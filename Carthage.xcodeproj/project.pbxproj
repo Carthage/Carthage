@@ -235,9 +235,9 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		D0D1211719E87861005E4BAA /* Carthage */ = {
+		D0D1211719E87861005E4BAA /* carthage */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D0D1211F19E87861005E4BAA /* Build configuration list for PBXNativeTarget "Carthage" */;
+			buildConfigurationList = D0D1211F19E87861005E4BAA /* Build configuration list for PBXNativeTarget "carthage" */;
 			buildPhases = (
 				D0D1211419E87861005E4BAA /* Sources */,
 				D0D1211519E87861005E4BAA /* Frameworks */,
@@ -247,7 +247,7 @@
 			);
 			dependencies = (
 			);
-			name = Carthage;
+			name = carthage;
 			productName = Carthage;
 			productReference = D0D1211819E87861005E4BAA /* Carthage */;
 			productType = "com.apple.product-type.tool";
@@ -320,7 +320,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D0D1211719E87861005E4BAA /* Carthage */,
+				D0D1211719E87861005E4BAA /* carthage */,
 				D0D1216C19E87B05005E4BAA /* CarthageKit */,
 				D0D1217619E87B05005E4BAA /* CarthageKitTests */,
 			);
@@ -569,7 +569,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D0D1211F19E87861005E4BAA /* Build configuration list for PBXNativeTarget "Carthage" */ = {
+		D0D1211F19E87861005E4BAA /* Build configuration list for PBXNativeTarget "carthage" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0D1212019E87861005E4BAA /* Debug */,
