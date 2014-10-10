@@ -80,13 +80,13 @@ public struct Version: Comparable {
 	public let minor: Int
 	public let patch: Int
 
-	init(major: Int, minor: Int, patch: Int) {
+	public init(major: Int, minor: Int, patch: Int) {
 		self.major = major
 		self.minor = minor
 		self.patch = patch
 	}
 
-	static func fromString(specifier: String) -> Result<Version> {
+	static public func fromString(specifier: String) -> Result<Version> {
 		let components = split(specifier, { $0 == "." }, allowEmptySlices: false)
 		if components.count < 3 {
 			return failure()
