@@ -14,6 +14,7 @@
 		D0D1218619E87B1D005E4BAA /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
 		D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1218F19E88A15005E4BAA /* Cartfile.swift */; };
 		D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1219119E88B8F005E4BAA /* GitHub.swift */; };
+		D0D121B019E88FD5005E4BAA /* LlamaKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D121AD19E88FD1005E4BAA /* LlamaKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -23,6 +24,34 @@
 			proxyType = 1;
 			remoteGlobalIDString = D0D1216C19E87B05005E4BAA;
 			remoteInfo = CarthageKit;
+		};
+		D0D121A819E88FD1005E4BAA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = FB2F8D8119BF637B00E4C49E;
+			remoteInfo = "LlamaKit-iOS";
+		};
+		D0D121AA19E88FD1005E4BAA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = FB2F8D8C19BF637B00E4C49E;
+			remoteInfo = "LlamaKit-iOSTests";
+		};
+		D0D121AC19E88FD1005E4BAA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = D0297D1019D67999009986A9;
+			remoteInfo = "LlamaKit-Mac";
+		};
+		D0D121AE19E88FD1005E4BAA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = D0297D1A19D67999009986A9;
+			remoteInfo = "LlamaKit-MacTests";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -39,7 +68,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		D0D1211819E87861005E4BAA /* Carthage */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Carthage; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0D1211819E87861005E4BAA /* Carthage */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = Carthage; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D1211B19E87861005E4BAA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D0D1212419E878CC005E4BAA /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Common.xcconfig; sourceTree = "<group>"; };
 		D0D1212619E878CC005E4BAA /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
@@ -67,6 +96,7 @@
 		D0D1217E19E87B05005E4BAA /* CarthageKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarthageKitTests.swift; sourceTree = "<group>"; };
 		D0D1218F19E88A15005E4BAA /* Cartfile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Cartfile.swift; sourceTree = "<group>"; };
 		D0D1219119E88B8F005E4BAA /* GitHub.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitHub.swift; sourceTree = "<group>"; };
+		D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = LlamaKit.xcodeproj; path = External/LlamaKit/LlamaKit.xcodeproj; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -82,6 +112,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0D121B019E88FD5005E4BAA /* LlamaKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -205,6 +236,7 @@
 		D0D1216F19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */,
 				D0D1217019E87B05005E4BAA /* Info.plist */,
 			);
 			name = "Supporting Files";
@@ -225,6 +257,17 @@
 				D0D1217D19E87B05005E4BAA /* Info.plist */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		D0D121A219E88FD0005E4BAA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D0D121A919E88FD1005E4BAA /* LlamaKit.framework */,
+				D0D121AB19E88FD1005E4BAA /* LlamaKit-iOSTests.xctest */,
+				D0D121AD19E88FD1005E4BAA /* LlamaKit.framework */,
+				D0D121AF19E88FD1005E4BAA /* LlamaKit-MacTests.xctest */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -324,6 +367,12 @@
 			mainGroup = D0D1210F19E87861005E4BAA;
 			productRefGroup = D0D1211919E87861005E4BAA /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = D0D121A219E88FD0005E4BAA /* Products */;
+					ProjectRef = D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				D0D1211719E87861005E4BAA /* carthage */,
@@ -332,6 +381,37 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		D0D121A919E88FD1005E4BAA /* LlamaKit.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = LlamaKit.framework;
+			remoteRef = D0D121A819E88FD1005E4BAA /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		D0D121AB19E88FD1005E4BAA /* LlamaKit-iOSTests.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = "LlamaKit-iOSTests.xctest";
+			remoteRef = D0D121AA19E88FD1005E4BAA /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		D0D121AD19E88FD1005E4BAA /* LlamaKit.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = LlamaKit.framework;
+			remoteRef = D0D121AC19E88FD1005E4BAA /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		D0D121AF19E88FD1005E4BAA /* LlamaKit-MacTests.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = "LlamaKit-MacTests.xctest";
+			remoteRef = D0D121AE19E88FD1005E4BAA /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		D0D1216B19E87B05005E4BAA /* Resources */ = {
@@ -597,6 +677,7 @@
 				D0D1218919E87B38005E4BAA /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		D0D1218519E87B05005E4BAA /* Build configuration list for PBXNativeTarget "CarthageKitTests" */ = {
 			isa = XCConfigurationList;
@@ -607,6 +688,7 @@
 				D0D1218A19E87B38005E4BAA /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
