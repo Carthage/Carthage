@@ -26,9 +26,17 @@ class CartfileSpec: QuickSpec {
 			let depReactiveCocoa = cartfile.dependencies[0]
 			expect(depReactiveCocoa.repository.name).to(equal("ReactiveCocoa"))
 			expect(depReactiveCocoa.repository.owner).to(equal("ReactiveCocoa"))
+			expect(depReactiveCocoa.version).to(equal(VersionSpecifier.Exactly(Version(major: 2, minor: 3, patch: 1))))
 
-			let expectedVersion = VersionSpecifier.Exactly(Version(major: 2, minor: 3, patch: 1))
-			expect(depReactiveCocoa.version).to(equal(expectedVersion))
+			let depConfigs = cartfile.dependencies[1]
+			expect(depConfigs.repository.owner).to(equal("jspahrsummers"))
+			expect(depConfigs.repository.name).to(equal("xcconfigs"))
+			expect(depConfigs.version).to(equal(VersionSpecifier.Exactly(Version(major: 0, minor: 1, patch: 0))))
+
+			let depBuildScripts = cartfile.dependencies[2]
+			expect(depBuildScripts.repository.owner).to(equal("jspahrsummers"))
+			expect(depBuildScripts.repository.name).to(equal("objc-build-scripts"))
+			expect(depBuildScripts.version).to(equal(VersionSpecifier.Any))
 		}
 	}
 }

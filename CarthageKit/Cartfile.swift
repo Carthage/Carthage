@@ -144,7 +144,13 @@ public enum VersionSpecifier: Equatable {
 public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 	switch (lhs) {
 	case let .Any:
-		return rhs == .Any
+		switch (rhs) {
+		case let .Any:
+			return true
+
+		default:
+			return false
+		}
 
 	case let .Exactly(leftVersion):
 		switch (rhs) {
