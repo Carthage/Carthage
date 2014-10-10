@@ -9,6 +9,38 @@
 import Foundation
 import LlamaKit
 
+public struct Cartfile {
+	public var dependencies: [Dependency]
+}
+
+extension Cartfile: JSONDecodable {
+	public static func fromJSON(JSON: AnyObject) -> Result<Cartfile> {
+		if let array = JSON as? [AnyObject] {
+			var deps: [Dependency] = []
+
+			for elem in array {
+				switch (Dependency.fromJSON(elem)) {
+				case let .Success(value):
+					deps.append(value.unbox)
+
+				case let .Failure(error):
+					return failure(error)
+				}
+			}
+
+			return success(Cartfile(dependencies: deps))
+		} else {
+			return failure()
+		}
+	}
+}
+
+extension Cartfile: Printable {
+	public var description: String {
+		return "\(dependencies)"
+	}
+}
+
 public struct Dependency: Equatable {
 	public var repository: Repository
 	public var version: VersionSpecifier
