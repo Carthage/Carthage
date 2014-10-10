@@ -88,7 +88,7 @@ public struct Version: Comparable {
 
 	static public func fromString(specifier: String) -> Result<Version> {
 		let components = split(specifier, { $0 == "." }, allowEmptySlices: false)
-		if components.count < 3 {
+		if components.count == 0 {
 			return failure()
 		}
 
@@ -97,8 +97,8 @@ public struct Version: Comparable {
 			return failure()
 		}
 
-		let minor = components[1].toInt()
-		let patch = components[2].toInt()
+		let minor = (components.count > 1 ? components[1].toInt() : 0)
+		let patch = (components.count > 2 ? components[2].toInt() : 0)
 
 		return success(self(major: major!, minor: minor ?? 0, patch: patch ?? 0))
 	}
