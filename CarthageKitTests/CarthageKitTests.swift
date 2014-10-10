@@ -11,4 +11,12 @@ import XCTest
 import CarthageKit
 
 class CarthageKitTests: XCTestCase {
+	func testScript() {
+		switch script() {
+		case let .Right(descriptor):
+			println(descriptor.value)
+		case let .Left(error):
+			println(error.value)
+		}
+	}
 }
