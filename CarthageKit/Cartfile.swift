@@ -14,6 +14,25 @@ public struct Dependency {
 	public var version: VersionSpecifier
 }
 
+extension Dependency: JSONDecodable {
+	public static func fromJSON(JSON: AnyObject) -> Result<Dependency> {
+		if let object = JSON as? [String: AnyObject] {
+			let versionString = object["version"] as? String ?? ""
+			let version = VersionSpecifier.fromJSON(versionString) ?? .Any
+
+			if let repo = object["repo"] as? String {
+				return Repository
+					.fromJSON(repo)
+					.map { Dependency(repository: $0, version: version) }
+			} else {
+				return failure()
+			}
+		} else {
+			return failure()
+		}
+	}
+}
+
 public struct Version: Comparable {
 	public let major: Int
 	public let minor: Int
@@ -76,6 +95,7 @@ extension Version: Printable {
 }
 
 public enum VersionSpecifier {
+	case Any
 	case Exactly(Version)
 }
 
