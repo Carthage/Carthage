@@ -128,7 +128,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		D0D1211819E87861005E4BAA /* Carthage */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = Carthage; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0D1211819E87861005E4BAA /* carthage */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D1211B19E87861005E4BAA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D0D1212419E878CC005E4BAA /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Common.xcconfig; sourceTree = "<group>"; };
 		D0D1212619E878CC005E4BAA /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
@@ -207,7 +207,7 @@
 		D0D1211919E87861005E4BAA /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D0D1211819E87861005E4BAA /* Carthage */,
+				D0D1211819E87861005E4BAA /* carthage */,
 				D0D1216D19E87B05005E4BAA /* CarthageKit.framework */,
 				D0D1217719E87B05005E4BAA /* CarthageKitTests.xctest */,
 			);
@@ -390,7 +390,7 @@
 			);
 			name = carthage;
 			productName = Carthage;
-			productReference = D0D1211819E87861005E4BAA /* Carthage */;
+			productReference = D0D1211819E87861005E4BAA /* carthage */;
 			productType = "com.apple.product-type.tool";
 		};
 		D0D1216C19E87B05005E4BAA /* CarthageKit */ = {
