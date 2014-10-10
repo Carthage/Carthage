@@ -1,0 +1,606 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D0D1211C19E87861005E4BAA /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1211B19E87861005E4BAA /* main.swift */; };
+		D0D1217219E87B05005E4BAA /* CarthageKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1217119E87B05005E4BAA /* CarthageKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0D1217819E87B05005E4BAA /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
+		D0D1217F19E87B05005E4BAA /* CarthageKitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1217E19E87B05005E4BAA /* CarthageKitTests.swift */; };
+		D0D1218619E87B1D005E4BAA /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D0D1217919E87B05005E4BAA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0D1211019E87861005E4BAA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D0D1216C19E87B05005E4BAA;
+			remoteInfo = CarthageKit;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D0D1211619E87861005E4BAA /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		D0D1211819E87861005E4BAA /* Carthage */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Carthage; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0D1211B19E87861005E4BAA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		D0D1212419E878CC005E4BAA /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Common.xcconfig; sourceTree = "<group>"; };
+		D0D1212619E878CC005E4BAA /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		D0D1212719E878CC005E4BAA /* Profile.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Profile.xcconfig; sourceTree = "<group>"; };
+		D0D1212819E878CC005E4BAA /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		D0D1212919E878CC005E4BAA /* Test.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Test.xcconfig; sourceTree = "<group>"; };
+		D0D1212B19E878CC005E4BAA /* Application.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Application.xcconfig; sourceTree = "<group>"; };
+		D0D1212C19E878CC005E4BAA /* Framework.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Framework.xcconfig; sourceTree = "<group>"; };
+		D0D1212D19E878CC005E4BAA /* StaticLibrary.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = StaticLibrary.xcconfig; sourceTree = "<group>"; };
+		D0D1212F19E878CC005E4BAA /* iOS-Application.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "iOS-Application.xcconfig"; sourceTree = "<group>"; };
+		D0D1213019E878CC005E4BAA /* iOS-Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "iOS-Base.xcconfig"; sourceTree = "<group>"; };
+		D0D1213119E878CC005E4BAA /* iOS-Framework.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "iOS-Framework.xcconfig"; sourceTree = "<group>"; };
+		D0D1213219E878CC005E4BAA /* iOS-StaticLibrary.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "iOS-StaticLibrary.xcconfig"; sourceTree = "<group>"; };
+		D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Mac-Application.xcconfig"; sourceTree = "<group>"; };
+		D0D1213519E878CC005E4BAA /* Mac-Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Mac-Base.xcconfig"; sourceTree = "<group>"; };
+		D0D1213619E878CC005E4BAA /* Mac-DynamicLibrary.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Mac-DynamicLibrary.xcconfig"; sourceTree = "<group>"; };
+		D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Mac-Framework.xcconfig"; sourceTree = "<group>"; };
+		D0D1213819E878CC005E4BAA /* Mac-StaticLibrary.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Mac-StaticLibrary.xcconfig"; sourceTree = "<group>"; };
+		D0D1213919E878CC005E4BAA /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		D0D1216D19E87B05005E4BAA /* CarthageKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = CarthageKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0D1217019E87B05005E4BAA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0D1217119E87B05005E4BAA /* CarthageKit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CarthageKit.h; sourceTree = "<group>"; };
+		D0D1217719E87B05005E4BAA /* CarthageKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarthageKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0D1217D19E87B05005E4BAA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0D1217E19E87B05005E4BAA /* CarthageKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarthageKitTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D0D1211519E87861005E4BAA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0D1218619E87B1D005E4BAA /* CarthageKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D1216919E87B05005E4BAA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D1217419E87B05005E4BAA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0D1217819E87B05005E4BAA /* CarthageKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D0D1210F19E87861005E4BAA = {
+			isa = PBXGroup;
+			children = (
+				D0D1211A19E87861005E4BAA /* Carthage */,
+				D0D1216E19E87B05005E4BAA /* CarthageKit */,
+				D0D1217B19E87B05005E4BAA /* CarthageKitTests */,
+				D0D1212219E878CC005E4BAA /* Configuration */,
+				D0D1211919E87861005E4BAA /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D0D1211919E87861005E4BAA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1211819E87861005E4BAA /* Carthage */,
+				D0D1216D19E87B05005E4BAA /* CarthageKit.framework */,
+				D0D1217719E87B05005E4BAA /* CarthageKitTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D0D1211A19E87861005E4BAA /* Carthage */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1211B19E87861005E4BAA /* main.swift */,
+			);
+			path = Carthage;
+			sourceTree = "<group>";
+		};
+		D0D1212219E878CC005E4BAA /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1212319E878CC005E4BAA /* Base */,
+				D0D1212E19E878CC005E4BAA /* iOS */,
+				D0D1213319E878CC005E4BAA /* Mac OS X */,
+				D0D1213919E878CC005E4BAA /* README.md */,
+			);
+			name = Configuration;
+			path = External/xcconfigs;
+			sourceTree = "<group>";
+		};
+		D0D1212319E878CC005E4BAA /* Base */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1212419E878CC005E4BAA /* Common.xcconfig */,
+				D0D1212519E878CC005E4BAA /* Configurations */,
+				D0D1212A19E878CC005E4BAA /* Targets */,
+			);
+			path = Base;
+			sourceTree = "<group>";
+		};
+		D0D1212519E878CC005E4BAA /* Configurations */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1212619E878CC005E4BAA /* Debug.xcconfig */,
+				D0D1212719E878CC005E4BAA /* Profile.xcconfig */,
+				D0D1212819E878CC005E4BAA /* Release.xcconfig */,
+				D0D1212919E878CC005E4BAA /* Test.xcconfig */,
+			);
+			path = Configurations;
+			sourceTree = "<group>";
+		};
+		D0D1212A19E878CC005E4BAA /* Targets */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1212B19E878CC005E4BAA /* Application.xcconfig */,
+				D0D1212C19E878CC005E4BAA /* Framework.xcconfig */,
+				D0D1212D19E878CC005E4BAA /* StaticLibrary.xcconfig */,
+			);
+			path = Targets;
+			sourceTree = "<group>";
+		};
+		D0D1212E19E878CC005E4BAA /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1212F19E878CC005E4BAA /* iOS-Application.xcconfig */,
+				D0D1213019E878CC005E4BAA /* iOS-Base.xcconfig */,
+				D0D1213119E878CC005E4BAA /* iOS-Framework.xcconfig */,
+				D0D1213219E878CC005E4BAA /* iOS-StaticLibrary.xcconfig */,
+			);
+			path = iOS;
+			sourceTree = "<group>";
+		};
+		D0D1213319E878CC005E4BAA /* Mac OS X */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */,
+				D0D1213519E878CC005E4BAA /* Mac-Base.xcconfig */,
+				D0D1213619E878CC005E4BAA /* Mac-DynamicLibrary.xcconfig */,
+				D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */,
+				D0D1213819E878CC005E4BAA /* Mac-StaticLibrary.xcconfig */,
+			);
+			path = "Mac OS X";
+			sourceTree = "<group>";
+		};
+		D0D1216E19E87B05005E4BAA /* CarthageKit */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1217119E87B05005E4BAA /* CarthageKit.h */,
+				D0D1216F19E87B05005E4BAA /* Supporting Files */,
+			);
+			path = CarthageKit;
+			sourceTree = "<group>";
+		};
+		D0D1216F19E87B05005E4BAA /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1217019E87B05005E4BAA /* Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		D0D1217B19E87B05005E4BAA /* CarthageKitTests */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1217E19E87B05005E4BAA /* CarthageKitTests.swift */,
+				D0D1217C19E87B05005E4BAA /* Supporting Files */,
+			);
+			path = CarthageKitTests;
+			sourceTree = "<group>";
+		};
+		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D0D1217D19E87B05005E4BAA /* Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D0D1216A19E87B05005E4BAA /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0D1217219E87B05005E4BAA /* CarthageKit.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D0D1211719E87861005E4BAA /* carthage */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0D1211F19E87861005E4BAA /* Build configuration list for PBXNativeTarget "carthage" */;
+			buildPhases = (
+				D0D1211419E87861005E4BAA /* Sources */,
+				D0D1211519E87861005E4BAA /* Frameworks */,
+				D0D1211619E87861005E4BAA /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = carthage;
+			productName = Carthage;
+			productReference = D0D1211819E87861005E4BAA /* Carthage */;
+			productType = "com.apple.product-type.tool";
+		};
+		D0D1216C19E87B05005E4BAA /* CarthageKit */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0D1218419E87B05005E4BAA /* Build configuration list for PBXNativeTarget "CarthageKit" */;
+			buildPhases = (
+				D0D1216819E87B05005E4BAA /* Sources */,
+				D0D1216919E87B05005E4BAA /* Frameworks */,
+				D0D1216A19E87B05005E4BAA /* Headers */,
+				D0D1216B19E87B05005E4BAA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CarthageKit;
+			productName = CarthageKit;
+			productReference = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		D0D1217619E87B05005E4BAA /* CarthageKitTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0D1218519E87B05005E4BAA /* Build configuration list for PBXNativeTarget "CarthageKitTests" */;
+			buildPhases = (
+				D0D1217319E87B05005E4BAA /* Sources */,
+				D0D1217419E87B05005E4BAA /* Frameworks */,
+				D0D1217519E87B05005E4BAA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D0D1217A19E87B05005E4BAA /* PBXTargetDependency */,
+			);
+			name = CarthageKitTests;
+			productName = CarthageKitTests;
+			productReference = D0D1217719E87B05005E4BAA /* CarthageKitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D0D1211019E87861005E4BAA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0610;
+				ORGANIZATIONNAME = Carthage;
+				TargetAttributes = {
+					D0D1211719E87861005E4BAA = {
+						CreatedOnToolsVersion = 6.1;
+					};
+					D0D1216C19E87B05005E4BAA = {
+						CreatedOnToolsVersion = 6.1;
+					};
+					D0D1217619E87B05005E4BAA = {
+						CreatedOnToolsVersion = 6.1;
+					};
+				};
+			};
+			buildConfigurationList = D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "Carthage" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D0D1210F19E87861005E4BAA;
+			productRefGroup = D0D1211919E87861005E4BAA /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D0D1211719E87861005E4BAA /* carthage */,
+				D0D1216C19E87B05005E4BAA /* CarthageKit */,
+				D0D1217619E87B05005E4BAA /* CarthageKitTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D0D1216B19E87B05005E4BAA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D1217519E87B05005E4BAA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D0D1211419E87861005E4BAA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0D1211C19E87861005E4BAA /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D1216819E87B05005E4BAA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D1217319E87B05005E4BAA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0D1217F19E87B05005E4BAA /* CarthageKitTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D0D1217A19E87B05005E4BAA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D0D1216C19E87B05005E4BAA /* CarthageKit */;
+			targetProxy = D0D1217919E87B05005E4BAA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		D0D1211D19E87861005E4BAA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1212619E878CC005E4BAA /* Debug.xcconfig */;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+			};
+			name = Debug;
+		};
+		D0D1211E19E87861005E4BAA /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1212819E878CC005E4BAA /* Release.xcconfig */;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+			};
+			name = Release;
+		};
+		D0D1212019E87861005E4BAA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		D0D1212119E87861005E4BAA /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		D0D1218019E87B05005E4BAA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_VERSION = A;
+				INFOPLIST_FILE = CarthageKit/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		D0D1218119E87B05005E4BAA /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_VERSION = A;
+				INFOPLIST_FILE = CarthageKit/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		D0D1218219E87B05005E4BAA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = CarthageKitTests/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		D0D1218319E87B05005E4BAA /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = CarthageKitTests/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		D0D1218719E87B38005E4BAA /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1212719E878CC005E4BAA /* Profile.xcconfig */;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+			};
+			name = Profile;
+		};
+		D0D1218819E87B38005E4BAA /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Profile;
+		};
+		D0D1218919E87B38005E4BAA /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_VERSION = A;
+				INFOPLIST_FILE = CarthageKit/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Profile;
+		};
+		D0D1218A19E87B38005E4BAA /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = CarthageKitTests/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Profile;
+		};
+		D0D1218B19E87B3B005E4BAA /* Test */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1212919E878CC005E4BAA /* Test.xcconfig */;
+			buildSettings = {
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+			};
+			name = Test;
+		};
+		D0D1218C19E87B3B005E4BAA /* Test */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Test;
+		};
+		D0D1218D19E87B3B005E4BAA /* Test */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */;
+			buildSettings = {
+				CURRENT_PROJECT_VERSION = 1;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_VERSION = A;
+				INFOPLIST_FILE = CarthageKit/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Test;
+		};
+		D0D1218E19E87B3B005E4BAA /* Test */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = CarthageKitTests/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Test;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "Carthage" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0D1211D19E87861005E4BAA /* Debug */,
+				D0D1218B19E87B3B005E4BAA /* Test */,
+				D0D1211E19E87861005E4BAA /* Release */,
+				D0D1218719E87B38005E4BAA /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D0D1211F19E87861005E4BAA /* Build configuration list for PBXNativeTarget "carthage" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0D1212019E87861005E4BAA /* Debug */,
+				D0D1218C19E87B3B005E4BAA /* Test */,
+				D0D1212119E87861005E4BAA /* Release */,
+				D0D1218819E87B38005E4BAA /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D0D1218419E87B05005E4BAA /* Build configuration list for PBXNativeTarget "CarthageKit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0D1218019E87B05005E4BAA /* Debug */,
+				D0D1218D19E87B3B005E4BAA /* Test */,
+				D0D1218119E87B05005E4BAA /* Release */,
+				D0D1218919E87B38005E4BAA /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+		D0D1218519E87B05005E4BAA /* Build configuration list for PBXNativeTarget "CarthageKitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0D1218219E87B05005E4BAA /* Debug */,
+				D0D1218E19E87B3B005E4BAA /* Test */,
+				D0D1218319E87B05005E4BAA /* Release */,
+				D0D1218A19E87B38005E4BAA /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D0D1211019E87861005E4BAA /* Project object */;
+}
