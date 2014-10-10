@@ -80,6 +80,10 @@ public struct Version: Comparable {
 	public let minor: Int
 	public let patch: Int
 
+	public var components: [Int] {
+		return [ major, minor, patch ]
+	}
+
 	public init(major: Int, minor: Int, patch: Int) {
 		self.major = major
 		self.minor = minor
@@ -127,12 +131,12 @@ public func <(lhs: Version, rhs: Version) -> Bool {
 }
 
 public func ==(lhs: Version, rhs: Version) -> Bool {
-	return lhs.major == rhs.major && lhs.minor == rhs.minor && lhs.patch == rhs.patch
+	return lhs.components == rhs.components
 }
 
 extension Version: Printable {
 	public var description: String {
-		return "\(major).\(minor).\(patch)"
+		return ".".join(components.map { $0.description })
 	}
 }
 
