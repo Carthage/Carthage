@@ -9,9 +9,13 @@
 import Foundation
 import LlamaKit
 
-public struct Dependency {
+public struct Dependency: Equatable {
 	public var repository: Repository
 	public var version: VersionSpecifier
+}
+
+public func ==(lhs: Dependency, rhs: Dependency) -> Bool {
+	return lhs.repository == rhs.repository && lhs.version == rhs.version
 }
 
 extension Dependency: JSONDecodable {
@@ -30,6 +34,12 @@ extension Dependency: JSONDecodable {
 		} else {
 			return failure()
 		}
+	}
+}
+
+extension Dependency: Printable {
+	public var description: String {
+		return "\(repository) @ \(version)"
 	}
 }
 
@@ -94,9 +104,25 @@ extension Version: Printable {
 	}
 }
 
-public enum VersionSpecifier {
+public enum VersionSpecifier: Equatable {
 	case Any
 	case Exactly(Version)
+}
+
+public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
+	switch (lhs) {
+	case let .Any:
+		return rhs == .Any
+
+	case let .Exactly(leftVersion):
+		switch (rhs) {
+		case let .Exactly(rightVersion):
+			return leftVersion == rightVersion
+
+		default:
+			return false
+		}
+	}
 }
 
 extension VersionSpecifier: JSONDecodable {
@@ -105,6 +131,18 @@ extension VersionSpecifier: JSONDecodable {
 			return Version.fromString(specifier).map { .Exactly($0) }
 		} else {
 			return failure()
+		}
+	}
+}
+
+extension VersionSpecifier: Printable {
+	public var description: String {
+		switch (self) {
+		case let .Any:
+			return "(any)"
+
+		case let .Exactly(version):
+			return version.description
 		}
 	}
 }

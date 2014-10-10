@@ -9,9 +9,13 @@
 import Foundation
 import LlamaKit
 
-public struct Repository {
+public struct Repository: Equatable {
 	public let owner: String
 	public let name: String
+}
+
+public func ==(lhs: Repository, rhs: Repository) -> Bool {
+	return lhs.owner == rhs.owner && lhs.name == rhs.name
 }
 
 extension Repository: JSONDecodable {
@@ -26,5 +30,11 @@ extension Repository: JSONDecodable {
 		} else {
 			return failure()
 		}
+	}
+}
+
+extension Repository: Printable {
+	public var description: String {
+		return "\(owner)/\(name)"
 	}
 }
