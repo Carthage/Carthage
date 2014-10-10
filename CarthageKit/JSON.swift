@@ -9,10 +9,14 @@
 import Foundation
 import LlamaKit
 
+/// Implemented by any type that can be parsed from JSON.
 public protocol JSONDecodable {
+	/// Attempts to parse an instance of this type from the given JSON object.
 	class func fromJSON(JSON: AnyObject) -> Result<Self>
 }
 
+/// Loads the JSON file at the given URL and attempts to parse it into an
+/// instance of type `T`.
 public func parseJSONAtURL<T: JSONDecodable>(URL: NSURL) -> Result<T> {
 	var error: NSError?
 	if let data = NSData(contentsOfURL: URL, options: NSDataReadingOptions.allZeros, error: &error) {
@@ -24,6 +28,6 @@ public func parseJSONAtURL<T: JSONDecodable>(URL: NSURL) -> Result<T> {
 	} else if let error = error {
 		return failure(error)
 	}
-	
+
 	return failure()
 }

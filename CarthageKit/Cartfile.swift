@@ -9,7 +9,10 @@
 import Foundation
 import LlamaKit
 
+/// Represents a Cartfile, which is a specification of a project's dependencies
+/// and any other settings Carthage needs to build it.
 public struct Cartfile {
+	/// The dependencies listed in the Cartfile.
 	public var dependencies: [Dependency]
 }
 
@@ -41,8 +44,12 @@ extension Cartfile: Printable {
 	}
 }
 
+/// Represents a single dependency of a project.
 public struct Dependency: Equatable {
+	/// The GitHub repository in which this dependency lives.
 	public var repository: Repository
+
+	/// The version(s) that are required to satisfy this dependency.
 	public var version: VersionSpecifier
 }
 
@@ -75,11 +82,26 @@ extension Dependency: Printable {
 	}
 }
 
+/// A semantic version.
 public struct Version: Comparable {
+	/// The major version.
+	///
+	/// Increments to this component represent incompatible API changes.
 	public let major: Int
+
+	/// The minor version.
+	///
+	/// Increments to this component represent backwards-compatible
+	/// enhancements.
 	public let minor: Int
+
+	/// The patch version.
+	///
+	/// Increments to this component represent backwards-compatible bug fixes.
 	public let patch: Int
 
+	/// A list of the version components, in order from most significant to
+	/// least significant.
 	public var components: [Int] {
 		return [ major, minor, patch ]
 	}
@@ -90,6 +112,8 @@ public struct Version: Comparable {
 		self.patch = patch
 	}
 
+	/// Attempts to parse a semantic version from a human-readable string of the
+	/// form "a.b.c".
 	static public func fromString(specifier: String) -> Result<Version> {
 		let components = split(specifier, { $0 == "." }, allowEmptySlices: false)
 		if components.count == 0 {
@@ -140,6 +164,8 @@ extension Version: Printable {
 	}
 }
 
+/// Describes which versions are acceptable for satisfying a dependency
+/// requirement.
 public enum VersionSpecifier: Equatable {
 	case Any
 	case Exactly(Version)

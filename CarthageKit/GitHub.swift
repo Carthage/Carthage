@@ -9,6 +9,7 @@
 import Foundation
 import LlamaKit
 
+/// Describes a GitHub.com repository.
 public struct Repository: Equatable {
 	public let owner: String
 	public let name: String
