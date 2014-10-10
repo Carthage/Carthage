@@ -12,6 +12,8 @@
 		D0D1217819E87B05005E4BAA /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
 		D0D1217F19E87B05005E4BAA /* CarthageKitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1217E19E87B05005E4BAA /* CarthageKitTests.swift */; };
 		D0D1218619E87B1D005E4BAA /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
+		D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1218F19E88A15005E4BAA /* Cartfile.swift */; };
+		D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1219119E88B8F005E4BAA /* GitHub.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,6 +65,8 @@
 		D0D1217719E87B05005E4BAA /* CarthageKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarthageKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D1217D19E87B05005E4BAA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0D1217E19E87B05005E4BAA /* CarthageKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarthageKitTests.swift; sourceTree = "<group>"; };
+		D0D1218F19E88A15005E4BAA /* Cartfile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Cartfile.swift; sourceTree = "<group>"; };
+		D0D1219119E88B8F005E4BAA /* GitHub.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitHub.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -191,6 +195,8 @@
 			isa = PBXGroup;
 			children = (
 				D0D1217119E87B05005E4BAA /* CarthageKit.h */,
+				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
+				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
 			);
 			path = CarthageKit;
@@ -357,6 +363,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
+				D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
