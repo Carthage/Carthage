@@ -133,22 +133,12 @@ public struct Version: Comparable {
 }
 
 public func <(lhs: Version, rhs: Version) -> Bool {
-	if (lhs.major < rhs.major) {
-		return true
-	} else if (lhs.major > rhs.major) {
-		return false
-	}
-
-	if (lhs.minor < rhs.minor) {
-		return true
-	} else if (lhs.minor > rhs.minor) {
-		return false
-	}
-
-	if (lhs.patch < rhs.patch) {
-		return true
-	} else if (lhs.patch > rhs.patch) {
-		return false
+	for (left, right) in Zip2(lhs.components, rhs.components) {
+		if (left < right) {
+			return true
+		} else if (right > left) {
+			return false
+		}
 	}
 
 	return false
@@ -172,24 +162,15 @@ public enum VersionSpecifier: Equatable {
 }
 
 public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
-	switch (lhs) {
-	case let .Any:
-		switch (rhs) {
-		case let .Any:
-			return true
+	switch (lhs, rhs) {
+	case let (.Any, .Any):
+		return true
 
-		default:
-			return false
-		}
+	case let (.Exactly(left), .Exactly(right)):
+		return left == right
 
-	case let .Exactly(leftVersion):
-		switch (rhs) {
-		case let .Exactly(rightVersion):
-			return leftVersion == rightVersion
-
-		default:
-			return false
-		}
+	default:
+		return false
 	}
 }
 
