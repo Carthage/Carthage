@@ -7,16 +7,19 @@
 //
 
 import Foundation
+import LlamaKit
 import CarthageKit
 
-class CheckoutCommand: Command {
-	let verb = "checkout"
+struct CheckoutCommand: CommandType {
+	static let verb = "checkout"
 
-	func run(arguments: [String]) {
+	init(_ arguments: [String] = []) {
+	}
+
+	func run() -> Result<()> {
 		println("ohai checkout")
 
 		// 1. Identify the current project's working directory.
-
-		
+		return success()
 	}
 }
