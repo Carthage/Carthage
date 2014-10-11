@@ -53,6 +53,10 @@ class VersionSpec: QuickSpec {
             expect(version).to(beGreaterThan(Version(major: 1, minor: 2, patch: 2)))
             expect(version).to(beGreaterThan(Version(major: 2, minor: 0, patch: 2)))
             expect(version).to(beGreaterThan(Version(major: 2, minor: 1, patch: 0)))
+            
+            expect(version).to(beLessThan(Version(major: 10, minor: 0, patch: 0)))
+            expect(version).to(beLessThan(Version(major: 2, minor: 10, patch: 1)))
+            expect(version).to(beLessThan(Version(major: 2, minor: 1, patch: 10)))
         }
     }
 }
