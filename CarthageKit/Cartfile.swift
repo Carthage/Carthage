@@ -133,22 +133,12 @@ public struct Version: Comparable {
 }
 
 public func <(lhs: Version, rhs: Version) -> Bool {
-	if (lhs.major < rhs.major) {
-		return true
-	} else if (lhs.major > rhs.major) {
-		return false
-	}
-
-	if (lhs.minor < rhs.minor) {
-		return true
-	} else if (lhs.minor > rhs.minor) {
-		return false
-	}
-
-	if (lhs.patch < rhs.patch) {
-		return true
-	} else if (lhs.patch > rhs.patch) {
-		return false
+	for (left, right) in Zip2(lhs.components, rhs.components) {
+		if (left < right) {
+			return true
+		} else if (right > left) {
+			return false
+		}
 	}
 
 	return false
