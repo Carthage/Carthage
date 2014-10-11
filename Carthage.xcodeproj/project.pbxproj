@@ -11,6 +11,7 @@
 		D04AEAB319E904CB0045C166 /* ReactiveCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D04AEAAB19E904C50045C166 /* ReactiveCocoa.framework */; };
 		D04AEAB419E904D60045C166 /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D04AEAA019E904A80045C166 /* Nimble.framework */; };
 		D04AEAB519E904D60045C166 /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D04AEA8D19E904A30045C166 /* Quick.framework */; };
+		D04AEADB19E918C30045C166 /* TaskSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04AEADA19E918C30045C166 /* TaskSpec.swift */; };
 		D0AD39B019E900BC00B343CE /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD39AF19E900BC00B343CE /* Task.swift */; };
 		D0D1211C19E87861005E4BAA /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1211B19E87861005E4BAA /* main.swift */; };
 		D0D1217219E87B05005E4BAA /* CarthageKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1217119E87B05005E4BAA /* CarthageKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -162,6 +163,7 @@
 		D04AEA8419E904A30045C166 /* Quick.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Quick.xcodeproj; path = External/ReactiveCocoa/External/Quick/Quick/Quick.xcodeproj; sourceTree = SOURCE_ROOT; };
 		D04AEA9419E904A80045C166 /* Nimble.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Nimble.xcodeproj; path = External/ReactiveCocoa/External/Quick/Externals/Nimble/Nimble.xcodeproj; sourceTree = SOURCE_ROOT; };
 		D04AEAA319E904C50045C166 /* ReactiveCocoa.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = ReactiveCocoa.xcodeproj; path = External/ReactiveCocoa/ReactiveCocoa.xcodeproj; sourceTree = SOURCE_ROOT; };
+		D04AEADA19E918C30045C166 /* TaskSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TaskSpec.swift; sourceTree = "<group>"; };
 		D0AD39AF19E900BC00B343CE /* Task.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
 		D0D1211819E87861005E4BAA /* carthage */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D1211B19E87861005E4BAA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -392,6 +394,7 @@
 			isa = PBXGroup;
 			children = (
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
+				D04AEADA19E918C30045C166 /* TaskSpec.swift */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
 			path = CarthageKitTests;
@@ -690,6 +693,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */,
+				D04AEADB19E918C30045C166 /* TaskSpec.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

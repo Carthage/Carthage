@@ -10,24 +10,31 @@ import Foundation
 import ReactiveCocoa
 
 /// Describes how to execute a shell command.
-internal struct TaskDescription {
+public struct TaskDescription {
 	/// The path to the executable that should be launched.
 	var launchPath: String
 
 	/// Any arguments to provide to the executable.
-	var arguments: [String] = []
+	var arguments: [String]
 
 	/// The path to the working directory in which the process should be
 	/// launched.
 	///
 	/// If nil, the launched task will inherit the working directory of its
 	/// parent.
-	var workingDirectoryPath: String? = nil
+	var workingDirectoryPath: String?
 
 	/// Environment variables to set for the launched process.
 	///
 	/// If nil, the launched task will inherit the environment of its parent.
-	var environment: [String: String]? = nil
+	var environment: [String: String]?
+
+	public init(launchPath: String, arguments: [String] = [], workingDirectoryPath: String? = nil, environment: [String: String]? = nil) {
+		self.launchPath = launchPath
+		self.arguments = arguments
+		self.workingDirectoryPath = workingDirectoryPath
+		self.environment = environment
+	}
 
 	/// Creates an `NSTask` instance, configured according to the properties of
 	/// the receiver.
@@ -66,7 +73,7 @@ private func pipeForWritingToSink(sink: SinkOf<NSData>) -> NSPipe {
 ///
 /// Returns a promise that will launch the task when started, then eventually
 /// resolve to the task's exit status.
-internal func launchTask(taskDescription: TaskDescription, standardInput: SequenceOf<NSData>? = nil, standardOutput: SinkOf<NSData>? = nil, standardError: SinkOf<NSData>? = nil) -> Promise<Int32> {
+public func launchTask(taskDescription: TaskDescription, standardInput: SequenceOf<NSData>? = nil, standardOutput: SinkOf<NSData>? = nil, standardError: SinkOf<NSData>? = nil) -> Promise<Int32> {
 	let task = taskDescription.configuredNSTask()
 
 	if let input = standardInput {
