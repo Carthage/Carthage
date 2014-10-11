@@ -29,6 +29,6 @@ case let .Some(.Failure(error)):
 	exit(EXIT_FAILURE)
 	
 case .None:
-	println("Unrecognized command: '\(verb)'. See `carthage --help'.'")
+	fputs("Unrecognized command: '\(verb)'. See `carthage --help'.'", stderr)
 	exit(EXIT_FAILURE)
 }
