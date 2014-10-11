@@ -8,19 +8,21 @@
 
 import Foundation
 
+let helpCommand = HelpCommand()
 let commands = [
-	HelpCommand()
+	helpCommand
 ]
 
 var arguments = Process.arguments
 if arguments.count == 0 {
-	arguments.append("help")
+	arguments.append(helpCommand.verb)
 }
 
 let verb = arguments[0]
-
-// We should always find a match, since we default to `help`.
-let match = find(commands.map { $0.verb }, verb)!
-
-arguments.removeAtIndex(0)
-commands[match].run(arguments)
+if let match = find(commands.map { $0.verb }, verb) {
+	arguments.removeAtIndex(0)
+	commands[match].run(arguments)
+} else {
+	println("Unrecognized command: \(verb)")
+	helpCommand.run([])
+}
