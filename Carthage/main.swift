@@ -8,5 +8,19 @@
 
 import Foundation
 
-println("Hello, World!")
+let commands = [
+	HelpCommand()
+]
 
+var arguments = Process.arguments
+if arguments.count == 0 {
+	arguments.append("help")
+}
+
+let verb = arguments[0]
+
+// We should always find a match, since we default to `help`.
+let match = find(commands.map { $0.verb }, verb)!
+
+arguments.removeAtIndex(0)
+commands[match].run(arguments)
