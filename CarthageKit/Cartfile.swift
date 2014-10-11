@@ -162,24 +162,15 @@ public enum VersionSpecifier: Equatable {
 }
 
 public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
-	switch (lhs) {
-	case let .Any:
-		switch (rhs) {
-		case let .Any:
-			return true
+	switch (lhs, rhs) {
+	case let (.Any, .Any):
+		return true
 
-		default:
-			return false
-		}
+	case let (.Exactly(left), .Exactly(right)):
+		return left == right
 
-	case let .Exactly(leftVersion):
-		switch (rhs) {
-		case let .Exactly(rightVersion):
-			return leftVersion == rightVersion
-
-		default:
-			return false
-		}
+	default:
+		return false
 	}
 }
 
