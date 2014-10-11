@@ -60,5 +60,19 @@ class TaskSpec: QuickSpec {
 			expect(standardError.value).notTo(equal(NSData()))
 			expect(NSString(data: errors.current, encoding: NSUTF8StringEncoding)).to(equal("stat: not-a-real-file: stat: No such file or directory\n"))
 		}
+
+		it("should launch a task with standard input") {
+			let desc = TaskDescription(launchPath: "/usr/bin/sort")
+
+			let strings = [ "foo\n", "bar\n", "buzz\n", "fuzz\n" ]
+			let data = strings.map { $0.dataUsingEncoding(NSUTF8StringEncoding)! }
+
+			let promise = launchTask(desc, standardInput: SequenceOf(data), standardOutput: SinkOf(standardOutput))
+			let output = accumulateData(standardOutput.signal)
+
+			let result = promise.await()
+			expect(result).to(equal(EXIT_SUCCESS))
+			expect(NSString(data: output.current, encoding: NSUTF8StringEncoding)).to(equal("bar\nbuzz\nfoo\nfuzz\n"))
+		}
 	}
 }
