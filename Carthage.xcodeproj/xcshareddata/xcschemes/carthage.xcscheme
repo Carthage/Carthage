@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "D0D1211719E87861005E4BAA"
-               BuildableName = "carthage"
+               BuildableName = "carthage.app"
                BlueprintName = "carthage"
                ReferencedContainer = "container:Carthage.xcodeproj">
             </BuildableReference>
@@ -33,7 +33,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D0D1211719E87861005E4BAA"
-            BuildableName = "carthage"
+            BuildableName = "carthage.app"
             BlueprintName = "carthage"
             ReferencedContainer = "container:Carthage.xcodeproj">
          </BuildableReference>
@@ -52,7 +52,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D0D1211719E87861005E4BAA"
-            BuildableName = "carthage"
+            BuildableName = "carthage.app"
             BlueprintName = "carthage"
             ReferencedContainer = "container:Carthage.xcodeproj">
          </BuildableReference>
@@ -70,7 +70,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D0D1211719E87861005E4BAA"
-            BuildableName = "carthage"
+            BuildableName = "carthage.app"
             BlueprintName = "carthage"
             ReferencedContainer = "container:Carthage.xcodeproj">
          </BuildableReference>
