@@ -14,9 +14,23 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "D0D1211719E87861005E4BAA"
-               BuildableName = "carthage"
+               BlueprintIdentifier = "D0E7B63119E9C64500EDBA4D"
+               BuildableName = "carthage.app"
                BlueprintName = "carthage"
+               ReferencedContainer = "container:Carthage.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "D0E7B64019E9C64600EDBA4D"
+               BuildableName = "CarthageTests.xctest"
+               BlueprintName = "CarthageTests"
                ReferencedContainer = "container:Carthage.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -28,12 +42,22 @@
       shouldUseLaunchSchemeArgsEnv = "YES"
       buildConfiguration = "Debug">
       <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "D0E7B64019E9C64600EDBA4D"
+               BuildableName = "CarthageTests.xctest"
+               BlueprintName = "CarthageTests"
+               ReferencedContainer = "container:Carthage.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D0D1211719E87861005E4BAA"
-            BuildableName = "carthage"
+            BlueprintIdentifier = "D0E7B63119E9C64500EDBA4D"
+            BuildableName = "carthage.app"
             BlueprintName = "carthage"
             ReferencedContainer = "container:Carthage.xcodeproj">
          </BuildableReference>
@@ -51,8 +75,8 @@
       <BuildableProductRunnable>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D0D1211719E87861005E4BAA"
-            BuildableName = "carthage"
+            BlueprintIdentifier = "D0E7B63119E9C64500EDBA4D"
+            BuildableName = "carthage.app"
             BlueprintName = "carthage"
             ReferencedContainer = "container:Carthage.xcodeproj">
          </BuildableReference>
@@ -69,8 +93,8 @@
       <BuildableProductRunnable>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D0D1211719E87861005E4BAA"
-            BuildableName = "carthage"
+            BlueprintIdentifier = "D0E7B63119E9C64500EDBA4D"
+            BuildableName = "carthage.app"
             BlueprintName = "carthage"
             ReferencedContainer = "container:Carthage.xcodeproj">
          </BuildableReference>

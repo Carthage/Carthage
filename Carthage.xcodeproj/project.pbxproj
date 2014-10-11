@@ -8,12 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		D039935719E9AA0A00D13E71 /* LlamaKit.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D0D121AD19E88FD1005E4BAA /* LlamaKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		D06939B119E8A757001E44AE /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
-		D06939B319E8A79F001E44AE /* Help.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B219E8A79F001E44AE /* Help.swift */; };
-		D0D1211C19E87861005E4BAA /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1211B19E87861005E4BAA /* main.swift */; };
 		D0D1217219E87B05005E4BAA /* CarthageKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1217119E87B05005E4BAA /* CarthageKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D1217819E87B05005E4BAA /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
-		D0D1218619E87B1D005E4BAA /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
 		D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1218F19E88A15005E4BAA /* Cartfile.swift */; };
 		D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1219119E88B8F005E4BAA /* GitHub.swift */; };
 		D0D121A019E88F67005E4BAA /* JSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1219F19E88F67005E4BAA /* JSON.swift */; };
@@ -22,6 +18,11 @@
 		D0D121DD19E8998F005E4BAA /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D121D619E89984005E4BAA /* Nimble.framework */; };
 		D0D121DE19E8998F005E4BAA /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D121C719E8997E005E4BAA /* Quick.framework */; };
 		D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */; };
+		D0E7B64819E9C64600EDBA4D /* carthageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E7B64719E9C64600EDBA4D /* carthageTests.swift */; };
+		D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
+		D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
+		D0E7B65519E9C76900EDBA4D /* Help.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B219E8A79F001E44AE /* Help.swift */; };
+		D0E7B65619E9C76900EDBA4D /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1211B19E87861005E4BAA /* main.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -116,6 +117,13 @@
 			remoteGlobalIDString = 1F925EB7195C0D6300ED456B;
 			remoteInfo = "Nimble-OSXTests";
 		};
+		D0E7B64219E9C64600EDBA4D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0D1211019E87861005E4BAA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D0E7B63119E9C64500EDBA4D;
+			remoteInfo = carthage;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -130,21 +138,11 @@
 			name = "Copy Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D0D1211619E87861005E4BAA /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = /usr/share/man/man1/;
-			dstSubfolderSpec = 0;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 1;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		D06939B019E8A757001E44AE /* Command.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
 		D06939B219E8A79F001E44AE /* Help.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Help.swift; sourceTree = "<group>"; };
-		D0D1211819E87861005E4BAA /* carthage */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D1211B19E87861005E4BAA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D0D1212419E878CC005E4BAA /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Common.xcconfig; sourceTree = "<group>"; };
 		D0D1212619E878CC005E4BAA /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
@@ -177,17 +175,14 @@
 		D0D121BA19E8997E005E4BAA /* Quick.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Quick.xcodeproj; path = External/Quick/Quick/Quick.xcodeproj; sourceTree = SOURCE_ROOT; };
 		D0D121CE19E89984005E4BAA /* Nimble.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Nimble.xcodeproj; path = External/Quick/Externals/Nimble/Nimble.xcodeproj; sourceTree = SOURCE_ROOT; };
 		D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CartfileSpec.swift; sourceTree = "<group>"; };
+		D0E7B63219E9C64500EDBA4D /* carthage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = carthage.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0E7B64119E9C64600EDBA4D /* CarthageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarthageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0E7B64619E9C64600EDBA4D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0E7B64719E9C64600EDBA4D /* carthageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = carthageTests.swift; sourceTree = "<group>"; };
+		D0E7B65819E9CA0800EDBA4D /* carthage */ = {isa = PBXFileReference; lastKnownFileType = text; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		D0D1211519E87861005E4BAA /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D0D1218619E87B1D005E4BAA /* CarthageKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D0D1216919E87B05005E4BAA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -206,6 +201,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D0E7B62F19E9C64500EDBA4D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0E7B63E19E9C64600EDBA4D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -213,19 +223,22 @@
 			isa = PBXGroup;
 			children = (
 				D0D1211A19E87861005E4BAA /* Carthage */,
+				D0E7B64419E9C64600EDBA4D /* CarthageTests */,
 				D0D1216E19E87B05005E4BAA /* CarthageKit */,
 				D0D1217B19E87B05005E4BAA /* CarthageKitTests */,
 				D0D1212219E878CC005E4BAA /* Configuration */,
 				D0D1211919E87861005E4BAA /* Products */,
+				D0E7B65819E9CA0800EDBA4D /* carthage */,
 			);
 			sourceTree = "<group>";
 		};
 		D0D1211919E87861005E4BAA /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D0D1211819E87861005E4BAA /* carthage */,
 				D0D1216D19E87B05005E4BAA /* CarthageKit.framework */,
 				D0D1217719E87B05005E4BAA /* CarthageKitTests.xctest */,
+				D0E7B63219E9C64500EDBA4D /* carthage.app */,
+				D0E7B64119E9C64600EDBA4D /* CarthageTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -380,6 +393,24 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		D0E7B64419E9C64600EDBA4D /* CarthageTests */ = {
+			isa = PBXGroup;
+			children = (
+				D0E7B64719E9C64600EDBA4D /* carthageTests.swift */,
+				D0E7B64519E9C64600EDBA4D /* Supporting Files */,
+			);
+			name = CarthageTests;
+			path = carthageTests;
+			sourceTree = "<group>";
+		};
+		D0E7B64519E9C64600EDBA4D /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D0E7B64619E9C64600EDBA4D /* Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -394,23 +425,6 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		D0D1211719E87861005E4BAA /* carthage */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = D0D1211F19E87861005E4BAA /* Build configuration list for PBXNativeTarget "carthage" */;
-			buildPhases = (
-				D0D1211419E87861005E4BAA /* Sources */,
-				D0D1211519E87861005E4BAA /* Frameworks */,
-				D0D1211619E87861005E4BAA /* CopyFiles */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = carthage;
-			productName = Carthage;
-			productReference = D0D1211819E87861005E4BAA /* carthage */;
-			productType = "com.apple.product-type.tool";
-		};
 		D0D1216C19E87B05005E4BAA /* CarthageKit */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D0D1218419E87B05005E4BAA /* Build configuration list for PBXNativeTarget "CarthageKit" */;
@@ -448,6 +462,42 @@
 			productReference = D0D1217719E87B05005E4BAA /* CarthageKitTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		D0E7B63119E9C64500EDBA4D /* carthage */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0E7B64919E9C64600EDBA4D /* Build configuration list for PBXNativeTarget "carthage" */;
+			buildPhases = (
+				D0E7B62E19E9C64500EDBA4D /* Sources */,
+				D0E7B62F19E9C64500EDBA4D /* Frameworks */,
+				D0E7B63019E9C64500EDBA4D /* Resources */,
+				D0E7B65719E9C7C700EDBA4D /* Extract CLI Tool */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = carthage;
+			productName = carthage;
+			productReference = D0E7B63219E9C64500EDBA4D /* carthage.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D0E7B64019E9C64600EDBA4D /* CarthageTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0E7B64E19E9C64600EDBA4D /* Build configuration list for PBXNativeTarget "CarthageTests" */;
+			buildPhases = (
+				D0E7B63D19E9C64600EDBA4D /* Sources */,
+				D0E7B63E19E9C64600EDBA4D /* Frameworks */,
+				D0E7B63F19E9C64600EDBA4D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D0E7B64319E9C64600EDBA4D /* PBXTargetDependency */,
+			);
+			name = CarthageTests;
+			productName = carthageTests;
+			productReference = D0E7B64119E9C64600EDBA4D /* CarthageTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -457,14 +507,18 @@
 				LastUpgradeCheck = 0610;
 				ORGANIZATIONNAME = Carthage;
 				TargetAttributes = {
-					D0D1211719E87861005E4BAA = {
-						CreatedOnToolsVersion = 6.1;
-					};
 					D0D1216C19E87B05005E4BAA = {
 						CreatedOnToolsVersion = 6.1;
 					};
 					D0D1217619E87B05005E4BAA = {
 						CreatedOnToolsVersion = 6.1;
+					};
+					D0E7B63119E9C64500EDBA4D = {
+						CreatedOnToolsVersion = 6.1;
+					};
+					D0E7B64019E9C64600EDBA4D = {
+						CreatedOnToolsVersion = 6.1;
+						TestTargetID = D0E7B63119E9C64500EDBA4D;
 					};
 				};
 			};
@@ -474,6 +528,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				Base,
 			);
 			mainGroup = D0D1210F19E87861005E4BAA;
 			productRefGroup = D0D1211919E87861005E4BAA /* Products */;
@@ -494,7 +549,8 @@
 			);
 			projectRoot = "";
 			targets = (
-				D0D1211719E87861005E4BAA /* carthage */,
+				D0E7B63119E9C64500EDBA4D /* carthage */,
+				D0E7B64019E9C64600EDBA4D /* CarthageTests */,
 				D0D1216C19E87B05005E4BAA /* CarthageKit */,
 				D0D1217619E87B05005E4BAA /* CarthageKitTests */,
 			);
@@ -604,19 +660,42 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin PBXSourcesBuildPhase section */
-		D0D1211419E87861005E4BAA /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
+		D0E7B63019E9C64500EDBA4D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0D1211C19E87861005E4BAA /* main.swift in Sources */,
-				D06939B119E8A757001E44AE /* Command.swift in Sources */,
-				D06939B319E8A79F001E44AE /* Help.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D0E7B63F19E9C64600EDBA4D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		D0E7B65719E9C7C700EDBA4D /* Extract CLI Tool */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(EXECUTABLE_PATH)",
+			);
+			name = "Extract CLI Tool";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(EXECUTABLE_NAME)",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = ". script/extract-tool";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
 		D0D1216819E87B05005E4BAA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -635,6 +714,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D0E7B62E19E9C64500EDBA4D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0E7B65519E9C76900EDBA4D /* Help.swift in Sources */,
+				D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */,
+				D0E7B65619E9C76900EDBA4D /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0E7B63D19E9C64600EDBA4D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0E7B64819E9C64600EDBA4D /* carthageTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -642,6 +739,11 @@
 			isa = PBXTargetDependency;
 			target = D0D1216C19E87B05005E4BAA /* CarthageKit */;
 			targetProxy = D0D1217919E87B05005E4BAA /* PBXContainerItemProxy */;
+		};
+		D0E7B64319E9C64600EDBA4D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D0E7B63119E9C64500EDBA4D /* carthage */;
+			targetProxy = D0E7B64219E9C64600EDBA4D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -659,24 +761,6 @@
 			baseConfigurationReference = D0D1212819E878CC005E4BAA /* Release.xcconfig */;
 			buildSettings = {
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-			};
-			name = Release;
-		};
-		D0D1212019E87861005E4BAA /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
-			buildSettings = {
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/. @loader_path/Frameworks /Library/Frameworks";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		D0D1212119E87861005E4BAA /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
-			buildSettings = {
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/. @loader_path/Frameworks /Library/Frameworks";
-				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
@@ -750,15 +834,6 @@
 			};
 			name = Profile;
 		};
-		D0D1218819E87B38005E4BAA /* Profile */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
-			buildSettings = {
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/. @loader_path/Frameworks /Library/Frameworks";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Profile;
-		};
 		D0D1218919E87B38005E4BAA /* Profile */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */;
@@ -798,15 +873,6 @@
 			};
 			name = Test;
 		};
-		D0D1218C19E87B3B005E4BAA /* Test */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
-			buildSettings = {
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/. @loader_path/Frameworks /Library/Frameworks";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Test;
-		};
 		D0D1218D19E87B3B005E4BAA /* Test */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */;
@@ -838,6 +904,106 @@
 			};
 			name = Test;
 		};
+		D0E7B64A19E9C64600EDBA4D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				INFOPLIST_FILE = carthage/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		D0E7B64B19E9C64600EDBA4D /* Test */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				INFOPLIST_FILE = carthage/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Test;
+		};
+		D0E7B64C19E9C64600EDBA4D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				INFOPLIST_FILE = carthage/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		D0E7B64D19E9C64600EDBA4D /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				INFOPLIST_FILE = carthage/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Profile;
+		};
+		D0E7B64F19E9C64600EDBA4D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = carthageTests/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/carthage.app/Contents/MacOS/carthage";
+			};
+			name = Debug;
+		};
+		D0E7B65019E9C64600EDBA4D /* Test */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = carthageTests/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/carthage.app/Contents/MacOS/carthage";
+			};
+			name = Test;
+		};
+		D0E7B65119E9C64600EDBA4D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = carthageTests/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/carthage.app/Contents/MacOS/carthage";
+			};
+			name = Release;
+		};
+		D0E7B65219E9C64600EDBA4D /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = carthageTests/Info.plist;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/carthage.app/Contents/MacOS/carthage";
+			};
+			name = Profile;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -848,17 +1014,6 @@
 				D0D1218B19E87B3B005E4BAA /* Test */,
 				D0D1211E19E87861005E4BAA /* Release */,
 				D0D1218719E87B38005E4BAA /* Profile */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		D0D1211F19E87861005E4BAA /* Build configuration list for PBXNativeTarget "carthage" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D0D1212019E87861005E4BAA /* Debug */,
-				D0D1218C19E87B3B005E4BAA /* Test */,
-				D0D1212119E87861005E4BAA /* Release */,
-				D0D1218819E87B38005E4BAA /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -884,6 +1039,26 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
+		};
+		D0E7B64919E9C64600EDBA4D /* Build configuration list for PBXNativeTarget "carthage" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0E7B64A19E9C64600EDBA4D /* Debug */,
+				D0E7B64B19E9C64600EDBA4D /* Test */,
+				D0E7B64C19E9C64600EDBA4D /* Release */,
+				D0E7B64D19E9C64600EDBA4D /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+		D0E7B64E19E9C64600EDBA4D /* Build configuration list for PBXNativeTarget "CarthageTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0E7B64F19E9C64600EDBA4D /* Debug */,
+				D0E7B65019E9C64600EDBA4D /* Test */,
+				D0E7B65119E9C64600EDBA4D /* Release */,
+				D0E7B65219E9C64600EDBA4D /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
 		};
 /* End XCConfigurationList section */
 	};
