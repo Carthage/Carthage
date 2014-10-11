@@ -9,10 +9,23 @@
 import Foundation
 import LlamaKit
 
-let commands = [
-	HelpCommand.verb: HelpCommand.self
+// Hopefully this will be built into the standard library someday.
+func +<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
+    var result: [K: V]
+    for (key, value) in lhs {
+        result.updateValue(value, forKey: key)
+    }
+    for (key, value) in rhs {
+        result.updateValue(value, forKey: key)
+    }
+    return result
+}
+
+let commandTypes = [
+	HelpCommand.self
 ]
 
+let commands = commandTypes.map({ [$0.verb: $0] }).reduce([:], combine: +)
 var arguments = Process.arguments
 
 let verb = arguments.first ?? HelpCommand.verb
