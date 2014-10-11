@@ -9,32 +9,26 @@
 import Foundation
 import LlamaKit
 
-let commandTypes = [
-	HelpCommand.self
+let commands = [
+	HelpCommand.verb: HelpCommand.self
 ]
 
 var arguments = Process.arguments
-if arguments.count == 0 {
-	arguments.append(HelpCommand.verb)
-}
 
-let verb = arguments[0]
-var command: CommandType? = nil
+let verb = arguments.first ?? HelpCommand.verb
+let args = arguments.count > 0 ? Array(dropFirst(arguments)) : []
 
-if let match = find(commandTypes.map { $0.verb }, verb) {
-	arguments.removeAtIndex(0)
-	command = commandTypes[match](arguments)
-} else {
-	println("Unrecognized command: \(verb)")
-	command = HelpCommand()
-}
+let result = commands[verb]?(args).run()
 
-let result = command!.run()
 switch result {
-case let .Success(_):
+case .Some(.Success):
 	exit(EXIT_SUCCESS)
-
-case let .Failure(error):
+	
+case let .Some(.Failure(error)):
 	fputs("Error executing command \(verb): \(error)", stderr)
+	exit(EXIT_FAILURE)
+	
+case .None:
+	println("Unrecognized command: '\(verb)'. See `carthage --help'.'")
 	exit(EXIT_FAILURE)
 }
