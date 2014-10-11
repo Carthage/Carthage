@@ -22,23 +22,43 @@ class TaskSpec: QuickSpec {
 			standardError.value = NSData()
 		}
 
+		func accumulateData(signal: Signal<NSData>) -> Signal<NSData> {
+			return signal.scan(NSData()) { (accum, data) in
+				let buffer = accum.mutableCopy() as NSMutableData
+				buffer.appendData(data)
+
+				return buffer
+			}
+		}
+
 		it("should launch a task that writes to stdout") {
 			let desc = TaskDescription(launchPath: "/bin/echo", arguments: [ "foobar" ])
 			let promise = launchTask(desc, standardOutput: SinkOf(standardOutput))
 			expect(standardOutput.value).to(equal(NSData()))
 
-			let output = standardOutput.signal.scan(NSMutableData()) { (accum, data) in
-				accum.appendData(data)
-				return accum
-			}
-
+			let output = accumulateData(standardOutput.signal)
 			expect(output.current.length).to(equal(0))
 
 			let result = promise.await()
-			expect(result).to(equal(0))
+			expect(result).to(equal(EXIT_SUCCESS))
 
 			expect(standardOutput.value).notTo(equal(NSData()))
 			expect(NSString(data: output.current, encoding: NSUTF8StringEncoding)).to(equal("foobar\n"))
+		}
+
+		it("should launch a task that writes to stderr") {
+			let desc = TaskDescription(launchPath: "/usr/bin/stat", arguments: [ "not-a-real-file" ])
+			let promise = launchTask(desc, standardError: SinkOf(standardError))
+			expect(standardError.value).to(equal(NSData()))
+
+			let errors = accumulateData(standardError.signal)
+			expect(errors.current.length).to(equal(0))
+
+			let result = promise.await()
+			expect(result).to(equal(EXIT_FAILURE))
+
+			expect(standardError.value).notTo(equal(NSData()))
+			expect(NSString(data: errors.current, encoding: NSUTF8StringEncoding)).to(equal("stat: not-a-real-file: stat: No such file or directory\n"))
 		}
 	}
 }
