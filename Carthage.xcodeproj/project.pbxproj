@@ -1049,6 +1049,7 @@
 				D0E7B64D19E9C64600EDBA4D /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		D0E7B64E19E9C64600EDBA4D /* Build configuration list for PBXNativeTarget "CarthageTests" */ = {
 			isa = XCConfigurationList;
@@ -1059,6 +1060,7 @@
 				D0E7B65219E9C64600EDBA4D /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
