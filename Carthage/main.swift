@@ -8,8 +8,8 @@
 
 import Foundation
 
-let commands = [
-	HelpCommand()
+let commands : [Command] = [
+	HelpCommand(),
 ]
 
 var arguments = Process.arguments
