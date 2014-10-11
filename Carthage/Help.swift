@@ -7,11 +7,16 @@
 //
 
 import Foundation
+import LlamaKit
 
-class HelpCommand: CommandType {
-	let verb = "help"
+struct HelpCommand: CommandType {
+	static let verb = "help"
 
-	func run(arguments: [String]) {
+	init(_ arguments: [String] = []) {
+	}
+
+	func run() -> Result<()> {
 		println("ohai help")
+		return success()
 	}
 }
