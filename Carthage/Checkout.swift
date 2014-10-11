@@ -20,6 +20,13 @@ struct CheckoutCommand: CommandType {
 		println("ohai checkout")
 
 		// 1. Identify the current project's working directory.
+
+		let pwd : String = NSFileManager.defaultManager().currentDirectoryPath;
+		if pwd.isEmpty {
+			return failure()
+		}
+		println("pwd is: \(pwd)")
+
 		return success()
 	}
 }
