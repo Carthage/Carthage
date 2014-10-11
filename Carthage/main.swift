@@ -14,11 +14,12 @@ let commandTypes = [
 ]
 
 var arguments = Process.arguments
-if arguments.count == 0 {
+
+if arguments.count == 1 {
 	arguments.append(HelpCommand.verb)
 }
 
-let verb = arguments[0]
+let verb = arguments[1]
 var command: CommandType? = nil
 
 if let match = find(commandTypes.map { $0.verb }, verb) {
