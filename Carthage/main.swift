@@ -10,6 +10,7 @@ import Foundation
 
 let commands : [Command] = [
 	HelpCommand(),
+	CheckoutCommand(),
 ]
 
 var arguments = Process.arguments

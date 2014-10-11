@@ -21,6 +21,7 @@
 		D0D121DD19E8998F005E4BAA /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D121D619E89984005E4BAA /* Nimble.framework */; };
 		D0D121DE19E8998F005E4BAA /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D121C719E8997E005E4BAA /* Quick.framework */; };
 		D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */; };
+		F66685FC19E8F1EC00487A88 /* Checkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66685FB19E8F1EC00487A88 /* Checkout.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -165,6 +166,7 @@
 		D0D121BA19E8997E005E4BAA /* Quick.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Quick.xcodeproj; path = External/Quick/Quick/Quick.xcodeproj; sourceTree = SOURCE_ROOT; };
 		D0D121CE19E89984005E4BAA /* Nimble.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Nimble.xcodeproj; path = External/Quick/Externals/Nimble/Nimble.xcodeproj; sourceTree = SOURCE_ROOT; };
 		D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CartfileSpec.swift; sourceTree = "<group>"; };
+		F66685FB19E8F1EC00487A88 /* Checkout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Checkout.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -224,6 +226,7 @@
 				D06939B019E8A757001E44AE /* Command.swift */,
 				D06939B219E8A79F001E44AE /* Help.swift */,
 				D0D1211B19E87861005E4BAA /* main.swift */,
+				F66685FB19E8F1EC00487A88 /* Checkout.swift */,
 			);
 			path = Carthage;
 			sourceTree = "<group>";
@@ -601,6 +604,7 @@
 				D0D1211C19E87861005E4BAA /* main.swift in Sources */,
 				D06939B119E8A757001E44AE /* Command.swift in Sources */,
 				D06939B319E8A79F001E44AE /* Help.swift in Sources */,
+				F66685FC19E8F1EC00487A88 /* Checkout.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
