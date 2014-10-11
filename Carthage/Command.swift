@@ -7,9 +7,12 @@
 //
 
 import Foundation
+import LlamaKit
 
-protocol Command: class {
-	var verb: String { get }
+protocol CommandType {
+	class var verb: String { get }
 
-	func run(arguments: [String])
+	init(_ arguments: [String])
+
+	func run() -> Result<()>
 }

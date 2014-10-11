@@ -7,21 +7,34 @@
 //
 
 import Foundation
+import LlamaKit
 
-let commands : [Command] = [
-	HelpCommand(),
-	CheckoutCommand(),
+let commandTypes = [
+	HelpCommand.self
 ]
 
 var arguments = Process.arguments
 if arguments.count == 0 {
-	arguments.append("help")
+	arguments.append(HelpCommand.verb)
 }
 
 let verb = arguments[0]
+var command: CommandType? = nil
 
-// We should always find a match, since we default to `help`.
-let match = find(commands.map { $0.verb }, verb)!
+if let match = find(commandTypes.map { $0.verb }, verb) {
+	arguments.removeAtIndex(0)
+	command = commandTypes[match](arguments)
+} else {
+	println("Unrecognized command: \(verb)")
+	command = HelpCommand()
+}
 
-arguments.removeAtIndex(0)
-commands[match].run(arguments)
+let result = command!.run()
+switch result {
+case let .Success(_):
+	exit(EXIT_SUCCESS)
+
+case let .Failure(error):
+	fputs("Error executing command \(verb): \(error)", stderr)
+	exit(EXIT_FAILURE)
+}
