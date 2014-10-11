@@ -1,12 +1,12 @@
 # Carthage
 
-A simple package manager for Cocoa.
+A simple dependency manager for Cocoa.
 
 The goal of Carthage is straightforward: to resolve complex dependency graphs in the simplest way possible, without supplanting or duplicating the existing Cocoa toolchain.
 
 ### Process
 
-The package management process looks like this:
+The dependency management process looks like this:
 
 1. Your project specifies its dependencies, and which versions it will accept
 1. Those dependencies specify their own dependencies in the same way
