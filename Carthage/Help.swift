@@ -8,7 +8,7 @@
 
 import Foundation
 
-class HelpCommand: Command {
+class HelpCommand: CommandType {
 	let verb = "help"
 
 	func run(arguments: [String]) {

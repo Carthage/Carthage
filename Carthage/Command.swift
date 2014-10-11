@@ -8,7 +8,7 @@
 
 import Foundation
 
-protocol Command: class {
+protocol CommandType: class {
 	var verb: String { get }
 
 	func run(arguments: [String])
