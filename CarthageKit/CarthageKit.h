@@ -6,7 +6,7 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
-#import <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
 
 //! Project version number for CarthageKit.
 FOUNDATION_EXPORT double CarthageKitVersionNumber;

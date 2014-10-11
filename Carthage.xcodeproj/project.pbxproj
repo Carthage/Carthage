@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D039935719E9AA0A00D13E71 /* LlamaKit.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D0D121AD19E88FD1005E4BAA /* LlamaKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D06939B119E8A757001E44AE /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
 		D06939B319E8A79F001E44AE /* Help.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B219E8A79F001E44AE /* Help.swift */; };
 		D0D1211C19E87861005E4BAA /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1211B19E87861005E4BAA /* main.swift */; };
@@ -118,6 +119,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		D039935519E9A9F500D13E71 /* Copy Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				D039935719E9AA0A00D13E71 /* LlamaKit.framework in Copy Frameworks */,
+			);
+			name = "Copy Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0D1211619E87861005E4BAA /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -407,6 +419,7 @@
 				D0D1216919E87B05005E4BAA /* Frameworks */,
 				D0D1216A19E87B05005E4BAA /* Headers */,
 				D0D1216B19E87B05005E4BAA /* Resources */,
+				D039935519E9A9F500D13E71 /* Copy Frameworks */,
 			);
 			buildRules = (
 			);
@@ -653,6 +666,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/. @loader_path/Frameworks /Library/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -661,6 +675,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/. @loader_path/Frameworks /Library/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -672,8 +687,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
+				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				OTHER_LDFLAGS = "-flat_namespace";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -687,8 +705,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
+				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				OTHER_LDFLAGS = "-flat_namespace";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -733,6 +754,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/. @loader_path/Frameworks /Library/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Profile;
@@ -744,8 +766,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
+				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				OTHER_LDFLAGS = "-flat_namespace";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -777,6 +802,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/. @loader_path/Frameworks /Library/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Test;
@@ -788,8 +814,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
+				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				OTHER_LDFLAGS = "-flat_namespace";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
