@@ -13,6 +13,13 @@ import LlamaKit
 public struct Repository: Equatable {
 	public let owner: String
 	public let name: String
+	public let cloneURL: NSURL?
+
+	init(owner: String, name: String) {
+		self.owner = owner
+		self.name = name
+		self.cloneURL = NSURL(scheme: "https", host: "github.com", path: "/\(owner)/\(name).git")
+	}
 }
 
 public func ==(lhs: Repository, rhs: Repository) -> Bool {
