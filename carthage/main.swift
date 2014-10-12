@@ -14,8 +14,10 @@ let commandTypes = [
 ]
 
 var arguments = Process.arguments
+assert(arguments.count >= 1)
 
-if arguments.count == 1 {
+arguments.removeAtIndex(0)
+if arguments.count == 0 {
 	arguments.append(HelpCommand.verb)
 }
 
