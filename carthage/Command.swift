@@ -1,5 +1,5 @@
 //
-//  main.swift
+//  Command.swift
 //  Carthage
 //
 //  Created by Justin Spahr-Summers on 2014-10-10.
@@ -7,6 +7,12 @@
 //
 
 import Foundation
+import LlamaKit
 
-println("Hello, World!")
+protocol CommandType {
+	class var verb: String { get }
 
+	init(_ arguments: [String])
+
+	func run() -> Result<()>
+}
