@@ -108,7 +108,13 @@ private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bo
 /// Attempts to locate a project or workspace within the given directory.
 public func locateProjectInDirectory(directoryURL: NSURL) -> Result<ProjectLocator> {
 	let enumerationOptions = NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants
-	let enumerator = NSFileManager.defaultManager().enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, errorHandler: nil)
+	
+	var enumerationError: NSError?
+	let enumerator = NSFileManager.defaultManager().enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions) { (URL, error) in
+		enumerationError = error
+		return false
+	}
+	
 	if let enumerator = enumerator {
 		var matches: [ProjectEnumerationMatch] = []
 
@@ -124,7 +130,11 @@ public func locateProjectInDirectory(directoryURL: NSURL) -> Result<ProjectLocat
 		}
 	}
 
-	return failure()
+	if let error = enumerationError {
+		return failure(error)
+	} else {
+		return failure()
+	}
 }
 
 public func buildInDirectory(directoryURL: NSURL, configuration: String = "Release") -> Promise<Result<()>> {
