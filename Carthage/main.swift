@@ -11,7 +11,7 @@ import LlamaKit
 
 // Hopefully this will be built into the standard library someday.
 func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
-    var result: [K: V]
+    var result = Dictionary<K, V>()
     for (key, value) in lhs {
         result.updateValue(value, forKey: key)
     }
