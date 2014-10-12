@@ -38,7 +38,12 @@ public struct Project {
 				if let cloneURL = dependency.repository.cloneURL? {
 					let task = NSTask()
 					task.launchPath = "/usr/bin/git"
-					let arguments = [ "clone", cloneURL.absoluteString!, "Dependencies/\(dependency.repository.name)-\(dependency.version)" ]
+					let arguments = [
+						"clone",
+						"--depth=1",
+						cloneURL.absoluteString!,
+						"Dependencies/\(dependency.repository.name)-\(dependency.version)",
+					]
 					task.arguments = arguments
 
 					let argumentString = join(" ", arguments)
