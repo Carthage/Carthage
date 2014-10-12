@@ -25,7 +25,7 @@ let commandTypes = [
 	HelpCommand.self
 ]
 
-let commands = commandTypes.map({ [$0.verb: $0] }).reduce([:], combine: +)
+let commands = commandTypes.map { [$0.verb: $0] }.reduce([:], combine: +)
 var arguments = Process.arguments
 
 let verb = arguments.first ?? HelpCommand.verb
