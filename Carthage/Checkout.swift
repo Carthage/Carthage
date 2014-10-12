@@ -17,15 +17,18 @@ struct CheckoutCommand: CommandType {
 	}
 
 	func run() -> Result<()> {
-		println("ohai checkout")
-
 		// 1. Identify the current project's working directory.
 
-		let pwd : String = NSFileManager.defaultManager().currentDirectoryPath;
-		if pwd.isEmpty {
+		let pwd : String? = NSFileManager.defaultManager().currentDirectoryPath;
+		if pwd == nil || pwd!.isEmpty {
 			return failure()
 		}
-		println("pwd is: \(pwd)")
+
+		// 2. Create project
+
+		let project = Project(projectPath: pwd!)
+
+		println("project cartfile is: \(project.cartFile)")
 
 		return success()
 	}
