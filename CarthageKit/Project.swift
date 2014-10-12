@@ -28,13 +28,18 @@ public struct Project {
 			if (result.error() != nil) {
 				return
 			}
-
 			cartfile = result.value()
 		}
 	}
 
 	public func cloneDependencies() -> Result<()> {
+		if let dependencies = cartfile?.dependencies {
+			println("dependencies \(dependencies)")
 
+			for dependency in dependencies {
+				println("repo: \(dependency.repository.cloneURL)")
+			}
+		}
 
 		return failure()
 	}
