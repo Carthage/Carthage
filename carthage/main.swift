@@ -21,7 +21,7 @@ if arguments.count == 0 {
 	arguments.append(HelpCommand.verb)
 }
 
-let verb = arguments[1]
+let verb = arguments[0]
 var command: CommandType? = nil
 
 if let match = find(commandTypes.map { $0.verb }, verb) {
