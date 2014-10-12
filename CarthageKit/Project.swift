@@ -34,13 +34,37 @@ public struct Project {
 
 	public func cloneDependencies() -> Result<()> {
 		if let dependencies = cartfile?.dependencies {
-			println("dependencies \(dependencies)")
-
 			for dependency in dependencies {
 				println("repo: \(dependency.repository.cloneURL)")
+				if let cloneURL = dependency.repository.cloneURL? {
+					let task = NSTask()
+					task.launchPath = "/usr/bin/git"
+					let arguments = [ "clone", cloneURL.absoluteString!, "Dependencies/\(dependency.repository.name)-\(dependency.version)" ]
+					task.arguments = arguments
+
+					let argumentString = join(" ", arguments)
+
+					println("\(task.launchPath) \(argumentString)")
+
+					let pipe = NSPipe()
+					task.standardOutput = pipe
+					task.standardError = pipe
+					task.launch()
+
+					let data = pipe.fileHandleForReading.readDataToEndOfFile()
+					let output: String? = NSString(data: data, encoding: NSUTF8StringEncoding)
+
+					println(output!)
+					task.waitUntilExit()
+
+					let terminationStatus = task.terminationStatus
+					if terminationStatus != 0 {
+						return failure()
+					}
+				}
 			}
 		}
 
-		return failure()
+		return success()
 	}
 }
