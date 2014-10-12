@@ -23,7 +23,7 @@ class TaskSpec: QuickSpec {
 		}
 
 		func accumulateData(signal: Signal<NSData>) -> Signal<NSData> {
-			return signal.scan(NSData()) { (accum, data) in
+			return signal.scanWithStart(NSData()) { (accum, data) in
 				let buffer = accum.mutableCopy() as NSMutableData
 				buffer.appendData(data)
 
