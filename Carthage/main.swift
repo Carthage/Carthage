@@ -10,7 +10,7 @@ import Foundation
 import LlamaKit
 
 // Hopefully this will be built into the standard library someday.
-func +<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
+func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
     var result: [K: V]
     for (key, value) in lhs {
         result.updateValue(value, forKey: key)
@@ -25,7 +25,7 @@ let commandTypes = [
 	HelpCommand.self
 ]
 
-let commands = commandTypes.map { [$0.verb: $0] }.reduce([:], combine: +)
+let commands = commandTypes.map { [$0.verb: $0] }.reduce([:], combine: combineDictionaries)
 var arguments = Process.arguments
 
 let verb = arguments.first ?? HelpCommand.verb
