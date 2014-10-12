@@ -31,6 +31,18 @@ public enum ProjectLocator: Comparable {
 			return URL
 		}
 	}
+
+	/// The arguments that should be passed to `xcodebuild` to help it locate
+	/// this project.
+	private var arguments: [String] {
+		switch (self) {
+		case let .Workspace(URL):
+			return [ "-workspace", URL.path! ]
+
+		case let .ProjectFile(URL):
+			return [ "-project", URL.path! ]
+		}
+	}
 }
 
 public func ==(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
@@ -108,13 +120,13 @@ private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bo
 /// Attempts to locate a project or workspace within the given directory.
 public func locateProjectInDirectory(directoryURL: NSURL) -> Result<ProjectLocator> {
 	let enumerationOptions = NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants
-	
+
 	var enumerationError: NSError?
 	let enumerator = NSFileManager.defaultManager().enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions) { (URL, error) in
 		enumerationError = error
 		return false
 	}
-	
+
 	if let enumerator = enumerator {
 		var matches: [ProjectEnumerationMatch] = []
 
@@ -140,8 +152,19 @@ public func locateProjectInDirectory(directoryURL: NSURL) -> Result<ProjectLocat
 public func buildInDirectory(directoryURL: NSURL, configuration: String = "Release") -> Promise<Result<()>> {
 	precondition(directoryURL.fileURL)
 
+	let result = locateProjectInDirectory(directoryURL)
+	if let error = result.error() {
+		return Promise { $0.put(failure(error)) }
+	}
+
+	let locator = result.value()!
+
+	var arguments = [ "xcodebuild" ]
+	arguments += locator.arguments
+	arguments.append("build")
+
 	let directoryPath = directoryURL.path
-	let desc = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "xcodebuild", "build" ], workingDirectoryPath: directoryPath)
+	let desc = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: arguments, workingDirectoryPath: directoryPath)
 
 	return launchTask(desc).then { status in
 		return Promise { sink in
