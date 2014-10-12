@@ -12,24 +12,24 @@ import LlamaKit
 /// Represents a Project that is using Carthage.
 public struct Project {
 	/// Path to the root folder
-    public var projectPath: String
+    public var path: String
 
 	/// The project's cart file
-	public var cartFile: Cartfile?
+	public var cartfile: Cartfile?
 
-	public init(projectPath: String) {
-		self.projectPath = projectPath
+	public init(path: String) {
+		self.path = path
 
-		let cartFileURL : NSURL? = NSURL.fileURLWithPath(self.projectPath)?.URLByAppendingPathComponent("Cartfile")
+		let cartfileURL : NSURL? = NSURL.fileURLWithPath(self.path)?.URLByAppendingPathComponent("Cartfile")
 
-		if (cartFileURL != nil) {
-			let result : Result<Cartfile> = parseJSONAtURL(cartFileURL!)
+		if (cartfileURL != nil) {
+			let result : Result<Cartfile> = parseJSONAtURL(cartfileURL!)
 
 			if (result.error() != nil) {
 				return
 			}
 
-			cartFile = result.value()
+			cartfile = result.value()
 		}
 	}
 }

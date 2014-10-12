@@ -26,9 +26,9 @@ struct CheckoutCommand: CommandType {
 
 		// 2. Create project
 
-		let project = Project(projectPath: pwd!)
+		let project = Project(path: pwd!)
 
-		println("project cartfile is: \(project.cartFile)")
+		println("project cartfile is: \(project.cartfile)")
 
 		return success()
 	}
