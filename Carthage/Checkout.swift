@@ -17,18 +17,16 @@ struct CheckoutCommand: CommandType {
 	}
 
 	func run() -> Result<()> {
-		// 1. Identify the current project's working directory.
+		// 1. Identify the project's working directory.
 
 		let pwd : String? = NSFileManager.defaultManager().currentDirectoryPath;
 		if pwd == nil || pwd!.isEmpty {
 			return failure()
 		}
 
-		// 2. Create project
+		// 2. Create the project
 
 		let project = Project(path: pwd!)
-
-		println("project cartfile is: \(project.cartfile)")
 
 		return project.cloneDependencies()
 	}
