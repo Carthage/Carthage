@@ -29,7 +29,7 @@ assert(arguments.count >= 1)
 arguments.removeAtIndex(0)
 
 let verb = arguments.first ?? HelpCommand.verb
-let args = arguments.count > 0 ? dropFirst(arguments) : []
+let args = (arguments.count > 0 ? dropFirst(arguments) : [])
 
 let result = commands[verb]?(args).run()
 
