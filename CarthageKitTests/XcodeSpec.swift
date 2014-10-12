@@ -21,5 +21,28 @@ class XcodeSpec: QuickSpec {
 			let result = buildInDirectory(directoryURL).await()
 			expect(result.error()).to(beNil())
 		}
+
+		it("should locate the project") {
+			let result = locateProjectInDirectory(directoryURL)
+			expect(result.error()).to(beNil())
+
+			let locator = result.value()!
+			let expectedURL = directoryURL.URLByAppendingPathComponent("TestFramework.xcodeproj")
+			expect(locator).to(equal(ProjectLocator.ProjectFile(expectedURL)))
+		}
+
+		it("should locate the project from the parent directory") {
+			let result = locateProjectInDirectory(directoryURL.URLByDeletingLastPathComponent!)
+			expect(result.error()).to(beNil())
+
+			let locator = result.value()!
+			let expectedURL = directoryURL.URLByAppendingPathComponent("TestFramework.xcodeproj")
+			expect(locator).to(equal(ProjectLocator.ProjectFile(expectedURL)))
+		}
+
+		it("should not locate the project from a directory not containing it") {
+			let result = locateProjectInDirectory(directoryURL.URLByAppendingPathComponent("TestFramework"))
+			expect(result.isSuccess()).to(beFalsy())
+		}
 	}
 }
