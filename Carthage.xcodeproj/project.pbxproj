@@ -23,6 +23,7 @@
 		D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
 		D0E7B65519E9C76900EDBA4D /* Help.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B219E8A79F001E44AE /* Help.swift */; };
 		D0E7B65619E9C76900EDBA4D /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1211B19E87861005E4BAA /* main.swift */; };
+		F603929919EA29F80050A6AF /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = F603929819EA29F80050A6AF /* Project.swift */; };
 		F689C33619EA14D4006D1EFA /* Checkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66685FB19E8F1EC00487A88 /* Checkout.swift */; };
 /* End PBXBuildFile section */
 
@@ -181,6 +182,7 @@
 		D0E7B64619E9C64600EDBA4D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0E7B64719E9C64600EDBA4D /* carthageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = carthageTests.swift; sourceTree = "<group>"; };
 		D0E7B65819E9CA0800EDBA4D /* carthage */ = {isa = PBXFileReference; lastKnownFileType = text; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
+		F603929819EA29F80050A6AF /* Project.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
 		F66685FB19E8F1EC00487A88 /* Checkout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Checkout.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -248,9 +250,9 @@
 		D0D1211A19E87861005E4BAA /* Carthage */ = {
 			isa = PBXGroup;
 			children = (
+				D0D1211B19E87861005E4BAA /* main.swift */,
 				D06939B019E8A757001E44AE /* Command.swift */,
 				D06939B219E8A79F001E44AE /* Help.swift */,
-				D0D1211B19E87861005E4BAA /* main.swift */,
 				F66685FB19E8F1EC00487A88 /* Checkout.swift */,
 			);
 			path = Carthage;
@@ -326,6 +328,7 @@
 			isa = PBXGroup;
 			children = (
 				D0D1217119E87B05005E4BAA /* CarthageKit.h */,
+				F603929819EA29F80050A6AF /* Project.swift */,
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
 				D0D1219F19E88F67005E4BAA /* JSON.swift */,
@@ -706,6 +709,7 @@
 				D0D121A019E88F67005E4BAA /* JSON.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */,
+				F603929919EA29F80050A6AF /* Project.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
