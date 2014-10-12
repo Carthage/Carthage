@@ -133,15 +133,7 @@ public struct Version: Comparable {
 }
 
 public func <(lhs: Version, rhs: Version) -> Bool {
-	for (left, right) in Zip2(lhs.components, rhs.components) {
-		if (left < right) {
-			return true
-		} else if (right > left) {
-			return false
-		}
-	}
-
-	return false
+    return lexicographicalCompare(lhs.components, rhs.components)
 }
 
 public func ==(lhs: Version, rhs: Version) -> Bool {
