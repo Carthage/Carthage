@@ -30,6 +30,6 @@ struct CheckoutCommand: CommandType {
 
 		println("project cartfile is: \(project.cartfile)")
 
-		return success()
+		return project.cloneDependencies()
 	}
 }

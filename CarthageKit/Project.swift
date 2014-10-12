@@ -32,4 +32,10 @@ public struct Project {
 			cartfile = result.value()
 		}
 	}
+
+	public func cloneDependencies() -> Result<()> {
+
+
+		return failure()
+	}
 }
