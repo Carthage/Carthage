@@ -25,6 +25,7 @@
 		D0D121A019E88F67005E4BAA /* JSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1219F19E88F67005E4BAA /* JSON.swift */; };
 		D0D121B419E897EE005E4BAA /* TestCartfile.json in Resources */ = {isa = PBXBuildFile; fileRef = D0D121B319E897EE005E4BAA /* TestCartfile.json */; };
 		D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */; };
+		D0DB09A119EA34E500234B16 /* TestFramework in Resources */ = {isa = PBXBuildFile; fileRef = D0DB09A019EA34E500234B16 /* TestFramework */; };
 		D0E7B64819E9C64600EDBA4D /* carthageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E7B64719E9C64600EDBA4D /* carthageTests.swift */; };
 		D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
 		D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
@@ -71,9 +72,9 @@
 		D01F8A4719EA28F600643E7C /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Quick.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4B19EA28FE00643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../External/ReactiveCocoa/External/Quick/Externals/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
 		D01F8A5319EA2F1700643E7C /* Xcode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Xcode.swift; sourceTree = "<group>"; };
+		D04AEADA19E918C30045C166 /* TaskSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TaskSpec.swift; sourceTree = "<group>"; };
 		D06939B019E8A757001E44AE /* Command.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
 		D06939B219E8A79F001E44AE /* Help.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Help.swift; sourceTree = "<group>"; };
-		D04AEADA19E918C30045C166 /* TaskSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TaskSpec.swift; sourceTree = "<group>"; };
 		D0AD39AF19E900BC00B343CE /* Task.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
 		D0D1211B19E87861005E4BAA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D0D1212419E878CC005E4BAA /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Common.xcconfig; sourceTree = "<group>"; };
@@ -104,6 +105,7 @@
 		D0D1219F19E88F67005E4BAA /* JSON.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JSON.swift; sourceTree = "<group>"; };
 		D0D121B319E897EE005E4BAA /* TestCartfile.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = TestCartfile.json; sourceTree = "<group>"; };
 		D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CartfileSpec.swift; sourceTree = "<group>"; };
+		D0DB09A019EA34E500234B16 /* TestFramework */ = {isa = PBXFileReference; lastKnownFileType = folder; path = TestFramework; sourceTree = "<group>"; };
 		D0E7B63219E9C64500EDBA4D /* carthage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = carthage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B64119E9C64600EDBA4D /* CarthageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarthageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B64619E9C64600EDBA4D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -288,6 +290,7 @@
 		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				D0DB09A019EA34E500234B16 /* TestFramework */,
 				D01F8A4B19EA28FE00643E7C /* Nimble.framework */,
 				D01F8A4619EA28F600643E7C /* Nimble.framework */,
 				D01F8A4719EA28F600643E7C /* Quick.framework */,
@@ -460,6 +463,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0D121B419E897EE005E4BAA /* TestCartfile.json in Resources */,
+				D0DB09A119EA34E500234B16 /* TestFramework in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
