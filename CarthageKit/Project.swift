@@ -35,7 +35,6 @@ public struct Project {
 	public func cloneDependencies() -> Result<()> {
 		if let dependencies = cartfile?.dependencies {
 			for dependency in dependencies {
-				println("repo: \(dependency.repository.cloneURL)")
 				if let cloneURL = dependency.repository.cloneURL? {
 					let task = NSTask()
 					task.launchPath = "/usr/bin/git"
@@ -49,12 +48,17 @@ public struct Project {
 					let pipe = NSPipe()
 					task.standardOutput = pipe
 					task.standardError = pipe
+					let fileHandle = pipe.fileHandleForReading
+
+					fileHandle.readabilityHandler =  { (handle: NSFileHandle?) -> () in
+						if let data = handle?.availableData {
+							let output: String? = NSString(data: data, encoding: NSUTF8StringEncoding)
+
+							println(output!)
+						}
+					}
+
 					task.launch()
-
-					let data = pipe.fileHandleForReading.readDataToEndOfFile()
-					let output: String? = NSString(data: data, encoding: NSUTF8StringEncoding)
-
-					println(output!)
 					task.waitUntilExit()
 
 					let terminationStatus = task.terminationStatus
