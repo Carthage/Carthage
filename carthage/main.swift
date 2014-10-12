@@ -28,6 +28,9 @@ let commandTypes = [
 let commands = commandTypes.map { [$0.verb: $0] }.reduce([:], combine: combineDictionaries)
 var arguments = Process.arguments
 
+assert(arguments.count >= 1)
+arguments.removeAtIndex(0)
+
 let verb = arguments.first ?? HelpCommand.verb
 let args = arguments.count > 0 ? Array(dropFirst(arguments)) : []
 
