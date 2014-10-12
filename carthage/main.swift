@@ -10,7 +10,7 @@ import Foundation
 import LlamaKit
 
 let commandTypes = [
-	HelpCommand.self
+	LocateCommand.self
 ]
 
 var arguments = Process.arguments
