@@ -158,21 +158,69 @@ public func buildInDirectory(directoryURL: NSURL, configuration: String = "Relea
 	}
 
 	let locator = result.value()!
+	let baseArguments = [ "xcodebuild" ] + locator.arguments
 
-	var arguments = [ "xcodebuild" ]
-	arguments += locator.arguments
-	arguments.append("build")
+	var task = TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: directoryURL.path!)
 
-	let directoryPath = directoryURL.path
-	let desc = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: arguments, workingDirectoryPath: directoryPath)
+	let stdout = SignalingProperty(NSData())
+	let accumulated = stdout.signal.scanWithStart(NSData()) { (accum, data) in
+		let copy = accum.mutableCopy() as NSMutableData
+		copy.appendData(data)
 
-	return launchTask(desc).then { status in
-		return Promise { sink in
-			if status == EXIT_SUCCESS {
-				sink.put(success())
-			} else {
-				sink.put(failure())
+		return copy
+	}
+
+	task.arguments = baseArguments + [ "-list" ]
+
+	let schemePromise = launchTask(task, standardOutput: SinkOf(stdout)).then { status -> Promise<Event<String>> in
+		if (status != EXIT_SUCCESS) {
+			return Promise { sink in
+				sink.put(.Completed)
 			}
+		}
+
+		let lines = Producer<String> { consumer in
+			let string = accumulated.map { NSString(data: $0, encoding: NSUTF8StringEncoding) }.current
+			
+			if let string = string {
+				string.enumerateLinesUsingBlock { (line, stop) in
+					consumer.put(.Next(Box(line)))
+					
+					if consumer.disposable.disposed {
+						stop.memory = true
+					}
+				}
+				
+				consumer.put(.Completed)
+			} else {
+				consumer.put(.Error(RACError.Empty.error))
+			}
+		}
+
+		return lines.skipWhile { !$0.hasSuffix("Schemes:") }
+			.skip(1)
+			.takeWhile { !$0.isEmpty }
+			.map { $0.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
+			.first()
+	}
+
+	return schemePromise.then { event in
+		switch (event) {
+		case let .Next(scheme):
+			task.arguments = baseArguments + [ "-scheme", scheme.unbox, "build" ]
+
+			return launchTask(task).then { status in
+				return Promise { sink in
+					if status == EXIT_SUCCESS {
+						sink.put(success())
+					} else {
+						sink.put(failure())
+					}
+				}
+			}
+		
+		default:
+			return Promise { $0.put(failure()) }
 		}
 	}
 }
