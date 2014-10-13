@@ -7,16 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D039935719E9AA0A00D13E71 /* LlamaKit.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D0D121AD19E88FD1005E4BAA /* LlamaKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; };
+		D01F8A4119EA28C600643E7C /* LlamaKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; };
+		D01F8A4419EA28E400643E7C /* LlamaKit.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D01F8A4519EA28E600643E7C /* ReactiveCocoa.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D01F8A4819EA28F600643E7C /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4619EA28F600643E7C /* Nimble.framework */; };
+		D01F8A4919EA28F600643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
+		D01F8A4A19EA28FE00643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
+		D01F8A4C19EA28FE00643E7C /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4B19EA28FE00643E7C /* Nimble.framework */; };
+		D04AEADB19E918C30045C166 /* TaskSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04AEADA19E918C30045C166 /* TaskSpec.swift */; };
+		D0AD39B019E900BC00B343CE /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD39AF19E900BC00B343CE /* Task.swift */; };
 		D0D1217219E87B05005E4BAA /* CarthageKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1217119E87B05005E4BAA /* CarthageKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D1217819E87B05005E4BAA /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
 		D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1218F19E88A15005E4BAA /* Cartfile.swift */; };
 		D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1219119E88B8F005E4BAA /* GitHub.swift */; };
 		D0D121A019E88F67005E4BAA /* JSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1219F19E88F67005E4BAA /* JSON.swift */; };
-		D0D121B019E88FD5005E4BAA /* LlamaKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D121AD19E88FD1005E4BAA /* LlamaKit.framework */; };
 		D0D121B419E897EE005E4BAA /* TestCartfile.json in Resources */ = {isa = PBXBuildFile; fileRef = D0D121B319E897EE005E4BAA /* TestCartfile.json */; };
-		D0D121DD19E8998F005E4BAA /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D121D619E89984005E4BAA /* Nimble.framework */; };
-		D0D121DE19E8998F005E4BAA /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D121C719E8997E005E4BAA /* Quick.framework */; };
 		D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */; };
 		D0E7B64819E9C64600EDBA4D /* carthageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E7B64719E9C64600EDBA4D /* carthageTests.swift */; };
 		D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
@@ -35,90 +41,6 @@
 			remoteGlobalIDString = D0D1216C19E87B05005E4BAA;
 			remoteInfo = CarthageKit;
 		};
-		D0D121A819E88FD1005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = FB2F8D8119BF637B00E4C49E;
-			remoteInfo = "LlamaKit-iOS";
-		};
-		D0D121AA19E88FD1005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = FB2F8D8C19BF637B00E4C49E;
-			remoteInfo = "LlamaKit-iOSTests";
-		};
-		D0D121AC19E88FD1005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = D0297D1019D67999009986A9;
-			remoteInfo = "LlamaKit-Mac";
-		};
-		D0D121AE19E88FD1005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = D0297D1A19D67999009986A9;
-			remoteInfo = "LlamaKit-MacTests";
-		};
-		D0D121C619E8997E005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121BA19E8997E005E4BAA /* Quick.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = DAEB6B8E1943873100289F44;
-			remoteInfo = Quick;
-		};
-		D0D121C819E8997E005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121BA19E8997E005E4BAA /* Quick.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = DAEB6B991943873100289F44;
-			remoteInfo = QuickTests;
-		};
-		D0D121CA19E8997E005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121BA19E8997E005E4BAA /* Quick.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 5A5D117C19473F2100F6D13D;
-			remoteInfo = "Quick-iOS";
-		};
-		D0D121CC19E8997E005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121BA19E8997E005E4BAA /* Quick.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 5A5D118619473F2100F6D13D;
-			remoteInfo = "Quick-iOSTests";
-		};
-		D0D121D519E89984005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121CE19E89984005E4BAA /* Nimble.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 1F1A74291940169200FFFC47;
-			remoteInfo = "Nimble-iOS";
-		};
-		D0D121D719E89984005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121CE19E89984005E4BAA /* Nimble.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 1F1A74341940169200FFFC47;
-			remoteInfo = "Nimble-iOSTests";
-		};
-		D0D121D919E89984005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121CE19E89984005E4BAA /* Nimble.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 1F925EAD195C0D6300ED456B;
-			remoteInfo = "Nimble-OSX";
-		};
-		D0D121DB19E89984005E4BAA /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D121CE19E89984005E4BAA /* Nimble.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 1F925EB7195C0D6300ED456B;
-			remoteInfo = "Nimble-OSXTests";
-		};
 		D0E7B64219E9C64600EDBA4D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D0D1211019E87861005E4BAA /* Project object */;
@@ -135,7 +57,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				D039935719E9AA0A00D13E71 /* LlamaKit.framework in Copy Frameworks */,
+				D01F8A4419EA28E400643E7C /* LlamaKit.framework in Copy Frameworks */,
+				D01F8A4519EA28E600643E7C /* ReactiveCocoa.framework in Copy Frameworks */,
 			);
 			name = "Copy Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -143,8 +66,15 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveCocoa.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D01F8A4019EA28C600643E7C /* LlamaKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = LlamaKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D01F8A4619EA28F600643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../External/ReactiveCocoa/External/Quick/Externals/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
+		D01F8A4719EA28F600643E7C /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Quick.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D01F8A4B19EA28FE00643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../External/ReactiveCocoa/External/Quick/Externals/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
 		D06939B019E8A757001E44AE /* Command.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
 		D06939B219E8A79F001E44AE /* Help.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Help.swift; sourceTree = "<group>"; };
+		D04AEADA19E918C30045C166 /* TaskSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TaskSpec.swift; sourceTree = "<group>"; };
+		D0AD39AF19E900BC00B343CE /* Task.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
 		D0D1211B19E87861005E4BAA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D0D1212419E878CC005E4BAA /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Common.xcconfig; sourceTree = "<group>"; };
 		D0D1212619E878CC005E4BAA /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
@@ -172,10 +102,7 @@
 		D0D1218F19E88A15005E4BAA /* Cartfile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Cartfile.swift; sourceTree = "<group>"; };
 		D0D1219119E88B8F005E4BAA /* GitHub.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitHub.swift; sourceTree = "<group>"; };
 		D0D1219F19E88F67005E4BAA /* JSON.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JSON.swift; sourceTree = "<group>"; };
-		D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = LlamaKit.xcodeproj; path = External/LlamaKit/LlamaKit.xcodeproj; sourceTree = SOURCE_ROOT; };
 		D0D121B319E897EE005E4BAA /* TestCartfile.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = TestCartfile.json; sourceTree = "<group>"; };
-		D0D121BA19E8997E005E4BAA /* Quick.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Quick.xcodeproj; path = External/Quick/Quick/Quick.xcodeproj; sourceTree = SOURCE_ROOT; };
-		D0D121CE19E89984005E4BAA /* Nimble.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Nimble.xcodeproj; path = External/Quick/Externals/Nimble/Nimble.xcodeproj; sourceTree = SOURCE_ROOT; };
 		D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CartfileSpec.swift; sourceTree = "<group>"; };
 		D0E7B63219E9C64500EDBA4D /* carthage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = carthage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B64119E9C64600EDBA4D /* CarthageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarthageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -191,7 +118,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0D121B019E88FD5005E4BAA /* LlamaKit.framework in Frameworks */,
+				D01F8A4119EA28C600643E7C /* LlamaKit.framework in Frameworks */,
+				D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -199,8 +127,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0D121DD19E8998F005E4BAA /* Nimble.framework in Frameworks */,
-				D0D121DE19E8998F005E4BAA /* Quick.framework in Frameworks */,
+				D01F8A4C19EA28FE00643E7C /* Nimble.framework in Frameworks */,
+				D01F8A4A19EA28FE00643E7C /* Quick.framework in Frameworks */,
 				D0D1217819E87B05005E4BAA /* CarthageKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -217,6 +145,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D01F8A4819EA28F600643E7C /* Nimble.framework in Frameworks */,
+				D01F8A4919EA28F600643E7C /* Quick.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -267,7 +197,7 @@
 				D0D1213919E878CC005E4BAA /* README.md */,
 			);
 			name = Configuration;
-			path = External/xcconfigs;
+			path = External/ReactiveCocoa/External/xcconfigs;
 			sourceTree = "<group>";
 		};
 		D0D1212319E878CC005E4BAA /* Base */ = {
@@ -332,6 +262,7 @@
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
 				D0D1219F19E88F67005E4BAA /* JSON.swift */,
+				D0AD39AF19E900BC00B343CE /* Task.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
 			);
 			path = CarthageKit;
@@ -340,7 +271,8 @@
 		D0D1216F19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */,
+				D01F8A4019EA28C600643E7C /* LlamaKit.framework */,
+				D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */,
 				D0D1217019E87B05005E4BAA /* Info.plist */,
 			);
 			name = "Supporting Files";
@@ -350,6 +282,7 @@
 			isa = PBXGroup;
 			children = (
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
+				D04AEADA19E918C30045C166 /* TaskSpec.swift */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
 			path = CarthageKitTests;
@@ -358,45 +291,13 @@
 		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				D0D121CE19E89984005E4BAA /* Nimble.xcodeproj */,
-				D0D121BA19E8997E005E4BAA /* Quick.xcodeproj */,
+				D01F8A4B19EA28FE00643E7C /* Nimble.framework */,
+				D01F8A4619EA28F600643E7C /* Nimble.framework */,
+				D01F8A4719EA28F600643E7C /* Quick.framework */,
 				D0D1217D19E87B05005E4BAA /* Info.plist */,
 				D0D121B319E897EE005E4BAA /* TestCartfile.json */,
 			);
 			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
-		D0D121A219E88FD0005E4BAA /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				D0D121A919E88FD1005E4BAA /* LlamaKit.framework */,
-				D0D121AB19E88FD1005E4BAA /* LlamaKit-iOSTests.xctest */,
-				D0D121AD19E88FD1005E4BAA /* LlamaKit.framework */,
-				D0D121AF19E88FD1005E4BAA /* LlamaKit-MacTests.xctest */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		D0D121BB19E8997E005E4BAA /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				D0D121C719E8997E005E4BAA /* Quick.framework */,
-				D0D121C919E8997E005E4BAA /* QuickTests.xctest */,
-				D0D121CB19E8997E005E4BAA /* Quick.framework */,
-				D0D121CD19E8997E005E4BAA /* Quick-iOSTests.xctest */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		D0D121CF19E89984005E4BAA /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				D0D121D619E89984005E4BAA /* Nimble.framework */,
-				D0D121D819E89984005E4BAA /* NimbleTests.xctest */,
-				D0D121DA19E89984005E4BAA /* Nimble.framework */,
-				D0D121DC19E89984005E4BAA /* Nimble-OSXTests.xctest */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 		D0E7B64419E9C64600EDBA4D /* CarthageTests */ = {
@@ -539,20 +440,6 @@
 			mainGroup = D0D1210F19E87861005E4BAA;
 			productRefGroup = D0D1211919E87861005E4BAA /* Products */;
 			projectDirPath = "";
-			projectReferences = (
-				{
-					ProductGroup = D0D121A219E88FD0005E4BAA /* Products */;
-					ProjectRef = D0D121A119E88FD0005E4BAA /* LlamaKit.xcodeproj */;
-				},
-				{
-					ProductGroup = D0D121CF19E89984005E4BAA /* Products */;
-					ProjectRef = D0D121CE19E89984005E4BAA /* Nimble.xcodeproj */;
-				},
-				{
-					ProductGroup = D0D121BB19E8997E005E4BAA /* Products */;
-					ProjectRef = D0D121BA19E8997E005E4BAA /* Quick.xcodeproj */;
-				},
-			);
 			projectRoot = "";
 			targets = (
 				D0E7B63119E9C64500EDBA4D /* carthage */,
@@ -562,93 +449,6 @@
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXReferenceProxy section */
-		D0D121A919E88FD1005E4BAA /* LlamaKit.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = LlamaKit.framework;
-			remoteRef = D0D121A819E88FD1005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D0D121AB19E88FD1005E4BAA /* LlamaKit-iOSTests.xctest */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.cfbundle;
-			path = "LlamaKit-iOSTests.xctest";
-			remoteRef = D0D121AA19E88FD1005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D0D121AD19E88FD1005E4BAA /* LlamaKit.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = LlamaKit.framework;
-			remoteRef = D0D121AC19E88FD1005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D0D121AF19E88FD1005E4BAA /* LlamaKit-MacTests.xctest */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.cfbundle;
-			path = "LlamaKit-MacTests.xctest";
-			remoteRef = D0D121AE19E88FD1005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D0D121C719E8997E005E4BAA /* Quick.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = Quick.framework;
-			remoteRef = D0D121C619E8997E005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D0D121C919E8997E005E4BAA /* QuickTests.xctest */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.cfbundle;
-			path = QuickTests.xctest;
-			remoteRef = D0D121C819E8997E005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D0D121CB19E8997E005E4BAA /* Quick.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = Quick.framework;
-			remoteRef = D0D121CA19E8997E005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D0D121CD19E8997E005E4BAA /* Quick-iOSTests.xctest */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.cfbundle;
-			path = "Quick-iOSTests.xctest";
-			remoteRef = D0D121CC19E8997E005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D0D121D619E89984005E4BAA /* Nimble.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = Nimble.framework;
-			remoteRef = D0D121D519E89984005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D0D121D819E89984005E4BAA /* NimbleTests.xctest */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.cfbundle;
-			path = NimbleTests.xctest;
-			remoteRef = D0D121D719E89984005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D0D121DA19E89984005E4BAA /* Nimble.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = Nimble.framework;
-			remoteRef = D0D121D919E89984005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D0D121DC19E89984005E4BAA /* Nimble-OSXTests.xctest */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.cfbundle;
-			path = "Nimble-OSXTests.xctest";
-			remoteRef = D0D121DB19E89984005E4BAA /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		D0D1216B19E87B05005E4BAA /* Resources */ = {
@@ -707,6 +507,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0D121A019E88F67005E4BAA /* JSON.swift in Sources */,
+				D0AD39B019E900BC00B343CE /* Task.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */,
 				F603929919EA29F80050A6AF /* Project.swift in Sources */,
@@ -718,6 +519,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */,
+				D04AEADB19E918C30045C166 /* TaskSpec.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -783,7 +585,6 @@
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				OTHER_LDFLAGS = "-flat_namespace";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -801,7 +602,6 @@
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				OTHER_LDFLAGS = "-flat_namespace";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -853,7 +653,6 @@
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				OTHER_LDFLAGS = "-flat_namespace";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -892,7 +691,6 @@
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				OTHER_LDFLAGS = "-flat_namespace";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
