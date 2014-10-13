@@ -35,39 +35,20 @@ public struct Project {
 	public func cloneDependencies() -> Result<()> {
 		if let dependencies = cartfile?.dependencies {
 			for dependency in dependencies {
-				if let cloneURL = dependency.repository.cloneURL? {
-					let task = NSTask()
-					task.launchPath = "/usr/bin/git"
+				if let cloneURL = dependency.repository.cloneURL {
 					let arguments = [
-						"clone",
-						"--depth=1",
-						cloneURL.absoluteString!,
-						"Dependencies/\(dependency.repository.name)-\(dependency.version)",
-					]
-					task.arguments = arguments
+							"clone",
+							"--depth=1",
+							cloneURL.absoluteString!,
+							"Dependencies/\(dependency.repository.name)-\(dependency.version)",
+						]
 
-					let argumentString = join(" ", arguments)
+					let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments)
+					let promise = launchTask(taskDescription)
 
-					println("\(task.launchPath) \(argumentString)")
+					let exitStatus = promise.await()
 
-					let pipe = NSPipe()
-					task.standardOutput = pipe
-					task.standardError = pipe
-					let fileHandle = pipe.fileHandleForReading
-
-					fileHandle.readabilityHandler =  { (handle: NSFileHandle?) -> () in
-						if let data = handle?.availableData {
-							let output: String? = NSString(data: data, encoding: NSUTF8StringEncoding)
-
-							println(output!)
-						}
-					}
-
-					task.launch()
-					task.waitUntilExit()
-
-					let terminationStatus = task.terminationStatus
-					if terminationStatus != 0 {
+					if exitStatus < 0 {
 						return failure()
 					}
 				}
