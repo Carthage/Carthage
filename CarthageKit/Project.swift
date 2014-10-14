@@ -15,7 +15,7 @@ public struct Project {
     public var path: String
 
 	/// The project's cart file
-	public var cartfile: Cartfile?
+	public let cartfile: Cartfile?
 
 	public init(path: String) {
 		self.path = path
@@ -35,7 +35,10 @@ public struct Project {
 	public func cloneDependencies() -> Result<()> {
 		if let dependencies = cartfile?.dependencies {
 			for dependency in dependencies {
-                return cloneDependency(dependency)
+                let destinationPath = "~/.carthage/dependencies".stringByExpandingTildeInPath
+
+                // Ignore the result for now
+                cloneDependency(dependency, NSURL.fileURLWithPath(destinationPath)!)
 			}
 		}
 		return success()

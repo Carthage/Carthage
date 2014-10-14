@@ -9,12 +9,14 @@
 import Foundation
 import LlamaKit
 
-public func cloneDependency(dependency: Dependency) -> Result<()> {
+public func cloneDependency(dependency: Dependency, destinationURL: NSURL) -> Result<()> {
+    let destinationPath = destinationURL.URLByAppendingPathComponent("\(dependency.repository.name)-\(dependency.version)").path!
+
     let arguments = [
         "clone",
         "--depth=1",
         dependency.repository.cloneURL.absoluteString!,
-        "Dependencies/\(dependency.repository.name)-\(dependency.version)",
+        destinationPath,
     ]
 
     let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments)
