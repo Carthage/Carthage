@@ -13,12 +13,13 @@ import LlamaKit
 public struct Repository: Equatable {
 	public let owner: String
 	public let name: String
-	public let cloneURL: NSURL?
+	public var cloneURL: NSURL? {
+        return NSURL(scheme: "https", host: "github.com", path: "/\(owner)/\(name).git")
+    }
 
 	init(owner: String, name: String) {
 		self.owner = owner
 		self.name = name
-		self.cloneURL = NSURL(scheme: "https", host: "github.com", path: "/\(owner)/\(name).git")
 	}
 }
 
