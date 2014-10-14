@@ -35,26 +35,9 @@ public struct Project {
 	public func cloneDependencies() -> Result<()> {
 		if let dependencies = cartfile?.dependencies {
 			for dependency in dependencies {
-				if let cloneURL = dependency.repository.cloneURL {
-					let arguments = [
-							"clone",
-							"--depth=1",
-							cloneURL.absoluteString!,
-							"Dependencies/\(dependency.repository.name)-\(dependency.version)",
-						]
-
-					let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments)
-					let promise = launchTask(taskDescription)
-
-					let exitStatus = promise.await()
-
-					if exitStatus < 0 {
-						return failure()
-					}
-				}
+                return cloneDependency(dependency)
 			}
 		}
-
 		return success()
 	}
 }
