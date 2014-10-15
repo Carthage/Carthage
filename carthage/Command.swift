@@ -12,7 +12,7 @@ import LlamaKit
 protocol CommandType {
 	class var verb: String { get }
 
-	init(_ arguments: [String])
+	init(_ arguments: Slice<String>)
 
 	func run() -> Result<()>
 }

@@ -12,7 +12,7 @@ import LlamaKit
 struct HelpCommand: CommandType {
 	static let verb = "help"
 
-	init(_ arguments: [String] = []) {
+	init(_ arguments: Slice<String> = []) {
 	}
 
 	func run() -> Result<()> {

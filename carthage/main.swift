@@ -9,35 +9,39 @@
 import Foundation
 import LlamaKit
 
+// Hopefully this will be built into the standard library someday.
+func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
+	var result = lhs
+    for (key, value) in rhs {
+        result.updateValue(value, forKey: key)
+    }
+    return result
+}
+
 let commandTypes = [
 	HelpCommand.self
 ]
 
+let commands = commandTypes.map { [$0.verb: $0] }.reduce([:], combine: combineDictionaries)
 var arguments = Process.arguments
+
 assert(arguments.count >= 1)
-
 arguments.removeAtIndex(0)
-if arguments.count == 0 {
-	arguments.append(HelpCommand.verb)
-}
 
-let verb = arguments[0]
-var command: CommandType? = nil
+let verb = arguments.first ?? HelpCommand.verb
+let args = (arguments.count > 0 ? dropFirst(arguments) : [])
 
-if let match = find(commandTypes.map { $0.verb }, verb) {
-	arguments.removeAtIndex(0)
-	command = commandTypes[match](arguments)
-} else {
-	println("Unrecognized command: \(verb)")
-	command = HelpCommand()
-}
+let result = commands[verb]?(args).run()
 
-let result = command!.run()
 switch result {
-case let .Success(_):
+case .Some(.Success):
 	exit(EXIT_SUCCESS)
-
-case let .Failure(error):
+	
+case let .Some(.Failure(error)):
 	fputs("Error executing command \(verb): \(error)", stderr)
+	exit(EXIT_FAILURE)
+	
+case .None:
+	fputs("Unrecognized command: '\(verb)'. See `carthage help`.", stderr)
 	exit(EXIT_FAILURE)
 }
