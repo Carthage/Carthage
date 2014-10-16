@@ -51,7 +51,17 @@ public struct Dependency: Equatable {
 
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: VersionSpecifier
+
+	/// The raw version string specified in the Cartfile
+	public var versionString : String
+
+	public init(repository : Repository, versionString: String) {
+		self.repository = repository
+		self.versionString = versionString
+		self.version = VersionSpecifier.fromJSON(versionString) ?? .Any
+	}
 }
+
 
 public func ==(lhs: Dependency, rhs: Dependency) -> Bool {
 	return lhs.repository == rhs.repository && lhs.version == rhs.version
@@ -61,12 +71,11 @@ extension Dependency: JSONDecodable {
 	public static func fromJSON(JSON: AnyObject) -> Result<Dependency> {
 		if let object = JSON as? [String: AnyObject] {
 			let versionString = object["version"] as? String ?? ""
-			let version = VersionSpecifier.fromJSON(versionString) ?? .Any
 
 			if let repo = object["repo"] as? String {
 				return Repository
 					.fromJSON(repo)
-					.map { Dependency(repository: $0, version: version) }
+					.map { Dependency(repository: $0, versionString: versionString) }
 			} else {
 				return failure()
 			}
