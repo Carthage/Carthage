@@ -38,6 +38,10 @@ public struct Project {
 
                 // Ignore the result for now
                 cloneOrUpdateDependency(dependency)
+
+				let projectPath = path.stringByAppendingPathComponent("Libraries").stringByAppendingPathComponent(dependency.repository.name)
+
+				checkoutDependency(dependency, projectPath)
 			}
 		}
 		return success()
