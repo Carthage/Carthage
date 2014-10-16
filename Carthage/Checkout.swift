@@ -11,12 +11,9 @@ import LlamaKit
 import CarthageKit
 
 struct CheckoutCommand: CommandType {
-	static let verb = "checkout"
+	let verb = "checkout"
 
-	init(_ arguments: [String] = []) {
-	}
-
-	func run() -> Result<()> {
+	func run(_ arguments: [String] = []) -> Result<()> {
 		// 1. Identify the project's working directory.
 
 		let pwd : String? = NSFileManager.defaultManager().currentDirectoryPath;
