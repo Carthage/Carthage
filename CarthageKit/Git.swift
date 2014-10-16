@@ -25,7 +25,8 @@ public func cloneOrUpdateDependency(dependency: Dependency) -> Result<()> {
         println("A file already exists at \(destinationPath) and it is not a git repository. Please delete it and try again.")
         return failure()
     }
-    return cloneDependency(dependency, destinationPath)
+
+	return cloneDependency(dependency, destinationPath)
 }
 
 public func cloneDependency(dependency: Dependency, destinationPath: String) -> Result<()> {
@@ -54,6 +55,33 @@ public func updateDependency(dependency: Dependency, destinationPath: String) ->
     ]
 
     let taskDescription = TaskDescription(launchPath: "/usr/bin/git", workingDirectoryPath: destinationPath, arguments: arguments)
+    let promise = launchTask(taskDescription)
+
+    let exitStatus = promise.await()
+
+    if exitStatus < 0 {
+        return failure()
+    }
+    return success()
+}
+
+public func checkoutDependency(dependency: Dependency, destinationPath: String) -> Result<()> {
+	let dependencyPath : String = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
+
+	let cloneURL : String = NSURL.fileURLWithPath(dependencyPath, isDirectory:true)!.absoluteString!
+
+	var arguments = [
+        "clone",
+		"--local",
+		cloneURL,
+        destinationPath,
+    ]
+
+	if strlen(dependency.versionString) > 0 {
+		arguments = arguments + ["--branch=\(dependency.versionString)"]
+	}
+
+    let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments)
     let promise = launchTask(taskDescription)
 
     let exitStatus = promise.await()
