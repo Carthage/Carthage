@@ -9,7 +9,7 @@
 import Foundation
 import LlamaKit
 
-let commandTypes : [CommandType] = [
+let commands : [CommandType] = [
 	HelpCommand(),
 	CheckoutCommand(),
 ]
@@ -25,9 +25,9 @@ if arguments.count == 0 {
 let verb = arguments[0]
 var command: CommandType? = nil
 
-if let match = find(commandTypes.map { $0.verb }, verb) {
+if let match = find(commands.map { $0.verb }, verb) {
 	arguments.removeAtIndex(0)
-	command = commandTypes[match]
+	command = commands[match]
 } else {
 	println("Unrecognized command: \(verb)")
 	command = HelpCommand()
