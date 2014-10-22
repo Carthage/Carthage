@@ -12,10 +12,10 @@ import LlamaKit
 // Hopefully this will be built into the standard library someday.
 func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	var result = lhs
-    for (key, value) in rhs {
-        result.updateValue(value, forKey: key)
-    }
-    return result
+	for (key, value) in rhs {
+		result.updateValue(value, forKey: key)
+	}
+	return result
 }
 
 let commandTypes = [
@@ -36,11 +36,11 @@ let result = commands[verb]?(args).run()
 switch result {
 case .Some(.Success):
 	exit(EXIT_SUCCESS)
-	
+
 case let .Some(.Failure(error)):
 	fputs("Error executing command \(verb): \(error)", stderr)
 	exit(EXIT_FAILURE)
-	
+
 case .None:
 	fputs("Unrecognized command: '\(verb)'. See `carthage help`.", stderr)
 	exit(EXIT_FAILURE)
