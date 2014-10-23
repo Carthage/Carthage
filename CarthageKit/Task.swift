@@ -58,8 +58,8 @@ private func pipeForWritingToSink(sink: SinkOf<NSData>) -> NSPipe {
 
 /// Launches a new shell task, using the parameters from `taskDescription`.
 ///
-/// If `standardOutput` or `standardError` are not specified, the corresponding
-/// handle is inherited from the parent process.
+/// If `standardError` is not specified, it will be inherited from the parent
+/// process.
 ///
 /// Returns a cold signal that will launch the task when started, then send one
 /// `NSData` value (representing aggregated data from `stdout`) and complete
@@ -102,8 +102,16 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 			return buffer
 		}.replay(1)
 
+		// Start the aggregated output with an initial value.
+		stdoutSink.put(NSData())
+
+		// TODO: The memory management here is pretty screwy. We need to keep
+		// `stdout` alive, so we'll create an unused observation and retain the
+		// disposable.
+		subscriber.disposable.addDisposable(stdout.observe { _ in () })
+
 		if let output = standardOutput {
-			stdout.observe(output)
+			subscriber.disposable.addDisposable(stdout.observe(output))
 		}
 
 		if let error = standardError {
@@ -112,17 +120,23 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 
 		task.terminationHandler = { task in
 			if task.terminationStatus == EXIT_SUCCESS {
-				aggregatedOutput.take(1).start(subscriber)
+				println("terminated")
+				aggregatedOutput.take(1).on(subscribed: { println("output subscribed") }, next: { value in println("output next: \(value)") }, terminated: { println("output terminated") }).start(subscriber)
 			} else {
 				// TODO: Real error here.
 				subscriber.put(.Error(NSError(domain: "", code: 0, userInfo: nil)))
 			}
 		}
 
+		if subscriber.disposable.disposed {
+			return
+		}
+
+		task.launch()
 		subscriber.disposable.addDisposable {
 			task.terminate()
 		}
 
-		task.launch()
+		println("\(task) launched")
 	}
 }
