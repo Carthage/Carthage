@@ -12,16 +12,12 @@ import LlamaKit
 import ReactiveCocoa
 
 struct BuildCommand: CommandType {
-	static let verb = "build"
+	let verb = "build"
 
-	let directoryURL: NSURL
+	func run<C: CollectionType where C.Generator.Element == String>(arguments: C) -> ColdSignal<()> {
+		// TODO: Support -configuration argument
+		let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
 
-	// TODO: Support -configuration argument
-	init<C: CollectionType where C.Generator.Element == String>(_ arguments: C) {
-		directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
-	}
-
-	func run() -> Result<()> {
-		return buildInDirectory(directoryURL).wait()
+		return buildInDirectory(directoryURL)
 	}
 }

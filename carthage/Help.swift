@@ -8,18 +8,13 @@
 
 import Foundation
 import LlamaKit
+import ReactiveCocoa
 
 struct HelpCommand: CommandType {
-	static let verb = "help"
+	let verb = "help"
 
-	init() {
-	}
-
-	init<C: CollectionType where C.Generator.Element == String>(_ arguments: C) {
-	}
-
-	func run() -> Result<()> {
+	func run<C: CollectionType where C.Generator.Element == String>(arguments: C) -> ColdSignal<()> {
 		println("ohai help")
-		return success()
+		return .empty()
 	}
 }
