@@ -26,11 +26,17 @@ class TaskSpec: QuickSpec {
 			let (signal, sink) = HotSignal<NSData>.pipe()
 
 			signal.scan(initial: NSData()) { (accum, data) in
+				println("received data to accumulate")
+
 				let buffer = accum.mutableCopy() as NSMutableData
 				buffer.appendData(data)
 
 				return buffer
-			}.observe(property)
+			// FIXME: This doesn't actually need to be cold, it just works
+			// around memory management issues.
+			}.replay(0).start(next: { value in
+				property.value = value
+			})
 
 			return sink
 		}
