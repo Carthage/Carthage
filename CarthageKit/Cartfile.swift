@@ -51,28 +51,6 @@ public struct Cartfile {
 	}
 }
 
-extension Cartfile: JSONDecodable {
-	public static func fromJSON(JSON: AnyObject) -> Result<Cartfile> {
-		if let array = JSON as? [AnyObject] {
-			var deps: [Dependency] = []
-
-			for elem in array {
-				switch (Dependency.fromJSON(elem)) {
-				case let .Success(value):
-					deps.append(value.unbox)
-
-				case let .Failure(error):
-					return failure(error)
-				}
-			}
-
-			return success(Cartfile(dependencies: deps))
-		} else {
-			return failure()
-		}
-	}
-}
-
 extension Cartfile: Printable {
 	public var description: String {
 		return "\(dependencies)"
@@ -116,25 +94,6 @@ public struct Dependency: Equatable {
 
 public func ==(lhs: Dependency, rhs: Dependency) -> Bool {
 	return lhs.repository == rhs.repository && lhs.version == rhs.version
-}
-
-extension Dependency: JSONDecodable {
-	public static func fromJSON(JSON: AnyObject) -> Result<Dependency> {
-		if let object = JSON as? [String: AnyObject] {
-			let versionString = object["version"] as? String ?? ""
-			let version = VersionSpecifier.fromJSON(versionString) ?? .Any
-
-			if let repo = object["repo"] as? String {
-				return Repository
-					.fromJSON(repo)
-					.map { Dependency(repository: $0, version: version) }
-			} else {
-				return failure()
-			}
-		} else {
-			return failure()
-		}
-	}
 }
 
 extension Dependency: Printable {
@@ -259,16 +218,6 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 
 	default:
 		return false
-	}
-}
-
-extension VersionSpecifier: JSONDecodable {
-	public static func fromJSON(JSON: AnyObject) -> Result<VersionSpecifier> {
-		if let specifier = JSON as? String {
-			return Version.fromString(specifier).map { .Exactly($0) }
-		} else {
-			return failure()
-		}
 	}
 }
 

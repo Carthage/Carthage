@@ -29,21 +29,6 @@ public func ==(lhs: Repository, rhs: Repository) -> Bool {
 	return lhs.owner == rhs.owner && lhs.name == rhs.name
 }
 
-extension Repository: JSONDecodable {
-	public static func fromJSON(JSON: AnyObject) -> Result<Repository> {
-		if let NWO = JSON as? String {
-			let components = split(NWO, { $0 == "/" }, maxSplit: 1, allowEmptySlices: false)
-			if components.count < 2 {
-				return failure()
-			}
-
-			return success(self(owner: components[0], name: components[1]))
-		} else {
-			return failure()
-		}
-	}
-}
-
 extension Repository: Printable {
 	public var description: String {
 		return "\(owner)/\(name)"

@@ -14,10 +14,12 @@ import Quick
 
 class CartfileSpec: QuickSpec {
 	override func spec() {
-		let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("TestCartfile", withExtension: "json")!
+		let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("TestCartfile", withExtension: "")!
 
-		it("should parse a JSON Cartfile") {
-			let result: Result<Cartfile> = parseJSONAtURL(testCartfileURL)
+		it("should parse a Cartfile") {
+			let testCartfile = NSString(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
+
+			let result = Cartfile.fromString(testCartfile!)
 			expect(result.error()).to(beNil())
 
 			let cartfile = result.value()!
@@ -45,15 +47,15 @@ class VersionSpec: QuickSpec {
     override func spec() {
         it("should order versions correctly") {
             let version = Version(major: 2, minor: 1, patch: 1)
-            
+
             expect(version).to(beLessThan(Version(major: 3, minor: 0, patch: 0)))
             expect(version).to(beLessThan(Version(major: 2, minor: 2, patch: 0)))
             expect(version).to(beLessThan(Version(major: 2, minor: 1, patch: 2)))
-            
+
             expect(version).to(beGreaterThan(Version(major: 1, minor: 2, patch: 2)))
             expect(version).to(beGreaterThan(Version(major: 2, minor: 0, patch: 2)))
             expect(version).to(beGreaterThan(Version(major: 2, minor: 1, patch: 0)))
-            
+
             expect(version).to(beLessThan(Version(major: 10, minor: 0, patch: 0)))
             expect(version).to(beLessThan(Version(major: 2, minor: 10, patch: 1)))
             expect(version).to(beLessThan(Version(major: 2, minor: 1, patch: 10)))
