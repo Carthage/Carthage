@@ -18,12 +18,12 @@ class XcodeSpec: QuickSpec {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("TestFramework", withExtension: nil)!
 
 		it("should build") {
-			let result = buildInDirectory(directoryURL).await()
+			let result = buildInDirectory(directoryURL).wait()
 			expect(result.error()).to(beNil())
 		}
 
 		it("should locate the project") {
-			let result = locateProjectInDirectory(directoryURL)
+			let result = locateProjectInDirectory(directoryURL).first()
 			expect(result.error()).to(beNil())
 
 			let locator = result.value()!
@@ -32,7 +32,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should locate the project from the parent directory") {
-			let result = locateProjectInDirectory(directoryURL.URLByDeletingLastPathComponent!)
+			let result = locateProjectInDirectory(directoryURL.URLByDeletingLastPathComponent!).first()
 			expect(result.error()).to(beNil())
 
 			let locator = result.value()!
@@ -41,7 +41,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should not locate the project from a directory not containing it") {
-			let result = locateProjectInDirectory(directoryURL.URLByAppendingPathComponent("TestFramework"))
+			let result = locateProjectInDirectory(directoryURL.URLByAppendingPathComponent("TestFramework")).wait()
 			expect(result.isSuccess()).to(beFalsy())
 		}
 	}
