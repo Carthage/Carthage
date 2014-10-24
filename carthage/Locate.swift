@@ -15,15 +15,15 @@ struct LocateCommand: CommandType {
 
 	let directoryURL: NSURL
 
-	init(_ arguments: [String]) {
-		let path = arguments.first ?? NSFileManager.defaultManager().currentDirectoryPath
+	init<C: CollectionType where C.Generator.Element == String>(_ arguments: C) {
+		let path = first(arguments) ?? NSFileManager.defaultManager().currentDirectoryPath
 
 		// TODO: Allow commands to fail initialization for cases like these.
 		directoryURL = NSURL.fileURLWithPath(path)!
 	}
 
 	func run() -> Result<()> {
-		let result = locateProjectInDirectory(directoryURL)
+		let result = locateProjectInDirectory(directoryURL).first()
 
 		switch (result) {
 		case let .Success(locator):

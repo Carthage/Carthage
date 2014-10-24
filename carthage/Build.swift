@@ -17,11 +17,11 @@ struct BuildCommand: CommandType {
 	let directoryURL: NSURL
 
 	// TODO: Support -configuration argument
-	init(_ arguments: [String] = []) {
+	init<C: CollectionType where C.Generator.Element == String>(_ arguments: C) {
 		directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
 	}
 
 	func run() -> Result<()> {
-		return buildInDirectory(directoryURL).await()
+		return buildInDirectory(directoryURL).wait()
 	}
 }

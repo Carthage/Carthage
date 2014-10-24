@@ -12,7 +12,7 @@ import LlamaKit
 protocol CommandType {
 	class var verb: String { get }
 
-	init<S: SequenceType where S.Generator.Element == String>(_ arguments: S)
+	init<C: CollectionType where C.Generator.Element == String>(_ arguments: C)
 
 	func run() -> Result<()>
 }
