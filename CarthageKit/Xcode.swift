@@ -118,109 +118,75 @@ private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bo
 }
 
 /// Attempts to locate a project or workspace within the given directory.
-public func locateProjectInDirectory(directoryURL: NSURL) -> Result<ProjectLocator> {
+///
+/// Sends all matches in preferential order.
+public func locateProjectInDirectory(directoryURL: NSURL) -> ColdSignal<ProjectLocator> {
 	let enumerationOptions = NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants
 
-	var enumerationError: NSError?
-	let enumerator = NSFileManager.defaultManager().enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions) { (URL, error) in
-		enumerationError = error
-		return false
-	}
+	return ColdSignal.lazy {
+		var enumerationError: NSError?
+		let enumerator = NSFileManager.defaultManager().enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions) { (URL, error) in
+			enumerationError = error
+			return false
+		}
 
-	if let enumerator = enumerator {
-		var matches: [ProjectEnumerationMatch] = []
+		if let enumerator = enumerator {
+			var matches: [ProjectEnumerationMatch] = []
 
-		while let URL = enumerator.nextObject() as? NSURL {
-			if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value() {
-				matches.append(match)
+			while let URL = enumerator.nextObject() as? NSURL {
+				if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value() {
+					matches.append(match)
+				}
+			}
+
+			if matches.count > 0 {
+				sort(&matches)
+				return ColdSignal.fromValues(matches).map { $0.locator }
 			}
 		}
 
-		if matches.count > 0 {
-			sort(&matches)
-			return success(matches[0].locator)
-		}
-	}
-
-	if let error = enumerationError {
-		return failure(error)
-	} else {
-		return failure()
+		return .error(enumerationError ?? RACError.Empty.error)
 	}
 }
 
-public func buildInDirectory(directoryURL: NSURL, configuration: String = "Release") -> Promise<Result<()>> {
+public func buildInDirectory(directoryURL: NSURL, configuration: String = "Release") -> ColdSignal<()> {
 	precondition(directoryURL.fileURL)
 
-	let result = locateProjectInDirectory(directoryURL)
-	if let error = result.error() {
-		return Promise { $0.put(failure(error)) }
-	}
+	return locateProjectInDirectory(directoryURL)
+		.take(1)
+		.map { locator in
+			let baseArguments = [ "xcodebuild" ] + locator.arguments
+			let task = TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: directoryURL.path!, arguments: baseArguments + [ "-list" ])
 
-	let locator = result.value()!
-	let baseArguments = [ "xcodebuild" ] + locator.arguments
-
-	var task = TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: directoryURL.path!)
-
-	let stdout = SignalingProperty(NSData())
-	let accumulated = stdout.signal.scanWithStart(NSData()) { (accum, data) in
-		let copy = accum.mutableCopy() as NSMutableData
-		copy.appendData(data)
-
-		return copy
-	}
-
-	task.arguments = baseArguments + [ "-list" ]
-
-	let schemePromise = launchTask(task, standardOutput: SinkOf(stdout)).then { status -> Promise<Event<String>> in
-		if (status != EXIT_SUCCESS) {
-			return Promise { sink in
-				sink.put(.Completed)
-			}
+			return launchTask(task)
 		}
+		.merge(identity)
+		.tryMap { (data: NSData, errorPointer: NSErrorPointer) -> String? in
+			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))
+		}
+		.map { string -> ColdSignal<String> in
+			return ColdSignal<String> { subscriber in
+				(string as NSString).enumerateLinesUsingBlock { (line, stop) in
+					subscriber.put(.Next(Box(line)))
 
-		let lines = Producer<String> { consumer in
-			let string = accumulated.map { NSString(data: $0, encoding: NSUTF8StringEncoding) }.current
-			
-			if let string = string {
-				string.enumerateLinesUsingBlock { (line, stop) in
-					consumer.put(.Next(Box(line)))
-					
-					if consumer.disposable.disposed {
+					if subscriber.disposable.disposed {
 						stop.memory = true
 					}
 				}
-				
-				consumer.put(.Completed)
-			} else {
-				consumer.put(.Error(RACError.Empty.error))
+
+				subscriber.put(.Completed)
 			}
 		}
+		.merge(identity)
+		.skipWhile { line in !line.hasSuffix("Schemes:") }
+		.skip(1)
+		.takeWhile { line in !line.isEmpty }
+		.map { line in (line as NSString).stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
+		.map { scheme in
+			// TODO
+			// task.arguments = baseArguments + [ "-scheme", scheme.unbox, "build" ]
 
-		return lines.skipWhile { !$0.hasSuffix("Schemes:") }
-			.skip(1)
-			.takeWhile { !$0.isEmpty }
-			.map { $0.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
-			.first()
-	}
-
-	return schemePromise.then { event in
-		switch (event) {
-		case let .Next(scheme):
-			task.arguments = baseArguments + [ "-scheme", scheme.unbox, "build" ]
-
-			return launchTask(task).then { status in
-				return Promise { sink in
-					if status == EXIT_SUCCESS {
-						sink.put(success())
-					} else {
-						sink.put(failure())
-					}
-				}
-			}
-		
-		default:
-			return Promise { $0.put(failure()) }
+			return ColdSignal<()>.empty()
 		}
-	}
+		.merge(identity)
 }
