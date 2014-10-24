@@ -14,6 +14,41 @@ import LlamaKit
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
 	public var dependencies: [Dependency]
+
+	/// Attempts to parse Cartfile information from a string.
+	public static func fromString(string: String) -> Result<Cartfile> {
+		var cartfile = self(dependencies: [])
+		var result = success(())
+
+		let ignoreSet = NSMutableCharacterSet(charactersInString: "#")
+		ignoreSet.formUnionWithCharacterSet(NSCharacterSet.whitespaceAndNewlineCharacterSet())
+
+		(string as NSString).enumerateLinesUsingBlock { (line, stop) in
+			let scanner = NSScanner(string: line)
+			scanner.scanCharactersFromSet(ignoreSet, intoString: nil)
+
+			if scanner.atEnd {
+				return
+			}
+
+			switch (Dependency.fromScanner(scanner)) {
+			case let .Success(dep):
+				cartfile.dependencies.append(dep.unbox)
+
+			case let .Failure(error):
+				result = failure(error)
+				stop.memory = true
+			}
+
+			scanner.scanCharactersFromSet(ignoreSet, intoString: nil)
+			if !scanner.atEnd {
+				result = failure()
+				stop.memory = true
+			}
+		}
+
+		return result.map { _ in cartfile }
+	}
 }
 
 extension Cartfile: JSONDecodable {
