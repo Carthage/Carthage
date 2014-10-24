@@ -152,6 +152,11 @@ public func locateProjectInDirectory(directoryURL: NSURL) -> ColdSignal<ProjectL
 public func buildInDirectory(directoryURL: NSURL, configuration: String = "Release") -> ColdSignal<()> {
 	precondition(directoryURL.fileURL)
 
+	let handle = NSFileHandle.fileHandleWithStandardOutput()
+	let stdoutSink = SinkOf<NSData> { data in
+		handle.writeData(data)
+	}
+
 	let locatorSignal = locateProjectInDirectory(directoryURL)
 	let task = TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: directoryURL.path!, arguments: [ "xcodebuild" ])
 
@@ -196,11 +201,14 @@ public func buildInDirectory(directoryURL: NSURL, configuration: String = "Relea
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 		.map { (scheme: String) -> ColdSignal<()> in
 			return locatorSignal.take(1)
+				.on(subscribed: {
+					println("*** Building scheme \(scheme)…")
+				})
 				.map { (locator: ProjectLocator) -> ColdSignal<NSData> in
 					var buildScheme = task
 					buildScheme.arguments += [ "-scheme", scheme, "build" ]
 
-					return launchTask(buildScheme)
+					return launchTask(buildScheme, standardOutput: stdoutSink)
 				}
 				.then(.empty())
 		}
