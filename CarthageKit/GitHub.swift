@@ -15,7 +15,7 @@ public struct Repository: Equatable {
 	public let name: String
 
 	/// Parses repository information out of a string of the form "owner/name".
-	static func fromNWO(NWO: String) -> Result<Repository> {
+	public static func fromNWO(NWO: String) -> Result<Repository> {
 		let components = split(NWO, { $0 == "/" }, maxSplit: 1, allowEmptySlices: false)
 		if components.count < 2 {
 			return failure()
