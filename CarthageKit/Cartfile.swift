@@ -51,6 +51,32 @@ public struct Dependency: Equatable {
 
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: VersionSpecifier
+
+	/// Attempts to parse a Dependency specification.
+	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
+		if !scanner.scanString("github", intoString: nil) {
+			return failure()
+		}
+
+		if !scanner.scanUpToString("\"", intoString: nil) || !scanner.scanString("\"", intoString: nil) {
+			return failure()
+		}
+
+		var repoNWO: NSString? = nil
+		if !scanner.scanUpToString("\"", intoString: &repoNWO) || !scanner.scanString("\"", intoString: nil) {
+			return failure()
+		}
+
+		if let repoNWO = repoNWO {
+			return Repository.fromNWO(repoNWO).flatMap { repo in
+				scanner.scanCharactersFromSet(NSCharacterSet.whitespaceCharacterSet(), intoString: nil)
+
+				return VersionSpecifier.fromScanner(scanner).map { specifier in self(repository: repo, version: specifier) }
+			}
+		} else {
+			return failure()
+		}
+	}
 }
 
 public func ==(lhs: Dependency, rhs: Dependency) -> Bool {
