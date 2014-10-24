@@ -8,11 +8,13 @@ resolve and build them for you.
 ```
 github "ReactiveCocoa/ReactiveCocoa" >= 2.3.1
 github "Mantle/Mantle" ~> 1.0
+github "jspahrsummers/libextobjc" == 0.4.1
 github "jspahrsummers/xcconfigs"
 ```
 
-This example describes three dependencies:
+This example describes these dependencies:
 
 1. [ReactiveCocoa](https://github.com/ReactiveCocoa/ReactiveCocoa), of version 2.3.1 or later
 1. [Mantle](https://github.com/Mantle/Mantle), of version 1.x (1.0 or later, but less than 2.0)
+1. [libextobjc](https://github.com/jspahrsummers/libextobjc), at exactly version 0.4.1
 1. The latest version of [jspahrsummers/xcconfigs](http://github.com/jspahrsummers/xcconfigs)
