@@ -6,9 +6,9 @@ resolve and build them for you.
 ## Example
 
 ```
-github 'ReactiveCocoa/ReactiveCocoa' >= 2.3.1
-github 'Mantle/Mantle' ~> 1.0
-github 'jspahrsummers/xcconfigs'
+github "ReactiveCocoa/ReactiveCocoa" >= 2.3.1
+github "Mantle/Mantle" ~> 1.0
+github "jspahrsummers/xcconfigs"
 ```
 
 This example describes three dependencies:
