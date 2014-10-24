@@ -205,6 +205,7 @@ public func buildInDirectory(directoryURL: NSURL, configuration: String = "Relea
 			return locatorSignal.take(1)
 				.map { (locator: ProjectLocator) -> ColdSignal<NSData> in
 					var buildScheme = task
+					buildScheme.arguments += locator.arguments
 					buildScheme.arguments += [ "-scheme", scheme, "build" ]
 
 					return launchTask(buildScheme, standardOutput: stdoutSink).on(subscribed: {
