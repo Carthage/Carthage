@@ -120,8 +120,7 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 
 		task.terminationHandler = { task in
 			if task.terminationStatus == EXIT_SUCCESS {
-				println("terminated")
-				aggregatedOutput.take(1).on(subscribed: { println("output subscribed") }, next: { value in println("output next: \(value)") }, terminated: { println("output terminated") }).start(subscriber)
+				aggregatedOutput.take(1).start(subscriber)
 			} else {
 				// TODO: Real error here.
 				subscriber.put(.Error(NSError(domain: "", code: 0, userInfo: nil)))
@@ -136,7 +135,5 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 		subscriber.disposable.addDisposable {
 			task.terminate()
 		}
-
-		println("\(task) launched")
 	}
 }
