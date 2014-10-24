@@ -152,7 +152,17 @@ public func locateProjectInDirectory(directoryURL: NSURL) -> ColdSignal<ProjectL
 public func buildInDirectory(directoryURL: NSURL, configuration: String = "Release") -> ColdSignal<()> {
 	precondition(directoryURL.fileURL)
 
-	return locateProjectInDirectory(directoryURL).take(1)
+	return locateProjectInDirectory(directoryURL)
+		.filter { (locator: ProjectLocator) in
+			switch (locator) {
+			case .ProjectFile:
+				return true
+
+			default:
+				return false
+			}
+		}
+		.take(1)
 		.map { (locator: ProjectLocator) -> ColdSignal<NSData> in
 			let baseArguments = [ "xcodebuild" ] + locator.arguments
 			let task = TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: directoryURL.path!, arguments: baseArguments + [ "-list" ])
