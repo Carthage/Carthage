@@ -199,6 +199,8 @@ public func buildInDirectory(directoryURL: NSURL, configuration: String = "Relea
 		.skip(1)
 		.takeWhile { (line: String) -> Bool in line.isEmpty ? false : true }
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
+		// TODO: Remove this when concat() works properly.
+		.take(1)
 		.map { (scheme: String) -> ColdSignal<()> in
 			return locatorSignal.take(1)
 				.map { (locator: ProjectLocator) -> ColdSignal<NSData> in
