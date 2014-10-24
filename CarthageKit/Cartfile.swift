@@ -153,6 +153,33 @@ public enum VersionSpecifier: Equatable {
 	case Exactly(Version)
 	case AtLeast(Version)
 	case CompatibleWith(Version)
+
+	/// Attempts to parse a VersionSpecifier.
+	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
+		func scanVersion() -> Result<Version> {
+			let characterSet = NSCharacterSet(charactersInString: "0123456789.")
+			scanner.scanUpToCharactersFromSet(characterSet, intoString: nil)
+
+			var version: NSString? = nil
+			if scanner.scanCharactersFromSet(characterSet, intoString: &version) {
+				if let version = version {
+					return Version.fromString(version)
+				}
+			}
+
+			return failure()
+		}
+
+		if scanner.scanString("==", intoString: nil) {
+			return scanVersion().map { Exactly($0) }
+		} else if scanner.scanString(">=", intoString: nil) {
+			return scanVersion().map { AtLeast($0) }
+		} else if scanner.scanString("~>", intoString: nil) {
+			return scanVersion().map { CompatibleWith($0) }
+		} else {
+			return success(Any)
+		}
+	}
 }
 
 public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
