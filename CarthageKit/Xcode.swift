@@ -201,15 +201,15 @@ public func buildInDirectory(directoryURL: NSURL, configuration: String = "Relea
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 		.map { (scheme: String) -> ColdSignal<()> in
 			return locatorSignal.take(1)
-				.on(subscribed: {
-					println("*** Building scheme \(scheme)…")
-				})
 				.map { (locator: ProjectLocator) -> ColdSignal<NSData> in
 					var buildScheme = task
 					buildScheme.arguments += [ "-scheme", scheme, "build" ]
 
-					return launchTask(buildScheme, standardOutput: stdoutSink)
+					return launchTask(buildScheme, standardOutput: stdoutSink).on(subscribed: {
+						println("*** Building scheme \(scheme)…\n")
+					})
 				}
+				.concat(identity)
 				.then(.empty())
 		}
 		.merge(identity)
