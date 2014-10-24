@@ -122,8 +122,8 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 			if task.terminationStatus == EXIT_SUCCESS {
 				aggregatedOutput.take(1).start(subscriber)
 			} else {
-				// TODO: Real error here.
-				subscriber.put(.Error(NSError(domain: "", code: 0, userInfo: nil)))
+				let error = CarthageError.ShellTaskFailed(exitCode: Int(task.terminationStatus))
+				subscriber.put(.Error(error.error))
 			}
 		}
 

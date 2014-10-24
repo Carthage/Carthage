@@ -19,6 +19,7 @@
 		D03B32BD19EA453D007788BE /* Locate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B32BC19EA453D007788BE /* Locate.swift */; };
 		D03B32BF19EA49D8007788BE /* Build.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B32BE19EA49D8007788BE /* Build.swift */; };
 		D04AEADB19E918C30045C166 /* TaskSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04AEADA19E918C30045C166 /* TaskSpec.swift */; };
+		D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAAB4919FAEDB4007B24B3 /* Errors.swift */; };
 		D0AD39B019E900BC00B343CE /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD39AF19E900BC00B343CE /* Task.swift */; };
 		D0D1217219E87B05005E4BAA /* CarthageKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1217119E87B05005E4BAA /* CarthageKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D1217819E87B05005E4BAA /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
@@ -80,6 +81,7 @@
 		D04AEADA19E918C30045C166 /* TaskSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TaskSpec.swift; sourceTree = "<group>"; };
 		D06939B019E8A757001E44AE /* Command.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
 		D06939B219E8A79F001E44AE /* Help.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Help.swift; sourceTree = "<group>"; };
+		D0AAAB4919FAEDB4007B24B3 /* Errors.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
 		D0AD39AF19E900BC00B343CE /* Task.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
 		D0D1211B19E87861005E4BAA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D0D1212419E878CC005E4BAA /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Common.xcconfig; sourceTree = "<group>"; };
@@ -266,6 +268,7 @@
 			children = (
 				D0D1217119E87B05005E4BAA /* CarthageKit.h */,
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
+				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
 				D0D1219F19E88F67005E4BAA /* JSON.swift */,
 				D0AD39AF19E900BC00B343CE /* Task.swift */,
@@ -517,6 +520,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0D121A019E88F67005E4BAA /* JSON.swift in Sources */,
+				D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */,
 				D0AD39B019E900BC00B343CE /* Task.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */,
