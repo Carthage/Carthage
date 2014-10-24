@@ -151,7 +151,7 @@ extension Version: Printable {
 public enum VersionSpecifier: Equatable {
 	case Any
 	case Exactly(Version)
-	case GreaterThan(Version)
+	case AtLeast(Version)
 	case CompatibleWith(Version)
 }
 
@@ -163,10 +163,10 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 	case let (.Exactly(left), .Exactly(right)):
 		return left == right
 
-	case let (.GreaterThan(left), .GreaterThan(right)):
+	case let (.AtLeast(left), .AtLeast(right)):
 		return left == right
 
-	case let (.CompatibleWith(left), .CompatibleWith(right)):
+	case let (.AtLeast(left), .AtLeast(right)):
 		return left == right
 
 	default:
@@ -193,8 +193,8 @@ extension VersionSpecifier: Printable {
 		case let .Exactly(version):
 			return "== \(version)"
 
-		case let .GreaterThan(version):
-			return "> \(version)"
+		case let .AtLeast(version):
+			return ">= \(version)"
 
 		case let .CompatibleWith(version):
 			return "~> \(version)"
