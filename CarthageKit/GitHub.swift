@@ -13,6 +13,16 @@ import LlamaKit
 public struct Repository: Equatable {
 	public let owner: String
 	public let name: String
+
+	/// Parses repository information out of a string of the form "owner/name".
+	static func fromNWO(NWO: String) -> Result<Repository> {
+		let components = split(NWO, { $0 == "/" }, maxSplit: 1, allowEmptySlices: false)
+		if components.count < 2 {
+			return failure()
+		}
+
+		return success(self(owner: components[0], name: components[1]))
+	}
 }
 
 public func ==(lhs: Repository, rhs: Repository) -> Bool {
