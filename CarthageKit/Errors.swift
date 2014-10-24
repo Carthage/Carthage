@@ -18,7 +18,7 @@ public enum CarthageError {
 	static let exitCodeKey = "CarthageErrorExitCode"
 
 	/// A launched task failed with an erroneous exit code.
-	case ShellTaskFailed(status: Int)
+	case ShellTaskFailed(exitCode: Int)
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
