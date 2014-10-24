@@ -152,22 +152,21 @@ public func locateProjectInDirectory(directoryURL: NSURL) -> ColdSignal<ProjectL
 public func buildInDirectory(directoryURL: NSURL, configuration: String = "Release") -> ColdSignal<()> {
 	precondition(directoryURL.fileURL)
 
-	return locateProjectInDirectory(directoryURL)
-		.take(1)
-		.map { locator in
+	return locateProjectInDirectory(directoryURL).take(1)
+		.map { (locator: ProjectLocator) -> ColdSignal<NSData> in
 			let baseArguments = [ "xcodebuild" ] + locator.arguments
 			let task = TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: directoryURL.path!, arguments: baseArguments + [ "-list" ])
 
 			return launchTask(task)
 		}
 		.merge(identity)
-		.tryMap { (data: NSData, errorPointer: NSErrorPointer) -> String? in
-			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))
+		.map { (data: NSData) -> String in
+			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
 		}
-		.map { string -> ColdSignal<String> in
-			return ColdSignal<String> { subscriber in
+		.map { (string: String) -> ColdSignal<String> in
+			return ColdSignal { subscriber in
 				(string as NSString).enumerateLinesUsingBlock { (line, stop) in
-					subscriber.put(.Next(Box(line)))
+					subscriber.put(.Next(Box(line as String)))
 
 					if subscriber.disposable.disposed {
 						stop.memory = true
@@ -178,11 +177,11 @@ public func buildInDirectory(directoryURL: NSURL, configuration: String = "Relea
 			}
 		}
 		.merge(identity)
-		.skipWhile { line in !line.hasSuffix("Schemes:") }
+		.skipWhile { (line: String) -> Bool in line.hasSuffix("Schemes:") ? false : true }
 		.skip(1)
-		.takeWhile { line in !line.isEmpty }
-		.map { line in (line as NSString).stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
-		.map { scheme in
+		.takeWhile { (line: String) -> Bool in line.isEmpty ? false : true }
+		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
+		.map { (scheme: String) -> ColdSignal<()> in
 			// TODO
 			// task.arguments = baseArguments + [ "-scheme", scheme.unbox, "build" ]
 
