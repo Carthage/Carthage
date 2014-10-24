@@ -152,8 +152,10 @@ public func locateProjectInDirectory(directoryURL: NSURL) -> ColdSignal<ProjectL
 public func buildInDirectory(directoryURL: NSURL, configuration: String = "Release") -> ColdSignal<()> {
 	precondition(directoryURL.fileURL)
 
-	return locateProjectInDirectory(directoryURL)
-		.filter { (locator: ProjectLocator) in
+	let locatorSignal = locateProjectInDirectory(directoryURL)
+	let task = TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: directoryURL.path!, arguments: [ "xcodebuild" ])
+
+	return locatorSignal.filter { (locator: ProjectLocator) in
 			switch (locator) {
 			case .ProjectFile:
 				return true
@@ -164,10 +166,11 @@ public func buildInDirectory(directoryURL: NSURL, configuration: String = "Relea
 		}
 		.take(1)
 		.map { (locator: ProjectLocator) -> ColdSignal<NSData> in
-			let baseArguments = [ "xcodebuild" ] + locator.arguments
-			let task = TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: directoryURL.path!, arguments: baseArguments + [ "-list" ])
+			var listSchemes = task
+			listSchemes.arguments += locator.arguments
+			listSchemes.arguments.append("-list")
 
-			return launchTask(task)
+			return launchTask(listSchemes)
 		}
 		.merge(identity)
 		.map { (data: NSData) -> String in
@@ -192,10 +195,14 @@ public func buildInDirectory(directoryURL: NSURL, configuration: String = "Relea
 		.takeWhile { (line: String) -> Bool in line.isEmpty ? false : true }
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 		.map { (scheme: String) -> ColdSignal<()> in
-			// TODO
-			// task.arguments = baseArguments + [ "-scheme", scheme.unbox, "build" ]
+			return locatorSignal.take(1)
+				.map { (locator: ProjectLocator) -> ColdSignal<NSData> in
+					var buildScheme = task
+					buildScheme.arguments += [ "-scheme", scheme, "build" ]
 
-			return ColdSignal<()>.empty()
+					return launchTask(buildScheme)
+				}
+				.then(.empty())
 		}
 		.merge(identity)
 }
