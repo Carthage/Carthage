@@ -117,10 +117,10 @@ private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bo
 	return lhs.locator < rhs.locator
 }
 
-/// Attempts to locate a project or workspace within the given directory.
+/// Attempts to locate projects and workspaces within the given directory.
 ///
 /// Sends all matches in preferential order.
-public func locateProjectInDirectory(directoryURL: NSURL) -> ColdSignal<ProjectLocator> {
+public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<ProjectLocator> {
 	let enumerationOptions = NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants
 
 	return ColdSignal.lazy {
@@ -157,7 +157,7 @@ public func buildInDirectory(directoryURL: NSURL, configuration: String = "Relea
 		handle.writeData(data)
 	}
 
-	let locatorSignal = locateProjectInDirectory(directoryURL)
+	let locatorSignal = locateProjectsInDirectory(directoryURL)
 	let task = TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: directoryURL.path!, arguments: [ "xcodebuild" ])
 
 	return locatorSignal.filter { (locator: ProjectLocator) in

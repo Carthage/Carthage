@@ -20,7 +20,7 @@ struct LocateCommand: CommandType {
 		// TODO: Fail running if the path is invalid.
 		let directoryURL = NSURL.fileURLWithPath(path)!
 
-		return locateProjectInDirectory(directoryURL)
+		return locateProjectsInDirectory(directoryURL)
 			.on(next: { locator in
 				switch (locator) {
 				case let .Workspace(URL):
