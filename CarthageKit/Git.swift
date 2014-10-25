@@ -11,6 +11,23 @@ import LlamaKit
 
 let dependenciesPath = "~/.carthage/dependencies".stringByExpandingTildeInPath
 
+public func runGitTask(withArguments arguments: [String] = ["git", "--version"]) -> Result<()> {
+	let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments)
+	let task = launchTask(taskDescription)
+
+	var taskError : NSError? = nil
+
+	task.start(error: { error in
+			taskError = error
+		})
+
+    if taskError != nil {
+        return failure(taskError!)
+    }
+    return success()
+
+}
+
 public func cloneOrUpdateDependency(dependency: Dependency) -> Result<()> {
     let destinationPath = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
 
@@ -36,16 +53,7 @@ public func cloneDependency(dependency: Dependency, destinationPath: String) -> 
         dependency.repository.cloneURL.absoluteString!,
         destinationPath,
     ]
-
-    let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments)
-    let promise = launchTask(taskDescription)
-
-    let exitStatus = promise.await()
-
-    if exitStatus < 0 {
-        return failure()
-    }
-    return success()
+	return runGitTask(withArguments: arguments)
 }
 
 public func updateDependency(dependency: Dependency, destinationPath: String) -> Result<()> {
@@ -53,16 +61,7 @@ public func updateDependency(dependency: Dependency, destinationPath: String) ->
         "fetch",
         dependency.repository.cloneURL.absoluteString!,
     ]
-
-    let taskDescription = TaskDescription(launchPath: "/usr/bin/git", workingDirectoryPath: destinationPath, arguments: arguments)
-    let promise = launchTask(taskDescription)
-
-    let exitStatus = promise.await()
-
-    if exitStatus < 0 {
-        return failure()
-    }
-    return success()
+	return runGitTask(withArguments: arguments)
 }
 
 public func checkoutDependency(dependency: Dependency, destinationPath: String) -> Result<()> {
@@ -81,13 +80,5 @@ public func checkoutDependency(dependency: Dependency, destinationPath: String) 
 		arguments = arguments + ["--branch=\(dependency.versionString)"]
 	}
 
-    let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments)
-    let promise = launchTask(taskDescription)
-
-    let exitStatus = promise.await()
-
-    if exitStatus < 0 {
-        return failure()
-    }
-    return success()
+	return runGitTask(withArguments: arguments)
 }
