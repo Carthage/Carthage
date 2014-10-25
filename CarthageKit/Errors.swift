@@ -20,6 +20,9 @@ public enum CarthageError {
 	/// A launched task failed with an erroneous exit code.
 	case ShellTaskFailed(exitCode: Int)
 
+	/// One or more arguments was invalid.
+	case InvalidArgument(description: String)
+
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
 		switch (self) {
@@ -27,6 +30,11 @@ public enum CarthageError {
 			return NSError(domain: CarthageErrorDomain, code: 1, userInfo: [
 				NSLocalizedDescriptionKey: "A shell task failed with exit code \(code)",
 				CarthageError.exitCodeKey: code
+			])
+
+		case let .InvalidArgument(description):
+			return NSError(domain: CarthageErrorDomain, code: 2, userInfo: [
+				NSLocalizedDescriptionKey: description
 			])
 		}
 	}

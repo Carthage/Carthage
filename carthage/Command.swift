@@ -113,7 +113,7 @@ private func usageError<T>(option: Option<T>, value: String?) -> NSError {
 		description = "Missing argument for \(option)"
 	}
 
-	return NSError(domain: CarthageErrorDomain, code: 999, userInfo: [ NSLocalizedDescriptionKey: description! ])
+	return CarthageError.InvalidArgument(description: description!).error
 }
 
 // Inspired by the Argo library:
