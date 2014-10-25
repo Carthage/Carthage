@@ -6,8 +6,8 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import CarthageKit
 import Foundation
-import LlamaKit
 import ReactiveCocoa
 
 protocol CommandType {
@@ -19,7 +19,7 @@ protocol CommandType {
 }
 
 protocol OptionsType {
-	class func parse(args: [String]) -> Result<Self>
+	class func parse(args: [String]) -> ColdSignal<Self>
 }
 
 protocol ArgumentType {
@@ -58,6 +58,17 @@ extension String: ArgumentType {
 	}
 }
 
+func usageError<T>(option: Option<T>, value: String?) -> NSError {
+	var description: String?
+	if let value = value {
+		description = "Invalid value for \(option): \(value)"
+	} else {
+		description = "Missing argument for \(option)"
+	}
+
+	return NSError(domain: CarthageErrorDomain, code: 999, userInfo: [ NSLocalizedDescriptionKey: description! ])
+}
+
 // Inspired by the Argo library:
 // https://github.com/thoughtbot/Argo
 /*
@@ -93,50 +104,47 @@ infix operator <| {
 	precedence 150
 }
 
-func <*><T, U>(f: (T -> U)?, value: Result<T>) -> Result<U> {
-	if let f = f {
-		return value.map(f)
-	} else {
-		return failure()
-	}
+func <*><T, U>(f: T -> U, value: ColdSignal<T>) -> ColdSignal<U> {
+	return value.map(f)
 }
 
-func <*><T, U>(f: Result<(T -> U)>, value: Result<T>) -> Result<U> {
-	switch (f) {
-	case let .Success(f):
-		return value.map(f.unbox)
-
-	case let .Failure(error):
-		return .Failure(error)
-	}
+func <*><T, U>(f: ColdSignal<(T -> U)>, value: ColdSignal<T>) -> ColdSignal<U> {
+	return f.combineLatestWith(value)
+		.map { (f, value) in f(value) }
 }
 
-func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> Result<T> {
+func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> ColdSignal<T> {
 	var keyIndex = find(arguments, "--\(option.key)")
 	if let keyIndex = keyIndex {
 		if keyIndex + 1 < arguments.count {
-			if let value = T.fromString(arguments[keyIndex + 1]) {
-				return success(value)
+			let stringValue = arguments[keyIndex + 1]
+			if let value = T.fromString(stringValue) {
+				return .single(value)
+			} else {
+				return .error(usageError(option, stringValue))
 			}
 		}
 
-		return failure()
+		return .error(usageError(option, nil))
 	}
 
-	return success(option.defaultValue)
+	return .single(option.defaultValue)
 }
 
-func <|<T: ArgumentType>(arguments: [String], option: Option<T?>) -> Result<T?> {
+func <|<T: ArgumentType>(arguments: [String], option: Option<T?>) -> ColdSignal<T?> {
 	var keyIndex = find(arguments, "--\(option.key)")
 	if let keyIndex = keyIndex {
 		if keyIndex + 1 < arguments.count {
-			if let value = T.fromString(arguments[keyIndex + 1]) {
-				return success(value)
+			let stringValue = arguments[keyIndex + 1]
+			if let value = T.fromString(stringValue) {
+				return .single(value)
+			} else {
+				return .error(usageError(option, stringValue))
 			}
 		}
 
-		return failure()
+		return .error(usageError(option, nil))
 	}
 
-	return success(nil)
+	return .single(nil)
 }
