@@ -14,65 +14,63 @@ import ReactiveCocoa
 
 class TaskSpec: QuickSpec {
 	override func spec() {
-		let standardOutput = SignalingProperty(NSData())
-		let standardError = SignalingProperty(NSData())
+		let standardOutput = ObservableProperty(NSData())
+		let standardError = ObservableProperty(NSData())
 
 		beforeEach {
 			standardOutput.value = NSData()
 			standardError.value = NSData()
 		}
 
-		func accumulateData(signal: Signal<NSData>) -> Signal<NSData> {
-			return signal.scanWithStart(NSData()) { (accum, data) in
+		func accumulatingSinkForProperty(property: ObservableProperty<NSData>) -> SinkOf<NSData> {
+			let (signal, sink) = HotSignal<NSData>.pipe()
+
+			signal.scan(initial: NSData()) { (accum, data) in
+				println("received data to accumulate")
+
 				let buffer = accum.mutableCopy() as NSMutableData
 				buffer.appendData(data)
 
 				return buffer
-			}
+			// FIXME: This doesn't actually need to be cold, it just works
+			// around memory management issues.
+			}.replay(0).start(next: { value in
+				property.value = value
+			})
+
+			return sink
 		}
 
 		it("should launch a task that writes to stdout") {
 			let desc = TaskDescription(launchPath: "/bin/echo", arguments: [ "foobar" ])
-			let promise = launchTask(desc, standardOutput: SinkOf(standardOutput))
+			let task = launchTask(desc, standardOutput: accumulatingSinkForProperty(standardOutput)).on(subscribed: { println("subscribed") }, next: { value in println("next \(value)") }, terminated: { println("terminated") })
 			expect(standardOutput.value).to(equal(NSData()))
 
-			let output = accumulateData(standardOutput.signal)
-			expect(output.current.length).to(equal(0))
-
-			let result = promise.await()
-			expect(result).to(equal(EXIT_SUCCESS))
-
-			expect(standardOutput.value).notTo(equal(NSData()))
-			expect(NSString(data: output.current, encoding: NSUTF8StringEncoding)).to(equal("foobar\n"))
+			let result = task.wait()
+			expect(result.isSuccess()).to(beTruthy())
+			expect(NSString(data: standardOutput.value, encoding: NSUTF8StringEncoding)).to(equal("foobar\n"))
 		}
 
 		it("should launch a task that writes to stderr") {
 			let desc = TaskDescription(launchPath: "/usr/bin/stat", arguments: [ "not-a-real-file" ])
-			let promise = launchTask(desc, standardError: SinkOf(standardError))
+			let task = launchTask(desc, standardError: accumulatingSinkForProperty(standardError))
 			expect(standardError.value).to(equal(NSData()))
 
-			let errors = accumulateData(standardError.signal)
-			expect(errors.current.length).to(equal(0))
-
-			let result = promise.await()
-			expect(result).to(equal(EXIT_FAILURE))
-
-			expect(standardError.value).notTo(equal(NSData()))
-			expect(NSString(data: errors.current, encoding: NSUTF8StringEncoding)).to(equal("stat: not-a-real-file: stat: No such file or directory\n"))
+			let result = task.wait()
+			expect(result.isSuccess()).to(beFalsy())
+			expect(NSString(data: standardError.value, encoding: NSUTF8StringEncoding)).to(equal("stat: not-a-real-file: stat: No such file or directory\n"))
 		}
 
 		it("should launch a task with standard input") {
-			let desc = TaskDescription(launchPath: "/usr/bin/sort")
-
 			let strings = [ "foo\n", "bar\n", "buzz\n", "fuzz\n" ]
 			let data = strings.map { $0.dataUsingEncoding(NSUTF8StringEncoding)! }
 
-			let promise = launchTask(desc, standardInput: SequenceOf(data), standardOutput: SinkOf(standardOutput))
-			let output = accumulateData(standardOutput.signal)
+			let desc = TaskDescription(launchPath: "/usr/bin/sort", standardInput: ColdSignal.fromValues(data))
+			let task = launchTask(desc, standardOutput: accumulatingSinkForProperty(standardOutput))
 
-			let result = promise.await()
-			expect(result).to(equal(EXIT_SUCCESS))
-			expect(NSString(data: output.current, encoding: NSUTF8StringEncoding)).to(equal("bar\nbuzz\nfoo\nfuzz\n"))
+			let result = task.wait()
+			expect(result.isSuccess()).to(beTruthy())
+			expect(NSString(data: standardOutput.value, encoding: NSUTF8StringEncoding)).to(equal("bar\nbuzz\nfoo\nfuzz\n"))
 		}
 	}
 }

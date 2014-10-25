@@ -10,7 +10,9 @@ import Foundation
 import LlamaKit
 
 protocol CommandType {
-	var verb: String { get }
+	class var verb: String { get }
 
-	func run(arguments: [String]) -> Result<()>
+	init<S: SequenceType where S.Generator.Element == String>(_ arguments: S)
+
+	func run() -> Result<()>
 }

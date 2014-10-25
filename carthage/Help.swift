@@ -10,9 +10,15 @@ import Foundation
 import LlamaKit
 
 struct HelpCommand: CommandType {
-	let verb = "help"
+	static let verb = "help"
 
-	func run(_ arguments: [String] = []) -> Result<()> {
+	init() {
+	}
+
+	init<S: SequenceType where S.Generator.Element == String>(_ arguments: S) {
+	}
+
+	func run() -> Result<()> {
 		println("ohai help")
 		return success()
 	}
