@@ -23,7 +23,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should locate the project") {
-			let result = locateProjectInDirectory(directoryURL).first()
+			let result = locateProjectsInDirectory(directoryURL).first()
 			expect(result.error()).to(beNil())
 
 			let locator = result.value()!
@@ -32,7 +32,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should locate the project from the parent directory") {
-			let result = locateProjectInDirectory(directoryURL.URLByDeletingLastPathComponent!).first()
+			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!).first()
 			expect(result.error()).to(beNil())
 
 			let locator = result.value()!
@@ -41,7 +41,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should not locate the project from a directory not containing it") {
-			let result = locateProjectInDirectory(directoryURL.URLByAppendingPathComponent("TestFramework")).wait()
+			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("TestFramework")).wait()
 			expect(result.isSuccess()).to(beFalsy())
 		}
 	}
