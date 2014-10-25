@@ -23,7 +23,30 @@ protocol CommandType {
 	func run(arguments: [String]) -> ColdSignal<()>
 }
 
-/// Represents a record of options for a command.
+/// Represents a record of options for a command, which can be parsed from
+/// a list of command-line arguments.
+///
+/// This is most helpful when used in conjunction with the `option` function,
+/// and `<*>` and `<|` combinators.
+///
+/// Example:
+///
+///		struct LogOptions: OptionsType {
+///			let verbosity: Int
+///			let outputFilename: String?
+///			let logName: String
+///
+///			static func create(verbosity: Int)(outputFilename: String?)(logName: String) -> LogOptions {
+///				return LogOptions(verbosity: verbosity, outputFilename: outputFilename, logName: logName)
+///			}
+///
+///			static func parse(args: [String]) -> ColdSignal<LogOptions> {
+///				return create
+///					<*> args <| option("verbose", 0, "The verbosity level with which to read the logs")
+///					<*> args <| option("outputFilename", "A file to print output to, instead of stdout")
+///					<*> args <| option("logName", "all", "The log to read")
+///			}
+///		}
 protocol OptionsType {
 	/// Parses a set of options from the given command-line arguments.
 	///
@@ -128,15 +151,28 @@ infix operator <| {
 	precedence 150
 }
 
+/// Applies `f` to the values in the given signal.
+///
+/// In the context of command-line option parsing, this is used to chain
+/// together the parsing of multiple arguments. See OptionsType for an example.
 func <*><T, U>(f: T -> U, value: ColdSignal<T>) -> ColdSignal<U> {
 	return value.map(f)
 }
 
+/// Applies the functions in `f` to the values in the given signal.
+///
+/// In the context of command-line option parsing, this is used to chain
+/// together the parsing of multiple arguments. See OptionsType for an example.
 func <*><T, U>(f: ColdSignal<(T -> U)>, value: ColdSignal<T>) -> ColdSignal<U> {
 	return f.combineLatestWith(value)
 		.map { (f, value) in f(value) }
 }
 
+/// Attempts to parse a value for the given option from the given command-line
+/// arguments.
+///
+/// Returns either a signal of one value or an error. If no value was specified
+/// on the command line, the option's `defaultValue` is used.
 func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> ColdSignal<T> {
 	var keyIndex = find(arguments, "--\(option.key)")
 	if let keyIndex = keyIndex {
@@ -155,6 +191,11 @@ func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> ColdSignal<T
 	return .single(option.defaultValue)
 }
 
+/// Attempts to parse a value for the given nullable option from the given
+/// command-line arguments.
+///
+/// Returns either a signal of one value or an error. If no value was specified
+/// on the command line, `nil` is used.
 func <|<T: ArgumentType>(arguments: [String], option: Option<T?>) -> ColdSignal<T?> {
 	var keyIndex = find(arguments, "--\(option.key)")
 	if let keyIndex = keyIndex {
