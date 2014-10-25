@@ -11,10 +11,11 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-struct LocateCommand: CommandType {
-	let verb = "locate"
+/// Locates Xcode projects or workspaces within the specified directory.
+public struct LocateCommand: CommandType {
+	public let verb = "locate"
 
-	func run(arguments: [String]) -> ColdSignal<()> {
+	public func run(arguments: [String]) -> ColdSignal<()> {
 		let path = first(arguments) ?? NSFileManager.defaultManager().currentDirectoryPath
 
 		// TODO: Fail running if the path is invalid.

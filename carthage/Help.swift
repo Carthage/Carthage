@@ -10,10 +10,11 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-struct HelpCommand: CommandType {
-	let verb = "help"
+/// Offers general or subcommand-specific help.
+public struct HelpCommand: CommandType {
+	public let verb = "help"
 
-	func run(arguments: [String]) -> ColdSignal<()> {
+	public func run(arguments: [String]) -> ColdSignal<()> {
 		println("ohai help")
 		return .empty()
 	}
