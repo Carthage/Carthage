@@ -67,3 +67,23 @@ class VersionSpec: QuickSpec {
 		}
 	}
 }
+
+class VersionSpecifierSpec: QuickSpec {
+	override func spec() {
+		it("should intersect version specifiers correctly") {
+			let versionOne = Version(major: 1, minor: 3, patch: 2)
+			let versionTwoOne = Version(major: 2, minor: 1, patch: 1)
+			let versionTwoTwo = Version(major: 2, minor: 2, patch: 0)
+
+			func testIntersection(lhs: VersionSpecifier, rhs: VersionSpecifier, #expected: VersionSpecifier) {
+				expect(intersection(lhs, rhs)).to(equal(expected))
+				expect(intersection(rhs, lhs)).to(equal(expected))
+			}
+
+			testIntersection(VersionSpecifier.Any, VersionSpecifier.Any, expected: VersionSpecifier.Any)
+			testIntersection(VersionSpecifier.Any, VersionSpecifier.AtLeast(versionOne), expected: VersionSpecifier.AtLeast(versionOne))
+			testIntersection(VersionSpecifier.Any, VersionSpecifier.CompatibleWith(versionOne), expected: VersionSpecifier.CompatibleWith(versionOne))
+			testIntersection(VersionSpecifier.Any, VersionSpecifier.Exactly(versionOne), expected: VersionSpecifier.Exactly(versionOne))
+		}
+	}
+}
