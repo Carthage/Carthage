@@ -18,6 +18,7 @@
 		D04AEADB19E918C30045C166 /* TaskSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04AEADA19E918C30045C166 /* TaskSpec.swift */; };
 		D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAAB4919FAEDB4007B24B3 /* Errors.swift */; };
 		D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */ = {isa = PBXBuildFile; fileRef = D0AAAB5419FB1062007B24B3 /* TestCartfile */; };
+		D0AAAB5019FB0960007B24B3 /* CarthageKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0AD39B019E900BC00B343CE /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD39AF19E900BC00B343CE /* Task.swift */; };
 		D0D1217219E87B05005E4BAA /* CarthageKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1217119E87B05005E4BAA /* CarthageKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D1217819E87B05005E4BAA /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
@@ -32,6 +33,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		D0AAAB5119FB0960007B24B3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0D1211019E87861005E4BAA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D0D1216C19E87B05005E4BAA;
+			remoteInfo = CarthageKit;
+		};
 		D0D1217919E87B05005E4BAA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D0D1211019E87861005E4BAA /* Project object */;
@@ -59,6 +67,17 @@
 				D01F8A4519EA28E600643E7C /* ReactiveCocoa.framework in Copy Frameworks */,
 			);
 			name = "Copy Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0AAAB5319FB0960007B24B3 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				D0AAAB5019FB0960007B24B3 /* CarthageKit.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -371,10 +390,12 @@
 				D0E7B62F19E9C64500EDBA4D /* Frameworks */,
 				D0E7B63019E9C64500EDBA4D /* Resources */,
 				D0E7B65719E9C7C700EDBA4D /* Extract CLI Tool */,
+				D0AAAB5319FB0960007B24B3 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D0AAAB5219FB0960007B24B3 /* PBXTargetDependency */,
 			);
 			name = carthage;
 			productName = carthage;
@@ -537,6 +558,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		D0AAAB5219FB0960007B24B3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D0D1216C19E87B05005E4BAA /* CarthageKit */;
+			targetProxy = D0AAAB5119FB0960007B24B3 /* PBXContainerItemProxy */;
+		};
 		D0D1217A19E87B05005E4BAA /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = D0D1216C19E87B05005E4BAA /* CarthageKit */;
