@@ -206,7 +206,7 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 	case let (.AtLeast(left), .AtLeast(right)):
 		return left == right
 
-	case let (.AtLeast(left), .AtLeast(right)):
+	case let (.CompatibleWith(left), .CompatibleWith(right)):
 		return left == right
 
 	default:
