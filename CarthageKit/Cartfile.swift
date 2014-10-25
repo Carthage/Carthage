@@ -174,9 +174,9 @@ extension Version: Printable {
 /// requirement.
 public enum VersionSpecifier: Equatable {
 	case Any
-	case Exactly(Version)
 	case AtLeast(Version)
 	case CompatibleWith(Version)
+	case Exactly(Version)
 
 	/// Attempts to parse a VersionSpecifier.
 	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
