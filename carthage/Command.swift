@@ -116,6 +116,26 @@ private func usageError<T>(option: Option<T>, value: String?) -> NSError {
 	return CarthageError.InvalidArgument(description: description!).error
 }
 
+/// Combines the text of the two errors, if they're both `InvalidArgument`
+/// errors. Otherwise, uses whichever one is not (biased toward the left).
+private func combineUsageErrors(left: NSError, right: NSError) -> NSError {
+	let combinedError = CarthageError.InvalidArgument(description: "\(left.localizedDescription)\n\(right.localizedDescription)").error
+
+	func isUsageError(error: NSError) -> Bool {
+		return error.domain == combinedError.domain && error.code == combinedError.code
+	}
+
+	if isUsageError(left) {
+		if isUsageError(right) {
+			return combinedError
+		} else {
+			return right
+		}
+	} else {
+		return left
+	}
+}
+
 // Inspired by the Argo library:
 // https://github.com/thoughtbot/Argo
 /*
@@ -164,8 +184,28 @@ public func <*><T, U>(f: T -> U, value: ColdSignal<T>) -> ColdSignal<U> {
 /// In the context of command-line option parsing, this is used to chain
 /// together the parsing of multiple arguments. See OptionsType for an example.
 public func <*><T, U>(f: ColdSignal<(T -> U)>, value: ColdSignal<T>) -> ColdSignal<U> {
-	return f.combineLatestWith(value)
-		.map { (f, value) in f(value) }
+	return f.materialize()
+		.combineLatestWith(value.materialize())
+		.map { (fEvent, valueEvent) -> ColdSignal<U> in
+			switch (fEvent, valueEvent) {
+			case let (.Error(left), .Error(right)):
+				return .error(combineUsageErrors(left, right))
+
+			case let (.Error(left), _):
+				return .error(left)
+
+			case let (_, .Error(right)):
+				return .error(right)
+
+			case let (.Next(f), .Next(value)):
+				let newValue = f.unbox(value.unbox)
+				return .single(newValue)
+
+			default:
+				return .empty()
+			}
+		}
+		.merge(identity)
 }
 
 /// Implements <| uniformly over all values, even those that may not necessarily
