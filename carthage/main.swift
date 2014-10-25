@@ -8,6 +8,7 @@
 
 import Foundation
 import LlamaKit
+import ReactiveCocoa
 
 // Hopefully this will be built into the standard library someday.
 func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
@@ -18,21 +19,23 @@ func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	return result
 }
 
-let commandTypes = [
-	HelpCommand.self
-	CheckoutCommand.self
+let availableCommands: [CommandType] = [
+	BuildCommand(),
+	HelpCommand(),
+	LocateCommand(),
+	CheckoutCommand(),
 ]
 
-let commands = commandTypes.map { [$0.verb: $0] }.reduce([:], combine: combineDictionaries)
+let commandsByVerb = availableCommands.map { [$0.verb: $0] }.reduce([:], combine: combineDictionaries)
 var arguments = Process.arguments
 
 assert(arguments.count >= 1)
 arguments.removeAtIndex(0)
 
-let verb = arguments.first ?? HelpCommand.verb
+let verb = arguments.first ?? HelpCommand().verb
 let args = (arguments.count > 0 ? dropFirst(arguments) : [])
 
-let result = commands[verb]?(args).run()
+let result = commandsByVerb[verb]?.run(args).wait()
 
 switch result {
 case .Some(.Success):

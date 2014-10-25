@@ -14,27 +14,46 @@ import LlamaKit
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
 	public var dependencies: [Dependency]
-}
 
-extension Cartfile: JSONDecodable {
-	public static func fromJSON(JSON: AnyObject) -> Result<Cartfile> {
-		if let array = JSON as? [AnyObject] {
-			var deps: [Dependency] = []
+	/// Attempts to parse Cartfile information from a string.
+	public static func fromString(string: String) -> Result<Cartfile> {
+		var cartfile = self(dependencies: [])
+		var result = success(())
 
-			for elem in array {
-				switch (Dependency.fromJSON(elem)) {
-				case let .Success(value):
-					deps.append(value.unbox)
-
-				case let .Failure(error):
-					return failure(error)
-				}
+		let commentIndicator = "#"
+		(string as NSString).enumerateLinesUsingBlock { (line, stop) in
+			let scanner = NSScanner(string: line)
+			if scanner.scanString(commentIndicator, intoString: nil) {
+				// Skip the rest of the line.
+				return
 			}
 
-			return success(Cartfile(dependencies: deps))
-		} else {
-			return failure()
+			if scanner.atEnd {
+				// The line was all whitespace.
+				return
+			}
+
+			switch (Dependency.fromScanner(scanner)) {
+			case let .Success(dep):
+				cartfile.dependencies.append(dep.unbox)
+
+			case let .Failure(error):
+				result = failure(error)
+				stop.memory = true
+			}
+
+			if scanner.scanString(commentIndicator, intoString: nil) {
+				// Skip the rest of the line.
+				return
+			}
+
+			if !scanner.atEnd {
+				result = failure()
+				stop.memory = true
+			}
 		}
+
+		return result.map { _ in cartfile }
 	}
 }
 
@@ -60,29 +79,34 @@ public struct Dependency: Equatable {
 		self.versionString = versionString
 		self.version = VersionSpecifier.fromJSON(versionString) ?? .Any
 	}
-}
 
+	/// Attempts to parse a Dependency specification.
+	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
+		if !scanner.scanString("github", intoString: nil) {
+			return failure()
+		}
 
-public func ==(lhs: Dependency, rhs: Dependency) -> Bool {
-	return lhs.repository == rhs.repository && lhs.version == rhs.version
-}
+		if !scanner.scanString("\"", intoString: nil) {
+			return failure()
+		}
 
-extension Dependency: JSONDecodable {
-	public static func fromJSON(JSON: AnyObject) -> Result<Dependency> {
-		if let object = JSON as? [String: AnyObject] {
-			let versionString = object["version"] as? String ?? ""
+		var repoNWO: NSString? = nil
+		if !scanner.scanUpToString("\"", intoString: &repoNWO) || !scanner.scanString("\"", intoString: nil) {
+			return failure()
+		}
 
-			if let repo = object["repo"] as? String {
-				return Repository
-					.fromJSON(repo)
-					.map { Dependency(repository: $0, versionString: versionString) }
-			} else {
-				return failure()
+		if let repoNWO = repoNWO {
+			return Repository.fromNWO(repoNWO).flatMap { repo in
+				return VersionSpecifier.fromScanner(scanner).map { specifier in self(repository: repo, version: specifier) }
 			}
 		} else {
 			return failure()
 		}
 	}
+}
+
+public func ==(lhs: Dependency, rhs: Dependency) -> Bool {
+	return lhs.repository == rhs.repository && lhs.version == rhs.version
 }
 
 extension Dependency: Printable {
@@ -159,7 +183,133 @@ extension Version: Printable {
 /// requirement.
 public enum VersionSpecifier: Equatable {
 	case Any
+	case AtLeast(Version)
+	case CompatibleWith(Version)
 	case Exactly(Version)
+
+	/// Attempts to parse a VersionSpecifier.
+	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
+		func scanVersion() -> Result<Version> {
+			var version: NSString? = nil
+			if scanner.scanCharactersFromSet(NSCharacterSet(charactersInString: "0123456789."), intoString: &version) {
+				if let version = version {
+					return Version.fromString(version)
+				}
+			}
+
+			return failure()
+		}
+
+		if scanner.scanString("==", intoString: nil) {
+			return scanVersion().map { Exactly($0) }
+		} else if scanner.scanString(">=", intoString: nil) {
+			return scanVersion().map { AtLeast($0) }
+		} else if scanner.scanString("~>", intoString: nil) {
+			return scanVersion().map { CompatibleWith($0) }
+		} else {
+			return success(Any)
+		}
+	}
+
+	/// Determines whether the given version satisfies this version specifier.
+	public func satisfiedBy(version: Version) -> Bool {
+		switch (self) {
+		case .Any:
+			return true
+
+		case let .Exactly(requirement):
+			return version == requirement
+
+		case let .AtLeast(requirement):
+			return version >= requirement
+
+		case let .CompatibleWith(requirement):
+			return version.major == requirement.major && version >= requirement
+		}
+	}
+}
+
+private func intersection(#atLeast: Version, #compatibleWith: Version) -> VersionSpecifier? {
+	if atLeast.major > compatibleWith.major {
+		return nil
+	} else if atLeast.major < compatibleWith.major {
+		return .CompatibleWith(compatibleWith)
+	} else {
+		return .CompatibleWith(max(atLeast, compatibleWith))
+	}
+}
+
+private func intersection(#atLeast: Version, #exactly: Version) -> VersionSpecifier? {
+	if atLeast > exactly {
+		return nil
+	}
+
+	return .Exactly(exactly)
+}
+
+private func intersection(#compatibleWith: Version, #exactly: Version) -> VersionSpecifier? {
+	if exactly.major != compatibleWith.major || compatibleWith > exactly {
+		return nil
+	}
+
+	return .Exactly(exactly)
+}
+
+/// Attempts to determine a version specifier that accurately describes the
+/// intersection between the two given specifiers.
+///
+/// In other words, any version that satisfies the returned specifier will
+/// satisfy _both_ of the given specifiers.
+public func intersection(lhs: VersionSpecifier, rhs: VersionSpecifier) -> VersionSpecifier? {
+	switch (lhs, rhs) {
+	// Unfortunately, patterns with a wildcard _ are not considered exhaustive,
+	// so do the same thing manually.
+	case (.Any, .Any): fallthrough
+	case (.Any, .AtLeast): fallthrough
+	case (.Any, .CompatibleWith): fallthrough
+	case (.Any, .Exactly):
+		return rhs
+
+	case (.AtLeast, .Any): fallthrough
+	case (.CompatibleWith, .Any): fallthrough
+	case (.Exactly, .Any):
+		return lhs
+
+	case let (.AtLeast(lv), .AtLeast(rv)):
+		return .AtLeast(max(lv, rv))
+
+	case let (.AtLeast(lv), .CompatibleWith(rv)):
+		return intersection(atLeast: lv, compatibleWith: rv)
+
+	case let (.AtLeast(lv), .Exactly(rv)):
+		return intersection(atLeast: lv, exactly: rv)
+
+	case let (.CompatibleWith(lv), .AtLeast(rv)):
+		return intersection(atLeast: rv, compatibleWith: lv)
+
+	case let (.CompatibleWith(lv), .CompatibleWith(rv)):
+		if lv.major != rv.major {
+			return nil
+		}
+
+		return .CompatibleWith(max(lv, rv))
+
+	case let (.CompatibleWith(lv), .Exactly(rv)):
+		return intersection(compatibleWith: lv, exactly: rv)
+
+	case let (.Exactly(lv), .AtLeast(rv)):
+		return intersection(atLeast: rv, exactly: lv)
+
+	case let (.Exactly(lv), .CompatibleWith(rv)):
+		return intersection(compatibleWith: rv, exactly: lv)
+
+	case let (.Exactly(lv), .Exactly(rv)):
+		if lv != rv {
+			return nil
+		}
+
+		return lhs
+	}
 }
 
 public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
@@ -170,18 +320,14 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 	case let (.Exactly(left), .Exactly(right)):
 		return left == right
 
+	case let (.AtLeast(left), .AtLeast(right)):
+		return left == right
+
+	case let (.CompatibleWith(left), .CompatibleWith(right)):
+		return left == right
+
 	default:
 		return false
-	}
-}
-
-extension VersionSpecifier: JSONDecodable {
-	public static func fromJSON(JSON: AnyObject) -> Result<VersionSpecifier> {
-		if let specifier = JSON as? String {
-			return Version.fromString(specifier).map { .Exactly($0) }
-		} else {
-			return failure()
-		}
 	}
 }
 
@@ -192,7 +338,13 @@ extension VersionSpecifier: Printable {
 			return "(any)"
 
 		case let .Exactly(version):
-			return version.description
+			return "== \(version)"
+
+		case let .AtLeast(version):
+			return ">= \(version)"
+
+		case let .CompatibleWith(version):
+			return "~> \(version)"
 		}
 	}
 }

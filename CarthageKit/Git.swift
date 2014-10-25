@@ -76,7 +76,7 @@ public func checkoutDependency(dependency: Dependency, destinationPath: String) 
         destinationPath,
     ]
 
-	if strlen(dependency.versionString) > 0 {
+	if strlen(dependency.versionString!) > 0 {
 		arguments = arguments + ["--branch=\(dependency.versionString)"]
 	}
 
