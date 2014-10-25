@@ -212,11 +212,11 @@
 			isa = PBXGroup;
 			children = (
 				D03B32BE19EA49D8007788BE /* Build.swift */,
+				F66685FB19E8F1EC00487A88 /* Checkout.swift */,
 				D06939B019E8A757001E44AE /* Command.swift */,
 				D06939B219E8A79F001E44AE /* Help.swift */,
 				D03B32BC19EA453D007788BE /* Locate.swift */,
 				D0D1211B19E87861005E4BAA /* main.swift */,
-				F66685FB19E8F1EC00487A88 /* Checkout.swift */,
 			);
 			path = Carthage;
 			sourceTree = "<group>";

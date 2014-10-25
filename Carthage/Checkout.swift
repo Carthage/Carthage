@@ -23,11 +23,10 @@ struct CheckoutCommand: CommandType {
 		}
 
 		// 2. Create the project
-
 		let project = Project(path: pwd!)
-
-		project.cloneDependencies()
-
-		return ColdSignal.empty()
+		return ColdSignal { subscriber in
+			project.cloneDependencies()
+			subscriber.put(.Completed)
+		}
 	}
 }
