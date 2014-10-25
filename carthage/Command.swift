@@ -12,7 +12,7 @@ import ReactiveCocoa
 
 /// Represents a Carthage subcommand that can be executed with its own set of
 /// arguments.
-protocol CommandType {
+public protocol CommandType {
 	/// The action that users should specify to use this subcommand (e.g.,
 	/// `help`).
 	var verb: String { get }
@@ -47,7 +47,7 @@ protocol CommandType {
 ///					<*> args <| option("logName", "all", "The log to read")
 ///			}
 ///		}
-protocol OptionsType {
+public protocol OptionsType {
 	/// Parses a set of options from the given command-line arguments.
 	///
 	/// Returns a signal that will error if the arguments are invalid for the
@@ -56,23 +56,23 @@ protocol OptionsType {
 }
 
 /// Describes an option that can be provided on the command line.
-struct Option<T> {
+public struct Option<T> {
 	/// The key that controls this option.
 	///
 	/// For example, a key of `verbose` would be used for a `--verbose` option.
-	let key: String
+	public let key: String
 
 	/// The default value for this option. This is the value that will be used
 	/// if the option is never explicitly specified on the command line.
-	let defaultValue: T
+	public let defaultValue: T
 
 	/// A human-readable string describing the purpose of this option. This will
 	/// be shown in help messages.
-	let usage: String
+	public let usage: String
 }
 
 /// Constructs an option with the given parameters.
-func option<T: ArgumentType>(key: String, defaultValue: T, usage: String) -> Option<T> {
+public func option<T: ArgumentType>(key: String, defaultValue: T, usage: String) -> Option<T> {
 	return Option(key: key, defaultValue: defaultValue, usage: usage)
 }
 
@@ -80,24 +80,24 @@ func option<T: ArgumentType>(key: String, defaultValue: T, usage: String) -> Opt
 ///
 /// This must be used for options that permit `nil`, because it's impossible to
 /// extend `Optional` with the `ArgumentType` protocol.
-func option<T: ArgumentType>(key: String, usage: String) -> Option<T?> {
+public func option<T: ArgumentType>(key: String, usage: String) -> Option<T?> {
 	return Option(key: key, defaultValue: nil, usage: usage)
 }
 
 /// Represents a value that can be converted from a command-line argument.
-protocol ArgumentType {
+public protocol ArgumentType {
 	/// Attempts to parse a value from the given command-line argument.
 	class func fromString(string: String) -> Self?
 }
 
 extension Int: ArgumentType {
-	static func fromString(string: String) -> Int? {
+	public static func fromString(string: String) -> Int? {
 		return string.toInt()
 	}
 }
 
 extension String: ArgumentType {
-	static func fromString(string: String) -> String? {
+	public static func fromString(string: String) -> String? {
 		return string
 	}
 }
@@ -155,7 +155,7 @@ infix operator <| {
 ///
 /// In the context of command-line option parsing, this is used to chain
 /// together the parsing of multiple arguments. See OptionsType for an example.
-func <*><T, U>(f: T -> U, value: ColdSignal<T>) -> ColdSignal<U> {
+public func <*><T, U>(f: T -> U, value: ColdSignal<T>) -> ColdSignal<U> {
 	return value.map(f)
 }
 
@@ -163,7 +163,7 @@ func <*><T, U>(f: T -> U, value: ColdSignal<T>) -> ColdSignal<U> {
 ///
 /// In the context of command-line option parsing, this is used to chain
 /// together the parsing of multiple arguments. See OptionsType for an example.
-func <*><T, U>(f: ColdSignal<(T -> U)>, value: ColdSignal<T>) -> ColdSignal<U> {
+public func <*><T, U>(f: ColdSignal<(T -> U)>, value: ColdSignal<T>) -> ColdSignal<U> {
 	return f.combineLatestWith(value)
 		.map { (f, value) in f(value) }
 }
@@ -173,7 +173,7 @@ func <*><T, U>(f: ColdSignal<(T -> U)>, value: ColdSignal<T>) -> ColdSignal<U> {
 ///
 /// Returns either a signal of one value or an error. If no value was specified
 /// on the command line, the option's `defaultValue` is used.
-func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> ColdSignal<T> {
+public func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> ColdSignal<T> {
 	var keyIndex = find(arguments, "--\(option.key)")
 	if let keyIndex = keyIndex {
 		if keyIndex + 1 < arguments.count {
@@ -196,7 +196,7 @@ func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> ColdSignal<T
 ///
 /// Returns either a signal of one value or an error. If no value was specified
 /// on the command line, `nil` is used.
-func <|<T: ArgumentType>(arguments: [String], option: Option<T?>) -> ColdSignal<T?> {
+public func <|<T: ArgumentType>(arguments: [String], option: Option<T?>) -> ColdSignal<T?> {
 	var keyIndex = find(arguments, "--\(option.key)")
 	if let keyIndex = keyIndex {
 		if keyIndex + 1 < arguments.count {
