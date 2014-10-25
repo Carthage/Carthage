@@ -222,7 +222,7 @@ private func intersection(#atLeast: Version, #exactly: Version) -> VersionSpecif
 }
 
 private func intersection(#compatibleWith: Version, #exactly: Version) -> VersionSpecifier? {
-	if exactly.major != compatibleWith.major {
+	if exactly.major != compatibleWith.major || compatibleWith > exactly {
 		return nil
 	}
 
