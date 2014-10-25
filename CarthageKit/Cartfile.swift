@@ -23,9 +23,13 @@ public struct Cartfile {
 		let commentIndicator = "#"
 		(string as NSString).enumerateLinesUsingBlock { (line, stop) in
 			let scanner = NSScanner(string: line)
-			scanner.scanString(commentIndicator, intoString: nil)
+			if scanner.scanString(commentIndicator, intoString: nil) {
+				// Skip the rest of the line.
+				return
+			}
 
 			if scanner.atEnd {
+				// The line was all whitespace.
 				return
 			}
 
@@ -38,7 +42,11 @@ public struct Cartfile {
 				stop.memory = true
 			}
 
-			scanner.scanString(commentIndicator, intoString: nil)
+			if scanner.scanString(commentIndicator, intoString: nil) {
+				// Skip the rest of the line.
+				return
+			}
+
 			if !scanner.atEnd {
 				result = failure()
 				stop.memory = true
