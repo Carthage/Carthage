@@ -201,6 +201,23 @@ public enum VersionSpecifier: Equatable {
 			return success(Any)
 		}
 	}
+
+	/// Determines whether the given version satisfies this version specifier.
+	public func satisfiedBy(version: Version) -> Bool {
+		switch (self) {
+		case .Any:
+			return true
+
+		case let .Exactly(requirement):
+			return version == requirement
+
+		case let .AtLeast(requirement):
+			return version >= requirement
+
+		case let .CompatibleWith(requirement):
+			return version.major == requirement.major && version >= requirement
+		}
+	}
 }
 
 private func intersection(#atLeast: Version, #compatibleWith: Version) -> VersionSpecifier? {
