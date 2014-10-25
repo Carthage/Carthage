@@ -71,15 +71,6 @@ public struct Dependency: Equatable {
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: VersionSpecifier
 
-	/// The raw version string specified in the Cartfile
-	public var versionString : String
-
-	public init(repository : Repository, versionString: String) {
-		self.repository = repository
-		self.versionString = versionString
-		self.version = VersionSpecifier.fromJSON(versionString) ?? .Any
-	}
-
 	/// Attempts to parse a Dependency specification.
 	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
 		if !scanner.scanString("github", intoString: nil) {
@@ -133,22 +124,36 @@ public struct Version: Comparable {
 	/// Increments to this component represent backwards-compatible bug fixes.
 	public let patch: Int
 
+	/// The raw version string specified in the cartfile.
+	///
+	/// eg. "v2.3.1".
+	public let raw: String
+
 	/// A list of the version components, in order from most significant to
 	/// least significant.
 	public var components: [Int] {
 		return [ major, minor, patch ]
 	}
 
-	public init(major: Int, minor: Int, patch: Int) {
+	public init(major: Int, minor: Int, patch: Int, raw: String) {
 		self.major = major
 		self.minor = minor
 		self.patch = patch
+		self.raw = raw
 	}
 
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
 	static public func fromString(specifier: String) -> Result<Version> {
-		let components = split(specifier, { $0 == "." }, allowEmptySlices: false)
+		let validChars = NSCharacterSet(charactersInString: "0123456789.")
+		let scanner = NSScanner(string: specifier)
+		var sanitizedSpecifier : NSString? = nil
+
+		if !scanner.scanCharactersFromSet(validChars, intoString: &sanitizedSpecifier) {
+			return failure()
+		}
+
+		let components = split(sanitizedSpecifier! as String, { $0 == "." }, allowEmptySlices: false)
 		if components.count == 0 {
 			return failure()
 		}
@@ -161,7 +166,7 @@ public struct Version: Comparable {
 		let minor = (components.count > 1 ? components[1].toInt() : 0)
 		let patch = (components.count > 2 ? components[2].toInt() : 0)
 
-		return success(self(major: major!, minor: minor ?? 0, patch: patch ?? 0))
+		return success(self(major: major!, minor: minor ?? 0, patch: patch ?? 0, raw: specifier))
 	}
 }
 
@@ -191,7 +196,8 @@ public enum VersionSpecifier: Equatable {
 	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
 		func scanVersion() -> Result<Version> {
 			var version: NSString? = nil
-			if scanner.scanCharactersFromSet(NSCharacterSet(charactersInString: "0123456789."), intoString: &version) {
+
+			if scanner.scanUpToString("\n", intoString: &version) {
 				if let version = version {
 					return Version.fromString(version)
 				}
@@ -225,6 +231,23 @@ public enum VersionSpecifier: Equatable {
 
 		case let .CompatibleWith(requirement):
 			return version.major == requirement.major && version >= requirement
+		}
+	}
+
+	/// Returns just the version
+	public var version: Version? {
+		switch (self) {
+		case let .Any:
+			return nil
+
+		case let .Exactly(version):
+			return version
+
+		case let .AtLeast(version):
+			return version
+
+		case let .CompatibleWith(version):
+			return version
 		}
 	}
 }
