@@ -40,12 +40,6 @@ func option<T: ArgumentType>(key: String, usage: String) -> Option<T?> {
 	return Option(key: key, defaultValue: nil, usage: usage)
 }
 
-extension Bool: ArgumentType {
-	static func fromString(string: String) -> Bool? {
-		return (string as NSString).boolValue
-	}
-}
-
 extension Int: ArgumentType {
 	static func fromString(string: String) -> Int? {
 		return string.toInt()
