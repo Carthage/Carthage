@@ -8,14 +8,13 @@
 
 import Foundation
 import LlamaKit
-import ReactiveCocoa
 
 /// Offers general or subcommand-specific help.
 public struct HelpCommand: CommandType {
 	public let verb = "help"
 
-	public func run(arguments: [String]) -> ColdSignal<()> {
+	public func run(arguments: [String]) -> Result<()> {
 		println("ohai help")
-		return .empty()
+		return success(())
 	}
 }

@@ -8,7 +8,7 @@
 
 import CarthageKit
 import Foundation
-import ReactiveCocoa
+import LlamaKit
 
 /// Represents a Carthage subcommand that can be executed with its own set of
 /// arguments.
@@ -18,9 +18,7 @@ public protocol CommandType {
 	var verb: String { get }
 
 	/// Runs this subcommand with the given arguments.
-	///
-	/// Returns a signal that will complete or error when the command finishes.
-	func run(arguments: [String]) -> ColdSignal<()>
+	func run(arguments: [String]) -> Result<()>
 }
 
 /// Represents a record of options for a command, which can be parsed from
@@ -40,7 +38,7 @@ public protocol CommandType {
 ///				return LogOptions(verbosity: verbosity, outputFilename: outputFilename, logName: logName)
 ///			}
 ///
-///			static func parse(args: [String]) -> ColdSignal<LogOptions> {
+///			static func parse(args: [String]) -> Result<LogOptions> {
 ///				return create
 ///					<*> args <| option("verbose", 0, "The verbosity level with which to read the logs")
 ///					<*> args <| option("outputFilename", "A file to print output to, instead of stdout")
@@ -50,9 +48,9 @@ public protocol CommandType {
 public protocol OptionsType {
 	/// Parses a set of options from the given command-line arguments.
 	///
-	/// Returns a signal that will error with an `InvalidArgument` error if the
+	/// Returns the parsed options, or an `InvalidArgument` error if the
 	/// arguments are invalid for the receiving OptionsType.
-	class func parse(args: [String]) -> ColdSignal<Self>
+	class func parse(args: [String]) -> Result<Self>
 }
 
 /// Describes an option that can be provided on the command line.
@@ -178,77 +176,68 @@ infix operator <| {
 	precedence 150
 }
 
-/// Applies `f` to the values in the given signal.
+/// Applies `f` to the value in the given result.
 ///
 /// In the context of command-line option parsing, this is used to chain
 /// together the parsing of multiple arguments. See OptionsType for an example.
-public func <*><T, U>(f: T -> U, value: ColdSignal<T>) -> ColdSignal<U> {
+public func <*><T, U>(f: T -> U, value: Result<T>) -> Result<U> {
 	return value.map(f)
 }
 
-/// Applies the functions in `f` to the values in the given signal.
+/// Applies the function in `f` to the value in the given result.
 ///
 /// In the context of command-line option parsing, this is used to chain
 /// together the parsing of multiple arguments. See OptionsType for an example.
-public func <*><T, U>(f: ColdSignal<(T -> U)>, value: ColdSignal<T>) -> ColdSignal<U> {
-	return f.materialize()
-		.combineLatestWith(value.materialize())
-		.map { (fEvent, valueEvent) -> ColdSignal<U> in
-			switch (fEvent, valueEvent) {
-			case let (.Error(left), .Error(right)):
-				return .error(combineUsageErrors(left, right))
+public func <*><T, U>(f: Result<(T -> U)>, value: Result<T>) -> Result<U> {
+	switch (f, value) {
+	case let (.Failure(left), .Failure(right)):
+		return failure(combineUsageErrors(left, right))
 
-			case let (.Error(left), _):
-				return .error(left)
+	case let (.Failure(left), .Success):
+		return failure(left)
 
-			case let (_, .Error(right)):
-				return .error(right)
+	case let (.Success, .Failure(right)):
+		return failure(right)
 
-			case let (.Next(f), .Next(value)):
-				let newValue = f.unbox(value.unbox)
-				return .single(newValue)
-
-			default:
-				return .empty()
-			}
-		}
-		.merge(identity)
+	case let (.Success(f), .Success(value)):
+		let newValue = f.unbox(value.unbox)
+		return success(newValue)
+	}
 }
 
 /// Implements <| uniformly over all values, even those that may not necessarily
 /// conform to ArgumentType.
-private func parseOption<T>(option: Option<T>, defaultValue: T, fromArguments: [String], parse: String -> T?) -> ColdSignal<T> {
+private func parseOption<T>(option: Option<T>, defaultValue: T, fromArguments: [String], parse: String -> T?) -> Result<T> {
 	var keyIndex = find(arguments, "--\(option.key)")
 	if let keyIndex = keyIndex {
 		if keyIndex + 1 < arguments.count {
 			let stringValue = arguments[keyIndex + 1]
 			if let value = parse(stringValue) {
-				return .single(value)
+				return success(value)
 			} else {
-				return .error(usageError(option, stringValue))
+				return failure(usageError(option, stringValue))
 			}
 		}
 
-		return .error(usageError(option, nil))
+		return failure(usageError(option, nil))
 	}
 
-	return .single(defaultValue)
+	return success(defaultValue)
 }
 
 /// Attempts to parse a value for the given option from the given command-line
 /// arguments.
 ///
-/// Returns either a signal of one value or an error. If no value was specified
-/// on the command line, the option's `defaultValue` is used.
-public func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> ColdSignal<T> {
+/// If no value was specified on the command line, the option's `defaultValue`
+/// is used.
+public func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> Result<T> {
 	return parseOption(option, option.defaultValue, arguments) { str in T.fromString(str) }
 }
 
 /// Attempts to parse a value for the given nullable option from the given
 /// command-line arguments.
 ///
-/// Returns either a signal of one value or an error. If no value was specified
-/// on the command line, `nil` is used.
-public func <|<T: ArgumentType>(arguments: [String], option: Option<T?>) -> ColdSignal<T?> {
+/// If no value was specified on the command line, `nil` is used.
+public func <|<T: ArgumentType>(arguments: [String], option: Option<T?>) -> Result<T?> {
 	return parseOption(option, option.defaultValue, arguments) { str in T.fromString(str) }
 }

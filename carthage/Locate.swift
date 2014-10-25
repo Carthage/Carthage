@@ -15,7 +15,7 @@ import ReactiveCocoa
 public struct LocateCommand: CommandType {
 	public let verb = "locate"
 
-	public func run(arguments: [String]) -> ColdSignal<()> {
+	public func run(arguments: [String]) -> Result<()> {
 		let path = first(arguments) ?? NSFileManager.defaultManager().currentDirectoryPath
 
 		// TODO: Fail running if the path is invalid.
@@ -31,6 +31,7 @@ public struct LocateCommand: CommandType {
 					println("Found an Xcode project at: \(URL.path!)")
 				}
 			})
-			.then(.empty())
+			.then(ColdSignal<()>.empty())
+			.wait()
 	}
 }
