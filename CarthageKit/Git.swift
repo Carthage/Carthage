@@ -76,8 +76,8 @@ public func checkoutDependency(dependency: Dependency, destinationPath: String) 
         destinationPath,
     ]
 
-	if strlen(dependency.versionString!) > 0 {
-		arguments = arguments + ["--branch=\(dependency.versionString)"]
+	if let versionString = dependency.version.version?.raw {
+		arguments = arguments + ["--branch=\(versionString)"]
 	}
 
 	return runGitTask(withArguments: arguments)
