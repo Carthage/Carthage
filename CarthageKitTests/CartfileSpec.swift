@@ -70,40 +70,46 @@ class VersionSpec: QuickSpec {
 
 class VersionSpecifierSpec: QuickSpec {
 	override func spec() {
-		it("should intersect version specifiers correctly") {
-			let versionOne = Version(major: 1, minor: 3, patch: 2)
-			let versionTwoOne = Version(major: 2, minor: 1, patch: 1)
-			let versionTwoTwo = Version(major: 2, minor: 2, patch: 0)
+		let versionOne = Version(major: 1, minor: 3, patch: 2)
+		let versionTwoOne = Version(major: 2, minor: 1, patch: 1)
+		let versionTwoTwo = Version(major: 2, minor: 2, patch: 0)
 
-			func testIntersection(lhs: VersionSpecifier, rhs: VersionSpecifier, #expected: VersionSpecifier?) {
-				if let expected = expected {
-					expect(intersection(lhs, rhs)).to(equal(expected))
-					expect(intersection(rhs, lhs)).to(equal(expected))
-				} else {
-					expect(intersection(lhs, rhs)).to(beNil())
-					expect(intersection(rhs, lhs)).to(beNil())
-				}
+		func testIntersection(lhs: VersionSpecifier, rhs: VersionSpecifier, #expected: VersionSpecifier?) {
+			if let expected = expected {
+				expect(intersection(lhs, rhs)).to(equal(expected))
+				expect(intersection(rhs, lhs)).to(equal(expected))
+			} else {
+				expect(intersection(lhs, rhs)).to(beNil())
+				expect(intersection(rhs, lhs)).to(beNil())
 			}
+		}
 
+		it("should return the tighter specifier when one is Any") {
 			testIntersection(VersionSpecifier.Any, VersionSpecifier.Any, expected: VersionSpecifier.Any)
 			testIntersection(VersionSpecifier.Any, VersionSpecifier.AtLeast(versionOne), expected: VersionSpecifier.AtLeast(versionOne))
 			testIntersection(VersionSpecifier.Any, VersionSpecifier.CompatibleWith(versionOne), expected: VersionSpecifier.CompatibleWith(versionOne))
 			testIntersection(VersionSpecifier.Any, VersionSpecifier.Exactly(versionOne), expected: VersionSpecifier.Exactly(versionOne))
+		}
 
+		it("should return the higher specifier when one is AtLeast") {
 			testIntersection(VersionSpecifier.AtLeast(versionOne), VersionSpecifier.AtLeast(versionOne), expected: VersionSpecifier.AtLeast(versionOne))
 			testIntersection(VersionSpecifier.AtLeast(versionOne), VersionSpecifier.AtLeast(versionTwoOne), expected: VersionSpecifier.AtLeast(versionTwoOne))
 			testIntersection(VersionSpecifier.AtLeast(versionOne), VersionSpecifier.CompatibleWith(versionTwoOne), expected: VersionSpecifier.CompatibleWith(versionTwoOne))
 			testIntersection(VersionSpecifier.AtLeast(versionTwoOne), VersionSpecifier.CompatibleWith(versionTwoTwo), expected: VersionSpecifier.CompatibleWith(versionTwoTwo))
 			testIntersection(VersionSpecifier.AtLeast(versionOne), VersionSpecifier.Exactly(versionTwoTwo), expected: VersionSpecifier.Exactly(versionTwoTwo))
-			testIntersection(VersionSpecifier.AtLeast(versionTwoOne), VersionSpecifier.Exactly(versionOne), expected: nil)
+		}
 
+		it("should return the higher minor or patch version when one is CompatibleWith") {
 			testIntersection(VersionSpecifier.CompatibleWith(versionOne), VersionSpecifier.CompatibleWith(versionOne), expected: VersionSpecifier.CompatibleWith(versionOne))
 			testIntersection(VersionSpecifier.CompatibleWith(versionOne), VersionSpecifier.CompatibleWith(versionTwoOne), expected: nil)
 			testIntersection(VersionSpecifier.CompatibleWith(versionTwoOne), VersionSpecifier.CompatibleWith(versionTwoTwo), expected: VersionSpecifier.CompatibleWith(versionTwoTwo))
-			testIntersection(VersionSpecifier.CompatibleWith(versionOne), VersionSpecifier.Exactly(versionTwoOne), expected: nil)
 			testIntersection(VersionSpecifier.CompatibleWith(versionTwoOne), VersionSpecifier.Exactly(versionTwoTwo), expected: VersionSpecifier.Exactly(versionTwoTwo))
-			testIntersection(VersionSpecifier.CompatibleWith(versionTwoTwo), VersionSpecifier.Exactly(versionTwoOne), expected: nil)
+		}
 
+		it("should only match exact specifiers for Exactly") {
+			testIntersection(VersionSpecifier.AtLeast(versionTwoOne), VersionSpecifier.Exactly(versionOne), expected: nil)
+			testIntersection(VersionSpecifier.CompatibleWith(versionOne), VersionSpecifier.Exactly(versionTwoOne), expected: nil)
+			testIntersection(VersionSpecifier.CompatibleWith(versionTwoTwo), VersionSpecifier.Exactly(versionTwoOne), expected: nil)
 			testIntersection(VersionSpecifier.Exactly(versionOne), VersionSpecifier.Exactly(versionOne), expected: VersionSpecifier.Exactly(versionOne))
 			testIntersection(VersionSpecifier.Exactly(versionTwoOne), VersionSpecifier.Exactly(versionOne), expected: nil)
 		}
