@@ -6,6 +6,7 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import CarthageKit
 import Foundation
 import LlamaKit
 import ReactiveCocoa
@@ -43,10 +44,18 @@ case .Some(.Success):
 	exit(EXIT_SUCCESS)
 
 case let .Some(.Failure(error)):
-	fputs("Error executing command \(verb): \(error)", stderr)
+	// TODO: This is super dumb.
+	let comparisonError = CarthageError.InvalidArgument(description: "").error
+
+	if error.domain == comparisonError.domain && error.code == comparisonError.code {
+		fputs("\(error.localizedDescription)\n", stderr)
+	} else {
+		fputs("Error executing command \(verb): \(error)\n", stderr)
+	}
+
 	exit(EXIT_FAILURE)
 
 case .None:
-	fputs("Unrecognized command: '\(verb)'. See `carthage help`.", stderr)
+	fputs("Unrecognized command: '\(verb)'. See `carthage help`.\n", stderr)
 	exit(EXIT_FAILURE)
 }
