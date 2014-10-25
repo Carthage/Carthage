@@ -13,7 +13,7 @@ import ReactiveCocoa
 struct HelpCommand: CommandType {
 	let verb = "help"
 
-	func run<C: CollectionType where C.Generator.Element == String>(arguments: C) -> ColdSignal<()> {
+	func run(arguments: [String]) -> ColdSignal<()> {
 		println("ohai help")
 		return .empty()
 	}

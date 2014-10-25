@@ -11,13 +11,27 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
+struct BuildOptions: OptionsType {
+	let configuration: String?
+
+	static func create(configuration: String?) -> BuildOptions {
+		return BuildOptions(configuration: configuration)
+	}
+
+	static func parse(args: [String]) -> Result<BuildOptions> {
+		return create
+			<*> args <| option("configuration", "The Xcode configuration to build")
+	}
+}
+
 struct BuildCommand: CommandType {
 	let verb = "build"
 
-	func run<C: CollectionType where C.Generator.Element == String>(arguments: C) -> ColdSignal<()> {
-		// TODO: Support -configuration argument
-		let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
+	func run(arguments: [String]) -> ColdSignal<()> {
+		// TODO: Handle errors.
+		let options = BuildOptions.parse(arguments).value()!
 
-		return buildInDirectory(directoryURL)
+		let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
+		return buildInDirectory(directoryURL, configuration: options.configuration ?? "Release")
 	}
 }

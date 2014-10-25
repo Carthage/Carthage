@@ -14,7 +14,7 @@ import ReactiveCocoa
 struct LocateCommand: CommandType {
 	let verb = "locate"
 
-	func run<C: CollectionType where C.Generator.Element == String>(arguments: C) -> ColdSignal<()> {
+	func run(arguments: [String]) -> ColdSignal<()> {
 		let path = first(arguments) ?? NSFileManager.defaultManager().currentDirectoryPath
 
 		// TODO: Fail running if the path is invalid.

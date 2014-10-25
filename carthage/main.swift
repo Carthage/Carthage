@@ -32,9 +32,11 @@ assert(arguments.count >= 1)
 arguments.removeAtIndex(0)
 
 let verb = arguments.first ?? HelpCommand().verb
-let args = (arguments.count > 0 ? dropFirst(arguments) : [])
+if arguments.count > 0 {
+	arguments.removeAtIndex(0)
+}
 
-let result = commandsByVerb[verb]?.run(args).wait()
+let result = commandsByVerb[verb]?.run(arguments).wait()
 
 switch result {
 case .Some(.Success):
