@@ -168,17 +168,14 @@ public func <*><T, U>(f: ColdSignal<(T -> U)>, value: ColdSignal<T>) -> ColdSign
 		.map { (f, value) in f(value) }
 }
 
-/// Attempts to parse a value for the given option from the given command-line
-/// arguments.
-///
-/// Returns either a signal of one value or an error. If no value was specified
-/// on the command line, the option's `defaultValue` is used.
-public func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> ColdSignal<T> {
+/// Implements <| uniformly over all values, even those that may not necessarily
+/// conform to ArgumentType.
+private func parseOption<T>(option: Option<T>, defaultValue: T, fromArguments: [String], parse: String -> T?) -> ColdSignal<T> {
 	var keyIndex = find(arguments, "--\(option.key)")
 	if let keyIndex = keyIndex {
 		if keyIndex + 1 < arguments.count {
 			let stringValue = arguments[keyIndex + 1]
-			if let value = T.fromString(stringValue) {
+			if let value = parse(stringValue) {
 				return .single(value)
 			} else {
 				return .error(usageError(option, stringValue))
@@ -188,7 +185,16 @@ public func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> ColdS
 		return .error(usageError(option, nil))
 	}
 
-	return .single(option.defaultValue)
+	return .single(defaultValue)
+}
+
+/// Attempts to parse a value for the given option from the given command-line
+/// arguments.
+///
+/// Returns either a signal of one value or an error. If no value was specified
+/// on the command line, the option's `defaultValue` is used.
+public func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> ColdSignal<T> {
+	return parseOption(option, option.defaultValue, arguments) { str in T.fromString(str) }
 }
 
 /// Attempts to parse a value for the given nullable option from the given
@@ -197,19 +203,5 @@ public func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> ColdS
 /// Returns either a signal of one value or an error. If no value was specified
 /// on the command line, `nil` is used.
 public func <|<T: ArgumentType>(arguments: [String], option: Option<T?>) -> ColdSignal<T?> {
-	var keyIndex = find(arguments, "--\(option.key)")
-	if let keyIndex = keyIndex {
-		if keyIndex + 1 < arguments.count {
-			let stringValue = arguments[keyIndex + 1]
-			if let value = T.fromString(stringValue) {
-				return .single(value)
-			} else {
-				return .error(usageError(option, stringValue))
-			}
-		}
-
-		return .error(usageError(option, nil))
-	}
-
-	return .single(nil)
+	return parseOption(option, option.defaultValue, arguments) { str in T.fromString(str) }
 }
