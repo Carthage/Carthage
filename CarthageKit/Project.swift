@@ -20,15 +20,10 @@ public struct Project {
 	public init(path: String) {
 		self.path = path
 
-		let cartfileURL : NSURL? = NSURL.fileURLWithPath(self.path)?.URLByAppendingPathComponent("Cartfile")
-
-		if (cartfileURL != nil) {
-			let result : Result<Cartfile> = parseJSONAtURL(cartfileURL!)
-
-			if (result.error() != nil) {
-				return
+		if let cartfileURL = NSURL.fileURLWithPath(self.path)?.URLByAppendingPathComponent("Cartfile") {
+			if let cartfile = NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding, error: nil) {
+				self.cartfile = Cartfile.fromString(cartfile).value()
 			}
-			cartfile = result.value()
 		}
 	}
 
