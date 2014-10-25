@@ -50,8 +50,8 @@ public protocol CommandType {
 public protocol OptionsType {
 	/// Parses a set of options from the given command-line arguments.
 	///
-	/// Returns a signal that will error if the arguments are invalid for the
-	/// receiving OptionsType.
+	/// Returns a signal that will error with an `InvalidArgument` error if the
+	/// arguments are invalid for the receiving OptionsType.
 	class func parse(args: [String]) -> ColdSignal<Self>
 }
 
@@ -69,6 +69,12 @@ public struct Option<T> {
 	/// A human-readable string describing the purpose of this option. This will
 	/// be shown in help messages.
 	public let usage: String
+}
+
+extension Option: Printable {
+	public var description: String {
+		return "--\(key)"
+	}
 }
 
 /// Constructs an option with the given parameters.
@@ -102,7 +108,8 @@ extension String: ArgumentType {
 	}
 }
 
-/// Constructs an error that describes how `option` was used incorrectly.
+/// Constructs an `InvalidArgument` error that describes how `option` was used
+/// incorrectly.
 ///
 /// If provided, `value` should be the invalid value given by the user.
 private func usageError<T>(option: Option<T>, value: String?) -> NSError {
