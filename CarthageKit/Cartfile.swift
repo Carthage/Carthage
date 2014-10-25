@@ -20,12 +20,10 @@ public struct Cartfile {
 		var cartfile = self(dependencies: [])
 		var result = success(())
 
-		let ignoreSet = NSMutableCharacterSet(charactersInString: "#")
-		ignoreSet.formUnionWithCharacterSet(NSCharacterSet.whitespaceAndNewlineCharacterSet())
-
+		let commentIndicator = "#"
 		(string as NSString).enumerateLinesUsingBlock { (line, stop) in
 			let scanner = NSScanner(string: line)
-			scanner.scanCharactersFromSet(ignoreSet, intoString: nil)
+			scanner.scanString(commentIndicator, intoString: nil)
 
 			if scanner.atEnd {
 				return
@@ -40,7 +38,7 @@ public struct Cartfile {
 				stop.memory = true
 			}
 
-			scanner.scanCharactersFromSet(ignoreSet, intoString: nil)
+			scanner.scanString(commentIndicator, intoString: nil)
 			if !scanner.atEnd {
 				result = failure()
 				stop.memory = true
@@ -71,7 +69,7 @@ public struct Dependency: Equatable {
 			return failure()
 		}
 
-		if !scanner.scanUpToString("\"", intoString: nil) || !scanner.scanString("\"", intoString: nil) {
+		if !scanner.scanString("\"", intoString: nil) {
 			return failure()
 		}
 
@@ -82,8 +80,6 @@ public struct Dependency: Equatable {
 
 		if let repoNWO = repoNWO {
 			return Repository.fromNWO(repoNWO).flatMap { repo in
-				scanner.scanCharactersFromSet(NSCharacterSet.whitespaceCharacterSet(), intoString: nil)
-
 				return VersionSpecifier.fromScanner(scanner).map { specifier in self(repository: repo, version: specifier) }
 			}
 		} else {
@@ -177,11 +173,8 @@ public enum VersionSpecifier: Equatable {
 	/// Attempts to parse a VersionSpecifier.
 	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
 		func scanVersion() -> Result<Version> {
-			let characterSet = NSCharacterSet(charactersInString: "0123456789.")
-			scanner.scanUpToCharactersFromSet(characterSet, intoString: nil)
-
 			var version: NSString? = nil
-			if scanner.scanCharactersFromSet(characterSet, intoString: &version) {
+			if scanner.scanCharactersFromSet(NSCharacterSet(charactersInString: "0123456789."), intoString: &version) {
 				if let version = version {
 					return Version.fromString(version)
 				}
