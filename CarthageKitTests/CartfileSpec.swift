@@ -23,22 +23,27 @@ class CartfileSpec: QuickSpec {
 			expect(result.error()).to(beNil())
 
 			let cartfile = result.value()!
-			expect(cartfile.dependencies.count).to(equal(3))
+			expect(cartfile.dependencies.count).to(equal(4))
 
 			let depReactiveCocoa = cartfile.dependencies[0]
 			expect(depReactiveCocoa.repository.name).to(equal("ReactiveCocoa"))
 			expect(depReactiveCocoa.repository.owner).to(equal("ReactiveCocoa"))
-			expect(depReactiveCocoa.version).to(equal(VersionSpecifier.Exactly(Version(major: 2, minor: 3, patch: 1))))
+			expect(depReactiveCocoa.version).to(equal(VersionSpecifier.AtLeast(Version(major: 2, minor: 3, patch: 1))))
 
-			let depConfigs = cartfile.dependencies[1]
+			let depMantle = cartfile.dependencies[1]
+			expect(depMantle.repository.name).to(equal("Mantle"))
+			expect(depMantle.repository.owner).to(equal("Mantle"))
+			expect(depMantle.version).to(equal(VersionSpecifier.CompatibleWith(Version(major: 1, minor: 0, patch: 0))))
+
+			let depLibextobjc = cartfile.dependencies[2]
+			expect(depLibextobjc.repository.owner).to(equal("jspahrsummers"))
+			expect(depLibextobjc.repository.name).to(equal("libextobjc"))
+			expect(depLibextobjc.version).to(equal(VersionSpecifier.Exactly(Version(major: 0, minor: 4, patch: 1))))
+
+			let depConfigs = cartfile.dependencies[3]
 			expect(depConfigs.repository.owner).to(equal("jspahrsummers"))
 			expect(depConfigs.repository.name).to(equal("xcconfigs"))
-			expect(depConfigs.version).to(equal(VersionSpecifier.Exactly(Version(major: 0, minor: 1, patch: 0))))
-
-			let depBuildScripts = cartfile.dependencies[2]
-			expect(depBuildScripts.repository.owner).to(equal("jspahrsummers"))
-			expect(depBuildScripts.repository.name).to(equal("objc-build-scripts"))
-			expect(depBuildScripts.version).to(equal(VersionSpecifier.Any))
+			expect(depConfigs.version).to(equal(VersionSpecifier.Any))
 		}
 	}
 }
