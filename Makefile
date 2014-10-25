@@ -16,8 +16,8 @@ clean:
 install: bootstrap
 	xcodebuild $(XCODEFLAGS) install
 
-	install -d "$(FRAMEWORKS_FOLDER)"
-	rm -r "$(FRAMEWORKS_FOLDER)/CarthageKit.framework"
+	mkdir -p "$(FRAMEWORKS_FOLDER)"
+	rm -rf "$(FRAMEWORKS_FOLDER)/CarthageKit.framework"
 	cp -PR "$(BUILT_BUNDLE)/Contents/Frameworks/CarthageKit.framework" "$(FRAMEWORKS_FOLDER)/"
 
 	install -d "$(BINARIES_FOLDER)"
