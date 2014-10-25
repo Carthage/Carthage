@@ -174,9 +174,9 @@ extension Version: Printable {
 /// requirement.
 public enum VersionSpecifier: Equatable {
 	case Any
-	case Exactly(Version)
 	case AtLeast(Version)
 	case CompatibleWith(Version)
+	case Exactly(Version)
 
 	/// Attempts to parse a VersionSpecifier.
 	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
@@ -217,6 +217,89 @@ public enum VersionSpecifier: Equatable {
 		case let .CompatibleWith(requirement):
 			return version.major == requirement.major && version >= requirement
 		}
+	}
+}
+
+private func intersection(#atLeast: Version, #compatibleWith: Version) -> VersionSpecifier? {
+	if atLeast.major > compatibleWith.major {
+		return nil
+	} else if atLeast.major < compatibleWith.major {
+		return .CompatibleWith(compatibleWith)
+	} else {
+		return .CompatibleWith(max(atLeast, compatibleWith))
+	}
+}
+
+private func intersection(#atLeast: Version, #exactly: Version) -> VersionSpecifier? {
+	if atLeast > exactly {
+		return nil
+	}
+
+	return .Exactly(exactly)
+}
+
+private func intersection(#compatibleWith: Version, #exactly: Version) -> VersionSpecifier? {
+	if exactly.major != compatibleWith.major || compatibleWith > exactly {
+		return nil
+	}
+
+	return .Exactly(exactly)
+}
+
+/// Attempts to determine a version specifier that accurately describes the
+/// intersection between the two given specifiers.
+///
+/// In other words, any version that satisfies the returned specifier will
+/// satisfy _both_ of the given specifiers.
+public func intersection(lhs: VersionSpecifier, rhs: VersionSpecifier) -> VersionSpecifier? {
+	switch (lhs, rhs) {
+	// Unfortunately, patterns with a wildcard _ are not considered exhaustive,
+	// so do the same thing manually.
+	case (.Any, .Any): fallthrough
+	case (.Any, .AtLeast): fallthrough
+	case (.Any, .CompatibleWith): fallthrough
+	case (.Any, .Exactly):
+		return rhs
+
+	case (.AtLeast, .Any): fallthrough
+	case (.CompatibleWith, .Any): fallthrough
+	case (.Exactly, .Any):
+		return lhs
+
+	case let (.AtLeast(lv), .AtLeast(rv)):
+		return .AtLeast(max(lv, rv))
+
+	case let (.AtLeast(lv), .CompatibleWith(rv)):
+		return intersection(atLeast: lv, compatibleWith: rv)
+
+	case let (.AtLeast(lv), .Exactly(rv)):
+		return intersection(atLeast: lv, exactly: rv)
+
+	case let (.CompatibleWith(lv), .AtLeast(rv)):
+		return intersection(atLeast: rv, compatibleWith: lv)
+
+	case let (.CompatibleWith(lv), .CompatibleWith(rv)):
+		if lv.major != rv.major {
+			return nil
+		}
+
+		return .CompatibleWith(max(lv, rv))
+
+	case let (.CompatibleWith(lv), .Exactly(rv)):
+		return intersection(compatibleWith: lv, exactly: rv)
+
+	case let (.Exactly(lv), .AtLeast(rv)):
+		return intersection(atLeast: rv, exactly: lv)
+
+	case let (.Exactly(lv), .CompatibleWith(rv)):
+		return intersection(compatibleWith: rv, exactly: lv)
+
+	case let (.Exactly(lv), .Exactly(rv)):
+		if lv != rv {
+			return nil
+		}
+
+		return lhs
 	}
 }
 

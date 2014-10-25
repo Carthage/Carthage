@@ -8,11 +8,12 @@
 
 import Foundation
 import LlamaKit
+import ReactiveCocoa
 
 protocol CommandType {
-	class var verb: String { get }
+	var verb: String { get }
 
-	init<S: SequenceType where S.Generator.Element == String>(_ arguments: S)
+	init()
 
-	func run() -> Result<()>
+	func run<C: CollectionType where C.Generator.Element == String>(arguments: C) -> ColdSignal<()>
 }

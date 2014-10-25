@@ -15,6 +15,9 @@
 		D01F8A4919EA28F600643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
 		D01F8A4A19EA28FE00643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
 		D01F8A4C19EA28FE00643E7C /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4B19EA28FE00643E7C /* Nimble.framework */; };
+		D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F8A5319EA2F1700643E7C /* Xcode.swift */; };
+		D03B32BD19EA453D007788BE /* Locate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B32BC19EA453D007788BE /* Locate.swift */; };
+		D03B32BF19EA49D8007788BE /* Build.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B32BE19EA49D8007788BE /* Build.swift */; };
 		D04AEADB19E918C30045C166 /* TaskSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04AEADA19E918C30045C166 /* TaskSpec.swift */; };
 		D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAAB4919FAEDB4007B24B3 /* Errors.swift */; };
 		D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */ = {isa = PBXBuildFile; fileRef = D0AAAB5419FB1062007B24B3 /* TestCartfile */; };
@@ -25,6 +28,8 @@
 		D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1218F19E88A15005E4BAA /* Cartfile.swift */; };
 		D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1219119E88B8F005E4BAA /* GitHub.swift */; };
 		D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */; };
+		D0DB09A119EA34E500234B16 /* TestFramework in Resources */ = {isa = PBXBuildFile; fileRef = D0DB09A019EA34E500234B16 /* TestFramework */; };
+		D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DB09A319EA354200234B16 /* XcodeSpec.swift */; };
 		D0E7B64819E9C64600EDBA4D /* carthageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E7B64719E9C64600EDBA4D /* carthageTests.swift */; };
 		D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
 		D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
@@ -88,6 +93,9 @@
 		D01F8A4619EA28F600643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../External/ReactiveCocoa/External/Quick/Externals/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
 		D01F8A4719EA28F600643E7C /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Quick.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4B19EA28FE00643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../External/ReactiveCocoa/External/Quick/Externals/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
+		D01F8A5319EA2F1700643E7C /* Xcode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Xcode.swift; sourceTree = "<group>"; };
+		D03B32BC19EA453D007788BE /* Locate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Locate.swift; path = carthage/Locate.swift; sourceTree = SOURCE_ROOT; };
+		D03B32BE19EA49D8007788BE /* Build.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Build.swift; path = carthage/Build.swift; sourceTree = SOURCE_ROOT; };
 		D04AEADA19E918C30045C166 /* TaskSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TaskSpec.swift; sourceTree = "<group>"; };
 		D06939B019E8A757001E44AE /* Command.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
 		D06939B219E8A79F001E44AE /* Help.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Help.swift; sourceTree = "<group>"; };
@@ -121,6 +129,8 @@
 		D0D1218F19E88A15005E4BAA /* Cartfile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Cartfile.swift; sourceTree = "<group>"; };
 		D0D1219119E88B8F005E4BAA /* GitHub.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitHub.swift; sourceTree = "<group>"; };
 		D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CartfileSpec.swift; sourceTree = "<group>"; };
+		D0DB09A019EA34E500234B16 /* TestFramework */ = {isa = PBXFileReference; lastKnownFileType = folder; path = TestFramework; sourceTree = "<group>"; };
+		D0DB09A319EA354200234B16 /* XcodeSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XcodeSpec.swift; sourceTree = "<group>"; };
 		D0E7B63219E9C64500EDBA4D /* carthage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = carthage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B64119E9C64600EDBA4D /* CarthageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarthageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B64619E9C64600EDBA4D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -195,8 +205,10 @@
 		D0D1211A19E87861005E4BAA /* Carthage */ = {
 			isa = PBXGroup;
 			children = (
+				D03B32BE19EA49D8007788BE /* Build.swift */,
 				D06939B019E8A757001E44AE /* Command.swift */,
 				D06939B219E8A79F001E44AE /* Help.swift */,
+				D03B32BC19EA453D007788BE /* Locate.swift */,
 				D0D1211B19E87861005E4BAA /* main.swift */,
 			);
 			path = Carthage;
@@ -276,6 +288,7 @@
 				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
 				D0AD39AF19E900BC00B343CE /* Task.swift */,
+				D01F8A5319EA2F1700643E7C /* Xcode.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
 			);
 			path = CarthageKit;
@@ -296,6 +309,7 @@
 			children = (
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
 				D04AEADA19E918C30045C166 /* TaskSpec.swift */,
+				D0DB09A319EA354200234B16 /* XcodeSpec.swift */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
 			path = CarthageKitTests;
@@ -304,6 +318,7 @@
 		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				D0DB09A019EA34E500234B16 /* TestFramework */,
 				D01F8A4B19EA28FE00643E7C /* Nimble.framework */,
 				D01F8A4619EA28F600643E7C /* Nimble.framework */,
 				D01F8A4719EA28F600643E7C /* Quick.framework */,
@@ -478,6 +493,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */,
+				D0DB09A119EA34E500234B16 /* TestFramework in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -524,6 +540,7 @@
 				D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */,
 				D0AD39B019E900BC00B343CE /* Task.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
+				D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */,
 				D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -534,6 +551,7 @@
 			files = (
 				D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */,
 				D04AEADB19E918C30045C166 /* TaskSpec.swift in Sources */,
+				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -543,7 +561,9 @@
 			files = (
 				D0E7B65519E9C76900EDBA4D /* Help.swift in Sources */,
 				D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */,
+				D03B32BF19EA49D8007788BE /* Build.swift in Sources */,
 				D0E7B65619E9C76900EDBA4D /* main.swift in Sources */,
+				D03B32BD19EA453D007788BE /* Locate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
