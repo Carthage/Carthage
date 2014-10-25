@@ -10,34 +10,61 @@ import CarthageKit
 import Foundation
 import ReactiveCocoa
 
+/// Represents a Carthage subcommand that can be executed with its own set of
+/// arguments.
 protocol CommandType {
+	/// The action that users should specify to use this subcommand (e.g.,
+	/// `help`).
 	var verb: String { get }
 
-	init()
-
+	/// Runs this subcommand with the given arguments.
+	///
+	/// Returns a signal that will complete or error when the command finishes.
 	func run(arguments: [String]) -> ColdSignal<()>
 }
 
+/// Represents a record of options for a command.
 protocol OptionsType {
+	/// Parses a set of options from the given command-line arguments.
+	///
+	/// Returns a signal that will error if the arguments are invalid for the
+	/// receiving OptionsType.
 	class func parse(args: [String]) -> ColdSignal<Self>
 }
 
-protocol ArgumentType {
-	class func fromString(string: String) -> Self?
-}
-
+/// Describes an option that can be provided on the command line.
 struct Option<T> {
+	/// The key that controls this option.
+	///
+	/// For example, a key of `verbose` would be used for a `--verbose` option.
 	let key: String
+
+	/// The default value for this option. This is the value that will be used
+	/// if the option is never explicitly specified on the command line.
 	let defaultValue: T
+
+	/// A human-readable string describing the purpose of this option. This will
+	/// be shown in help messages.
 	let usage: String
 }
 
+/// Constructs an option with the given parameters.
 func option<T: ArgumentType>(key: String, defaultValue: T, usage: String) -> Option<T> {
 	return Option(key: key, defaultValue: defaultValue, usage: usage)
 }
 
+/// Contructs a nullable option with the given parameters.
+///
+/// This must be used for options that permit `nil`, because it's impossible to
+/// extend `Optional` with the `ArgumentType` protocol.
 func option<T: ArgumentType>(key: String, usage: String) -> Option<T?> {
 	return Option(key: key, defaultValue: nil, usage: usage)
+}
+
+/// Represents a value that can be converted from a command-line argument.
+protocol ArgumentType {
+	/// Attempts to parse a value from the given command-line argument.
+	class func fromString(string: String) -> Self?
 }
 
 extension Int: ArgumentType {
@@ -52,7 +79,10 @@ extension String: ArgumentType {
 	}
 }
 
-func usageError<T>(option: Option<T>, value: String?) -> NSError {
+/// Constructs an error that describes how `option` was used incorrectly.
+///
+/// If provided, `value` should be the invalid value given by the user.
+private func usageError<T>(option: Option<T>, value: String?) -> NSError {
 	var description: String?
 	if let value = value {
 		description = "Invalid value for \(option): \(value)"
