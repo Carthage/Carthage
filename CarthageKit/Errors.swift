@@ -24,7 +24,10 @@ public enum CarthageError {
 	public var error: NSError {
 		switch (self) {
 		case let .ShellTaskFailed(code):
-			return NSError(domain: CarthageErrorDomain, code: 1, userInfo: [ CarthageError.exitCodeKey: code  ])
+			return NSError(domain: CarthageErrorDomain, code: 1, userInfo: [
+				NSLocalizedDescriptionKey: "A shell task failed with exit code \(code)",
+				CarthageError.exitCodeKey: code
+			])
 		}
 	}
 }
