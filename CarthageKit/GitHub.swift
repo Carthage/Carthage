@@ -14,8 +14,8 @@ public struct Repository: Equatable {
 	public let owner: String
 	public let name: String
 	public var cloneURL: NSURL {
-        return NSURL(scheme: "https", host: "github.com", path: "/\(owner)/\(name).git")!
-    }
+		return NSURL(scheme: "https", host: "github.com", path: "/\(owner)/\(name).git")!
+	}
 
 	init(owner: String, name: String) {
 		self.owner = owner
