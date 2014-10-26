@@ -17,6 +17,10 @@ public protocol CommandType {
 	/// `help`).
 	var verb: String { get }
 
+	/// A human-readable, high-level description of what this command is used
+	/// for.
+	var function: String { get }
+
 	/// Runs this subcommand in the given mode.
 	func run(mode: CommandMode) -> Result<()>
 }

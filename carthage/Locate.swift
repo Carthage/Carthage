@@ -11,9 +11,9 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-/// Locates Xcode projects or workspaces within the specified directory.
 public struct LocateCommand: CommandType {
 	public let verb = "locate"
+	public let function = "Locate Xcode projects or workspaces"
 
 	public func run(mode: CommandMode) -> Result<()> {
 		return ColdSignal.fromResult(LocateOptions.evaluate(mode))

@@ -9,9 +9,9 @@
 import Foundation
 import LlamaKit
 
-/// Offers general or subcommand-specific help.
 public struct HelpCommand: CommandType {
 	public let verb = "help"
+	public let function = "Display general or command-specific help"
 
 	private let registry: CommandRegistry
 
@@ -25,7 +25,7 @@ public struct HelpCommand: CommandType {
 		println("Available commands:\n")
 
 		for command in registry.commands {
-			println("\t\(command.verb)")
+			println("  \(command.verb): \(command.function)")
 		}
 
 		return success(())

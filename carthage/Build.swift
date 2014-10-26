@@ -11,9 +11,9 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-/// Builds the project in the current directory.
 public struct BuildCommand: CommandType {
 	public let verb = "build"
+	public let function = "Build the project in the current directory"
 
 	public func run(mode: CommandMode) -> Result<()> {
 		return ColdSignal.fromResult(BuildOptions.evaluate(mode))
