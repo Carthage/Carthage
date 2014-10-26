@@ -55,8 +55,9 @@ public final class ArgumentGenerator: GeneratorType {
 					permitKeys = false
 				} else {
 					currentKey = arg.substringFromIndex(keyStartIndex)
-					continue
 				}
+
+				continue
 			}
 
 			if let key = currentKey {
@@ -113,18 +114,18 @@ public enum CommandMode {
 ///
 ///		struct LogOptions: OptionsType {
 ///			let verbosity: Int
-///			let outputFilename: String?
+///			let outputFilename: String
 ///			let logName: String
 ///
-///			static func create(verbosity: Int)(outputFilename: String?)(logName: String) -> LogOptions {
+///			static func create(verbosity: Int)(outputFilename: String)(logName: String) -> LogOptions {
 ///				return LogOptions(verbosity: verbosity, outputFilename: outputFilename, logName: logName)
 ///			}
 ///
 ///			static func evaluate(m: CommandMode) -> Result<LogOptions> {
 ///				return create
-///					<*> m <| option("verbose", 0, "The verbosity level with which to read the logs")
-///					<*> m <| option("outputFilename", "A file to print output to, instead of stdout")
-///					<*> m <| option("logName", "all", "The log to read")
+///					<*> m <| option(key: "verbose", 0, "the verbosity level with which to read the logs")
+///					<*> m <| option(key: "outputFilename", defaultValue: "", "a file to print output to, instead of stdout")
+///					<*> m <| option("the log to read")
 ///			}
 ///		}
 public protocol OptionsType {
@@ -136,15 +137,19 @@ public protocol OptionsType {
 }
 
 /// Describes an option that can be provided on the command line.
-public struct Option<T> {
-	/// The key that controls this option.
+public struct Option<T: ArgumentType> {
+	/// The key that controls this option. For example, a key of `verbose` would
+	/// be used for a `--verbose` option.
 	///
-	/// For example, a key of `verbose` would be used for a `--verbose` option.
-	public let key: String
+	/// If this is nil, this option will not have a corresponding flag, and must
+	/// be specified as a plain value at the end of the argument list.
+	public let key: String?
 
 	/// The default value for this option. This is the value that will be used
 	/// if the option is never explicitly specified on the command line.
-	public let defaultValue: T
+	///
+	/// If this is nil, this option is always required.
+	public let defaultValue: T?
 
 	/// A human-readable string describing the purpose of this option. This will
 	/// be shown in help messages.
@@ -153,21 +158,17 @@ public struct Option<T> {
 
 extension Option: Printable {
 	public var description: String {
-		return "--\(key)"
+		if let key = key {
+			return "--\(key)"
+		} else {
+			return usage
+		}
 	}
 }
 
 /// Constructs an option with the given parameters.
-public func option<T: ArgumentType>(key: String, defaultValue: T, usage: String) -> Option<T> {
+public func option<T: ArgumentType>(key: String? = nil, defaultValue: T? = nil, usage: String) -> Option<T> {
 	return Option(key: key, defaultValue: defaultValue, usage: usage)
-}
-
-/// Contructs a nullable option with the given parameters.
-///
-/// This must be used for options that permit `nil`, because it's impossible to
-/// extend `Optional` with the `ArgumentType` protocol.
-public func option<T: ArgumentType>(key: String, usage: String) -> Option<T?> {
-	return Option(key: key, defaultValue: nil, usage: usage)
 }
 
 /// Represents a value that can be converted from a command-line argument.
@@ -205,28 +206,6 @@ private func invalidUsageError<T>(option: Option<T>, value: String) -> NSError {
 	}
 
 	return CarthageError.InvalidArgument(description: description!).error
-}
-
-/// Implements <| uniformly over all values, even those that may not necessarily
-/// conform to ArgumentType.
-private func evaluateOption<T>(option: Option<T>, defaultValue: T, mode: CommandMode, parse: String -> T?) -> Result<T> {
-	switch (mode) {
-	case let .Arguments(arguments):
-		if let stringValue = arguments[option.key] {
-			if stringValue != "" {
-				if let value = parse(stringValue) {
-					return success(value)
-				}
-			}
-
-			return failure(invalidUsageError(option, stringValue))
-		}
-
-		return success(defaultValue)
-
-	case .Usage:
-		return failure(informativeUsageError(option))
-	}
 }
 
 /// Combines the text of the two errors, if they're both `InvalidArgument`
@@ -318,13 +297,32 @@ public func <*><T, U>(f: Result<(T -> U)>, value: Result<T>) -> Result<U> {
 /// If parsing command line arguments, and no value was specified on the command
 /// line, the option's `defaultValue` is used.
 public func <|<T: ArgumentType>(mode: CommandMode, option: Option<T>) -> Result<T> {
-	return evaluateOption(option, option.defaultValue, mode) { str in T.fromString(str) }
-}
+	switch (mode) {
+	case let .Arguments(arguments):
+		var stringValue: String?
+		if let key = option.key {
+			stringValue = arguments[key]
+		} else {
+			stringValue = arguments.next()
+		}
 
-/// Evaluates the given nullable option in the given mode.
-///
-/// If parsing command line arguments, and no value was specified on the command
-/// line, `nil` is used.
-public func <|<T: ArgumentType>(mode: CommandMode, option: Option<T?>) -> Result<T?> {
-	return evaluateOption(option, option.defaultValue, mode) { str in T.fromString(str) }
+		if let stringValue = stringValue {
+			if stringValue != "" {
+				if let value = T.fromString(stringValue) {
+					return success(value)
+				}
+			}
+
+			return failure(invalidUsageError(option, stringValue))
+		} else if let defaultValue = option.defaultValue {
+			return success(defaultValue)
+		} else {
+			// TODO: Flags vs. missing options will need to be differentiated
+			// once we support booleans.
+			return failure(invalidUsageError(option, ""))
+		}
+
+	case .Usage:
+		return failure(informativeUsageError(option))
+	}
 }

@@ -35,6 +35,6 @@ private struct BuildOptions: OptionsType {
 
 	static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
-			<*> m <| option("configuration", "Release", "The Xcode configuration to build")
+			<*> m <| option(key: "configuration", defaultValue: "Release", "the Xcode configuration to build")
 	}
 }
