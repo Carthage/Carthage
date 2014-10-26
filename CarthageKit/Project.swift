@@ -15,7 +15,7 @@ let dependenciesPath = "~/.carthage/dependencies".stringByExpandingTildeInPath
 /// Represents a Project that is using Carthage.
 public struct Project {
 	/// Path to the root folder
-    public var path: String
+	public var path: String
 
 	/// The project's cart file
 	public let cartfile: Cartfile?
