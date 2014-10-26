@@ -10,68 +10,80 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-let dependenciesPath = "~/.carthage/dependencies".stringByExpandingTildeInPath
-
-public func runGitTask(withArguments arguments: [String] = ["git", "--version"]) -> ColdSignal<()> {
+public func runGitTask(withArguments arguments: [String] = ["--version"]) -> ColdSignal<String> {
 	let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments)
-	return launchTask(taskDescription).then(.empty())
+	return launchTask(taskDescription).map { NSString(data:$0, encoding: NSUTF8StringEncoding) as String }
 }
 
-public func cloneOrUpdateDependency(dependency: Dependency) -> ColdSignal<()> {
-    let destinationPath = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
+public func repositoryRemote(repositoryPath: String) -> ColdSignal<String> {
+	// TODO: Perhaps don't assume it's origin?
+	let arguments = [
+		"config",
+		"--get",
+		"remote.origin.url",
+	]
+	return runGitTask(withArguments: arguments)
+}
 
+/// Returns a cold signal that completes when cloning is complete, or errors if
+/// the repository cannot be cloned.
+public func cloneRepository(cloneURL: String, destinationPath: String) -> ColdSignal<String> {
     var isDirectory : ObjCBool = false
 
     if NSFileManager.defaultManager().fileExistsAtPath(destinationPath, isDirectory: &isDirectory) {
         if isDirectory {
-            // This is probably a git repo
-            // TODO: Also check the remote matches and warn if it doesn't
-            return updateDependency(dependency, destinationPath)
+			return repositoryRemote(destinationPath)
+				.map({ remoteURL in
+					var error : NSError? = nil
+
+					if remoteURL == cloneURL {
+						error = NSError(domain:"", code: -1, userInfo: [ NSLocalizedDescriptionKey: "Git repo already exists at \(destinationPath). Try calling fetchRepository() instead." ])
+					} else {
+						error = NSError(domain:"", code: -1, userInfo: [ NSLocalizedDescriptionKey: "A git repository with a different remoteURL exists at \(destinationPath). Please remove it before trying again." ])
+					}
+					return ColdSignal.error(error!)
+				})
+				.merge(identity)
         }
-		// TODO: Real errors
-        return ColdSignal.error(NSError(domain:"", code: -1, userInfo: [ NSLocalizedDescriptionKey: "A file already exists at \(destinationPath) and it is not a git repository. Please delete it and try again." ]))
+        return ColdSignal.error(NSError(domain:"", code: -1, userInfo: [ NSLocalizedDescriptionKey: "A file already exists at \(destinationPath) and it is not a git repository. Please remove it before trying again" ]))
     }
 
-	return cloneDependency(dependency, destinationPath)
-}
-
-public func cloneDependency(dependency: Dependency, destinationPath: String) -> ColdSignal<()> {
-    let arguments = [
+	let arguments = [
         "clone",
-        dependency.repository.cloneURL.absoluteString!,
+        cloneURL,
         destinationPath,
     ]
 	return runGitTask(withArguments: arguments)
 }
 
-public func updateDependency(dependency: Dependency, destinationPath: String) -> ColdSignal<()> {
-    let arguments = [
-        "fetch",
-        dependency.repository.cloneURL.absoluteString!,
-    ]
-	return runGitTask(withArguments: arguments)
-}
-
-public func checkoutDependency(dependency: Dependency, destinationPath: String) -> ColdSignal<()> {
-	let dependencyPath : String = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
-
-	let cloneURLString = NSURL.fileURLWithPath(dependencyPath, isDirectory:true)?.absoluteString?
-
-	if cloneURLString == nil {
-		// TODO: Real errors
-        return ColdSignal.error(NSError(domain:"", code: -1, userInfo: [ NSLocalizedDescriptionKey: "The dependency \(dependency) doesn't have a URL to clone from." ]))
-	}
-
-	var arguments = [
-        "clone",
-		"--local",
-		cloneURLString!,
-        destinationPath,
-    ]
-
-	if let versionString = dependency.version.version?.raw {
-		arguments = arguments + ["--branch=\(versionString)"]
-	}
-
-	return runGitTask(withArguments: arguments)
-}
+//public func updateDependency(dependency: Dependency, destinationPath: String) -> ColdSignal<()> {
+//    let arguments = [
+//        "fetch",
+//        dependency.repository.cloneURL.absoluteString!,
+//    ]
+//	return runGitTask(withArguments: arguments)
+//}
+//
+//public func checkoutDependency(dependency: Dependency, destinationPath: String) -> ColdSignal<()> {
+//	let dependencyPath : String = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
+//
+//	let cloneURLString = NSURL.fileURLWithPath(dependencyPath, isDirectory:true)?.absoluteString?
+//
+//	if cloneURLString == nil {
+//		// TODO: Real errors
+//        return ColdSignal.error(NSError(domain:"", code: -1, userInfo: [ NSLocalizedDescriptionKey: "The dependency \(dependency) doesn't have a URL to clone from." ]))
+//	}
+//
+//	var arguments = [
+//        "clone",
+//		"--local",
+//		cloneURLString!,
+//        destinationPath,
+//    ]
+//
+//	if let versionString = dependency.version.version?.raw {
+//		arguments = arguments + ["--branch=\(versionString)"]
+//	}
+//
+//	return runGitTask(withArguments: arguments)
+//}

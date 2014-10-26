@@ -10,6 +10,8 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
+let dependenciesPath = "~/.carthage/dependencies".stringByExpandingTildeInPath
+
 /// Represents a Project that is using Carthage.
 public struct Project {
 	/// Path to the root folder
@@ -30,9 +32,14 @@ public struct Project {
 
 	public func checkoutDependencies() -> ColdSignal<()> {
 		if let dependencies = cartfile?.dependencies {
-			return ColdSignal.fromValues(dependencies.map({ dependency in
-				return cloneOrUpdateDependency(dependency)
-			})).concat(identity)
+			return ColdSignal.fromValues(dependencies)
+				.map({ dependency -> ColdSignal<String> in
+					let destinationPath = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
+
+					return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationPath)
+				})
+				.concat(identity)
+				.then(.empty())
 		}
 		return ColdSignal.empty()
 	}
