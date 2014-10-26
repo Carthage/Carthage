@@ -8,6 +8,7 @@
 
 import Foundation
 import LlamaKit
+import ReactiveCocoa
 
 /// Represents a Project that is using Carthage.
 public struct Project {
@@ -27,18 +28,12 @@ public struct Project {
 		}
 	}
 
-	public func cloneDependencies() -> Result<()> {
+	public func checkoutDependencies() -> ColdSignal<()> {
 		if let dependencies = cartfile?.dependencies {
-			for dependency in dependencies {
-
-                // Ignore the result for now
-                cloneOrUpdateDependency(dependency)
-
-				let projectPath = path.stringByAppendingPathComponent("Libraries").stringByAppendingPathComponent(dependency.repository.name)
-
-				checkoutDependency(dependency, projectPath)
-			}
+			return ColdSignal.fromValues(dependencies.map({ dependency in
+				return cloneOrUpdateDependency(dependency)
+			})).concat(identity)
 		}
-		return success()
+		return ColdSignal.empty()
 	}
 }

@@ -15,18 +15,14 @@ struct CheckoutCommand: CommandType {
 	let verb = "checkout"
 
 	func run<C: CollectionType where C.Generator.Element == String>(arguments: C) -> ColdSignal<()> {
-		// 1. Identify the project's working directory.
+		// Identify the project's working directory.
 
 		let pwd : String? = NSFileManager.defaultManager().currentDirectoryPath
 		if pwd == nil || pwd!.isEmpty {
 			return ColdSignal.empty()
 		}
 
-		// 2. Create the project
 		let project = Project(path: pwd!)
-		return ColdSignal { subscriber in
-			project.cloneDependencies()
-			subscriber.put(.Completed)
-		}
+		return project.checkoutDependencies()
 	}
 }
