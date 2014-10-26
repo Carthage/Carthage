@@ -24,7 +24,7 @@ let commands = CommandRegistry()
 commands.register(BuildCommand())
 commands.register(LocateCommand())
 
-let helpCommand = HelpCommand()
+let helpCommand = HelpCommand(registry: commands)
 commands.register(helpCommand)
 
 var arguments = Process.arguments

@@ -27,7 +27,7 @@ public final class CommandRegistry {
 
 	/// All available commands.
 	public var commands: [CommandType] {
-		return commandsByVerb.values.array
+		return sorted(commandsByVerb.values) { return $0.verb < $1.verb }
 	}
 
 	public init() {}
