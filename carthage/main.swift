@@ -37,7 +37,7 @@ if arguments.count > 0 {
 	arguments.removeAtIndex(0)
 }
 
-let result = commandsByVerb[verb]?.run(.Arguments(arguments))
+let result = commandsByVerb[verb]?.run(.Arguments(ArgumentGenerator(arguments)))
 
 switch result {
 case .Some(.Success):

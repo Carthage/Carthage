@@ -21,10 +21,82 @@ public protocol CommandType {
 	func run(mode: CommandMode) -> Result<()>
 }
 
+/// A generator that destructively enumerates a list of command-line arguments.
+public final class ArgumentGenerator: GeneratorType {
+	typealias Element = String
+
+	private var touchedKeyedArguments = [String: String]()
+
+	/// All flags associated with values that have not yet been read through
+	/// a subscripting call.
+	internal var untouchedKeyedArguments = [String: String]()
+
+	/// Arguments not associated with any flags.
+	private var floatingArguments: GeneratorOf<String>
+
+	/// Initializes the generator from a simple list of command-line arguments.
+	public init(_ arguments: [String]) {
+		var currentKey: String? = nil
+		var permitKeys = true
+
+		var floating = [String]()
+
+		for arg in arguments {
+			let keyStartIndex = arg.startIndex.successor().successor()
+
+			if permitKeys && keyStartIndex <= arg.endIndex && arg.substringToIndex(keyStartIndex) == "--" {
+				if let key = currentKey {
+					untouchedKeyedArguments[key] = ""
+					currentKey = nil
+				}
+
+				// Check for -- by itself.
+				if keyStartIndex == arg.endIndex {
+					permitKeys = false
+				} else {
+					currentKey = arg.substringFromIndex(keyStartIndex)
+					continue
+				}
+			}
+
+			if let key = currentKey {
+				untouchedKeyedArguments[key] = arg
+				currentKey = nil
+			} else {
+				floating.append(arg)
+			}
+		}
+
+		if let key = currentKey {
+			untouchedKeyedArguments[key] = ""
+		}
+
+		floatingArguments = GeneratorOf(floating.generate())
+	}
+
+	/// Yields the next argument _not_ associated with a flag, or nil if all
+	/// unassociated arguments have been enumerated already.
+	public func next() -> String? {
+		return floatingArguments.next()
+	}
+
+	/// Returns the value associated with the given flag, or nil if it was not
+	/// provided.
+	///
+	/// Flags provided without a value will result in an empty string.
+	public subscript(key: String) -> String? {
+		if let value = untouchedKeyedArguments.removeValueForKey(key) {
+			touchedKeyedArguments[key] = value
+		}
+
+		return touchedKeyedArguments[key]
+	}
+}
+
 /// Describes the "mode" in which a command should run.
 public enum CommandMode {
 	/// Options should be parsed from the given command-line arguments.
-	case Arguments([String])
+	case Arguments(ArgumentGenerator)
 
 	/// Each option should record its usage information in an error, for
 	/// presentation to the user.
@@ -123,15 +195,13 @@ private func informativeUsageError<T>(option: Option<T>) -> NSError {
 }
 
 /// Constructs an `InvalidArgument` error that describes how `option` was used
-/// incorrectly.
-///
-/// If provided, `value` should be the invalid value given by the user.
-private func invalidUsageError<T>(option: Option<T>, value: String?) -> NSError {
+/// incorrectly. `value` should be the invalid value given by the user.
+private func invalidUsageError<T>(option: Option<T>, value: String) -> NSError {
 	var description: String?
-	if let value = value {
-		description = "Invalid value for \(option): \(value)"
-	} else {
+	if value == "" {
 		description = "Missing argument for \(option)"
+	} else {
+		description = "Invalid value for \(option): \(value)"
 	}
 
 	return CarthageError.InvalidArgument(description: description!).error
@@ -142,18 +212,14 @@ private func invalidUsageError<T>(option: Option<T>, value: String?) -> NSError 
 private func evaluateOption<T>(option: Option<T>, defaultValue: T, mode: CommandMode, parse: String -> T?) -> Result<T> {
 	switch (mode) {
 	case let .Arguments(arguments):
-		var keyIndex = find(arguments, "--\(option.key)")
-		if let keyIndex = keyIndex {
-			if keyIndex + 1 < arguments.count {
-				let stringValue = arguments[keyIndex + 1]
+		if let stringValue = arguments[option.key] {
+			if stringValue != "" {
 				if let value = parse(stringValue) {
 					return success(value)
-				} else {
-					return failure(invalidUsageError(option, stringValue))
 				}
 			}
 
-			return failure(invalidUsageError(option, nil))
+			return failure(invalidUsageError(option, stringValue))
 		}
 
 		return success(defaultValue)

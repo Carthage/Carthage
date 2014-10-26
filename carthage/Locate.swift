@@ -18,7 +18,7 @@ public struct LocateCommand: CommandType {
 	public func run(mode: CommandMode) -> Result<()> {
 		switch (mode) {
 		case let .Arguments(arguments):
-			let path = first(arguments) ?? NSFileManager.defaultManager().currentDirectoryPath
+			let path = arguments.next() ?? NSFileManager.defaultManager().currentDirectoryPath
 
 			// TODO: Fail running if the path is invalid.
 			let directoryURL = NSURL.fileURLWithPath(path)!
