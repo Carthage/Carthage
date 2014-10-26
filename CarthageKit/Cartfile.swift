@@ -197,7 +197,7 @@ public enum VersionSpecifier: Equatable {
 		func scanVersion() -> Result<Version> {
 			var version: NSString? = nil
 
-			if scanner.scanUpToString("\n", intoString: &version) {
+			if scanner.scanUpToCharactersFromSet(NSCharacterSet.whitespaceAndNewlineCharacterSet(), intoString: &version) {
 				if let version = version {
 					return Version.fromString(version)
 				}
