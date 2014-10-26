@@ -161,9 +161,9 @@ public enum CommandMode {
 ///
 ///			static func evaluate(m: CommandMode) -> Result<LogOptions> {
 ///				return create
-///					<*> m <| option(key: "verbose", 0, "the verbosity level with which to read the logs")
-///					<*> m <| option(key: "outputFilename", defaultValue: "", "a file to print output to, instead of stdout")
-///					<*> m <| option("the log to read")
+///					<*> m <| Option(key: "verbose", defaultValue: 0, usage: "the verbosity level with which to read the logs")
+///					<*> m <| Option(key: "outputFilename", defaultValue: "", usage: "a file to print output to, instead of stdout")
+///					<*> m <| Option(usage: "the log to read")
 ///			}
 ///		}
 public protocol OptionsType {
@@ -192,6 +192,12 @@ public struct Option<T: ArgumentType> {
 	/// A human-readable string describing the purpose of this option. This will
 	/// be shown in help messages.
 	public let usage: String
+
+	public init(key: String? = nil, defaultValue: T? = nil, usage: String) {
+		self.key = key
+		self.defaultValue = defaultValue
+		self.usage = usage
+	}
 
 	/// Constructs an `InvalidArgument` error that describes how to use the
 	/// option.
@@ -238,11 +244,6 @@ extension Option: Printable {
 			return usage
 		}
 	}
-}
-
-/// Constructs an option with the given parameters.
-public func option<T: ArgumentType>(key: String? = nil, defaultValue: T? = nil, usage: String) -> Option<T> {
-	return Option(key: key, defaultValue: defaultValue, usage: usage)
 }
 
 /// Represents a value that can be converted from a command-line argument.

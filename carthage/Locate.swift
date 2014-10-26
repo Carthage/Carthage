@@ -51,6 +51,6 @@ private struct LocateOptions: OptionsType {
 
 	static func evaluate(m: CommandMode) -> Result<LocateOptions> {
 		return create
-			<*> m <| option(defaultValue: "", "the directory in which to look for Xcode projects")
+			<*> m <| Option(defaultValue: "", usage: "the directory in which to look for Xcode projects")
 	}
 }

@@ -54,6 +54,6 @@ private struct HelpOptions: OptionsType {
 
 	static func evaluate(m: CommandMode) -> Result<HelpOptions> {
 		return create
-			<*> m <| option(defaultValue: "", "the command to display help for")
+			<*> m <| Option(defaultValue: "", usage: "the command to display help for")
 	}
 }
