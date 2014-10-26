@@ -80,22 +80,24 @@ public final class ArgumentGenerator: GeneratorType {
 		var floating = [String]()
 
 		for arg in arguments {
-			let keyStartIndex = arg.startIndex.successor().successor()
+			if countElements(arg) >= 2 {
+				let keyStartIndex = arg.startIndex.successor().successor()
 
-			if permitKeys && keyStartIndex <= arg.endIndex && arg.substringToIndex(keyStartIndex) == "--" {
-				if let key = currentKey {
-					untouchedKeyedArguments[key] = ""
-					currentKey = nil
+				if permitKeys && arg.substringToIndex(keyStartIndex) == "--" {
+					if let key = currentKey {
+						untouchedKeyedArguments[key] = ""
+						currentKey = nil
+					}
+
+					// Check for -- by itself.
+					if keyStartIndex == arg.endIndex {
+						permitKeys = false
+					} else {
+						currentKey = arg.substringFromIndex(keyStartIndex)
+					}
+
+					continue
 				}
-
-				// Check for -- by itself.
-				if keyStartIndex == arg.endIndex {
-					permitKeys = false
-				} else {
-					currentKey = arg.substringFromIndex(keyStartIndex)
-				}
-
-				continue
 			}
 
 			if let key = currentKey {
