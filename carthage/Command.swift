@@ -67,7 +67,7 @@ public final class ArgumentGenerator: GeneratorType {
 
 	/// All flags associated with values that have not yet been read through
 	/// a subscripting call.
-	internal var untouchedKeyedArguments = [String: String]()
+	private var untouchedKeyedArguments = [String: String]()
 
 	/// Arguments not associated with any flags.
 	private var floatingArguments: GeneratorOf<String>
@@ -192,6 +192,42 @@ public struct Option<T: ArgumentType> {
 	/// A human-readable string describing the purpose of this option. This will
 	/// be shown in help messages.
 	public let usage: String
+
+	/// Constructs an `InvalidArgument` error that describes how to use the
+	/// option.
+	private func informativeUsageError() -> NSError {
+		var description = ""
+
+		if defaultValue != nil {
+			description += "["
+		}
+
+		if let key = key {
+			description += "--\(key) "
+		}
+
+		description += "(\(T.name))"
+
+		if defaultValue != nil {
+			description += "]"
+		}
+
+		description += "\n\t\(usage)"
+		return CarthageError.InvalidArgument(description: description).error
+	}
+
+	/// Constructs an `InvalidArgument` error that describes how the option was
+	/// used incorrectly. `value` should be the invalid value given by the user.
+	private func invalidUsageError(value: String) -> NSError {
+		var description: String?
+		if value == "" {
+			description = "Missing argument for '\(self)'"
+		} else {
+			description = "Invalid value for '\(self)': \(value)"
+		}
+
+		return CarthageError.InvalidArgument(description: description!).error
+	}
 }
 
 extension Option: Printable {
@@ -211,39 +247,27 @@ public func option<T: ArgumentType>(key: String? = nil, defaultValue: T? = nil, 
 
 /// Represents a value that can be converted from a command-line argument.
 public protocol ArgumentType {
+	/// A human-readable name for this type.
+	class var name: String { get }
+
 	/// Attempts to parse a value from the given command-line argument.
 	class func fromString(string: String) -> Self?
 }
 
 extension Int: ArgumentType {
+	public static let name = "integer"
+
 	public static func fromString(string: String) -> Int? {
 		return string.toInt()
 	}
 }
 
 extension String: ArgumentType {
+	public static let name = "string"
+
 	public static func fromString(string: String) -> String? {
 		return string
 	}
-}
-
-/// Constructs an `InvalidArgument` error that describes how to use `option`.
-private func informativeUsageError<T>(option: Option<T>) -> NSError {
-	let description = "\(option)\n\t\(option.usage)"
-	return CarthageError.InvalidArgument(description: description).error
-}
-
-/// Constructs an `InvalidArgument` error that describes how `option` was used
-/// incorrectly. `value` should be the invalid value given by the user.
-private func invalidUsageError<T>(option: Option<T>, value: String) -> NSError {
-	var description: String?
-	if value == "" {
-		description = "Missing argument for \(option)"
-	} else {
-		description = "Invalid value for \(option): \(value)"
-	}
-
-	return CarthageError.InvalidArgument(description: description!).error
 }
 
 /// Combines the text of the two errors, if they're both `InvalidArgument`
@@ -351,16 +375,16 @@ public func <|<T: ArgumentType>(mode: CommandMode, option: Option<T>) -> Result<
 				}
 			}
 
-			return failure(invalidUsageError(option, stringValue))
+			return failure(option.invalidUsageError(stringValue))
 		} else if let defaultValue = option.defaultValue {
 			return success(defaultValue)
 		} else {
 			// TODO: Flags vs. missing options will need to be differentiated
 			// once we support booleans.
-			return failure(invalidUsageError(option, ""))
+			return failure(option.invalidUsageError(""))
 		}
 
 	case .Usage:
-		return failure(informativeUsageError(option))
+		return failure(option.informativeUsageError())
 	}
 }

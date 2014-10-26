@@ -44,15 +44,7 @@ case .Some(.Success):
 	exit(EXIT_SUCCESS)
 
 case let .Some(.Failure(error)):
-	// TODO: This is super dumb.
-	let comparisonError = CarthageError.InvalidArgument(description: "").error
-
-	if error.domain == comparisonError.domain && error.code == comparisonError.code {
-		fputs("\(error.localizedDescription)\n", stderr)
-	} else {
-		fputs("Error executing command \(verb): \(error)\n", stderr)
-	}
-
+	fputs("\(error.localizedDescription)\n", stderr)
 	exit(EXIT_FAILURE)
 
 case .None:
