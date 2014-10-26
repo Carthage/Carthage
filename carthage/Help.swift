@@ -22,12 +22,36 @@ public struct HelpCommand: CommandType {
 	}
 
 	public func run(mode: CommandMode) -> Result<()> {
-		println("Available commands:\n")
+		return HelpOptions.evaluate(mode)
+			.flatMap { options in
+				if let verb = options.verb {
+					if let command = self.registry[verb] {
+						return command.run(.Usage)
+					} else {
+						fputs("Unrecognized command: '\(verb)'\n", stderr)
+					}
+				}
 
-		for command in registry.commands {
-			println("  \(command.verb): \(command.function)")
-		}
+				println("Available commands:\n")
 
-		return success(())
+				for command in self.registry.commands {
+					println("  \(command.verb): \(command.function)")
+				}
+
+				return success(())
+			}
+	}
+}
+
+private struct HelpOptions: OptionsType {
+	let verb: String?
+
+	static func create(verb: String) -> HelpOptions {
+		return self(verb: (verb == "" ? nil : verb))
+	}
+
+	static func evaluate(m: CommandMode) -> Result<HelpOptions> {
+		return create
+			<*> m <| option(defaultValue: "", "the command to display help for")
 	}
 }

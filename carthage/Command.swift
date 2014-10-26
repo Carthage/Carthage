@@ -49,7 +49,13 @@ public final class CommandRegistry {
 	///
 	/// Returns the results of the execution, or nil if no such command exists.
 	public func runCommand(verb: String, arguments: [String]) -> Result<()>? {
-		return commandsByVerb[verb]?.run(.Arguments(ArgumentGenerator(arguments)))
+		return self[verb]?.run(.Arguments(ArgumentGenerator(arguments)))
+	}
+
+	/// Returns the command matching the given verb, or nil if no such command
+	/// is registered.
+	public subscript(verb: String) -> CommandType? {
+		return commandsByVerb[verb]
 	}
 }
 
