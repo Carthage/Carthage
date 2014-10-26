@@ -35,18 +35,13 @@ public func cloneRepository(cloneURL: String, destinationPath: String) -> ColdSi
         if isDirectory {
 			return repositoryRemote(destinationPath)
 				.map({ remoteURL in
-					var error : NSError? = nil
-
-					if remoteURL == cloneURL {
-						error = NSError(domain:"", code: -1, userInfo: [ NSLocalizedDescriptionKey: "Git repo already exists at \(destinationPath). Try calling fetchRepository() instead." ])
-					} else {
-						error = NSError(domain:"", code: -1, userInfo: [ NSLocalizedDescriptionKey: "A git repository with a different remoteURL exists at \(destinationPath). Please remove it before trying again." ])
-					}
-					return ColdSignal.error(error!)
+					let error = remoteURL == cloneURL ? CarthageError.RepositoryAlreadyCloned(location: destinationPath) : CarthageError.RepositoryRemoteMismatch(expected: cloneURL, actual: remoteURL)
+					return ColdSignal.error(error.error)
 				})
 				.merge(identity)
         }
-        return ColdSignal.error(NSError(domain:"", code: -1, userInfo: [ NSLocalizedDescriptionKey: "A file already exists at \(destinationPath) and it is not a git repository. Please remove it before trying again" ]))
+		let error = CarthageError.RepositoryCloneFailed(location: destinationPath)
+        return ColdSignal.error(error.error)
     }
 
 	let arguments = [
