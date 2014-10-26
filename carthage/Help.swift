@@ -26,6 +26,8 @@ public struct HelpCommand: CommandType {
 			.flatMap { options in
 				if let verb = options.verb {
 					if let command = self.registry[verb] {
+						println(command.function)
+						println()
 						return command.run(.Usage)
 					} else {
 						fputs("Unrecognized command: '\(verb)'\n", stderr)
