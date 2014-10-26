@@ -17,7 +17,7 @@ struct CheckoutCommand: CommandType {
 	func run<C: CollectionType where C.Generator.Element == String>(arguments: C) -> ColdSignal<()> {
 		// 1. Identify the project's working directory.
 
-		let pwd : String? = NSFileManager.defaultManager().currentDirectoryPath;
+		let pwd : String? = NSFileManager.defaultManager().currentDirectoryPath
 		if pwd == nil || pwd!.isEmpty {
 			return ColdSignal.empty()
 		}
