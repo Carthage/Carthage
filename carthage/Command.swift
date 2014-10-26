@@ -17,8 +17,18 @@ public protocol CommandType {
 	/// `help`).
 	var verb: String { get }
 
-	/// Runs this subcommand with the given arguments.
-	func run(arguments: [String]) -> Result<()>
+	/// Runs this subcommand in the given mode.
+	func run(mode: CommandMode) -> Result<()>
+}
+
+/// Describes the "mode" in which a command should run.
+public enum CommandMode {
+	/// Options should be parsed from the given command-line arguments.
+	case Arguments([String])
+
+	/// Each option should record its usage information in an error, for
+	/// presentation to the user.
+	case Usage
 }
 
 /// Represents a record of options for a command, which can be parsed from
@@ -38,19 +48,19 @@ public protocol CommandType {
 ///				return LogOptions(verbosity: verbosity, outputFilename: outputFilename, logName: logName)
 ///			}
 ///
-///			static func parse(args: [String]) -> Result<LogOptions> {
+///			static func evaluate(m: CommandMode) -> Result<LogOptions> {
 ///				return create
-///					<*> args <| option("verbose", 0, "The verbosity level with which to read the logs")
-///					<*> args <| option("outputFilename", "A file to print output to, instead of stdout")
-///					<*> args <| option("logName", "all", "The log to read")
+///					<*> m <| option("verbose", 0, "The verbosity level with which to read the logs")
+///					<*> m <| option("outputFilename", "A file to print output to, instead of stdout")
+///					<*> m <| option("logName", "all", "The log to read")
 ///			}
 ///		}
 public protocol OptionsType {
-	/// Parses a set of options from the given command-line arguments.
+	/// Evaluates this set of options in the given mode.
 	///
-	/// Returns the parsed options, or an `InvalidArgument` error if the
-	/// arguments are invalid for the receiving OptionsType.
-	class func parse(args: [String]) -> Result<Self>
+	/// Returns the parsed options, or an `InvalidArgument` error containing
+	/// usage information.
+	class func evaluate(m: CommandMode) -> Result<Self>
 }
 
 /// Describes an option that can be provided on the command line.
@@ -106,11 +116,17 @@ extension String: ArgumentType {
 	}
 }
 
+/// Constructs an `InvalidArgument` error that describes how to use `option`.
+private func informativeUsageError<T>(option: Option<T>) -> NSError {
+	let description = "\(option)\n\t\(option.usage)"
+	return CarthageError.InvalidArgument(description: description).error
+}
+
 /// Constructs an `InvalidArgument` error that describes how `option` was used
 /// incorrectly.
 ///
 /// If provided, `value` should be the invalid value given by the user.
-private func usageError<T>(option: Option<T>, value: String?) -> NSError {
+private func invalidUsageError<T>(option: Option<T>, value: String?) -> NSError {
 	var description: String?
 	if let value = value {
 		description = "Invalid value for \(option): \(value)"
@@ -119,6 +135,32 @@ private func usageError<T>(option: Option<T>, value: String?) -> NSError {
 	}
 
 	return CarthageError.InvalidArgument(description: description!).error
+}
+
+/// Implements <| uniformly over all values, even those that may not necessarily
+/// conform to ArgumentType.
+private func evaluateOption<T>(option: Option<T>, defaultValue: T, mode: CommandMode, parse: String -> T?) -> Result<T> {
+	switch (mode) {
+	case let .Arguments(arguments):
+		var keyIndex = find(arguments, "--\(option.key)")
+		if let keyIndex = keyIndex {
+			if keyIndex + 1 < arguments.count {
+				let stringValue = arguments[keyIndex + 1]
+				if let value = parse(stringValue) {
+					return success(value)
+				} else {
+					return failure(invalidUsageError(option, stringValue))
+				}
+			}
+
+			return failure(invalidUsageError(option, nil))
+		}
+
+		return success(defaultValue)
+
+	case .Usage:
+		return failure(informativeUsageError(option))
+	}
 }
 
 /// Combines the text of the two errors, if they're both `InvalidArgument`
@@ -205,39 +247,18 @@ public func <*><T, U>(f: Result<(T -> U)>, value: Result<T>) -> Result<U> {
 	}
 }
 
-/// Implements <| uniformly over all values, even those that may not necessarily
-/// conform to ArgumentType.
-private func parseOption<T>(option: Option<T>, defaultValue: T, fromArguments: [String], parse: String -> T?) -> Result<T> {
-	var keyIndex = find(arguments, "--\(option.key)")
-	if let keyIndex = keyIndex {
-		if keyIndex + 1 < arguments.count {
-			let stringValue = arguments[keyIndex + 1]
-			if let value = parse(stringValue) {
-				return success(value)
-			} else {
-				return failure(usageError(option, stringValue))
-			}
-		}
-
-		return failure(usageError(option, nil))
-	}
-
-	return success(defaultValue)
+/// Evaluates the given option in the given mode.
+///
+/// If parsing command line arguments, and no value was specified on the command
+/// line, the option's `defaultValue` is used.
+public func <|<T: ArgumentType>(mode: CommandMode, option: Option<T>) -> Result<T> {
+	return evaluateOption(option, option.defaultValue, mode) { str in T.fromString(str) }
 }
 
-/// Attempts to parse a value for the given option from the given command-line
-/// arguments.
+/// Evaluates the given nullable option in the given mode.
 ///
-/// If no value was specified on the command line, the option's `defaultValue`
-/// is used.
-public func <|<T: ArgumentType>(arguments: [String], option: Option<T>) -> Result<T> {
-	return parseOption(option, option.defaultValue, arguments) { str in T.fromString(str) }
-}
-
-/// Attempts to parse a value for the given nullable option from the given
-/// command-line arguments.
-///
-/// If no value was specified on the command line, `nil` is used.
-public func <|<T: ArgumentType>(arguments: [String], option: Option<T?>) -> Result<T?> {
-	return parseOption(option, option.defaultValue, arguments) { str in T.fromString(str) }
+/// If parsing command line arguments, and no value was specified on the command
+/// line, `nil` is used.
+public func <|<T: ArgumentType>(mode: CommandMode, option: Option<T?>) -> Result<T?> {
+	return evaluateOption(option, option.defaultValue, mode) { str in T.fromString(str) }
 }

@@ -15,23 +15,29 @@ import ReactiveCocoa
 public struct LocateCommand: CommandType {
 	public let verb = "locate"
 
-	public func run(arguments: [String]) -> Result<()> {
-		let path = first(arguments) ?? NSFileManager.defaultManager().currentDirectoryPath
+	public func run(mode: CommandMode) -> Result<()> {
+		switch (mode) {
+		case let .Arguments(arguments):
+			let path = first(arguments) ?? NSFileManager.defaultManager().currentDirectoryPath
 
-		// TODO: Fail running if the path is invalid.
-		let directoryURL = NSURL.fileURLWithPath(path)!
+			// TODO: Fail running if the path is invalid.
+			let directoryURL = NSURL.fileURLWithPath(path)!
 
-		return locateProjectsInDirectory(directoryURL)
-			.on(next: { locator in
-				switch (locator) {
-				case let .Workspace(URL):
-					println("Found an Xcode workspace at: \(URL.path!)")
+			return locateProjectsInDirectory(directoryURL)
+				.on(next: { locator in
+					switch (locator) {
+					case let .Workspace(URL):
+						println("Found an Xcode workspace at: \(URL.path!)")
 
-				case let .ProjectFile(URL):
-					println("Found an Xcode project at: \(URL.path!)")
-				}
-			})
-			.then(ColdSignal<()>.empty())
-			.wait()
+					case let .ProjectFile(URL):
+						println("Found an Xcode project at: \(URL.path!)")
+					}
+				})
+				.then(ColdSignal<()>.empty())
+				.wait()
+		
+		default:
+			return failure()
+		}
 	}
 }

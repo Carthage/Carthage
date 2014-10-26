@@ -15,8 +15,8 @@ import ReactiveCocoa
 public struct BuildCommand: CommandType {
 	public let verb = "build"
 
-	public func run(arguments: [String]) -> Result<()> {
-		return ColdSignal.fromResult(BuildOptions.parse(arguments))
+	public func run(mode: CommandMode) -> Result<()> {
+		return ColdSignal.fromResult(BuildOptions.evaluate(mode))
 			.map { options -> ColdSignal<()> in
 				let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
 				return buildInDirectory(directoryURL, configuration: options.configuration)
@@ -33,8 +33,8 @@ private struct BuildOptions: OptionsType {
 		return BuildOptions(configuration: configuration)
 	}
 
-	static func parse(args: [String]) -> Result<BuildOptions> {
+	static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
-			<*> args <| option("configuration", "Release", "The Xcode configuration to build")
+			<*> m <| option("configuration", "Release", "The Xcode configuration to build")
 	}
 }

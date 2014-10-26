@@ -13,7 +13,7 @@ import LlamaKit
 public struct HelpCommand: CommandType {
 	public let verb = "help"
 
-	public func run(arguments: [String]) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<()> {
 		println("ohai help")
 		return success(())
 	}
