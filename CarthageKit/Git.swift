@@ -10,19 +10,20 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-public func runGitTask(withArguments arguments: [String] = ["--version"]) -> ColdSignal<String> {
-	let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments)
+public func launchGitTask(arguments: [String] = ["--version"], repositoryPath: String? = nil) -> ColdSignal<String> {
+	let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments, workingDirectoryPath: repositoryPath)
 	return launchTask(taskDescription).map { NSString(data:$0, encoding: NSUTF8StringEncoding) as String }
 }
 
 public func repositoryRemote(repositoryPath: String) -> ColdSignal<String> {
-	// TODO: Perhaps don't assume it's origin?
+	// TODO: Perhaps don't assume it is 'origin'?
 	let arguments = [
 		"config",
 		"--get",
 		"remote.origin.url",
 	]
-	return runGitTask(withArguments: arguments)
+	return launchGitTask(arguments: arguments, repositoryPath: repositoryPath)
+		.map { $0.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
 }
 
 /// Returns a cold signal that completes when cloning is complete, or errors if
@@ -53,7 +54,7 @@ public func cloneRepository(cloneURL: String, destinationPath: String) -> ColdSi
         cloneURL,
         destinationPath,
     ]
-	return runGitTask(withArguments: arguments)
+	return launchGitTask(arguments: arguments)
 }
 
 //public func updateDependency(dependency: Dependency, destinationPath: String) -> ColdSignal<()> {
