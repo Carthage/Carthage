@@ -37,6 +37,13 @@ public struct Project {
 					let destinationPath = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
 
 					return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationPath)
+						.catch( {error in
+							println(error.localizedDescription)
+							if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationPath).error.code {
+								return fetchRepository(destinationPath)
+							}
+							return ColdSignal.empty()
+						})
 				})
 				.concat(identity)
 				.then(.empty())
