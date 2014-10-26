@@ -16,28 +16,41 @@ public struct LocateCommand: CommandType {
 	public let verb = "locate"
 
 	public func run(mode: CommandMode) -> Result<()> {
-		switch (mode) {
-		case let .Arguments(arguments):
-			let path = arguments.next() ?? NSFileManager.defaultManager().currentDirectoryPath
+		return ColdSignal.fromResult(LocateOptions.evaluate(mode))
+			.map { options -> ColdSignal<ProjectLocator> in
+				// TODO: Fail running if the path is invalid.
+				let directoryURL = NSURL.fileURLWithPath(options.path)!
 
-			// TODO: Fail running if the path is invalid.
-			let directoryURL = NSURL.fileURLWithPath(path)!
+				return locateProjectsInDirectory(directoryURL)
+			}
+			.merge(identity)
+			.on(next: { locator in
+				switch (locator) {
+				case let .Workspace(URL):
+					println("Found an Xcode workspace at: \(URL.path!)")
 
-			return locateProjectsInDirectory(directoryURL)
-				.on(next: { locator in
-					switch (locator) {
-					case let .Workspace(URL):
-						println("Found an Xcode workspace at: \(URL.path!)")
+				case let .ProjectFile(URL):
+					println("Found an Xcode project at: \(URL.path!)")
+				}
+			})
+			.then(ColdSignal<()>.empty())
+			.wait()
+	}
+}
 
-					case let .ProjectFile(URL):
-						println("Found an Xcode project at: \(URL.path!)")
-					}
-				})
-				.then(ColdSignal<()>.empty())
-				.wait()
-		
-		default:
-			return failure()
+private struct LocateOptions: OptionsType {
+	let path: String
+
+	static func create(var path: String) -> LocateOptions {
+		if path == "" {
+			path = NSFileManager.defaultManager().currentDirectoryPath
 		}
+
+		return self(path: path)
+	}
+
+	static func evaluate(m: CommandMode) -> Result<LocateOptions> {
+		return create
+			<*> m <| option(defaultValue: "", "the directory in which to look for Xcode projects")
 	}
 }

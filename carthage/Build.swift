@@ -30,7 +30,7 @@ private struct BuildOptions: OptionsType {
 	let configuration: String
 
 	static func create(configuration: String) -> BuildOptions {
-		return BuildOptions(configuration: configuration)
+		return self(configuration: configuration)
 	}
 
 	static func evaluate(m: CommandMode) -> Result<BuildOptions> {
