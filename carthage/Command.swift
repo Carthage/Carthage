@@ -21,6 +21,34 @@ public protocol CommandType {
 	func run(mode: CommandMode) -> Result<()>
 }
 
+/// Maintains the list of commands available to run.
+public final class CommandRegistry {
+	private var commandsByVerb = [String: CommandType]()
+
+	/// All available commands.
+	public var commands: [CommandType] {
+		return commandsByVerb.values.array
+	}
+
+	public init() {}
+
+	/// Registers the given command, making it available to run.
+	///
+	/// If another command was already registered with the same `verb`, it will
+	/// be overwritten.
+	public func register(command: CommandType) {
+		commandsByVerb[command.verb] = command
+	}
+
+	/// Runs the command corresponding to the given verb, passing it the given
+	/// arguments.
+	///
+	/// Returns the results of the execution, or nil if no such command exists.
+	public func runCommand(verb: String, arguments: [String]) -> Result<()>? {
+		return commandsByVerb[verb]?.run(.Arguments(ArgumentGenerator(arguments)))
+	}
+}
+
 /// A generator that destructively enumerates a list of command-line arguments.
 public final class ArgumentGenerator: GeneratorType {
 	typealias Element = String

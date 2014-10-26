@@ -20,26 +20,26 @@ func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	return result
 }
 
-let availableCommands: [CommandType] = [
-	BuildCommand(),
-	HelpCommand(),
-	LocateCommand()
-]
+let commands = CommandRegistry()
+commands.register(BuildCommand())
+commands.register(LocateCommand())
 
-let commandsByVerb = availableCommands.map { [$0.verb: $0] }.reduce([:], combine: combineDictionaries)
+let helpCommand = HelpCommand()
+commands.register(helpCommand)
+
 var arguments = Process.arguments
 
+// Remove the executable name.
 assert(arguments.count >= 1)
 arguments.removeAtIndex(0)
 
-let verb = arguments.first ?? HelpCommand().verb
+let verb = arguments.first ?? helpCommand.verb
 if arguments.count > 0 {
+	// Remove the command name.
 	arguments.removeAtIndex(0)
 }
 
-let result = commandsByVerb[verb]?.run(.Arguments(ArgumentGenerator(arguments)))
-
-switch result {
+switch commands.runCommand(verb, arguments: arguments) {
 case .Some(.Success):
 	exit(EXIT_SUCCESS)
 
