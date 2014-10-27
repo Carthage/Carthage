@@ -35,7 +35,7 @@ public struct Project {
 			return ColdSignal.fromValues(dependencies)
 				.map({ dependency -> ColdSignal<String> in
 					let destinationPath = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
-
+					println(destinationPath)
 					return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationPath)
 						.catch( {error in
 							println(error.localizedDescription)
@@ -45,6 +45,7 @@ public struct Project {
 							return ColdSignal.empty()
 						})
 				})
+				.on(next: { println($0) })
 				.concat(identity)
 				.then(.empty())
 		}
