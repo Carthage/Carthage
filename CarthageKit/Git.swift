@@ -37,14 +37,11 @@ public func cloneRepository(cloneURL: String, destinationPath: String) -> ColdSi
 				.map({ remoteURL in
 					let error = remoteURL == cloneURL ? CarthageError.RepositoryAlreadyCloned(location: destinationPath) : CarthageError.RepositoryRemoteMismatch(expected: cloneURL, actual: remoteURL)
 					return ColdSignal.error(error.error)
-                    //return ColdSignal.empty()
 				})
-				.concat(identity)
-                .on(completed: { println("repoRemote completed") })
+				.merge(identity)
         }
 		let error = CarthageError.RepositoryCloneFailed(location: destinationPath)
-        //return ColdSignal.error(error.error)
-        return ColdSignal.empty()
+        return ColdSignal.error(error.error)
     }
 
 	let arguments = [
