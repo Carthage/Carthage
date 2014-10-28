@@ -32,21 +32,22 @@ public struct Project {
 
 	public func checkoutDependencies() -> ColdSignal<()> {
 		if let dependencies = cartfile?.dependencies {
-			return ColdSignal.fromValues(dependencies)
-				.map({ dependency -> ColdSignal<String> in
+             return ColdSignal.fromValues(dependencies)
+                .map({ dependency -> ColdSignal<String> in
 					let destinationPath = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
 					println(destinationPath)
-					return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationPath)
+                    return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationPath)
 						.catch( {error in
 							println(error.localizedDescription)
 							if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationPath).error.code {
 								return fetchRepository(destinationPath)
 							}
-							return ColdSignal.empty()
+                            return ColdSignal.empty()
 						})
+                        .deliverOn(QueueScheduler())
+                        .on(completed: { println("Completed") })
 				})
-				.on(next: { println($0) })
-				.concat(identity)
+                .concat(identity)
 				.then(.empty())
 		}
 		return ColdSignal.empty()
