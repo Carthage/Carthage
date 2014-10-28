@@ -44,8 +44,7 @@ public struct Project {
 							}
                             return ColdSignal.empty()
 						})
-                        .deliverOn(QueueScheduler())
-                        .on(completed: { println("Completed") })
+                        .on(error: { println("Errored \($0)") }, completed: { println("Completed") })
 				})
                 .concat(identity)
 				.then(.empty())
