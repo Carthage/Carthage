@@ -104,6 +104,7 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 
 		// Start the aggregated output with an initial value.
 		stdoutSink.put(NSData())
+        stdoutSink.put(NSData())
 
 		// TODO: The memory management here is pretty screwy. We need to keep
 		// `stdout` alive, so we'll create an unused observation and retain the
