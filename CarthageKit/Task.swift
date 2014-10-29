@@ -120,7 +120,7 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 
 		task.terminationHandler = { task in
 			if task.terminationStatus == EXIT_SUCCESS {
-				aggregatedOutput.take(1).start(subscriber)
+				aggregatedOutput.take(1).on(completed: { println("completed") }).start(subscriber)
 			} else {
 				let error = CarthageError.ShellTaskFailed(exitCode: Int(task.terminationStatus))
 				subscriber.put(.Error(error.error))
