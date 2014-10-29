@@ -36,15 +36,15 @@ public struct Project {
 				.map({ dependency -> ColdSignal<String> in
 					let destinationPath = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
 					println(destinationPath)
-					return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationPath)
-						.catch( {error in
-							println(error.localizedDescription)
-							if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationPath).error.code {
+//					return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationPath)
+//						.catch( {error in
+//							println(error.localizedDescription)
+//							if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationPath).error.code {
                                 return fetchRepository(destinationPath).catch { _ in return .empty() }
-							}
-							return ColdSignal.empty()
-						})
-						.on(error: { println("Errored \($0)") }, completed: { println("Completed") })
+//							}
+//							return ColdSignal.empty()
+//						})
+//						.on(error: { println("Errored \($0)") }, completed: { println("Completed") })
 				})
 				.concat(identity)
 				.then(.empty())
