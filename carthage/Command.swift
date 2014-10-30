@@ -365,7 +365,7 @@ public func <*><T, U>(f: Result<(T -> U)>, value: Result<T>) -> Result<U> {
 /// If parsing command line arguments, and no value was specified on the command
 /// line, the option's `defaultValue` is used.
 public func <|<T: ArgumentType>(mode: CommandMode, option: Option<T>) -> Result<T> {
-	switch (mode) {
+	switch mode {
 	case let .Arguments(arguments):
 		var stringValue: String?
 		if let key = option.key {
