@@ -22,7 +22,6 @@ func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 
 let commands = CommandRegistry()
 commands.register(BuildCommand())
-commands.register(LocateCommand())
 
 let helpCommand = HelpCommand(registry: commands)
 commands.register(helpCommand)
