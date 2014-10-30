@@ -80,13 +80,16 @@ public final class ArgumentGenerator: GeneratorType {
 		var positional: [String] = []
 
 		for arg in arguments {
+			// If this is a keyed argument...
 			if permitKeys && arg.hasPrefix("--") {
+				// Terminate any open keyed argument without a value.
 				if let key = currentKey {
 					untouchedKeyedArguments[key] = ""
 					currentKey = nil
 				}
 
-				// Check for -- by itself.
+				// Check for -- by itself, which should terminate the keyed
+				// argument list.
 				let keyStartIndex = arg.startIndex.successor().successor()
 				if keyStartIndex == arg.endIndex {
 					permitKeys = false
@@ -97,6 +100,8 @@ public final class ArgumentGenerator: GeneratorType {
 				continue
 			}
 
+			// Otherwise, this is just a plain string. Terminate any open keyed
+			// argument, or else consider it a positional argument.
 			if let key = currentKey {
 				untouchedKeyedArguments[key] = arg
 				currentKey = nil
@@ -105,6 +110,7 @@ public final class ArgumentGenerator: GeneratorType {
 			}
 		}
 
+		// If the last argument seen was an option key, make sure to include it.
 		if let key = currentKey {
 			untouchedKeyedArguments[key] = ""
 		}
