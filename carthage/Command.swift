@@ -27,7 +27,7 @@ public protocol CommandType {
 
 /// Maintains the list of commands available to run.
 public final class CommandRegistry {
-	private var commandsByVerb = [String: CommandType]()
+	private var commandsByVerb: [String: CommandType] = [:]
 
 	/// All available commands.
 	public var commands: [CommandType] {
@@ -63,11 +63,11 @@ public final class CommandRegistry {
 public final class ArgumentGenerator: GeneratorType {
 	typealias Element = String
 
-	private var touchedKeyedArguments = [String: String]()
+	private var touchedKeyedArguments: [String: String] = [:]
 
 	/// All flags associated with values that have not yet been read through
 	/// a subscripting call.
-	private var untouchedKeyedArguments = [String: String]()
+	private var untouchedKeyedArguments: [String: String] = [:]
 
 	/// Arguments not associated with any flags.
 	private var floatingArguments: GeneratorOf<String>
@@ -77,7 +77,7 @@ public final class ArgumentGenerator: GeneratorType {
 		var currentKey: String? = nil
 		var permitKeys = true
 
-		var floating = [String]()
+		var floating: [String] = []
 
 		for arg in arguments {
 			if countElements(arg) >= 2 {
