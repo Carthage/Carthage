@@ -67,15 +67,12 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
-      useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/alanjrogers/Code/Carthage"
+      useCustomWorkingDirectory = "NO"
+      customWorkingDirectory = "/Users/alanr/working/opensource/Carthage"
       buildConfiguration = "Debug"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       allowLocationSimulation = "NO">
-      <PathRunnable
-         FilePath = "/Users/alanjrogers/Library/Developer/Xcode/DerivedData/Carthage-gzkybstuyezahsdpsvtepccwlxmj/Build/Products/Debug/carthage">
-      </PathRunnable>
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
