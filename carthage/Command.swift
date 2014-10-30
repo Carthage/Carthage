@@ -70,14 +70,14 @@ public final class ArgumentGenerator: GeneratorType {
 	private var untouchedKeyedArguments: [String: String] = [:]
 
 	/// Arguments not associated with any flags.
-	private var floatingArguments: GeneratorOf<String>
+	private var positionalArguments: GeneratorOf<String>
 
 	/// Initializes the generator from a simple list of command-line arguments.
 	public init(_ arguments: [String]) {
 		var currentKey: String? = nil
 		var permitKeys = true
 
-		var floating: [String] = []
+		var positional: [String] = []
 
 		for arg in arguments {
 			if permitKeys && arg.hasPrefix("--") {
@@ -101,7 +101,7 @@ public final class ArgumentGenerator: GeneratorType {
 				untouchedKeyedArguments[key] = arg
 				currentKey = nil
 			} else {
-				floating.append(arg)
+				positional.append(arg)
 			}
 		}
 
@@ -109,13 +109,13 @@ public final class ArgumentGenerator: GeneratorType {
 			untouchedKeyedArguments[key] = ""
 		}
 
-		floatingArguments = GeneratorOf(floating.generate())
+		positionalArguments = GeneratorOf(positional.generate())
 	}
 
 	/// Yields the next argument _not_ associated with a flag, or nil if all
 	/// unassociated arguments have been enumerated already.
 	public func next() -> String? {
-		return floatingArguments.next()
+		return positionalArguments.next()
 	}
 
 	/// Returns the value associated with the given flag, or nil if it was not
