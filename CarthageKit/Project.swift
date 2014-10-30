@@ -39,7 +39,7 @@ public struct Project {
 						.catch( {error in
 							println(error.localizedDescription)
 							if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationPath).error.code {
-                                return fetchRepository(destinationPath).catch { _ in return .empty() }
+								return fetchRepository(destinationPath).catch { _ in return .empty() }
 							}
 							return ColdSignal.empty()
 						})
