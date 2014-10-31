@@ -149,6 +149,15 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<Project
 	}
 }
 
+/// Creates a task description for executing `xcodebuild` in the given directory
+/// and with the given arguments.
+public func xcodebuildTask(workingDirectoryURL: NSURL, arguments: [String] = []) -> TaskDescription {
+	precondition(workingDirectoryURL.fileURL)
+
+	var arguments = [ "xcodebuild" ] + arguments
+	return TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: workingDirectoryURL.path!, arguments: arguments)
+}
+
 public func buildInDirectory(directoryURL: NSURL, #configuration: String?) -> ColdSignal<()> {
 	precondition(directoryURL.fileURL)
 
@@ -159,12 +168,12 @@ public func buildInDirectory(directoryURL: NSURL, #configuration: String?) -> Co
 
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
 
-	var arguments = [ "xcodebuild" ]
+	var arguments: [String] = []
 	if let configuration = configuration {
 		arguments += [ "-configuration", "\(configuration)" ]
 	}
 
-	let task = TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: directoryURL.path!, arguments: arguments)
+	let task = xcodebuildTask(directoryURL, arguments: arguments)
 
 	return locatorSignal.filter { (locator: ProjectLocator) in
 			switch (locator) {
