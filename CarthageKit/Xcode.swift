@@ -151,48 +151,15 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<Project
 
 /// Creates a task description for executing `xcodebuild` in the given directory
 /// and with the given arguments.
-public func xcodebuildTask(workingDirectoryURL: NSURL, arguments: [String] = []) -> TaskDescription {
-	precondition(workingDirectoryURL.fileURL)
-
+public func xcodebuildTask(arguments: [String]) -> TaskDescription {
 	var arguments = [ "xcodebuild" ] + arguments
-	return TaskDescription(launchPath: "/usr/bin/xcrun", workingDirectoryPath: workingDirectoryURL.path!, arguments: arguments)
+	return TaskDescription(launchPath: "/usr/bin/xcrun", arguments: arguments)
 }
 
-public func buildInDirectory(directoryURL: NSURL, #configuration: String?) -> ColdSignal<()> {
-	precondition(directoryURL.fileURL)
-
-	let handle = NSFileHandle.fileHandleWithStandardOutput()
-	let stdoutSink = SinkOf<NSData> { data in
-		handle.writeData(data)
-	}
-
-	let locatorSignal = locateProjectsInDirectory(directoryURL)
-
-	var arguments: [String] = []
-	if let configuration = configuration {
-		arguments += [ "-configuration", "\(configuration)" ]
-	}
-
-	let task = xcodebuildTask(directoryURL, arguments: arguments)
-
-	return locatorSignal.filter { (locator: ProjectLocator) in
-			switch (locator) {
-			case .ProjectFile:
-				return true
-
-			default:
-				return false
-			}
-		}
-		.take(1)
-		.map { (locator: ProjectLocator) -> ColdSignal<NSData> in
-			var listSchemes = task
-			listSchemes.arguments += locator.arguments
-			listSchemes.arguments.append("-list")
-
-			return launchTask(listSchemes)
-		}
-		.merge(identity)
+/// Sends each scheme found in the given project.
+public func schemesInProject(locator: ProjectLocator) -> ColdSignal<String> {
+	let task = xcodebuildTask(locator.arguments + [ "-list" ])
+	return launchTask(task)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
 		}
@@ -214,12 +181,41 @@ public func buildInDirectory(directoryURL: NSURL, #configuration: String?) -> Co
 		.skip(1)
 		.takeWhile { (line: String) -> Bool in line.isEmpty ? false : true }
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
+}
+
+public func buildInDirectory(directoryURL: NSURL, #configuration: String?) -> ColdSignal<()> {
+	precondition(directoryURL.fileURL)
+
+	let locatorSignal = locateProjectsInDirectory(directoryURL)
+	return locatorSignal.filter { (locator: ProjectLocator) in
+			switch (locator) {
+			case .ProjectFile:
+				return true
+
+			default:
+				return false
+			}
+		}
+		.take(1)
+		.map { (locator: ProjectLocator) -> ColdSignal<String> in
+			return schemesInProject(locator)
+		}
+		.merge(identity)
 		.map { (scheme: String) -> ColdSignal<()> in
+			var configurationArguments: [String] = []
+			if let configuration = configuration {
+				configurationArguments += [ "-configuration", "\(configuration)" ]
+			}
+
+			let handle = NSFileHandle.fileHandleWithStandardOutput()
+			let stdoutSink = SinkOf<NSData> { data in
+				handle.writeData(data)
+			}
+
 			return locatorSignal.take(1)
 				.map { (locator: ProjectLocator) -> ColdSignal<NSData> in
-					var buildScheme = task
-					buildScheme.arguments += locator.arguments
-					buildScheme.arguments += [ "-scheme", scheme, "build" ]
+					var buildScheme = xcodebuildTask(locator.arguments + configurationArguments + [ "-scheme", scheme, "build" ])
+					buildScheme.workingDirectoryPath = directoryURL.path!
 
 					return launchTask(buildScheme, standardOutput: stdoutSink).on(subscribed: {
 						println("*** Building scheme \(scheme)…\n")
