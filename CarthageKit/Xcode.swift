@@ -20,7 +20,7 @@ public enum ProjectLocator: Comparable {
 	case ProjectFile(NSURL)
 
 	/// The file URL this locator refers to.
-	var fileURL: NSURL {
+	public var fileURL: NSURL {
 		switch (self) {
 		case let .Workspace(URL):
 			assert(URL.fileURL)
@@ -157,24 +157,14 @@ public func xcodebuildTask(arguments: [String]) -> TaskDescription {
 }
 
 /// Sends each scheme found in the given project.
-public func schemesInProject(locator: ProjectLocator) -> ColdSignal<String> {
-	let task = xcodebuildTask(locator.arguments + [ "-list" ])
+public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
+	let task = xcodebuildTask(project.arguments + [ "-list" ])
 	return launchTask(task)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
 		}
 		.map { (string: String) -> ColdSignal<String> in
-			return ColdSignal { subscriber in
-				(string as NSString).enumerateLinesUsingBlock { (line, stop) in
-					subscriber.put(.Next(Box(line as String)))
-
-					if subscriber.disposable.disposed {
-						stop.memory = true
-					}
-				}
-
-				subscriber.put(.Completed)
-			}
+			return string.linesSignal
 		}
 		.merge(identity)
 		.skipWhile { (line: String) -> Bool in line.hasSuffix("Schemes:") ? false : true }
