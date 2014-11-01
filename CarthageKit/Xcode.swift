@@ -151,14 +151,33 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<Project
 
 /// Creates a task description for executing `xcodebuild` in the given directory
 /// and with the given arguments.
-public func xcodebuildTask(arguments: [String]) -> TaskDescription {
-	var arguments = [ "xcodebuild" ] + arguments
-	return TaskDescription(launchPath: "/usr/bin/xcrun", arguments: arguments)
+public func xcodebuildTask(arguments: [String], project: ProjectLocator? = nil, scheme: String? = nil, configuration: String? = nil, platform: Platform? = nil) -> TaskDescription {
+	var args = [ "xcodebuild" ]
+
+	if let project = project {
+		args += project.arguments
+	}
+
+	if let scheme = scheme {
+		args += [ "-scheme", scheme ]
+	}
+
+	if let configuration = configuration {
+		args += [ "-configuration", configuration ]
+	}
+
+	if let platform = platform {
+		args += platform.arguments
+	}
+
+	args += arguments
+	return TaskDescription(launchPath: "/usr/bin/xcrun", arguments: args)
 }
 
 /// Sends each scheme found in the given project.
 public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
-	let task = xcodebuildTask(project.arguments + [ "-list" ])
+	let task = xcodebuildTask([ "-list" ], project: project)
+	
 	return launchTask(task)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
@@ -234,8 +253,9 @@ public enum Platform {
 
 /// Returns the value for the given build setting, or an error if it could not
 /// be determined.
-private func valueForBuildSetting(setting: String, withScheme scheme: String, inProject project: ProjectLocator) -> ColdSignal<String> {
-	let task = xcodebuildTask(project.arguments + [ "-scheme", scheme, "-showBuildSettings" ])
+private func valueForBuildSetting(setting: String, withScheme scheme: String, inProject project: ProjectLocator, configuration: String? = nil) -> ColdSignal<String> {
+	let task = xcodebuildTask([ "-showBuildSettings" ], project: project, scheme: scheme, configuration: configuration)
+
 	return launchTask(task)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
@@ -271,23 +291,13 @@ public func platformForScheme(scheme: String, inProject project: ProjectLocator)
 public func buildScheme(scheme: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, configuration: String? = nil) -> ColdSignal<()> {
 	precondition(workingDirectoryURL.fileURL)
 
-	var configurationArguments: [String] = []
-	if let configuration = configuration {
-		configurationArguments += [ "-configuration", "\(configuration)" ]
-	}
-
 	let handle = NSFileHandle.fileHandleWithStandardOutput()
 	let stdoutSink = SinkOf<NSData> { data in
 		handle.writeData(data)
 	}
 
 	let buildPlatform = { (platform: Platform?) -> ColdSignal<NSData> in
-		var buildScheme = xcodebuildTask(project.arguments + configurationArguments + [ "-scheme", scheme ])
-		if let platform = platform {
-			buildScheme.arguments += platform.arguments
-		}
-
-		buildScheme.arguments.append("build")
+		var buildScheme = xcodebuildTask([ "build" ], project: project, platform: platform, scheme: scheme, configuration: configuration)
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 		return launchTask(buildScheme, standardOutput: stdoutSink)
