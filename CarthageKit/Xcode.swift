@@ -21,7 +21,7 @@ public enum ProjectLocator: Comparable {
 
 	/// The file URL this locator refers to.
 	public var fileURL: NSURL {
-		switch (self) {
+		switch self {
 		case let .Workspace(URL):
 			assert(URL.fileURL)
 			return URL
@@ -35,7 +35,7 @@ public enum ProjectLocator: Comparable {
 	/// The arguments that should be passed to `xcodebuild` to help it locate
 	/// this project.
 	private var arguments: [String] {
-		switch (self) {
+		switch self {
 		case let .Workspace(URL):
 			return [ "-workspace", URL.path! ]
 
@@ -187,7 +187,7 @@ public enum Platform {
 	/// Attempts to parse a platform name from a string returned from
 	/// `xcodebuild`.
 	public static func fromString(string: String) -> Result<Platform> {
-		switch (string) {
+		switch string {
 		case "macosx":
 			return success(.MacOSX)
 
@@ -204,7 +204,7 @@ public enum Platform {
 
 	/// Whether this platform targets iOS.
 	public var iOS: Bool {
-		switch (self) {
+		switch self {
 		case .iPhoneOS:
 			return true
 
@@ -213,6 +213,21 @@ public enum Platform {
 
 		case .MacOSX:
 			return false
+		}
+	}
+
+	/// The arguments that should be passed to `xcodebuild` to select this
+	/// platform for building.
+	private var arguments: [String] {
+		switch self {
+		case .MacOSX:
+			return [ "-sdk", "macosx" ]
+
+		case .iPhoneOS:
+			return [ "-sdk", "iphoneos" ]
+
+		case .iPhoneSimulator:
+			return [ "-sdk", "iphonesimulator" ]
 		}
 	}
 }
@@ -247,6 +262,7 @@ public func platformForScheme(scheme: String, inProject project: ProjectLocator)
 		.tryMap(Platform.fromString)
 }
 
+/// Builds one scheme of the given project, for all supported platforms.
 public func buildScheme(scheme: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, configuration: String? = nil) -> ColdSignal<()> {
 	precondition(workingDirectoryURL.fileURL)
 
@@ -260,10 +276,31 @@ public func buildScheme(scheme: String, inProject project: ProjectLocator, #work
 		handle.writeData(data)
 	}
 
-	var buildScheme = xcodebuildTask(project.arguments + configurationArguments + [ "-scheme", scheme, "build" ])
-	buildScheme.workingDirectoryPath = workingDirectoryURL.path!
+	let buildPlatform = { (platform: Platform?) -> ColdSignal<NSData> in
+		var buildScheme = xcodebuildTask(project.arguments + configurationArguments + [ "-scheme", scheme ])
+		if let platform = platform {
+			buildScheme.arguments += platform.arguments
+		}
 
-	return launchTask(buildScheme, standardOutput: stdoutSink)
+		buildScheme.arguments.append("build")
+		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
+
+		return launchTask(buildScheme, standardOutput: stdoutSink)
+	}
+
+	return platformForScheme(scheme, inProject: project)
+		.map { (platform: Platform) -> ColdSignal<NSData> in
+			switch platform {
+			case .iPhoneSimulator: fallthrough
+			case .iPhoneOS:
+				return buildPlatform(.iPhoneSimulator)
+					.concat(buildPlatform(.iPhoneOS))
+
+			case .MacOSX:
+				return buildPlatform(nil)
+			}
+		}
+		.merge(identity)
 		.then(.empty())
 }
 
@@ -272,7 +309,7 @@ public func buildInDirectory(directoryURL: NSURL, #configuration: String?) -> Co
 
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
 	return locatorSignal.filter { (project: ProjectLocator) in
-			switch (project) {
+			switch project {
 			case .ProjectFile:
 				return true
 
