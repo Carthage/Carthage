@@ -78,13 +78,13 @@ public struct BuildArguments {
 	public let project: ProjectLocator
 
 	/// The scheme to build in the project.
-	public let scheme: String?
+	public var scheme: String?
 
 	/// The configuration to use when building the project.
-	public let configuration: String?
+	public var configuration: String?
 
 	/// The platform to build for.
-	public let platform: Platform?
+	public var platform: Platform?
 
 	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, platform: Platform? = nil) {
 		self.project = project
@@ -307,9 +307,17 @@ private func valueForBuildSetting(setting: String, buildArguments: BuildArgument
 		.take(1)
 }
 
+/// Determines the relative path to the executable that will be built from the
+/// given arguments.
+private func executablePath(buildArguments: BuildArguments) -> ColdSignal<String> {
+	// TODO: Combine with URLToBuiltProduct() somehow.
+	return valueForBuildSetting("EXECUTABLE_PATH", buildArguments)
+}
+
 /// Determines where the build product for the given scheme will exist, when
 /// built with the given settings.
 private func URLToBuiltProduct(buildArguments: BuildArguments) -> ColdSignal<NSURL> {
+	// TODO: Parse multiple build settings in the same pass.
 	return valueForBuildSetting("BUILT_PRODUCTS_DIR", buildArguments)
 		// TODO: This should be a zip.
 		.combineLatestWith(valueForBuildSetting("WRAPPER_NAME", buildArguments))
@@ -336,40 +344,17 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		handle.writeData(data)
 	}
 
-	let buildPlatform = { (platform: Platform?) -> ColdSignal<NSURL> in
-		let buildArgs = BuildArguments(project: project, platform: platform, scheme: scheme, configuration: configuration)
-		var buildScheme = xcodebuildTask("build", buildArgs)
+	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+
+	let buildPlatform = { (platform: Platform) -> ColdSignal<NSURL> in
+		var copiedArgs = buildArgs
+		copiedArgs.platform = platform
+
+		var buildScheme = xcodebuildTask("build", copiedArgs)
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 		return launchTask(buildScheme, standardOutput: stdoutSink)
-			.then(URLToBuiltProduct(buildArgs))
-			.tryMap { (productURL: NSURL, error: NSErrorPointer) -> NSURL? in
-				var folderName: String!
-
-				// FIXME
-				switch platform {
-				case .Some(.iPhoneSimulator):
-					folderName = "iOS Simulator"
-
-				case .Some(.iPhoneOS):
-					folderName = "iOS Device"
-
-				default:
-					folderName = "OS X"
-				}
-
-				let folderURL = workingDirectoryURL.URLByAppendingPathComponent(folderName, isDirectory: true)
-				if !NSFileManager.defaultManager().createDirectoryAtURL(folderURL, withIntermediateDirectories: true, attributes: nil, error: error) {
-					return nil
-				}
-
-				let destinationURL = folderURL.URLByAppendingPathComponent(productURL.lastPathComponent)
-				if !NSFileManager.defaultManager().copyItemAtURL(productURL, toURL: destinationURL, error: error) {
-					return nil
-				}
-
-				return destinationURL
-			}
+			.then(URLToBuiltProduct(copiedArgs))
 	}
 
 	return platformForScheme(scheme, inProject: project)
@@ -379,9 +364,61 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			case .iPhoneOS:
 				return buildPlatform(.iPhoneSimulator)
 					.concat(buildPlatform(.iPhoneOS))
+					.reduce(initial: []) { $0 + [ $1 ] }
+							.on(completed: { println("Completed reduce") })
+					// TODO: This should be a zip.
+					.combineLatestWith(executablePath(buildArgs))
+					.map { (productURLs: [NSURL], executablePath: String) -> ColdSignal<NSURL> in
+						let simulatorURL = productURLs[0]
+						let deviceURL = productURLs[1]
+
+						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("Carthage/iOS", isDirectory: true)
+						var error: NSError?
+						if !NSFileManager.defaultManager().createDirectoryAtURL(folderURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+							return .error(error ?? RACError.Empty.error)
+						}
+
+						let destinationURL = folderURL.URLByAppendingPathComponent(deviceURL.lastPathComponent)
+						
+						// TODO: Atomic copying.
+						NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: nil)
+						
+						if !NSFileManager.defaultManager().copyItemAtURL(deviceURL, toURL: destinationURL, error: &error) {
+							return .error(error ?? RACError.Empty.error)
+						}
+
+						// TODO: Deduplicate, handle errors.
+						let simulatorExecutable = simulatorURL.URLByDeletingLastPathComponent!.URLByAppendingPathComponent(executablePath, isDirectory: false)
+						let deviceExecutable = deviceURL.URLByDeletingLastPathComponent!.URLByAppendingPathComponent(executablePath, isDirectory: false)
+						let destinationExecutable = destinationURL.URLByDeletingLastPathComponent!.URLByAppendingPathComponent(executablePath, isDirectory: false)
+
+						let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create", simulatorExecutable.path!, deviceExecutable.path!, "-output", destinationExecutable.path! ])
+						println(lipoTask)
+						return launchTask(lipoTask, standardOutput: stdoutSink)
+							.on(completed: { println("Completed task") })
+							.then(.single(destinationURL))
+					}
+					.merge(identity)
 
 			default:
 				return buildPlatform(platform)
+					.tryMap { (productURL: NSURL, error: NSErrorPointer) -> NSURL? in
+						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("Carthage/Mac", isDirectory: true)
+						if !NSFileManager.defaultManager().createDirectoryAtURL(folderURL, withIntermediateDirectories: true, attributes: nil, error: error) {
+							return nil
+						}
+
+						let destinationURL = folderURL.URLByAppendingPathComponent(productURL.lastPathComponent)
+						
+						// TODO: Atomic copying.
+						NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: nil)
+						
+						if !NSFileManager.defaultManager().copyItemAtURL(productURL, toURL: destinationURL, error: error) {
+							return nil
+						}
+
+						return destinationURL
+					}
 			}
 		}
 		.merge(identity)
