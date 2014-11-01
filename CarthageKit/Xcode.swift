@@ -365,7 +365,6 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				return buildPlatform(.iPhoneSimulator)
 					.concat(buildPlatform(.iPhoneOS))
 					.reduce(initial: []) { $0 + [ $1 ] }
-							.on(completed: { println("Completed reduce") })
 					// TODO: This should be a zip.
 					.combineLatestWith(executablePath(buildArgs))
 					.map { (productURLs: [NSURL], executablePath: String) -> ColdSignal<NSURL> in
@@ -393,9 +392,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						let destinationExecutable = destinationURL.URLByDeletingLastPathComponent!.URLByAppendingPathComponent(executablePath, isDirectory: false)
 
 						let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create", simulatorExecutable.path!, deviceExecutable.path!, "-output", destinationExecutable.path! ])
-						println(lipoTask)
 						return launchTask(lipoTask, standardOutput: stdoutSink)
-							.on(completed: { println("Completed task") })
 							.then(.single(destinationURL))
 					}
 					.merge(identity)
