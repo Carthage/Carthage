@@ -20,6 +20,9 @@ public enum CarthageError {
 	/// A launched task failed with an erroneous exit code.
 	case ShellTaskFailed(exitCode: Int)
 
+	/// One or more arguments was invalid.
+	case InvalidArgument(description: String)
+
 	/// The git repository has already been cloned to the specified location
 	case RepositoryAlreadyCloned(location: String)
 
@@ -35,7 +38,15 @@ public enum CarthageError {
 	public var error: NSError {
 		switch (self) {
 		case let .ShellTaskFailed(code):
-			return NSError(domain: CarthageErrorDomain, code: 1, userInfo: [ CarthageError.exitCodeKey: code  ])
+			return NSError(domain: CarthageErrorDomain, code: 1, userInfo: [
+				NSLocalizedDescriptionKey: "A shell task failed with exit code \(code)",
+				CarthageError.exitCodeKey: code
+			])
+
+		case let .InvalidArgument(description):
+			return NSError(domain: CarthageErrorDomain, code: 2, userInfo: [
+				NSLocalizedDescriptionKey: description
+			])
 		case let .RepositoryAlreadyCloned(location):
 			return NSError(domain: CarthageErrorDomain, code: 2, userInfo: [ NSLocalizedDescriptionKey: "The git repository already exists at \(location)."])
 		case let .RepositoryRemoteMismatch(expected, actual):

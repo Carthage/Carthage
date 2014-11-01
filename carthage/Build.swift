@@ -11,13 +11,30 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-struct BuildCommand: CommandType {
-	let verb = "build"
+public struct BuildCommand: CommandType {
+	public let verb = "build"
+	public let function = "Build the project in the current directory"
 
-	func run<C: CollectionType where C.Generator.Element == String>(arguments: C) -> ColdSignal<()> {
-		// TODO: Support -configuration argument
-		let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
+	public func run(mode: CommandMode) -> Result<()> {
+		return ColdSignal.fromResult(BuildOptions.evaluate(mode))
+			.map { options -> ColdSignal<()> in
+				let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
+				return buildInDirectory(directoryURL, configuration: options.configuration)
+			}
+			.merge(identity)
+			.wait()
+	}
+}
 
-		return buildInDirectory(directoryURL)
+private struct BuildOptions: OptionsType {
+	let configuration: String
+
+	static func create(configuration: String) -> BuildOptions {
+		return self(configuration: configuration)
+	}
+
+	static func evaluate(m: CommandMode) -> Result<BuildOptions> {
+		return create
+			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 	}
 }

@@ -6,6 +6,7 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import CarthageKit
 import Foundation
 import LlamaKit
 import ReactiveCocoa
@@ -19,33 +20,33 @@ func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	return result
 }
 
-let availableCommands: [CommandType] = [
-	BuildCommand(),
-	HelpCommand(),
-	LocateCommand(),
-	CheckoutCommand(),
-]
+let commands = CommandRegistry()
+commands.register(BuildCommand())
 
-let commandsByVerb = availableCommands.map { [$0.verb: $0] }.reduce([:], combine: combineDictionaries)
+let helpCommand = HelpCommand(registry: commands)
+commands.register(helpCommand)
+
 var arguments = Process.arguments
 
+// Remove the executable name.
 assert(arguments.count >= 1)
 arguments.removeAtIndex(0)
 
-let verb = arguments.first ?? HelpCommand().verb
-let args = (arguments.count > 0 ? dropFirst(arguments) : [])
+let verb = arguments.first ?? helpCommand.verb
+if arguments.count > 0 {
+	// Remove the command name.
+	arguments.removeAtIndex(0)
+}
 
-let result = commandsByVerb[verb]?.run(args).wait()
-
-switch result {
+switch commands.runCommand(verb, arguments: arguments) {
 case .Some(.Success):
 	exit(EXIT_SUCCESS)
 
 case let .Some(.Failure(error)):
-	fputs("Error executing command \(verb): \(error)", stderr)
+	fputs("\(error.localizedDescription)\n", stderr)
 	exit(EXIT_FAILURE)
 
 case .None:
-	fputs("Unrecognized command: '\(verb)'. See `carthage help`.", stderr)
+	fputs("Unrecognized command: '\(verb)'. See `carthage help`.\n", stderr)
 	exit(EXIT_FAILURE)
 }
