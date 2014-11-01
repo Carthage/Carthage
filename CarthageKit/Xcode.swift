@@ -232,11 +232,9 @@ public enum Platform {
 	}
 }
 
-/// Determines which platform the given scheme builds for, by default.
-///
-/// If the platform is unrecognized or could not be determined, an error will be
-/// sent on the returned signal.
-public func platformForScheme(scheme: String, inProject project: ProjectLocator) -> ColdSignal<Platform> {
+/// Returns the value for the given build setting, or an error if it could not
+/// be determined.
+private func valueForBuildSetting(setting: String, withScheme scheme: String, inProject project: ProjectLocator) -> ColdSignal<String> {
 	let task = xcodebuildTask(project.arguments + [ "-scheme", scheme, "-showBuildSettings" ])
 	return launchTask(task)
 		.map { (data: NSData) -> String in
@@ -250,16 +248,23 @@ public func platformForScheme(scheme: String, inProject project: ProjectLocator)
 			let components = split(line, { $0 == "=" }, maxSplit: 1)
 			let trimSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
 
-			if components[0].stringByTrimmingCharactersInSet(trimSet) == "PLATFORM_NAME" {
+			if components[0].stringByTrimmingCharactersInSet(trimSet) == setting {
 				return .single(components[1].stringByTrimmingCharactersInSet(trimSet))
 			} else {
 				return .empty()
 			}
 		}
 		.merge(identity)
-		.concat(.error(CarthageError.MissingPlatform.error))
+		.concat(.error(CarthageError.MissingBuildSetting(setting).error))
 		.take(1)
-		.tryMap(Platform.fromString)
+}
+
+/// Determines which platform the given scheme builds for, by default.
+///
+/// If the platform is unrecognized or could not be determined, an error will be
+/// sent on the returned signal.
+public func platformForScheme(scheme: String, inProject project: ProjectLocator) -> ColdSignal<Platform> {
+	return valueForBuildSetting("PLATFORM_NAME", withScheme: scheme, inProject: project).tryMap(Platform.fromString)
 }
 
 /// Builds one scheme of the given project, for all supported platforms.

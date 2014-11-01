@@ -23,8 +23,8 @@ public enum CarthageError {
 	/// One or more arguments was invalid.
 	case InvalidArgument(description: String)
 
-	/// `xcodebuild` did not return platform information.
-	case MissingPlatform
+	/// `xcodebuild` did not return a build setting that we needed.
+	case MissingBuildSetting(String)
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
@@ -40,8 +40,10 @@ public enum CarthageError {
 				NSLocalizedDescriptionKey: description
 			])
 
-		case .MissingPlatform:
-			return NSError(domain: CarthageErrorDomain, code: 3, userInfo: nil)
+		case let .MissingBuildSetting(setting):
+			return NSError(domain: CarthageErrorDomain, code: 3, userInfo: [
+				NSLocalizedDescriptionKey: "xcodebuild did not return a value for build setting \(setting)"
+			])
 		}
 	}
 }
