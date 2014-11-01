@@ -247,12 +247,32 @@ public func platformForScheme(scheme: String, inProject project: ProjectLocator)
 		.tryMap(Platform.fromString)
 }
 
+public func buildScheme(scheme: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, configuration: String? = nil) -> ColdSignal<()> {
+	precondition(workingDirectoryURL.fileURL)
+
+	var configurationArguments: [String] = []
+	if let configuration = configuration {
+		configurationArguments += [ "-configuration", "\(configuration)" ]
+	}
+
+	let handle = NSFileHandle.fileHandleWithStandardOutput()
+	let stdoutSink = SinkOf<NSData> { data in
+		handle.writeData(data)
+	}
+
+	var buildScheme = xcodebuildTask(project.arguments + configurationArguments + [ "-scheme", scheme, "build" ])
+	buildScheme.workingDirectoryPath = workingDirectoryURL.path!
+
+	return launchTask(buildScheme, standardOutput: stdoutSink)
+		.then(.empty())
+}
+
 public func buildInDirectory(directoryURL: NSURL, #configuration: String?) -> ColdSignal<()> {
 	precondition(directoryURL.fileURL)
 
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
-	return locatorSignal.filter { (locator: ProjectLocator) in
-			switch (locator) {
+	return locatorSignal.filter { (project: ProjectLocator) in
+			switch (project) {
 			case .ProjectFile:
 				return true
 
@@ -261,32 +281,16 @@ public func buildInDirectory(directoryURL: NSURL, #configuration: String?) -> Co
 			}
 		}
 		.take(1)
-		.map { (locator: ProjectLocator) -> ColdSignal<String> in
-			return schemesInProject(locator)
+		.map { (project: ProjectLocator) -> ColdSignal<String> in
+			return schemesInProject(project)
 		}
 		.merge(identity)
-		.map { (scheme: String) -> ColdSignal<()> in
-			var configurationArguments: [String] = []
-			if let configuration = configuration {
-				configurationArguments += [ "-configuration", "\(configuration)" ]
-			}
-
-			let handle = NSFileHandle.fileHandleWithStandardOutput()
-			let stdoutSink = SinkOf<NSData> { data in
-				handle.writeData(data)
-			}
-
-			return locatorSignal.take(1)
-				.map { (locator: ProjectLocator) -> ColdSignal<NSData> in
-					var buildScheme = xcodebuildTask(locator.arguments + configurationArguments + [ "-scheme", scheme, "build" ])
-					buildScheme.workingDirectoryPath = directoryURL.path!
-
-					return launchTask(buildScheme, standardOutput: stdoutSink).on(subscribed: {
-						println("*** Building scheme \(scheme)…\n")
-					})
-				}
-				.merge(identity)
-				.then(.empty())
+		.combineLatestWith(locatorSignal.take(1))
+		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<()> in
+			return buildScheme(scheme, inProject: project, workingDirectoryURL: directoryURL, configuration: configuration)
+				.on(subscribed: {
+					println("*** Building scheme \(scheme)…\n")
+				})
 		}
 		.concat(identity)
 }
