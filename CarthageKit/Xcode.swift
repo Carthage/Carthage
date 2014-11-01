@@ -72,6 +72,53 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 	}
 }
 
+/// Configures a build with Xcode.
+public struct BuildArguments {
+	/// The project to build.
+	public let project: ProjectLocator
+
+	/// The scheme to build in the project.
+	public let scheme: String?
+
+	/// The configuration to use when building the project.
+	public let configuration: String?
+
+	/// The platform to build for.
+	public let platform: Platform?
+
+	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, platform: Platform? = nil) {
+		self.project = project
+		self.scheme = scheme
+		self.configuration = configuration
+		self.platform = platform
+	}
+
+	/// The `xcodebuild` invocation corresponding to the receiver.
+	private var arguments: [String] {
+		var args = [ "xcodebuild" ] + project.arguments
+
+		if let scheme = scheme {
+			args += [ "-scheme", scheme ]
+		}
+
+		if let configuration = configuration {
+			args += [ "-configuration", configuration ]
+		}
+
+		if let platform = platform {
+			args += platform.arguments
+		}
+
+		return args
+	}
+}
+
+extension BuildArguments: Printable {
+	public var description: String {
+		return " ".join(arguments)
+	}
+}
+
 /// A candidate match for a project's canonical `ProjectLocator`.
 private struct ProjectEnumerationMatch: Comparable {
 	let locator: ProjectLocator
@@ -149,35 +196,16 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<Project
 	}
 }
 
-/// Creates a task description for executing `xcodebuild` in the given directory
-/// and with the given arguments.
-public func xcodebuildTask(arguments: [String], project: ProjectLocator? = nil, scheme: String? = nil, configuration: String? = nil, platform: Platform? = nil) -> TaskDescription {
-	var args = [ "xcodebuild" ]
-
-	if let project = project {
-		args += project.arguments
-	}
-
-	if let scheme = scheme {
-		args += [ "-scheme", scheme ]
-	}
-
-	if let configuration = configuration {
-		args += [ "-configuration", configuration ]
-	}
-
-	if let platform = platform {
-		args += platform.arguments
-	}
-
-	args += arguments
-	return TaskDescription(launchPath: "/usr/bin/xcrun", arguments: args)
+/// Creates a task description for executing `xcodebuild` with the given
+/// arguments.
+public func xcodebuildTask(task: String, buildArguments: BuildArguments) -> TaskDescription {
+	return TaskDescription(launchPath: "/usr/bin/xcrun", arguments: buildArguments.arguments + [ task ])
 }
 
 /// Sends each scheme found in the given project.
 public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
-	let task = xcodebuildTask([ "-list" ], project: project)
-	
+	let task = xcodebuildTask("-list", BuildArguments(project: project))
+
 	return launchTask(task)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
@@ -253,8 +281,8 @@ public enum Platform {
 
 /// Returns the value for the given build setting, or an error if it could not
 /// be determined.
-private func valueForBuildSetting(setting: String, withScheme scheme: String, inProject project: ProjectLocator, configuration: String? = nil) -> ColdSignal<String> {
-	let task = xcodebuildTask([ "-showBuildSettings" ], project: project, scheme: scheme, configuration: configuration)
+private func valueForBuildSetting(setting: String, buildArguments: BuildArguments) -> ColdSignal<String> {
+	let task = xcodebuildTask("-showBuildSettings", buildArguments)
 
 	return launchTask(task)
 		.map { (data: NSData) -> String in
@@ -284,7 +312,8 @@ private func valueForBuildSetting(setting: String, withScheme scheme: String, in
 /// If the platform is unrecognized or could not be determined, an error will be
 /// sent on the returned signal.
 public func platformForScheme(scheme: String, inProject project: ProjectLocator) -> ColdSignal<Platform> {
-	return valueForBuildSetting("PLATFORM_NAME", withScheme: scheme, inProject: project).tryMap(Platform.fromString)
+	return valueForBuildSetting("PLATFORM_NAME", BuildArguments(project: project, scheme: scheme))
+		.tryMap(Platform.fromString)
 }
 
 /// Builds one scheme of the given project, for all supported platforms.
@@ -297,7 +326,7 @@ public func buildScheme(scheme: String, inProject project: ProjectLocator, #work
 	}
 
 	let buildPlatform = { (platform: Platform?) -> ColdSignal<NSData> in
-		var buildScheme = xcodebuildTask([ "build" ], project: project, platform: platform, scheme: scheme, configuration: configuration)
+		var buildScheme = xcodebuildTask("build", BuildArguments(project: project, platform: platform, scheme: scheme, configuration: configuration))
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 		return launchTask(buildScheme, standardOutput: stdoutSink)
