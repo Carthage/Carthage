@@ -23,6 +23,9 @@ public enum CarthageError {
 	/// One or more arguments was invalid.
 	case InvalidArgument(description: String)
 
+	/// `xcodebuild` did not return platform information.
+	case MissingPlatform
+
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
 		switch (self) {
@@ -36,6 +39,9 @@ public enum CarthageError {
 			return NSError(domain: CarthageErrorDomain, code: 2, userInfo: [
 				NSLocalizedDescriptionKey: description
 			])
+
+		case .MissingPlatform:
+			return NSError(domain: CarthageErrorDomain, code: 3, userInfo: nil)
 		}
 	}
 }

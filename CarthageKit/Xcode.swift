@@ -173,6 +173,80 @@ public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
+/// Represents a platform or SDK buildable by Xcode.
+public enum Platform {
+	/// Mac OS X.
+	case MacOSX
+
+	/// iOS, for device.
+	case iPhoneOS
+
+	/// iOS, for the simulator.
+	case iPhoneSimulator
+
+	/// Attempts to parse a platform name from a string returned from
+	/// `xcodebuild`.
+	public static func fromString(string: String) -> Result<Platform> {
+		switch (string) {
+		case "macosx":
+			return success(.MacOSX)
+
+		case "iphoneos":
+			return success(.iPhoneOS)
+
+		case "iphonesimulator":
+			return success(.iPhoneSimulator)
+
+		default:
+			return failure()
+		}
+	}
+
+	/// Whether this platform targets iOS.
+	public var iOS: Bool {
+		switch (self) {
+		case .iPhoneOS:
+			return true
+
+		case .iPhoneSimulator:
+			return true
+
+		case .MacOSX:
+			return false
+		}
+	}
+}
+
+/// Determines which platform the given scheme builds for, by default.
+///
+/// If the platform is unrecognized or could not be determined, an error will be
+/// sent on the returned signal.
+public func platformForScheme(scheme: String, inProject project: ProjectLocator) -> ColdSignal<Platform> {
+	let task = xcodebuildTask(project.arguments + [ "-scheme", scheme, "-showBuildSettings" ])
+	return launchTask(task)
+		.map { (data: NSData) -> String in
+			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
+		}
+		.map { (string: String) -> ColdSignal<String> in
+			return string.linesSignal
+		}
+		.merge(identity)
+		.map { (line: String) -> ColdSignal<String> in
+			let components = split(line, { $0 == "=" }, maxSplit: 1)
+			let trimSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
+
+			if components[0].stringByTrimmingCharactersInSet(trimSet) == "PLATFORM_NAME" {
+				return .single(components[1].stringByTrimmingCharactersInSet(trimSet))
+			} else {
+				return .empty()
+			}
+		}
+		.merge(identity)
+		.concat(.error(CarthageError.MissingPlatform.error))
+		.take(1)
+		.tryMap(Platform.fromString)
+}
+
 public func buildInDirectory(directoryURL: NSURL, #configuration: String?) -> ColdSignal<()> {
 	precondition(directoryURL.fileURL)
 
