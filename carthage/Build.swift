@@ -19,7 +19,7 @@ public struct BuildCommand: CommandType {
 		return ColdSignal.fromResult(BuildOptions.evaluate(mode))
 			.map { options -> ColdSignal<()> in
 				let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
-				return buildInDirectory(directoryURL, withConfiguration: options.configuration)
+				return buildInDirectory(directoryURL, withConfiguration: options.configuration, onlyScheme: options.scheme)
 			}
 			.merge(identity)
 			.wait()
@@ -28,13 +28,15 @@ public struct BuildCommand: CommandType {
 
 private struct BuildOptions: OptionsType {
 	let configuration: String
+	let scheme: String?
 
-	static func create(configuration: String) -> BuildOptions {
-		return self(configuration: configuration)
+	static func create(configuration: String)(scheme: String) -> BuildOptions {
+		return self(configuration: configuration, scheme: (scheme.isEmpty ? nil : scheme))
 	}
 
 	static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
+			<*> m <| Option(key: "scheme", defaultValue: "", usage: "a scheme to build (if not specified, all schemes will be built)")
 	}
 }

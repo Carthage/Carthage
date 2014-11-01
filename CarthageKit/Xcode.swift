@@ -378,10 +378,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						}
 
 						let destinationURL = folderURL.URLByAppendingPathComponent(deviceURL.lastPathComponent)
-						
+
 						// TODO: Atomic copying.
 						NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: nil)
-						
+
 						if !NSFileManager.defaultManager().copyItemAtURL(deviceURL, toURL: destinationURL, error: &error) {
 							return .error(error ?? RACError.Empty.error)
 						}
@@ -406,10 +406,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						}
 
 						let destinationURL = folderURL.URLByAppendingPathComponent(productURL.lastPathComponent)
-						
+
 						// TODO: Atomic copying.
 						NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: nil)
-						
+
 						if !NSFileManager.defaultManager().copyItemAtURL(productURL, toURL: destinationURL, error: error) {
 							return nil
 						}
@@ -422,24 +422,34 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		.then(.empty())
 }
 
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> ColdSignal<()> {
+/// Builds the first project or workspace found within the given directory.
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, onlyScheme: String? = nil) -> ColdSignal<()> {
 	precondition(directoryURL.fileURL)
 
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
-	return locatorSignal.filter { (project: ProjectLocator) in
-			switch project {
-			case .ProjectFile:
-				return true
 
-			default:
-				return false
+	var schemesSignal: ColdSignal<String>!
+	if let onlyScheme = onlyScheme {
+		schemesSignal = .single(onlyScheme)
+	} else {
+		schemesSignal = locatorSignal
+			.filter { (project: ProjectLocator) in
+				switch project {
+				case .ProjectFile:
+					return true
+
+				default:
+					return false
+				}
 			}
-		}
-		.take(1)
-		.map { (project: ProjectLocator) -> ColdSignal<String> in
-			return schemesInProject(project)
-		}
-		.merge(identity)
+			.take(1)
+			.map { (project: ProjectLocator) -> ColdSignal<String> in
+				return schemesInProject(project)
+			}
+			.merge(identity)
+	}
+
+	return schemesSignal
 		.combineLatestWith(locatorSignal.take(1))
 		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<()> in
 			return buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
