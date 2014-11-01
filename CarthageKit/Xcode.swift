@@ -296,7 +296,7 @@ private func valueForBuildSetting(setting: String, buildArguments: BuildArgument
 			let components = split(line, { $0 == "=" }, maxSplit: 1)
 			let trimSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
 
-			if components[0].stringByTrimmingCharactersInSet(trimSet) == setting {
+			if components.count == 2 && components[0].stringByTrimmingCharactersInSet(trimSet) == setting {
 				return .single(components[1].stringByTrimmingCharactersInSet(trimSet))
 			} else {
 				return .empty()
@@ -305,6 +305,17 @@ private func valueForBuildSetting(setting: String, buildArguments: BuildArgument
 		.merge(identity)
 		.concat(.error(CarthageError.MissingBuildSetting(setting).error))
 		.take(1)
+}
+
+/// Determines where the build product for the given scheme will exist, when
+/// built with the given settings.
+private func URLToBuiltProduct(buildArguments: BuildArguments) -> ColdSignal<NSURL> {
+	return valueForBuildSetting("BUILT_PRODUCTS_DIR", buildArguments)
+		// TODO: This should be a zip.
+		.combineLatestWith(valueForBuildSetting("WRAPPER_NAME", buildArguments))
+		.map { (productsDir, wrapperName) in
+			return NSURL.fileURLWithPath(productsDir, isDirectory: true)!.URLByAppendingPathComponent(wrapperName)
+		}
 }
 
 /// Determines which platform the given scheme builds for, by default.
@@ -317,7 +328,7 @@ public func platformForScheme(scheme: String, inProject project: ProjectLocator)
 }
 
 /// Builds one scheme of the given project, for all supported platforms.
-public func buildScheme(scheme: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, configuration: String? = nil) -> ColdSignal<()> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> ColdSignal<()> {
 	precondition(workingDirectoryURL.fileURL)
 
 	let handle = NSFileHandle.fileHandleWithStandardOutput()
@@ -325,30 +336,59 @@ public func buildScheme(scheme: String, inProject project: ProjectLocator, #work
 		handle.writeData(data)
 	}
 
-	let buildPlatform = { (platform: Platform?) -> ColdSignal<NSData> in
-		var buildScheme = xcodebuildTask("build", BuildArguments(project: project, platform: platform, scheme: scheme, configuration: configuration))
+	let buildPlatform = { (platform: Platform?) -> ColdSignal<NSURL> in
+		let buildArgs = BuildArguments(project: project, platform: platform, scheme: scheme, configuration: configuration)
+		var buildScheme = xcodebuildTask("build", buildArgs)
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 		return launchTask(buildScheme, standardOutput: stdoutSink)
+			.then(URLToBuiltProduct(buildArgs))
+			.tryMap { (productURL: NSURL, error: NSErrorPointer) -> NSURL? in
+				var folderName: String!
+
+				// FIXME
+				switch platform {
+				case .Some(.iPhoneSimulator):
+					folderName = "iOS Simulator"
+
+				case .Some(.iPhoneOS):
+					folderName = "iOS Device"
+
+				default:
+					folderName = "OS X"
+				}
+
+				let folderURL = workingDirectoryURL.URLByAppendingPathComponent(folderName, isDirectory: true)
+				if !NSFileManager.defaultManager().createDirectoryAtURL(folderURL, withIntermediateDirectories: true, attributes: nil, error: error) {
+					return nil
+				}
+
+				let destinationURL = folderURL.URLByAppendingPathComponent(productURL.lastPathComponent)
+				if !NSFileManager.defaultManager().copyItemAtURL(productURL, toURL: destinationURL, error: error) {
+					return nil
+				}
+
+				return destinationURL
+			}
 	}
 
 	return platformForScheme(scheme, inProject: project)
-		.map { (platform: Platform) -> ColdSignal<NSData> in
+		.map { (platform: Platform) -> ColdSignal<NSURL> in
 			switch platform {
 			case .iPhoneSimulator: fallthrough
 			case .iPhoneOS:
 				return buildPlatform(.iPhoneSimulator)
 					.concat(buildPlatform(.iPhoneOS))
 
-			case .MacOSX:
-				return buildPlatform(nil)
+			default:
+				return buildPlatform(platform)
 			}
 		}
 		.merge(identity)
 		.then(.empty())
 }
 
-public func buildInDirectory(directoryURL: NSURL, #configuration: String?) -> ColdSignal<()> {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> ColdSignal<()> {
 	precondition(directoryURL.fileURL)
 
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
@@ -368,7 +408,7 @@ public func buildInDirectory(directoryURL: NSURL, #configuration: String?) -> Co
 		.merge(identity)
 		.combineLatestWith(locatorSignal.take(1))
 		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<()> in
-			return buildScheme(scheme, inProject: project, workingDirectoryURL: directoryURL, configuration: configuration)
+			return buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
 				.on(subscribed: {
 					println("*** Building scheme \(scheme)…\n")
 				})

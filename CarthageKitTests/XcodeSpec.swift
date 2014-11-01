@@ -18,7 +18,7 @@ class XcodeSpec: QuickSpec {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("TestFramework", withExtension: nil)!
 
 		it("should build") {
-			let result = buildInDirectory(directoryURL, configuration: nil).wait()
+			let result = buildInDirectory(directoryURL, withConfiguration: "Debug").wait()
 			expect(result.error()).to(beNil())
 		}
 
