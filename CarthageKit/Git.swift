@@ -55,29 +55,3 @@ public func cloneRepository(cloneURL: String, destinationPath: String) -> ColdSi
 public func fetchRepository(repositoryPath: String) -> ColdSignal<String> {
 	return launchGitTask(arguments: [ "fetch" ], repositoryPath: repositoryPath)
 }
-
-/*
-public func checkoutDependency(dependency: Dependency, destinationPath: String) -> ColdSignal<()> {
-	let dependencyPath : String = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
-
-	let cloneURLString = NSURL.fileURLWithPath(dependencyPath, isDirectory:true)?.absoluteString?
-
-	if cloneURLString == nil {
-		// TODO: Real errors
-        return ColdSignal.error(NSError(domain:"", code: -1, userInfo: [ NSLocalizedDescriptionKey: "The dependency \(dependency) doesn't have a URL to clone from." ]))
-	}
-
-	var arguments = [
-        "clone",
-		"--local",
-		cloneURLString!,
-        destinationPath,
-    ]
-
-	if let versionString = dependency.version.version?.raw {
-		arguments = arguments + ["--branch=\(versionString)"]
-	}
-
-	return runGitTask(withArguments: arguments)
-}
-*/
