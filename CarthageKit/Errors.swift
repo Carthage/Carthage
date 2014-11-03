@@ -23,6 +23,9 @@ public enum CarthageError {
 	/// One or more arguments was invalid.
 	case InvalidArgument(description: String)
 
+    /// No Cartfile present in the project
+    case NoCartfile
+
 	/// The git repository has already been cloned to the specified location
 	case RepositoryAlreadyCloned(location: String)
 
@@ -42,17 +45,18 @@ public enum CarthageError {
 				NSLocalizedDescriptionKey: "A shell task failed with exit code \(code)",
 				CarthageError.exitCodeKey: code
 			])
-
 		case let .InvalidArgument(description):
 			return NSError(domain: CarthageErrorDomain, code: 2, userInfo: [
 				NSLocalizedDescriptionKey: description
 			])
+        case let .NoCartfile:
+            return NSError(domain: CarthageErrorDomain, code: 3, userInfo: [ NSLocalizedDescriptionKey: "No Cartfile found." ])
 		case let .RepositoryAlreadyCloned(location):
-			return NSError(domain: CarthageErrorDomain, code: 2, userInfo: [ NSLocalizedDescriptionKey: "The git repository already exists at \(location)."])
+			return NSError(domain: CarthageErrorDomain, code: 4, userInfo: [ NSLocalizedDescriptionKey: "The git repository already exists at \(location)."])
 		case let .RepositoryRemoteMismatch(expected, actual):
-			return NSError(domain: CarthageErrorDomain, code: 3, userInfo: [ NSLocalizedDescriptionKey: "Expected a remote URL: \(expected), but found \(actual)."])
+			return NSError(domain: CarthageErrorDomain, code: 5, userInfo: [ NSLocalizedDescriptionKey: "Expected a remote URL: \(expected), but found \(actual)."])
 		case let .RepositoryCloneFailed(location):
-			return NSError(domain: CarthageErrorDomain, code: 4, userInfo: [ NSLocalizedDescriptionKey: "Unable to clone it repository because a file already exists at \(location)."])
+			return NSError(domain: CarthageErrorDomain, code: 6, userInfo: [ NSLocalizedDescriptionKey: "Unable to clone it repository because a file already exists at \(location)."])
 		}
 	}
 }

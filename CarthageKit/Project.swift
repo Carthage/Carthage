@@ -47,6 +47,6 @@ public struct Project {
 				.concat(identity)
 				.then(.empty())
 		}
-		return ColdSignal.empty()
+		return ColdSignal.error(CarthageError.NoCartfile.error)
 	}
 }
