@@ -11,18 +11,27 @@ import LlamaKit
 import ReactiveCocoa
 import CarthageKit
 
-struct CheckoutCommand: CommandType {
-	let verb = "checkout"
+public struct CheckoutCommand: CommandType {
+	public let verb = "checkout"
+    public let function = "Checkout dependencies listed in the project Cartfile"
 
-	func run<C: CollectionType where C.Generator.Element == String>(arguments: C) -> ColdSignal<()> {
+    private let registry: CommandRegistry
+
+    /// Initializes the command to provide help from the given registry of
+    /// commands.
+    public init(registry: CommandRegistry) {
+        self.registry = registry
+    }
+
+    public func run(mode: CommandMode) -> Result<()> {
 		// Identify the project's working directory.
 
 		let pwd : String? = NSFileManager.defaultManager().currentDirectoryPath
 		if pwd == nil || pwd!.isEmpty {
-			return ColdSignal.empty()
+			return failure()
 		}
 
 		let project = Project(path: pwd!)
-		return project.checkoutDependencies()
+		return project.checkoutDependencies().first()
 	}
 }
