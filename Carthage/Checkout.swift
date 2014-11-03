@@ -15,14 +15,6 @@ public struct CheckoutCommand: CommandType {
 	public let verb = "checkout"
     public let function = "Checkout dependencies listed in the project Cartfile"
 
-    private let registry: CommandRegistry
-
-    /// Initializes the command to provide help from the given registry of
-    /// commands.
-    public init(registry: CommandRegistry) {
-        self.registry = registry
-    }
-
     public func run(mode: CommandMode) -> Result<()> {
 		// Identify the project's working directory.
 
