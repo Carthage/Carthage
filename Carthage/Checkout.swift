@@ -24,6 +24,6 @@ public struct CheckoutCommand: CommandType {
 		}
 
 		let project = Project(path: pwd!)
-		return project.checkoutDependencies().first()
+		return project.checkoutDependencies().wait()
 	}
 }
