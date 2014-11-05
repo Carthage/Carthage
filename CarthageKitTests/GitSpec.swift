@@ -9,17 +9,21 @@
 import Foundation
 import CarthageKit
 import Quick
+import Nimble
 
 class GitSpec: CarthageSpec {
     override func spec() {
-        let archiveURL = NSBundle(forClass: self.dynamicType).URLForResource("repositories", withExtension: "zip", subdirectory: "fixtures")!
-
         beforeEach() {
             // unzip the repositories
+            let testRepo = self.pathForFixtureRepositoryNamed("simple-repo")
 
-
+            println(testRepo)
         }
 
+        it("Should do some stuff") {
+
+            expect(true == false).to(equal(false))
+        }
     }
 }
 

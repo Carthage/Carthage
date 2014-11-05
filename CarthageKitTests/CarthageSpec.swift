@@ -60,7 +60,7 @@ class CarthageSpec: QuickSpec {
     func unzipFile(member: NSString, zipPath: NSString, destinationPath: NSString, error: NSErrorPointer) -> Bool {
         let task = NSTask()
         task.launchPath = "/usr/bin/unzip"
-        task.arguments = [ "-qq", "-d", destinationPath, zipPath, "\(member)*", "-x", "*/.DS_Store" ]
+        task.arguments = [ "-qq", "-d", destinationPath, zipPath, "repositories/\(member)*", "-x", "*/.DS_Store" ]
 
         task.launch()
         task.waitUntilExit()
