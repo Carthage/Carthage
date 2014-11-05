@@ -9,6 +9,10 @@
 import Foundation
 import Quick
 
+let CarthageSpecErrorDomain = "CarthageSpecErrorDomain"
+
+let CarthageSpecErrorUnzipFailed = -99
+
 class CarthageSpec: QuickSpec {
     var tempDirectoryPath: NSString!
 
@@ -38,13 +42,13 @@ class CarthageSpec: QuickSpec {
         }
 
         var error: NSError?
-        let success = fileManager.createDirectoryAtPath(self.repositoryFixturesPath, withIntermediateDirectories:true, attributes:nil, error:&error)
+        var success = fileManager.createDirectoryAtPath(self.repositoryFixturesPath, withIntermediateDirectories:true, attributes:nil, error:&error)
         XCTAssertTrue(success, "Couldn't create the repository fixtures directory at \(self.repositoryFixturesPath): \(error)")
 
         let zippedRepositoriesPath = NSBundle(forClass: self.dynamicType).resourcePath!.stringByAppendingPathComponent("fixtures").stringByAppendingPathComponent("repositories.zip")
 
         error = nil
-        //success = unzipFile(repositoryName, fromArchiveAtPath:zippedRepositoriesPath, intoDirectory:fixturesPath error:&error);
+        success = unzipFile(repositoryName, zipPath:zippedRepositoriesPath, destinationPath:self.repositoryFixturesPath, error:&error)
         XCTAssertTrue(success, "Couldn't unzip fixture \"\(repositoryName)\" from \(zippedRepositoriesPath) to \(self.repositoryFixturesPath): \(error)")
     }
 
@@ -52,4 +56,21 @@ class CarthageSpec: QuickSpec {
         setUpRepositoryFixtureIfNeeded(repositoryName)
         return self.repositoryFixturesPath.stringByAppendingPathComponent(repositoryName)
     }
+
+    func unzipFile(member: NSString, zipPath: NSString, destinationPath: NSString, error: NSErrorPointer) -> Bool {
+        let task = NSTask()
+        task.launchPath = "/usr/bin/unzip"
+        task.arguments = [ "-qq", "-d", destinationPath, zipPath, "\(member)*", "-x", "*/.DS_Store" ]
+
+        task.launch()
+        task.waitUntilExit()
+
+        let success = (task.terminationStatus == 0)
+        if !success && error != nil {
+            error.memory = NSError(domain:CarthageSpecErrorDomain, code:CarthageSpecErrorUnzipFailed, userInfo:[ NSLocalizedDescriptionKey: "Unzip failed" ]);
+        }
+
+        return success;
+    }
+
 }
