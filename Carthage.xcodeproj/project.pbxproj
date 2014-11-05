@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		885C91281A07499D00461A70 /* GitSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 885C91271A07499D00461A70 /* GitSpec.swift */; };
 		885C912C1A074AD300461A70 /* fixtures in Resources */ = {isa = PBXBuildFile; fileRef = 885C912B1A074AD300461A70 /* fixtures */; };
+		88651A371A0A0CBA00766E2C /* CarthageSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88651A361A0A0CBA00766E2C /* CarthageSpec.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
 		D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; };
 		D01F8A4119EA28C600643E7C /* LlamaKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; };
@@ -94,6 +95,7 @@
 /* Begin PBXFileReference section */
 		885C91271A07499D00461A70 /* GitSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitSpec.swift; sourceTree = "<group>"; };
 		885C912B1A074AD300461A70 /* fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = fixtures; sourceTree = "<group>"; };
+		88651A361A0A0CBA00766E2C /* CarthageSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarthageSpec.swift; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
 		D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveCocoa.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4019EA28C600643E7C /* LlamaKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = LlamaKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -315,6 +317,7 @@
 		D0D1217B19E87B05005E4BAA /* CarthageKitTests */ = {
 			isa = PBXGroup;
 			children = (
+				88651A361A0A0CBA00766E2C /* CarthageSpec.swift */,
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
 				D04AEADA19E918C30045C166 /* TaskSpec.swift */,
 				D0DB09A319EA354200234B16 /* XcodeSpec.swift */,
@@ -561,6 +564,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				88651A371A0A0CBA00766E2C /* CarthageSpec.swift in Sources */,
 				D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */,
 				D04AEADB19E918C30045C166 /* TaskSpec.swift in Sources */,
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
