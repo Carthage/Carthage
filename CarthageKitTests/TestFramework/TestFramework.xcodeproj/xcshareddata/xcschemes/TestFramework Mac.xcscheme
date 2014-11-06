@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "D0EB39EC1A0B6479003202B2"
-               BuildableName = "TestFramework Mac.framework"
+               BuildableName = "TestFramework.framework"
                BlueprintName = "TestFramework Mac"
                ReferencedContainer = "container:TestFramework.xcodeproj">
             </BuildableReference>
@@ -57,7 +57,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D0EB39EC1A0B6479003202B2"
-            BuildableName = "TestFramework Mac.framework"
+            BuildableName = "TestFramework.framework"
             BlueprintName = "TestFramework Mac"
             ReferencedContainer = "container:TestFramework.xcodeproj">
          </BuildableReference>
@@ -76,7 +76,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D0EB39EC1A0B6479003202B2"
-            BuildableName = "TestFramework Mac.framework"
+            BuildableName = "TestFramework.framework"
             BlueprintName = "TestFramework Mac"
             ReferencedContainer = "container:TestFramework.xcodeproj">
          </BuildableReference>
@@ -94,7 +94,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D0EB39EC1A0B6479003202B2"
-            BuildableName = "TestFramework Mac.framework"
+            BuildableName = "TestFramework.framework"
             BlueprintName = "TestFramework Mac"
             ReferencedContainer = "container:TestFramework.xcodeproj">
          </BuildableReference>
