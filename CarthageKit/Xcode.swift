@@ -10,6 +10,11 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
+/// The name of the folder into which Carthage puts binaries it builds (relative
+/// to the working directory).
+// TODO: This should be configurable.
+public let CarthageBinariesFolderName = "Carthage.build"
+
 /// Describes how to locate the actual project or workspace that Xcode should
 /// build.
 public enum ProjectLocator: Comparable {
@@ -419,7 +424,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					.map { buildSettingsPerPlatform -> ColdSignal<()> in
 						let simulatorSettings = buildSettingsPerPlatform[0]
 						let deviceSettings = buildSettingsPerPlatform[1]
-						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("Carthage/iOS", isDirectory: true)
+						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderName)/iOS", isDirectory: true)
 
 						return copyBuildProductIntoDirectory(folderURL, deviceSettings)
 							.then(URLToBuiltExecutable(simulatorSettings))
@@ -446,7 +451,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			default:
 				return buildPlatform(platform)
 					.map { settings -> ColdSignal<NSURL> in
-						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("Carthage/Mac", isDirectory: true)
+						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderName)/Mac", isDirectory: true)
 						return copyBuildProductIntoDirectory(folderURL, settings)
 					}
 					.merge(identity)
