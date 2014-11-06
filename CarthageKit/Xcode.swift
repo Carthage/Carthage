@@ -279,10 +279,9 @@ public enum Platform {
 	}
 }
 
-/// Returns the value for the given build setting, or an error if it could not
-/// be determined.
-private func valueForBuildSetting(setting: String, buildArguments: BuildArguments) -> ColdSignal<String> {
-	let task = xcodebuildTask("-showBuildSettings", buildArguments)
+/// Returns the value of all build settings in the given configuration.
+public func buildSettings(arguments: BuildArguments) -> ColdSignal<Dictionary<String, String>> {
+	let task = xcodebuildTask("-showBuildSettings", arguments)
 
 	return launchTask(task)
 		.map { (data: NSData) -> String in
@@ -292,38 +291,90 @@ private func valueForBuildSetting(setting: String, buildArguments: BuildArgument
 			return string.linesSignal
 		}
 		.merge(identity)
-		.map { (line: String) -> ColdSignal<String> in
+		.map { (line: String) -> Dictionary<String, String> in
 			let components = split(line, { $0 == "=" }, maxSplit: 1)
 			let trimSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
 
-			if components.count == 2 && components[0].stringByTrimmingCharactersInSet(trimSet) == setting {
-				return .single(components[1].stringByTrimmingCharactersInSet(trimSet))
+			if components.count == 2 {
+				return [ components[0].stringByTrimmingCharactersInSet(trimSet): components[1].stringByTrimmingCharactersInSet(trimSet) ]
 			} else {
-				return .empty()
+				return [:]
 			}
 		}
-		.merge(identity)
-		.concat(.error(CarthageError.MissingBuildSetting(setting).error))
-		.take(1)
+		.reduce(initial: [:], combineDictionaries)
 }
 
-/// Determines the relative path to the executable that will be built from the
-/// given arguments.
-private func executablePath(buildArguments: BuildArguments) -> ColdSignal<String> {
-	// TODO: Combine with URLToBuiltProduct() somehow.
-	return valueForBuildSetting("EXECUTABLE_PATH", buildArguments)
+/// Returns the value for the given build setting, or an error if it could not
+/// be determined.
+private func valueForBuildSetting(setting: String, settings: Dictionary<String, String>) -> ColdSignal<String> {
+	if let value = settings[setting] {
+		return .single(value)
+	} else {
+		return .error(CarthageError.MissingBuildSetting(setting).error)
+	}
+}
+
+/// Returns the value for the given build setting, or an error if it could not
+/// be determined.
+private func valueForBuildSetting(setting: String, arguments: BuildArguments) -> ColdSignal<String> {
+	return buildSettings(arguments)
+		.map { settings in valueForBuildSetting(setting, settings) }
+		.merge(identity)
+}
+
+/// Calculates a URL against `BUILT_PRODUCTS_DIR` using a build setting that
+/// represents a relative path.
+private func URLWithPathRelativeToBuildProductsDirectory(pathSettingName: String, settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
+	return valueForBuildSetting("BUILT_PRODUCTS_DIR", settings)
+		.tryMap { productsDir -> Result<NSURL> in
+			if let fileURL = NSURL.fileURLWithPath(productsDir, isDirectory: true) {
+				return success(fileURL)
+			} else {
+				return failure()
+			}
+		}
+		// TODO: This should be a zip.
+		.combineLatestWith(valueForBuildSetting(pathSettingName, settings))
+		.map { (productsDirURL, path) in productsDirURL.URLByAppendingPathComponent(path) }
+}
+
+/// Determines where the executable for the product of the given scheme will
+/// exist, when built with the given settings.
+private func URLToBuiltExecutable(settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
+	return URLWithPathRelativeToBuildProductsDirectory("EXECUTABLE_PATH", settings)
 }
 
 /// Determines where the build product for the given scheme will exist, when
 /// built with the given settings.
-private func URLToBuiltProduct(buildArguments: BuildArguments) -> ColdSignal<NSURL> {
-	// TODO: Parse multiple build settings in the same pass.
-	return valueForBuildSetting("BUILT_PRODUCTS_DIR", buildArguments)
-		// TODO: This should be a zip.
-		.combineLatestWith(valueForBuildSetting("WRAPPER_NAME", buildArguments))
-		.map { (productsDir, wrapperName) in
-			return NSURL.fileURLWithPath(productsDir, isDirectory: true)!.URLByAppendingPathComponent(wrapperName)
+private func URLToBuiltProduct(settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
+	return URLWithPathRelativeToBuildProductsDirectory("WRAPPER_NAME", settings)
+}
+
+/// Finds the built product for the given settings, then copies it (preserving
+/// its name) into the given folder. The folder will be created if it does not
+/// already exist.
+///
+/// Returns a signal that will send the URL after copying upon success.
+private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
+	return ColdSignal.lazy {
+		var error: NSError?
+		if !NSFileManager.defaultManager().createDirectoryAtURL(directoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+			return .error(error ?? RACError.Empty.error)
 		}
+
+		return valueForBuildSetting("WRAPPER_NAME", settings)
+			.map(directoryURL.URLByAppendingPathComponent)
+			.map { destinationURL in
+				return URLToBuiltProduct(settings)
+					.try { (productURL, error) in
+						// TODO: Atomic copying.
+						NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: nil)
+						return NSFileManager.defaultManager().copyItemAtURL(productURL, toURL: destinationURL, error: error)
+					}
+					.then(.single(destinationURL))
+			}
+			.merge(identity)
+	}
 }
 
 /// Determines which platform the given scheme builds for, by default.
@@ -346,7 +397,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
-	let buildPlatform = { (platform: Platform) -> ColdSignal<NSURL> in
+	let buildPlatform = { (platform: Platform) -> ColdSignal<Dictionary<String, String>> in
 		var copiedArgs = buildArgs
 		copiedArgs.platform = platform
 
@@ -354,72 +405,55 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 		return launchTask(buildScheme, standardOutput: stdoutSink)
-			.then(URLToBuiltProduct(copiedArgs))
+			.then(buildSettings(copiedArgs))
 	}
 
 	return platformForScheme(scheme, inProject: project)
-		.map { (platform: Platform) -> ColdSignal<NSURL> in
+		.map { (platform: Platform) -> ColdSignal<()> in
 			switch platform {
 			case .iPhoneSimulator: fallthrough
 			case .iPhoneOS:
 				return buildPlatform(.iPhoneSimulator)
 					.concat(buildPlatform(.iPhoneOS))
 					.reduce(initial: []) { $0 + [ $1 ] }
-					// TODO: This should be a zip.
-					.combineLatestWith(executablePath(buildArgs))
-					.map { (productURLs: [NSURL], executablePath: String) -> ColdSignal<NSURL> in
-						let simulatorURL = productURLs[0]
-						let deviceURL = productURLs[1]
-
+					.map { buildSettingsPerPlatform -> ColdSignal<()> in
+						let simulatorSettings = buildSettingsPerPlatform[0]
+						let deviceSettings = buildSettingsPerPlatform[1]
 						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("Carthage/iOS", isDirectory: true)
-						var error: NSError?
-						if !NSFileManager.defaultManager().createDirectoryAtURL(folderURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-							return .error(error ?? RACError.Empty.error)
-						}
 
-						let destinationURL = folderURL.URLByAppendingPathComponent(deviceURL.lastPathComponent)
-
-						// TODO: Atomic copying.
-						NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: nil)
-
-						if !NSFileManager.defaultManager().copyItemAtURL(deviceURL, toURL: destinationURL, error: &error) {
-							return .error(error ?? RACError.Empty.error)
-						}
-
-						// TODO: Deduplicate, handle errors.
-						let simulatorExecutable = simulatorURL.URLByDeletingLastPathComponent!.URLByAppendingPathComponent(executablePath, isDirectory: false)
-						let deviceExecutable = deviceURL.URLByDeletingLastPathComponent!.URLByAppendingPathComponent(executablePath, isDirectory: false)
-						let destinationExecutable = destinationURL.URLByDeletingLastPathComponent!.URLByAppendingPathComponent(executablePath, isDirectory: false)
-
-						let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create", simulatorExecutable.path!, deviceExecutable.path!, "-output", destinationExecutable.path! ])
-						return launchTask(lipoTask, standardOutput: stdoutSink)
-							.then(.single(destinationURL))
+						return copyBuildProductIntoDirectory(folderURL, deviceSettings)
+							.then(URLToBuiltExecutable(simulatorSettings))
+							.concat(URLToBuiltExecutable(deviceSettings))
+							.tryMap { URL -> Result<String> in
+								if let path = URL.path {
+									return success(path)
+								} else {
+									return failure()
+								}
+							}
+							.reduce(initial: []) { $0 + [ $1 ] }
+							// TODO: This should be a zip.
+							.combineLatestWith(valueForBuildSetting("EXECUTABLE_PATH", deviceSettings).map(folderURL.URLByAppendingPathComponent))
+							.map { (executablePaths: [String], outputURL: NSURL) -> ColdSignal<NSData> in
+								let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
+								return launchTask(lipoTask, standardOutput: stdoutSink)
+							}
+							.merge(identity)
+							.then(.empty())
 					}
 					.merge(identity)
 
 			default:
 				return buildPlatform(platform)
-					.tryMap { (productURL: NSURL, error: NSErrorPointer) -> NSURL? in
+					.map { settings -> ColdSignal<NSURL> in
 						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("Carthage/Mac", isDirectory: true)
-						if !NSFileManager.defaultManager().createDirectoryAtURL(folderURL, withIntermediateDirectories: true, attributes: nil, error: error) {
-							return nil
-						}
-
-						let destinationURL = folderURL.URLByAppendingPathComponent(productURL.lastPathComponent)
-
-						// TODO: Atomic copying.
-						NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: nil)
-
-						if !NSFileManager.defaultManager().copyItemAtURL(productURL, toURL: destinationURL, error: error) {
-							return nil
-						}
-
-						return destinationURL
+						return copyBuildProductIntoDirectory(folderURL, settings)
 					}
+					.merge(identity)
+					.then(.empty())
 			}
 		}
 		.merge(identity)
-		.then(.empty())
 }
 
 /// Builds the first project or workspace found within the given directory.
