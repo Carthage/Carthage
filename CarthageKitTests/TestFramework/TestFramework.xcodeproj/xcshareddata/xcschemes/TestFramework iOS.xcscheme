@@ -15,22 +15,22 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "D0DB098219EA34CE00234B16"
-               BuildableName = "TestFramework.framework"
-               BlueprintName = "TestFramework"
+               BuildableName = "TestFramework iOS.framework"
+               BlueprintName = "TestFramework iOS"
                ReferencedContainer = "container:TestFramework.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
             buildForTesting = "YES"
-            buildForRunning = "YES"
+            buildForRunning = "NO"
             buildForProfiling = "NO"
             buildForArchiving = "NO"
-            buildForAnalyzing = "YES">
+            buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "D0DB098D19EA34CE00234B16"
-               BuildableName = "TestFrameworkTests.xctest"
-               BlueprintName = "TestFrameworkTests"
+               BuildableName = "TestFramework iOS Tests.xctest"
+               BlueprintName = "TestFramework iOS Tests"
                ReferencedContainer = "container:TestFramework.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -47,8 +47,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "D0DB098D19EA34CE00234B16"
-               BuildableName = "TestFrameworkTests.xctest"
-               BlueprintName = "TestFrameworkTests"
+               BuildableName = "TestFramework iOS Tests.xctest"
+               BlueprintName = "TestFramework iOS Tests"
                ReferencedContainer = "container:TestFramework.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -57,8 +57,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D0DB098219EA34CE00234B16"
-            BuildableName = "TestFramework.framework"
-            BlueprintName = "TestFramework"
+            BuildableName = "TestFramework iOS.framework"
+            BlueprintName = "TestFramework iOS"
             ReferencedContainer = "container:TestFramework.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -76,8 +76,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D0DB098219EA34CE00234B16"
-            BuildableName = "TestFramework.framework"
-            BlueprintName = "TestFramework"
+            BuildableName = "TestFramework iOS.framework"
+            BlueprintName = "TestFramework iOS"
             ReferencedContainer = "container:TestFramework.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -94,8 +94,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D0DB098219EA34CE00234B16"
-            BuildableName = "TestFramework.framework"
-            BlueprintName = "TestFramework"
+            BuildableName = "TestFramework iOS.framework"
+            BlueprintName = "TestFramework iOS"
             ReferencedContainer = "container:TestFramework.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

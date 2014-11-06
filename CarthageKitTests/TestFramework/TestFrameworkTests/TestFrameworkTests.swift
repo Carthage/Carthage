@@ -2,11 +2,11 @@
 //  TestFrameworkTests.swift
 //  TestFrameworkTests
 //
-//  Created by Justin Spahr-Summers on 2014-10-11.
+//  Created by Justin Spahr-Summers on 2014-11-06.
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
-import UIKit
+import Foundation
 import XCTest
 
 class TestFrameworkTests: XCTestCase {
