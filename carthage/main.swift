@@ -11,15 +11,6 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-// Hopefully this will be built into the standard library someday.
-func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
-	var result = lhs
-	for (key, value) in rhs {
-		result.updateValue(value, forKey: key)
-	}
-	return result
-}
-
 let commands = CommandRegistry()
 commands.register(BuildCommand())
 

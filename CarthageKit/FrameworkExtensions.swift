@@ -27,3 +27,13 @@ extension String {
 		}
 	}
 }
+
+/// Merges `rhs` into `lhs` and returns the result.
+public func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
+	var result = lhs
+	for (key, value) in rhs {
+		result.updateValue(value, forKey: key)
+	}
+
+	return result
+}
