@@ -8,9 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		D0DB098919EA34CE00234B16 /* TestFramework.h in Headers */ = {isa = PBXBuildFile; fileRef = D0DB098819EA34CE00234B16 /* TestFramework.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D0DB098F19EA34CE00234B16 /* TestFramework iOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0DB098319EA34CE00234B16 /* TestFramework iOS.framework */; };
+		D0DB098F19EA34CE00234B16 /* TestFramework.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0DB098319EA34CE00234B16 /* TestFramework.framework */; };
 		D0DB099619EA34CE00234B16 /* TestFrameworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DB099519EA34CE00234B16 /* TestFrameworkTests.swift */; };
-		D0EB39F81A0B6479003202B2 /* TestFramework Mac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EB39ED1A0B6479003202B2 /* TestFramework Mac.framework */; };
+		D0EB39F81A0B6479003202B2 /* TestFramework.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EB39ED1A0B6479003202B2 /* TestFramework.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,13 +31,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		D0DB098319EA34CE00234B16 /* TestFramework iOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = "TestFramework iOS.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0DB098319EA34CE00234B16 /* TestFramework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TestFramework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0DB098719EA34CE00234B16 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0DB098819EA34CE00234B16 /* TestFramework.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TestFramework.h; sourceTree = "<group>"; };
 		D0DB098E19EA34CE00234B16 /* TestFrameworkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TestFrameworkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0DB099419EA34CE00234B16 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0DB099519EA34CE00234B16 /* TestFrameworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFrameworkTests.swift; sourceTree = "<group>"; };
-		D0EB39ED1A0B6479003202B2 /* TestFramework Mac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = "TestFramework Mac.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EB39ED1A0B6479003202B2 /* TestFramework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TestFramework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0EB39F71A0B6479003202B2 /* TestFrameworkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TestFrameworkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -53,7 +53,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0DB098F19EA34CE00234B16 /* TestFramework iOS.framework in Frameworks */,
+				D0DB098F19EA34CE00234B16 /* TestFramework.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -68,7 +68,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0EB39F81A0B6479003202B2 /* TestFramework Mac.framework in Frameworks */,
+				D0EB39F81A0B6479003202B2 /* TestFramework.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -87,9 +87,9 @@
 		D0DB098419EA34CE00234B16 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D0DB098319EA34CE00234B16 /* TestFramework iOS.framework */,
+				D0DB098319EA34CE00234B16 /* TestFramework.framework */,
 				D0DB098E19EA34CE00234B16 /* TestFrameworkTests.xctest */,
-				D0EB39ED1A0B6479003202B2 /* TestFramework Mac.framework */,
+				D0EB39ED1A0B6479003202B2 /* TestFramework.framework */,
 				D0EB39F71A0B6479003202B2 /* TestFrameworkTests.xctest */,
 			);
 			name = Products;
@@ -165,7 +165,7 @@
 			);
 			name = "TestFramework iOS";
 			productName = TestFramework;
-			productReference = D0DB098319EA34CE00234B16 /* TestFramework iOS.framework */;
+			productReference = D0DB098319EA34CE00234B16 /* TestFramework.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 		D0DB098D19EA34CE00234B16 /* TestFramework iOS Tests */ = {
@@ -201,7 +201,7 @@
 			);
 			name = "TestFramework Mac";
 			productName = TestFramework;
-			productReference = D0EB39ED1A0B6479003202B2 /* TestFramework Mac.framework */;
+			productReference = D0EB39ED1A0B6479003202B2 /* TestFramework.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 		D0EB39F61A0B6479003202B2 /* TestFramework Mac Tests */ = {
@@ -380,6 +380,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = TestFramework;
 				SDKROOT = iphoneos;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -419,6 +420,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_NAME = TestFramework;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
@@ -437,7 +439,6 @@
 				INFOPLIST_FILE = TestFramework/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
 			name = Debug;
@@ -452,7 +453,6 @@
 				INFOPLIST_FILE = TestFramework/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
 			name = Release;
@@ -504,7 +504,6 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
-				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
@@ -524,7 +523,6 @@
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
-				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
