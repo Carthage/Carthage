@@ -22,7 +22,7 @@ public protocol Scannable {
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
-	public var dependencies: [Dependency]
+	public var dependencies: [Dependency<VersionSpecifier>]
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile> {
@@ -42,7 +42,7 @@ public struct Cartfile {
 				return
 			}
 
-			switch (Dependency.fromScanner(scanner)) {
+			switch (Dependency<VersionSpecifier>.fromScanner(scanner)) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep.unbox)
 
@@ -72,16 +72,19 @@ extension Cartfile: Printable {
 	}
 }
 
+/// An abstract type representing a way to specify versions.
+public protocol VersionType: Scannable, Equatable {}
+
 /// Represents a single dependency of a project.
-public struct Dependency: Equatable {
+public struct Dependency<V: VersionType>: Equatable {
 	/// The GitHub repository in which this dependency lives.
 	public var repository: Repository
 
 	/// The version(s) that are required to satisfy this dependency.
-	public var version: VersionSpecifier
+	public var version: V
 }
 
-public func ==(lhs: Dependency, rhs: Dependency) -> Bool {
+public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 	return lhs.repository == rhs.repository && lhs.version == rhs.version
 }
 
@@ -103,7 +106,7 @@ extension Dependency: Scannable {
 
 		if let repoNWO = repoNWO {
 			return Repository.fromNWO(repoNWO).flatMap { repo in
-				return VersionSpecifier.fromScanner(scanner).map { specifier in self(repository: repo, version: specifier) }
+				return V.fromScanner(scanner).map { specifier in self(repository: repo, version: specifier) }
 			}
 		} else {
 			return failure()
@@ -174,6 +177,8 @@ extension Version: Scannable {
 	}
 }
 
+extension Version: VersionType {}
+
 public func <(lhs: Version, rhs: Version) -> Bool {
     return lexicographicalCompare(lhs.components, rhs.components)
 }
@@ -228,6 +233,8 @@ extension VersionSpecifier: Scannable {
 		}
 	}
 }
+
+extension VersionSpecifier: VersionType {}
 
 private func intersection(#atLeast: Version, #compatibleWith: Version) -> VersionSpecifier? {
 	if atLeast.major > compatibleWith.major {
