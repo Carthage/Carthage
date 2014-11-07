@@ -13,9 +13,9 @@ import CarthageKit
 
 public struct CheckoutCommand: CommandType {
 	public let verb = "checkout"
-    public let function = "Checkout dependencies listed in the project Cartfile"
+	public let function = "Checkout dependencies listed in the project Cartfile"
 
-    public func run(mode: CommandMode) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<()> {
 		// Identify the project's working directory.
 
 		let pwd : String? = NSFileManager.defaultManager().currentDirectoryPath
