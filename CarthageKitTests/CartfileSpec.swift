@@ -14,9 +14,8 @@ import Quick
 
 class CartfileSpec: QuickSpec {
 	override func spec() {
-		let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("TestCartfile", withExtension: "")!
-
 		it("should parse a Cartfile") {
+			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("TestCartfile", withExtension: "")!
 			let testCartfile = NSString(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
 
 			let result = Cartfile.fromString(testCartfile!)
@@ -44,6 +43,27 @@ class CartfileSpec: QuickSpec {
 			expect(depConfigs.repository.owner).to(equal("jspahrsummers"))
 			expect(depConfigs.repository.name).to(equal("xcconfigs"))
 			expect(depConfigs.version).to(equal(VersionSpecifier.Any))
+		}
+
+		it("should parse a Cartfile.lock") {
+			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("TestCartfile", withExtension: "lock")!
+			let testCartfile = NSString(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
+
+			let result = CartfileLock.fromString(testCartfile!)
+			expect(result.error()).to(beNil())
+
+			let cartfileLock = result.value()!
+			expect(cartfileLock.dependencies.count).to(equal(2))
+
+			let depReactiveCocoa = cartfileLock.dependencies[0]
+			expect(depReactiveCocoa.repository.name).to(equal("ReactiveCocoa"))
+			expect(depReactiveCocoa.repository.owner).to(equal("ReactiveCocoa"))
+			expect(depReactiveCocoa.version).to(equal(PinnedVersion(tag: "v2.3.1")))
+
+			let depMantle = cartfileLock.dependencies[1]
+			expect(depMantle.repository.name).to(equal("Mantle"))
+			expect(depMantle.repository.owner).to(equal("Mantle"))
+			expect(depMantle.version).to(equal(PinnedVersion(tag: "1.0")))
 		}
 	}
 }

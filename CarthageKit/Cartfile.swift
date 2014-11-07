@@ -228,6 +228,10 @@ extension SemanticVersion: Printable {
 public struct PinnedVersion: Equatable {
 	/// The name of the tag to pin to.
 	public let tag: String
+
+	public init(tag: String) {
+		self.tag = tag
+	}
 }
 
 public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
