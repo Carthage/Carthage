@@ -14,23 +14,23 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "D0DB098219EA34CE00234B16"
+               BlueprintIdentifier = "D0EB39EC1A0B6479003202B2"
                BuildableName = "TestFramework.framework"
-               BlueprintName = "TestFramework"
+               BlueprintName = "TestFramework Mac"
                ReferencedContainer = "container:TestFramework.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
             buildForTesting = "YES"
-            buildForRunning = "YES"
+            buildForRunning = "NO"
             buildForProfiling = "NO"
             buildForArchiving = "NO"
-            buildForAnalyzing = "YES">
+            buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "D0DB098D19EA34CE00234B16"
-               BuildableName = "TestFrameworkTests.xctest"
-               BlueprintName = "TestFrameworkTests"
+               BlueprintIdentifier = "D0EB39F61A0B6479003202B2"
+               BuildableName = "TestFramework Mac Tests.xctest"
+               BlueprintName = "TestFramework Mac Tests"
                ReferencedContainer = "container:TestFramework.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -46,9 +46,9 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "D0DB098D19EA34CE00234B16"
-               BuildableName = "TestFrameworkTests.xctest"
-               BlueprintName = "TestFrameworkTests"
+               BlueprintIdentifier = "D0EB39F61A0B6479003202B2"
+               BuildableName = "TestFramework Mac Tests.xctest"
+               BlueprintName = "TestFramework Mac Tests"
                ReferencedContainer = "container:TestFramework.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -56,9 +56,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D0DB098219EA34CE00234B16"
+            BlueprintIdentifier = "D0EB39EC1A0B6479003202B2"
             BuildableName = "TestFramework.framework"
-            BlueprintName = "TestFramework"
+            BlueprintName = "TestFramework Mac"
             ReferencedContainer = "container:TestFramework.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -75,9 +75,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D0DB098219EA34CE00234B16"
+            BlueprintIdentifier = "D0EB39EC1A0B6479003202B2"
             BuildableName = "TestFramework.framework"
-            BlueprintName = "TestFramework"
+            BlueprintName = "TestFramework Mac"
             ReferencedContainer = "container:TestFramework.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -93,9 +93,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D0DB098219EA34CE00234B16"
+            BlueprintIdentifier = "D0EB39EC1A0B6479003202B2"
             BuildableName = "TestFramework.framework"
-            BlueprintName = "TestFramework"
+            BlueprintName = "TestFramework Mac"
             ReferencedContainer = "container:TestFramework.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

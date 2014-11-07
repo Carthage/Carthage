@@ -1,15 +1,15 @@
 //
-//  TestFrameworkTests.swift
-//  TestFrameworkTests
+//  TestApplicationTests.swift
+//  TestApplicationTests
 //
-//  Created by Justin Spahr-Summers on 2014-11-06.
+//  Created by Justin Spahr-Summers on 2014-11-05.
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
-import Foundation
+import Cocoa
 import XCTest
 
-class TestFrameworkTests: XCTestCase {
+class TestApplicationTests: XCTestCase {
     
     override func setUp() {
         super.setUp()

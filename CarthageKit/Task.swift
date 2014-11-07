@@ -45,6 +45,18 @@ public struct TaskDescription {
 	}
 }
 
+extension TaskDescription: Printable {
+	public var description: String {
+		var str = "\(launchPath)"
+
+		for arg in arguments {
+			str += " \(arg)"
+		}
+
+		return str
+	}
+}
+
 /// Creates a pipe that, when written to, will place data into the given sink.
 private func pipeForWritingToSink(sink: SinkOf<NSData>) -> NSPipe {
 	let pipe = NSPipe()
