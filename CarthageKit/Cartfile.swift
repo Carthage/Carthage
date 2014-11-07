@@ -146,11 +146,18 @@ public struct Version: Comparable {
 		self.minor = minor
 		self.patch = patch
 	}
+}
 
+extension Version: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
-	static public func fromString(specifier: String) -> Result<Version> {
-		let components = split(specifier, { $0 == "." }, allowEmptySlices: false)
+	static public func fromScanner(scanner: NSScanner) -> Result<Version> {
+		var version: NSString? = nil
+		if !scanner.scanCharactersFromSet(NSCharacterSet(charactersInString: "0123456789."), intoString: &version) || version == nil {
+			return failure()
+		}
+
+		let components = split(version! as String, { $0 == "." }, allowEmptySlices: false)
 		if components.count == 0 {
 			return failure()
 		}
@@ -210,23 +217,12 @@ public enum VersionSpecifier: Equatable {
 extension VersionSpecifier: Scannable {
 	/// Attempts to parse a VersionSpecifier.
 	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
-		func scanVersion() -> Result<Version> {
-			var version: NSString? = nil
-			if scanner.scanCharactersFromSet(NSCharacterSet(charactersInString: "0123456789."), intoString: &version) {
-				if let version = version {
-					return Version.fromString(version)
-				}
-			}
-
-			return failure()
-		}
-
 		if scanner.scanString("==", intoString: nil) {
-			return scanVersion().map { Exactly($0) }
+			return Version.fromScanner(scanner).map { Exactly($0) }
 		} else if scanner.scanString(">=", intoString: nil) {
-			return scanVersion().map { AtLeast($0) }
+			return Version.fromScanner(scanner).map { AtLeast($0) }
 		} else if scanner.scanString("~>", intoString: nil) {
-			return scanVersion().map { CompatibleWith($0) }
+			return Version.fromScanner(scanner).map { CompatibleWith($0) }
 		} else {
 			return success(Any)
 		}
