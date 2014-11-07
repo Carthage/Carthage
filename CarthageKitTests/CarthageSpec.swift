@@ -20,7 +20,7 @@ class CarthageSpec: QuickSpec {
         if (tempDirectoryPath == nil) {
             self.setUpTempDirectoryPath()
         }
-        return self.tempDirectoryPath.stringByAppendingPathComponent("repositories")
+        return self.tempDirectoryPath
     }
 
     func setUpTempDirectoryPath() {

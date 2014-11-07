@@ -13,16 +13,16 @@ import Nimble
 
 class GitSpec: CarthageSpec {
     override func spec() {
-        beforeEach() {
-            // unzip the repositories
-            let testRepo = self.pathForFixtureRepositoryNamed("simple-repo")
+		var testRepoPath: String!
 
-            println(testRepo)
+        beforeEach {
+            testRepoPath = self.pathForFixtureRepositoryNamed("simple-repo")
         }
 
-        it("Should do some stuff") {
-
-            expect(true == false).to(equal(false))
+        it("repositoryRemote should send the remote URL") {
+			let remote = repositoryRemote(testRepoPath).first().value()
+			expect(remote).notTo(beNil())
+			expect(remote).to(equal(""))
         }
     }
 }
