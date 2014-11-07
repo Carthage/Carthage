@@ -16,10 +16,36 @@ import ReactiveCocoa
 class XcodeSpec: QuickSpec {
 	override func spec() {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("TestFramework", withExtension: nil)!
+		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderName)
 
-		it("should build") {
-			let result = buildInDirectory(directoryURL, configuration: nil).wait()
+		beforeEach {
+			NSFileManager.defaultManager().removeItemAtURL(buildFolderURL, error: nil)
+			return ()
+		}
+
+		it("should build for all platforms") {
+			let result = buildInDirectory(directoryURL, withConfiguration: "Debug").wait()
 			expect(result.error()).to(beNil())
+
+			let macURL = buildFolderURL.URLByAppendingPathComponent("Mac/TestFramework.framework/TestFramework")
+			var isDirectory: ObjCBool = false
+			expect(NSFileManager.defaultManager().fileExistsAtPath(macURL.path!, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beFalsy())
+
+			let iOSURL = buildFolderURL.URLByAppendingPathComponent("iOS/TestFramework.framework/TestFramework")
+			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSURL.path!, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beFalsy())
+
+			// Verify that the iOS framework is a universal binary for device
+			// and simulator.
+			let output = launchTask(TaskDescription(launchPath: "/usr/bin/otool", arguments: [ "-fv", iOSURL.path! ]))
+				.map { NSString(data: $0, encoding: NSStringEncoding(NSUTF8StringEncoding))! }
+				.first()
+				.value()!
+
+			expect(output).to(contain("architecture i386"))
+			expect(output).to(contain("architecture armv7"))
+			expect(output).to(contain("architecture arm64"))
 		}
 
 		it("should locate the project") {
