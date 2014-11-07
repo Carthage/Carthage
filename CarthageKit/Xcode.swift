@@ -255,7 +255,7 @@ public enum Platform {
 	}
 
 	/// Whether this platform targets iOS.
-	public var iOS: Bool {
+	public var targetsiOS: Bool {
 		switch self {
 		case .iPhoneOS:
 			return true
