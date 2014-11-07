@@ -9,6 +9,15 @@
 import Foundation
 import LlamaKit
 
+/// Anything that can be parsed from an NSScanner.
+public protocol Scannable {
+	/// Attempts to parse an instance of the receiver from the given scanner.
+	///
+	/// If parsing fails, the scanner will be left at the first invalid
+	/// character (with any partially valid input already consumed).
+	class func fromScanner(scanner: NSScanner) -> Result<Self>
+}
+
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
@@ -70,7 +79,13 @@ public struct Dependency: Equatable {
 
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: VersionSpecifier
+}
 
+public func ==(lhs: Dependency, rhs: Dependency) -> Bool {
+	return lhs.repository == rhs.repository && lhs.version == rhs.version
+}
+
+extension Dependency: Scannable {
 	/// Attempts to parse a Dependency specification.
 	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
 		if !scanner.scanString("github", intoString: nil) {
@@ -94,10 +109,6 @@ public struct Dependency: Equatable {
 			return failure()
 		}
 	}
-}
-
-public func ==(lhs: Dependency, rhs: Dependency) -> Bool {
-	return lhs.repository == rhs.repository && lhs.version == rhs.version
 }
 
 extension Dependency: Printable {
@@ -178,6 +189,25 @@ public enum VersionSpecifier: Equatable {
 	case CompatibleWith(Version)
 	case Exactly(Version)
 
+	/// Determines whether the given version satisfies this version specifier.
+	public func satisfiedBy(version: Version) -> Bool {
+		switch (self) {
+		case .Any:
+			return true
+
+		case let .Exactly(requirement):
+			return version == requirement
+
+		case let .AtLeast(requirement):
+			return version >= requirement
+
+		case let .CompatibleWith(requirement):
+			return version.major == requirement.major && version >= requirement
+		}
+	}
+}
+
+extension VersionSpecifier: Scannable {
 	/// Attempts to parse a VersionSpecifier.
 	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
 		func scanVersion() -> Result<Version> {
@@ -199,23 +229,6 @@ public enum VersionSpecifier: Equatable {
 			return scanVersion().map { CompatibleWith($0) }
 		} else {
 			return success(Any)
-		}
-	}
-
-	/// Determines whether the given version satisfies this version specifier.
-	public func satisfiedBy(version: Version) -> Bool {
-		switch (self) {
-		case .Any:
-			return true
-
-		case let .Exactly(requirement):
-			return version == requirement
-
-		case let .AtLeast(requirement):
-			return version >= requirement
-
-		case let .CompatibleWith(requirement):
-			return version.major == requirement.major && version >= requirement
 		}
 	}
 }
