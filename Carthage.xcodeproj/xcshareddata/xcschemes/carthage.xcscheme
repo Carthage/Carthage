@@ -78,11 +78,10 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
-      customWorkingDirectory = "/Users/alanr/working/opensource/Carthage"
       buildConfiguration = "Debug"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
-      allowLocationSimulation = "NO">
+      allowLocationSimulation = "YES">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
