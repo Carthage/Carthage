@@ -52,9 +52,9 @@ class CarthageSpec: QuickSpec {
         XCTAssertTrue(success, "Couldn't unzip fixture \"\(repositoryName)\" from \(zippedRepositoriesPath) to \(self.repositoryFixturesPath): \(error)")
     }
 
-    func pathForFixtureRepositoryNamed(repositoryName: String) -> NSString {
+    func pathForFixtureRepositoryNamed(repositoryName: String) -> String {
         setUpRepositoryFixtureIfNeeded(repositoryName)
-        return self.repositoryFixturesPath.stringByAppendingPathComponent(repositoryName)
+        return "\(self.repositoryFixturesPath)/repositories/\(repositoryName)"
     }
 
     func unzipFile(member: NSString, zipPath: NSString, destinationPath: NSString, error: NSErrorPointer) -> Bool {
