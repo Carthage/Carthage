@@ -113,6 +113,12 @@ public struct Dependency<V: VersionType>: Equatable {
 
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: V
+
+	/// The path at which this dependency will be checked out, relative to the
+	/// working directory of the main project.
+	public var relativePath: String {
+		return repository.name
+	}
 }
 
 public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
