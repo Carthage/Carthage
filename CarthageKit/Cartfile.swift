@@ -121,7 +121,7 @@ extension Dependency: Printable {
 }
 
 /// A semantic version.
-public struct Version: Comparable {
+public struct SemanticVersion: Comparable {
 	/// The major version.
 	///
 	/// Increments to this component represent incompatible API changes.
@@ -151,10 +151,10 @@ public struct Version: Comparable {
 	}
 }
 
-extension Version: Scannable {
+extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
-	static public func fromScanner(scanner: NSScanner) -> Result<Version> {
+	static public func fromScanner(scanner: NSScanner) -> Result<SemanticVersion> {
 		var version: NSString? = nil
 		if !scanner.scanCharactersFromSet(NSCharacterSet(charactersInString: "0123456789."), intoString: &version) || version == nil {
 			return failure()
@@ -177,17 +177,17 @@ extension Version: Scannable {
 	}
 }
 
-extension Version: VersionType {}
+extension SemanticVersion: VersionType {}
 
-public func <(lhs: Version, rhs: Version) -> Bool {
+public func <(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
     return lexicographicalCompare(lhs.components, rhs.components)
 }
 
-public func ==(lhs: Version, rhs: Version) -> Bool {
+public func ==(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
 	return lhs.components == rhs.components
 }
 
-extension Version: Printable {
+extension SemanticVersion: Printable {
 	public var description: String {
 		return ".".join(components.map { $0.description })
 	}
@@ -197,12 +197,12 @@ extension Version: Printable {
 /// requirement.
 public enum VersionSpecifier: Equatable {
 	case Any
-	case AtLeast(Version)
-	case CompatibleWith(Version)
-	case Exactly(Version)
+	case AtLeast(SemanticVersion)
+	case CompatibleWith(SemanticVersion)
+	case Exactly(SemanticVersion)
 
 	/// Determines whether the given version satisfies this version specifier.
-	public func satisfiedBy(version: Version) -> Bool {
+	public func satisfiedBy(version: SemanticVersion) -> Bool {
 		switch (self) {
 		case .Any:
 			return true
@@ -223,11 +223,11 @@ extension VersionSpecifier: Scannable {
 	/// Attempts to parse a VersionSpecifier.
 	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
 		if scanner.scanString("==", intoString: nil) {
-			return Version.fromScanner(scanner).map { Exactly($0) }
+			return SemanticVersion.fromScanner(scanner).map { Exactly($0) }
 		} else if scanner.scanString(">=", intoString: nil) {
-			return Version.fromScanner(scanner).map { AtLeast($0) }
+			return SemanticVersion.fromScanner(scanner).map { AtLeast($0) }
 		} else if scanner.scanString("~>", intoString: nil) {
-			return Version.fromScanner(scanner).map { CompatibleWith($0) }
+			return SemanticVersion.fromScanner(scanner).map { CompatibleWith($0) }
 		} else {
 			return success(Any)
 		}
@@ -236,7 +236,7 @@ extension VersionSpecifier: Scannable {
 
 extension VersionSpecifier: VersionType {}
 
-private func intersection(#atLeast: Version, #compatibleWith: Version) -> VersionSpecifier? {
+private func intersection(#atLeast: SemanticVersion, #compatibleWith: SemanticVersion) -> VersionSpecifier? {
 	if atLeast.major > compatibleWith.major {
 		return nil
 	} else if atLeast.major < compatibleWith.major {
@@ -246,7 +246,7 @@ private func intersection(#atLeast: Version, #compatibleWith: Version) -> Versio
 	}
 }
 
-private func intersection(#atLeast: Version, #exactly: Version) -> VersionSpecifier? {
+private func intersection(#atLeast: SemanticVersion, #exactly: SemanticVersion) -> VersionSpecifier? {
 	if atLeast > exactly {
 		return nil
 	}
@@ -254,7 +254,7 @@ private func intersection(#atLeast: Version, #exactly: Version) -> VersionSpecif
 	return .Exactly(exactly)
 }
 
-private func intersection(#compatibleWith: Version, #exactly: Version) -> VersionSpecifier? {
+private func intersection(#compatibleWith: SemanticVersion, #exactly: SemanticVersion) -> VersionSpecifier? {
 	if exactly.major != compatibleWith.major || compatibleWith > exactly {
 		return nil
 	}
