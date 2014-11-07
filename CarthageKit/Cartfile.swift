@@ -180,7 +180,7 @@ extension SemanticVersion: Scannable {
 extension SemanticVersion: VersionType {}
 
 public func <(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
-    return lexicographicalCompare(lhs.components, rhs.components)
+	return lexicographicalCompare(lhs.components, rhs.components)
 }
 
 public func ==(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
@@ -190,6 +190,41 @@ public func ==(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
 extension SemanticVersion: Printable {
 	public var description: String {
 		return ".".join(components.map { $0.description })
+	}
+}
+
+/// An immutable version that a project can be pinned to.
+public struct PinnedVersion: Equatable {
+	/// The name of the tag to pin to.
+	public let tag: String
+}
+
+public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
+	return lhs.tag == rhs.tag
+}
+
+extension PinnedVersion: Scannable {
+	public static func fromScanner(scanner: NSScanner) -> Result<PinnedVersion> {
+		if !scanner.scanString("\"", intoString: nil) {
+			return failure()
+		}
+
+		var tag: NSString? = nil
+		if scanner.scanUpToString("\"", intoString: &tag) {
+			if let tag = tag {
+				return success(self(tag: tag))
+			}
+		}
+
+		return failure()
+	}
+}
+
+extension PinnedVersion: VersionType {}
+
+extension PinnedVersion: Printable {
+	public var description: String {
+		return tag
 	}
 }
 
