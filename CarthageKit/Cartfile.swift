@@ -72,6 +72,37 @@ extension Cartfile: Printable {
 	}
 }
 
+/// Represents a parsed Cartfile.lock, which specifies which exact version was
+/// checked out for each dependency.
+public struct CartfileLock {
+	public var dependencies: [Dependency<PinnedVersion>]
+
+	public static func fromString(string: String) -> Result<CartfileLock> {
+		var cartfile = self(dependencies: [])
+		var result = success(())
+
+		let scanner = NSScanner(string: string)
+		scannerLoop: while !scanner.atEnd {
+			switch (Dependency<PinnedVersion>.fromScanner(scanner)) {
+			case let .Success(dep):
+				cartfile.dependencies.append(dep.unbox)
+
+			case let .Failure(error):
+				result = failure(error)
+				break scannerLoop
+			}
+		}
+
+		return result.map { _ in cartfile }
+	}
+}
+
+extension CartfileLock: Printable {
+	public var description: String {
+		return "\(dependencies)"
+	}
+}
+
 /// An abstract type representing a way to specify versions.
 public protocol VersionType: Scannable, Equatable {}
 
