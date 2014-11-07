@@ -245,13 +245,15 @@ extension PinnedVersion: Scannable {
 		}
 
 		var tag: NSString? = nil
-		if scanner.scanUpToString("\"", intoString: &tag) {
-			if let tag = tag {
-				return success(self(tag: tag))
-			}
+		if !scanner.scanUpToString("\"", intoString: &tag) || tag == nil {
+			return failure()
 		}
 
-		return failure()
+		if !scanner.scanString("\"", intoString: nil) {
+			return failure()
+		}
+
+		return success(self(tag: tag!))
 	}
 }
 
