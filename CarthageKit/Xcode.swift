@@ -219,9 +219,9 @@ public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
 			return string.linesSignal
 		}
 		.merge(identity)
-		.skipWhile { (line: String) -> Bool in line.hasSuffix("Schemes:") ? false : true }
+		.skipWhile { line in !line.hasSuffix("Schemes:") }
 		.skip(1)
-		.takeWhile { (line: String) -> Bool in line.isEmpty ? false : true }
+		.takeWhile { line in !line.isEmpty }
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
