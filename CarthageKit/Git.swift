@@ -29,7 +29,7 @@ public func repositoryRemote(repositoryPath: String) -> ColdSignal<String> {
 /// Returns a cold signal that completes when cloning is complete, or errors if
 /// the repository cannot be cloned.
 public func cloneRepository(cloneURL: String, destinationPath: String) -> ColdSignal<String> {
-    var isDirectory : ObjCBool = false
+    var isDirectory: ObjCBool = false
 
     if NSFileManager.defaultManager().fileExistsAtPath(destinationPath, isDirectory: &isDirectory) {
         if isDirectory {

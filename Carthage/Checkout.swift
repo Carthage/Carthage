@@ -18,7 +18,7 @@ public struct CheckoutCommand: CommandType {
 	public func run(mode: CommandMode) -> Result<()> {
 		// Identify the project's working directory.
 
-		let pwd : String? = NSFileManager.defaultManager().currentDirectoryPath
+		let pwd: String? = NSFileManager.defaultManager().currentDirectoryPath
 		if pwd == nil || pwd!.isEmpty {
 			return failure()
 		}

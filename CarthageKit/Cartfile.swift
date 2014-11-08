@@ -147,7 +147,7 @@ public struct Version: Comparable {
 	static public func fromString(specifier: String) -> Result<Version> {
 		let validChars = NSCharacterSet(charactersInString: "0123456789.")
 		let scanner = NSScanner(string: specifier)
-		var sanitizedSpecifier : NSString? = nil
+		var sanitizedSpecifier: NSString? = nil
 
 		if !scanner.scanCharactersFromSet(validChars, intoString: &sanitizedSpecifier) {
 			return failure()
