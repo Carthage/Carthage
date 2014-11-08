@@ -30,7 +30,6 @@
 		D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */; };
 		D0D789C619FCD44700F07D81 /* CommandSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D789C519FCD44700F07D81 /* CommandSpec.swift */; };
 		D0D789C719FCD44B00F07D81 /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
-		D0DB09A119EA34E500234B16 /* TestFramework in Resources */ = {isa = PBXBuildFile; fileRef = D0DB09A019EA34E500234B16 /* TestFramework */; };
 		D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DB09A319EA354200234B16 /* XcodeSpec.swift */; };
 		D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
 		D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
@@ -132,7 +131,6 @@
 		D0D1219119E88B8F005E4BAA /* GitHub.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitHub.swift; sourceTree = "<group>"; };
 		D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CartfileSpec.swift; sourceTree = "<group>"; };
 		D0D789C519FCD44700F07D81 /* CommandSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CommandSpec.swift; sourceTree = "<group>"; };
-		D0DB09A019EA34E500234B16 /* TestFramework */ = {isa = PBXFileReference; lastKnownFileType = folder; path = TestFramework; sourceTree = "<group>"; };
 		D0DB09A319EA354200234B16 /* XcodeSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XcodeSpec.swift; sourceTree = "<group>"; };
 		D0E7B63219E9C64500EDBA4D /* carthage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = carthage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B64119E9C64600EDBA4D /* CarthageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarthageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -321,7 +319,6 @@
 		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				D0DB09A019EA34E500234B16 /* TestFramework */,
 				D01F8A4B19EA28FE00643E7C /* Nimble.framework */,
 				D01F8A4619EA28F600643E7C /* Nimble.framework */,
 				D01F8A4719EA28F600643E7C /* Quick.framework */,
@@ -497,7 +494,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */,
-				D0DB09A119EA34E500234B16 /* TestFramework in Resources */,
 				D0F551DC1A0D71AB0093311F /* TestCartfile.lock in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
