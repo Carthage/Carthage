@@ -13,7 +13,7 @@ import CarthageKit
 
 public struct CheckoutCommand: CommandType {
 	public let verb = "checkout"
-	public let function = "Checkout dependencies listed in the project Cartfile"
+	public let function = "Checks out the dependencies listed in a project's Cartfile"
 
 	public func run(mode: CommandMode) -> Result<()> {
 		// Identify the project's working directory.
