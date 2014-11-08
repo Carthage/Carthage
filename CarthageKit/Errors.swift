@@ -30,7 +30,7 @@ public enum CarthageError {
 	case NoCartfile
 
 	/// The git repository has already been cloned to the specified location
-	case RepositoryAlreadyCloned(location: String)
+	case RepositoryAlreadyCloned(location: NSURL)
 
 	/// The git repository has a remote that doesn't match what we're trying to
 	/// clone
@@ -38,7 +38,7 @@ public enum CarthageError {
 
 	/// Unable to clone a git repository because a file with the same name
 	/// exists
-	case RepositoryCloneFailed(location: String)
+	case RepositoryCloneFailed(location: NSURL)
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {

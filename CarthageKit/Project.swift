@@ -10,7 +10,7 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-let dependenciesPath = "~/.carthage/dependencies".stringByExpandingTildeInPath
+let dependenciesURL = NSURL.fileURLWithPath("~/.carthage/dependencies".stringByExpandingTildeInPath, isDirectory:true)!
 
 /// Represents a Project that is using Carthage.
 public struct Project {
@@ -34,12 +34,12 @@ public struct Project {
 		if let dependencies = cartfile?.dependencies {
 			return ColdSignal.fromValues(dependencies)
 				.map({ dependency -> ColdSignal<String> in
-					let destinationPath = dependenciesPath.stringByAppendingPathComponent("\(dependency.repository.name)")
-					return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationPath)
+					let destinationURL = dependenciesURL.URLByAppendingPathComponent("\(dependency.repository.name)")
+					return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationURL)
 						.catch( {error in
 							println(error.localizedDescription)
-							if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationPath).error.code {
-								return fetchRepository(destinationPath).catch { _ in return .empty() }
+							if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationURL).error.code {
+								return fetchRepository(destinationURL).catch { _ in return .empty() }
 							}
 							return ColdSignal.empty()
 						})
