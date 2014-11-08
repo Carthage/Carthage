@@ -62,6 +62,19 @@ class XcodeSpec: QuickSpec {
 			expect(output).to(contain("architecture i386"))
 			expect(output).to(contain("architecture armv7"))
 			expect(output).to(contain("architecture arm64"))
+
+			// Verify that the dependencies exist at the top level.
+			let expectedDependencies = [ "Archimedes", "ReactiveCocoa" ]
+			for dependency in expectedDependencies {
+				let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
+				let iOSPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
+
+				expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
+				expect(isDirectory).to(beTruthy())
+
+				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
+				expect(isDirectory).to(beTruthy())
+			}
 		}
 
 		it("should locate the workspace") {
