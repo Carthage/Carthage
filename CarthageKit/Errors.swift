@@ -26,8 +26,8 @@ public enum CarthageError {
 	/// `xcodebuild` did not return a build setting that we needed.
 	case MissingBuildSetting(String)
 
-    /// No Cartfile present in the project
-    case NoCartfile
+	/// No Cartfile present in the project
+	case NoCartfile
 
 	/// The git repository has already been cloned to the specified location
 	case RepositoryAlreadyCloned(location: String)
@@ -57,7 +57,7 @@ public enum CarthageError {
 				NSLocalizedDescriptionKey: "xcodebuild did not return a value for build setting \(setting)"
 			])
 		case let .NoCartfile:
-            return NSError(domain: CarthageErrorDomain, code: 3, userInfo: [
+			return NSError(domain: CarthageErrorDomain, code: 3, userInfo: [
 				NSLocalizedDescriptionKey: "No Cartfile found."
 			])
 		case let .RepositoryAlreadyCloned(location):
