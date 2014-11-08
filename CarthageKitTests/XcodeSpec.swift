@@ -24,21 +24,36 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for all platforms") {
-			let result = buildInDirectory(directoryURL, withConfiguration: "Debug").wait()
+			var macURL: NSURL!
+			var iOSURL: NSURL!
+
+			let result = buildInDirectory(directoryURL, withConfiguration: "Debug")
+				.on(next: { productURL in
+					expect(productURL.lastPathComponent).to(equal("TestFramework.framework"))
+
+					if contains(productURL.pathComponents as [String], "Mac") {
+						macURL = productURL
+					} else if contains(productURL.pathComponents as [String], "iOS") {
+						iOSURL = productURL
+					}
+				})
+				.wait()
+
 			expect(result.error()).to(beNil())
 
-			let macURL = buildFolderURL.URLByAppendingPathComponent("Mac/TestFramework.framework/TestFramework")
+			expect(macURL).notTo(beNil())
+			expect(iOSURL).notTo(beNil())
+
 			var isDirectory: ObjCBool = false
 			expect(NSFileManager.defaultManager().fileExistsAtPath(macURL.path!, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beFalsy())
+			expect(isDirectory).to(beTruthy())
 
-			let iOSURL = buildFolderURL.URLByAppendingPathComponent("iOS/TestFramework.framework/TestFramework")
 			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSURL.path!, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beFalsy())
+			expect(isDirectory).to(beTruthy())
 
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
-			let output = launchTask(TaskDescription(launchPath: "/usr/bin/otool", arguments: [ "-fv", iOSURL.path! ]))
+			let output = launchTask(TaskDescription(launchPath: "/usr/bin/otool", arguments: [ "-fv", iOSURL.URLByAppendingPathComponent("TestFramework").path! ]))
 				.map { NSString(data: $0, encoding: NSStringEncoding(NSUTF8StringEncoding))! }
 				.first()
 				.value()!

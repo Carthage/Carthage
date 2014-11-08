@@ -392,7 +392,9 @@ public func platformForScheme(scheme: String, inProject project: ProjectLocator)
 }
 
 /// Builds one scheme of the given project, for all supported platforms.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> ColdSignal<()> {
+///
+/// Sends the URL to each product built.
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> ColdSignal<NSURL> {
 	precondition(workingDirectoryURL.fileURL)
 
 	let handle = NSFileHandle.fileHandleWithStandardOutput()
@@ -414,37 +416,40 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 
 	return platformForScheme(scheme, inProject: project)
-		.map { (platform: Platform) -> ColdSignal<()> in
+		.map { (platform: Platform) in
 			switch platform {
 			case .iPhoneSimulator: fallthrough
 			case .iPhoneOS:
 				return buildPlatform(.iPhoneSimulator)
 					.concat(buildPlatform(.iPhoneOS))
 					.reduce(initial: []) { $0 + [ $1 ] }
-					.map { buildSettingsPerPlatform -> ColdSignal<()> in
+					.map { buildSettingsPerPlatform in
 						let simulatorSettings = buildSettingsPerPlatform[0]
 						let deviceSettings = buildSettingsPerPlatform[1]
 						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderName)/iOS", isDirectory: true)
 
 						return copyBuildProductIntoDirectory(folderURL, deviceSettings)
-							.then(URLToBuiltExecutable(simulatorSettings))
-							.concat(URLToBuiltExecutable(deviceSettings))
-							.tryMap { URL -> Result<String> in
-								if let path = URL.path {
-									return success(path)
-								} else {
-									return failure()
-								}
-							}
-							.reduce(initial: []) { $0 + [ $1 ] }
-							// TODO: This should be a zip.
-							.combineLatestWith(valueForBuildSetting("EXECUTABLE_PATH", deviceSettings).map(folderURL.URLByAppendingPathComponent))
-							.map { (executablePaths: [String], outputURL: NSURL) -> ColdSignal<NSData> in
-								let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
-								return launchTask(lipoTask, standardOutput: stdoutSink)
+							.map { productURL in
+								return URLToBuiltExecutable(simulatorSettings)
+									.concat(URLToBuiltExecutable(deviceSettings))
+									.tryMap { URL -> Result<String> in
+										if let path = URL.path {
+											return success(path)
+										} else {
+											return failure()
+										}
+									}
+									.reduce(initial: []) { $0 + [ $1 ] }
+									// TODO: This should be a zip.
+									.combineLatestWith(valueForBuildSetting("EXECUTABLE_PATH", deviceSettings).map(folderURL.URLByAppendingPathComponent))
+									.map { (executablePaths: [String], outputURL: NSURL) -> ColdSignal<NSData> in
+										let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
+										return launchTask(lipoTask, standardOutput: stdoutSink)
+									}
+									.merge(identity)
+									.then(.single(productURL))
 							}
 							.merge(identity)
-							.then(.empty())
 					}
 					.merge(identity)
 
@@ -455,15 +460,14 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						return copyBuildProductIntoDirectory(folderURL, settings)
 					}
 					.merge(identity)
-					.then(.empty())
 			}
 		}
 		.merge(identity)
 }
 
 /// Attempts to build each Carthage dependency in the given directory, sending
-/// them as they finish building successfully.
-private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> ColdSignal<Dependency<PinnedVersion>> {
+/// each dependency and its built product location.
+private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> ColdSignal<(Dependency<PinnedVersion>, NSURL)> {
 	return NSString.rac_readContentsOfURL(CartfileLock.URLInDirectory(directoryURL), usedEncoding: nil, scheduler: ImmediateScheduler().asRACScheduler())
 		.asColdSignal()
 		.catch { error in
@@ -481,14 +485,17 @@ private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration
 			let dependencyURL = directoryURL.URLByAppendingPathComponent(dependency.relativePath)
 
 			// TODO: Capture and redirect output?
-			return buildInDirectory(dependencyURL, withConfiguration: configuration)
-				.then(.single(dependency))
+			return ColdSignal.single(dependency)
+				// TODO: This should be a zip.
+				.combineLatestWith(buildInDirectory(dependencyURL, withConfiguration: configuration))
 		}
 		.concat(identity)
 }
 
 /// Builds the first project or workspace found within the given directory.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, onlyScheme: String? = nil) -> ColdSignal<()> {
+///
+/// Sends the URL to each product built.
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, onlyScheme: String? = nil) -> ColdSignal<NSURL> {
 	precondition(directoryURL.fileURL)
 
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
@@ -521,7 +528,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 
 		return schemesSignal
 			.combineLatestWith(locatorSignal.take(1))
-			.map { (scheme: String, project: ProjectLocator) -> ColdSignal<()> in
+			.map { (scheme: String, project: ProjectLocator) in
 				return buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
 					.on(subscribed: {
 						println("*** Building scheme \(scheme)…\n")
