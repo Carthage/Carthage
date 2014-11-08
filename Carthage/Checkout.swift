@@ -24,6 +24,9 @@ public struct CheckoutCommand: CommandType {
 		}
 
 		let project = Project(path: pwd!)
-		return project.checkoutDependencies().wait()
+		if project == nil {
+			return failure(CarthageError.NoCartfile.error)
+		}
+		return project!.checkoutDependencies().wait()
 	}
 }

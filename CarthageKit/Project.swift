@@ -20,33 +20,35 @@ public struct Project {
 	/// The project's cart file
 	public let cartfile: Cartfile?
 
-	public init(path: String) {
+	public init?(path: String) {
 		self.path = path
 
-		if let cartfileURL = NSURL.fileURLWithPath(self.path)?.URLByAppendingPathComponent("Cartfile") {
-			if let cartfile = NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding, error: nil) {
-				self.cartfile = Cartfile.fromString(cartfile).value()
-			}
-		}
+		let cartfileURL: NSURL? = NSURL.fileURLWithPath(self.path)?.URLByAppendingPathComponent("Cartfile")
+		if cartfileURL == nil { return nil }
+
+		let cartfileContents: NSString? = NSString(contentsOfURL: cartfileURL!, encoding: NSUTF8StringEncoding, error: nil)
+		if (cartfileContents == nil) { return nil }
+
+		let cartfile: Cartfile? = Cartfile.fromString(cartfileContents!).value()
+		if (cartfile == nil) { return nil }
+
+		self.cartfile = cartfile!
 	}
 
 	public func checkoutDependencies() -> ColdSignal<()> {
-		if let dependencies = cartfile?.dependencies {
-			return ColdSignal.fromValues(dependencies)
-				.map({ dependency -> ColdSignal<String> in
-					let destinationURL = dependenciesURL.URLByAppendingPathComponent("\(dependency.repository.name)")
-					return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationURL)
-						.catch( {error in
-							println(error.localizedDescription)
-							if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationURL).error.code {
-								return fetchRepository(destinationURL).catch { _ in return .empty() }
-							}
-							return ColdSignal.empty()
-						})
-				})
-				.concat(identity)
-				.then(.empty())
-		}
-		return ColdSignal.error(CarthageError.NoCartfile.error)
+		return ColdSignal.fromValues(self.cartfile.dependencies)
+			.map({ dependency -> ColdSignal<String> in
+				let destinationURL = dependenciesURL.URLByAppendingPathComponent("\(dependency.repository.name)")
+				return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationURL)
+					.catch( {error in
+						println(error.localizedDescription)
+						if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationURL).error.code {
+							return fetchRepository(destinationURL).catch { _ in return .empty() }
+						}
+						return ColdSignal.empty()
+					})
+			})
+			.concat(identity)
+			.then(.empty())
 	}
 }
