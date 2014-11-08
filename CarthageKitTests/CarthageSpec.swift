@@ -9,10 +9,6 @@
 import Foundation
 import Quick
 
-let CarthageSpecErrorDomain = "CarthageSpecErrorDomain"
-
-let CarthageSpecErrorUnzipFailed = -99
-
 class CarthageSpec: QuickSpec {
 	var tempDirectoryPath: NSString!
 
@@ -47,9 +43,8 @@ class CarthageSpec: QuickSpec {
 
 		let zippedRepositoriesPath = NSBundle(forClass: self.dynamicType).resourcePath!.stringByAppendingPathComponent("fixtures").stringByAppendingPathComponent("repositories.zip")
 
-		error = nil
-		success = unzipFile(repositoryName, zipPath:zippedRepositoriesPath, destinationPath:self.repositoryFixturesPath, error:&error)
-		XCTAssertTrue(success, "Couldn't unzip fixture \"\(repositoryName)\" from \(zippedRepositoriesPath) to \(self.repositoryFixturesPath): \(error)")
+		success = unzipFile(repositoryName, zipPath:zippedRepositoriesPath, destinationPath:self.repositoryFixturesPath)
+		XCTAssertTrue(success, "Couldn't unzip fixture \"\(repositoryName)\" from \(zippedRepositoriesPath) to \(self.repositoryFixturesPath)")
 	}
 
 	func pathForFixtureRepositoryNamed(repositoryName: String) -> NSURL {
@@ -57,7 +52,7 @@ class CarthageSpec: QuickSpec {
 		return NSURL.fileURLWithPath("\(self.repositoryFixturesPath)/repositories/\(repositoryName)", isDirectory:true)!
 	}
 
-	func unzipFile(member: NSString, zipPath: NSString, destinationPath: NSString, error: NSErrorPointer) -> Bool {
+	func unzipFile(member: NSString, zipPath: NSString, destinationPath: NSString) -> Bool {
 		let task = NSTask()
 		task.launchPath = "/usr/bin/unzip"
 		task.arguments = [ "-qq", "-d", destinationPath, zipPath, "repositories/\(member)*", "-x", "*/.DS_Store" ]
@@ -65,11 +60,6 @@ class CarthageSpec: QuickSpec {
 		task.launch()
 		task.waitUntilExit()
 
-		let success = (task.terminationStatus == 0)
-		if !success && error != nil {
-			error.memory = NSError(domain:CarthageSpecErrorDomain, code:CarthageSpecErrorUnzipFailed, userInfo:[ NSLocalizedDescriptionKey: "Unzip failed" ]);
-		}
-
-		return success;
+		return task.terminationStatus == 0
 	}
 }
