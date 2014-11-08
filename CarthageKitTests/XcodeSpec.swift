@@ -15,7 +15,8 @@ import ReactiveCocoa
 
 class XcodeSpec: QuickSpec {
 	override func spec() {
-		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("TestFramework", withExtension: nil)!
+		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("ReactiveCocoaLayout", withExtension: nil)!
+		let workspaceURL = directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout.xcworkspace")
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderName)
 
 		beforeEach {
@@ -29,7 +30,7 @@ class XcodeSpec: QuickSpec {
 
 			let result = buildInDirectory(directoryURL, withConfiguration: "Debug")
 				.on(next: { productURL in
-					expect(productURL.lastPathComponent).to(equal("TestFramework.framework"))
+					expect(productURL.lastPathComponent).to(equal("ReactiveCocoaLayout.framework"))
 
 					if contains(productURL.pathComponents as [String], "Mac") {
 						macURL = productURL
@@ -53,7 +54,7 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
-			let output = launchTask(TaskDescription(launchPath: "/usr/bin/otool", arguments: [ "-fv", iOSURL.URLByAppendingPathComponent("TestFramework").path! ]))
+			let output = launchTask(TaskDescription(launchPath: "/usr/bin/otool", arguments: [ "-fv", iOSURL.URLByAppendingPathComponent("ReactiveCocoaLayout").path! ]))
 				.map { NSString(data: $0, encoding: NSStringEncoding(NSUTF8StringEncoding))! }
 				.first()
 				.value()!
@@ -63,13 +64,12 @@ class XcodeSpec: QuickSpec {
 			expect(output).to(contain("architecture arm64"))
 		}
 
-		it("should locate the project") {
+		it("should locate the workspace") {
 			let result = locateProjectsInDirectory(directoryURL).first()
 			expect(result.error()).to(beNil())
 
 			let locator = result.value()!
-			let expectedURL = directoryURL.URLByAppendingPathComponent("TestFramework.xcodeproj")
-			expect(locator).to(equal(ProjectLocator.ProjectFile(expectedURL)))
+			expect(locator).to(equal(ProjectLocator.Workspace(workspaceURL)))
 		}
 
 		it("should locate the project from the parent directory") {
@@ -77,12 +77,11 @@ class XcodeSpec: QuickSpec {
 			expect(result.error()).to(beNil())
 
 			let locator = result.value()!
-			let expectedURL = directoryURL.URLByAppendingPathComponent("TestFramework.xcodeproj")
-			expect(locator).to(equal(ProjectLocator.ProjectFile(expectedURL)))
+			expect(locator).to(equal(ProjectLocator.Workspace(workspaceURL)))
 		}
 
 		it("should not locate the project from a directory not containing it") {
-			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("TestFramework")).wait()
+			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")).wait()
 			expect(result.isSuccess()).to(beFalsy())
 		}
 	}

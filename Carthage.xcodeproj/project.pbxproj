@@ -387,6 +387,7 @@
 				D0D1217319E87B05005E4BAA /* Sources */,
 				D0D1217419E87B05005E4BAA /* Frameworks */,
 				D0D1217519E87B05005E4BAA /* Resources */,
+				D0AE6B171A0E931300E0E17D /* Copy Fixtures */,
 			);
 			buildRules = (
 			);
@@ -515,6 +516,22 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		D0AE6B171A0E931300E0E17D /* Copy Fixtures */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(TARGET_NAME)/fixtures",
+			);
+			name = "Copy Fixtures";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = ". script/copy-fixtures";
+		};
 		D0E7B65719E9C7C700EDBA4D /* Extract CLI Tool */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
