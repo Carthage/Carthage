@@ -461,6 +461,32 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		.merge(identity)
 }
 
+/// Attempts to build each Carthage dependency in the given directory, sending
+/// them as they finish building successfully.
+private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> ColdSignal<Dependency<PinnedVersion>> {
+	return NSString.rac_readContentsOfURL(CartfileLock.URLInDirectory(directoryURL), usedEncoding: nil, scheduler: ImmediateScheduler().asRACScheduler())
+		.asColdSignal()
+		.catch { error in
+			if error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError {
+				return .empty()
+			} else {
+				return .error(error)
+			}
+		}
+		.map { $0! as NSString }
+		.tryMap(CartfileLock.fromString)
+		.map { lockFile in ColdSignal.fromValues(lockFile.dependencies) }
+		.merge(identity)
+		.map { dependency in
+			let dependencyURL = directoryURL.URLByAppendingPathComponent(dependency.relativePath)
+
+			// TODO: Capture and redirect output?
+			return buildInDirectory(dependencyURL, withConfiguration: configuration)
+				.then(.single(dependency))
+		}
+		.concat(identity)
+}
+
 /// Builds the first project or workspace found within the given directory.
 public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, onlyScheme: String? = nil) -> ColdSignal<()> {
 	precondition(directoryURL.fileURL)
@@ -488,13 +514,19 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			.merge(identity)
 	}
 
-	return schemesSignal
-		.combineLatestWith(locatorSignal.take(1))
-		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<()> in
-			return buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
-				.on(subscribed: {
-					println("*** Building scheme \(scheme)…\n")
-				})
-		}
-		.concat(identity)
+	return ColdSignal.lazy {
+		// TODO: There's some infinite loop in RAC when this is chained with the
+		// following signal. :(
+		buildDependenciesInDirectory(directoryURL, withConfiguration: configuration).wait()
+
+		return schemesSignal
+			.combineLatestWith(locatorSignal.take(1))
+			.map { (scheme: String, project: ProjectLocator) -> ColdSignal<()> in
+				return buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+					.on(subscribed: {
+						println("*** Building scheme \(scheme)…\n")
+					})
+			}
+			.concat(identity)
+	}
 }

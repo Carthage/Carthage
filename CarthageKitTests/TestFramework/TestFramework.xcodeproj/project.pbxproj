@@ -34,11 +34,11 @@
 		D0DB098319EA34CE00234B16 /* TestFramework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TestFramework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0DB098719EA34CE00234B16 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0DB098819EA34CE00234B16 /* TestFramework.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TestFramework.h; sourceTree = "<group>"; };
-		D0DB098E19EA34CE00234B16 /* TestFrameworkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TestFrameworkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0DB098E19EA34CE00234B16 /* TestFramework iOS Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "TestFramework iOS Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0DB099419EA34CE00234B16 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0DB099519EA34CE00234B16 /* TestFrameworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFrameworkTests.swift; sourceTree = "<group>"; };
 		D0EB39ED1A0B6479003202B2 /* TestFramework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TestFramework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0EB39F71A0B6479003202B2 /* TestFrameworkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TestFrameworkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EB39F71A0B6479003202B2 /* TestFramework Mac Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "TestFramework Mac Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,9 +88,9 @@
 			isa = PBXGroup;
 			children = (
 				D0DB098319EA34CE00234B16 /* TestFramework.framework */,
-				D0DB098E19EA34CE00234B16 /* TestFrameworkTests.xctest */,
+				D0DB098E19EA34CE00234B16 /* TestFramework iOS Tests.xctest */,
 				D0EB39ED1A0B6479003202B2 /* TestFramework.framework */,
-				D0EB39F71A0B6479003202B2 /* TestFrameworkTests.xctest */,
+				D0EB39F71A0B6479003202B2 /* TestFramework Mac Tests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -183,7 +183,7 @@
 			);
 			name = "TestFramework iOS Tests";
 			productName = TestFrameworkTests;
-			productReference = D0DB098E19EA34CE00234B16 /* TestFrameworkTests.xctest */;
+			productReference = D0DB098E19EA34CE00234B16 /* TestFramework iOS Tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		D0EB39EC1A0B6479003202B2 /* TestFramework Mac */ = {
@@ -219,7 +219,7 @@
 			);
 			name = "TestFramework Mac Tests";
 			productName = TestFrameworkTests;
-			productReference = D0EB39F71A0B6479003202B2 /* TestFrameworkTests.xctest */;
+			productReference = D0EB39F71A0B6479003202B2 /* TestFramework Mac Tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -602,6 +602,7 @@
 				D0EB3A021A0B6479003202B2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		D0EB3A031A0B6479003202B2 /* Build configuration list for PBXNativeTarget "TestFramework Mac Tests" */ = {
 			isa = XCConfigurationList;
@@ -610,6 +611,7 @@
 				D0EB3A051A0B6479003202B2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
