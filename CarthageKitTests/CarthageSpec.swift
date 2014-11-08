@@ -25,7 +25,7 @@ class CarthageSpec: QuickSpec {
 
 		let fileManager = NSFileManager.defaultManager()
 		var error: NSError?
-		let success = fileManager.createDirectoryAtPath(tempDirectoryPath!, withIntermediateDirectories:true, attributes:nil, error:&error)
+		let success = fileManager.createDirectoryAtPath(tempDirectoryPath!, withIntermediateDirectories: true, attributes: nil, error: &error)
 		verify(success, "Couldn't create the temp fixtures directory at \(tempDirectoryPath): \(error)")
 	}
 
@@ -34,23 +34,23 @@ class CarthageSpec: QuickSpec {
 		let fileManager = NSFileManager.defaultManager()
 
 		var isDirectory: ObjCBool = false
-		if (fileManager.fileExistsAtPath(path, isDirectory:&isDirectory) && isDirectory) {
+		if (fileManager.fileExistsAtPath(path, isDirectory: &isDirectory) && isDirectory) {
 			return
 		}
 
 		var error: NSError?
-		var success = fileManager.createDirectoryAtPath(self.repositoryFixturesPath, withIntermediateDirectories:true, attributes:nil, error:&error)
+		var success = fileManager.createDirectoryAtPath(self.repositoryFixturesPath, withIntermediateDirectories: true, attributes: nil, error: &error)
 		verify(success, "Couldn't create the repository fixtures directory at \(self.repositoryFixturesPath): \(error)")
 
 		let zippedRepositoriesPath = NSBundle(forClass: self.dynamicType).resourcePath!.stringByAppendingPathComponent("fixtures").stringByAppendingPathComponent("repositories.zip")
 
-		success = unzipFile(repositoryName, zipPath:zippedRepositoriesPath, destinationPath:self.repositoryFixturesPath)
+		success = unzipFile(repositoryName, zipPath: zippedRepositoriesPath, destinationPath: self.repositoryFixturesPath)
 		verify(success, "Couldn't unzip fixture \"\(repositoryName)\" from \(zippedRepositoriesPath) to \(self.repositoryFixturesPath)")
 	}
 
 	func pathForFixtureRepositoryNamed(repositoryName: String) -> NSURL {
 		setUpRepositoryFixtureIfNeeded(repositoryName)
-		return NSURL.fileURLWithPath("\(self.repositoryFixturesPath)/repositories/\(repositoryName)", isDirectory:true)!
+		return NSURL.fileURLWithPath("\(self.repositoryFixturesPath)/repositories/\(repositoryName)", isDirectory: true)!
 	}
 
 	func unzipFile(member: NSString, zipPath: NSString, destinationPath: NSString) -> Bool {
