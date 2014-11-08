@@ -1,0 +1,67 @@
+#!/bin/sh
+
+BUILD_DIR=`pwd`/build
+BUILD_SDK_VERSION=${NIMBLE_BUILD_SDK_VERSION:-8.1}
+RUNTIME_SDK_VERSION=${NIMBLE_RUNTIME_SDK_VERSION:-8.1}
+
+set -e
+
+function run {
+    echo "\x1B[01;92m==>\x1B[0m $@"
+    "$@"
+}
+
+function test_ios {
+    run osascript -e 'tell app "iOS Simulator" to quit'
+    run xcodebuild -project Nimble.xcodeproj -scheme "Nimble-iOS" -configuration "Debug" -sdk "iphonesimulator$BUILD_SDK_VERSION" -destination "name=iPad Air,OS=$RUNTIME_SDK_VERSION" -destination-timeout 5 build test
+
+    run osascript -e 'tell app "iOS Simulator" to quit'
+    run xcodebuild -project Nimble.xcodeproj -scheme "Nimble-iOS" -configuration "Debug" -sdk "iphonesimulator$BUILD_SDK_VERSION" -destination "name=iPhone 5s,OS=$RUNTIME_SDK_VERSION" -destination-timeout 5 build test
+}
+
+function test_osx {
+    run xcodebuild -project Nimble.xcodeproj -scheme "Nimble-OSX" -configuration "Debug" -sdk "macosx" -destination-timeout 5 build test
+}
+
+function test() {
+    test_ios
+    test_osx
+}
+
+function clean {
+    run rm -rf ~/Library/Developer/Xcode/DerivedData
+}
+
+function help {
+    echo "Usage: $0 COMMANDS"
+    echo
+    echo "COMMANDS:"
+    echo " clean - Cleans the derived data directory of Xcode. Assumes default location"
+    echo " ios   - Runs the tests as an iOS device"
+    echo " osx   - Runs the tests on Mac OS X 10.10 (Yosemite and newer only)"
+    echo " help  - Displays this help"
+    echo
+    exit 1
+}
+
+function main {
+    for arg in $@
+    do
+        case "$arg" in
+            clean) clean ;;
+            ios) test_ios ;;
+            osx) test_osx ;;
+            test) test ;;
+            all) test ;;
+            help) help ;;
+        esac
+    done
+
+    if [ $# -eq 0 ]; then
+        clean
+        test
+    fi
+}
+
+main $@
+

@@ -1,0 +1,31 @@
+//
+// This file defines additional configuration options that are appropriate only
+// for a framework. Typically, you want to use a platform-specific variant
+// instead.
+//
+
+// Whether to strip out code that isn't called from anywhere
+DEAD_CODE_STRIPPING = NO
+
+// Whether this framework should define an LLVM module
+DEFINES_MODULE = YES
+
+// Whether function calls should be position-dependent (should always be
+// disabled for library code)
+GCC_DYNAMIC_NO_PIC = NO
+
+// Default frameworks to the name of the project, instead of any
+// platform-specific target
+PRODUCT_NAME = $(PROJECT_NAME)
+
+// Enables the framework to be included from any location as long as the
+// loader’s runpath search paths includes it. For example from an application
+// bundle (inside the "Frameworks" folder) or shared folder
+INSTALL_PATH = @rpath
+LD_DYLIB_INSTALL_NAME = @rpath/$(PRODUCT_NAME).$(WRAPPER_EXTENSION)/$(PRODUCT_NAME)
+SKIP_INSTALL = YES
+
+// When compiling this library, look for imports (written with quotes) in the
+// library's own folder first. This avoids conflicts from other headers in the
+// build folder.
+USER_HEADER_SEARCH_PATHS = ./**

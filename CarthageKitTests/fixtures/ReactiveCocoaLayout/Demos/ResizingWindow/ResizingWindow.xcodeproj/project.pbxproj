@@ -1,0 +1,402 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D0476CBA17790F140071F3CB /* Archimedes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0476CB917790F140071F3CB /* Archimedes.framework */; };
+		D094E59A177771A400906BF7 /* ReactiveCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D094E598177771A400906BF7 /* ReactiveCocoa.framework */; };
+		D094E59B177771A400906BF7 /* ReactiveCocoaLayout.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D094E599177771A400906BF7 /* ReactiveCocoaLayout.framework */; };
+		D0BB24FB16787D04005E9371 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0BB24FA16787D04005E9371 /* Cocoa.framework */; };
+		D0BB250516787D04005E9371 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D0BB250316787D04005E9371 /* InfoPlist.strings */; };
+		D0BB250716787D04005E9371 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BB250616787D04005E9371 /* main.m */; };
+		D0BB250B16787D04005E9371 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = D0BB250916787D04005E9371 /* Credits.rtf */; };
+		D0BB250E16787D04005E9371 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BB250D16787D04005E9371 /* AppDelegate.m */; };
+		D0BB251116787D04005E9371 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = D0BB250F16787D04005E9371 /* MainMenu.xib */; };
+		D0BB255C16787DEC005E9371 /* ResizingWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BB255B16787DEC005E9371 /* ResizingWindowController.m */; };
+		D0BB255E16787E47005E9371 /* ResizingWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = D0BB255D16787E47005E9371 /* ResizingWindow.xib */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		D0476CB917790F140071F3CB /* Archimedes.framework */ = {isa = PBXFileReference; lastKnownFileType = file; name = Archimedes.framework; path = ../../External/Archimedes/build/Release/Archimedes.framework; sourceTree = "<group>"; };
+		D094E598177771A400906BF7 /* ReactiveCocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ReactiveCocoa.framework; path = ../../External/ReactiveCocoa/ReactiveCocoaFramework/build/Release/ReactiveCocoa.framework; sourceTree = "<group>"; };
+		D094E599177771A400906BF7 /* ReactiveCocoaLayout.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ReactiveCocoaLayout.framework; path = ../../build/Release/ReactiveCocoaLayout.framework; sourceTree = "<group>"; };
+		D0BB24F616787D04005E9371 /* ResizingWindow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ResizingWindow.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0BB24FA16787D04005E9371 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		D0BB24FD16787D04005E9371 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		D0BB24FF16787D04005E9371 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D0BB250216787D04005E9371 /* ResizingWindow-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "ResizingWindow-Info.plist"; sourceTree = "<group>"; };
+		D0BB250416787D04005E9371 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		D0BB250616787D04005E9371 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		D0BB250816787D04005E9371 /* ResizingWindow-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ResizingWindow-Prefix.pch"; sourceTree = "<group>"; };
+		D0BB250A16787D04005E9371 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
+		D0BB250C16787D04005E9371 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		D0BB250D16787D04005E9371 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		D0BB251016787D04005E9371 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		D0BB253416787D24005E9371 /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Common.xcconfig; sourceTree = "<group>"; };
+		D0BB253616787D24005E9371 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		D0BB253716787D24005E9371 /* Profile.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Profile.xcconfig; sourceTree = "<group>"; };
+		D0BB253816787D24005E9371 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		D0BB253A16787D24005E9371 /* Application.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Application.xcconfig; sourceTree = "<group>"; };
+		D0BB253B16787D24005E9371 /* StaticLibrary.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = StaticLibrary.xcconfig; sourceTree = "<group>"; };
+		D0BB253D16787D24005E9371 /* iOS-Application.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "iOS-Application.xcconfig"; sourceTree = "<group>"; };
+		D0BB253E16787D24005E9371 /* iOS-Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "iOS-Base.xcconfig"; sourceTree = "<group>"; };
+		D0BB253F16787D24005E9371 /* iOS-StaticLibrary.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "iOS-StaticLibrary.xcconfig"; sourceTree = "<group>"; };
+		D0BB254116787D24005E9371 /* Mac-Application.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Mac-Application.xcconfig"; sourceTree = "<group>"; };
+		D0BB254216787D24005E9371 /* Mac-Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Mac-Base.xcconfig"; sourceTree = "<group>"; };
+		D0BB254316787D24005E9371 /* Mac-DynamicLibrary.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Mac-DynamicLibrary.xcconfig"; sourceTree = "<group>"; };
+		D0BB254416787D24005E9371 /* Mac-Framework.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Mac-Framework.xcconfig"; sourceTree = "<group>"; };
+		D0BB254516787D24005E9371 /* Mac-StaticLibrary.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Mac-StaticLibrary.xcconfig"; sourceTree = "<group>"; };
+		D0BB254616787D24005E9371 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
+		D0BB255A16787DEC005E9371 /* ResizingWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ResizingWindowController.h; sourceTree = "<group>"; };
+		D0BB255B16787DEC005E9371 /* ResizingWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ResizingWindowController.m; sourceTree = "<group>"; };
+		D0BB255D16787E47005E9371 /* ResizingWindow.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ResizingWindow.xib; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D0BB24F316787D04005E9371 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0476CBA17790F140071F3CB /* Archimedes.framework in Frameworks */,
+				D094E59A177771A400906BF7 /* ReactiveCocoa.framework in Frameworks */,
+				D094E59B177771A400906BF7 /* ReactiveCocoaLayout.framework in Frameworks */,
+				D0BB24FB16787D04005E9371 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D0BB24EB16787D04005E9371 = {
+			isa = PBXGroup;
+			children = (
+				D0BB250016787D04005E9371 /* ResizingWindow */,
+				D0BB24F916787D04005E9371 /* Frameworks */,
+				D0BB253216787D24005E9371 /* Configuration */,
+				D0BB24F716787D04005E9371 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D0BB24F716787D04005E9371 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D0BB24F616787D04005E9371 /* ResizingWindow.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D0BB24F916787D04005E9371 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D0476CB917790F140071F3CB /* Archimedes.framework */,
+				D0BB24FA16787D04005E9371 /* Cocoa.framework */,
+				D0BB24FD16787D04005E9371 /* AppKit.framework */,
+				D0BB24FF16787D04005E9371 /* Foundation.framework */,
+				D094E598177771A400906BF7 /* ReactiveCocoa.framework */,
+				D094E599177771A400906BF7 /* ReactiveCocoaLayout.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D0BB250016787D04005E9371 /* ResizingWindow */ = {
+			isa = PBXGroup;
+			children = (
+				D0BB250C16787D04005E9371 /* AppDelegate.h */,
+				D0BB250D16787D04005E9371 /* AppDelegate.m */,
+				D0BB250F16787D04005E9371 /* MainMenu.xib */,
+				D0BB255D16787E47005E9371 /* ResizingWindow.xib */,
+				D0BB255A16787DEC005E9371 /* ResizingWindowController.h */,
+				D0BB255B16787DEC005E9371 /* ResizingWindowController.m */,
+				D0BB250116787D04005E9371 /* Supporting Files */,
+			);
+			path = ResizingWindow;
+			sourceTree = "<group>";
+		};
+		D0BB250116787D04005E9371 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D0BB250216787D04005E9371 /* ResizingWindow-Info.plist */,
+				D0BB250316787D04005E9371 /* InfoPlist.strings */,
+				D0BB250616787D04005E9371 /* main.m */,
+				D0BB250816787D04005E9371 /* ResizingWindow-Prefix.pch */,
+				D0BB250916787D04005E9371 /* Credits.rtf */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		D0BB253216787D24005E9371 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				D0BB253316787D24005E9371 /* Base */,
+				D0BB253C16787D24005E9371 /* iOS */,
+				D0BB254016787D24005E9371 /* Mac OS X */,
+				D0BB254616787D24005E9371 /* README.md */,
+			);
+			name = Configuration;
+			path = ../../External/ReactiveCocoa/external/xcconfigs;
+			sourceTree = "<group>";
+		};
+		D0BB253316787D24005E9371 /* Base */ = {
+			isa = PBXGroup;
+			children = (
+				D0BB253416787D24005E9371 /* Common.xcconfig */,
+				D0BB253516787D24005E9371 /* Configurations */,
+				D0BB253916787D24005E9371 /* Targets */,
+			);
+			path = Base;
+			sourceTree = "<group>";
+		};
+		D0BB253516787D24005E9371 /* Configurations */ = {
+			isa = PBXGroup;
+			children = (
+				D0BB253616787D24005E9371 /* Debug.xcconfig */,
+				D0BB253716787D24005E9371 /* Profile.xcconfig */,
+				D0BB253816787D24005E9371 /* Release.xcconfig */,
+			);
+			path = Configurations;
+			sourceTree = "<group>";
+		};
+		D0BB253916787D24005E9371 /* Targets */ = {
+			isa = PBXGroup;
+			children = (
+				D0BB253A16787D24005E9371 /* Application.xcconfig */,
+				D0BB253B16787D24005E9371 /* StaticLibrary.xcconfig */,
+			);
+			path = Targets;
+			sourceTree = "<group>";
+		};
+		D0BB253C16787D24005E9371 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				D0BB253D16787D24005E9371 /* iOS-Application.xcconfig */,
+				D0BB253E16787D24005E9371 /* iOS-Base.xcconfig */,
+				D0BB253F16787D24005E9371 /* iOS-StaticLibrary.xcconfig */,
+			);
+			path = iOS;
+			sourceTree = "<group>";
+		};
+		D0BB254016787D24005E9371 /* Mac OS X */ = {
+			isa = PBXGroup;
+			children = (
+				D0BB254116787D24005E9371 /* Mac-Application.xcconfig */,
+				D0BB254216787D24005E9371 /* Mac-Base.xcconfig */,
+				D0BB254316787D24005E9371 /* Mac-DynamicLibrary.xcconfig */,
+				D0BB254416787D24005E9371 /* Mac-Framework.xcconfig */,
+				D0BB254516787D24005E9371 /* Mac-StaticLibrary.xcconfig */,
+			);
+			path = "Mac OS X";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D0BB24F516787D04005E9371 /* ResizingWindow */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0BB251416787D04005E9371 /* Build configuration list for PBXNativeTarget "ResizingWindow" */;
+			buildPhases = (
+				D0BB24F216787D04005E9371 /* Sources */,
+				D0BB24F316787D04005E9371 /* Frameworks */,
+				D0BB24F416787D04005E9371 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ResizingWindow;
+			productName = ResizingWindow;
+			productReference = D0BB24F616787D04005E9371 /* ResizingWindow.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D0BB24ED16787D04005E9371 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0450;
+				ORGANIZATIONNAME = GitHub;
+			};
+			buildConfigurationList = D0BB24F016787D04005E9371 /* Build configuration list for PBXProject "ResizingWindow" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D0BB24EB16787D04005E9371;
+			productRefGroup = D0BB24F716787D04005E9371 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D0BB24F516787D04005E9371 /* ResizingWindow */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D0BB24F416787D04005E9371 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0BB250516787D04005E9371 /* InfoPlist.strings in Resources */,
+				D0BB250B16787D04005E9371 /* Credits.rtf in Resources */,
+				D0BB251116787D04005E9371 /* MainMenu.xib in Resources */,
+				D0BB255E16787E47005E9371 /* ResizingWindow.xib in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D0BB24F216787D04005E9371 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0BB250716787D04005E9371 /* main.m in Sources */,
+				D0BB250E16787D04005E9371 /* AppDelegate.m in Sources */,
+				D0BB255C16787DEC005E9371 /* ResizingWindowController.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		D0BB250316787D04005E9371 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				D0BB250416787D04005E9371 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		D0BB250916787D04005E9371 /* Credits.rtf */ = {
+			isa = PBXVariantGroup;
+			children = (
+				D0BB250A16787D04005E9371 /* en */,
+			);
+			name = Credits.rtf;
+			sourceTree = "<group>";
+		};
+		D0BB250F16787D04005E9371 /* MainMenu.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				D0BB251016787D04005E9371 /* en */,
+			);
+			name = MainMenu.xib;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		D055F2B616846EA900B9338C /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0BB253716787D24005E9371 /* Profile.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				HEADER_SEARCH_PATHS = (
+					../../External/Archimedes,
+					../../External/ReactiveCocoa/ReactiveCocoaFramework/ReactiveCocoa/libextobjc/extobjc,
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+			};
+			name = Profile;
+		};
+		D055F2B716846EA900B9338C /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0BB254116787D24005E9371 /* Mac-Application.xcconfig */;
+			buildSettings = {
+				GCC_PREFIX_HEADER = "ResizingWindow/ResizingWindow-Prefix.pch";
+				INFOPLIST_FILE = "ResizingWindow/ResizingWindow-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Profile;
+		};
+		D0BB251216787D04005E9371 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0BB253616787D24005E9371 /* Debug.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				HEADER_SEARCH_PATHS = (
+					../../External/Archimedes,
+					../../External/ReactiveCocoa/ReactiveCocoaFramework/ReactiveCocoa/libextobjc/extobjc,
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+			};
+			name = Debug;
+		};
+		D0BB251316787D04005E9371 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0BB253816787D24005E9371 /* Release.xcconfig */;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				HEADER_SEARCH_PATHS = (
+					../../External/Archimedes,
+					../../External/ReactiveCocoa/ReactiveCocoaFramework/ReactiveCocoa/libextobjc/extobjc,
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+			};
+			name = Release;
+		};
+		D0BB251516787D04005E9371 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0BB254116787D24005E9371 /* Mac-Application.xcconfig */;
+			buildSettings = {
+				GCC_PREFIX_HEADER = "ResizingWindow/ResizingWindow-Prefix.pch";
+				INFOPLIST_FILE = "ResizingWindow/ResizingWindow-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Debug;
+		};
+		D0BB251616787D04005E9371 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0BB254116787D24005E9371 /* Mac-Application.xcconfig */;
+			buildSettings = {
+				GCC_PREFIX_HEADER = "ResizingWindow/ResizingWindow-Prefix.pch";
+				INFOPLIST_FILE = "ResizingWindow/ResizingWindow-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D0BB24F016787D04005E9371 /* Build configuration list for PBXProject "ResizingWindow" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0BB251216787D04005E9371 /* Debug */,
+				D0BB251316787D04005E9371 /* Release */,
+				D055F2B616846EA900B9338C /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D0BB251416787D04005E9371 /* Build configuration list for PBXNativeTarget "ResizingWindow" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0BB251516787D04005E9371 /* Debug */,
+				D0BB251616787D04005E9371 /* Release */,
+				D055F2B716846EA900B9338C /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D0BB24ED16787D04005E9371 /* Project object */;
+}

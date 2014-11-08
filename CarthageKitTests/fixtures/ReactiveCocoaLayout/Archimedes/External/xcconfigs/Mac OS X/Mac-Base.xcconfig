@@ -1,0 +1,19 @@
+//
+// This file defines additional configuration options that are appropriate only
+// for Mac OS X. This file is not standalone -- it is meant to be included into
+// a configuration file for a specific type of target.
+//
+
+// Whether to combine multiple image resolutions into a multirepresentational
+// TIFF
+COMBINE_HIDPI_IMAGES = YES
+
+// Where to find embedded frameworks
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks @loader_path/../Frameworks
+
+// The base SDK to use (if no version is specified, the latest version is
+// assumed)
+SDKROOT = macosx
+
+// Supported build architectures
+VALID_ARCHS = x86_64

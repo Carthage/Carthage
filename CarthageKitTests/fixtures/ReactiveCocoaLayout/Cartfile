@@ -1,0 +1,2 @@
+github "ReactiveCocoa/ReactiveCocoa" ~> 2.4
+github "github/Archimedes" ~> 1.1.1
