@@ -233,8 +233,8 @@
 				D0D1213919E878CC005E4BAA /* README.md */,
 			);
 			name = Configuration;
-			path = ../External/ReactiveCocoa/External/xcconfigs;
-			sourceTree = "<group>";
+			path = External/ReactiveCocoa/External/xcconfigs;
+			sourceTree = SOURCE_ROOT;
 		};
 		D0D1212319E878CC005E4BAA /* Base */ = {
 			isa = PBXGroup;
