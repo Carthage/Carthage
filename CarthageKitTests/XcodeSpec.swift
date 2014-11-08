@@ -15,7 +15,7 @@ import ReactiveCocoa
 
 class XcodeSpec: QuickSpec {
 	override func spec() {
-		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("TestFramework", withExtension: nil, subdirectory: "repositories")!
+		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("TestFramework", withExtension: nil, subdirectory: "fixtures")!
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderName)
 
 		beforeEach {
