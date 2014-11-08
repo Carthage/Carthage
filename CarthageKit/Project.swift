@@ -17,8 +17,8 @@ public struct Project {
 	/// Path to the root folder
 	public var path: String
 
-	/// The project's cart file
-	public let cartfile: Cartfile?
+	/// The project's Cartfile
+	public let cartfile: Cartfile
 
 	public init?(path: String) {
 		self.path = path
