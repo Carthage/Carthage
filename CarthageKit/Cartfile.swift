@@ -227,23 +227,6 @@ public enum VersionSpecifier: Equatable {
 			return version.major == requirement.major && version >= requirement
 		}
 	}
-
-	/// Returns just the version
-	public var version: Version? {
-		switch (self) {
-		case let .Any:
-			return nil
-
-		case let .Exactly(version):
-			return version
-
-		case let .AtLeast(version):
-			return version
-
-		case let .CompatibleWith(version):
-			return version
-		}
-	}
 }
 
 private func intersection(#atLeast: Version, #compatibleWith: Version) -> VersionSpecifier? {
