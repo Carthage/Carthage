@@ -124,22 +124,16 @@ public struct Version: Comparable {
 	/// Increments to this component represent backwards-compatible bug fixes.
 	public let patch: Int
 
-	/// The raw version string specified in the cartfile.
-	///
-	/// eg. "v2.3.1".
-	public let raw: String
-
 	/// A list of the version components, in order from most significant to
 	/// least significant.
 	public var components: [Int] {
 		return [ major, minor, patch ]
 	}
 
-	public init(major: Int, minor: Int, patch: Int, raw: String) {
+	public init(major: Int, minor: Int, patch: Int) {
 		self.major = major
 		self.minor = minor
 		self.patch = patch
-		self.raw = raw
 	}
 
 	/// Attempts to parse a semantic version from a human-readable string of the
@@ -166,7 +160,7 @@ public struct Version: Comparable {
 		let minor = (components.count > 1 ? components[1].toInt() : 0)
 		let patch = (components.count > 2 ? components[2].toInt() : 0)
 
-		return success(self(major: major!, minor: minor ?? 0, patch: patch ?? 0, raw: specifier))
+		return success(self(major: major!, minor: minor ?? 0, patch: patch ?? 0))
 	}
 }
 
