@@ -466,8 +466,8 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 }
 
 /// Attempts to build each Carthage dependency in the given directory, sending
-/// each dependency and its built product location.
-private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> ColdSignal<(Dependency<PinnedVersion>, NSURL)> {
+/// each dependency that is built.
+private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> ColdSignal<Dependency<PinnedVersion>> {
 	return NSString.rac_readContentsOfURL(CartfileLock.URLInDirectory(directoryURL), usedEncoding: nil, scheduler: ImmediateScheduler().asRACScheduler())
 		.asColdSignal()
 		.catch { error in
@@ -485,9 +485,32 @@ private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration
 			let dependencyURL = directoryURL.URLByAppendingPathComponent(dependency.relativePath)
 
 			// TODO: Capture and redirect output?
-			return ColdSignal.single(dependency)
-				// TODO: This should be a zip.
-				.combineLatestWith(buildInDirectory(dependencyURL, withConfiguration: configuration))
+			return buildInDirectory(dependencyURL, withConfiguration: configuration)
+				.map { productURL -> ColdSignal<()> in
+					let pathComponents = productURL.pathComponents as [String]
+
+					// The extracted components should be "PLATFORM/PRODUCT".
+					let relativeComponents = [ CarthageBinariesFolderName ] + suffix(pathComponents, 2)
+
+					// Move the built dependency up to the top level.
+					let destinationURL = reduce(relativeComponents, directoryURL) { $0.URLByAppendingPathComponent($1) }
+					return ColdSignal.lazy {
+						var error: NSError?
+						if !NSFileManager.defaultManager().createDirectoryAtURL(destinationURL.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error) {
+							return .error(error ?? RACError.Empty.error)
+						}
+
+						// rename() is atomic and can automatically remove the
+						// destination, unlike NSFileManager.
+						if rename(productURL.path!, destinationURL.path!) == 0 {
+							return .empty()
+						} else {
+							return .error(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
+						}
+					}
+				}
+				.merge(identity)
+				.then(.single(dependency))
 		}
 		.concat(identity)
 }
