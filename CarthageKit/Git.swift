@@ -46,6 +46,8 @@ public func cloneRepository(cloneURL: String, destinationURL: NSURL) -> ColdSign
 
 	let arguments = [
 		"clone",
+		"--bare",
+		"--recursive",
 		cloneURL,
 		destinationURL.path!,
 	]
