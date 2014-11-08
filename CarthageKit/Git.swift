@@ -29,26 +29,26 @@ public func repositoryRemote(repositoryURL: NSURL) -> ColdSignal<String> {
 /// Returns a cold signal that completes when cloning is complete, or errors if
 /// the repository cannot be cloned.
 public func cloneRepository(cloneURL: String, destinationURL: NSURL) -> ColdSignal<String> {
-    var isDirectory: ObjCBool = false
+	var isDirectory: ObjCBool = false
 
-    if NSFileManager.defaultManager().fileExistsAtPath(destinationURL.path!, isDirectory: &isDirectory) {
-        if isDirectory {
+	if NSFileManager.defaultManager().fileExistsAtPath(destinationURL.path!, isDirectory: &isDirectory) {
+		if isDirectory {
 			return repositoryRemote(destinationURL)
 				.map({ remoteURL in
 					let error = remoteURL == cloneURL ? CarthageError.RepositoryAlreadyCloned(location: destinationURL) : CarthageError.RepositoryRemoteMismatch(expected: cloneURL, actual: remoteURL)
 					return ColdSignal.error(error.error)
 				})
 				.merge(identity)
-        }
+		}
 		let error = CarthageError.RepositoryCloneFailed(location: destinationURL)
-        return ColdSignal.error(error.error)
-    }
+		return ColdSignal.error(error.error)
+	}
 
 	let arguments = [
-        "clone",
-        cloneURL,
-        destinationURL.path!,
-    ]
+		"clone",
+		cloneURL,
+		destinationURL.path!,
+	]
 	return launchGitTask(arguments: arguments)
 }
 
