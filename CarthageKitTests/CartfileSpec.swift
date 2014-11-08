@@ -28,17 +28,17 @@ class CartfileSpec: QuickSpec {
 			let depReactiveCocoa = cartfile.dependencies[0]
 			expect(depReactiveCocoa.repository.name).to(equal("ReactiveCocoa"))
 			expect(depReactiveCocoa.repository.owner).to(equal("ReactiveCocoa"))
-            expect(depReactiveCocoa.version).to(equal(VersionSpecifier.AtLeast(Version(major: 2, minor: 3, patch: 1))))
+			expect(depReactiveCocoa.version).to(equal(VersionSpecifier.AtLeast(Version(major: 2, minor: 3, patch: 1))))
 
 			let depMantle = cartfile.dependencies[1]
 			expect(depMantle.repository.name).to(equal("Mantle"))
 			expect(depMantle.repository.owner).to(equal("Mantle"))
-            expect(depMantle.version).to(equal(VersionSpecifier.CompatibleWith(Version(major: 1, minor: 0, patch: 0))))
+			expect(depMantle.version).to(equal(VersionSpecifier.CompatibleWith(Version(major: 1, minor: 0, patch: 0))))
 
 			let depLibextobjc = cartfile.dependencies[2]
 			expect(depLibextobjc.repository.owner).to(equal("jspahrsummers"))
 			expect(depLibextobjc.repository.name).to(equal("libextobjc"))
-            expect(depLibextobjc.version).to(equal(VersionSpecifier.Exactly(Version(major: 0, minor: 4, patch: 1))))
+			expect(depLibextobjc.version).to(equal(VersionSpecifier.Exactly(Version(major: 0, minor: 4, patch: 1))))
 
 			let depConfigs = cartfile.dependencies[3]
 			expect(depConfigs.repository.owner).to(equal("jspahrsummers"))
@@ -51,30 +51,30 @@ class CartfileSpec: QuickSpec {
 class VersionSpec: QuickSpec {
 	override func spec() {
 		it("should order versions correctly") {
-            let version = Version(major: 2, minor: 1, patch: 1)
+			let version = Version(major: 2, minor: 1, patch: 1)
 
-            expect(version).to(beLessThan(Version(major: 3, minor: 0, patch: 0)))
-            expect(version).to(beLessThan(Version(major: 2, minor: 2, patch: 0)))
-            expect(version).to(beLessThan(Version(major: 2, minor: 1, patch: 2)))
+			expect(version).to(beLessThan(Version(major: 3, minor: 0, patch: 0)))
+			expect(version).to(beLessThan(Version(major: 2, minor: 2, patch: 0)))
+			expect(version).to(beLessThan(Version(major: 2, minor: 1, patch: 2)))
 
 			expect(version).to(beGreaterThan(Version(major: 1, minor: 2, patch: 2)))
 			expect(version).to(beGreaterThan(Version(major: 2, minor: 0, patch: 2)))
-            expect(version).to(beGreaterThan(Version(major: 2, minor: 1, patch: 0)))
+			expect(version).to(beGreaterThan(Version(major: 2, minor: 1, patch: 0)))
 
-            expect(version).to(beLessThan(Version(major: 10, minor: 0, patch: 0)))
-            expect(version).to(beLessThan(Version(major: 2, minor: 10, patch: 1)))
-            expect(version).to(beLessThan(Version(major: 2, minor: 1, patch: 10)))
+			expect(version).to(beLessThan(Version(major: 10, minor: 0, patch: 0)))
+			expect(version).to(beLessThan(Version(major: 2, minor: 10, patch: 1)))
+			expect(version).to(beLessThan(Version(major: 2, minor: 1, patch: 10)))
 		}
 	}
 }
 
 class VersionSpecifierSpec: QuickSpec {
 	override func spec() {
-        let versionOne = Version(major: 1, minor: 3, patch: 2)
-        let versionTwoZero = Version(major: 2, minor: 0, patch: 2)
-        let versionTwoOne = Version(major: 2, minor: 1, patch: 1)
-        let versionTwoTwo = Version(major: 2, minor: 2, patch: 0)
-        let versionThree = Version(major: 3, minor: 0, patch: 0)
+		let versionOne = Version(major: 1, minor: 3, patch: 2)
+		let versionTwoZero = Version(major: 2, minor: 0, patch: 2)
+		let versionTwoOne = Version(major: 2, minor: 1, patch: 1)
+		let versionTwoTwo = Version(major: 2, minor: 2, patch: 0)
+		let versionThree = Version(major: 3, minor: 0, patch: 0)
 
 		func testIntersection(lhs: VersionSpecifier, rhs: VersionSpecifier, #expected: VersionSpecifier?) {
 			if let expected = expected {
