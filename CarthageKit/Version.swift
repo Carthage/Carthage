@@ -8,6 +8,7 @@
 
 import Foundation
 import LlamaKit
+import ReactiveCocoa
 
 /// An abstract type representing a way to specify versions.
 public protocol VersionType: Scannable, Equatable {}
@@ -249,6 +250,21 @@ public func intersection(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Versio
 		}
 
 		return lhs
+	}
+}
+
+/// Attempts to determine a version specifier that accurately describes the
+/// intersection between the given specifiers.
+///
+/// In other words, any version that satisfies the returned specifier will
+/// satisfy _all_ of the given specifiers.
+public func intersection<S: SequenceType where S.Generator.Element == VersionSpecifier>(specs: S) -> VersionSpecifier? {
+	return reduce(specs, nil) { (left: VersionSpecifier?, right: VersionSpecifier) -> VersionSpecifier? in
+		if let left = left {
+			return intersection(left, right)
+		} else {
+			return right
+		}
 	}
 }
 
