@@ -95,10 +95,23 @@ extension CartfileLock: Printable {
 	}
 }
 
+/// Uniquely identifies a dependency that can be used in projects.
+public enum DependencyIdentifier: Equatable {
+	/// A repository hosted on GitHub.com.
+	case GitHub(Repository)
+}
+
+public func ==(lhs: DependencyIdentifier, rhs: DependencyIdentifier) -> Bool {
+	switch (lhs, rhs) {
+	case let (.GitHub(left), .GitHub(right)):
+		return left == right
+	}
+}
+
 /// Represents a single dependency of a project.
 public struct DependencyVersion<V: VersionType>: Equatable {
-	/// The GitHub repository in which this dependency lives.
-	public var repository: Repository
+	/// The unique identifier for this dependency.
+	public let identifier: DependencyIdentifier
 
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: V
@@ -110,7 +123,7 @@ public struct DependencyVersion<V: VersionType>: Equatable {
 }
 
 public func ==<V>(lhs: DependencyVersion<V>, rhs: DependencyVersion<V>) -> Bool {
-	return lhs.repository == rhs.repository && lhs.version == rhs.version
+	return lhs.identifier == rhs.identifier && lhs.version == rhs.version
 }
 
 extension DependencyVersion: Scannable {
