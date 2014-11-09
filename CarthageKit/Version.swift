@@ -153,6 +153,25 @@ public enum VersionSpecifier: Equatable {
 	}
 }
 
+public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
+	switch (lhs, rhs) {
+	case let (.Any, .Any):
+		return true
+
+	case let (.Exactly(left), .Exactly(right)):
+		return left == right
+
+	case let (.AtLeast(left), .AtLeast(right)):
+		return left == right
+
+	case let (.CompatibleWith(left), .CompatibleWith(right)):
+		return left == right
+
+	default:
+		return false
+	}
+}
+
 extension VersionSpecifier: Scannable {
 	/// Attempts to parse a VersionSpecifier.
 	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
@@ -169,6 +188,24 @@ extension VersionSpecifier: Scannable {
 }
 
 extension VersionSpecifier: VersionType {}
+
+extension VersionSpecifier: Printable {
+	public var description: String {
+		switch (self) {
+		case let .Any:
+			return "(any)"
+
+		case let .Exactly(version):
+			return "== \(version)"
+
+		case let .AtLeast(version):
+			return ">= \(version)"
+
+		case let .CompatibleWith(version):
+			return "~> \(version)"
+		}
+	}
+}
 
 private func intersection(#atLeast: SemanticVersion, #compatibleWith: SemanticVersion) -> VersionSpecifier? {
 	if atLeast.major > compatibleWith.major {
@@ -283,41 +320,4 @@ public func latestSatisfyingVersion<S: SequenceType where S.Generator.Element ==
 	}
 
 	return nil
-}
-
-public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
-	switch (lhs, rhs) {
-	case let (.Any, .Any):
-		return true
-
-	case let (.Exactly(left), .Exactly(right)):
-		return left == right
-
-	case let (.AtLeast(left), .AtLeast(right)):
-		return left == right
-
-	case let (.CompatibleWith(left), .CompatibleWith(right)):
-		return left == right
-
-	default:
-		return false
-	}
-}
-
-extension VersionSpecifier: Printable {
-	public var description: String {
-		switch (self) {
-		case let .Any:
-			return "(any)"
-
-		case let .Exactly(version):
-			return "== \(version)"
-
-		case let .AtLeast(version):
-			return ">= \(version)"
-
-		case let .CompatibleWith(version):
-			return "~> \(version)"
-		}
-	}
 }
