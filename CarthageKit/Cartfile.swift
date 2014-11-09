@@ -14,7 +14,7 @@ import ReactiveCocoa
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
-	public var dependencies: [Dependency<VersionSpecifier>]
+	public var dependencies: [DependencyVersion<VersionSpecifier>]
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile> {
@@ -34,7 +34,7 @@ public struct Cartfile {
 				return
 			}
 
-			switch (Dependency<VersionSpecifier>.fromScanner(scanner)) {
+			switch (DependencyVersion<VersionSpecifier>.fromScanner(scanner)) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep.unbox)
 
@@ -67,7 +67,7 @@ extension Cartfile: Printable {
 /// Represents a parsed Cartfile.lock, which specifies which exact version was
 /// checked out for each dependency.
 public struct CartfileLock {
-	public var dependencies: [Dependency<PinnedVersion>]
+	public var dependencies: [DependencyVersion<PinnedVersion>]
 
 	public static func fromString(string: String) -> Result<CartfileLock> {
 		var cartfile = self(dependencies: [])
@@ -75,7 +75,7 @@ public struct CartfileLock {
 
 		let scanner = NSScanner(string: string)
 		scannerLoop: while !scanner.atEnd {
-			switch (Dependency<PinnedVersion>.fromScanner(scanner)) {
+			switch (DependencyVersion<PinnedVersion>.fromScanner(scanner)) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep.unbox)
 
@@ -96,7 +96,7 @@ extension CartfileLock: Printable {
 }
 
 /// Represents a single dependency of a project.
-public struct Dependency<V: VersionType>: Equatable {
+public struct DependencyVersion<V: VersionType>: Equatable {
 	/// The GitHub repository in which this dependency lives.
 	public var repository: Repository
 
@@ -104,18 +104,18 @@ public struct Dependency<V: VersionType>: Equatable {
 	public var version: V
 
 	/// Maps over the `version` in the receiver.
-	public func map<W: VersionType>(f: V -> W) -> Dependency<W> {
-		return Dependency<W>(repository: repository, version: f(version))
+	public func map<W: VersionType>(f: V -> W) -> DependencyVersion<W> {
+		return DependencyVersion<W>(repository: repository, version: f(version))
 	}
 }
 
-public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
+public func ==<V>(lhs: DependencyVersion<V>, rhs: DependencyVersion<V>) -> Bool {
 	return lhs.repository == rhs.repository && lhs.version == rhs.version
 }
 
-extension Dependency: Scannable {
-	/// Attempts to parse a Dependency specification.
-	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
+extension DependencyVersion: Scannable {
+	/// Attempts to parse a DependencyVersion specification.
+	public static func fromScanner(scanner: NSScanner) -> Result<DependencyVersion> {
 		if !scanner.scanString("github", intoString: nil) {
 			return failure()
 		}
@@ -139,7 +139,7 @@ extension Dependency: Scannable {
 	}
 }
 
-extension Dependency: Printable {
+extension DependencyVersion: Printable {
 	public var description: String {
 		return "\(repository) @ \(version)"
 	}
@@ -147,7 +147,7 @@ extension Dependency: Printable {
 
 /// Sends each version available to choose from for the given dependency, in no
 /// particular order.
-internal func versionsForDependency(dependency: Dependency<VersionSpecifier>) -> ColdSignal<SemanticVersion> {
+internal func versionsForDependency(dependency: DependencyVersion<VersionSpecifier>) -> ColdSignal<SemanticVersion> {
 	// TODO: Look up available tags in the repository.
 	return .error(RACError.Empty.error)
 }
@@ -156,7 +156,7 @@ internal func versionsForDependency(dependency: Dependency<VersionSpecifier>) ->
 ///
 /// If the specified version of the dependency does not have a Cartfile, the
 /// returned signal will complete without sending any values.
-internal func dependencyCartfile(dependency: Dependency<SemanticVersion>) -> ColdSignal<Cartfile> {
+internal func dependencyCartfile(dependency: DependencyVersion<SemanticVersion>) -> ColdSignal<Cartfile> {
 	// TODO: Parse the contents of the Cartfile on the tag corresponding to
 	// the specific input version.
 	return .error(RACError.Empty.error)

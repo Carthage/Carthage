@@ -59,9 +59,9 @@ private struct ResolutionState {
 ///
 /// Sends each recursive dependency with its resolved version, in no particular
 /// order.
-public func resolveDependencesInCartfile(cartfile: Cartfile) -> ColdSignal<Dependency<SemanticVersion>> {
+public func resolveDependencesInCartfile(cartfile: Cartfile) -> ColdSignal<DependencyVersion<SemanticVersion>> {
 	return versionMapForCartfile(cartfile)
-		.map { versionMap -> ColdSignal<Dependency<SemanticVersion>> in
+		.map { versionMap -> ColdSignal<DependencyVersion<SemanticVersion>> in
 			var state = ResolutionState(versionMap: versionMap)
 
 			// Enumerate dependencies breadth-first and populate the version
