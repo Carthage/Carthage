@@ -162,6 +162,40 @@ private func dependencyCartfile(dependency: Dependency<SemanticVersion>) -> Cold
 	return .error(RACError.Empty.error)
 }
 
+typealias RepositoryVersionMap = Dictionary<Repository, [SemanticVersion]>
+
+/// Looks up all dependencies (and nested dependencies) from the given Cartfile,
+/// and what versions are available for each.
+private func versionMapForCartfile(cartfile: Cartfile) -> ColdSignal<RepositoryVersionMap> {
+	return ColdSignal.fromValues(cartfile.dependencies)
+		.map { dependency -> ColdSignal<RepositoryVersionMap> in
+			return versionsForDependency(dependency)
+				.map { version -> ColdSignal<RepositoryVersionMap> in
+					let pinnedDependency = dependency.map { _ in version }
+					let recursiveVersionMap = dependencyCartfile(pinnedDependency)
+						.map { cartfile in versionMapForCartfile(cartfile) }
+						.merge(identity)
+
+					return ColdSignal.single([ dependency.repository: [ version ] ])
+						.concat(recursiveVersionMap)
+				}
+				.merge(identity)
+		}
+		.merge(identity)
+		.reduce(initial: [:]) { (var left, right) -> RepositoryVersionMap in
+			for (repo, rightVersions) in right {
+				if let leftVersions = left[repo] {
+					// FIXME: We should just use a set.
+					left[repo] = leftVersions + rightVersions.filter { !contains(leftVersions, $0) }
+				} else {
+					left[repo] = rightVersions
+				}
+			}
+
+			return left
+		}
+}
+
 /// Attempts to determine the latest valid version to use for each dependency
 /// specified in the given Cartfile, and all nested dependencies thereof.
 ///

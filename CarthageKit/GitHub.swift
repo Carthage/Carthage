@@ -29,6 +29,12 @@ public func ==(lhs: Repository, rhs: Repository) -> Bool {
 	return lhs.owner == rhs.owner && lhs.name == rhs.name
 }
 
+extension Repository: Hashable {
+	public var hashValue: Int {
+		return owner.hashValue ^ name.hashValue
+	}
+}
+
 extension Repository: Printable {
 	public var description: String {
 		return "\(owner)/\(name)"
