@@ -8,6 +8,7 @@
 
 import Foundation
 import LlamaKit
+import ReactiveCocoa
 
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
@@ -137,4 +138,30 @@ extension Dependency: Printable {
 	public var description: String {
 		return "\(repository) @ \(version)"
 	}
+}
+
+/// Sends each version available to choose from for the given dependency, in no
+/// particular order.
+private func versionsForDependency(dependency: Dependency<VersionSpecifier>) -> ColdSignal<SemanticVersion> {
+	// TODO: Look up available tags in the repository.
+	return .error(RACError.Empty.error)
+}
+
+/// Looks up the Cartfile for the given dependency and version combo.
+///
+/// If the specified version of the dependency does not have a Cartfile, the
+/// returned signal will complete without sending any values.
+private func dependencyCartfile(dependency: Dependency<SemanticVersion>) -> ColdSignal<Cartfile> {
+	// TODO: Parse the contents of the Cartfile on the tag corresponding to
+	// the specific input version.
+	return .error(RACError.Empty.error)
+}
+
+/// Attempts to determine the latest valid version to use for each dependency
+/// specified in the given Cartfile, and all nested dependencies thereof.
+///
+/// Sends each recursive dependency with its resolved version, in no particular
+/// order.
+public func resolveDependencesInCartfile(cartfile: Cartfile) -> ColdSignal<Dependency<SemanticVersion>> {
+	return .error(RACError.Empty.error)
 }
