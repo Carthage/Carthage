@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82D61A10160700F0DD94 /* Resolver.swift */; };
 		D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; };
 		D01F8A4119EA28C600643E7C /* LlamaKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; };
 		D01F8A4419EA28E400643E7C /* LlamaKit.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -93,6 +94,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D01D82D61A10160700F0DD94 /* Resolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Resolver.swift; sourceTree = "<group>"; };
 		D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveCocoa.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4019EA28C600643E7C /* LlamaKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = LlamaKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4619EA28F600643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../External/ReactiveCocoa/External/Quick/Externals/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
@@ -296,6 +298,7 @@
 				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
 				D074EDC41A049283001DE082 /* FrameworkExtensions.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
+				D01D82D61A10160700F0DD94 /* Resolver.swift */,
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
 				D0AD39AF19E900BC00B343CE /* Task.swift */,
 				D0DE893F1A0F2CB00030A3EC /* Version.swift */,
@@ -554,6 +557,7 @@
 				D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */,
 				D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */,
 				D0AD39B019E900BC00B343CE /* Task.swift in Sources */,
+				D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */,
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */,
