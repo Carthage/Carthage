@@ -156,34 +156,45 @@ extension ColdSignal {
 }
 
 /// Sends all permutations of the values from the input signals, as they arrive.
+///
+/// If no input signals are given, sends a single empty array then completes.
 private func permutations<T>(signals: [ColdSignal<T>]) -> ColdSignal<[T]> {
-	var combined: ColdSignal<[T]>? = nil
+	var combined: ColdSignal<[T]> = .single([])
 
 	for signal in signals {
-		if let oldCombined = combined {
-			combined = oldCombined.permuteWith(signal).map { (var array, value) in
-				array.append(value)
-				return array
-			}
-		} else {
-			combined = signal.map { [ $0 ] }
+		combined = combined.permuteWith(signal).map { (var array, value) in
+			array.append(value)
+			return array
 		}
 	}
 
-	return combined ?? .empty()
+	return combined
 }
 
+/// Creates one or more dependency graphs for the given dependency,
+/// incorporating all known versions of each recursive dependency.
 private func graphsForDependencyVersion(dependency: DependencyVersion<SemanticVersion>, versionMap: DependencyVersionMap) -> ColdSignal<DependencyNode> {
+	let templateNode = DependencyNode(identifier: dependency.identifier, version: dependency.version)
+
 	return dependencyCartfile(dependency)
-		.map { cartfile in
-			return ColdSignal<DependencyNode> { subscriber in
-				for dependency in cartfile.dependencies {
-					if let versions = versionMap[dependency.identifier] {
-					} else {
-						// TODO
+		.map { cartfile -> ColdSignal<DependencyNode> in
+			let nodeSignals = cartfile.dependencies.map { dependency -> ColdSignal<DependencyNode> in
+				let versions = versionMap[dependency.identifier]!
+
+				return ColdSignal.fromValues(versions)
+					.map { version -> ColdSignal<DependencyNode> in
+						let dependencyVersion = dependency.map { _ in version }
+						return graphsForDependencyVersion(dependencyVersion, versionMap)
 					}
-				}
+					.merge(identity)
 			}
+
+			return permutations(nodeSignals)
+				.map { dependencyNodes in
+					var parentNode = templateNode
+					parentNode.dependencies = dependencyNodes
+					return parentNode
+				}
 		}
 		.merge(identity)
 }
