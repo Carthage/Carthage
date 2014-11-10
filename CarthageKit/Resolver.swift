@@ -38,9 +38,6 @@ public struct Resolver {
 			.merge(identity)
 
 		return graphPermutations
-			.on(next: { graph in
-				println("*** POSSIBLE GRAPH ***\n\(graph)\n")
-			})
 			// TODO: Real error here.
 			.concat(.error(RACError.Empty.error))
 			.take(1)
@@ -173,12 +170,10 @@ private struct DependencyGraph: Equatable {
 					node = existingNode
 					node.versionSpecifier = newSpecifier
 				} else {
-					println("Couldn't reconcile \(existingNode) with \(node)")
 					// TODO: Real error message.
 					return failure()
 				}
 			} else {
-				println("Couldn't reconcile \(existingNode) with \(node)")
 				// TODO: Real error message.
 				return failure()
 			}

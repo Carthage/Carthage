@@ -21,7 +21,28 @@ class ResolverSpec: QuickSpec {
 			let cartfile = Cartfile.fromString(testCartfile!).value()!
 
 			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency)
-			resolver.resolveDependencesInCartfile(cartfile).wait()
+			let result = resolver.resolveDependencesInCartfile(cartfile)
+				.reduce(initial: [:]) { (var dict, dependency) -> [String: SemanticVersion] in
+					switch dependency.identifier {
+					case let .GitHub(repo):
+						dict[repo.description] = dependency.version
+
+					default:
+						break
+					}
+
+					return dict
+				}
+				.first()
+
+			expect(result.error()).to(beNil())
+
+			let versionByRepo = result.value()!
+			expect(versionByRepo["ReactiveCocoa/ReactiveCocoa"]).to(equal(SemanticVersion(major: 3, minor: 0, patch: 0)))
+			expect(versionByRepo["Mantle/Mantle"]).to(equal(SemanticVersion(major: 1, minor: 3, patch: 0)))
+			expect(versionByRepo["jspahrsummers/libextobjc"]).to(equal(SemanticVersion(major: 0, minor: 4, patch: 1)))
+			expect(versionByRepo["jspahrsummers/xcconfigs"]).to(equal(SemanticVersion(major: 1, minor: 3, patch: 0)))
+			expect(versionByRepo["jspahrsummers/objc-build-scripts"]).to(equal(SemanticVersion(major: 3, minor: 0, patch: 0)))
 		}
 	}
 
