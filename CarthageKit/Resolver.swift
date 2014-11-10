@@ -32,12 +32,12 @@ public struct Resolver {
 	/// Sends each recursive dependency with its resolved version, in no particular
 	/// order.
 	public func resolveDependencesInCartfile(cartfile: Cartfile) -> ColdSignal<DependencyVersion<SemanticVersion>> {
-		// Dependency graph permutations for each of the root nodes' versions.
-		let graphPermutations = nodePermutationsForCartfile(cartfile)
+		return nodePermutationsForCartfile(cartfile)
 			.map { rootNodes in self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph()) }
 			.merge(identity)
-
-		return graphPermutations
+			// Pass through resolution errors only if we never got
+			// a valid graph.
+			.dematerializeErrorsIfEmpty(identity)
 			.take(1)
 			.map { graph -> ColdSignal<DependencyVersion<SemanticVersion>> in
 				return ColdSignal.fromValues(graph.allNodes.keys)
@@ -86,6 +86,9 @@ public struct Resolver {
 			.merge(identity)
 			.map { dependencyNodes in self.graphPermutationsForEachNode(dependencyNodes, dependencyOf: node, basedOnGraph: inputGraph) }
 			.merge(identity)
+			// Pass through resolution errors only if we never got
+			// a valid graph.
+			.dematerializeErrorsIfEmpty(identity)
 	}
 
 	/// Recursively permutes each element in `nodes` and all dependencies
@@ -93,7 +96,7 @@ public struct Resolver {
 	/// the specified node (or as a root otherwise).
 	///
 	/// This is a helper method, and not meant to be called from outside.
-	private func graphPermutationsForEachNode(nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> ColdSignal<DependencyGraph> {
+	private func graphPermutationsForEachNode(nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> ColdSignal<Event<DependencyGraph>> {
 		return ColdSignal.lazy {
 			var result = success(inputGraph)
 
@@ -105,30 +108,32 @@ public struct Resolver {
 			}
 
 			return ColdSignal.fromResult(result)
-				// Discard impossible graphs.
-				.catch { _ in .empty() }
 				.map { graph -> ColdSignal<DependencyGraph> in
 					// Each signal represents all evaluations of one subtree.
 					let graphSignals = nodes.map { node in self.graphPermutationsForDependenciesOfNode(node, basedOnGraph: graph) }
 
 					return permutations(graphSignals)
-						.map { graphs -> ColdSignal<DependencyGraph> in
+						.map { graphs -> ColdSignal<Event<DependencyGraph>> in
 							let result = reduce(graphs, success(inputGraph)) { (result, graph) in
 								return result.flatMap { mergeGraphs($0, graph) }
 							}
 
 							switch result {
 							case let .Success(graph):
-								return .single(graph.unbox)
+								return ColdSignal.single(graph.unbox).materialize()
 
-							case .Failure:
+							case let .Failure(error):
 								// Discard impossible graphs.
-								return .empty()
+								return .single(.Error(error))
 							}
 						}
 						.merge(identity)
+						// Pass through resolution errors only if we never got
+						// a valid graph.
+						.dematerializeErrorsIfEmpty(identity)
 				}
 				.merge(identity)
+				.materialize()
 		}
 	}
 }

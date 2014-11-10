@@ -92,6 +92,47 @@ extension ColdSignal {
 			subscriber.disposable.addDisposable(otherDisposable)
 		}
 	}
+
+	/// Dematerializes the signal, like dematerialize(), but only yields Error
+	/// events if no values were sent.
+	internal func dematerializeErrorsIfEmpty<U>(evidence: ColdSignal -> ColdSignal<Event<U>>) -> ColdSignal<U> {
+		return ColdSignal<U> { subscriber in
+			let queue = dispatch_queue_create("org.reactivecocoa.ReactiveCocoa.ColdSignal.dematerializeErrorsIfEmpty", DISPATCH_QUEUE_SERIAL)
+			var receivedValue = false
+			var receivedError: NSError? = nil
+
+			evidence(self).start(next: { event in
+				switch event {
+				case let .Next(value):
+					dispatch_sync(queue) {
+						receivedValue = true
+					}
+
+					fallthrough
+
+				case .Completed:
+					subscriber.put(event)
+
+				case let .Error(error):
+					dispatch_sync(queue) {
+						receivedError = error
+					}
+				}
+			}, error: { error in
+				subscriber.put(.Error(error))
+			}, completed: {
+				dispatch_sync(queue) {
+					if !receivedValue {
+						if let receivedError = receivedError {
+							subscriber.put(.Error(receivedError))
+						}
+					}
+				}
+
+				subscriber.put(.Completed)
+			})
+		}
+	}
 }
 
 /// Sends all permutations of the values from the input signals, as they arrive.
