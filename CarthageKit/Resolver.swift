@@ -95,6 +95,7 @@ private struct DependencyGraph: Equatable {
 			if let newSpecifier = intersection(existingNode.versionSpecifier, node.versionSpecifier) {
 				if newSpecifier.satisfiedBy(existingNode.proposedVersion) {
 					node = existingNode
+					node.versionSpecifier = newSpecifier
 				} else {
 					println("Couldn't reconcile \(existingNode) with \(node)")
 					// TODO: Real error message.
