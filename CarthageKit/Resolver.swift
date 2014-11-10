@@ -38,8 +38,6 @@ public struct Resolver {
 			.merge(identity)
 
 		return graphPermutations
-			// TODO: Real error here.
-			.concat(.error(RACError.Empty.error))
 			.take(1)
 			.map { graph -> ColdSignal<DependencyVersion<SemanticVersion>> in
 				return ColdSignal.fromValues(graph.allNodes.keys)
@@ -58,15 +56,18 @@ public struct Resolver {
 	/// exist for each).
 	private func nodePermutationsForCartfile(cartfile: Cartfile) -> ColdSignal<[DependencyNode]> {
 		let nodeSignals = cartfile.dependencies.map { dependency -> ColdSignal<DependencyNode> in
-			// TODO: If this signal is empty (because no version meets the
-			// specifier), we'll never have any permutations, so we need to generate
-			// an error.
 			return self.versionsForDependency(dependency.identifier)
 				.filter { dependency.version.satisfiedBy($0) }
 				.map { DependencyNode(identifier: dependency.identifier, proposedVersion: $0, versionSpecifier: dependency.version) }
 				.reduce(initial: []) { $0 + [ $1 ] }
 				.map(sorted)
-				.map(ColdSignal.fromValues)
+				.map { nodes -> ColdSignal<DependencyNode> in
+					if nodes.isEmpty {
+						return .error(CarthageError.RequiredVersionNotFound(dependency.identifier, dependency.version).error)
+					} else {
+						return .fromValues(nodes)
+					}
+				}
 				.concat(identity)
 		}
 
@@ -173,12 +174,10 @@ private struct DependencyGraph: Equatable {
 					node = existingNode
 					node.versionSpecifier = newSpecifier
 				} else {
-					// TODO: Real error message.
-					return failure()
+					return failure(CarthageError.RequiredVersionNotFound(node.identifier, newSpecifier).error)
 				}
 			} else {
-				// TODO: Real error message.
-				return failure()
+				return failure(CarthageError.IncompatibleRequirements(node.identifier, existingNode.versionSpecifier, node.versionSpecifier).error)
 			}
 		} else {
 			allNodes[node] = ()
