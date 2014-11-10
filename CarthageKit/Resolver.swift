@@ -40,7 +40,7 @@ private func versionMapForCartfile(cartfile: Cartfile) -> ColdSignal<DependencyV
 		}
 }
 
-private class DependencyNode: Equatable {
+private class DependencyNode: Comparable {
 	let identifier: DependencyIdentifier
 	let proposedVersion: SemanticVersion
 	var versionSpecifier: VersionSpecifier
@@ -56,6 +56,11 @@ private class DependencyNode: Equatable {
 		self.proposedVersion = proposedVersion
 		self.versionSpecifier = versionSpecifier
 	}
+}
+
+private func <(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
+	// Try higher versions first.
+	return lhs.proposedVersion > rhs.proposedVersion
 }
 
 private func ==(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
@@ -267,6 +272,10 @@ private func nodePermutationsForCartfile(cartfile: Cartfile) -> ColdSignal<[Depe
 		return versionsForDependency(dependency.identifier)
 			.filter { dependency.version.satisfiedBy($0) }
 			.map { DependencyNode(identifier: dependency.identifier, proposedVersion: $0, versionSpecifier: dependency.version) }
+			.reduce(initial: []) { $0 + [ $1 ] }
+			.map(sorted)
+			.map(ColdSignal.fromValues)
+			.concat(identity)
 	}
 
 	return permutations(nodeSignals)
