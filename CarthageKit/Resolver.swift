@@ -48,6 +48,14 @@ public struct Resolver {
 			.merge(identity)
 	}
 
+	/// Sends all permutations of valid DependencyNodes, corresponding to the
+	/// dependencies listed in the given Cartfile, in the order that they should
+	/// be tried.
+	///
+	/// In other words, this will always send arrays equal in length to
+	/// `cartfile.dependencies`. Each array represents one possible permutation
+	/// of those dependencies (chosen from among the versions that actually
+	/// exist for each).
 	private func nodePermutationsForCartfile(cartfile: Cartfile) -> ColdSignal<[DependencyNode]> {
 		let nodeSignals = cartfile.dependencies.map { dependency -> ColdSignal<DependencyNode> in
 			// TODO: If this signal is empty (because no version meets the
@@ -65,6 +73,12 @@ public struct Resolver {
 		return permutations(nodeSignals)
 	}
 
+	/// Sends all possible permutations of `inputGraph` oriented around the
+	/// dependencies of `node`.
+	///
+	/// In other words, this attempts to create one transformed graph for each
+	/// possible permutation of the dependencies for the given node (chosen from
+	/// among the verisons that actually exist for each).
 	private func graphPermutationsForDependenciesOfNode(node: DependencyNode, basedOnGraph inputGraph: DependencyGraph) -> ColdSignal<DependencyGraph> {
 		return cartfileForDependency(node.dependencyVersion)
 			.map { self.nodePermutationsForCartfile($0) }
@@ -73,6 +87,11 @@ public struct Resolver {
 			.merge(identity)
 	}
 
+	/// Recursively permutes each element in `nodes` and all dependencies
+	/// thereof, attaching each permutation to `inputGraph` as a dependency of
+	/// the specified node (or as a root otherwise).
+	///
+	/// This is a helper method, and not meant to be called from outside.
 	private func graphPermutationsForEachNode(nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> ColdSignal<DependencyGraph> {
 		return ColdSignal.lazy {
 			var result = success(inputGraph)
@@ -113,54 +132,38 @@ public struct Resolver {
 	}
 }
 
-private class DependencyNode: Comparable {
-	let identifier: DependencyIdentifier
-	let proposedVersion: SemanticVersion
-	var versionSpecifier: VersionSpecifier
-
-	var dependencyVersion: DependencyVersion<SemanticVersion> {
-		return DependencyVersion(identifier: identifier, version: proposedVersion)
-	}
-
-	init(identifier: DependencyIdentifier, proposedVersion: SemanticVersion, versionSpecifier: VersionSpecifier) {
-		precondition(versionSpecifier.satisfiedBy(proposedVersion))
-
-		self.identifier = identifier
-		self.proposedVersion = proposedVersion
-		self.versionSpecifier = versionSpecifier
-	}
-}
-
-private func <(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
-	// Try higher versions first.
-	return lhs.proposedVersion > rhs.proposedVersion
-}
-
-private func ==(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
-	return lhs.identifier == rhs.identifier
-}
-
-extension DependencyNode: Hashable {
-	private var hashValue: Int {
-		return identifier.hashValue
-	}
-}
-
-extension DependencyNode: Printable {
-	private var description: String {
-		return "\(identifier) @ \(proposedVersion) (restricted to \(versionSpecifier))"
-	}
-}
-
+/// A poor person's Set.
 private typealias DependencyNodeSet = [DependencyNode: ()]
 
+/// Represents an acyclic dependency graph in which each project appears at most
+/// once.
+///
+/// Dependency graphs can exist in an incomplete state, but will never be
+/// inconsistent (i.e., include versions that are known to be invalid given the
+/// current graph).
 private struct DependencyGraph: Equatable {
+	/// A full list of all nodes included in the graph.
 	var allNodes: DependencyNodeSet = [:]
+
+	/// All nodes that have dependencies, associated with those lists of
+	/// dependencies themselves.
 	var edges: [DependencyNode: DependencyNodeSet] = [:]
+
+	/// The root nodes of the graph (i.e., those dependencies that are listed
+	/// by the top-level project).
 	var roots: DependencyNodeSet = [:]
 
 	init() {}
 
+	/// Attempts to add the given node to the graph, optionally as a dependency
+	/// of another.
+	///
+	/// If the given node refers to a project which already exists in the graph,
+	/// this method will attempt to unify the version specifiers of both.
+	///
+	/// Returns the node as actually inserted into the graph (which may be
+	/// different from the node passed in), or an error if this addition would
+	/// make the graph inconsistent.
 	mutating func addNode(var node: DependencyNode, dependencyOf: DependencyNode?) -> Result<DependencyNode> {
 		if let index = allNodes.indexForKey(node) {
 			let existingNode = allNodes[index].0
@@ -191,26 +194,6 @@ private struct DependencyGraph: Equatable {
 
 		return success(node)
 	}
-}
-
-private func mergeGraphs(lhs: DependencyGraph, rhs: DependencyGraph) -> Result<DependencyGraph> {
-	var result = success(lhs)
-
-	for (root, _) in rhs.roots {
-		result = result.flatMap { (var graph) in
-			return graph.addNode(root, dependencyOf: nil).map { _ in graph }
-		}
-	}
-
-	for (node, dependencies) in rhs.edges {
-		for (dependency, _) in dependencies {
-			result = result.flatMap { (var graph) in
-				return graph.addNode(dependency, dependencyOf: node).map { _ in graph }
-			}
-		}
-	}
-
-	return result
 }
 
 private func ==(lhs: DependencyGraph, rhs: DependencyGraph) -> Bool {
@@ -261,5 +244,81 @@ extension DependencyGraph: Printable {
 		}
 
 		return str
+	}
+}
+
+/// Attempts to unify two graphs.
+///
+/// Returns the new graph, or an error if the graphs specify inconsistent
+/// versions for one or more dependencies.
+private func mergeGraphs(lhs: DependencyGraph, rhs: DependencyGraph) -> Result<DependencyGraph> {
+	var result = success(lhs)
+
+	for (root, _) in rhs.roots {
+		result = result.flatMap { (var graph) in
+			return graph.addNode(root, dependencyOf: nil).map { _ in graph }
+		}
+	}
+
+	for (node, dependencies) in rhs.edges {
+		for (dependency, _) in dependencies {
+			result = result.flatMap { (var graph) in
+				return graph.addNode(dependency, dependencyOf: node).map { _ in graph }
+			}
+		}
+	}
+
+	return result
+}
+
+/// A node in, or being considered for, an acyclic dependency graph.
+private class DependencyNode: Comparable {
+	/// The dependency that this node refers to.
+	let identifier: DependencyIdentifier
+
+	/// The version of the dependency that this node represents.
+	///
+	/// This version is merely "proposed" because it depends on the final
+	/// resolution of the graph, as well as whether any "better" graphs exist.
+	let proposedVersion: SemanticVersion
+
+	/// The current requirements applied to this dependency.
+	///
+	/// This specifier may change as the graph is added to, and the requirements
+	/// become more stringent.
+	var versionSpecifier: VersionSpecifier
+
+	/// A DependencyVersion equivalent to this node.
+	var dependencyVersion: DependencyVersion<SemanticVersion> {
+		return DependencyVersion(identifier: identifier, version: proposedVersion)
+	}
+
+	init(identifier: DependencyIdentifier, proposedVersion: SemanticVersion, versionSpecifier: VersionSpecifier) {
+		precondition(versionSpecifier.satisfiedBy(proposedVersion))
+
+		self.identifier = identifier
+		self.proposedVersion = proposedVersion
+		self.versionSpecifier = versionSpecifier
+	}
+}
+
+private func <(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
+	// Try higher versions first.
+	return lhs.proposedVersion > rhs.proposedVersion
+}
+
+private func ==(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
+	return lhs.identifier == rhs.identifier
+}
+
+extension DependencyNode: Hashable {
+	private var hashValue: Int {
+		return identifier.hashValue
+	}
+}
+
+extension DependencyNode: Printable {
+	private var description: String {
+		return "\(identifier) @ \(proposedVersion) (restricted to \(versionSpecifier))"
 	}
 }
