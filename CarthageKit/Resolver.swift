@@ -285,26 +285,47 @@ private func graphPermutationsForDependenciesOfNode(node: DependencyNode, inputG
 	return dependencyCartfile(node.dependencyVersion)
 		.map(nodePermutationsForCartfile)
 		.merge(identity)
-		.map { dependencyNodes -> ColdSignal<DependencyGraph> in
-			var result = success(inputGraph)
+		.map { dependencyNodes in graphPermutationsForEachNode(dependencyNodes, inputGraph, dependencyOf: node) }
+		.merge(identity)
+}
 
-			for dependencyNode in dependencyNodes {
-				result = result.flatMap { (var graph) in
-					return graph.addNode(dependencyNode, dependencyOf: node)
-						.map { _ in graph }
-				}
-			}
+private func graphPermutationsForEachNode(nodes: [DependencyNode], inputGraph: DependencyGraph, #dependencyOf: DependencyNode?) -> ColdSignal<DependencyGraph> {
+	return ColdSignal.lazy {
+		var result = success(inputGraph)
 
-			switch result {
-			case let .Success(graph):
-				return .single(graph.unbox)
-
-			case .Failure:
-				// Discard impossible graphs.
-				return .empty()
+		for node in nodes {
+			result = result.flatMap { (var graph) in
+				return graph.addNode(node, dependencyOf: dependencyOf)
+					.map { _ in graph }
 			}
 		}
-		.merge(identity)
+
+		return ColdSignal.fromResult(result)
+			// Discard impossible graphs.
+			.catch { _ in .empty() }
+			.map { graph -> ColdSignal<DependencyGraph> in
+				// Each signal represents all evaluations of one subtree.
+				let graphSignals = nodes.map { node in graphPermutationsForDependenciesOfNode(node, graph) }
+
+				return permutations(graphSignals)
+					.map { graphs -> ColdSignal<DependencyGraph> in
+						let result = reduce(graphs, success(inputGraph)) { (result, graph) in
+							return result.flatMap { mergeGraphs($0, graph) }
+						}
+
+						switch result {
+						case let .Success(graph):
+							return .single(graph.unbox)
+
+						case .Failure:
+							// Discard impossible graphs.
+							return .empty()
+						}
+					}
+					.merge(identity)
+			}
+			.merge(identity)
+	}
 }
 
 /// Attempts to determine the latest valid version to use for each dependency
@@ -315,40 +336,7 @@ private func graphPermutationsForDependenciesOfNode(node: DependencyNode, inputG
 public func resolveDependencesInCartfile(cartfile: Cartfile) -> ColdSignal<DependencyVersion<SemanticVersion>> {
 	// Dependency graph permutations for each of the root nodes' versions.
 	let graphPermutations = nodePermutationsForCartfile(cartfile)
-		.map { rootNodes -> ColdSignal<DependencyGraph> in
-			var result = success(DependencyGraph())
-
-			for node in rootNodes {
-				result = result.flatMap { (var graph) in
-					return graph.addNode(node, dependencyOf: nil)
-						.map { _ in graph }
-				}
-			}
-
-			return ColdSignal.fromResult(result)
-				.map { graph -> ColdSignal<DependencyGraph> in
-					// Each signal represents an evaluated subtree for one root.
-					let graphSignals = rootNodes.map { node in graphPermutationsForDependenciesOfNode(node, graph) }
-
-					return permutations(graphSignals)
-						.map { graphs -> ColdSignal<DependencyGraph> in
-							let result = reduce(graphs, success(DependencyGraph())) { (result, graph) in
-								return result.flatMap { mergeGraphs($0, graph) }
-							}
-
-							switch result {
-							case let .Success(graph):
-								return .single(graph.unbox)
-
-							case .Failure:
-								// Discard impossible graphs.
-								return .empty()
-							}
-						}
-						.merge(identity)
-				}
-				.merge(identity)
-		}
+		.map { rootNodes in graphPermutationsForEachNode(rootNodes, DependencyGraph(), dependencyOf: nil) }
 		.merge(identity)
 
 	return graphPermutations
