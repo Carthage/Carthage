@@ -108,27 +108,18 @@ public func ==(lhs: DependencyIdentifier, rhs: DependencyIdentifier) -> Bool {
 	}
 }
 
-/// Represents a single dependency of a project.
-public struct DependencyVersion<V: VersionType>: Equatable {
-	/// The unique identifier for this dependency.
-	public let identifier: DependencyIdentifier
-
-	/// The version(s) that are required to satisfy this dependency.
-	public var version: V
-
-	/// Maps over the `version` in the receiver.
-	public func map<W: VersionType>(f: V -> W) -> DependencyVersion<W> {
-		return DependencyVersion<W>(repository: repository, version: f(version))
+extension DependencyIdentifier: Hashable {
+	public var hashValue: Int {
+		switch (self) {
+		case let .GitHub(repo):
+			return repo.hashValue
+		}
 	}
 }
 
-public func ==<V>(lhs: DependencyVersion<V>, rhs: DependencyVersion<V>) -> Bool {
-	return lhs.identifier == rhs.identifier && lhs.version == rhs.version
-}
-
-extension DependencyVersion: Scannable {
-	/// Attempts to parse a DependencyVersion specification.
-	public static func fromScanner(scanner: NSScanner) -> Result<DependencyVersion> {
+extension DependencyIdentifier: Scannable {
+	/// Attempts to parse a DependencyIdentifier.
+	public static func fromScanner(scanner: NSScanner) -> Result<DependencyIdentifier> {
 		if !scanner.scanString("github", intoString: nil) {
 			return failure()
 		}
@@ -143,18 +134,52 @@ extension DependencyVersion: Scannable {
 		}
 
 		if let repoNWO = repoNWO {
-			return Repository.fromNWO(repoNWO).flatMap { repo in
-				return V.fromScanner(scanner).map { specifier in self(repository: repo, version: specifier) }
-			}
+			return Repository.fromNWO(repoNWO).map { self.GitHub($0) }
 		} else {
 			return failure()
 		}
 	}
 }
 
+extension DependencyIdentifier: Printable {
+	public var description: String {
+		switch (self) {
+		case let .GitHub(repo):
+			return "github \"\(repo)\""
+		}
+	}
+}
+
+/// Represents a single dependency of a project.
+public struct DependencyVersion<V: VersionType>: Equatable {
+	/// The unique identifier for this dependency.
+	public let identifier: DependencyIdentifier
+
+	/// The version(s) that are required to satisfy this dependency.
+	public var version: V
+
+	/// Maps over the `version` in the receiver.
+	public func map<W: VersionType>(f: V -> W) -> DependencyVersion<W> {
+		return DependencyVersion<W>(identifier: identifier, version: f(version))
+	}
+}
+
+public func ==<V>(lhs: DependencyVersion<V>, rhs: DependencyVersion<V>) -> Bool {
+	return lhs.identifier == rhs.identifier && lhs.version == rhs.version
+}
+
+extension DependencyVersion: Scannable {
+	/// Attempts to parse a DependencyVersion specification.
+	public static func fromScanner(scanner: NSScanner) -> Result<DependencyVersion> {
+		return DependencyIdentifier.fromScanner(scanner).flatMap { identifier in
+			return V.fromScanner(scanner).map { specifier in self(identifier: identifier, version: specifier) }
+		}
+	}
+}
+
 extension DependencyVersion: Printable {
 	public var description: String {
-		return "\(repository) @ \(version)"
+		return "\(identifier) @ \(version)"
 	}
 }
 
