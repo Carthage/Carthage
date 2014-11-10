@@ -9,11 +9,20 @@
 import Foundation
 import LlamaKit
 
+/// Anything that can be parsed from an NSScanner.
+public protocol Scannable {
+	/// Attempts to parse an instance of the receiver from the given scanner.
+	///
+	/// If parsing fails, the scanner will be left at the first invalid
+	/// character (with any partially valid input already consumed).
+	class func fromScanner(scanner: NSScanner) -> Result<Self>
+}
+
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
-	public var dependencies: [Dependency]
+	public var dependencies: [Dependency<VersionSpecifier>]
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile> {
@@ -33,7 +42,7 @@ public struct Cartfile {
 				return
 			}
 
-			switch (Dependency.fromScanner(scanner)) {
+			switch (Dependency<VersionSpecifier>.fromScanner(scanner)) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep.unbox)
 
@@ -63,14 +72,54 @@ extension Cartfile: Printable {
 	}
 }
 
+/// Represents a parsed Cartfile.lock, which specifies which exact version was
+/// checked out for each dependency.
+public struct CartfileLock {
+	public var dependencies: [Dependency<PinnedVersion>]
+
+	public static func fromString(string: String) -> Result<CartfileLock> {
+		var cartfile = self(dependencies: [])
+		var result = success(())
+
+		let scanner = NSScanner(string: string)
+		scannerLoop: while !scanner.atEnd {
+			switch (Dependency<PinnedVersion>.fromScanner(scanner)) {
+			case let .Success(dep):
+				cartfile.dependencies.append(dep.unbox)
+
+			case let .Failure(error):
+				result = failure(error)
+				break scannerLoop
+			}
+		}
+
+		return result.map { _ in cartfile }
+	}
+}
+
+extension CartfileLock: Printable {
+	public var description: String {
+		return "\(dependencies)"
+	}
+}
+
+/// An abstract type representing a way to specify versions.
+public protocol VersionType: Scannable, Equatable {}
+
 /// Represents a single dependency of a project.
-public struct Dependency: Equatable {
+public struct Dependency<V: VersionType>: Equatable {
 	/// The GitHub repository in which this dependency lives.
 	public var repository: Repository
 
 	/// The version(s) that are required to satisfy this dependency.
-	public var version: VersionSpecifier
+	public var version: V
+}
 
+public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
+	return lhs.repository == rhs.repository && lhs.version == rhs.version
+}
+
+extension Dependency: Scannable {
 	/// Attempts to parse a Dependency specification.
 	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
 		if !scanner.scanString("github", intoString: nil) {
@@ -88,16 +137,12 @@ public struct Dependency: Equatable {
 
 		if let repoNWO = repoNWO {
 			return Repository.fromNWO(repoNWO).flatMap { repo in
-				return VersionSpecifier.fromScanner(scanner).map { specifier in self(repository: repo, version: specifier) }
+				return V.fromScanner(scanner).map { specifier in self(repository: repo, version: specifier) }
 			}
 		} else {
 			return failure()
 		}
 	}
-}
-
-public func ==(lhs: Dependency, rhs: Dependency) -> Bool {
-	return lhs.repository == rhs.repository && lhs.version == rhs.version
 }
 
 extension Dependency: Printable {
@@ -107,7 +152,7 @@ extension Dependency: Printable {
 }
 
 /// A semantic version.
-public struct Version: Comparable {
+public struct SemanticVersion: Comparable {
 	/// The major version.
 	///
 	/// Increments to this component represent incompatible API changes.
@@ -135,11 +180,18 @@ public struct Version: Comparable {
 		self.minor = minor
 		self.patch = patch
 	}
+}
 
+extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
-	static public func fromString(specifier: String) -> Result<Version> {
-		let components = split(specifier, { $0 == "." }, allowEmptySlices: false)
+	static public func fromScanner(scanner: NSScanner) -> Result<SemanticVersion> {
+		var version: NSString? = nil
+		if !scanner.scanCharactersFromSet(NSCharacterSet(charactersInString: "0123456789."), intoString: &version) || version == nil {
+			return failure()
+		}
+
+		let components = split(version! as String, { $0 == "." }, allowEmptySlices: false)
 		if components.count == 0 {
 			return failure()
 		}
@@ -156,17 +208,60 @@ public struct Version: Comparable {
 	}
 }
 
-public func <(lhs: Version, rhs: Version) -> Bool {
-    return lexicographicalCompare(lhs.components, rhs.components)
+extension SemanticVersion: VersionType {}
+
+public func <(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
+	return lexicographicalCompare(lhs.components, rhs.components)
 }
 
-public func ==(lhs: Version, rhs: Version) -> Bool {
+public func ==(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
 	return lhs.components == rhs.components
 }
 
-extension Version: Printable {
+extension SemanticVersion: Printable {
 	public var description: String {
 		return ".".join(components.map { $0.description })
+	}
+}
+
+/// An immutable version that a project can be pinned to.
+public struct PinnedVersion: Equatable {
+	/// The name of the tag to pin to.
+	public let tag: String
+
+	public init(tag: String) {
+		self.tag = tag
+	}
+}
+
+public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
+	return lhs.tag == rhs.tag
+}
+
+extension PinnedVersion: Scannable {
+	public static func fromScanner(scanner: NSScanner) -> Result<PinnedVersion> {
+		if !scanner.scanString("\"", intoString: nil) {
+			return failure()
+		}
+
+		var tag: NSString? = nil
+		if !scanner.scanUpToString("\"", intoString: &tag) || tag == nil {
+			return failure()
+		}
+
+		if !scanner.scanString("\"", intoString: nil) {
+			return failure()
+		}
+
+		return success(self(tag: tag!))
+	}
+}
+
+extension PinnedVersion: VersionType {}
+
+extension PinnedVersion: Printable {
+	public var description: String {
+		return tag
 	}
 }
 
@@ -174,36 +269,12 @@ extension Version: Printable {
 /// requirement.
 public enum VersionSpecifier: Equatable {
 	case Any
-	case AtLeast(Version)
-	case CompatibleWith(Version)
-	case Exactly(Version)
-
-	/// Attempts to parse a VersionSpecifier.
-	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
-		func scanVersion() -> Result<Version> {
-			var version: NSString? = nil
-			if scanner.scanCharactersFromSet(NSCharacterSet(charactersInString: "0123456789."), intoString: &version) {
-				if let version = version {
-					return Version.fromString(version)
-				}
-			}
-
-			return failure()
-		}
-
-		if scanner.scanString("==", intoString: nil) {
-			return scanVersion().map { Exactly($0) }
-		} else if scanner.scanString(">=", intoString: nil) {
-			return scanVersion().map { AtLeast($0) }
-		} else if scanner.scanString("~>", intoString: nil) {
-			return scanVersion().map { CompatibleWith($0) }
-		} else {
-			return success(Any)
-		}
-	}
+	case AtLeast(SemanticVersion)
+	case CompatibleWith(SemanticVersion)
+	case Exactly(SemanticVersion)
 
 	/// Determines whether the given version satisfies this version specifier.
-	public func satisfiedBy(version: Version) -> Bool {
+	public func satisfiedBy(version: SemanticVersion) -> Bool {
 		switch (self) {
 		case .Any:
 			return true
@@ -220,7 +291,24 @@ public enum VersionSpecifier: Equatable {
 	}
 }
 
-private func intersection(#atLeast: Version, #compatibleWith: Version) -> VersionSpecifier? {
+extension VersionSpecifier: Scannable {
+	/// Attempts to parse a VersionSpecifier.
+	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
+		if scanner.scanString("==", intoString: nil) {
+			return SemanticVersion.fromScanner(scanner).map { Exactly($0) }
+		} else if scanner.scanString(">=", intoString: nil) {
+			return SemanticVersion.fromScanner(scanner).map { AtLeast($0) }
+		} else if scanner.scanString("~>", intoString: nil) {
+			return SemanticVersion.fromScanner(scanner).map { CompatibleWith($0) }
+		} else {
+			return success(Any)
+		}
+	}
+}
+
+extension VersionSpecifier: VersionType {}
+
+private func intersection(#atLeast: SemanticVersion, #compatibleWith: SemanticVersion) -> VersionSpecifier? {
 	if atLeast.major > compatibleWith.major {
 		return nil
 	} else if atLeast.major < compatibleWith.major {
@@ -230,7 +318,7 @@ private func intersection(#atLeast: Version, #compatibleWith: Version) -> Versio
 	}
 }
 
-private func intersection(#atLeast: Version, #exactly: Version) -> VersionSpecifier? {
+private func intersection(#atLeast: SemanticVersion, #exactly: SemanticVersion) -> VersionSpecifier? {
 	if atLeast > exactly {
 		return nil
 	}
@@ -238,7 +326,7 @@ private func intersection(#atLeast: Version, #exactly: Version) -> VersionSpecif
 	return .Exactly(exactly)
 }
 
-private func intersection(#compatibleWith: Version, #exactly: Version) -> VersionSpecifier? {
+private func intersection(#compatibleWith: SemanticVersion, #exactly: SemanticVersion) -> VersionSpecifier? {
 	if exactly.major != compatibleWith.major || compatibleWith > exactly {
 		return nil
 	}
