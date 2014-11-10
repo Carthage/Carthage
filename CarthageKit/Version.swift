@@ -80,6 +80,12 @@ public func ==(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
 	return lhs.components == rhs.components
 }
 
+extension SemanticVersion: Hashable {
+	public var hashValue: Int {
+		return reduce(components, 0) { $0 ^ $1.hashValue }
+	}
+}
+
 extension SemanticVersion: Printable {
 	public var description: String {
 		return ".".join(components.map { $0.description })

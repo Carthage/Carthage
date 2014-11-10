@@ -10,7 +10,8 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-typealias DependencyVersionMap = [DependencyIdentifier: [SemanticVersion]]
+private typealias SemanticVersionSet = [SemanticVersion: ()]
+private typealias DependencyVersionMap = [DependencyIdentifier: SemanticVersionSet]
 
 /// Looks up all dependencies (and nested dependencies) from the given Cartfile,
 /// and what versions are available for each.
@@ -24,7 +25,7 @@ private func versionMapForCartfile(cartfile: Cartfile) -> ColdSignal<DependencyV
 						.map { cartfile in versionMapForCartfile(cartfile) }
 						.merge(identity)
 
-					return ColdSignal.single([ dependency.identifier: [ version ] ])
+					return ColdSignal.single([ dependency.identifier: [ version: () ] ])
 						.concat(recursiveVersionMap)
 				}
 				.merge(identity)
@@ -32,47 +33,31 @@ private func versionMapForCartfile(cartfile: Cartfile) -> ColdSignal<DependencyV
 		.merge(identity)
 		.reduce(initial: [:]) { (var left, right) -> DependencyVersionMap in
 			for (repo, rightVersions) in right {
-				if let leftVersions = left[repo] {
-					// FIXME: We should just use a set.
-					left[repo] = leftVersions + rightVersions.filter { !contains(leftVersions, $0) }
-				} else {
-					left[repo] = rightVersions
-				}
+				left[repo] = combineDictionaries(left[repo] ?? [:], rightVersions)
 			}
 
 			return left
 		}
 }
 
-/// Represents a node in a dependency resolution graph, which consists of
-/// _proposed_ versions for dependencies, and may therefore specify combinations
-/// that could eventually be disallowed (due to conflicting requirements).
-///
-/// Completed graphs should contain exactly one node for each dependency.
 private class DependencyNode: Equatable {
-	/// The dependency represented by this node.
 	let identifier: DependencyIdentifier
+	let proposedVersion: SemanticVersion
+	var versionSpecifier: VersionSpecifier
 
-	/// The version chosen for this node, which may or may not be a valid
-	/// selection.
-	let version: SemanticVersion
-
-	/// The dependencies that this node has.
-	var dependencies: [DependencyNode] = []
-
-	/// The DependencyVersion corresponding to this node.
 	var dependencyVersion: DependencyVersion<SemanticVersion> {
-		return DependencyVersion(identifier: identifier, version: version)
+		return DependencyVersion(identifier: identifier, version: proposedVersion)
 	}
 
-	init(identifier: DependencyIdentifier, version: SemanticVersion) {
+	init(identifier: DependencyIdentifier, proposedVersion: SemanticVersion, versionSpecifier: VersionSpecifier) {
 		self.identifier = identifier
-		self.version = version
+		self.proposedVersion = proposedVersion
+		self.versionSpecifier = versionSpecifier
 	}
 }
 
 private func ==(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
-	return lhs.identifier == rhs.identifier && lhs.version == rhs.version
+	return lhs.identifier == rhs.identifier
 }
 
 extension DependencyNode: Hashable {
@@ -83,16 +68,90 @@ extension DependencyNode: Hashable {
 
 extension DependencyNode: Printable {
 	private var description: String {
-		var str = "\(identifier) @ \(version)"
+		return "\(identifier) @ \(proposedVersion) (restricted to \(versionSpecifier))"
+	}
+}
 
-		if dependencies.count > 0 {
-			str += " ->"
+private typealias DependencyNodeSet = [DependencyNode: ()]
 
-			for dependency in dependencies {
-				(dependency.description as NSString).enumerateLinesUsingBlock { (line, stop) in
-					str += "\n\t\(line)"
+private struct DependencyGraph: Equatable {
+	var allNodes: DependencyNodeSet = [:]
+	var edges: [DependencyNode: DependencyNodeSet] = [:]
+	var roots: DependencyNodeSet = [:]
+
+	mutating func addNode(var node: DependencyNode, dependencyOf: DependencyNode?) -> Result<DependencyNode> {
+		if let index = allNodes.indexForKey(node) {
+			let existingNode = allNodes[index].0
+
+			if let newSpecifier = intersection(existingNode.versionSpecifier, node.versionSpecifier) {
+				if newSpecifier.satisfiedBy(existingNode.proposedVersion) {
+					node = existingNode
+				} else {
+					// TODO: Real error message.
+					return failure()
+				}
+			} else {
+				// TODO: Real error message.
+				return failure()
+			}
+		} else {
+			allNodes[node] = ()
+		}
+
+		if let dependencyOf = dependencyOf {
+			var nodeSet = edges[dependencyOf] ?? DependencyNodeSet()
+			nodeSet[node] = ()
+			edges[dependencyOf] = nodeSet
+		} else {
+			roots[node] = ()
+		}
+
+		return success(node)
+	}
+}
+
+private func ==(lhs: DependencyGraph, rhs: DependencyGraph) -> Bool {
+	if lhs.edges.count != rhs.edges.count || lhs.roots.count != rhs.roots.count {
+		return false
+	}
+
+	for (edge, leftDeps) in lhs.edges {
+		if let rightDeps = rhs.edges[edge] {
+			if leftDeps.count != rightDeps.count {
+				return false
+			}
+
+			for (dep, _) in leftDeps {
+				if rightDeps[dep] == nil {
+					return false
 				}
 			}
+		} else {
+			return false
+		}
+	}
+
+	for (root, _) in lhs.roots {
+		if rhs.roots[root] == nil {
+			return false
+		}
+	}
+
+	return true
+}
+
+extension DependencyGraph: Printable {
+	private var description: String {
+		var str = "Roots:"
+
+		for (node, _) in roots {
+			str += "\n\t\(node)"
+		}
+
+		str += "\n\nEdges:"
+
+		for (node, _) in edges {
+			str += "\n\t\(node)"
 		}
 
 		return str
@@ -171,49 +230,39 @@ private func permutations<T>(signals: [ColdSignal<T>]) -> ColdSignal<[T]> {
 	return combined
 }
 
-/// Creates one or more dependency graphs for the given dependency,
-/// incorporating all known versions of each recursive dependency.
-private func graphsForDependencyVersion(dependency: DependencyVersion<SemanticVersion>, versionMap: DependencyVersionMap) -> ColdSignal<DependencyNode> {
-	let templateNode = DependencyNode(identifier: dependency.identifier, version: dependency.version)
+private func nodePermutationsForCartfile(cartfile: Cartfile) -> ColdSignal<[DependencyNode]> {
+	let nodeSignals = cartfile.dependencies.map { dependency -> ColdSignal<DependencyNode> in
+		return versionsForDependency(dependency.identifier)
+			.map { DependencyNode(identifier: dependency.identifier, proposedVersion: $0, versionSpecifier: dependency.version) }
+	}
 
-	return dependencyCartfile(dependency)
-		.map { cartfile -> ColdSignal<DependencyNode> in
-			let nodeSignals = cartfile.dependencies.map { dependency -> ColdSignal<DependencyNode> in
-				let versions = versionMap[dependency.identifier]!
-
-				return ColdSignal.fromValues(versions)
-					.map { version -> ColdSignal<DependencyNode> in
-						let dependencyVersion = dependency.map { _ in version }
-						return graphsForDependencyVersion(dependencyVersion, versionMap)
-					}
-					.merge(identity)
-			}
-
-			return permutations(nodeSignals)
-				.map { dependencyNodes in
-					var parentNode = templateNode
-					parentNode.dependencies = dependencyNodes
-					return parentNode
-				}
-		}
-		.merge(identity)
+	return permutations(nodeSignals)
 }
 
-private func graphsForVersionMap(versionMap: DependencyVersionMap, roots: [DependencyIdentifier]) -> ColdSignal<DependencyNode> {
-	let dependencies = versionMap.keys
+private func graphPermutationsForDependenciesOfNode(node: DependencyNode, inputGraph: DependencyGraph) -> ColdSignal<DependencyGraph> {
+	return dependencyCartfile(node.dependencyVersion)
+		.map(nodePermutationsForCartfile)
+		.merge(identity)
+		.map { dependencyNodes -> ColdSignal<DependencyGraph> in
+			var result = success(inputGraph)
 
-	return ColdSignal { subscriber in
-		var remainingVersions = versionMap
+			for dependencyNode in dependencyNodes {
+				result = result.flatMap { (var graph) in
+					return graph.addNode(dependencyNode, dependencyOf: node)
+						.map { _ in graph }
+				}
+			}
 
-		while !subscriber.disposable.disposed && !remainingVersions.isEmpty {
-			var nodes: [DependencyIdentifier: DependencyNode] = [:]
+			switch result {
+			case let .Success(graph):
+				return .single(graph.unbox)
 
-			for root in roots {
+			case .Failure:
+				// Discard impossible graphs.
+				return .empty()
 			}
 		}
-
-		subscriber.put(.Completed)
-	}
+		.merge(identity)
 }
 
 /// Attempts to determine the latest valid version to use for each dependency
@@ -222,5 +271,23 @@ private func graphsForVersionMap(versionMap: DependencyVersionMap, roots: [Depen
 /// Sends each recursive dependency with its resolved version, in no particular
 /// order.
 public func resolveDependencesInCartfile(cartfile: Cartfile) -> ColdSignal<DependencyVersion<SemanticVersion>> {
-	return .error(RACError.Empty.error)
+	// Dependency graph permutations for each of the root nodes' versions.
+	let graphPermutations = nodePermutationsForCartfile(cartfile)
+		.map { rootNodes -> ColdSignal<DependencyGraph> in
+			var result = success(DependencyGraph())
+
+			for node in rootNodes {
+				result = result.flatMap { (var graph) in
+					return graph.addNode(node, dependencyOf: nil)
+						.map { _ in graph }
+				}
+			}
+
+			return .fromResult(result)
+		}
+		.merge(identity)
+
+	return graphPermutations.on(next: { graph in
+		println("*** POSSIBLE GRAPH ***\n\(graph)\n")
+	}).then(.empty())
 }
