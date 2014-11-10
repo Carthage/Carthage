@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import LlamaKit
 import ReactiveCocoa
 
 typealias DependencyVersionMap = [DependencyIdentifier: [SemanticVersion]]
@@ -96,6 +97,80 @@ extension DependencyNode: Printable {
 
 		return str
 	}
+}
+
+extension ColdSignal {
+	/// Sends each value that occurs on the receiver combined with each value
+	/// that occurs on the given signal (repeats included).
+	private func permuteWith<U>(signal: ColdSignal<U>) -> ColdSignal<(T, U)> {
+		return ColdSignal<(T, U)> { subscriber in
+			let queue = dispatch_queue_create("org.reactivecocoa.ReactiveCocoa.ColdSignal.recombineWith", DISPATCH_QUEUE_SERIAL)
+			var selfValues: [T] = []
+			var selfCompleted = false
+			var otherValues: [U] = []
+			var otherCompleted = false
+
+			let selfDisposable = self.start(next: { value in
+				dispatch_sync(queue) {
+					selfValues.append(value)
+
+					for otherValue in otherValues {
+						subscriber.put(.Next(Box((value, otherValue))))
+					}
+				}
+			}, error: { error in
+				subscriber.put(.Error(error))
+			}, completed: {
+				dispatch_sync(queue) {
+					selfCompleted = true
+					if otherCompleted {
+						subscriber.put(.Completed)
+					}
+				}
+			})
+
+			subscriber.disposable.addDisposable(selfDisposable)
+
+			let otherDisposable = signal.start(next: { value in
+				dispatch_sync(queue) {
+					otherValues.append(value)
+
+					for selfValue in selfValues {
+						subscriber.put(.Next(Box((selfValue, value))))
+					}
+				}
+			}, error: { error in
+				subscriber.put(.Error(error))
+			}, completed: {
+				dispatch_sync(queue) {
+					otherCompleted = true
+					if selfCompleted {
+						subscriber.put(.Completed)
+					}
+				}
+			})
+
+			subscriber.disposable.addDisposable(otherDisposable)
+		}
+	}
+}
+
+/// Sends all permutations of the values from the input signals, as they arrive.
+private func permutations<T>(signals: [ColdSignal<T>]) -> ColdSignal<[T]> {
+	var combined: ColdSignal<[T]>? = nil
+
+	for signal in signals {
+		if let oldCombined = combined {
+			combined = oldCombined.permuteWith(signal).map { (var array, value) in
+				array.append(value)
+				return array
+			}
+		} else {
+			combined = signal.map { [ $0 ] }
+		}
+	}
+
+	return combined ?? .empty()
 }
 
 private func graphsForDependencyVersion(dependency: DependencyVersion<SemanticVersion>, versionMap: DependencyVersionMap) -> ColdSignal<DependencyNode> {
