@@ -24,6 +24,12 @@ public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
 	public var dependencies: [Dependency<VersionSpecifier>]
 
+	/// Returns the location where Cartfile should exist within the given
+	/// directory.
+	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
+		return directoryURL.URLByAppendingPathComponent("Cartfile")
+	}
+
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile> {
 		var cartfile = self(dependencies: [])
@@ -77,6 +83,13 @@ extension Cartfile: Printable {
 public struct CartfileLock {
 	public var dependencies: [Dependency<PinnedVersion>]
 
+	/// Returns the location where Cartfile.lock should exist within the given
+	/// directory.
+	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
+		return directoryURL.URLByAppendingPathComponent("Cartfile.lock")
+	}
+
+	/// Attempts to parse Cartfile.lock information from a string.
 	public static func fromString(string: String) -> Result<CartfileLock> {
 		var cartfile = self(dependencies: [])
 		var result = success(())
@@ -113,6 +126,12 @@ public struct Dependency<V: VersionType>: Equatable {
 
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: V
+
+	/// The path at which this dependency will be checked out, relative to the
+	/// working directory of the main project.
+	public var relativePath: String {
+		return repository.name
+	}
 }
 
 public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {

@@ -1,0 +1,11 @@
+//
+// This file defines additional configuration options that are appropriate only
+// for a framework. This should be set at the target level for each project
+// configuration.
+//
+
+// Import base framework settings
+#include "../Base/Targets/Framework.xcconfig"
+
+// Import common settings specific to iOS
+#include "iOS-Base.xcconfig"

@@ -20,6 +20,7 @@ public struct BuildCommand: CommandType {
 			.map { options -> ColdSignal<()> in
 				let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
 				return buildInDirectory(directoryURL, withConfiguration: options.configuration, onlyScheme: options.scheme)
+					.then(.empty())
 			}
 			.merge(identity)
 			.wait()
