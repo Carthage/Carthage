@@ -10,36 +10,6 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-private typealias SemanticVersionSet = [SemanticVersion: ()]
-private typealias DependencyVersionMap = [DependencyIdentifier: SemanticVersionSet]
-
-/// Looks up all dependencies (and nested dependencies) from the given Cartfile,
-/// and what versions are available for each.
-private func versionMapForCartfile(cartfile: Cartfile) -> ColdSignal<DependencyVersionMap> {
-	return ColdSignal.fromValues(cartfile.dependencies)
-		.map { dependency -> ColdSignal<DependencyVersionMap> in
-			return versionsForDependency(dependency.identifier)
-				.map { version -> ColdSignal<DependencyVersionMap> in
-					let pinnedDependency = dependency.map { _ in version }
-					let recursiveVersionMap = dependencyCartfile(pinnedDependency)
-						.map { cartfile in versionMapForCartfile(cartfile) }
-						.merge(identity)
-
-					return ColdSignal.single([ dependency.identifier: [ version: () ] ])
-						.concat(recursiveVersionMap)
-				}
-				.merge(identity)
-		}
-		.merge(identity)
-		.reduce(initial: [:]) { (var left, right) -> DependencyVersionMap in
-			for (repo, rightVersions) in right {
-				left[repo] = combineDictionaries(left[repo] ?? [:], rightVersions)
-			}
-
-			return left
-		}
-}
-
 private class DependencyNode: Comparable {
 	let identifier: DependencyIdentifier
 	let proposedVersion: SemanticVersion
