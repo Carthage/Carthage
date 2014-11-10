@@ -351,7 +351,16 @@ public func resolveDependencesInCartfile(cartfile: Cartfile) -> ColdSignal<Depen
 		}
 		.merge(identity)
 
-	return graphPermutations.on(next: { graph in
-		println("*** POSSIBLE GRAPH ***\n\(graph)\n")
-	}).then(.empty())
+	return graphPermutations
+		.on(next: { graph in
+			println("*** POSSIBLE GRAPH ***\n\(graph)\n")
+		})
+		// TODO: Real error here.
+		.concat(.error(RACError.Empty.error))
+		.take(1)
+		.map { graph -> ColdSignal<DependencyVersion<SemanticVersion>> in
+			return ColdSignal.fromValues(graph.allNodes.keys)
+				.map { node in node.dependencyVersion }
+		}
+		.merge(identity)
 }
