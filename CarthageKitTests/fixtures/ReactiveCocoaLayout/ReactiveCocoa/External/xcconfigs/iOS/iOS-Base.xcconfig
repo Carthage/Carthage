@@ -1,0 +1,15 @@
+//
+// This file defines additional configuration options that are appropriate only
+// for iOS. This file is not standalone -- it is meant to be included into
+// a configuration file for a specific type of target.
+//
+
+// Xcode needs this to find archived headers if SKIP_INSTALL is set
+HEADER_SEARCH_PATHS = $(OBJROOT)/UninstalledProducts/include
+
+// Where to find embedded frameworks
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @loader_path/Frameworks
+
+// The base SDK to use (if no version is specified, the latest version is
+// assumed)
+SDKROOT = iphoneos

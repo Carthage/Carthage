@@ -20,6 +20,12 @@ public struct Cartfile {
 		self.dependencies = dependencies
 	}
 
+	/// Returns the location where Cartfile should exist within the given
+	/// directory.
+	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
+		return directoryURL.URLByAppendingPathComponent("Cartfile")
+	}
+
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile> {
 		var cartfile = self()
@@ -73,6 +79,13 @@ extension Cartfile: Printable {
 public struct CartfileLock {
 	public var dependencies: [DependencyVersion<PinnedVersion>]
 
+	/// Returns the location where Cartfile.lock should exist within the given
+	/// directory.
+	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
+		return directoryURL.URLByAppendingPathComponent("Cartfile.lock")
+	}
+
+	/// Attempts to parse Cartfile.lock information from a string.
 	public static func fromString(string: String) -> Result<CartfileLock> {
 		var cartfile = self(dependencies: [])
 		var result = success(())
@@ -103,6 +116,14 @@ extension CartfileLock: Printable {
 public enum DependencyIdentifier: Equatable {
 	/// A repository hosted on GitHub.com.
 	case GitHub(Repository)
+	
+	/// The unique, user-visible name for this dependency.
+	public var name: String {
+		switch (self) {
+		case let .GitHub(repo):
+			return repo.name
+		}
+	}
 }
 
 public func ==(lhs: DependencyIdentifier, rhs: DependencyIdentifier) -> Bool {
@@ -161,6 +182,12 @@ public struct DependencyVersion<V: VersionType>: Equatable {
 
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: V
+
+	/// The path at which this dependency will be checked out, relative to the
+	/// working directory of the main project.
+	public var relativePath: String {
+		return identifier.name
+	}
 
 	public init(identifier: DependencyIdentifier, version: V) {
 		self.identifier = identifier
