@@ -158,6 +158,11 @@ public struct DependencyVersion<V: VersionType>: Equatable {
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: V
 
+	public init(identifier: DependencyIdentifier, version: V) {
+		self.identifier = identifier
+		self.version = version
+	}
+
 	/// Maps over the `version` in the receiver.
 	public func map<W: VersionType>(f: V -> W) -> DependencyVersion<W> {
 		return DependencyVersion<W>(identifier: identifier, version: f(version))
@@ -185,7 +190,7 @@ extension DependencyVersion: Printable {
 
 /// Sends each version available to choose from for the given dependency, in no
 /// particular order.
-internal func versionsForDependency(dependency: DependencyVersion<VersionSpecifier>) -> ColdSignal<SemanticVersion> {
+internal func versionsForDependency(dependency: DependencyIdentifier) -> ColdSignal<SemanticVersion> {
 	// TODO: Look up available tags in the repository.
 	return .error(RACError.Empty.error)
 }
