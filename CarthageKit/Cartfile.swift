@@ -16,9 +16,13 @@ public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
 	public var dependencies: [DependencyVersion<VersionSpecifier>]
 
+	public init(dependencies: [DependencyVersion<VersionSpecifier>] = []) {
+		self.dependencies = dependencies
+	}
+
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile> {
-		var cartfile = self(dependencies: [])
+		var cartfile = self()
 		var result = success(())
 
 		let commentIndicator = "#"
@@ -186,21 +190,4 @@ extension DependencyVersion: Printable {
 	public var description: String {
 		return "\(identifier) @ \(version)"
 	}
-}
-
-/// Sends each version available to choose from for the given dependency, in no
-/// particular order.
-internal func versionsForDependency(dependency: DependencyIdentifier) -> ColdSignal<SemanticVersion> {
-	// TODO: Look up available tags in the repository.
-	return .error(RACError.Empty.error)
-}
-
-/// Looks up the Cartfile for the given dependency and version combo.
-///
-/// If the specified version of the dependency does not have a Cartfile, the
-/// returned signal will complete without sending any values.
-internal func dependencyCartfile(dependency: DependencyVersion<SemanticVersion>) -> ColdSignal<Cartfile> {
-	// TODO: Parse the contents of the Cartfile on the tag corresponding to
-	// the specific input version.
-	return .error(RACError.Empty.error)
 }
