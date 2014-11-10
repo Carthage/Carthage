@@ -50,6 +50,8 @@ private class DependencyNode: Equatable {
 	}
 
 	init(identifier: DependencyIdentifier, proposedVersion: SemanticVersion, versionSpecifier: VersionSpecifier) {
+		precondition(versionSpecifier.satisfiedBy(proposedVersion))
+
 		self.identifier = identifier
 		self.proposedVersion = proposedVersion
 		self.versionSpecifier = versionSpecifier
@@ -79,6 +81,8 @@ private struct DependencyGraph: Equatable {
 	var edges: [DependencyNode: DependencyNodeSet] = [:]
 	var roots: DependencyNodeSet = [:]
 
+	init() {}
+
 	mutating func addNode(var node: DependencyNode, dependencyOf: DependencyNode?) -> Result<DependencyNode> {
 		if let index = allNodes.indexForKey(node) {
 			let existingNode = allNodes[index].0
@@ -87,10 +91,12 @@ private struct DependencyGraph: Equatable {
 				if newSpecifier.satisfiedBy(existingNode.proposedVersion) {
 					node = existingNode
 				} else {
+					println("Couldn't reconcile \(existingNode) with \(node)")
 					// TODO: Real error message.
 					return failure()
 				}
 			} else {
+				println("Couldn't reconcile \(existingNode) with \(node)")
 				// TODO: Real error message.
 				return failure()
 			}
@@ -108,6 +114,26 @@ private struct DependencyGraph: Equatable {
 
 		return success(node)
 	}
+}
+
+private func mergeGraphs(lhs: DependencyGraph, rhs: DependencyGraph) -> Result<DependencyGraph> {
+	var result = success(lhs)
+
+	for (root, _) in rhs.roots {
+		result = result.flatMap { (var graph) in
+			return graph.addNode(root, dependencyOf: nil).map { _ in graph }
+		}
+	}
+
+	for (node, dependencies) in rhs.edges {
+		for (dependency, _) in dependencies {
+			result = result.flatMap { (var graph) in
+				return graph.addNode(dependency, dependencyOf: node).map { _ in graph }
+			}
+		}
+	}
+
+	return result
 }
 
 private func ==(lhs: DependencyGraph, rhs: DependencyGraph) -> Bool {
@@ -144,14 +170,17 @@ extension DependencyGraph: Printable {
 	private var description: String {
 		var str = "Roots:"
 
-		for (node, _) in roots {
-			str += "\n\t\(node)"
+		for (root, _) in roots {
+			str += "\n\t\(root)"
 		}
 
 		str += "\n\nEdges:"
 
-		for (node, _) in edges {
-			str += "\n\t\(node)"
+		for (node, dependencies) in edges {
+			str += "\n\t\(node.identifier) ->"
+			for (dep, _) in dependencies {
+				str += "\n\t\t\(dep)"
+			}
 		}
 
 		return str
@@ -232,7 +261,11 @@ private func permutations<T>(signals: [ColdSignal<T>]) -> ColdSignal<[T]> {
 
 private func nodePermutationsForCartfile(cartfile: Cartfile) -> ColdSignal<[DependencyNode]> {
 	let nodeSignals = cartfile.dependencies.map { dependency -> ColdSignal<DependencyNode> in
+		// TODO: If this signal is empty (because no version meets the
+		// specifier), we'll never have any permutations, so we need to generate
+		// an error.
 		return versionsForDependency(dependency.identifier)
+			.filter { dependency.version.satisfiedBy($0) }
 			.map { DependencyNode(identifier: dependency.identifier, proposedVersion: $0, versionSpecifier: dependency.version) }
 	}
 
@@ -283,7 +316,29 @@ public func resolveDependencesInCartfile(cartfile: Cartfile) -> ColdSignal<Depen
 				}
 			}
 
-			return .fromResult(result)
+			return ColdSignal.fromResult(result)
+				.map { graph -> ColdSignal<DependencyGraph> in
+					// Each signal represents an evaluated subtree for one root.
+					let graphSignals = rootNodes.map { node in graphPermutationsForDependenciesOfNode(node, graph) }
+
+					return permutations(graphSignals)
+						.map { graphs -> ColdSignal<DependencyGraph> in
+							let result = reduce(graphs, success(DependencyGraph())) { (result, graph) in
+								return result.flatMap { mergeGraphs($0, graph) }
+							}
+
+							switch result {
+							case let .Success(graph):
+								return .single(graph.unbox)
+
+							case .Failure:
+								// Discard impossible graphs.
+								return .empty()
+							}
+						}
+						.merge(identity)
+				}
+				.merge(identity)
 		}
 		.merge(identity)
 
