@@ -414,7 +414,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		var buildScheme = xcodebuildTask("build", copiedArgs)
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
-		return launchTask(buildScheme)
+		return launchTask(buildScheme, standardOutput: stdoutSink)
 			.then(buildSettings(copiedArgs))
 	}
 
