@@ -579,7 +579,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				buildOutput.observe(stdoutSink)
 
 				return productURLs.on(subscribed: {
-					println("Building scheme \"\(scheme)\" in \(project)")
+					println("*** Building scheme \"\(scheme)\" in \(project)")
 				})
 			}
 			.concat(identity)
