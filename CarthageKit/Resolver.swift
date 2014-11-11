@@ -56,14 +56,14 @@ public struct Resolver {
 	/// exist for each).
 	private func nodePermutationsForCartfile(cartfile: Cartfile) -> ColdSignal<[DependencyNode]> {
 		let nodeSignals = cartfile.dependencies.map { dependency -> ColdSignal<DependencyNode> in
-			return self.versionsForDependency(dependency.identifier)
+			return self.versionsForDependency(dependency.project)
 				.filter { dependency.version.satisfiedBy($0) }
-				.map { DependencyNode(identifier: dependency.identifier, proposedVersion: $0, versionSpecifier: dependency.version) }
+				.map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
 				.reduce(initial: []) { $0 + [ $1 ] }
 				.map(sorted)
 				.map { nodes -> ColdSignal<DependencyNode> in
 					if nodes.isEmpty {
-						return .error(CarthageError.RequiredVersionNotFound(dependency.identifier, dependency.version).error)
+						return .error(CarthageError.RequiredVersionNotFound(dependency.project, dependency.version).error)
 					} else {
 						return .fromValues(nodes)
 					}
@@ -179,10 +179,10 @@ private struct DependencyGraph: Equatable {
 					node = existingNode
 					node.versionSpecifier = newSpecifier
 				} else {
-					return failure(CarthageError.RequiredVersionNotFound(node.identifier, newSpecifier).error)
+					return failure(CarthageError.RequiredVersionNotFound(node.project, newSpecifier).error)
 				}
 			} else {
-				return failure(CarthageError.IncompatibleRequirements(node.identifier, existingNode.versionSpecifier, node.versionSpecifier).error)
+				return failure(CarthageError.IncompatibleRequirements(node.project, existingNode.versionSpecifier, node.versionSpecifier).error)
 			}
 		} else {
 			allNodes[node] = ()
@@ -241,7 +241,7 @@ extension DependencyGraph: Printable {
 		str += "\n\nEdges:"
 
 		for (node, dependencies) in edges {
-			str += "\n\t\(node.identifier) ->"
+			str += "\n\t\(node.project) ->"
 			for (dep, _) in dependencies {
 				str += "\n\t\t\(dep)"
 			}
@@ -277,8 +277,8 @@ private func mergeGraphs(lhs: DependencyGraph, rhs: DependencyGraph) -> Result<D
 
 /// A node in, or being considered for, an acyclic dependency graph.
 private class DependencyNode: Comparable {
-	/// The dependency that this node refers to.
-	let identifier: ProjectIdentifier
+	/// The project that this node refers to.
+	let project: ProjectIdentifier
 
 	/// The version of the dependency that this node represents.
 	///
@@ -294,13 +294,13 @@ private class DependencyNode: Comparable {
 
 	/// A Dependency equivalent to this node.
 	var dependencyVersion: Dependency<SemanticVersion> {
-		return Dependency(identifier: identifier, version: proposedVersion)
+		return Dependency(project: project, version: proposedVersion)
 	}
 
-	init(identifier: ProjectIdentifier, proposedVersion: SemanticVersion, versionSpecifier: VersionSpecifier) {
+	init(project: ProjectIdentifier, proposedVersion: SemanticVersion, versionSpecifier: VersionSpecifier) {
 		precondition(versionSpecifier.satisfiedBy(proposedVersion))
 
-		self.identifier = identifier
+		self.project = project
 		self.proposedVersion = proposedVersion
 		self.versionSpecifier = versionSpecifier
 	}
@@ -312,17 +312,17 @@ private func <(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
 }
 
 private func ==(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
-	return lhs.identifier == rhs.identifier
+	return lhs.project == rhs.project
 }
 
 extension DependencyNode: Hashable {
 	private var hashValue: Int {
-		return identifier.hashValue
+		return project.hashValue
 	}
 }
 
 extension DependencyNode: Printable {
 	private var description: String {
-		return "\(identifier) @ \(proposedVersion) (restricted to \(versionSpecifier))"
+		return "\(project) @ \(proposedVersion) (restricted to \(versionSpecifier))"
 	}
 }

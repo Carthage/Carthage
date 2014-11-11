@@ -183,38 +183,38 @@ extension ProjectIdentifier: Printable {
 
 /// Represents a single dependency of a project.
 public struct Dependency<V: VersionType>: Equatable {
-	/// The unique identifier for this dependency.
-	public let identifier: ProjectIdentifier
+	/// The project corresponding to this dependency.
+	public let project: ProjectIdentifier
 
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: V
 
-	public init(identifier: ProjectIdentifier, version: V) {
-		self.identifier = identifier
+	public init(project: ProjectIdentifier, version: V) {
+		self.project = project
 		self.version = version
 	}
 
 	/// Maps over the `version` in the receiver.
 	public func map<W: VersionType>(f: V -> W) -> Dependency<W> {
-		return Dependency<W>(identifier: identifier, version: f(version))
+		return Dependency<W>(project: project, version: f(version))
 	}
 }
 
 public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
-	return lhs.identifier == rhs.identifier && lhs.version == rhs.version
+	return lhs.project == rhs.project && lhs.version == rhs.version
 }
 
 extension Dependency: Scannable {
 	/// Attempts to parse a Dependency specification.
 	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
 		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
-			return V.fromScanner(scanner).map { specifier in self(identifier: identifier, version: specifier) }
+			return V.fromScanner(scanner).map { specifier in self(project: identifier, version: specifier) }
 		}
 	}
 }
 
 extension Dependency: Printable {
 	public var description: String {
-		return "\(identifier) @ \(version)"
+		return "\(project) @ \(version)"
 	}
 }
