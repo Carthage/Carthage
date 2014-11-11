@@ -14,6 +14,11 @@ public struct Repository: Equatable {
 	public let owner: String
 	public let name: String
 
+	public init(owner: String, name: String) {
+		self.owner = owner
+		self.name = name
+	}
+
 	/// Parses repository information out of a string of the form "owner/name".
 	public static func fromNWO(NWO: String) -> Result<Repository> {
 		let components = split(NWO, { $0 == "/" }, maxSplit: 1, allowEmptySlices: false)
@@ -27,6 +32,12 @@ public struct Repository: Equatable {
 
 public func ==(lhs: Repository, rhs: Repository) -> Bool {
 	return lhs.owner == rhs.owner && lhs.name == rhs.name
+}
+
+extension Repository: Hashable {
+	public var hashValue: Int {
+		return owner.hashValue ^ name.hashValue
+	}
 }
 
 extension Repository: Printable {

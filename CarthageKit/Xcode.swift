@@ -496,7 +496,7 @@ private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration
 		.map { lockFile in ColdSignal.fromValues(lockFile.dependencies) }
 		.merge(identity)
 		.map { dependency in
-			let dependencyURL = directoryURL.URLByAppendingPathComponent(dependency.relativePath)
+			let dependencyURL = directoryURL.URLByAppendingPathComponent(dependency.project.relativePath)
 
 			let (buildOutput, builtDependencies) = buildInDirectory(dependencyURL, withConfiguration: configuration)
 			let outputDisposable = buildOutput.observe(stdoutSink)

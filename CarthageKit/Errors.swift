@@ -26,6 +26,13 @@ public enum CarthageError {
 	/// `xcodebuild` did not return a build setting that we needed.
 	case MissingBuildSetting(String)
 
+	/// Incompatible version specifiers were given for a dependency.
+	case IncompatibleRequirements(ProjectIdentifier, VersionSpecifier, VersionSpecifier)
+
+	/// No existent version could be found to satisfy the version specifier for
+	/// a dependency.
+	case RequiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
+
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
 		switch (self) {
@@ -43,6 +50,16 @@ public enum CarthageError {
 		case let .MissingBuildSetting(setting):
 			return NSError(domain: CarthageErrorDomain, code: 3, userInfo: [
 				NSLocalizedDescriptionKey: "xcodebuild did not return a value for build setting \(setting)"
+			])
+
+		case let .IncompatibleRequirements(dependency, first, second):
+			return NSError(domain: CarthageErrorDomain, code: 4, userInfo: [
+				NSLocalizedDescriptionKey: "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(first)\n\t\(second)"
+			])
+
+		case let .RequiredVersionNotFound(dependency, specifier):
+			return NSError(domain: CarthageErrorDomain, code: 5, userInfo: [
+				NSLocalizedDescriptionKey: "No available version for \(dependency) satisfies the requirement: \(specifier)"
 			])
 		}
 	}
