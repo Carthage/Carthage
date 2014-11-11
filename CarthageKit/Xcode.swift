@@ -479,10 +479,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send each dependency successfully built.
-private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<DependencyVersion<PinnedVersion>>) {
+private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<Dependency<PinnedVersion>>) {
 	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 
-	let dependenciesSignal: ColdSignal<DependencyVersion<PinnedVersion>> = NSString.rac_readContentsOfURL(CartfileLock.URLInDirectory(directoryURL), usedEncoding: nil, scheduler: ImmediateScheduler().asRACScheduler())
+	let dependenciesSignal: ColdSignal<Dependency<PinnedVersion>> = NSString.rac_readContentsOfURL(CartfileLock.URLInDirectory(directoryURL), usedEncoding: nil, scheduler: ImmediateScheduler().asRACScheduler())
 		.asColdSignal()
 		.catch { error in
 			if error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError {

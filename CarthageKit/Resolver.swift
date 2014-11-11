@@ -13,7 +13,7 @@ import ReactiveCocoa
 /// Responsible for resolving acyclic dependency graphs.
 public struct Resolver {
 	private let versionsForDependency: ProjectIdentifier -> ColdSignal<SemanticVersion>
-	private let cartfileForDependency: DependencyVersion<SemanticVersion> -> ColdSignal<Cartfile>
+	private let cartfileForDependency: Dependency<SemanticVersion> -> ColdSignal<Cartfile>
 
 	/// Instantiates a dependency graph resolver with the given behaviors.
 	///
@@ -21,7 +21,7 @@ public struct Resolver {
 	///                         for a dependency.
 	/// cartfileForDependency - Loads the Cartfile for a specific version of a
 	///                         dependency.
-	public init(versionsForDependency: ProjectIdentifier -> ColdSignal<SemanticVersion>, cartfileForDependency: DependencyVersion<SemanticVersion> -> ColdSignal<Cartfile>) {
+	public init(versionsForDependency: ProjectIdentifier -> ColdSignal<SemanticVersion>, cartfileForDependency: Dependency<SemanticVersion> -> ColdSignal<Cartfile>) {
 		self.versionsForDependency = versionsForDependency
 		self.cartfileForDependency = cartfileForDependency
 	}
@@ -31,7 +31,7 @@ public struct Resolver {
 	///
 	/// Sends each recursive dependency with its resolved version, in no particular
 	/// order.
-	public func resolveDependencesInCartfile(cartfile: Cartfile) -> ColdSignal<DependencyVersion<SemanticVersion>> {
+	public func resolveDependencesInCartfile(cartfile: Cartfile) -> ColdSignal<Dependency<SemanticVersion>> {
 		return nodePermutationsForCartfile(cartfile)
 			.map { rootNodes in self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph()) }
 			.merge(identity)
@@ -39,7 +39,7 @@ public struct Resolver {
 			// a valid graph.
 			.dematerializeErrorsIfEmpty(identity)
 			.take(1)
-			.map { graph -> ColdSignal<DependencyVersion<SemanticVersion>> in
+			.map { graph -> ColdSignal<Dependency<SemanticVersion>> in
 				return ColdSignal.fromValues(graph.allNodes.keys)
 					.map { node in node.dependencyVersion }
 			}
@@ -292,9 +292,9 @@ private class DependencyNode: Comparable {
 	/// become more stringent.
 	var versionSpecifier: VersionSpecifier
 
-	/// A DependencyVersion equivalent to this node.
-	var dependencyVersion: DependencyVersion<SemanticVersion> {
-		return DependencyVersion(identifier: identifier, version: proposedVersion)
+	/// A Dependency equivalent to this node.
+	var dependencyVersion: Dependency<SemanticVersion> {
+		return Dependency(identifier: identifier, version: proposedVersion)
 	}
 
 	init(identifier: ProjectIdentifier, proposedVersion: SemanticVersion, versionSpecifier: VersionSpecifier) {

@@ -57,7 +57,7 @@ class ResolverSpec: QuickSpec {
 		])
 	}
 
-	private func cartfileForDependency(dependency: DependencyVersion<SemanticVersion>) -> ColdSignal<Cartfile> {
+	private func cartfileForDependency(dependency: Dependency<SemanticVersion>) -> ColdSignal<Cartfile> {
 		var cartfile = Cartfile()
 
 		if dependency.identifier == ProjectIdentifier.GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {

@@ -14,9 +14,9 @@ import ReactiveCocoa
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
-	public var dependencies: [DependencyVersion<VersionSpecifier>]
+	public var dependencies: [Dependency<VersionSpecifier>]
 
-	public init(dependencies: [DependencyVersion<VersionSpecifier>] = []) {
+	public init(dependencies: [Dependency<VersionSpecifier>] = []) {
 		self.dependencies = dependencies
 	}
 
@@ -44,7 +44,7 @@ public struct Cartfile {
 				return
 			}
 
-			switch (DependencyVersion<VersionSpecifier>.fromScanner(scanner)) {
+			switch (Dependency<VersionSpecifier>.fromScanner(scanner)) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep.unbox)
 
@@ -77,7 +77,7 @@ extension Cartfile: Printable {
 /// Represents a parsed Cartfile.lock, which specifies which exact version was
 /// checked out for each dependency.
 public struct CartfileLock {
-	public var dependencies: [DependencyVersion<PinnedVersion>]
+	public var dependencies: [Dependency<PinnedVersion>]
 
 	/// Returns the location where Cartfile.lock should exist within the given
 	/// directory.
@@ -92,7 +92,7 @@ public struct CartfileLock {
 
 		let scanner = NSScanner(string: string)
 		scannerLoop: while !scanner.atEnd {
-			switch (DependencyVersion<PinnedVersion>.fromScanner(scanner)) {
+			switch (Dependency<PinnedVersion>.fromScanner(scanner)) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep.unbox)
 
@@ -176,7 +176,7 @@ extension ProjectIdentifier: Printable {
 }
 
 /// Represents a single dependency of a project.
-public struct DependencyVersion<V: VersionType>: Equatable {
+public struct Dependency<V: VersionType>: Equatable {
 	/// The unique identifier for this dependency.
 	public let identifier: ProjectIdentifier
 
@@ -195,25 +195,25 @@ public struct DependencyVersion<V: VersionType>: Equatable {
 	}
 
 	/// Maps over the `version` in the receiver.
-	public func map<W: VersionType>(f: V -> W) -> DependencyVersion<W> {
-		return DependencyVersion<W>(identifier: identifier, version: f(version))
+	public func map<W: VersionType>(f: V -> W) -> Dependency<W> {
+		return Dependency<W>(identifier: identifier, version: f(version))
 	}
 }
 
-public func ==<V>(lhs: DependencyVersion<V>, rhs: DependencyVersion<V>) -> Bool {
+public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 	return lhs.identifier == rhs.identifier && lhs.version == rhs.version
 }
 
-extension DependencyVersion: Scannable {
-	/// Attempts to parse a DependencyVersion specification.
-	public static func fromScanner(scanner: NSScanner) -> Result<DependencyVersion> {
+extension Dependency: Scannable {
+	/// Attempts to parse a Dependency specification.
+	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
 		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
 			return V.fromScanner(scanner).map { specifier in self(identifier: identifier, version: specifier) }
 		}
 	}
 }
 
-extension DependencyVersion: Printable {
+extension Dependency: Printable {
 	public var description: String {
 		return "\(identifier) @ \(version)"
 	}
