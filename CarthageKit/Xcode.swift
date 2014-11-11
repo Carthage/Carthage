@@ -499,7 +499,7 @@ private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration
 			let dependencyURL = directoryURL.URLByAppendingPathComponent(dependency.relativePath)
 
 			let (buildOutput, builtDependencies) = buildInDirectory(dependencyURL, withConfiguration: configuration)
-			buildOutput.observe(stdoutSink)
+			let outputDisposable = buildOutput.observe(stdoutSink)
 
 			return builtDependencies
 				.map { productURL -> ColdSignal<()> in
@@ -527,6 +527,9 @@ private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration
 				}
 				.merge(identity)
 				.then(.single(dependency))
+				.on(disposed: {
+					outputDisposable.dispose()
+				})
 		}
 		.concat(identity)
 
@@ -566,7 +569,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 
 	let productURLs = ColdSignal<NSURL>.lazy {
 		let (buildOutput, builtDependencies) = buildDependenciesInDirectory(directoryURL, withConfiguration: configuration)
-		buildOutput.observe(stdoutSink)
+		let outputDisposable = buildOutput.observe(stdoutSink)
 
 		// TODO: There's some infinite loop in RAC when this is chained with the
 		// following signal. :(
@@ -576,13 +579,18 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			.combineLatestWith(locatorSignal.take(1))
 			.map { (scheme: String, project: ProjectLocator) in
 				let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
-				buildOutput.observe(stdoutSink)
+				let outputDisposable = buildOutput.observe(stdoutSink)
 
 				return productURLs.on(subscribed: {
 					println("*** Building scheme \"\(scheme)\" in \(project)")
+				}, disposed: {
+					outputDisposable.dispose()
 				})
 			}
 			.concat(identity)
+			.on(disposed: {
+				outputDisposable.dispose()
+			})
 	}
 
 	return (stdoutSignal, productURLs)

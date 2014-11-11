@@ -34,7 +34,7 @@ class XcodeSpec: QuickSpec {
 			var iOSURL: NSURL!
 			
 			let (outputSignal, productURLs) = buildInDirectory(directoryURL, withConfiguration: "Debug")
-			outputSignal.observe(stdoutSink)
+			let outputDisposable = outputSignal.observe(stdoutSink)
 
 			let result = productURLs
 				.on(next: { productURL in
@@ -45,6 +45,8 @@ class XcodeSpec: QuickSpec {
 					} else if contains(productURL.pathComponents as [String], "iOS") {
 						iOSURL = productURL
 					}
+				}, disposed: {
+					outputDisposable.dispose()
 				})
 				.wait()
 
