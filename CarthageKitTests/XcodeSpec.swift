@@ -18,6 +18,11 @@ class XcodeSpec: QuickSpec {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("ReactiveCocoaLayout", withExtension: nil)!
 		let workspaceURL = directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout.xcworkspace")
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderName)
+		
+		let stdoutHandle = NSFileHandle.fileHandleWithStandardOutput()
+		let stdoutSink = SinkOf<NSData> { data in
+			stdoutHandle.writeData(data)
+		}
 
 		beforeEach {
 			NSFileManager.defaultManager().removeItemAtURL(buildFolderURL, error: nil)
@@ -27,8 +32,11 @@ class XcodeSpec: QuickSpec {
 		it("should build for all platforms") {
 			var macURL: NSURL!
 			var iOSURL: NSURL!
+			
+			let (outputSignal, productURLs) = buildInDirectory(directoryURL, withConfiguration: "Debug")
+			outputSignal.observe(stdoutSink)
 
-			let result = buildInDirectory(directoryURL, withConfiguration: "Debug")
+			let result = productURLs
 				.on(next: { productURL in
 					expect(productURL.lastPathComponent).to(equal("ReactiveCocoaLayout.framework"))
 

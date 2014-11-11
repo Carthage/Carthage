@@ -77,6 +77,12 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 	}
 }
 
+extension ProjectLocator: Printable {
+	public var description: String {
+		return fileURL.lastPathComponent
+	}
+}
+
 /// Configures a build with Xcode.
 public struct BuildArguments {
 	/// The project to build.
@@ -393,15 +399,12 @@ public func platformForScheme(scheme: String, inProject project: ProjectLocator)
 
 /// Builds one scheme of the given project, for all supported platforms.
 ///
-/// Sends the URL to each product built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> ColdSignal<NSURL> {
+/// Returns a signal of all standard output from `xcodebuild`, and a signal
+/// which will send the URL to each product successfully built.
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
 	precondition(workingDirectoryURL.fileURL)
 
-	let handle = NSFileHandle.fileHandleWithStandardOutput()
-	let stdoutSink = SinkOf<NSData> { data in
-		handle.writeData(data)
-	}
-
+	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
 	let buildPlatform = { (platform: Platform) -> ColdSignal<Dictionary<String, String>> in
@@ -411,11 +414,16 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		var buildScheme = xcodebuildTask("build", copiedArgs)
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
-		return launchTask(buildScheme, standardOutput: stdoutSink)
+		return launchTask(buildScheme)
 			.then(buildSettings(copiedArgs))
 	}
 
-	return platformForScheme(scheme, inProject: project)
+	// TODO: This should probably return a signal-of-signals, so callers can
+	// track the starting and stopping of each scheme individually.
+	//
+	// This will also allow us to remove the event logging from
+	// buildInDirectory().
+	let buildSignal: ColdSignal<NSURL> = platformForScheme(scheme, inProject: project)
 		.map { (platform: Platform) in
 			switch platform {
 			case .iPhoneSimulator: fallthrough
@@ -463,12 +471,18 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			}
 		}
 		.merge(identity)
+
+	return (stdoutSignal, buildSignal)
 }
 
-/// Attempts to build each Carthage dependency in the given directory, sending
-/// each dependency that is built.
-private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> ColdSignal<Dependency<PinnedVersion>> {
-	return NSString.rac_readContentsOfURL(CartfileLock.URLInDirectory(directoryURL), usedEncoding: nil, scheduler: ImmediateScheduler().asRACScheduler())
+/// Attempts to build each Carthage dependency in the given directory.
+///
+/// Returns a signal of all standard output from `xcodebuild`, and a signal
+/// which will send each dependency successfully built.
+private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<Dependency<PinnedVersion>>) {
+	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
+
+	let dependenciesSignal: ColdSignal<Dependency<PinnedVersion>> = NSString.rac_readContentsOfURL(CartfileLock.URLInDirectory(directoryURL), usedEncoding: nil, scheduler: ImmediateScheduler().asRACScheduler())
 		.asColdSignal()
 		.catch { error in
 			if error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError {
@@ -484,8 +498,10 @@ private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration
 		.map { dependency in
 			let dependencyURL = directoryURL.URLByAppendingPathComponent(dependency.relativePath)
 
-			// TODO: Capture and redirect output?
-			return buildInDirectory(dependencyURL, withConfiguration: configuration)
+			let (buildOutput, builtDependencies) = buildInDirectory(dependencyURL, withConfiguration: configuration)
+			buildOutput.observe(stdoutSink)
+
+			return builtDependencies
 				.map { productURL -> ColdSignal<()> in
 					let pathComponents = productURL.pathComponents as [String]
 
@@ -513,14 +529,18 @@ private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration
 				.then(.single(dependency))
 		}
 		.concat(identity)
+
+	return (stdoutSignal, dependenciesSignal)
 }
 
 /// Builds the first project or workspace found within the given directory.
 ///
-/// Sends the URL to each product built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, onlyScheme: String? = nil) -> ColdSignal<NSURL> {
+/// Returns a signal of all standard output from `xcodebuild`, and a signal
+/// which will send the URL to each product successfully built.
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, onlyScheme: String? = nil) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
 	precondition(directoryURL.fileURL)
 
+	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
 
 	var schemesSignal: ColdSignal<String>!
@@ -544,19 +564,26 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			.merge(identity)
 	}
 
-	return ColdSignal.lazy {
+	let productURLs = ColdSignal<NSURL>.lazy {
+		let (buildOutput, builtDependencies) = buildDependenciesInDirectory(directoryURL, withConfiguration: configuration)
+		buildOutput.observe(stdoutSink)
+
 		// TODO: There's some infinite loop in RAC when this is chained with the
 		// following signal. :(
-		buildDependenciesInDirectory(directoryURL, withConfiguration: configuration).wait()
+		builtDependencies.wait()
 
 		return schemesSignal
 			.combineLatestWith(locatorSignal.take(1))
 			.map { (scheme: String, project: ProjectLocator) in
-				return buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
-					.on(subscribed: {
-						println("*** Building scheme \(scheme)…\n")
-					})
+				let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+				buildOutput.observe(stdoutSink)
+
+				return productURLs.on(subscribed: {
+					println("Building scheme \"\(scheme)\" in \(project)")
+				})
 			}
 			.concat(identity)
 	}
+
+	return (stdoutSignal, productURLs)
 }
