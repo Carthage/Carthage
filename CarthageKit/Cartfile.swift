@@ -112,17 +112,23 @@ extension CartfileLock: Printable {
 	}
 }
 
-/// Uniquely identifies a dependency that can be used in projects.
+/// Uniquely identifies a project that can be used as a dependency.
 public enum ProjectIdentifier: Equatable {
 	/// A repository hosted on GitHub.com.
 	case GitHub(Repository)
 
-	/// The unique, user-visible name for this dependency.
+	/// The unique, user-visible name for this project.
 	public var name: String {
 		switch (self) {
 		case let .GitHub(repo):
 			return repo.name
 		}
+	}
+
+	/// The path at which this project will be checked out, relative to the
+	/// working directory of the main project.
+	public var relativePath: String {
+		return name
 	}
 }
 
@@ -182,12 +188,6 @@ public struct Dependency<V: VersionType>: Equatable {
 
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: V
-
-	/// The path at which this dependency will be checked out, relative to the
-	/// working directory of the main project.
-	public var relativePath: String {
-		return identifier.name
-	}
 
 	public init(identifier: ProjectIdentifier, version: V) {
 		self.identifier = identifier
