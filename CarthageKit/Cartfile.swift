@@ -113,10 +113,10 @@ extension CartfileLock: Printable {
 }
 
 /// Uniquely identifies a dependency that can be used in projects.
-public enum DependencyIdentifier: Equatable {
+public enum ProjectIdentifier: Equatable {
 	/// A repository hosted on GitHub.com.
 	case GitHub(Repository)
-	
+
 	/// The unique, user-visible name for this dependency.
 	public var name: String {
 		switch (self) {
@@ -126,14 +126,14 @@ public enum DependencyIdentifier: Equatable {
 	}
 }
 
-public func ==(lhs: DependencyIdentifier, rhs: DependencyIdentifier) -> Bool {
+public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 	switch (lhs, rhs) {
 	case let (.GitHub(left), .GitHub(right)):
 		return left == right
 	}
 }
 
-extension DependencyIdentifier: Hashable {
+extension ProjectIdentifier: Hashable {
 	public var hashValue: Int {
 		switch (self) {
 		case let .GitHub(repo):
@@ -142,9 +142,9 @@ extension DependencyIdentifier: Hashable {
 	}
 }
 
-extension DependencyIdentifier: Scannable {
-	/// Attempts to parse a DependencyIdentifier.
-	public static func fromScanner(scanner: NSScanner) -> Result<DependencyIdentifier> {
+extension ProjectIdentifier: Scannable {
+	/// Attempts to parse a ProjectIdentifier.
+	public static func fromScanner(scanner: NSScanner) -> Result<ProjectIdentifier> {
 		if !scanner.scanString("github", intoString: nil) {
 			return failure()
 		}
@@ -166,7 +166,7 @@ extension DependencyIdentifier: Scannable {
 	}
 }
 
-extension DependencyIdentifier: Printable {
+extension ProjectIdentifier: Printable {
 	public var description: String {
 		switch (self) {
 		case let .GitHub(repo):
@@ -178,7 +178,7 @@ extension DependencyIdentifier: Printable {
 /// Represents a single dependency of a project.
 public struct DependencyVersion<V: VersionType>: Equatable {
 	/// The unique identifier for this dependency.
-	public let identifier: DependencyIdentifier
+	public let identifier: ProjectIdentifier
 
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: V
@@ -189,7 +189,7 @@ public struct DependencyVersion<V: VersionType>: Equatable {
 		return identifier.name
 	}
 
-	public init(identifier: DependencyIdentifier, version: V) {
+	public init(identifier: ProjectIdentifier, version: V) {
 		self.identifier = identifier
 		self.version = version
 	}
@@ -207,7 +207,7 @@ public func ==<V>(lhs: DependencyVersion<V>, rhs: DependencyVersion<V>) -> Bool 
 extension DependencyVersion: Scannable {
 	/// Attempts to parse a DependencyVersion specification.
 	public static func fromScanner(scanner: NSScanner) -> Result<DependencyVersion> {
-		return DependencyIdentifier.fromScanner(scanner).flatMap { identifier in
+		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
 			return V.fromScanner(scanner).map { specifier in self(identifier: identifier, version: specifier) }
 		}
 	}

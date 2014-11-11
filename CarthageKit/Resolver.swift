@@ -12,7 +12,7 @@ import ReactiveCocoa
 
 /// Responsible for resolving acyclic dependency graphs.
 public struct Resolver {
-	private let versionsForDependency: DependencyIdentifier -> ColdSignal<SemanticVersion>
+	private let versionsForDependency: ProjectIdentifier -> ColdSignal<SemanticVersion>
 	private let cartfileForDependency: DependencyVersion<SemanticVersion> -> ColdSignal<Cartfile>
 
 	/// Instantiates a dependency graph resolver with the given behaviors.
@@ -21,7 +21,7 @@ public struct Resolver {
 	///                         for a dependency.
 	/// cartfileForDependency - Loads the Cartfile for a specific version of a
 	///                         dependency.
-	public init(versionsForDependency: DependencyIdentifier -> ColdSignal<SemanticVersion>, cartfileForDependency: DependencyVersion<SemanticVersion> -> ColdSignal<Cartfile>) {
+	public init(versionsForDependency: ProjectIdentifier -> ColdSignal<SemanticVersion>, cartfileForDependency: DependencyVersion<SemanticVersion> -> ColdSignal<Cartfile>) {
 		self.versionsForDependency = versionsForDependency
 		self.cartfileForDependency = cartfileForDependency
 	}
@@ -278,7 +278,7 @@ private func mergeGraphs(lhs: DependencyGraph, rhs: DependencyGraph) -> Result<D
 /// A node in, or being considered for, an acyclic dependency graph.
 private class DependencyNode: Comparable {
 	/// The dependency that this node refers to.
-	let identifier: DependencyIdentifier
+	let identifier: ProjectIdentifier
 
 	/// The version of the dependency that this node represents.
 	///
@@ -297,7 +297,7 @@ private class DependencyNode: Comparable {
 		return DependencyVersion(identifier: identifier, version: proposedVersion)
 	}
 
-	init(identifier: DependencyIdentifier, proposedVersion: SemanticVersion, versionSpecifier: VersionSpecifier) {
+	init(identifier: ProjectIdentifier, proposedVersion: SemanticVersion, versionSpecifier: VersionSpecifier) {
 		precondition(versionSpecifier.satisfiedBy(proposedVersion))
 
 		self.identifier = identifier

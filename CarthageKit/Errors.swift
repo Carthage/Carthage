@@ -27,11 +27,11 @@ public enum CarthageError {
 	case MissingBuildSetting(String)
 
 	/// Incompatible version specifiers were given for a dependency.
-	case IncompatibleRequirements(DependencyIdentifier, VersionSpecifier, VersionSpecifier)
+	case IncompatibleRequirements(ProjectIdentifier, VersionSpecifier, VersionSpecifier)
 
 	/// No existent version could be found to satisfy the version specifier for
 	/// a dependency.
-	case RequiredVersionNotFound(DependencyIdentifier, VersionSpecifier)
+	case RequiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {

@@ -46,7 +46,7 @@ class ResolverSpec: QuickSpec {
 		}
 	}
 
-	private func versionsForDependency(dependency: DependencyIdentifier) -> ColdSignal<SemanticVersion> {
+	private func versionsForDependency(dependency: ProjectIdentifier) -> ColdSignal<SemanticVersion> {
 		return .fromValues([
 			SemanticVersion(major: 0, minor: 4, patch: 1),
 			SemanticVersion(major: 0, minor: 9, patch: 0),
@@ -60,9 +60,9 @@ class ResolverSpec: QuickSpec {
 	private func cartfileForDependency(dependency: DependencyVersion<SemanticVersion>) -> ColdSignal<Cartfile> {
 		var cartfile = Cartfile()
 
-		if dependency.identifier == DependencyIdentifier.GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {
+		if dependency.identifier == ProjectIdentifier.GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {
 			cartfile = Cartfile.fromString("github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0").value()!
-		} else if dependency.identifier == DependencyIdentifier.GitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")) {
+		} else if dependency.identifier == ProjectIdentifier.GitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")) {
 			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0").value()!
 		}
 
