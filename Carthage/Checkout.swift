@@ -27,6 +27,6 @@ public struct CheckoutCommand: CommandType {
 		if project == nil {
 			return failure(CarthageError.NoCartfile.error)
 		}
-		return project!.checkoutDependencies().wait()
+		return checkoutProjectDependencies(project!).wait()
 	}
 }
