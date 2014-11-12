@@ -94,6 +94,13 @@ extension RawArgument: Printable {
 	}
 }
 
+/// Constructs an `InvalidArgument` error that indicates a missing value for
+/// the argument by the given name.
+private func missingArgumentError(argumentName: String) -> NSError {
+	let description = "Missing argument for \(argumentName)"
+	return CarthageError.InvalidArgument(description: description).error
+}
+
 /// Destructively parses a list of command-line arguments.
 public final class ArgumentParser {
 	/// The remaining arguments to be extracted, in their raw form.
@@ -161,14 +168,13 @@ public final class ArgumentParser {
 					case let .Value(value):
 						foundValue = value
 						continue argumentLoop
-					
+
 					default:
 						break
 					}
 				}
 
-				let description = "Missing value for argument --\(key)"
-				return failure(CarthageError.InvalidArgument(description: description).error)
+				return failure(missingArgumentError("--\(key)"))
 			} else {
 				rawArguments.append(arg)
 			}
@@ -441,9 +447,7 @@ public func <|<T: ArgumentType>(mode: CommandMode, option: Option<T>) -> Result<
 		} else if let defaultValue = option.defaultValue {
 			return success(defaultValue)
 		} else {
-			// TODO: Flags vs. missing options will need to be differentiated
-			// once we support booleans.
-			return failure(option.invalidUsageError(""))
+			return failure(missingArgumentError(option.description))
 		}
 
 	case .Usage:
