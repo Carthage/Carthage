@@ -20,12 +20,6 @@ class GitSpec: CarthageSpec {
 			let exists = NSFileManager.defaultManager().fileExistsAtPath(testRepoURL.path!)
 			expect(exists).to(beTruthy())
 		}
-
-		it("repositoryRemote should send the remote URL") {
-			let remote = repositoryRemote(testRepoURL).first().value()
-			expect(remote).notTo(beNil())
-			expect(remote).to(equal("https://github.com/carthage/simple-repo.git"))
-		}
 	}
 }
 
