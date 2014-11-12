@@ -101,6 +101,29 @@ private func missingArgumentError(argumentName: String) -> NSError {
 	return CarthageError.InvalidArgument(description: description).error
 }
 
+/// Constructs an `InvalidArgument` error that describes how to use the
+/// option.
+private func informativeUsageError<T: ArgumentType>(option: Option<T>) -> NSError {
+	var description = ""
+
+	if option.defaultValue != nil {
+		description += "["
+	}
+
+	if let key = option.key {
+		description += "--\(key) "
+	}
+
+	description += "(\(T.name))"
+
+	if option.defaultValue != nil {
+		description += "]"
+	}
+
+	description += "\n\t\(option.usage)"
+	return CarthageError.InvalidArgument(description: description).error
+}
+
 /// Destructively parses a list of command-line arguments.
 public final class ArgumentParser {
 	/// The remaining arguments to be extracted, in their raw form.
@@ -244,7 +267,7 @@ public protocol OptionsType {
 }
 
 /// Describes an option that can be provided on the command line.
-public struct Option<T: ArgumentType> {
+public struct Option<T> {
 	/// The key that controls this option. For example, a key of `verbose` would
 	/// be used for a `--verbose` option.
 	///
@@ -266,29 +289,6 @@ public struct Option<T: ArgumentType> {
 		self.key = key
 		self.defaultValue = defaultValue
 		self.usage = usage
-	}
-
-	/// Constructs an `InvalidArgument` error that describes how to use the
-	/// option.
-	private func informativeUsageError() -> NSError {
-		var description = ""
-
-		if defaultValue != nil {
-			description += "["
-		}
-
-		if let key = key {
-			description += "--\(key) "
-		}
-
-		description += "(\(T.name))"
-
-		if defaultValue != nil {
-			description += "]"
-		}
-
-		description += "\n\t\(usage)"
-		return CarthageError.InvalidArgument(description: description).error
 	}
 
 	/// Constructs an `InvalidArgument` error that describes how the option was
@@ -451,6 +451,6 @@ public func <|<T: ArgumentType>(mode: CommandMode, option: Option<T>) -> Result<
 		}
 
 	case .Usage:
-		return failure(option.informativeUsageError())
+		return failure(informativeUsageError(option))
 	}
 }
