@@ -40,7 +40,7 @@ class OptionsTypeSpec: QuickSpec {
 
 			it("should override previous optional arguments") {
 				let value = tryArguments("required", "--intValue", "3", "--stringValue", "fuzzbuzz", "--intValue", "5", "--stringValue", "bazbuzz").value()
-				let expected = TestOptions(intValue: 5, stringValue: "bazbuz", optionalFilename: "filename", requiredName: "required", enabled: false)
+				let expected = TestOptions(intValue: 5, stringValue: "bazbuzz", optionalFilename: "filename", requiredName: "required", enabled: false)
 				expect(value).to(equal(expected))
 			}
 
