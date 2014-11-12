@@ -26,7 +26,8 @@ class CarthageSpec: QuickSpec {
 		let fileManager = NSFileManager.defaultManager()
 		var error: NSError?
 		let success = fileManager.createDirectoryAtPath(tempDirectoryPath!, withIntermediateDirectories: true, attributes: nil, error: &error)
-		verify(success, "Couldn't create the temp fixtures directory at \(tempDirectoryPath): \(error)")
+		expect(success) == true
+        expect(error) == nil
 	}
 
 	func setUpRepositoryFixtureIfNeeded(repositoryName: NSString) {
@@ -40,12 +41,14 @@ class CarthageSpec: QuickSpec {
 
 		var error: NSError?
 		var success = fileManager.createDirectoryAtPath(self.repositoryFixturesPath, withIntermediateDirectories: true, attributes: nil, error: &error)
-		verify(success, "Couldn't create the repository fixtures directory at \(self.repositoryFixturesPath): \(error)")
+		expect(success) == true
+        expect(error) == nil
 
 		let zippedRepositoriesPath = NSBundle(forClass: self.dynamicType).resourcePath!.stringByAppendingPathComponent("fixtures").stringByAppendingPathComponent("repositories.zip")
 
 		success = unzipFile(repositoryName, zipPath: zippedRepositoriesPath, destinationPath: self.repositoryFixturesPath)
-		verify(success, "Couldn't unzip fixture \"\(repositoryName)\" from \(zippedRepositoriesPath) to \(self.repositoryFixturesPath)")
+		expect(success) == true
+        expect(error) == nil
 	}
 
 	func pathForFixtureRepositoryNamed(repositoryName: String) -> NSURL {
