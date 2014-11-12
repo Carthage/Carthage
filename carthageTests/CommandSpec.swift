@@ -15,7 +15,7 @@ class OptionsTypeSpec: QuickSpec {
 	override func spec() {
 		describe("CommandMode.Arguments") {
 			func tryArguments(arguments: String...) -> Result<TestOptions> {
-				return TestOptions.evaluate(.Arguments(ArgumentGenerator(arguments)))
+				return TestOptions.evaluate(.Arguments(ArgumentParser(arguments)))
 			}
 
 			it("should fail if a required argument is missing") {
