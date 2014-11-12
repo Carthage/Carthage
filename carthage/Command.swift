@@ -124,6 +124,27 @@ private func informativeUsageError<T: ArgumentType>(option: Option<T>) -> NSErro
 	return CarthageError.InvalidArgument(description: description).error
 }
 
+/// Constructs an `InvalidArgument` error that describes how to use the
+/// given boolean option.
+private func informativeUsageError(option: Option<Bool>) -> NSError {
+	precondition(option.key != nil)
+
+	var description = ""
+
+	if option.defaultValue != nil {
+		description += "["
+	}
+
+	description += "--(no-)\(option.key!)"
+
+	if option.defaultValue != nil {
+		description += "]"
+	}
+
+	description += "\n\t\(option.usage)"
+	return CarthageError.InvalidArgument(description: description).error
+}
+
 /// Destructively parses a list of command-line arguments.
 public final class ArgumentParser {
 	/// The remaining arguments to be extracted, in their raw form.
@@ -151,24 +172,27 @@ public final class ArgumentParser {
 		}
 	}
 
-	/// Returns whether the given key was passed as a flag.
+	/// Returns whether the given key was enabled or disabled, or nil if it
+	/// was not given at all.
 	///
 	/// If the key is found, it is then removed from the list of arguments
 	/// remaining to be parsed.
-	private func consumeKey(key: String) -> Bool {
+	private func consumeBooleanKey(key: String) -> Bool? {
 		let oldArguments = rawArguments
 		rawArguments.removeAll()
 
-		var found = false
+		var result: Bool?
 		for arg in oldArguments {
 			if arg == .Key(key) {
-				found = true
+				result = true
+			} else if arg == .Key("no-\(key)") {
+				result = false
 			} else {
 				rawArguments.append(arg)
 			}
 		}
 
-		return found
+		return result
 	}
 
 	/// Returns the value associated with the given flag, or nil if the flag was
@@ -273,6 +297,8 @@ public struct Option<T> {
 	///
 	/// If this is nil, this option will not have a corresponding flag, and must
 	/// be specified as a plain value at the end of the argument list.
+	///
+	/// This must be non-nil for a boolean option.
 	public let key: String?
 
 	/// The default value for this option. This is the value that will be used
@@ -444,6 +470,28 @@ public func <|<T: ArgumentType>(mode: CommandMode, option: Option<T>) -> Result<
 			}
 
 			return failure(option.invalidUsageError(stringValue))
+		} else if let defaultValue = option.defaultValue {
+			return success(defaultValue)
+		} else {
+			return failure(missingArgumentError(option.description))
+		}
+
+	case .Usage:
+		return failure(informativeUsageError(option))
+	}
+}
+
+/// Evaluates the given boolean option in the given mode.
+///
+/// If parsing command line arguments, and no value was specified on the command
+/// line, the option's `defaultValue` is used.
+public func <|(mode: CommandMode, option: Option<Bool>) -> Result<Bool> {
+	precondition(option.key != nil)
+
+	switch mode {
+	case let .Arguments(arguments):
+		if let value = arguments.consumeBooleanKey(option.key!) {
+			return success(value)
 		} else if let defaultValue = option.defaultValue {
 			return success(defaultValue)
 		} else {
