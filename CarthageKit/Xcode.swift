@@ -550,11 +550,8 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 		let (buildOutput, builtDependencies) = buildDependenciesInDirectory(directoryURL, withConfiguration: configuration)
 		let outputDisposable = buildOutput.observe(stdoutSink)
 
-		// TODO: There's some infinite loop in RAC when this is chained with the
-		// following signal. :(
-		builtDependencies.wait()
-
-		return locatorSignal
+		return builtDependencies
+			.then(locatorSignal)
 			.filter { (project: ProjectLocator) in
 				switch project {
 				case .ProjectFile:
