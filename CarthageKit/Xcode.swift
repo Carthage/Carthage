@@ -540,17 +540,21 @@ private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, onlyScheme: String? = nil) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
 	precondition(directoryURL.fileURL)
 
 	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
 
-	var schemesSignal: ColdSignal<String>!
-	if let onlyScheme = onlyScheme {
-		schemesSignal = .single(onlyScheme)
-	} else {
-		schemesSignal = locatorSignal
+	let productURLs = ColdSignal<NSURL>.lazy {
+		let (buildOutput, builtDependencies) = buildDependenciesInDirectory(directoryURL, withConfiguration: configuration)
+		let outputDisposable = buildOutput.observe(stdoutSink)
+
+		// TODO: There's some infinite loop in RAC when this is chained with the
+		// following signal. :(
+		builtDependencies.wait()
+
+		return locatorSignal
 			.filter { (project: ProjectLocator) in
 				switch project {
 				case .ProjectFile:
@@ -565,17 +569,6 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				return schemesInProject(project)
 			}
 			.merge(identity)
-	}
-
-	let productURLs = ColdSignal<NSURL>.lazy {
-		let (buildOutput, builtDependencies) = buildDependenciesInDirectory(directoryURL, withConfiguration: configuration)
-		let outputDisposable = buildOutput.observe(stdoutSink)
-
-		// TODO: There's some infinite loop in RAC when this is chained with the
-		// following signal. :(
-		builtDependencies.wait()
-
-		return schemesSignal
 			.combineLatestWith(locatorSignal.take(1))
 			.map { (scheme: String, project: ProjectLocator) in
 				let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)

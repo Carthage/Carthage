@@ -22,7 +22,7 @@ public struct BuildCommand: CommandType {
 					.map { (stdoutHandle, temporaryURL) -> ColdSignal<()> in
 						let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
 
-						let (stdoutSignal, buildSignal) = buildInDirectory(directoryURL, withConfiguration: options.configuration, onlyScheme: options.scheme)
+						let (stdoutSignal, buildSignal) = buildInDirectory(directoryURL, withConfiguration: options.configuration)
 						let disposable = stdoutSignal.observe { data in
 							stdoutHandle.writeData(data)
 						}
@@ -67,15 +67,13 @@ public struct BuildCommand: CommandType {
 
 private struct BuildOptions: OptionsType {
 	let configuration: String
-	let scheme: String?
 
-	static func create(configuration: String)(scheme: String) -> BuildOptions {
-		return self(configuration: configuration, scheme: (scheme.isEmpty ? nil : scheme))
+	static func create(configuration: String) -> BuildOptions {
+		return self(configuration: configuration)
 	}
 
 	static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
-			<*> m <| Option(key: "scheme", defaultValue: "", usage: "a scheme to build (if not specified, all schemes will be built)")
 	}
 }
