@@ -220,7 +220,7 @@ public final class Project {
 				return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, dependency.version.tag)
 					.then(.empty())
 					.on(subscribed: {
-						println("*** Checking out \(dependency.project.name)")
+						println("*** Checking out \(dependency.project.name) at \(dependency.version)")
 					})
 			}
 			.merge(identity)
