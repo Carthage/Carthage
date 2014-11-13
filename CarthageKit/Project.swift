@@ -239,7 +239,7 @@ public func checkoutLockedDependencies(project: Project) -> ColdSignal<()> {
 				var environment = NSProcessInfo.processInfo().environment as [String: String]
 				environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
 
-				return launchGitTask([ "checkout", "--force", dependency.version.tag ], repositoryFileURL: repositoryURL, environment: environment)
+				return launchGitTask([ "checkout", "--quiet", "--force", dependency.version.tag ], repositoryFileURL: repositoryURL, environment: environment)
 					.then(.empty())
 			}
 		}
