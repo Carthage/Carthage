@@ -10,50 +10,61 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-let dependenciesURL = NSURL.fileURLWithPath("~/.carthage/dependencies".stringByExpandingTildeInPath, isDirectory:true)!
+/// The file URL to the directory in which cloned dependencies will be stored.
+public let CarthageDependencyRepositoriesURL = NSURL.fileURLWithPath("~/.carthage/dependencies".stringByExpandingTildeInPath, isDirectory:true)!
 
-/// Represents a Project that is using Carthage.
+/// Represents a project that is using Carthage.
 public struct Project {
-	/// Path to the root folder
-	public var path: String
+	/// File URL to the root directory of the project.
+	public let directoryURL: NSURL
 
-	/// The project's Cartfile
+	/// The project's Cartfile.
 	public let cartfile: Cartfile
 
-	public init?(path: String) {
-		self.path = path
+	/// Attempts to load project information from the given directory.
+	public static func loadFromDirectory(directoryURL: NSURL) -> Result<Project> {
+		precondition(directoryURL.fileURL)
 
-		let cartfileURL: NSURL? = NSURL.fileURLWithPath(self.path)?.URLByAppendingPathComponent("Cartfile")
-		if cartfileURL == nil { return nil }
+		let cartfileURL = directoryURL.URLByAppendingPathComponent("Cartfile", isDirectory: false)
 
-		let cartfileContents: NSString? = NSString(contentsOfURL: cartfileURL!, encoding: NSUTF8StringEncoding, error: nil)
-		if (cartfileContents == nil) { return nil }
-
-		let cartfile: Cartfile? = Cartfile.fromString(cartfileContents!).value()
-		if (cartfile == nil) { return nil }
-
-		self.cartfile = cartfile!
+		var error: NSError?
+		let cartfileContents = NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding, error: &error)
+		if let cartfileContents = cartfileContents {
+			return Cartfile.fromString(cartfileContents).map { cartfile in
+				return self(directoryURL: directoryURL, cartfile: cartfile)
+			}
+		} else {
+			return failure(error ?? CarthageError.NoCartfile.error)
+		}
 	}
 }
 
 /// Checks out the dependencies listed in the project's Cartfile.
 public func checkoutProjectDependencies(project: Project) -> ColdSignal<()> {
 	return ColdSignal.fromValues(project.cartfile.dependencies)
-		.map({ dependency -> ColdSignal<String> in
+		.map { dependency -> ColdSignal<String> in
 			switch dependency.project {
 			case let .GitHub(repository):
-				let destinationURL = dependenciesURL.URLByAppendingPathComponent("\(repository.name)")
+				let destinationURL = CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(repository.name)
 
-				return cloneRepository(repository.cloneURL.absoluteString!, destinationURL)
-					.catch( {error in
-						println(error.localizedDescription)
-						if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationURL).error.code {
-							return fetchRepository(destinationURL).catch { _ in return .empty() }
-						}
-						return ColdSignal.empty()
-					})
+				var isDirectory: ObjCBool = false
+				if NSFileManager.defaultManager().fileExistsAtPath(destinationURL.path!, isDirectory: &isDirectory) {
+					return fetchRepository(destinationURL)
+						.on(subscribed: {
+							println("*** Fetching \(dependency.project.name)")
+						}, terminated: {
+							println()
+						})
+				} else {
+					return cloneRepository(repository.cloneURLString, destinationURL)
+						.on(subscribed: {
+							println("*** Cloning \(dependency.project.name)")
+						}, terminated: {
+							println()
+						})
+				}
 			}
-		})
+		}
 		.concat(identity)
 		.then(.empty())
 }

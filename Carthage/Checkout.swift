@@ -13,20 +13,14 @@ import CarthageKit
 
 public struct CheckoutCommand: CommandType {
 	public let verb = "checkout"
-	public let function = "Checks out the dependencies listed in a project's Cartfile"
+	public let function = "Check out the dependencies listed in a project's Cartfile"
 
 	public func run(mode: CommandMode) -> Result<()> {
-		// Identify the project's working directory.
+		let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
 
-		let pwd: String? = NSFileManager.defaultManager().currentDirectoryPath
-		if pwd == nil || pwd!.isEmpty {
-			return failure()
-		}
-
-		let project = Project(path: pwd!)
-		if project == nil {
-			return failure(CarthageError.NoCartfile.error)
-		}
-		return checkoutProjectDependencies(project!).wait()
+		return Project.loadFromDirectory(directoryURL)
+			.flatMap { project in
+				return checkoutProjectDependencies(project).wait()
+			}
 	}
 }
