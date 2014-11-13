@@ -62,29 +62,33 @@ private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
 /// necessary.
 private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<SemanticVersion> {
 	let repositoryURL = repositoryFileURLForProject(project)
+	let fetchVersions = ColdSignal<()>.lazy {
+			var error: NSError?
+			if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+				return .error(error ?? RACError.Empty.error)
+			}
 
-	var updateSignal: ColdSignal<()>!
-	if NSFileManager.defaultManager().fileExistsAtPath(repositoryURL.path!) {
-		updateSignal = fetchRepository(repositoryURL)
-			.then(.empty())
-			.on(subscribed: {
-				println("*** Fetching \(project.name)")
-			}, terminated: {
-				println()
-			})
-	} else {
-		updateSignal = cloneProject(project, repositoryURL)
-			.then(.empty())
-			.on(subscribed: {
-				println("*** Cloning \(project.name)")
-			}, terminated: {
-				println()
-			})
-	}
-
-	let tagsSignal = launchGitTask([ "tag", "--sort=-version:refname" ], repositoryFileURL: repositoryURL)
-	return updateSignal
-		.then(tagsSignal)
+			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
+				// If we created the directory, we're now responsible for
+				// cloning it.
+				return cloneProject(project, repositoryURL)
+					.then(.empty())
+					.on(subscribed: {
+						println("*** Cloning \(project.name)")
+					}, terminated: {
+						println()
+					})
+			} else {
+				return fetchRepository(repositoryURL)
+					.then(.empty())
+					.on(subscribed: {
+						println("*** Fetching \(project.name)")
+					}, terminated: {
+						println()
+					})
+			}
+		}
+		.then(launchGitTask([ "tag" ], repositoryFileURL: repositoryURL))
 		.map { (allTags: String) -> ColdSignal<String> in
 			return ColdSignal { subscriber in
 				let string = allTags as NSString
