@@ -46,13 +46,16 @@ public struct SemanticVersion: Comparable {
 		self.patch = patch
 	}
 
+	/// The set of all characters present in valid semantic versions.
+	private static let versionCharacterSet = NSCharacterSet(charactersInString: "0123456789.")
+
 	/// Attempts to parse a semantic version from a PinnedVersion.
 	public static func fromPinnedVersion(pinnedVersion: PinnedVersion) -> Result<SemanticVersion> {
 		let scanner = NSScanner(string: pinnedVersion.tag)
 
 		// Skip leading characters, like "v" or "version-" or anything like
 		// that.
-		scanner.scanUpToCharactersFromSet(NSCharacterSet.decimalDigitCharacterSet(), intoString: nil)
+		scanner.scanUpToCharactersFromSet(versionCharacterSet, intoString: nil)
 
 		return self.fromScanner(scanner).flatMap { (var version) in
 			if scanner.atEnd {
@@ -72,7 +75,7 @@ extension SemanticVersion: Scannable {
 	/// form "a.b.c".
 	static public func fromScanner(scanner: NSScanner) -> Result<SemanticVersion> {
 		var version: NSString? = nil
-		if !scanner.scanCharactersFromSet(NSCharacterSet(charactersInString: "0123456789."), intoString: &version) || version == nil {
+		if !scanner.scanCharactersFromSet(versionCharacterSet, intoString: &version) || version == nil {
 			return failure()
 		}
 
