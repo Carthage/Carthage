@@ -34,7 +34,8 @@ case .Some(.Success):
 	exit(EXIT_SUCCESS)
 
 case let .Some(.Failure(error)):
-	fputs("\(error.localizedDescription)\n", stderr)
+	let errorDescription = (error.domain == CarthageErrorDomain ? error.localizedDescription : error.description)
+	fputs("\(errorDescription)\n", stderr)
 	exit(EXIT_FAILURE)
 
 case .None:
