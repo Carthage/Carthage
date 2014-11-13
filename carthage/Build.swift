@@ -27,7 +27,7 @@ public struct BuildCommand: CommandType {
 	public func buildWithOptions(options: BuildOptions) -> ColdSignal<()> {
 		return self.openTemporaryLogFile()
 			.map { (stdoutHandle, temporaryURL) -> ColdSignal<()> in
-				let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
+				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
 
 				let (stdoutSignal, buildSignal) = self.buildProjectInDirectoryURL(directoryURL, options: options)
 				let disposable = stdoutSignal.observe { data in
@@ -85,14 +85,16 @@ public struct BuildCommand: CommandType {
 public struct BuildOptions: OptionsType {
 	let configuration: String
 	let skipCurrent: Bool
+	let directoryPath: String
 
-	public static func create(configuration: String)(skipCurrent: Bool) -> BuildOptions {
-		return self(configuration: configuration, skipCurrent: skipCurrent)
+	public static func create(configuration: String)(skipCurrent: Bool)(directoryPath: String) -> BuildOptions {
+		return self(configuration: configuration, skipCurrent: skipCurrent, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "whether to skip the project in the current directory, and only build its dependencies")
+			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 }

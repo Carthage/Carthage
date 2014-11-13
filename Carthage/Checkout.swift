@@ -16,10 +16,10 @@ public struct CheckoutCommand: CommandType {
 	public let function = "Check out the dependencies listed in a project's Cartfile.lock"
 
 	public func run(mode: CommandMode) -> Result<()> {
-		let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
-
 		return ColdSignal.fromResult(CheckoutOptions.evaluate(mode))
 			.map { options -> ColdSignal<()> in
+				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
+
 				return ColdSignal.fromResult(Project.loadFromDirectory(directoryURL))
 					.map { $0.checkoutLockedDependencies() }
 					.merge(identity)
@@ -30,13 +30,14 @@ public struct CheckoutCommand: CommandType {
 }
 
 private struct CheckoutOptions: OptionsType {
-	static func evaluate(m: CommandMode) -> Result<CheckoutOptions> {
-		switch m {
-		case let .Usage:
-			return failure(CarthageError.InvalidArgument(description: "").error)
+	let directoryPath: String
 
-		default:
-			return success(self())
-		}
+	static func create(directoryPath: String) -> CheckoutOptions {
+		return self(directoryPath: directoryPath)
+	}
+
+	static func evaluate(m: CommandMode) -> Result<CheckoutOptions> {
+		return create
+			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 }
