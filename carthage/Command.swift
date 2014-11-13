@@ -102,19 +102,15 @@ private func missingArgumentError(argumentName: String) -> NSError {
 }
 
 /// Constructs an `InvalidArgument` error that describes how to use the
-/// option.
-private func informativeUsageError<T: ArgumentType>(option: Option<T>) -> NSError {
+/// option, with the given example of key (and value, if applicable) usage.
+private func informativeUsageError<T>(keyValueExample: String, option: Option<T>) -> NSError {
 	var description = ""
 
 	if option.defaultValue != nil {
 		description += "["
 	}
 
-	if let key = option.key {
-		description += "--\(key) "
-	}
-
-	description += "(\(T.name))"
+	description += keyValueExample
 
 	if option.defaultValue != nil {
 		description += "]"
@@ -125,24 +121,25 @@ private func informativeUsageError<T: ArgumentType>(option: Option<T>) -> NSErro
 }
 
 /// Constructs an `InvalidArgument` error that describes how to use the
+/// option.
+private func informativeUsageError<T: ArgumentType>(option: Option<T>) -> NSError {
+	var example = ""
+
+	if let key = option.key {
+		example += "--\(key) "
+	}
+
+	example += "(\(T.name))"
+
+	return informativeUsageError(example, option)
+}
+
+/// Constructs an `InvalidArgument` error that describes how to use the
 /// given boolean option.
 private func informativeUsageError(option: Option<Bool>) -> NSError {
 	precondition(option.key != nil)
 
-	var description = ""
-
-	if option.defaultValue != nil {
-		description += "["
-	}
-
-	description += "--(no-)\(option.key!)"
-
-	if option.defaultValue != nil {
-		description += "]"
-	}
-
-	description += "\n\t\(option.usage)"
-	return CarthageError.InvalidArgument(description: description).error
+	return informativeUsageError("--(no-)\(option.key!)", option)
 }
 
 /// Destructively parses a list of command-line arguments.
