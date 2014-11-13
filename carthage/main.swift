@@ -13,6 +13,7 @@ import ReactiveCocoa
 
 let commands = CommandRegistry()
 commands.register(BuildCommand())
+commands.register(CheckoutCommand())
 
 let helpCommand = HelpCommand(registry: commands)
 commands.register(helpCommand)
