@@ -49,7 +49,7 @@ public final class CommandRegistry {
 	///
 	/// Returns the results of the execution, or nil if no such command exists.
 	public func runCommand(verb: String, arguments: [String]) -> Result<()>? {
-		return self[verb]?.run(.Arguments(ArgumentGenerator(arguments)))
+		return self[verb]?.run(.Arguments(ArgumentParser(arguments)))
 	}
 
 	/// Returns the command matching the given verb, or nil if no such command
@@ -59,88 +59,196 @@ public final class CommandRegistry {
 	}
 }
 
-/// A generator that destructively enumerates a list of command-line arguments.
-public final class ArgumentGenerator: GeneratorType {
-	typealias Element = String
+/// Represents an argument passed on the command line.
+private enum RawArgument: Equatable {
+	/// A key corresponding to an option (e.g., `verbose` for `--verbose`).
+	case Key(String)
 
-	private var touchedKeyedArguments: [String: String] = [:]
+	/// A value, either associated with an option or passed as a positional
+	/// argument.
+	case Value(String)
+}
 
-	/// All flags associated with values that have not yet been read through
-	/// a subscripting call.
-	private var untouchedKeyedArguments: [String: String] = [:]
+private func ==(lhs: RawArgument, rhs: RawArgument) -> Bool {
+	switch (lhs, rhs) {
+	case let (.Key(left), .Key(right)):
+		return left == right
 
-	/// Arguments not associated with any flags.
-	private var positionalArguments: GeneratorOf<String>
+	case let (.Value(left), .Value(right)):
+		return left == right
+
+	default:
+		return false
+	}
+}
+
+extension RawArgument: Printable {
+	private var description: String {
+		switch self {
+		case let .Key(key):
+			return "--\(key)"
+
+		case let .Value(value):
+			return "\"\(value)\""
+		}
+	}
+}
+
+/// Constructs an `InvalidArgument` error that indicates a missing value for
+/// the argument by the given name.
+private func missingArgumentError(argumentName: String) -> NSError {
+	let description = "Missing argument for \(argumentName)"
+	return CarthageError.InvalidArgument(description: description).error
+}
+
+/// Constructs an `InvalidArgument` error that describes how to use the
+/// option, with the given example of key (and value, if applicable) usage.
+private func informativeUsageError<T>(keyValueExample: String, option: Option<T>) -> NSError {
+	var description = ""
+
+	if option.defaultValue != nil {
+		description += "["
+	}
+
+	description += keyValueExample
+
+	if option.defaultValue != nil {
+		description += "]"
+	}
+
+	description += "\n\t\(option.usage)"
+	return CarthageError.InvalidArgument(description: description).error
+}
+
+/// Constructs an `InvalidArgument` error that describes how to use the
+/// option.
+private func informativeUsageError<T: ArgumentType>(option: Option<T>) -> NSError {
+	var example = ""
+
+	if let key = option.key {
+		example += "--\(key) "
+	}
+
+	example += "(\(T.name))"
+
+	return informativeUsageError(example, option)
+}
+
+/// Constructs an `InvalidArgument` error that describes how to use the
+/// given boolean option.
+private func informativeUsageError(option: Option<Bool>) -> NSError {
+	precondition(option.key != nil)
+
+	return informativeUsageError("--(no-)\(option.key!)", option)
+}
+
+/// Destructively parses a list of command-line arguments.
+public final class ArgumentParser {
+	/// The remaining arguments to be extracted, in their raw form.
+	private var rawArguments: [RawArgument] = []
 
 	/// Initializes the generator from a simple list of command-line arguments.
 	public init(_ arguments: [String]) {
-		var currentKey: String? = nil
 		var permitKeys = true
 
-		var positional: [String] = []
-
 		for arg in arguments {
-			// If this is a keyed argument...
+			// Check whether this is a keyed argument.
 			if permitKeys && arg.hasPrefix("--") {
-				// Terminate any open keyed argument without a value.
-				if let key = currentKey {
-					untouchedKeyedArguments[key] = ""
-					currentKey = nil
-				}
-
 				// Check for -- by itself, which should terminate the keyed
 				// argument list.
 				let keyStartIndex = arg.startIndex.successor().successor()
 				if keyStartIndex == arg.endIndex {
 					permitKeys = false
 				} else {
-					currentKey = arg.substringFromIndex(keyStartIndex)
+					let key = arg.substringFromIndex(keyStartIndex)
+					rawArguments.append(.Key(key))
+				}
+			} else {
+				rawArguments.append(.Value(arg))
+			}
+		}
+	}
+
+	/// Returns whether the given key was enabled or disabled, or nil if it
+	/// was not given at all.
+	///
+	/// If the key is found, it is then removed from the list of arguments
+	/// remaining to be parsed.
+	private func consumeBooleanKey(key: String) -> Bool? {
+		let oldArguments = rawArguments
+		rawArguments.removeAll()
+
+		var result: Bool?
+		for arg in oldArguments {
+			if arg == .Key(key) {
+				result = true
+			} else if arg == .Key("no-\(key)") {
+				result = false
+			} else {
+				rawArguments.append(arg)
+			}
+		}
+
+		return result
+	}
+
+	/// Returns the value associated with the given flag, or nil if the flag was
+	/// not specified. If the key is presented, but no value was given, an error
+	/// is returned.
+	///
+	/// If a value is found, the key and the value are both removed from the
+	/// list of arguments remaining to be parsed.
+	private func consumeValueForKey(key: String) -> Result<String?> {
+		let oldArguments = rawArguments
+		rawArguments.removeAll()
+
+		var foundValue: String?
+		argumentLoop: for var index = 0; index < oldArguments.count; index++ {
+			let arg = oldArguments[index]
+
+			if arg == .Key(key) {
+				if ++index < oldArguments.count {
+					switch oldArguments[index] {
+					case let .Value(value):
+						foundValue = value
+						continue argumentLoop
+
+					default:
+						break
+					}
 				}
 
-				continue
-			}
-
-			// Otherwise, this is just a plain string. Terminate any open keyed
-			// argument, or else consider it a positional argument.
-			if let key = currentKey {
-				untouchedKeyedArguments[key] = arg
-				currentKey = nil
+				return failure(missingArgumentError("--\(key)"))
 			} else {
-				positional.append(arg)
+				rawArguments.append(arg)
 			}
 		}
 
-		// If the last argument seen was an option key, make sure to include it.
-		if let key = currentKey {
-			untouchedKeyedArguments[key] = ""
-		}
-
-		positionalArguments = GeneratorOf(positional.generate())
+		return success(foundValue)
 	}
 
-	/// Yields the next argument _not_ associated with a flag, or nil if all
-	/// unassociated arguments have been enumerated already.
-	public func next() -> String? {
-		return positionalArguments.next()
-	}
+	/// Returns the next positional argument that hasn't yet been returned, or
+	/// nil if there are no more positional arguments.
+	private func consumePositionalArgument() -> String? {
+		for var index = 0; index < rawArguments.count; index++ {
+			switch rawArguments[index] {
+			case let .Value(value):
+				rawArguments.removeAtIndex(index)
+				return value
 
-	/// Returns the value associated with the given flag, or nil if it was not
-	/// provided.
-	///
-	/// Flags provided without a value will result in an empty string.
-	public subscript(key: String) -> String? {
-		if let value = untouchedKeyedArguments.removeValueForKey(key) {
-			touchedKeyedArguments[key] = value
+			default:
+				break
+			}
 		}
 
-		return touchedKeyedArguments[key]
+		return nil
 	}
 }
 
 /// Describes the "mode" in which a command should run.
 public enum CommandMode {
 	/// Options should be parsed from the given command-line arguments.
-	case Arguments(ArgumentGenerator)
+	case Arguments(ArgumentParser)
 
 	/// Each option should record its usage information in an error, for
 	/// presentation to the user.
@@ -180,12 +288,14 @@ public protocol OptionsType {
 }
 
 /// Describes an option that can be provided on the command line.
-public struct Option<T: ArgumentType> {
+public struct Option<T> {
 	/// The key that controls this option. For example, a key of `verbose` would
 	/// be used for a `--verbose` option.
 	///
 	/// If this is nil, this option will not have a corresponding flag, and must
 	/// be specified as a plain value at the end of the argument list.
+	///
+	/// This must be non-nil for a boolean option.
 	public let key: String?
 
 	/// The default value for this option. This is the value that will be used
@@ -204,40 +314,11 @@ public struct Option<T: ArgumentType> {
 		self.usage = usage
 	}
 
-	/// Constructs an `InvalidArgument` error that describes how to use the
-	/// option.
-	private func informativeUsageError() -> NSError {
-		var description = ""
-
-		if defaultValue != nil {
-			description += "["
-		}
-
-		if let key = key {
-			description += "--\(key) "
-		}
-
-		description += "(\(T.name))"
-
-		if defaultValue != nil {
-			description += "]"
-		}
-
-		description += "\n\t\(usage)"
-		return CarthageError.InvalidArgument(description: description).error
-	}
-
 	/// Constructs an `InvalidArgument` error that describes how the option was
 	/// used incorrectly. `value` should be the invalid value given by the user.
 	private func invalidUsageError(value: String) -> NSError {
-		var description: String?
-		if value == "" {
-			description = "Missing argument for '\(self)'"
-		} else {
-			description = "Invalid value for '\(self)': \(value)"
-		}
-
-		return CarthageError.InvalidArgument(description: description!).error
+		let description = "Invalid value for '\(self)': \(value)"
+		return CarthageError.InvalidArgument(description: description).error
 	}
 }
 
@@ -369,28 +450,52 @@ public func <|<T: ArgumentType>(mode: CommandMode, option: Option<T>) -> Result<
 	case let .Arguments(arguments):
 		var stringValue: String?
 		if let key = option.key {
-			stringValue = arguments[key]
+			switch arguments.consumeValueForKey(key) {
+			case let .Success(value):
+				stringValue = value.unbox
+
+			case let .Failure(error):
+				return failure(error)
+			}
 		} else {
-			stringValue = arguments.next()
+			stringValue = arguments.consumePositionalArgument()
 		}
 
 		if let stringValue = stringValue {
-			if stringValue != "" {
-				if let value = T.fromString(stringValue) {
-					return success(value)
-				}
+			if let value = T.fromString(stringValue) {
+				return success(value)
 			}
 
 			return failure(option.invalidUsageError(stringValue))
 		} else if let defaultValue = option.defaultValue {
 			return success(defaultValue)
 		} else {
-			// TODO: Flags vs. missing options will need to be differentiated
-			// once we support booleans.
-			return failure(option.invalidUsageError(""))
+			return failure(missingArgumentError(option.description))
 		}
 
 	case .Usage:
-		return failure(option.informativeUsageError())
+		return failure(informativeUsageError(option))
+	}
+}
+
+/// Evaluates the given boolean option in the given mode.
+///
+/// If parsing command line arguments, and no value was specified on the command
+/// line, the option's `defaultValue` is used.
+public func <|(mode: CommandMode, option: Option<Bool>) -> Result<Bool> {
+	precondition(option.key != nil)
+
+	switch mode {
+	case let .Arguments(arguments):
+		if let value = arguments.consumeBooleanKey(option.key!) {
+			return success(value)
+		} else if let defaultValue = option.defaultValue {
+			return success(defaultValue)
+		} else {
+			return failure(missingArgumentError(option.description))
+		}
+
+	case .Usage:
+		return failure(informativeUsageError(option))
 	}
 }

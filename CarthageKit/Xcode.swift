@@ -479,7 +479,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send each dependency successfully built.
-private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<Dependency<PinnedVersion>>) {
+public func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<Dependency<PinnedVersion>>) {
 	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 
 	let dependenciesSignal: ColdSignal<Dependency<PinnedVersion>> = NSString.rac_readContentsOfURL(CartfileLock.URLInDirectory(directoryURL), usedEncoding: nil, scheduler: ImmediateScheduler().asRACScheduler())
@@ -502,7 +502,7 @@ private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration
 			let outputDisposable = buildOutput.observe(stdoutSink)
 
 			return builtDependencies
-				.map { productURL -> ColdSignal<()> in
+				.map { productURL -> ColdSignal<NSURL> in
 					let pathComponents = productURL.pathComponents as [String]
 
 					// The extracted components should be "PLATFORM/PRODUCT".
@@ -510,20 +510,20 @@ private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration
 
 					// Move the built dependency up to the top level.
 					let destinationURL = reduce(relativeComponents, directoryURL) { $0.URLByAppendingPathComponent($1) }
-					return ColdSignal.lazy {
-						var error: NSError?
-						if !NSFileManager.defaultManager().createDirectoryAtURL(destinationURL.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error) {
-							return .error(error ?? RACError.Empty.error)
-						}
 
-						// rename() is atomic and can automatically remove the
-						// destination, unlike NSFileManager.
-						if rename(productURL.path!, destinationURL.path!) == 0 {
-							return .empty()
-						} else {
-							return .error(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
+					return ColdSignal.single(destinationURL)
+						.try { (destinationURL, error) in
+							if NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: error) {
+								// If we removed something at the destination
+								// URL, its parent folder must exist.
+								return true
+							} else {
+								return NSFileManager.defaultManager().createDirectoryAtURL(destinationURL.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: error)
+							}
 						}
-					}
+						.try { (destinationURL, error) in
+							return NSFileManager.defaultManager().moveItemAtURL(productURL, toURL: destinationURL, error: error)
+						}
 				}
 				.merge(identity)
 				.then(.single(dependency))
@@ -540,17 +540,21 @@ private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, onlyScheme: String? = nil) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
 	precondition(directoryURL.fileURL)
 
 	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
 
-	var schemesSignal: ColdSignal<String>!
-	if let onlyScheme = onlyScheme {
-		schemesSignal = .single(onlyScheme)
-	} else {
-		schemesSignal = locatorSignal
+	let productURLs = ColdSignal<NSURL>.lazy {
+		let (buildOutput, builtDependencies) = buildDependenciesInDirectory(directoryURL, withConfiguration: configuration)
+		let outputDisposable = buildOutput.observe(stdoutSink)
+
+		// TODO: There's some infinite loop in RAC when this is chained with the
+		// following signal. :(
+		builtDependencies.wait()
+
+		return locatorSignal
 			.filter { (project: ProjectLocator) in
 				switch project {
 				case .ProjectFile:
@@ -565,17 +569,6 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				return schemesInProject(project)
 			}
 			.merge(identity)
-	}
-
-	let productURLs = ColdSignal<NSURL>.lazy {
-		let (buildOutput, builtDependencies) = buildDependenciesInDirectory(directoryURL, withConfiguration: configuration)
-		let outputDisposable = buildOutput.observe(stdoutSink)
-
-		// TODO: There's some infinite loop in RAC when this is chained with the
-		// following signal. :(
-		builtDependencies.wait()
-
-		return schemesSignal
 			.combineLatestWith(locatorSignal.take(1))
 			.map { (scheme: String, project: ProjectLocator) in
 				let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
