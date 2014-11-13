@@ -36,20 +36,24 @@ public struct Project {
 	}
 }
 
-/// Checks out the dependencies listed in the project's Cartfile
+/// Checks out the dependencies listed in the project's Cartfile.
 public func checkoutProjectDependencies(project: Project) -> ColdSignal<()> {
-    return ColdSignal.fromValues(project.cartfile.dependencies)
-        .map({ dependency -> ColdSignal<String> in
-            let destinationURL = dependenciesURL.URLByAppendingPathComponent("\(dependency.repository.name)")
-            return cloneRepository(dependency.repository.cloneURL.absoluteString!, destinationURL)
-                .catch( {error in
-                    println(error.localizedDescription)
-                    if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationURL).error.code {
-                        return fetchRepository(destinationURL).catch { _ in return .empty() }
-                    }
-                    return ColdSignal.empty()
-                })
-        })
-        .concat(identity)
-        .then(.empty())
+	return ColdSignal.fromValues(project.cartfile.dependencies)
+		.map({ dependency -> ColdSignal<String> in
+			switch dependency.project {
+			case let .GitHub(repository):
+				let destinationURL = dependenciesURL.URLByAppendingPathComponent("\(repository.name)")
+
+				return cloneRepository(repository.cloneURL.absoluteString!, destinationURL)
+					.catch( {error in
+						println(error.localizedDescription)
+						if error.code == CarthageError.RepositoryAlreadyCloned(location: destinationURL).error.code {
+							return fetchRepository(destinationURL).catch { _ in return .empty() }
+						}
+						return ColdSignal.empty()
+					})
+			}
+		})
+		.concat(identity)
+		.then(.empty())
 }

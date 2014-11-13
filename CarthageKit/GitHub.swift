@@ -19,7 +19,7 @@ public struct Repository: Equatable {
 		return NSURL(scheme: "https", host: "github.com", path: "/\(owner)/\(name).git")!
 	}
 
-	init(owner: String, name: String) {
+	public init(owner: String, name: String) {
 		self.owner = owner
 		self.name = name
 	}
@@ -37,6 +37,12 @@ public struct Repository: Equatable {
 
 public func ==(lhs: Repository, rhs: Repository) -> Bool {
 	return lhs.owner == rhs.owner && lhs.name == rhs.name
+}
+
+extension Repository: Hashable {
+	public var hashValue: Int {
+		return owner.hashValue ^ name.hashValue
+	}
 }
 
 extension Repository: Printable {

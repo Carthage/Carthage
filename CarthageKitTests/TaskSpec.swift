@@ -26,8 +26,6 @@ class TaskSpec: QuickSpec {
 			let (signal, sink) = HotSignal<NSData>.pipe()
 
 			signal.scan(initial: NSData()) { (accum, data) in
-				println("received data to accumulate")
-
 				let buffer = accum.mutableCopy() as NSMutableData
 				buffer.appendData(data)
 
@@ -43,7 +41,7 @@ class TaskSpec: QuickSpec {
 
 		it("should launch a task that writes to stdout") {
 			let desc = TaskDescription(launchPath: "/bin/echo", arguments: [ "foobar" ])
-			let task = launchTask(desc, standardOutput: accumulatingSinkForProperty(standardOutput)).on(subscribed: { println("subscribed") }, next: { value in println("next \(value)") }, terminated: { println("terminated") })
+			let task = launchTask(desc, standardOutput: accumulatingSinkForProperty(standardOutput))
 			expect(standardOutput.value).to(equal(NSData()))
 
 			let result = task.wait()

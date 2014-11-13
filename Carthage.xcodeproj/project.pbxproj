@@ -7,8 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		885C912C1A074AD300461A70 /* fixtures in Resources */ = {isa = PBXBuildFile; fileRef = 885C912B1A074AD300461A70 /* fixtures */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
+		D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82D61A10160700F0DD94 /* Resolver.swift */; };
+		D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */; };
 		D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; };
 		D01F8A4119EA28C600643E7C /* LlamaKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; };
 		D01F8A4419EA28E400643E7C /* LlamaKit.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -33,10 +34,14 @@
 		D0D789C619FCD44700F07D81 /* CommandSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D789C519FCD44700F07D81 /* CommandSpec.swift */; };
 		D0D789C719FCD44B00F07D81 /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
 		D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DB09A319EA354200234B16 /* XcodeSpec.swift */; };
+		D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE893F1A0F2CB00030A3EC /* Version.swift */; };
+		D0DE89421A0F2D450030A3EC /* VersionSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE89411A0F2D450030A3EC /* VersionSpec.swift */; };
+		D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE89431A0F2D9B0030A3EC /* Scannable.swift */; };
 		D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
 		D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
 		D0E7B65519E9C76900EDBA4D /* Help.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B219E8A79F001E44AE /* Help.swift */; };
 		D0E7B65619E9C76900EDBA4D /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1211B19E87861005E4BAA /* main.swift */; };
+		D0F551DC1A0D71AB0093311F /* TestCartfile.lock in Resources */ = {isa = PBXBuildFile; fileRef = D0F551DB1A0D71AB0093311F /* TestCartfile.lock */; };
 		F603929919EA29F80050A6AF /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = F603929819EA29F80050A6AF /* Project.swift */; };
 		F689C33619EA14D4006D1EFA /* Checkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66685FB19E8F1EC00487A88 /* Checkout.swift */; };
 /* End PBXBuildFile section */
@@ -92,8 +97,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		885C912B1A074AD300461A70 /* fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; path = fixtures; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
+		D01D82D61A10160700F0DD94 /* Resolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Resolver.swift; sourceTree = "<group>"; };
+		D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResolverSpec.swift; sourceTree = "<group>"; };
 		D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveCocoa.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4019EA28C600643E7C /* LlamaKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = LlamaKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4619EA28F600643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../External/ReactiveCocoa/External/Quick/Externals/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
@@ -137,10 +143,14 @@
 		D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CartfileSpec.swift; sourceTree = "<group>"; };
 		D0D789C519FCD44700F07D81 /* CommandSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CommandSpec.swift; sourceTree = "<group>"; };
 		D0DB09A319EA354200234B16 /* XcodeSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XcodeSpec.swift; sourceTree = "<group>"; };
+		D0DE893F1A0F2CB00030A3EC /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
+		D0DE89411A0F2D450030A3EC /* VersionSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionSpec.swift; sourceTree = "<group>"; };
+		D0DE89431A0F2D9B0030A3EC /* Scannable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Scannable.swift; sourceTree = "<group>"; };
 		D0E7B63219E9C64500EDBA4D /* carthage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = carthage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B64119E9C64600EDBA4D /* CarthageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarthageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B64619E9C64600EDBA4D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0E7B65819E9CA0800EDBA4D /* carthage */ = {isa = PBXFileReference; lastKnownFileType = text; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0F551DB1A0D71AB0093311F /* TestCartfile.lock */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfile.lock; sourceTree = "<group>"; };
 		F603929819EA29F80050A6AF /* Project.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
 		F66685FB19E8F1EC00487A88 /* Checkout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Checkout.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -296,7 +306,10 @@
 				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
 				D074EDC41A049283001DE082 /* FrameworkExtensions.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
+				D01D82D61A10160700F0DD94 /* Resolver.swift */,
+				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
 				D0AD39AF19E900BC00B343CE /* Task.swift */,
+				D0DE893F1A0F2CB00030A3EC /* Version.swift */,
 				D01F8A5319EA2F1700643E7C /* Xcode.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
 			);
@@ -317,7 +330,9 @@
 			isa = PBXGroup;
 			children = (
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
+				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
 				D04AEADA19E918C30045C166 /* TaskSpec.swift */,
+				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
 				D0DB09A319EA354200234B16 /* XcodeSpec.swift */,
 				D0D1212219E878CC005E4BAA /* Configuration */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
@@ -328,12 +343,12 @@
 		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				885C912B1A074AD300461A70 /* fixtures */,
 				D01F8A4B19EA28FE00643E7C /* Nimble.framework */,
 				D01F8A4619EA28F600643E7C /* Nimble.framework */,
 				D01F8A4719EA28F600643E7C /* Quick.framework */,
 				D0D1217D19E87B05005E4BAA /* Info.plist */,
 				D0AAAB5419FB1062007B24B3 /* TestCartfile */,
+				D0F551DB1A0D71AB0093311F /* TestCartfile.lock */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -396,6 +411,7 @@
 				D0D1217319E87B05005E4BAA /* Sources */,
 				D0D1217419E87B05005E4BAA /* Frameworks */,
 				D0D1217519E87B05005E4BAA /* Resources */,
+				D0AE6B171A0E931300E0E17D /* Copy Fixtures */,
 			);
 			buildRules = (
 			);
@@ -502,8 +518,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				885C912C1A074AD300461A70 /* fixtures in Resources */,
 				D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */,
+				D0F551DC1A0D71AB0093311F /* TestCartfile.lock in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -524,6 +540,22 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		D0AE6B171A0E931300E0E17D /* Copy Fixtures */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(TARGET_NAME)/fixtures",
+			);
+			name = "Copy Fixtures";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = ". script/copy-fixtures";
+		};
 		D0E7B65719E9C7C700EDBA4D /* Extract CLI Tool */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -548,10 +580,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */,
+				D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */,
 				D0AD39B019E900BC00B343CE /* Task.swift in Sources */,
+				D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */,
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
+				D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */,
 				D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */,
 				D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */,
 				F603929919EA29F80050A6AF /* Project.swift in Sources */,
@@ -563,8 +598,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */,
+				D0DE89421A0F2D450030A3EC /* VersionSpec.swift in Sources */,
 				D04AEADB19E918C30045C166 /* TaskSpec.swift in Sources */,
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
+				D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

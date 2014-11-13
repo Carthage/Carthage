@@ -1,0 +1,10 @@
+language: objective-c
+
+env:
+  matrix:
+    - NIMBLE_BUILD_SDK_VERSION=8.0 NIMBLE_RUNTIME_SDK_VERSION=8.0 TYPE=ios
+    # Until travis-ci supports these, we can't run this.
+    # - NIMBLE_BUILD_SDK_VERSION=8.1 NIMBLE_RUNTIME_SDK_VERSION=8.1 TYPE=ios
+    # - NIMBLE_BUILD_SDK_VERSION=8.1 NIMBLE_RUNTIME_SDK_VERSION=8.1 TYPE=osx
+
+script: ./test $TYPE

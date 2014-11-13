@@ -26,15 +26,22 @@ public enum CarthageError {
 	/// `xcodebuild` did not return a build setting that we needed.
 	case MissingBuildSetting(String)
 
-	/// No Cartfile present in the project
+	/// No Cartfile present in the project.
 	case NoCartfile
 
-	/// The git repository has already been cloned to the specified location
+	/// The Git repository has already been cloned to the specified location.
 	case RepositoryAlreadyCloned(location: NSURL)
 
-	/// Unable to clone a git repository because a file with the same name
-	/// exists
+	/// Unable to clone a Git repository because a file with the same name
+	/// exists.
 	case RepositoryCloneFailed(location: NSURL)
+
+	/// Incompatible version specifiers were given for a dependency.
+	case IncompatibleRequirements(ProjectIdentifier, VersionSpecifier, VersionSpecifier)
+
+	/// No existent version could be found to satisfy the version specifier for
+	/// a dependency.
+	case RequiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
@@ -44,25 +51,40 @@ public enum CarthageError {
 				NSLocalizedDescriptionKey: "A shell task failed with exit code \(code)",
 				CarthageError.exitCodeKey: code
 			])
+
 		case let .InvalidArgument(description):
 			return NSError(domain: CarthageErrorDomain, code: 2, userInfo: [
 				NSLocalizedDescriptionKey: description
 			])
+
 		case let .MissingBuildSetting(setting):
 			return NSError(domain: CarthageErrorDomain, code: 3, userInfo: [
 				NSLocalizedDescriptionKey: "xcodebuild did not return a value for build setting \(setting)"
 			])
+
 		case let .NoCartfile:
-			return NSError(domain: CarthageErrorDomain, code: 3, userInfo: [
+			return NSError(domain: CarthageErrorDomain, code: 4, userInfo: [
 				NSLocalizedDescriptionKey: "No Cartfile found."
 			])
+
 		case let .RepositoryAlreadyCloned(location):
-			return NSError(domain: CarthageErrorDomain, code: 4, userInfo: [
-				NSLocalizedDescriptionKey: "The git repository already exists at \(location)."
+			return NSError(domain: CarthageErrorDomain, code: 5, userInfo: [
+				NSLocalizedDescriptionKey: "The Git repository already exists at: \(location)"
 			])
+
 		case let .RepositoryCloneFailed(location):
 			return NSError(domain: CarthageErrorDomain, code: 6, userInfo: [
-				NSLocalizedDescriptionKey: "Unable to clone it repository because a file already exists at \(location)."
+				NSLocalizedDescriptionKey: "Unable to clone Git repository because a file already exists at: \(location)"
+			])
+
+		case let .IncompatibleRequirements(dependency, first, second):
+			return NSError(domain: CarthageErrorDomain, code: 7, userInfo: [
+				NSLocalizedDescriptionKey: "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(first)\n\t\(second)"
+			])
+
+		case let .RequiredVersionNotFound(dependency, specifier):
+			return NSError(domain: CarthageErrorDomain, code: 8, userInfo: [
+				NSLocalizedDescriptionKey: "No available version for \(dependency) satisfies the requirement: \(specifier)"
 			])
 		}
 	}

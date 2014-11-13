@@ -77,6 +77,12 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 	}
 }
 
+extension ProjectLocator: Printable {
+	public var description: String {
+		return fileURL.lastPathComponent
+	}
+}
+
 /// Configures a build with Xcode.
 public struct BuildArguments {
 	/// The project to build.
@@ -392,14 +398,13 @@ public func platformForScheme(scheme: String, inProject project: ProjectLocator)
 }
 
 /// Builds one scheme of the given project, for all supported platforms.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> ColdSignal<()> {
+///
+/// Returns a signal of all standard output from `xcodebuild`, and a signal
+/// which will send the URL to each product successfully built.
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
 	precondition(workingDirectoryURL.fileURL)
 
-	let handle = NSFileHandle.fileHandleWithStandardOutput()
-	let stdoutSink = SinkOf<NSData> { data in
-		handle.writeData(data)
-	}
-
+	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
 	let buildPlatform = { (platform: Platform) -> ColdSignal<Dictionary<String, String>> in
@@ -413,38 +418,46 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			.then(buildSettings(copiedArgs))
 	}
 
-	return platformForScheme(scheme, inProject: project)
-		.map { (platform: Platform) -> ColdSignal<()> in
+	// TODO: This should probably return a signal-of-signals, so callers can
+	// track the starting and stopping of each scheme individually.
+	//
+	// This will also allow us to remove the event logging from
+	// buildInDirectory().
+	let buildSignal: ColdSignal<NSURL> = platformForScheme(scheme, inProject: project)
+		.map { (platform: Platform) in
 			switch platform {
 			case .iPhoneSimulator: fallthrough
 			case .iPhoneOS:
 				return buildPlatform(.iPhoneSimulator)
 					.concat(buildPlatform(.iPhoneOS))
 					.reduce(initial: []) { $0 + [ $1 ] }
-					.map { buildSettingsPerPlatform -> ColdSignal<()> in
+					.map { buildSettingsPerPlatform in
 						let simulatorSettings = buildSettingsPerPlatform[0]
 						let deviceSettings = buildSettingsPerPlatform[1]
 						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderName)/iOS", isDirectory: true)
 
 						return copyBuildProductIntoDirectory(folderURL, deviceSettings)
-							.then(URLToBuiltExecutable(simulatorSettings))
-							.concat(URLToBuiltExecutable(deviceSettings))
-							.tryMap { URL -> Result<String> in
-								if let path = URL.path {
-									return success(path)
-								} else {
-									return failure()
-								}
-							}
-							.reduce(initial: []) { $0 + [ $1 ] }
-							// TODO: This should be a zip.
-							.combineLatestWith(valueForBuildSetting("EXECUTABLE_PATH", deviceSettings).map(folderURL.URLByAppendingPathComponent))
-							.map { (executablePaths: [String], outputURL: NSURL) -> ColdSignal<NSData> in
-								let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
-								return launchTask(lipoTask, standardOutput: stdoutSink)
+							.map { productURL in
+								return URLToBuiltExecutable(simulatorSettings)
+									.concat(URLToBuiltExecutable(deviceSettings))
+									.tryMap { URL -> Result<String> in
+										if let path = URL.path {
+											return success(path)
+										} else {
+											return failure()
+										}
+									}
+									.reduce(initial: []) { $0 + [ $1 ] }
+									// TODO: This should be a zip.
+									.combineLatestWith(valueForBuildSetting("EXECUTABLE_PATH", deviceSettings).map(folderURL.URLByAppendingPathComponent))
+									.map { (executablePaths: [String], outputURL: NSURL) -> ColdSignal<NSData> in
+										let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
+										return launchTask(lipoTask, standardOutput: stdoutSink)
+									}
+									.merge(identity)
+									.then(.single(productURL))
 							}
 							.merge(identity)
-							.then(.empty())
 					}
 					.merge(identity)
 
@@ -455,16 +468,82 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						return copyBuildProductIntoDirectory(folderURL, settings)
 					}
 					.merge(identity)
-					.then(.empty())
 			}
 		}
 		.merge(identity)
+
+	return (stdoutSignal, buildSignal)
+}
+
+/// Attempts to build each Carthage dependency in the given directory.
+///
+/// Returns a signal of all standard output from `xcodebuild`, and a signal
+/// which will send each dependency successfully built.
+private func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<Dependency<PinnedVersion>>) {
+	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
+
+	let dependenciesSignal: ColdSignal<Dependency<PinnedVersion>> = NSString.rac_readContentsOfURL(CartfileLock.URLInDirectory(directoryURL), usedEncoding: nil, scheduler: ImmediateScheduler().asRACScheduler())
+		.asColdSignal()
+		.catch { error in
+			if error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError {
+				return .empty()
+			} else {
+				return .error(error)
+			}
+		}
+		.map { $0! as NSString }
+		.tryMap(CartfileLock.fromString)
+		.map { lockFile in ColdSignal.fromValues(lockFile.dependencies) }
+		.merge(identity)
+		.map { dependency in
+			let dependencyURL = directoryURL.URLByAppendingPathComponent(dependency.project.relativePath)
+
+			let (buildOutput, builtDependencies) = buildInDirectory(dependencyURL, withConfiguration: configuration)
+			let outputDisposable = buildOutput.observe(stdoutSink)
+
+			return builtDependencies
+				.map { productURL -> ColdSignal<()> in
+					let pathComponents = productURL.pathComponents as [String]
+
+					// The extracted components should be "PLATFORM/PRODUCT".
+					let relativeComponents = [ CarthageBinariesFolderName ] + suffix(pathComponents, 2)
+
+					// Move the built dependency up to the top level.
+					let destinationURL = reduce(relativeComponents, directoryURL) { $0.URLByAppendingPathComponent($1) }
+					return ColdSignal.lazy {
+						var error: NSError?
+						if !NSFileManager.defaultManager().createDirectoryAtURL(destinationURL.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error) {
+							return .error(error ?? RACError.Empty.error)
+						}
+
+						// rename() is atomic and can automatically remove the
+						// destination, unlike NSFileManager.
+						if rename(productURL.path!, destinationURL.path!) == 0 {
+							return .empty()
+						} else {
+							return .error(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
+						}
+					}
+				}
+				.merge(identity)
+				.then(.single(dependency))
+				.on(disposed: {
+					outputDisposable.dispose()
+				})
+		}
+		.concat(identity)
+
+	return (stdoutSignal, dependenciesSignal)
 }
 
 /// Builds the first project or workspace found within the given directory.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, onlyScheme: String? = nil) -> ColdSignal<()> {
+///
+/// Returns a signal of all standard output from `xcodebuild`, and a signal
+/// which will send the URL to each product successfully built.
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, onlyScheme: String? = nil) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
 	precondition(directoryURL.fileURL)
 
+	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
 
 	var schemesSignal: ColdSignal<String>!
@@ -488,13 +567,31 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			.merge(identity)
 	}
 
-	return schemesSignal
-		.combineLatestWith(locatorSignal.take(1))
-		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<()> in
-			return buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
-				.on(subscribed: {
-					println("*** Building scheme \(scheme)…\n")
+	let productURLs = ColdSignal<NSURL>.lazy {
+		let (buildOutput, builtDependencies) = buildDependenciesInDirectory(directoryURL, withConfiguration: configuration)
+		let outputDisposable = buildOutput.observe(stdoutSink)
+
+		// TODO: There's some infinite loop in RAC when this is chained with the
+		// following signal. :(
+		builtDependencies.wait()
+
+		return schemesSignal
+			.combineLatestWith(locatorSignal.take(1))
+			.map { (scheme: String, project: ProjectLocator) in
+				let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+				let outputDisposable = buildOutput.observe(stdoutSink)
+
+				return productURLs.on(subscribed: {
+					println("*** Building scheme \"\(scheme)\" in \(project)")
+				}, disposed: {
+					outputDisposable.dispose()
 				})
-		}
-		.concat(identity)
+			}
+			.concat(identity)
+			.on(disposed: {
+				outputDisposable.dispose()
+			})
+	}
+
+	return (stdoutSignal, productURLs)
 }

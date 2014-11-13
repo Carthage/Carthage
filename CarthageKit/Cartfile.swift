@@ -8,16 +8,27 @@
 
 import Foundation
 import LlamaKit
+import ReactiveCocoa
 
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
-	public var dependencies: [Dependency]
+	public var dependencies: [Dependency<VersionSpecifier>]
+
+	public init(dependencies: [Dependency<VersionSpecifier>] = []) {
+		self.dependencies = dependencies
+	}
+
+	/// Returns the location where Cartfile should exist within the given
+	/// directory.
+	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
+		return directoryURL.URLByAppendingPathComponent("Cartfile")
+	}
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile> {
-		var cartfile = self(dependencies: [])
+		var cartfile = self()
 		var result = success(())
 
 		let commentIndicator = "#"
@@ -33,7 +44,7 @@ public struct Cartfile {
 				return
 			}
 
-			switch (Dependency.fromScanner(scanner)) {
+			switch (Dependency<VersionSpecifier>.fromScanner(scanner)) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep.unbox)
 
@@ -63,16 +74,83 @@ extension Cartfile: Printable {
 	}
 }
 
-/// Represents a single dependency of a project.
-public struct Dependency: Equatable {
-	/// The GitHub repository in which this dependency lives.
-	public var repository: Repository
+/// Represents a parsed Cartfile.lock, which specifies which exact version was
+/// checked out for each dependency.
+public struct CartfileLock {
+	public var dependencies: [Dependency<PinnedVersion>]
 
-	/// The version(s) that are required to satisfy this dependency.
-	public var version: VersionSpecifier
+	/// Returns the location where Cartfile.lock should exist within the given
+	/// directory.
+	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
+		return directoryURL.URLByAppendingPathComponent("Cartfile.lock")
+	}
 
-	/// Attempts to parse a Dependency specification.
-	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
+	/// Attempts to parse Cartfile.lock information from a string.
+	public static func fromString(string: String) -> Result<CartfileLock> {
+		var cartfile = self(dependencies: [])
+		var result = success(())
+
+		let scanner = NSScanner(string: string)
+		scannerLoop: while !scanner.atEnd {
+			switch (Dependency<PinnedVersion>.fromScanner(scanner)) {
+			case let .Success(dep):
+				cartfile.dependencies.append(dep.unbox)
+
+			case let .Failure(error):
+				result = failure(error)
+				break scannerLoop
+			}
+		}
+
+		return result.map { _ in cartfile }
+	}
+}
+
+extension CartfileLock: Printable {
+	public var description: String {
+		return "\(dependencies)"
+	}
+}
+
+/// Uniquely identifies a project that can be used as a dependency.
+public enum ProjectIdentifier: Equatable {
+	/// A repository hosted on GitHub.com.
+	case GitHub(Repository)
+
+	/// The unique, user-visible name for this project.
+	public var name: String {
+		switch (self) {
+		case let .GitHub(repo):
+			return repo.name
+		}
+	}
+
+	/// The path at which this project will be checked out, relative to the
+	/// working directory of the main project.
+	public var relativePath: String {
+		return name
+	}
+}
+
+public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
+	switch (lhs, rhs) {
+	case let (.GitHub(left), .GitHub(right)):
+		return left == right
+	}
+}
+
+extension ProjectIdentifier: Hashable {
+	public var hashValue: Int {
+		switch (self) {
+		case let .GitHub(repo):
+			return repo.hashValue
+		}
+	}
+}
+
+extension ProjectIdentifier: Scannable {
+	/// Attempts to parse a ProjectIdentifier.
+	public static func fromScanner(scanner: NSScanner) -> Result<ProjectIdentifier> {
 		if !scanner.scanString("github", intoString: nil) {
 			return failure()
 		}
@@ -87,264 +165,56 @@ public struct Dependency: Equatable {
 		}
 
 		if let repoNWO = repoNWO {
-			return Repository.fromNWO(repoNWO).flatMap { repo in
-				return VersionSpecifier.fromScanner(scanner).map { specifier in self(repository: repo, version: specifier) }
-			}
+			return Repository.fromNWO(repoNWO).map { self.GitHub($0) }
 		} else {
 			return failure()
 		}
 	}
 }
 
-public func ==(lhs: Dependency, rhs: Dependency) -> Bool {
-	return lhs.repository == rhs.repository && lhs.version == rhs.version
+extension ProjectIdentifier: Printable {
+	public var description: String {
+		switch (self) {
+		case let .GitHub(repo):
+			return "github \"\(repo)\""
+		}
+	}
+}
+
+/// Represents a single dependency of a project.
+public struct Dependency<V: VersionType>: Equatable {
+	/// The project corresponding to this dependency.
+	public let project: ProjectIdentifier
+
+	/// The version(s) that are required to satisfy this dependency.
+	public var version: V
+
+	public init(project: ProjectIdentifier, version: V) {
+		self.project = project
+		self.version = version
+	}
+
+	/// Maps over the `version` in the receiver.
+	public func map<W: VersionType>(f: V -> W) -> Dependency<W> {
+		return Dependency<W>(project: project, version: f(version))
+	}
+}
+
+public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
+	return lhs.project == rhs.project && lhs.version == rhs.version
+}
+
+extension Dependency: Scannable {
+	/// Attempts to parse a Dependency specification.
+	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
+		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
+			return V.fromScanner(scanner).map { specifier in self(project: identifier, version: specifier) }
+		}
+	}
 }
 
 extension Dependency: Printable {
 	public var description: String {
-		return "\(repository) @ \(version)"
-	}
-}
-
-/// A semantic version.
-public struct Version: Comparable {
-	/// The major version.
-	///
-	/// Increments to this component represent incompatible API changes.
-	public let major: Int
-
-	/// The minor version.
-	///
-	/// Increments to this component represent backwards-compatible
-	/// enhancements.
-	public let minor: Int
-
-	/// The patch version.
-	///
-	/// Increments to this component represent backwards-compatible bug fixes.
-	public let patch: Int
-
-	/// A list of the version components, in order from most significant to
-	/// least significant.
-	public var components: [Int] {
-		return [ major, minor, patch ]
-	}
-
-	public init(major: Int, minor: Int, patch: Int) {
-		self.major = major
-		self.minor = minor
-		self.patch = patch
-	}
-
-	/// Attempts to parse a semantic version from a human-readable string of the
-	/// form "a.b.c".
-	static public func fromString(specifier: String) -> Result<Version> {
-		let validChars = NSCharacterSet(charactersInString: "0123456789.")
-		let scanner = NSScanner(string: specifier)
-		var sanitizedSpecifier: NSString? = nil
-
-		if !scanner.scanCharactersFromSet(validChars, intoString: &sanitizedSpecifier) {
-			return failure()
-		}
-
-		let components = split(sanitizedSpecifier! as String, { $0 == "." }, allowEmptySlices: false)
-		if components.count == 0 {
-			return failure()
-		}
-
-		let major = components[0].toInt()
-		if major == nil {
-			return failure()
-		}
-
-		let minor = (components.count > 1 ? components[1].toInt() : 0)
-		let patch = (components.count > 2 ? components[2].toInt() : 0)
-
-		return success(self(major: major!, minor: minor ?? 0, patch: patch ?? 0))
-	}
-}
-
-public func <(lhs: Version, rhs: Version) -> Bool {
-    return lexicographicalCompare(lhs.components, rhs.components)
-}
-
-public func ==(lhs: Version, rhs: Version) -> Bool {
-	return lhs.components == rhs.components
-}
-
-extension Version: Printable {
-	public var description: String {
-		return ".".join(components.map { $0.description })
-	}
-}
-
-/// Describes which versions are acceptable for satisfying a dependency
-/// requirement.
-public enum VersionSpecifier: Equatable {
-	case Any
-	case AtLeast(Version)
-	case CompatibleWith(Version)
-	case Exactly(Version)
-
-	/// Attempts to parse a VersionSpecifier.
-	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
-		func scanVersion() -> Result<Version> {
-			var version: NSString? = nil
-
-			if scanner.scanUpToCharactersFromSet(NSCharacterSet.whitespaceAndNewlineCharacterSet(), intoString: &version) {
-				if let version = version {
-					return Version.fromString(version)
-				}
-			}
-
-			return failure()
-		}
-
-		if scanner.scanString("==", intoString: nil) {
-			return scanVersion().map { Exactly($0) }
-		} else if scanner.scanString(">=", intoString: nil) {
-			return scanVersion().map { AtLeast($0) }
-		} else if scanner.scanString("~>", intoString: nil) {
-			return scanVersion().map { CompatibleWith($0) }
-		} else {
-			return success(Any)
-		}
-	}
-
-	/// Determines whether the given version satisfies this version specifier.
-	public func satisfiedBy(version: Version) -> Bool {
-		switch (self) {
-		case .Any:
-			return true
-
-		case let .Exactly(requirement):
-			return version == requirement
-
-		case let .AtLeast(requirement):
-			return version >= requirement
-
-		case let .CompatibleWith(requirement):
-			return version.major == requirement.major && version >= requirement
-		}
-	}
-}
-
-private func intersection(#atLeast: Version, #compatibleWith: Version) -> VersionSpecifier? {
-	if atLeast.major > compatibleWith.major {
-		return nil
-	} else if atLeast.major < compatibleWith.major {
-		return .CompatibleWith(compatibleWith)
-	} else {
-		return .CompatibleWith(max(atLeast, compatibleWith))
-	}
-}
-
-private func intersection(#atLeast: Version, #exactly: Version) -> VersionSpecifier? {
-	if atLeast > exactly {
-		return nil
-	}
-
-	return .Exactly(exactly)
-}
-
-private func intersection(#compatibleWith: Version, #exactly: Version) -> VersionSpecifier? {
-	if exactly.major != compatibleWith.major || compatibleWith > exactly {
-		return nil
-	}
-
-	return .Exactly(exactly)
-}
-
-/// Attempts to determine a version specifier that accurately describes the
-/// intersection between the two given specifiers.
-///
-/// In other words, any version that satisfies the returned specifier will
-/// satisfy _both_ of the given specifiers.
-public func intersection(lhs: VersionSpecifier, rhs: VersionSpecifier) -> VersionSpecifier? {
-	switch (lhs, rhs) {
-	// Unfortunately, patterns with a wildcard _ are not considered exhaustive,
-	// so do the same thing manually.
-	case (.Any, .Any): fallthrough
-	case (.Any, .AtLeast): fallthrough
-	case (.Any, .CompatibleWith): fallthrough
-	case (.Any, .Exactly):
-		return rhs
-
-	case (.AtLeast, .Any): fallthrough
-	case (.CompatibleWith, .Any): fallthrough
-	case (.Exactly, .Any):
-		return lhs
-
-	case let (.AtLeast(lv), .AtLeast(rv)):
-		return .AtLeast(max(lv, rv))
-
-	case let (.AtLeast(lv), .CompatibleWith(rv)):
-		return intersection(atLeast: lv, compatibleWith: rv)
-
-	case let (.AtLeast(lv), .Exactly(rv)):
-		return intersection(atLeast: lv, exactly: rv)
-
-	case let (.CompatibleWith(lv), .AtLeast(rv)):
-		return intersection(atLeast: rv, compatibleWith: lv)
-
-	case let (.CompatibleWith(lv), .CompatibleWith(rv)):
-		if lv.major != rv.major {
-			return nil
-		}
-
-		return .CompatibleWith(max(lv, rv))
-
-	case let (.CompatibleWith(lv), .Exactly(rv)):
-		return intersection(compatibleWith: lv, exactly: rv)
-
-	case let (.Exactly(lv), .AtLeast(rv)):
-		return intersection(atLeast: rv, exactly: lv)
-
-	case let (.Exactly(lv), .CompatibleWith(rv)):
-		return intersection(compatibleWith: rv, exactly: lv)
-
-	case let (.Exactly(lv), .Exactly(rv)):
-		if lv != rv {
-			return nil
-		}
-
-		return lhs
-	}
-}
-
-public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
-	switch (lhs, rhs) {
-	case let (.Any, .Any):
-		return true
-
-	case let (.Exactly(left), .Exactly(right)):
-		return left == right
-
-	case let (.AtLeast(left), .AtLeast(right)):
-		return left == right
-
-	case let (.CompatibleWith(left), .CompatibleWith(right)):
-		return left == right
-
-	default:
-		return false
-	}
-}
-
-extension VersionSpecifier: Printable {
-	public var description: String {
-		switch (self) {
-		case let .Any:
-			return "(any)"
-
-		case let .Exactly(version):
-			return "== \(version)"
-
-		case let .AtLeast(version):
-			return ">= \(version)"
-
-		case let .CompatibleWith(version):
-			return "~> \(version)"
-		}
+		return "\(project) @ \(version)"
 	}
 }
