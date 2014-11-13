@@ -39,9 +39,30 @@ public final class Project {
 
 	/// Caches versions to avoid expensive lookups, and unnecessary
 	/// fetching/cloning.
-	typealias CachedVersionMap = [ProjectIdentifier: [SemanticVersion]]
-	private var cachedVersions: CachedVersionMap = [:]
+	private var cachedVersions: [ProjectIdentifier: [SemanticVersion]] = [:]
 	private let cachedVersionsScheduler = QueueScheduler()
+
+	/// Reads the current value of `cachedVersions` on the appropriate
+	/// scheduler.
+	private func readCachedVersions() -> ColdSignal<[ProjectIdentifier: [SemanticVersion]]> {
+		return ColdSignal.lazy {
+				return .single(self.cachedVersions)
+			}
+			.subscribeOn(cachedVersionsScheduler)
+			.deliverOn(QueueScheduler())
+	}
+
+	/// Adds a given version to `cachedVersions` on the appropriate scheduler.
+	private func addCachedVersion(version: SemanticVersion, forProject project: ProjectIdentifier) {
+		self.cachedVersionsScheduler.schedule {
+			if var versions = self.cachedVersions[project] {
+				versions.append(version)
+				self.cachedVersions[project] = versions
+			} else {
+				self.cachedVersions[project] = [ version ]
+			}
+		}
+	}
 
 	/// Attempts to load project information from the given directory.
 	public class func loadFromDirectory(directoryURL: NSURL) -> Result<Project> {
@@ -132,25 +153,10 @@ public final class Project {
 					.catch { _ in .empty() }
 			}
 			.merge(identity)
-			.on(next: { version in
-				self.cachedVersionsScheduler.schedule {
-					if var versions = self.cachedVersions[project] {
-						versions.append(version)
-						self.cachedVersions[project] = versions
-					} else {
-						self.cachedVersions[project] = [ version ]
-					}
-				}
+			.on(next: { self.addCachedVersion($0, forProject: project) })
 
-				return ()
-			})
-
-		return ColdSignal.lazy {
-				return .single(self.cachedVersions)
-			}
-			.subscribeOn(cachedVersionsScheduler)
-			.deliverOn(QueueScheduler())
-			.map { (versionsByProject: CachedVersionMap) -> ColdSignal<SemanticVersion> in
+		return readCachedVersions()
+			.map { versionsByProject -> ColdSignal<SemanticVersion> in
 				if let versions = versionsByProject[project] {
 					return .fromValues(versions)
 				} else {
