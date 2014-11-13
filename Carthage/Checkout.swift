@@ -19,8 +19,6 @@ public struct CheckoutCommand: CommandType {
 		let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
 
 		return Project.loadFromDirectory(directoryURL)
-			.flatMap { project in
-				return checkoutLockedDependencies(project).wait()
-			}
+			.flatMap { $0.checkoutLockedDependencies().wait() }
 	}
 }

@@ -19,7 +19,7 @@ public struct UpdateCommand: CommandType {
 		let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
 
 		return ColdSignal.fromResult(Project.loadFromDirectory(directoryURL))
-			.map(updateDependenciesInProject)
+			.map { $0.updateDependencies() }
 			.merge(identity)
 			.wait()
 	}
