@@ -42,11 +42,12 @@ public struct Project {
 	}
 }
 
-/// Returns a signal that completes when cloning completes successfully.
-private func cloneProject(project: ProjectIdentifier, destinationURL: NSURL) -> ColdSignal<String> {
+/// Returns a string representing the URL that the project's remote repository
+/// exists at.
+private func repositoryURLStringForProject(project: ProjectIdentifier) -> String {
 	switch project {
 	case let .GitHub(repository):
-		return cloneRepository(repository.cloneURLString, destinationURL)
+		return repository.cloneURLString
 	}
 }
 
@@ -74,10 +75,11 @@ private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<Semant
 				return .error(error ?? RACError.Empty.error)
 			}
 
+			let remoteURLString = repositoryURLStringForProject(project)
 			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
 				// If we created the directory, we're now responsible for
 				// cloning it.
-				return cloneProject(project, repositoryURL)
+				return cloneRepository(remoteURLString, repositoryURL)
 					.then(.empty())
 					.on(subscribed: {
 						println("*** Cloning \(project.name)")
@@ -85,7 +87,7 @@ private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<Semant
 						println()
 					})
 			} else {
-				return fetchRepository(repositoryURL)
+				return fetchRepository(repositoryURL, remoteURLString: remoteURLString)
 					.then(.empty())
 					.on(subscribed: {
 						println("*** Fetching \(project.name)")
@@ -183,7 +185,7 @@ public func checkoutProjectDependencies(project: Project) -> ColdSignal<()> {
 
 				var isDirectory: ObjCBool = false
 				if NSFileManager.defaultManager().fileExistsAtPath(destinationURL.path!, isDirectory: &isDirectory) {
-					return fetchRepository(destinationURL)
+					return fetchRepository(destinationURL, remoteURLString: repository.cloneURLString)
 						.on(subscribed: {
 							println("*** Fetching \(dependency.project.name)")
 						}, terminated: {

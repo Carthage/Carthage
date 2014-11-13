@@ -26,8 +26,13 @@ public func cloneRepository(cloneURLString: String, destinationURL: NSURL) -> Co
 }
 
 /// Returns a signal that completes when the fetch completes successfully.
-public func fetchRepository(repositoryFileURL: NSURL) -> ColdSignal<String> {
+public func fetchRepository(repositoryFileURL: NSURL, remoteURLString: String? = nil) -> ColdSignal<String> {
 	precondition(repositoryFileURL.fileURL)
 
-	return launchGitTask([ "fetch", "--tags", "--prune" ], repositoryFileURL: repositoryFileURL)
+	var arguments = [ "fetch", "--tags", "--prune" ]
+	if let remoteURLString = remoteURLString {
+		arguments.append(remoteURLString)
+	}
+
+	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
 }
