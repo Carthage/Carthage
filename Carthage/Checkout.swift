@@ -18,7 +18,25 @@ public struct CheckoutCommand: CommandType {
 	public func run(mode: CommandMode) -> Result<()> {
 		let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
 
-		return Project.loadFromDirectory(directoryURL)
-			.flatMap { $0.checkoutLockedDependencies().wait() }
+		return ColdSignal.fromResult(CheckoutOptions.evaluate(mode))
+			.map { options -> ColdSignal<()> in
+				return ColdSignal.fromResult(Project.loadFromDirectory(directoryURL))
+					.map { $0.checkoutLockedDependencies() }
+					.merge(identity)
+			}
+			.merge(identity)
+			.wait()
+	}
+}
+
+private struct CheckoutOptions: OptionsType {
+	static func evaluate(m: CommandMode) -> Result<CheckoutOptions> {
+		switch m {
+		case let .Usage:
+			return failure(CarthageError.InvalidArgument(description: "").error)
+
+		default:
+			return success(self())
+		}
 	}
 }
