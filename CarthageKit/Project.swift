@@ -153,7 +153,8 @@ private func cartfileForDependency(dependency: Dependency<SemanticVersion>) -> C
 	let showObject = "\(pinnedVersion.tag):\(CarthageProjectCartfilePath)"
 
 	let repositoryURL = repositoryFileURLForProject(dependency.project)
-	return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryURL)
+	return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryURL, standardError: SinkOf<NSData> { _ in () })
+		.catch { _ in .empty() }
 		.tryMap { Cartfile.fromString($0) }
 }
 

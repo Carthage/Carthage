@@ -12,9 +12,10 @@ import ReactiveCocoa
 
 /// Shells out to `git` with the given arguments, optionally in the directory
 /// of an existing repository.
-public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil) -> ColdSignal<String> {
+public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, standardError: SinkOf<NSData>? = nil) -> ColdSignal<String> {
 	let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments, workingDirectoryPath: repositoryFileURL?.path)
-	return launchTask(taskDescription).map { NSString(data: $0, encoding: NSUTF8StringEncoding) as String }
+	return launchTask(taskDescription, standardError: standardError)
+		.map { NSString(data: $0, encoding: NSUTF8StringEncoding) as String }
 }
 
 /// Returns a signal that completes when cloning completes successfully.
