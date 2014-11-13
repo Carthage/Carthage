@@ -31,6 +31,9 @@ public struct SemanticVersion: Comparable {
 	/// Increments to this component represent backwards-compatible bug fixes.
 	public let patch: Int
 
+	/// The pin from which this semantic version was derived.
+	public var pinnedVersion: PinnedVersion?
+
 	/// A list of the version components, in order from most significant to
 	/// least significant.
 	public var components: [Int] {
@@ -41,6 +44,26 @@ public struct SemanticVersion: Comparable {
 		self.major = major
 		self.minor = minor
 		self.patch = patch
+	}
+
+	/// Attempts to parse a semantic version from a PinnedVersion.
+	public static func fromPinnedVersion(pinnedVersion: PinnedVersion) -> Result<SemanticVersion> {
+		let scanner = NSScanner(string: pinnedVersion.tag)
+
+		// Skip leading characters, like "v" or "version-" or anything like
+		// that.
+		scanner.scanUpToCharactersFromSet(NSCharacterSet.decimalDigitCharacterSet(), intoString: nil)
+
+		return self.fromScanner(scanner).flatMap { (var version) in
+			if scanner.atEnd {
+				version.pinnedVersion = pinnedVersion
+				return success(version)
+			} else {
+				// Disallow versions like "1.0a5", because we only support
+				// SemVer right now.
+				return failure()
+			}
+		}
 	}
 }
 
