@@ -53,7 +53,7 @@ private func cloneProject(project: ProjectIdentifier, destinationURL: NSURL) -> 
 /// Returns the file URL at which the given project's repository will be
 /// located.
 private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
-	return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name)
+	return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
 }
 
 /// Sends all versions available for the given project.
@@ -87,13 +87,17 @@ private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<Semant
 		.then(tagsSignal)
 		.map { (allTags: String) -> ColdSignal<String> in
 			return ColdSignal { subscriber in
-				(allTags as NSString).enumerateLinesUsingBlock { (line, stop) in
+				let string = allTags as NSString
+
+				string.enumerateSubstringsInRange(NSMakeRange(0, string.length), options: NSStringEnumerationOptions.ByLines | NSStringEnumerationOptions.Reverse) { (line, substringRange, enclosingRange, stop) in
 					if subscriber.disposable.disposed {
 						stop.memory = true
 					}
 
 					subscriber.put(.Next(Box(line as String)))
 				}
+
+				subscriber.put(.Completed)
 			}
 		}
 		.concat(identity)
