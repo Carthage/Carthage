@@ -502,7 +502,7 @@ public func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration 
 			let outputDisposable = buildOutput.observe(stdoutSink)
 
 			return builtDependencies
-				.map { productURL -> ColdSignal<()> in
+				.map { productURL -> ColdSignal<NSURL> in
 					let pathComponents = productURL.pathComponents as [String]
 
 					// The extracted components should be "PLATFORM/PRODUCT".
@@ -510,20 +510,20 @@ public func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration 
 
 					// Move the built dependency up to the top level.
 					let destinationURL = reduce(relativeComponents, directoryURL) { $0.URLByAppendingPathComponent($1) }
-					return ColdSignal.lazy {
-						var error: NSError?
-						if !NSFileManager.defaultManager().createDirectoryAtURL(destinationURL.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error) {
-							return .error(error ?? RACError.Empty.error)
-						}
 
-						// rename() is atomic and can automatically remove the
-						// destination, unlike NSFileManager.
-						if rename(productURL.path!, destinationURL.path!) == 0 {
-							return .empty()
-						} else {
-							return .error(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
+					return ColdSignal.single(destinationURL)
+						.try { (destinationURL, error) in
+							if NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: error) {
+								// If we removed something at the destination
+								// URL, its parent folder must exist.
+								return true
+							} else {
+								return NSFileManager.defaultManager().createDirectoryAtURL(destinationURL.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: error)
+							}
 						}
-					}
+						.try { (destinationURL, error) in
+							return NSFileManager.defaultManager().moveItemAtURL(productURL, toURL: destinationURL, error: error)
+						}
 				}
 				.merge(identity)
 				.then(.single(dependency))
