@@ -112,16 +112,12 @@ private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<Semant
 					.then(.empty())
 					.on(subscribed: {
 						println("*** Cloning \(project.name)")
-					}, terminated: {
-						println()
 					})
 			} else {
 				return fetchRepository(repositoryURL, remoteURLString: remoteURLString)
 					.then(.empty())
 					.on(subscribed: {
 						println("*** Fetching \(project.name)")
-					}, terminated: {
-						println()
 					})
 			}
 		}
