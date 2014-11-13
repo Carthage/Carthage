@@ -27,6 +27,11 @@ public struct Project {
 	/// The project's Cartfile.
 	public let cartfile: Cartfile
 
+	/// The file URL to the project's Cartfile.lock.
+	private var cartfileLockURL: NSURL {
+		return directoryURL.URLByAppendingPathComponent(CarthageProjectCartfileLockPath, isDirectory: false)
+	}
+
 	/// Attempts to load project information from the given directory.
 	public static func loadFromDirectory(directoryURL: NSURL) -> Result<Project> {
 		precondition(directoryURL.fileURL)
@@ -44,10 +49,19 @@ public struct Project {
 		}
 	}
 
+	/// Reads the project's Cartfile.lock.
+	public func readCartfileLock() -> Result<CartfileLock> {
+		var error: NSError?
+		let cartfileLockContents = NSString(contentsOfURL: cartfileLockURL, encoding: NSUTF8StringEncoding, error: &error)
+		if let cartfileLockContents = cartfileLockContents {
+			return CartfileLock.fromString(cartfileLockContents)
+		} else {
+			return failure(error ?? CarthageError.NoCartfile.error)
+		}
+	}
+
 	/// Writes the given Cartfile.lock out to the project's directory.
 	public func writeCartfileLock(cartfileLock: CartfileLock) -> Result<()> {
-		let cartfileLockURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfileLockPath, isDirectory: false)
-
 		var error: NSError?
 		if cartfileLock.description.writeToURL(cartfileLockURL, atomically: true, encoding: NSUTF8StringEncoding, error: &error) {
 			return success(())
@@ -201,32 +215,34 @@ public func updateDependenciesInProject(project: Project) -> ColdSignal<()> {
 		}
 }
 
-/// Checks out the dependencies listed in the project's Cartfile.
-public func checkoutProjectDependencies(project: Project) -> ColdSignal<()> {
-	return ColdSignal.fromValues(project.cartfile.dependencies)
-		.map { dependency -> ColdSignal<String> in
-			switch dependency.project {
-			case let .GitHub(repository):
-				let destinationURL = CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(repository.name)
+/// Checks out the dependencies listed in the project's Cartfile.lock.
+public func checkoutLockedDependencies(project: Project) -> ColdSignal<()> {
+	return ColdSignal<CartfileLock>.lazy {
+			return ColdSignal.fromResult(project.readCartfileLock())
+		}
+		.map { cartfileLock -> ColdSignal<Dependency<PinnedVersion>> in
+			return ColdSignal.fromValues(cartfileLock.dependencies)
+		}
+		.merge(identity)
+		.map { dependency -> ColdSignal<()> in
+			let repositoryURL = repositoryFileURLForProject(dependency.project)
+			let workingDirectoryURL = project.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true)
 
-				var isDirectory: ObjCBool = false
-				if NSFileManager.defaultManager().fileExistsAtPath(destinationURL.path!, isDirectory: &isDirectory) {
-					return fetchRepository(destinationURL, remoteURLString: repository.cloneURLString)
-						.on(subscribed: {
-							println("*** Fetching \(dependency.project.name)")
-						}, terminated: {
-							println()
-						})
-				} else {
-					return cloneRepository(repository.cloneURLString, destinationURL)
-						.on(subscribed: {
-							println("*** Cloning \(dependency.project.name)")
-						}, terminated: {
-							println()
-						})
+			return ColdSignal.lazy {
+				println("*** Checking out \(dependency.project.name)")
+
+				var error: NSError?
+				if !NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+					return .error(error ?? RACError.Empty.error)
 				}
+
+				var environment = NSProcessInfo.processInfo().environment as [String: String]
+				environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
+
+				return launchGitTask([ "checkout", "--force", dependency.version.tag ], repositoryFileURL: repositoryURL, environment: environment)
+					.then(.empty())
 			}
 		}
-		.concat(identity)
+		.merge(identity)
 		.then(.empty())
 }
