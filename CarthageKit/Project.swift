@@ -56,6 +56,12 @@ private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
 	return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
 }
 
+/// Caches versions to avoid expensive lookups, and unnecessary
+/// fetching/cloning.
+typealias CachedVersionMap = [ProjectIdentifier: [SemanticVersion]]
+private var cachedVersions: CachedVersionMap = [:]
+private let cachedVersionsScheduler = QueueScheduler()
+
 /// Sends all versions available for the given project.
 ///
 /// This will automatically clone or fetch the project's repository as
@@ -104,11 +110,37 @@ private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<Semant
 				subscriber.put(.Completed)
 			}
 		}
-		.concat(identity)
+		.merge(identity)
 		.map { PinnedVersion(tag: $0) }
 		.map { version -> ColdSignal<SemanticVersion> in
 			return ColdSignal.fromResult(SemanticVersion.fromPinnedVersion(version))
 				.catch { _ in .empty() }
+		}
+		.merge(identity)
+		.on(next: { version in
+			cachedVersionsScheduler.schedule {
+				if var versions = cachedVersions[project] {
+					versions.append(version)
+					cachedVersions[project] = versions
+				} else {
+					cachedVersions[project] = [ version ]
+				}
+			}
+
+			return ()
+		})
+
+	return ColdSignal.lazy {
+			return .single(cachedVersions)
+		}
+		.subscribeOn(cachedVersionsScheduler)
+		.deliverOn(QueueScheduler())
+		.map { (versionsByProject: CachedVersionMap) -> ColdSignal<SemanticVersion> in
+			if let versions = versionsByProject[project] {
+				return .fromValues(versions)
+			} else {
+				return fetchVersions
+			}
 		}
 		.merge(identity)
 }
