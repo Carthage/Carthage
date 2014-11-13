@@ -14,6 +14,11 @@ public struct Repository: Equatable {
 	public let owner: String
 	public let name: String
 
+	/// The URL string that should be used for cloning the Git repository.
+	public var cloneURLString: String {
+		return "https://github.com/\(owner)/\(name).git"
+	}
+
 	public init(owner: String, name: String) {
 		self.owner = owner
 		self.name = name
