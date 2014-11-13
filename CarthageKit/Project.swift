@@ -121,23 +121,7 @@ private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<Semant
 					})
 			}
 		}
-		.then(launchGitTask([ "tag" ], repositoryFileURL: repositoryURL))
-		.map { (allTags: String) -> ColdSignal<String> in
-			return ColdSignal { subscriber in
-				let string = allTags as NSString
-
-				string.enumerateSubstringsInRange(NSMakeRange(0, string.length), options: NSStringEnumerationOptions.ByLines | NSStringEnumerationOptions.Reverse) { (line, substringRange, enclosingRange, stop) in
-					if subscriber.disposable.disposed {
-						stop.memory = true
-					}
-
-					subscriber.put(.Next(Box(line as String)))
-				}
-
-				subscriber.put(.Completed)
-			}
-		}
-		.merge(identity)
+		.then(listTags(repositoryURL))
 		.map { PinnedVersion(tag: $0) }
 		.map { version -> ColdSignal<SemanticVersion> in
 			return ColdSignal.fromResult(SemanticVersion.fromPinnedVersion(version))
@@ -177,10 +161,9 @@ private func cartfileForDependency(dependency: Dependency<SemanticVersion>) -> C
 	precondition(dependency.version.pinnedVersion != nil)
 
 	let pinnedVersion = dependency.version.pinnedVersion!
-	let showObject = "\(pinnedVersion.tag):\(CarthageProjectCartfilePath)"
-
 	let repositoryURL = repositoryFileURLForProject(dependency.project)
-	return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryURL, standardError: SinkOf<NSData> { _ in () })
+
+	return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, pinnedVersion.tag)
 		.catch { _ in .empty() }
 		.tryMap { Cartfile.fromString($0) }
 }
@@ -224,20 +207,11 @@ public func checkoutLockedDependencies(project: Project) -> ColdSignal<()> {
 			let repositoryURL = repositoryFileURLForProject(dependency.project)
 			let workingDirectoryURL = project.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true)
 
-			return ColdSignal.lazy {
-				println("*** Checking out \(dependency.project.name)")
-
-				var error: NSError?
-				if !NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-					return .error(error ?? RACError.Empty.error)
-				}
-
-				var environment = NSProcessInfo.processInfo().environment as [String: String]
-				environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
-
-				return launchGitTask([ "checkout", "--quiet", "--force", dependency.version.tag ], repositoryFileURL: repositoryURL, environment: environment)
-					.then(.empty())
-			}
+			return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, dependency.version.tag)
+				.then(.empty())
+				.on(subscribed: {
+					println("*** Checking out \(dependency.project.name)")
+				})
 		}
 		.merge(identity)
 		.then(.empty())

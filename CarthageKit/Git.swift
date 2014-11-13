@@ -37,3 +37,48 @@ public func fetchRepository(repositoryFileURL: NSURL, remoteURLString: String? =
 
 	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
 }
+
+/// Sends each tag found in the given Git repository.
+public func listTags(repositoryFileURL: NSURL) -> ColdSignal<String> {
+	return launchGitTask([ "tag" ], repositoryFileURL: repositoryFileURL)
+		.map { (allTags: String) -> ColdSignal<String> in
+			return ColdSignal { subscriber in
+				let string = allTags as NSString
+
+				string.enumerateSubstringsInRange(NSMakeRange(0, string.length), options: NSStringEnumerationOptions.ByLines | NSStringEnumerationOptions.Reverse) { (line, substringRange, enclosingRange, stop) in
+					if subscriber.disposable.disposed {
+						stop.memory = true
+					}
+
+					subscriber.put(.Next(Box(line as String)))
+				}
+
+				subscriber.put(.Completed)
+			}
+		}
+		.merge(identity)
+}
+
+/// Returns the text contents of the path at the given revision, or an error if
+/// the path could not be loaded.
+public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, revision: String) -> ColdSignal<String> {
+	let showObject = "\(revision):\(path)"
+	return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
+}
+
+/// Checks out the working tree of the given (ideally bare) repository, at the
+/// specified revision, to the given folder. If the folder does not exist, it
+/// will be created.
+public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String) -> ColdSignal<String> {
+	return ColdSignal.lazy {
+		var error: NSError?
+		if !NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+			return .error(error ?? RACError.Empty.error)
+		}
+
+		var environment = NSProcessInfo.processInfo().environment as [String: String]
+		environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
+
+		return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
+	}
+}
