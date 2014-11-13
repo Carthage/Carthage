@@ -28,7 +28,7 @@ public struct BuildCommand: CommandType {
 						}
 
 						return buildSignal.on(subscribed: {
-							println("xcodebuild output can be found in \(temporaryURL.path!)\n")
+							println("*** xcodebuild output can be found in \(temporaryURL.path!)")
 						}, disposed: {
 							disposable.dispose()
 						})
