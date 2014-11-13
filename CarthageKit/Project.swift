@@ -208,11 +208,11 @@ public func updatedDependenciesForProject(project: Project) -> ColdSignal<Cartfi
 /// changes will be reflected in the working directory checkouts and
 /// Cartfile.lock.
 public func updateDependenciesInProject(project: Project) -> ColdSignal<()> {
-	// TODO: Checkout
 	return updatedDependenciesForProject(project)
 		.tryMap { cartfileLock -> Result<()> in
 			return project.writeCartfileLock(cartfileLock)
 		}
+		.then(checkoutLockedDependencies(project))
 }
 
 /// Checks out the dependencies listed in the project's Cartfile.lock.
