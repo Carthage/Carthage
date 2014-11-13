@@ -155,7 +155,7 @@ extension PinnedVersion: VersionType {}
 
 extension PinnedVersion: Printable {
 	public var description: String {
-		return tag
+		return "\"\(tag)\""
 	}
 }
 
@@ -225,7 +225,7 @@ extension VersionSpecifier: Printable {
 	public var description: String {
 		switch (self) {
 		case let .Any:
-			return "(any)"
+			return ""
 
 		case let .Exactly(version):
 			return "== \(version)"

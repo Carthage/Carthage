@@ -108,7 +108,9 @@ public struct CartfileLock {
 
 extension CartfileLock: Printable {
 	public var description: String {
-		return "\(dependencies)"
+		return dependencies.reduce("") { (string, dependency) in
+			return string + "\(dependency)\n"
+		}
 	}
 }
 
@@ -215,6 +217,6 @@ extension Dependency: Scannable {
 
 extension Dependency: Printable {
 	public var description: String {
-		return "\(project) @ \(version)"
+		return "\(project) \(version)"
 	}
 }

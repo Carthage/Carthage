@@ -19,11 +19,8 @@ public struct UpdateCommand: CommandType {
 		let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
 
 		return ColdSignal.fromResult(Project.loadFromDirectory(directoryURL))
-			.map(updatedDependenciesForProject)
+			.map(updateDependenciesInProject)
 			.merge(identity)
-			.on(next: { cartfileLock in
-				println("Cartfile.lock:\n\(cartfileLock)")
-			})
 			.wait()
 	}
 }

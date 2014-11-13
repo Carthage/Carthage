@@ -16,6 +16,9 @@ public let CarthageDependencyRepositoriesURL = NSURL.fileURLWithPath("~/.carthag
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
 
+/// The relative path to a project's Cartfile.lock.
+public let CarthageProjectCartfileLockPath = "Cartfile.lock"
+
 /// Represents a project that is using Carthage.
 public struct Project {
 	/// File URL to the root directory of the project.
@@ -38,6 +41,18 @@ public struct Project {
 			}
 		} else {
 			return failure(error ?? CarthageError.NoCartfile.error)
+		}
+	}
+
+	/// Writes the given Cartfile.lock out to the project's directory.
+	public func writeCartfileLock(cartfileLock: CartfileLock) -> Result<()> {
+		let cartfileLockURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfileLockPath, isDirectory: false)
+
+		var error: NSError?
+		if cartfileLock.description.writeToURL(cartfileLockURL, atomically: true, encoding: NSUTF8StringEncoding, error: &error) {
+			return success(())
+		} else {
+			return failure(error ?? RACError.Empty.error)
 		}
 	}
 }
@@ -173,6 +188,17 @@ public func updatedDependenciesForProject(project: Project) -> ColdSignal<Cartfi
 		}
 		.reduce(initial: []) { $0 + [ $1 ] }
 		.map { CartfileLock(dependencies: $0) }
+}
+
+/// Updates the dependencies of the given project to the latest version. The
+/// changes will be reflected in the working directory checkouts and
+/// Cartfile.lock.
+public func updateDependenciesInProject(project: Project) -> ColdSignal<()> {
+	// TODO: Checkout
+	return updatedDependenciesForProject(project)
+		.tryMap { cartfileLock -> Result<()> in
+			return project.writeCartfileLock(cartfileLock)
+		}
 }
 
 /// Checks out the dependencies listed in the project's Cartfile.
