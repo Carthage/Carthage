@@ -13,7 +13,7 @@ import CarthageKit
 
 public struct UpdateCommand: CommandType {
 	public let verb = "update"
-	public let function = "Clone, check out, and build the dependencies in the project's Cartfile"
+	public let function = "Updates to and builds the latest dependencies in the project's Cartfile"
 
 	public func run(mode: CommandMode) -> Result<()> {
 		let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
