@@ -31,7 +31,7 @@ public struct Resolver {
 	///
 	/// Sends each recursive dependency with its resolved version, in no particular
 	/// order.
-	public func resolveDependencesInCartfile(cartfile: Cartfile) -> ColdSignal<Dependency<SemanticVersion>> {
+	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> ColdSignal<Dependency<SemanticVersion>> {
 		return nodePermutationsForCartfile(cartfile)
 			.map { rootNodes in self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph()) }
 			.merge(identity)
@@ -82,6 +82,8 @@ public struct Resolver {
 	/// among the verisons that actually exist for each).
 	private func graphPermutationsForDependenciesOfNode(node: DependencyNode, basedOnGraph inputGraph: DependencyGraph) -> ColdSignal<DependencyGraph> {
 		return cartfileForDependency(node.dependencyVersion)
+			.concat(.single(Cartfile(dependencies: [])))
+			.take(1)
 			.map { self.nodePermutationsForCartfile($0) }
 			.merge(identity)
 			.map { dependencyNodes in self.graphPermutationsForEachNode(dependencyNodes, dependencyOf: node, basedOnGraph: inputGraph) }

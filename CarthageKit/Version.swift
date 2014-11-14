@@ -31,6 +31,9 @@ public struct SemanticVersion: Comparable {
 	/// Increments to this component represent backwards-compatible bug fixes.
 	public let patch: Int
 
+	/// The pin from which this semantic version was derived.
+	public var pinnedVersion: PinnedVersion?
+
 	/// A list of the version components, in order from most significant to
 	/// least significant.
 	public var components: [Int] {
@@ -42,6 +45,29 @@ public struct SemanticVersion: Comparable {
 		self.minor = minor
 		self.patch = patch
 	}
+
+	/// The set of all characters present in valid semantic versions.
+	private static let versionCharacterSet = NSCharacterSet(charactersInString: "0123456789.")
+
+	/// Attempts to parse a semantic version from a PinnedVersion.
+	public static func fromPinnedVersion(pinnedVersion: PinnedVersion) -> Result<SemanticVersion> {
+		let scanner = NSScanner(string: pinnedVersion.tag)
+
+		// Skip leading characters, like "v" or "version-" or anything like
+		// that.
+		scanner.scanUpToCharactersFromSet(versionCharacterSet, intoString: nil)
+
+		return self.fromScanner(scanner).flatMap { (var version) in
+			if scanner.atEnd {
+				version.pinnedVersion = pinnedVersion
+				return success(version)
+			} else {
+				// Disallow versions like "1.0a5", because we only support
+				// SemVer right now.
+				return failure()
+			}
+		}
+	}
 }
 
 extension SemanticVersion: Scannable {
@@ -49,7 +75,7 @@ extension SemanticVersion: Scannable {
 	/// form "a.b.c".
 	static public func fromScanner(scanner: NSScanner) -> Result<SemanticVersion> {
 		var version: NSString? = nil
-		if !scanner.scanCharactersFromSet(NSCharacterSet(charactersInString: "0123456789."), intoString: &version) || version == nil {
+		if !scanner.scanCharactersFromSet(versionCharacterSet, intoString: &version) || version == nil {
 			return failure()
 		}
 
@@ -129,7 +155,7 @@ extension PinnedVersion: VersionType {}
 
 extension PinnedVersion: Printable {
 	public var description: String {
-		return tag
+		return "\"\(tag)\""
 	}
 }
 
@@ -199,7 +225,7 @@ extension VersionSpecifier: Printable {
 	public var description: String {
 		switch (self) {
 		case let .Any:
-			return "(any)"
+			return ""
 
 		case let .Exactly(version):
 			return "== \(version)"

@@ -21,7 +21,7 @@ class ResolverSpec: QuickSpec {
 			let cartfile = Cartfile.fromString(testCartfile!).value()!
 
 			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency)
-			let result = resolver.resolveDependencesInCartfile(cartfile)
+			let result = resolver.resolveDependenciesInCartfile(cartfile)
 				.reduce(initial: [:]) { (var dict, dependency) -> [String: SemanticVersion] in
 					switch dependency.project {
 					case let .GitHub(repo):

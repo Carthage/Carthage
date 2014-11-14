@@ -217,7 +217,7 @@ public final class ArgumentParser {
 						break
 					}
 				}
-
+	
 				return failure(missingArgumentError("--\(key)"))
 			} else {
 				rawArguments.append(arg)
