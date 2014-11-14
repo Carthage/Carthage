@@ -122,6 +122,66 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 	}
 }
 
+/// Clones the given submodule into the working directory of its parent
+/// repository, but without any Git metadata.
+public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirectoryURL: NSURL) -> ColdSignal<()> {
+	let submoduleDirectoryURL = workingDirectoryURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
+	let purgeGitDirectories = ColdSignal<()> { subscriber in
+		let enumerator = NSFileManager.defaultManager().enumeratorAtURL(submoduleDirectoryURL, includingPropertiesForKeys: [ NSURLIsDirectoryKey!, NSURLNameKey! ], options: nil, errorHandler: nil)!
+
+		while !subscriber.disposable.disposed {
+			let URL: NSURL! = enumerator.nextObject() as? NSURL
+			if URL == nil {
+				break
+			}
+
+			var name: AnyObject?
+			var error: NSError?
+			if !URL.getResourceValue(&name, forKey: NSURLNameKey, error: &error) {
+				subscriber.put(.Error(error ?? RACError.Empty.error))
+				return
+			}
+			
+			if let name = name as? NSString {
+				if name != ".git" {
+					continue
+				}
+			} else {
+				continue
+			}
+
+			var isDirectory: AnyObject?
+			if !URL.getResourceValue(&isDirectory, forKey: NSURLIsDirectoryKey, error: &error) || isDirectory == nil {
+				subscriber.put(.Error(error ?? RACError.Empty.error))
+				return
+			}
+
+			if let directory = isDirectory?.boolValue {
+				if directory {
+					enumerator.skipDescendants()
+				}
+			}
+
+			if !NSFileManager.defaultManager().removeItemAtURL(URL, error: &error) {
+				subscriber.put(.Error(error ?? RACError.Empty.error))
+				return
+			}
+		}
+
+		subscriber.put(.Completed)
+	}
+
+	return ColdSignal<String>.lazy {
+			var error: NSError?
+			if !NSFileManager.defaultManager().createDirectoryAtURL(submoduleDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+				return .error(error ?? RACError.Empty.error)
+			}
+
+			return launchGitTask([ "clone", submodule.URLString, submodule.path, "--depth", "1", "--quiet", "--recursive" ], repositoryFileURL: workingDirectoryURL)
+		}
+		.then(purgeGitDirectories)
+}
+
 /// Parses each key/value entry from the given config file contents, optionally
 /// stripping a known prefix/suffix off of each key.
 private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuffix: String = "") -> ColdSignal<(String, String)> {
@@ -130,7 +190,7 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 	return ColdSignal { subscriber in
 		for entry in entries {
 			if subscriber.disposable.disposed {
-				return
+				break
 			}
 
 			let components = split(entry, { $0 == "\n" }, maxSplit: 1, allowEmptySlices: true)
