@@ -23,7 +23,7 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 public func cloneRepository(cloneURLString: String, destinationURL: NSURL) -> ColdSignal<String> {
 	precondition(destinationURL.fileURL)
 
-	return launchGitTask([ "clone", "--bare", "--quiet", "--recursive", cloneURLString, destinationURL.path! ])
+	return launchGitTask([ "clone", "--bare", "--quiet", cloneURLString, destinationURL.path! ])
 }
 
 /// Returns a signal that completes when the fetch completes successfully.
