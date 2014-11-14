@@ -141,7 +141,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 				subscriber.put(.Error(error ?? RACError.Empty.error))
 				return
 			}
-			
+
 			if let name = name as? NSString {
 				if name != ".git" {
 					continue
@@ -171,14 +171,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 		subscriber.put(.Completed)
 	}
 
-	return ColdSignal<String>.lazy {
-			var error: NSError?
-			if !NSFileManager.defaultManager().createDirectoryAtURL(submoduleDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-				return .error(error ?? RACError.Empty.error)
-			}
-
-			return launchGitTask([ "clone", submodule.URLString, submodule.path, "--depth", "1", "--quiet", "--recursive" ], repositoryFileURL: workingDirectoryURL)
-		}
+	return launchGitTask([ "clone", submodule.URLString, submodule.path, "--depth", "1", "--quiet", "--recursive" ], repositoryFileURL: workingDirectoryURL)
 		.then(purgeGitDirectories)
 }
 
