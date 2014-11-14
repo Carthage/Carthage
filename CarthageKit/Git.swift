@@ -10,6 +10,45 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
+/// A Git submodule.
+public struct Submodule: Equatable {
+	/// The name of the submodule. Usually (but not always) the same as the
+	/// path.
+	public let name: String
+
+	/// The relative path at which the submodule is checked out.
+	public let path: String
+
+	/// The URL from which the submodule should be cloned, if present.
+	public let URLString: String
+
+	/// The SHA checked out in the submodule.
+	public let SHA: String
+
+	public init(name: String, path: String, URLString: String, SHA: String) {
+		self.name = name
+		self.path = path
+		self.URLString = URLString
+		self.SHA = SHA
+	}
+}
+
+public func ==(lhs: Submodule, rhs: Submodule) -> Bool {
+	return lhs.name == rhs.name && lhs.path == rhs.path && lhs.URLString == rhs.URLString && lhs.SHA == rhs.SHA
+}
+
+extension Submodule: Hashable {
+	public var hashValue: Int {
+		return name.hashValue
+	}
+}
+
+extension Submodule: Printable {
+	public var description: String {
+		return "\(name) @ \(SHA)"
+	}
+}
+
 /// Shells out to `git` with the given arguments, optionally in the directory
 /// of an existing repository.
 public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, standardError: SinkOf<NSData>? = nil, environment: [String: String]? = nil) -> ColdSignal<String> {
@@ -81,4 +120,80 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 
 		return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
 	}
+}
+
+/// Parses each key/value entry from the given config file contents, optionally
+/// stripping a known prefix/suffix off of each key.
+private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuffix: String = "") -> ColdSignal<(String, String)> {
+	let entries = split(contents, { $0 == "\0" }, allowEmptySlices: false)
+
+	return ColdSignal { subscriber in
+		for entry in entries {
+			if subscriber.disposable.disposed {
+				return
+			}
+
+			let components = split(entry, { $0 == "\n" }, maxSplit: 1, allowEmptySlices: true)
+			if components.count != 2 {
+				continue
+			}
+
+			let key = components[0]
+			let value = components[1]
+
+			if !key.hasPrefix(keyPrefix) || !key.hasSuffix(keySuffix) {
+				continue
+			}
+
+			let suffixLength = countElements(keySuffix)
+			let prefixLength = countElements(keyPrefix)
+
+			var keyCharacters = Array(key)
+			keyCharacters.removeRange(Range(start: keyCharacters.count - suffixLength, end: suffixLength))
+			keyCharacters.removeRange(Range(start: 0, end: prefixLength))
+
+			let trimmedKey = String(keyCharacters)
+			subscriber.put(.Next(Box((trimmedKey, value))))
+		}
+
+		subscriber.put(.Completed)
+	}
+}
+
+/// Determines the SHA that the submodule at the given path is pinned to, in the
+/// revision of the parent repository specified.
+public func submoduleSHAForPath(path: String, repositoryFileURL: NSURL, revision: String) -> ColdSignal<String> {
+	return launchGitTask([ "ls-tree", "-z", revision, path ], repositoryFileURL: repositoryFileURL)
+		.tryMap { string -> Result<String> in
+			// Example:
+			// 160000 commit 083fd81ecf00124cbdaa8f86ef10377737f6325a	External/ObjectiveGit
+			let components = split(string, { $0 == " " || $0 == "\t" }, maxSplit: 3, allowEmptySlices: false)
+			if components.count >= 3 {
+				return success(components[2])
+			} else {
+				// TODO: Real error here.
+				return failure()
+			}
+		}
+}
+
+/// Returns each submodule found in the given repository revision, or an empty
+/// signal if none exist.
+public func submodulesInRepository(repositoryFileURL: NSURL, revision: String) -> ColdSignal<Submodule> {
+	let modulesObject = "\(revision):.gitmodules"
+	let baseArguments = [ "config", "--blob", modulesObject, "-z" ]
+
+	return launchGitTask(baseArguments + [ "--get-regexp", "submodule\\..*\\.path" ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
+		.catch { _ in .empty() }
+		.map { parseConfigEntries($0, keyPrefix: "submodule.", keySuffix: ".path") }
+		.merge(identity)
+		.map { (name, path) -> ColdSignal<Submodule> in
+			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
+				// TODO: This should be a zip.
+				.combineLatestWith(submoduleSHAForPath(path, repositoryFileURL, revision))
+				.map { (URLString, SHA) in
+					return Submodule(name: name, path: path, URLString: URLString, SHA: SHA)
+				}
+		}
+		.merge(identity)
 }
