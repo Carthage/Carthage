@@ -79,7 +79,7 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 
 extension ProjectLocator: Printable {
 	public var description: String {
-		return fileURL.lastPathComponent
+		return fileURL.lastPathComponent!
 	}
 }
 
