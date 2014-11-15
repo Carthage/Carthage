@@ -108,7 +108,7 @@ public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, r
 /// Checks out the working tree of the given (ideally bare) repository, at the
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
-public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String) -> ColdSignal<String> {
+public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String) -> ColdSignal<()> {
 	return ColdSignal.lazy {
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -119,7 +119,19 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 		environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
 
 		return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
+			.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision))
 	}
+}
+
+/// Clones all submodules for the given repository at the specified revision,
+/// into the given working directory.
+public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String) -> ColdSignal<()> {
+	return submodulesInRepository(repositoryFileURL, revision)
+		.map { submodule -> ColdSignal<()> in
+			return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
+		}
+		.merge(identity)
+		.then(.empty())
 }
 
 /// Clones the given submodule into the working directory of its parent
