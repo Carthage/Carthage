@@ -2,7 +2,7 @@
 
 A simple dependency manager for Cocoa.
 
-The goal of Carthage is straightforward: to resolve complex dependency graphs in the simplest way possible, without supplanting or duplicating the existing Cocoa toolchain. Carthage uses the normal Xcode tooling for building and linking, and at no point will it modify your project files or overwrite your build settings.
+The goal of Carthage is straightforward: to resolve complex dependency graphs in the simplest way possible, without supplanting or duplicating the existing Cocoa toolchain. Carthage uses the normal Xcode tooling for building and linking, without modifying your project files or build settings.
 
 ### Installation
 
