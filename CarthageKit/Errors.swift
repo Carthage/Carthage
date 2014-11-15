@@ -26,9 +26,6 @@ public enum CarthageError {
 	/// `xcodebuild` did not return a build setting that we needed.
 	case MissingBuildSetting(String)
 
-	/// No Cartfile present in the project.
-	case NoCartfile
-
 	/// Incompatible version specifiers were given for a dependency.
 	case IncompatibleRequirements(ProjectIdentifier, VersionSpecifier, VersionSpecifier)
 
@@ -38,6 +35,9 @@ public enum CarthageError {
 
 	/// Failed to check out a repository.
 	case RepositoryCheckoutFailed(workingDirectoryURL: NSURL, reason: String)
+
+	/// Failed to read a file or directory at the given URL.
+	case ReadFailed(NSURL)
 
 	/// Failed to write a file or directory at the given URL.
 	case WriteFailed(NSURL)
@@ -61,9 +61,9 @@ public enum CarthageError {
 				NSLocalizedDescriptionKey: "xcodebuild did not return a value for build setting \(setting)"
 			])
 
-		case let .NoCartfile:
+		case let .ReadFailed(fileURL):
 			return NSError(domain: CarthageErrorDomain, code: 4, userInfo: [
-				NSLocalizedDescriptionKey: "No Cartfile found."
+				NSLocalizedDescriptionKey: "Failed to read file or folder at \(fileURL.path!)"
 			])
 
 		case let .IncompatibleRequirements(dependency, first, second):

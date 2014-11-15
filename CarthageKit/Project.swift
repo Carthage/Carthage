@@ -77,7 +77,7 @@ public final class Project {
 				return self(directoryURL: directoryURL, cartfile: cartfile)
 			}
 		} else {
-			return failure(error ?? CarthageError.NoCartfile.error)
+			return failure(error ?? CarthageError.ReadFailed(cartfileURL).error)
 		}
 	}
 
@@ -88,7 +88,7 @@ public final class Project {
 		if let cartfileLockContents = cartfileLockContents {
 			return CartfileLock.fromString(cartfileLockContents)
 		} else {
-			return failure(error ?? CarthageError.NoCartfile.error)
+			return failure(error ?? CarthageError.ReadFailed(cartfileLockURL).error)
 		}
 	}
 

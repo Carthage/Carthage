@@ -203,7 +203,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<Project
 			}
 		}
 
-		return .error(enumerationError ?? RACError.Empty.error)
+		return .error(enumerationError ?? CarthageError.ReadFailed(directoryURL).error)
 	}
 }
 
