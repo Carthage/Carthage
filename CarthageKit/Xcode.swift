@@ -193,10 +193,8 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<Project
 				}
 			}
 
-			if matches.count > 0 {
-				sort(&matches)
-				return ColdSignal.fromValues(matches).map { $0.locator }
-			}
+			sort(&matches)
+			return ColdSignal.fromValues(matches).map { $0.locator }
 		}
 
 		return .error(enumerationError ?? CarthageError.ReadFailed(directoryURL).error)
