@@ -36,6 +36,9 @@ public enum CarthageError {
 	/// a dependency.
 	case RequiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
 
+	/// Failed to check out a repository.
+	case RepositoryCheckoutFailed(workingDirectoryURL: NSURL, reason: String)
+
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
 		switch (self) {
@@ -68,6 +71,11 @@ public enum CarthageError {
 		case let .RequiredVersionNotFound(dependency, specifier):
 			return NSError(domain: CarthageErrorDomain, code: 6, userInfo: [
 				NSLocalizedDescriptionKey: "No available version for \(dependency) satisfies the requirement: \(specifier)"
+			])
+
+		case let .RepositoryCheckoutFailed(workingDirectoryURL, reason):
+			return NSError(domain: CarthageErrorDomain, code: 7, userInfo: [
+				NSLocalizedDescriptionKey: "Failed to check out repository into \(workingDirectoryURL.path!): \(reason)"
 			])
 		}
 	}

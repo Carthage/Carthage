@@ -112,7 +112,7 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 	return ColdSignal.lazy {
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-			return .error(error ?? RACError.Empty.error)
+			return .error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory").error)
 		}
 
 		var environment = NSProcessInfo.processInfo().environment as [String: String]
@@ -150,7 +150,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 			var name: AnyObject?
 			var error: NSError?
 			if !URL.getResourceValue(&name, forKey: NSURLNameKey, error: &error) {
-				subscriber.put(.Error(error ?? RACError.Empty.error))
+				subscriber.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)").error))
 				return
 			}
 
@@ -164,7 +164,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 
 			var isDirectory: AnyObject?
 			if !URL.getResourceValue(&isDirectory, forKey: NSURLIsDirectoryKey, error: &error) || isDirectory == nil {
-				subscriber.put(.Error(error ?? RACError.Empty.error))
+				subscriber.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory").error))
 				return
 			}
 
@@ -175,7 +175,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 			}
 
 			if !NSFileManager.defaultManager().removeItemAtURL(URL, error: &error) {
-				subscriber.put(.Error(error ?? RACError.Empty.error))
+				subscriber.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)").error))
 				return
 			}
 		}
