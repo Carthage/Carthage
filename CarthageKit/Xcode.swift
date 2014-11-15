@@ -370,7 +370,7 @@ private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: Dictio
 	return ColdSignal.lazy {
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(directoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-			return .error(error ?? RACError.Empty.error)
+			return .error(error ?? CarthageError.WriteFailed(directoryURL).error)
 		}
 
 		return valueForBuildSetting("WRAPPER_NAME", settings)

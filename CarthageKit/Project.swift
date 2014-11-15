@@ -98,7 +98,7 @@ public final class Project {
 		if cartfileLock.description.writeToURL(cartfileLockURL, atomically: true, encoding: NSUTF8StringEncoding, error: &error) {
 			return success(())
 		} else {
-			return failure(error ?? RACError.Empty.error)
+			return failure(error ?? CarthageError.WriteFailed(cartfileLockURL).error)
 		}
 	}
 
@@ -126,7 +126,7 @@ public final class Project {
 		let fetchVersions = ColdSignal<()>.lazy {
 				var error: NSError?
 				if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-					return .error(error ?? RACError.Empty.error)
+					return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
 				}
 
 				let remoteURLString = self.repositoryURLStringForProject(project)

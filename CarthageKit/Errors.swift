@@ -39,6 +39,9 @@ public enum CarthageError {
 	/// Failed to check out a repository.
 	case RepositoryCheckoutFailed(workingDirectoryURL: NSURL, reason: String)
 
+	/// Failed to write a file or directory at the given URL.
+	case WriteFailed(NSURL)
+
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
 		switch (self) {
@@ -76,6 +79,11 @@ public enum CarthageError {
 		case let .RepositoryCheckoutFailed(workingDirectoryURL, reason):
 			return NSError(domain: CarthageErrorDomain, code: 7, userInfo: [
 				NSLocalizedDescriptionKey: "Failed to check out repository into \(workingDirectoryURL.path!): \(reason)"
+			])
+
+		case let .WriteFailed(fileURL):
+			return NSError(domain: CarthageErrorDomain, code: 8, userInfo: [
+				NSLocalizedDescriptionKey: "Failed to create \(fileURL.path!)"
 			])
 		}
 	}
