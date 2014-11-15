@@ -203,22 +203,21 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 				continue
 			}
 
-			let key = components[0]
 			let value = components[1]
+			let scanner = NSScanner(string: components[0])
 
-			if !key.hasPrefix(keyPrefix) || !key.hasSuffix(keySuffix) {
+			if !scanner.scanString(keyPrefix, intoString: nil) {
 				continue
 			}
 
-			let suffixLength = countElements(keySuffix)
-			let prefixLength = countElements(keyPrefix)
+			var key: NSString?
+			if !scanner.scanUpToString(keySuffix, intoString: &key) {
+				continue
+			}
 
-			var keyCharacters = Array(key)
-			keyCharacters.removeRange(Range(start: keyCharacters.count - suffixLength, end: suffixLength))
-			keyCharacters.removeRange(Range(start: 0, end: prefixLength))
-
-			let trimmedKey = String(keyCharacters)
-			subscriber.put(.Next(Box((trimmedKey, value))))
+			if let key = key as? String {
+				subscriber.put(.Next(Box((key, value))))
+			}
 		}
 
 		subscriber.put(.Completed)
