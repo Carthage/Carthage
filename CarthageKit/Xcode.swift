@@ -256,7 +256,7 @@ public enum Platform {
 			return success(.iPhoneSimulator)
 
 		default:
-			return failure()
+			return failure(CarthageError.ParseError(description: "unexpected platform key \"(string)\"").error)
 		}
 	}
 
@@ -444,7 +444,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 										if let path = URL.path {
 											return success(path)
 										} else {
-											return failure()
+											return failure(CarthageError.ParseError(description: "expected file URL to built executable, got (URL)").error)
 										}
 									}
 									.reduce(initial: []) { $0 + [ $1 ] }

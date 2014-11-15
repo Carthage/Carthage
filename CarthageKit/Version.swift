@@ -64,7 +64,7 @@ public struct SemanticVersion: Comparable {
 			} else {
 				// Disallow versions like "1.0a5", because we only support
 				// SemVer right now.
-				return failure()
+				return failure(CarthageError.ParseError(description: "syntax of version \"\(version)\" is unsupported").error)
 			}
 		}
 	}
@@ -76,17 +76,17 @@ extension SemanticVersion: Scannable {
 	static public func fromScanner(scanner: NSScanner) -> Result<SemanticVersion> {
 		var version: NSString? = nil
 		if !scanner.scanCharactersFromSet(versionCharacterSet, intoString: &version) || version == nil {
-			return failure()
+			return failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)").error)
 		}
 
 		let components = split(version! as String, { $0 == "." }, allowEmptySlices: false)
 		if components.count == 0 {
-			return failure()
+			return failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)").error)
 		}
 
 		let major = components[0].toInt()
 		if major == nil {
-			return failure()
+			return failure(CarthageError.ParseError(description: "expected major version number in \"\(version!)\"").error)
 		}
 
 		let minor = (components.count > 1 ? components[1].toInt() : 0)
@@ -135,16 +135,16 @@ public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
 extension PinnedVersion: Scannable {
 	public static func fromScanner(scanner: NSScanner) -> Result<PinnedVersion> {
 		if !scanner.scanString("\"", intoString: nil) {
-			return failure()
+			return failure(CarthageError.ParseError(description: "expected pinned version in line: \(scanner.currentLine)").error)
 		}
 
 		var tag: NSString? = nil
 		if !scanner.scanUpToString("\"", intoString: &tag) || tag == nil {
-			return failure()
+			return failure(CarthageError.ParseError(description: "empty pinned version in line: \(scanner.currentLine)").error)
 		}
 
 		if !scanner.scanString("\"", intoString: nil) {
-			return failure()
+			return failure(CarthageError.ParseError(description: "unterminated pinned version in line: \(scanner.currentLine)").error)
 		}
 
 		return success(self(tag: tag!))

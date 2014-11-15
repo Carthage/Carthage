@@ -150,3 +150,16 @@ internal func permutations<T>(signals: [ColdSignal<T>]) -> ColdSignal<[T]> {
 
 	return combined
 }
+
+extension NSScanner {
+	/// Returns the current line being scanned.
+	internal var currentLine: NSString {
+		// Force Foundation types, so we don't have to use Swift's annoying
+		// string indexing.
+		let nsString: NSString = string
+		let scanRange: NSRange = NSMakeRange(scanLocation, 0)
+		let lineRange: NSRange = nsString.lineRangeForRange(scanRange)
+
+		return nsString.substringWithRange(lineRange)
+	}
+}

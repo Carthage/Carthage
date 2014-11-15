@@ -59,7 +59,7 @@ public struct Cartfile {
 			}
 
 			if !scanner.atEnd {
-				result = failure()
+				result = failure(CarthageError.ParseError(description: "unexpected trailing characters in line: \(line)").error)
 				stop.memory = true
 			}
 		}
@@ -154,22 +154,22 @@ extension ProjectIdentifier: Scannable {
 	/// Attempts to parse a ProjectIdentifier.
 	public static func fromScanner(scanner: NSScanner) -> Result<ProjectIdentifier> {
 		if !scanner.scanString("github", intoString: nil) {
-			return failure()
+			return failure(CarthageError.ParseError(description: "unexpected dependency type in line: \(scanner.currentLine)").error)
 		}
 
 		if !scanner.scanString("\"", intoString: nil) {
-			return failure()
+			return failure(CarthageError.ParseError(description: "expected string after dependency type in line: \(scanner.currentLine)").error)
 		}
 
 		var repoNWO: NSString? = nil
 		if !scanner.scanUpToString("\"", intoString: &repoNWO) || !scanner.scanString("\"", intoString: nil) {
-			return failure()
+			return failure(CarthageError.ParseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)").error)
 		}
 
 		if let repoNWO = repoNWO {
 			return Repository.fromNWO(repoNWO).map { self.GitHub($0) }
 		} else {
-			return failure()
+			return failure(CarthageError.ParseError(description: "empty string after dependency type in line: \(scanner.currentLine)").error)
 		}
 	}
 }

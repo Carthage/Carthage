@@ -237,8 +237,7 @@ public func submoduleSHAForPath(path: String, repositoryFileURL: NSURL, revision
 			if components.count >= 3 {
 				return success(components[2])
 			} else {
-				// TODO: Real error here.
-				return failure()
+				return failure(CarthageError.ParseError(description: "expected submodule commit SHA in ls-tree output: \(string)").error)
 			}
 		}
 }

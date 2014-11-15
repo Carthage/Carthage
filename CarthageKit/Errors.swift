@@ -42,6 +42,9 @@ public enum CarthageError {
 	/// Failed to write a file or directory at the given URL.
 	case WriteFailed(NSURL)
 
+	/// An error occurred parsing a Carthage file.
+	case ParseError(description: String)
+
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
 		switch (self) {
@@ -84,6 +87,11 @@ public enum CarthageError {
 		case let .WriteFailed(fileURL):
 			return NSError(domain: CarthageErrorDomain, code: 8, userInfo: [
 				NSLocalizedDescriptionKey: "Failed to create \(fileURL.path!)"
+			])
+
+		case let .ParseError(description):
+			return NSError(domain: CarthageErrorDomain, code: 9, userInfo: [
+				NSLocalizedDescriptionKey: "Parse error: \(description)"
 			])
 		}
 	}
