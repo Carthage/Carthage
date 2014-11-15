@@ -51,10 +51,10 @@ extension Submodule: Printable {
 
 /// Shells out to `git` with the given arguments, optionally in the directory
 /// of an existing repository.
-public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, standardError: SinkOf<NSData>? = nil, environment: [String: String]? = nil) -> ColdSignal<String> {
+public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, standardOutput: SinkOf<NSData>? = nil, standardError: SinkOf<NSData>? = nil, environment: [String: String]? = nil) -> ColdSignal<String> {
 	let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments, workingDirectoryPath: repositoryFileURL?.path, environment: environment)
 
-	return launchTask(taskDescription, standardError: standardError)
+	return launchTask(taskDescription, standardOutput: standardOutput, standardError: standardError)
 		.map { NSString(data: $0, encoding: NSUTF8StringEncoding) as String }
 }
 
@@ -183,7 +183,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 		subscriber.put(.Completed)
 	}
 
-	return launchGitTask([ "clone", submodule.URLString, submodule.path, "--depth", "1", "--quiet", "--recursive" ], repositoryFileURL: workingDirectoryURL)
+	return launchGitTask([ "clone", submodule.URLString, submodule.path, "--depth", "1", "--quiet", "--recursive" ], repositoryFileURL: workingDirectoryURL, standardOutput: SinkOf<NSData>{ _ in () })
 		.then(purgeGitDirectories)
 }
 
