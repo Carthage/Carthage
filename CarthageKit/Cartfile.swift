@@ -117,7 +117,7 @@ extension CartfileLock: Printable {
 /// Uniquely identifies a project that can be used as a dependency.
 public enum ProjectIdentifier: Equatable {
 	/// A repository hosted on GitHub.com.
-	case GitHub(Repository)
+	case GitHub(GitHubRepository)
 
 	/// The unique, user-visible name for this project.
 	public var name: String {
@@ -167,7 +167,7 @@ extension ProjectIdentifier: Scannable {
 		}
 
 		if let repoNWO = repoNWO {
-			return Repository.fromNWO(repoNWO).map { self.GitHub($0) }
+			return GitHubRepository.fromNWO(repoNWO).map { self.GitHub($0) }
 		} else {
 			return failure(CarthageError.ParseError(description: "empty string after dependency type in line: \(scanner.currentLine)").error)
 		}
