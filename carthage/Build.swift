@@ -17,26 +17,30 @@ public struct BuildCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<()> {
 		return ColdSignal.fromResult(BuildOptions.evaluate(mode))
-			.map { options -> ColdSignal<()> in
-				return self.openTemporaryLogFile()
-					.map { (stdoutHandle, temporaryURL) -> ColdSignal<()> in
-						let directoryURL = NSURL.fileURLWithPath(NSFileManager.defaultManager().currentDirectoryPath)!
-
-						let (stdoutSignal, buildSignal) = self.buildProjectInDirectoryURL(directoryURL, options: options)
-						let disposable = stdoutSignal.observe { data in
-							stdoutHandle.writeData(data)
-						}
-
-						return buildSignal.on(subscribed: {
-							println("xcodebuild output can be found in \(temporaryURL.path!)\n")
-						}, disposed: {
-							disposable.dispose()
-						})
-					}
-					.merge(identity)
-			}
+			.map { self.buildWithOptions($0) }
 			.merge(identity)
 			.wait()
+	}
+
+	/// Builds the project in the current working directory, with the given
+	/// options.
+	public func buildWithOptions(options: BuildOptions) -> ColdSignal<()> {
+		return self.openTemporaryLogFile()
+			.map { (stdoutHandle, temporaryURL) -> ColdSignal<()> in
+				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
+
+				let (stdoutSignal, buildSignal) = self.buildProjectInDirectoryURL(directoryURL, options: options)
+				let disposable = stdoutSignal.observe { data in
+					stdoutHandle.writeData(data)
+				}
+
+				return buildSignal.on(subscribed: {
+					println("*** xcodebuild output can be found in \(temporaryURL.path!)")
+				}, disposed: {
+					disposable.dispose()
+				})
+			}
+			.merge(identity)
 	}
 
 	/// Builds the project in the given directory, using the given options.
@@ -78,17 +82,19 @@ public struct BuildCommand: CommandType {
 	}
 }
 
-private struct BuildOptions: OptionsType {
+public struct BuildOptions: OptionsType {
 	let configuration: String
 	let skipCurrent: Bool
+	let directoryPath: String
 
-	static func create(configuration: String)(skipCurrent: Bool) -> BuildOptions {
-		return self(configuration: configuration, skipCurrent: skipCurrent)
+	public static func create(configuration: String)(skipCurrent: Bool)(directoryPath: String) -> BuildOptions {
+		return self(configuration: configuration, skipCurrent: skipCurrent, directoryPath: directoryPath)
 	}
 
-	static func evaluate(m: CommandMode) -> Result<BuildOptions> {
+	public static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "whether to skip the project in the current directory, and only build its dependencies")
+			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 }
