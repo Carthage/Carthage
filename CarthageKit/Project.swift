@@ -102,12 +102,11 @@ public final class Project {
 		}
 	}
 
-	/// Returns a string representing the URL that the project's remote repository
-	/// exists at.
-	private func repositoryURLStringForProject(project: ProjectIdentifier) -> String {
+	/// Returns the URL that the project's remote repository exists at.
+	private func repositoryURLStringForProject(project: ProjectIdentifier) -> GitURL {
 		switch project {
 		case let .GitHub(repository):
-			return repository.cloneURLString
+			return repository.cloneURL
 		}
 	}
 
@@ -139,7 +138,7 @@ public final class Project {
 							println("*** Cloning \(project.name)")
 						})
 				} else {
-					return fetchRepository(repositoryURL, remoteURLString: remoteURLString)
+					return fetchRepository(repositoryURL, remoteURL: remoteURLString)
 						.then(.empty())
 						.on(subscribed: {
 							println("*** Fetching \(project.name)")
