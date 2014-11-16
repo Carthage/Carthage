@@ -28,7 +28,7 @@ public final class Project {
 	public let cartfile: Cartfile
 
 	/// The file URL to the project's Cartfile.lock.
-	private var cartfileLockURL: NSURL {
+	public var cartfileLockURL: NSURL {
 		return directoryURL.URLByAppendingPathComponent(CarthageProjectCartfileLockPath, isDirectory: false)
 	}
 
