@@ -43,53 +43,53 @@ extension ColdSignal {
 	/// that occurs on the given signal (repeats included).
 	internal func permuteWith<U>(signal: ColdSignal<U>) -> ColdSignal<(T, U)> {
 		return ColdSignal<(T, U)> { subscriber in
-			let queue = dispatch_queue_create("org.reactivecocoa.ReactiveCocoa.ColdSignal.recombineWith", DISPATCH_QUEUE_SERIAL)
+			let scheduler = QueueScheduler()
 			var selfValues: [T] = []
 			var selfCompleted = false
 			var otherValues: [U] = []
 			var otherCompleted = false
 
-			let selfDisposable = self.start(next: { value in
-				dispatch_sync(queue) {
+			let schedulerDisposable = scheduler.schedule {
+				let selfDisposable = self.deliverOn(scheduler).start(next: { value in
 					selfValues.append(value)
 
 					for otherValue in otherValues {
 						subscriber.put(.Next(Box((value, otherValue))))
 					}
-				}
-			}, error: { error in
-				subscriber.put(.Error(error))
-			}, completed: {
-				dispatch_sync(queue) {
+				}, error: { error in
+					subscriber.put(.Error(error))
+				}, completed: {
 					selfCompleted = true
 					if otherCompleted {
 						subscriber.put(.Completed)
 					}
+				})
+
+				subscriber.disposable.addDisposable(selfDisposable)
+
+				if subscriber.disposable.disposed {
+					return
 				}
-			})
 
-			subscriber.disposable.addDisposable(selfDisposable)
-
-			let otherDisposable = signal.start(next: { value in
-				dispatch_sync(queue) {
+				let otherDisposable = signal.deliverOn(scheduler).start(next: { value in
 					otherValues.append(value)
 
 					for selfValue in selfValues {
 						subscriber.put(.Next(Box((selfValue, value))))
 					}
-				}
-			}, error: { error in
-				subscriber.put(.Error(error))
-			}, completed: {
-				dispatch_sync(queue) {
+				}, error: { error in
+					subscriber.put(.Error(error))
+				}, completed: {
 					otherCompleted = true
 					if selfCompleted {
 						subscriber.put(.Completed)
 					}
-				}
-			})
+				})
 
-			subscriber.disposable.addDisposable(otherDisposable)
+				subscriber.disposable.addDisposable(otherDisposable)
+			}
+
+			subscriber.disposable.addDisposable(schedulerDisposable)
 		}
 	}
 
@@ -97,40 +97,39 @@ extension ColdSignal {
 	/// events if no values were sent.
 	internal func dematerializeErrorsIfEmpty<U>(evidence: ColdSignal -> ColdSignal<Event<U>>) -> ColdSignal<U> {
 		return ColdSignal<U> { subscriber in
-			let queue = dispatch_queue_create("org.reactivecocoa.ReactiveCocoa.ColdSignal.dematerializeErrorsIfEmpty", DISPATCH_QUEUE_SERIAL)
+			let scheduler = QueueScheduler()
 			var receivedValue = false
 			var receivedError: NSError? = nil
 
-			evidence(self).start(next: { event in
-				switch event {
-				case let .Next(value):
-					dispatch_sync(queue) {
+			let schedulerDisposable = scheduler.schedule {
+				let selfDisposable = evidence(self).deliverOn(scheduler).start(next: { event in
+					switch event {
+					case let .Next(value):
 						receivedValue = true
-					}
+						fallthrough
 
-					fallthrough
+					case .Completed:
+						subscriber.put(event)
 
-				case .Completed:
-					subscriber.put(event)
-
-				case let .Error(error):
-					dispatch_sync(queue) {
+					case let .Error(error):
 						receivedError = error
 					}
-				}
-			}, error: { error in
-				subscriber.put(.Error(error))
-			}, completed: {
-				dispatch_sync(queue) {
+				}, error: { error in
+					subscriber.put(.Error(error))
+				}, completed: {
 					if !receivedValue {
 						if let receivedError = receivedError {
 							subscriber.put(.Error(receivedError))
 						}
 					}
-				}
 
-				subscriber.put(.Completed)
-			})
+					subscriber.put(.Completed)
+				})
+				
+				subscriber.disposable.addDisposable(selfDisposable)
+			}
+
+			subscriber.disposable.addDisposable(schedulerDisposable)
 		}
 	}
 }
