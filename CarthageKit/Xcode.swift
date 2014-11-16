@@ -142,11 +142,7 @@ private struct ProjectEnumerationMatch: Comparable {
 		var error: NSError?
 
 		if !URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: &error) {
-			if let error = error {
-				return failure(error)
-			} else {
-				return failure()
-			}
+			return failure(error ?? CarthageError.ReadFailed(URL).error)
 		}
 
 		if let typeIdentifier = typeIdentifier as? String {
@@ -197,13 +193,11 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<Project
 				}
 			}
 
-			if matches.count > 0 {
-				sort(&matches)
-				return ColdSignal.fromValues(matches).map { $0.locator }
-			}
+			sort(&matches)
+			return ColdSignal.fromValues(matches).map { $0.locator }
 		}
 
-		return .error(enumerationError ?? RACError.Empty.error)
+		return .error(enumerationError ?? CarthageError.ReadFailed(directoryURL).error)
 	}
 }
 
@@ -256,7 +250,7 @@ public enum Platform {
 			return success(.iPhoneSimulator)
 
 		default:
-			return failure()
+			return failure(CarthageError.ParseError(description: "unexpected platform key \"(string)\"").error)
 		}
 	}
 
@@ -341,7 +335,7 @@ private func URLWithPathRelativeToBuildProductsDirectory(pathSettingName: String
 			if let fileURL = NSURL.fileURLWithPath(productsDir, isDirectory: true) {
 				return success(fileURL)
 			} else {
-				return failure()
+				return failure(CarthageError.ParseError(description: "expected file URL for built products directory, got \(productsDir)").error)
 			}
 		}
 		// TODO: This should be a zip.
@@ -370,7 +364,7 @@ private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: Dictio
 	return ColdSignal.lazy {
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(directoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-			return .error(error ?? RACError.Empty.error)
+			return .error(error ?? CarthageError.WriteFailed(directoryURL).error)
 		}
 
 		return valueForBuildSetting("WRAPPER_NAME", settings)
@@ -444,7 +438,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 										if let path = URL.path {
 											return success(path)
 										} else {
-											return failure()
+											return failure(CarthageError.ParseError(description: "expected file URL to built executable, got (URL)").error)
 										}
 									}
 									.reduce(initial: []) { $0 + [ $1 ] }

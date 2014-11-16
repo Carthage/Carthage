@@ -28,7 +28,7 @@ public struct Repository: Equatable {
 	public static func fromNWO(NWO: String) -> Result<Repository> {
 		let components = split(NWO, { $0 == "/" }, maxSplit: 1, allowEmptySlices: false)
 		if components.count < 2 {
-			return failure()
+			return failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\"").error)
 		}
 
 		return success(self(owner: components[0], name: components[1]))

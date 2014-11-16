@@ -26,15 +26,24 @@ public enum CarthageError {
 	/// `xcodebuild` did not return a build setting that we needed.
 	case MissingBuildSetting(String)
 
-	/// No Cartfile present in the project.
-	case NoCartfile
-
 	/// Incompatible version specifiers were given for a dependency.
 	case IncompatibleRequirements(ProjectIdentifier, VersionSpecifier, VersionSpecifier)
 
 	/// No existent version could be found to satisfy the version specifier for
 	/// a dependency.
 	case RequiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
+
+	/// Failed to check out a repository.
+	case RepositoryCheckoutFailed(workingDirectoryURL: NSURL, reason: String)
+
+	/// Failed to read a file or directory at the given URL.
+	case ReadFailed(NSURL)
+
+	/// Failed to write a file or directory at the given URL.
+	case WriteFailed(NSURL)
+
+	/// An error occurred parsing a Carthage file.
+	case ParseError(description: String)
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
@@ -55,9 +64,9 @@ public enum CarthageError {
 				NSLocalizedDescriptionKey: "xcodebuild did not return a value for build setting \(setting)"
 			])
 
-		case let .NoCartfile:
+		case let .ReadFailed(fileURL):
 			return NSError(domain: CarthageErrorDomain, code: 4, userInfo: [
-				NSLocalizedDescriptionKey: "No Cartfile found."
+				NSLocalizedDescriptionKey: "Failed to read file or folder at \(fileURL.path!)"
 			])
 
 		case let .IncompatibleRequirements(dependency, first, second):
@@ -68,6 +77,21 @@ public enum CarthageError {
 		case let .RequiredVersionNotFound(dependency, specifier):
 			return NSError(domain: CarthageErrorDomain, code: 6, userInfo: [
 				NSLocalizedDescriptionKey: "No available version for \(dependency) satisfies the requirement: \(specifier)"
+			])
+
+		case let .RepositoryCheckoutFailed(workingDirectoryURL, reason):
+			return NSError(domain: CarthageErrorDomain, code: 7, userInfo: [
+				NSLocalizedDescriptionKey: "Failed to check out repository into \(workingDirectoryURL.path!): \(reason)"
+			])
+
+		case let .WriteFailed(fileURL):
+			return NSError(domain: CarthageErrorDomain, code: 8, userInfo: [
+				NSLocalizedDescriptionKey: "Failed to create \(fileURL.path!)"
+			])
+
+		case let .ParseError(description):
+			return NSError(domain: CarthageErrorDomain, code: 9, userInfo: [
+				NSLocalizedDescriptionKey: "Parse error: \(description)"
 			])
 		}
 	}
