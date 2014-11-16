@@ -27,8 +27,8 @@ class ResolverSpec: QuickSpec {
 					case let .GitHub(repo):
 						dict[repo.description] = dependency.version
 
-					default:
-						break
+					case let .Git(URL):
+						dict[URL.URLString] = dependency.version
 					}
 
 					return dict
@@ -43,6 +43,7 @@ class ResolverSpec: QuickSpec {
 			expect(versionByRepo["jspahrsummers/libextobjc"]).to(equal(SemanticVersion(major: 0, minor: 4, patch: 1)))
 			expect(versionByRepo["jspahrsummers/xcconfigs"]).to(equal(SemanticVersion(major: 1, minor: 3, patch: 0)))
 			expect(versionByRepo["jspahrsummers/objc-build-scripts"]).to(equal(SemanticVersion(major: 3, minor: 0, patch: 0)))
+			expect(versionByRepo["https://enterprise.local/desktop/git-error-translations.git"]).to(equal(SemanticVersion(major: 3, minor: 0, patch: 0)))
 		}
 	}
 

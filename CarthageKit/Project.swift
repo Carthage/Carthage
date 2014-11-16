@@ -107,6 +107,9 @@ public final class Project {
 		switch project {
 		case let .GitHub(repository):
 			return repository.cloneURL
+
+		case let .Git(URL):
+			return URL
 		}
 	}
 

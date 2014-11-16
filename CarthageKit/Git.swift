@@ -15,28 +15,75 @@ public struct GitURL: Equatable {
 	/// The string representation of the URL.
 	public let URLString: String
 
+	/// A normalized URL string, without protocol, authentication, or port
+	/// information. This is mostly useful for comparison, and not for any
+	/// actual Git operations.
+	private var normalizedURLString: String {
+		let parsedURL: NSURL? = NSURL(string: URLString)
+
+		if let parsedURL = parsedURL {
+			// Normal, valid URL.
+			let host = parsedURL.host ?? ""
+			let path = stripGitSuffix(parsedURL.path ?? "")
+			return "\(host)\(path)"
+		} else if URLString.hasPrefix("/") {
+			// Local path.
+			return stripGitSuffix(URLString)
+		} else {
+			// scp syntax.
+			var strippedURLString = URLString
+
+			if let index = find(strippedURLString, "@") {
+				strippedURLString.removeRange(Range(start: strippedURLString.startIndex, end: index))
+			}
+
+			var host = ""
+			if let index = find(strippedURLString, ":") {
+				host = strippedURLString[Range(start: strippedURLString.startIndex, end: index.predecessor())]
+				strippedURLString.removeRange(Range(start: strippedURLString.startIndex, end: index))
+			}
+
+			var path = strippedURLString
+			if !path.hasPrefix("/") {
+				// This probably isn't strictly legit, but we'll have a forward
+				// slash for other URL types.
+				path.insert("/", atIndex: path.startIndex)
+			}
+
+			return "\(host)\(path)"
+		}
+	}
+
 	/// The name of the repository, if it can be inferred from the URL.
 	public var name: String? {
 		let components = split(URLString, { $0 == "/" }, allowEmptySlices: false)
 
-		return components.last.map { gitName -> String in
-			if gitName.hasSuffix(".git") {
-				let nameNSString = gitName as NSString
-				return nameNSString.substringToIndex(nameNSString.length - 4) as String
-			} else {
-				return gitName
-			}
-		}
+		return components.last.map { self.stripGitSuffix($0) }
 	}
 
 	public init(_ URLString: String) {
 		self.URLString = URLString
 	}
+
+	/// Strips any trailing .git in the given name, if one exists.
+	private func stripGitSuffix(string: String) -> String {
+		if string.hasSuffix(".git") {
+			let nsString = string as NSString
+			return nsString.substringToIndex(nsString.length - 4) as String
+		} else {
+			return string
+		}
+	}
 }
 
 public func ==(lhs: GitURL, rhs: GitURL) -> Bool {
-	// TODO: Some kind of normalization.
-	return lhs.URLString == rhs.URLString
+	return lhs.normalizedURLString == rhs.normalizedURLString
+}
+
+extension GitURL: Hashable {
+	public var hashValue: Int {
+		return normalizedURLString.hashValue
+	}
 }
 
 extension GitURL: Printable {
