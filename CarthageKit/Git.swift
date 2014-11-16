@@ -183,7 +183,8 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 		subscriber.put(.Completed)
 	}
 
-	return launchGitTask([ "clone", submodule.URLString, submodule.path, "--depth", "1", "--quiet" ], repositoryFileURL: workingDirectoryURL)
+	return launchGitTask([ "clone", "--quiet", submodule.URLString, submodule.path ], repositoryFileURL: workingDirectoryURL)
+		.then(launchGitTask([ "checkout", "--quiet", submodule.SHA ], repositoryFileURL: submoduleDirectoryURL))
 		// Clone nested submodules in a separate step, to quiet its output correctly.
 		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleDirectoryURL))
 		.then(purgeGitDirectories)
