@@ -28,7 +28,7 @@ public final class Project {
 	public let cartfile: Cartfile
 
 	/// The file URL to the project's Cartfile.lock.
-	private var cartfileLockURL: NSURL {
+	public var cartfileLockURL: NSURL {
 		return directoryURL.URLByAppendingPathComponent(CarthageProjectCartfileLockPath, isDirectory: false)
 	}
 
@@ -117,36 +117,46 @@ public final class Project {
 		return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
 	}
 
+	/// Clones the given project to the global repositories folder, or fetches
+	/// inside it if it has already been cloned.
+	///
+	/// Returns a signal which will send the URL to the repository's folder on
+	/// disk.
+	private func cloneOrFetchProject(project: ProjectIdentifier) -> ColdSignal<NSURL> {
+		let repositoryURL = repositoryFileURLForProject(project)
+		return ColdSignal.lazy {
+			var error: NSError?
+			if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+				return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
+			}
+
+			let remoteURLString = self.repositoryURLStringForProject(project)
+			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
+				// If we created the directory, we're now responsible for
+				// cloning it.
+				return cloneRepository(remoteURLString, repositoryURL)
+					.then(.single(repositoryURL))
+					.on(subscribed: {
+						println("*** Cloning \(project.name)")
+					})
+			} else {
+				return fetchRepository(repositoryURL, remoteURLString: remoteURLString)
+					.then(.single(repositoryURL))
+					.on(subscribed: {
+						println("*** Fetching \(project.name)")
+					})
+			}
+		}
+	}
+
 	/// Sends all versions available for the given project.
 	///
 	/// This will automatically clone or fetch the project's repository as
 	/// necessary.
 	private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<SemanticVersion> {
-		let repositoryURL = repositoryFileURLForProject(project)
-		let fetchVersions = ColdSignal<()>.lazy {
-				var error: NSError?
-				if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-					return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
-				}
-
-				let remoteURLString = self.repositoryURLStringForProject(project)
-				if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
-					// If we created the directory, we're now responsible for
-					// cloning it.
-					return cloneRepository(remoteURLString, repositoryURL)
-						.then(.empty())
-						.on(subscribed: {
-							println("*** Cloning \(project.name)")
-						})
-				} else {
-					return fetchRepository(repositoryURL, remoteURLString: remoteURLString)
-						.then(.empty())
-						.on(subscribed: {
-							println("*** Fetching \(project.name)")
-						})
-				}
-			}
-			.then(listTags(repositoryURL))
+		let fetchVersions = cloneOrFetchProject(project)
+			.map { repositoryURL in listTags(repositoryURL) }
+			.merge(identity)
 			.map { PinnedVersion(tag: $0) }
 			.map { version -> ColdSignal<SemanticVersion> in
 				return ColdSignal.fromResult(SemanticVersion.fromPinnedVersion(version))
@@ -204,6 +214,30 @@ public final class Project {
 			.then(checkoutLockedDependencies())
 	}
 
+	/// Checks out the given project into its intended working directory,
+	/// cloning it first if need be.
+	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String) -> ColdSignal<()> {
+		let repositoryURL = self.repositoryFileURLForProject(project)
+		let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
+
+		let checkoutSignal = checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision)
+			.on(subscribed: {
+				println("*** Checking out \(project.name) at \"\(revision)\"")
+			})
+
+		return commitExistsInRepository(repositoryURL, revision)
+			.map { exists -> ColdSignal<NSURL> in
+				if exists {
+					return .empty()
+				} else {
+					return self.cloneOrFetchProject(project)
+				}
+			}
+			.merge(identity)
+			.then(checkoutSignal)
+			.then(.empty())
+	}
+
 	/// Checks out the dependencies listed in the project's Cartfile.lock.
 	public func checkoutLockedDependencies() -> ColdSignal<()> {
 		return ColdSignal<CartfileLock>.lazy {
@@ -213,16 +247,7 @@ public final class Project {
 				return ColdSignal.fromValues(cartfileLock.dependencies)
 			}
 			.merge(identity)
-			.map { dependency -> ColdSignal<()> in
-				let repositoryURL = self.repositoryFileURLForProject(dependency.project)
-				let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true)
-
-				return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, dependency.version.tag)
-					.then(.empty())
-					.on(subscribed: {
-						println("*** Checking out \(dependency.project.name) at \(dependency.version)")
-					})
-			}
+			.map { dependency in self.checkoutOrCloneProject(dependency.project, atRevision: dependency.version.tag) }
 			.merge(identity)
 			.then(.empty())
 	}
