@@ -5,10 +5,10 @@ Carthage is intended to be the simplest way to add frameworks to your Cocoa appl
 The basic [workflow](#adding-frameworks-to-an-application) looks something like this:
 
 1. You create a [Cartfile][] that lists the frameworks you’d like to use in your project.
-1. You [run Carthage](#adding-frameworks-to-an-application), which retrieves and builds the latest version of each framework that satisfies the requirements you’ve given, while maintaining compatibility across all dependencies.
+1. You [run Carthage](#adding-frameworks-to-an-application), which fetches and builds each framework you’ve listed.
 1. You drag the built `.framework` binaries into your application’s Xcode project.
 
-In other words, Carthage is responsible for building your dependencies and providing you with binary frameworks. Meanwhile, you retain full control over your project structure and setup—at no point will Carthage modify your project files or your build settings.
+Carthage is responsible for building your dependencies and providing you with binary frameworks, but you retain full control over your project structure and setup. Carthage does not automatically modify your project files or your build settings.
 
 ## Installing Carthage
 
