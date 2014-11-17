@@ -327,9 +327,8 @@ private func valueForBuildSetting(setting: String, arguments: BuildArguments) ->
 		.merge(identity)
 }
 
-/// Calculates a URL against `BUILT_PRODUCTS_DIR` using a build setting that
-/// represents a relative path.
-private func URLWithPathRelativeToBuildProductsDirectory(pathSettingName: String, settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
+/// Determines the URL to the built products directory for the given settings.
+private func URLToBuildProductsDirectory(settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
 	return valueForBuildSetting("BUILT_PRODUCTS_DIR", settings)
 		.tryMap { productsDir -> Result<NSURL> in
 			if let fileURL = NSURL.fileURLWithPath(productsDir, isDirectory: true) {
@@ -338,6 +337,12 @@ private func URLWithPathRelativeToBuildProductsDirectory(pathSettingName: String
 				return failure(CarthageError.ParseError(description: "expected file URL for built products directory, got \(productsDir)").error)
 			}
 		}
+}
+
+/// Calculates a URL against `BUILT_PRODUCTS_DIR` using a build setting that
+/// represents a relative path.
+private func URLWithPathRelativeToBuildProductsDirectory(pathSettingName: String, settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
+	return URLToBuildProductsDirectory(settings)
 		// TODO: This should be a zip.
 		.combineLatestWith(valueForBuildSetting(pathSettingName, settings))
 		.map { (productsDirURL, path) in productsDirURL.URLByAppendingPathComponent(path) }
@@ -526,10 +531,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 									.merge(identity)
 
 								let sourceModulesURL = pathToModulesFolder(simulatorSettings)
-									// TODO: This should be a zip, and better factored.
-									.combineLatestWith(valueForBuildSetting("BUILT_PRODUCTS_DIR", simulatorSettings))
-									.map { (modulesPath, productsPath) -> NSURL in
-										return NSURL.fileURLWithPath(productsPath, isDirectory: true)!.URLByAppendingPathComponent(modulesPath)
+									// TODO: This should be a zip.
+									.combineLatestWith(URLToBuildProductsDirectory(simulatorSettings))
+									.map { (modulesPath, productsURL) -> NSURL in
+										return productsURL.URLByAppendingPathComponent(modulesPath)
 									}
 
 								let destinationModulesURL = pathToModulesFolder(deviceSettings)
