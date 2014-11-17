@@ -54,6 +54,15 @@ public struct BuildCommand: CommandType {
 		var buildSignal = ColdSignal<Project>.lazy {
 				return .fromResult(Project.loadFromDirectory(directoryURL))
 			}
+			.catch { error in
+				if options.skipCurrent {
+					return .error(error)
+				} else {
+					// Ignore Cartfile loading failures. Assume the user just
+					// wants to build the enclosing project.
+					return .empty()
+				}
+			}
 			.map { project -> ColdSignal<()> in
 				let (dependenciesOutput, dependenciesSignal) = project.buildCheckedOutDependencies(options.configuration)
 				let dependenciesDisposable = dependenciesOutput.observe(stdoutSink)
