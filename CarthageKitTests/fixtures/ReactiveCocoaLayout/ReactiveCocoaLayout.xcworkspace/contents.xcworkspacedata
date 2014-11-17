@@ -5,9 +5,9 @@
       location = "group:ReactiveCocoaLayout.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:ReactiveCocoa/External/Quick/Quick.xcodeproj">
+      location = "group:Carthage.checkout/ReactiveCocoa/External/Quick/Quick.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:ReactiveCocoa/External/Quick/Externals/Nimble/Nimble.xcodeproj">
+      location = "group:Carthage.checkout/ReactiveCocoa/External/Quick/Externals/Nimble/Nimble.xcodeproj">
    </FileRef>
 </Workspace>
