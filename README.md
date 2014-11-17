@@ -1,27 +1,70 @@
 # Carthage
 
-A simple dependency manager for Cocoa.
+Carthage is intended to be the simplest way to add frameworks to your Cocoa application.
 
-The goal of Carthage is straightforward: to resolve complex dependency graphs in the simplest way possible, without supplanting or duplicating the existing Cocoa toolchain. Carthage uses the normal Xcode tooling for building and linking, without modifying your project files or build settings.
+The basic [workflow](#adding-frameworks-to-an-application) looks something like this:
 
-### Installation
+1. You create a [Cartfile][] that lists the frameworks you’d like to use in your project.
+1. You [run Carthage](#adding-frameworks-to-an-application), which retrieves and builds the latest version of each framework that satisfies the requirements you’ve given, while maintaining compatibility across all dependencies.
+1. You drag the built `.framework` binaries into your application’s Xcode project.
 
-To install the `carthage` tool on your system, simply clone the repository and run `sudo make install`.
+In other words, Carthage is responsible for building your dependencies and providing you with binary frameworks. Meanwhile, you retain full control over your project structure and setup—at no point will Carthage modify your project files or your build settings.
 
-### Usage
+## Installing Carthage
 
-Once you have Carthage [installed](#installation), set up your project:
+To install the `carthage` tool on your system, please download and run the `pkg` file for the latest  [release](https://github.com/Carthage/Carthage/releases), then follow the on-screen instructions.
 
-1. Create a [Cartfile](Documentation/Cartfile.md) that lists the dependencies of your project.
-1. Run `carthage update`. This will clone and build all dependencies recursively.
-1. Commit the `Cartfile.lock` file created by Carthage. This “pins” your dependencies, so other checkouts of your repository will use the same versions for consistency.
-1. Drag the `.framework` bundles for your dependencies into your Xcode project, and add them to all targets that depend upon them.
-1. In your targets’ “General” settings, add each framework to the “Embedded Binaries” section.
+If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository and run `sudo make install`.
 
-Afterwards, collaborators or users of your project only need to clone the repository and run `carthage bootstrap` to receive the same dependencies, and get started building.
+## Adding frameworks to an application
 
-Whenever you modify your `Cartfile` in the future, or whenever you want to update to newer dependencies (subject to the version restrictions listed in the `Cartfile`), you can re-run the `carthage update` command. For any dependencies added or removed in this way, make sure to update your project file accordingly.
+Once you have Carthage [installed](#installing-carthage), you can begin adding frameworks to your project:
 
-### License
+1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
+1. Run `carthage update`. This will fetch dependencies into a [Carthage.checkout][] folder, then build each one.
+1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage.build][] folder on disk.
+
+Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.lock][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.lock][]**, because anyone else using the project will need that file to build the same framework versions.
+
+After you’ve finished the above steps and pushed your changes, other users of the project only need to fetch the repository and run `carthage bootstrap` to get started with the frameworks you’ve added.
+
+### Adding frameworks to unit tests or a framework
+
+Using Carthage for the dependencies of any arbitrary target is fairly similar to [using Carthage for an application](#adding-frameworks-to-an-application). The main difference lies in how the frameworks are actually set up and linked in Xcode.
+
+Because non-application targets are missing the “Embedded Binaries” section in their build settings, you must instead drag the [built frameworks][Carthage.build] to the “Link Binaries With Libraries” build phase.
+
+In rare cases, you may want to also copy each dependency into the build product (e.g., to embed dependencies within the outer framework, or make sure dependencies are present in a test bundle). To do this, create a new “Copy Files” build phase with the “Frameworks” destination, then add the framework reference there as well.
+
+### Upgrading frameworks
+
+If you’ve modified your [Cartfile][], or you want to update to the newest versions of each framework (subject to the requirements you’ve specified), simply run the `carthage update` command again.
+
+## Supporting Carthage for your framework
+
+Because Carthage has no centralized package list, and no project specification format, **most frameworks should build automatically**.
+
+If you are a framework developer, and would like Carthage to be able to build your framework, first see if all your schemes build successfully by running `carthage build --no-skip-current`, then checking the [Carthage.build][] folder.
+
+If an important scheme is not built when you run that command, open Xcode and make sure that the scheme is marked as “Shared,” so Carthage can discover it.
+
+If you encounter build failures, try running `xcodebuild -scheme SCHEME -workspace WORKSPACE build` or `xcodebuild -scheme SCHEME -project PROJECT build` (with the actual values) and see if the same failure occurs there. This should hopefully yield enough information to resolve the problem.
+
+If, after all of the above, you’re still not able to build your framework with Carthage, please [open an issue](https://github.com/Carthage/Carthage/issues/new) and we’d be happy to help!
+
+## CarthageKit
+
+Most of the functionality of the `carthage` command line tool is actually encapsulated in a framework named CarthageKit.
+
+If you’re interested in using Carthage as part of another tool, or perhaps extending the functionality of Carthage, take a look at the [CarthageKit][] source code to see if the API fits your needs.
+
+## License
 
 Carthage is released under the [MIT License](LICENSE.md).
+
+[Artifacts]: Documentation/Artifacts.md
+[Cartfile]: Documentation/Artifacts.md#cartfile
+[Cartfile.lock]: Documentation/Artifacts.md#cartfile.lock
+[Carthage.build]: Documentation/Artifacts.md#carthage.build
+[Carthage.checkout]: Documentation/Artifacts.md#carthage.checkout
+[CarthageKit]: CarthageKit
