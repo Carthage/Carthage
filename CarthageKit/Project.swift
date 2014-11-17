@@ -103,7 +103,7 @@ public final class Project {
 	}
 
 	/// Returns the URL that the project's remote repository exists at.
-	private func repositoryURLStringForProject(project: ProjectIdentifier) -> GitURL {
+	private func repositoryURLForProject(project: ProjectIdentifier) -> GitURL {
 		switch project {
 		case let .GitHub(repository):
 			return repository.cloneURL
@@ -132,7 +132,7 @@ public final class Project {
 				return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
 			}
 
-			let remoteURL = self.repositoryURLStringForProject(project)
+			let remoteURL = self.repositoryURLForProject(project)
 			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
 				// If we created the directory, we're now responsible for
 				// cloning it.
