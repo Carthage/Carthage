@@ -355,6 +355,21 @@ private func URLToBuiltProduct(settings: Dictionary<String, String>) -> ColdSign
 	return URLWithPathRelativeToBuildProductsDirectory("WRAPPER_NAME", settings)
 }
 
+/// Determines the relative path (from the build folder) where the modules of a
+/// bundle will exist, when built with the given settings.
+///
+/// If the product does not build modules, the returned signal will complete
+/// without sending any values.
+private func pathToModulesFolder(settings: Dictionary<String, String>) -> ColdSignal<String> {
+	return valueForBuildSetting("CONTENTS_FOLDER_PATH", settings)
+		// TODO: This should be a zip.
+		.combineLatestWith(valueForBuildSetting("PRODUCT_MODULE_NAME", settings))
+		.catch { _ in .empty() }
+		.map { (contentsPath, moduleName) -> String in
+			return contentsPath.stringByAppendingPathComponent("Modules").stringByAppendingPathComponent(moduleName).stringByAppendingPathExtension("swiftmodule")!
+		}
+}
+
 /// Finds the built product for the given settings, then copies it (preserving
 /// its name) into the given folder. The folder will be created if it does not
 /// already exist.
@@ -415,6 +430,50 @@ private func mergeExecutables(executableURLs: [NSURL], outputURL: NSURL) -> Cold
 		.then(.empty())
 }
 
+/// If the given source URL represents an LLVM module, copies its contents into
+/// the destination module.
+///
+/// Sends the URL to each file after copying.
+private func mergeModules(sourceModuleDirectoryURL: NSURL, destinationModuleDirectoryURL: NSURL) -> ColdSignal<NSURL> {
+	precondition(sourceModuleDirectoryURL.fileURL)
+	precondition(destinationModuleDirectoryURL.fileURL)
+
+	return ColdSignal { subscriber in
+		let enumerator = NSFileManager.defaultManager().enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [ NSURLParentDirectoryURLKey ], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, errorHandler: nil)!
+
+		while !subscriber.disposable.disposed {
+			if let URL = enumerator.nextObject() as? NSURL {
+				var parentDirectoryURL: AnyObject?
+				var error: NSError?
+
+				if !URL.getResourceValue(&parentDirectoryURL, forKey: NSURLParentDirectoryURLKey, error: &error) {
+					subscriber.put(.Error(error ?? CarthageError.ReadFailed(URL).error))
+					return
+				}
+
+				if let parentDirectoryURL = parentDirectoryURL as? NSURL {
+					if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+						subscriber.put(.Error(error ?? CarthageError.WriteFailed(parentDirectoryURL).error))
+						return
+					}
+				}
+
+				let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(URL.lastPathComponent!)
+				if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
+					subscriber.put(.Next(Box(destinationURL)))
+				} else {
+					subscriber.put(.Error(error ?? CarthageError.WriteFailed(destinationURL).error))
+					return
+				}
+			} else {
+				break
+			}
+		}
+
+		subscriber.put(.Completed)
+	}
+}
+
 /// Builds one scheme of the given project, for all supported platforms.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
@@ -456,7 +515,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 						return copyBuildProductIntoDirectory(folderURL, deviceSettings)
 							.map { productURL in
-								return URLToBuiltExecutable(simulatorSettings)
+								let mergeProductBinaries = URLToBuiltExecutable(simulatorSettings)
 									.concat(URLToBuiltExecutable(deviceSettings))
 									.reduce(initial: []) { $0 + [ $1 ] }
 									// TODO: This should be a zip.
@@ -465,6 +524,29 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 										return mergeExecutables(executableURLs, outputURL)
 									}
 									.merge(identity)
+
+								let sourceModulesURL = pathToModulesFolder(simulatorSettings)
+									// TODO: This should be a zip, and better factored.
+									.combineLatestWith(valueForBuildSetting("BUILT_PRODUCTS_DIR", simulatorSettings))
+									.map { (modulesPath, productsPath) -> NSURL in
+										return NSURL.fileURLWithPath(productsPath, isDirectory: true)!.URLByAppendingPathComponent(modulesPath)
+									}
+
+								let destinationModulesURL = pathToModulesFolder(deviceSettings)
+									.map { modulesPath -> NSURL in
+										return folderURL.URLByAppendingPathComponent(modulesPath)
+									}
+
+								let mergeProductModules = sourceModulesURL
+									// TODO: This should be a zip.
+									.combineLatestWith(destinationModulesURL)
+									.map { (source: NSURL, destination: NSURL) -> ColdSignal<NSURL> in
+										return mergeModules(source, destination)
+									}
+									.merge(identity)
+
+								return mergeProductBinaries
+									.then(mergeProductModules)
 									.then(.single(productURL))
 							}
 							.merge(identity)
