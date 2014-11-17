@@ -104,8 +104,8 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should not locate the project from a directory not containing it") {
-			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")).wait()
-			expect(result.isSuccess()).to(beFalsy())
+			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")).first()
+			expect(result.value()).to(beNil())
 		}
 	}
 }
