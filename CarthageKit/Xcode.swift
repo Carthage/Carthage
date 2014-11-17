@@ -391,6 +391,30 @@ public func platformForScheme(scheme: String, inProject project: ProjectLocator)
 		.tryMap(Platform.fromString)
 }
 
+/// Attempts to merge the given executables into one fat binary, written to
+/// the specified URL.
+private func mergeExecutables(executableURLs: [NSURL], outputURL: NSURL) -> ColdSignal<()> {
+	precondition(outputURL.fileURL)
+
+	return ColdSignal.fromValues(executableURLs)
+		.tryMap { URL -> Result<String> in
+			if let path = URL.path {
+				return success(path)
+			} else {
+				return failure(CarthageError.ParseError(description: "expected file URL to built executable, got (URL)").error)
+			}
+		}
+		.reduce(initial: []) { $0 + [ $1 ] }
+		.map { executablePaths -> ColdSignal<NSData> in
+			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
+
+			// TODO: Redirect stdout.
+			return launchTask(lipoTask)
+		}
+		.merge(identity)
+		.then(.empty())
+}
+
 /// Builds one scheme of the given project, for all supported platforms.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
@@ -434,19 +458,11 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							.map { productURL in
 								return URLToBuiltExecutable(simulatorSettings)
 									.concat(URLToBuiltExecutable(deviceSettings))
-									.tryMap { URL -> Result<String> in
-										if let path = URL.path {
-											return success(path)
-										} else {
-											return failure(CarthageError.ParseError(description: "expected file URL to built executable, got (URL)").error)
-										}
-									}
 									.reduce(initial: []) { $0 + [ $1 ] }
 									// TODO: This should be a zip.
 									.combineLatestWith(valueForBuildSetting("EXECUTABLE_PATH", deviceSettings).map(folderURL.URLByAppendingPathComponent))
-									.map { (executablePaths: [String], outputURL: NSURL) -> ColdSignal<NSData> in
-										let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
-										return launchTask(lipoTask, standardOutput: stdoutSink)
+									.map { (executableURLs: [NSURL], outputURL: NSURL) -> ColdSignal<()> in
+										return mergeExecutables(executableURLs, outputURL)
 									}
 									.merge(identity)
 									.then(.single(productURL))
