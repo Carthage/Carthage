@@ -32,6 +32,9 @@ public final class Project {
 		return directoryURL.URLByAppendingPathComponent(CarthageProjectCartfileLockPath, isDirectory: false)
 	}
 
+	/// Whether to prefer HTTPS for cloning (vs. SSH).
+	public var preferHTTPS = true
+
 	public required init(directoryURL: NSURL, cartfile: Cartfile) {
 		self.directoryURL = directoryURL
 
@@ -109,7 +112,11 @@ public final class Project {
 	private func repositoryURLForProject(project: ProjectIdentifier) -> GitURL {
 		switch project {
 		case let .GitHub(repository):
-			return repository.cloneURL
+			if preferHTTPS {
+				return repository.HTTPSURL
+			} else {
+				return repository.SSHURL
+			}
 
 		case let .Git(URL):
 			return URL
