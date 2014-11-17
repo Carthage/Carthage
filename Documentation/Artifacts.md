@@ -8,7 +8,7 @@ A `Cartfile` describes your project’s dependencies to Carthage, allowing it to
 
 Dependency specifications consist of two main parts: the [origin](#origin), and the [version requirement](#version-requirement).
 
-### Origin
+#### Origin
 
 The only supported origins right now are GitHub.com repositories, specified with the `github` keyword:
 
@@ -24,7 +24,7 @@ git "https://enterprise.local/desktop/git-error-translations.git"
 
 Other possible origins may be added in the future. If there’s something specific you’d like to see, please [file an issue](https://github.com/Carthage/Carthage/issues/new).
 
-### Version requirement
+#### Version requirement
 
 Carthage supports three kinds of version requirements:
 
@@ -36,7 +36,7 @@ If no version requirement is given, any version of the dependency is allowed.
 
 Compatibility is determined according to [Semantic Versioning](http://semver.org/). This means that any version greater than or equal to 1.5.1, but less than 2.0, will be considered “compatible” with 1.5.1.
 
-### Full example
+#### Example Cartfile
 
 ```
 # Require version 2.3.1 or later
