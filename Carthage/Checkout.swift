@@ -21,6 +21,9 @@ public struct CheckoutCommand: CommandType {
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
 
 				return ColdSignal.fromResult(Project.loadFromDirectory(directoryURL))
+					.on(next: { project in
+						project.preferHTTPS = !options.useSSH
+					})
 					.map { $0.checkoutLockedDependencies() }
 					.merge(identity)
 			}
@@ -31,13 +34,15 @@ public struct CheckoutCommand: CommandType {
 
 private struct CheckoutOptions: OptionsType {
 	let directoryPath: String
+	let useSSH: Bool
 
-	static func create(directoryPath: String) -> CheckoutOptions {
-		return self(directoryPath: directoryPath)
+	static func create(useSSH: Bool)(directoryPath: String) -> CheckoutOptions {
+		return self(directoryPath: directoryPath, useSSH: useSSH)
 	}
 
 	static func evaluate(m: CommandMode) -> Result<CheckoutOptions> {
 		return create
+			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "whether to use SSH for GitHub repositories")
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 }
