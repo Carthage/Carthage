@@ -30,6 +30,24 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for all platforms") {
+			let dependencies = [
+				ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes")),
+				ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
+			]
+
+			for project in dependencies {
+				let (outputSignal, productURLs) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
+				let outputDisposable = outputSignal.observe(stdoutSink)
+
+				let result = productURLs
+					.on(disposed: {
+						outputDisposable.dispose()
+					})
+					.wait()
+
+				expect(result.error()).to(beNil())
+			}
+
 			var macURL: NSURL!
 			var iOSURL: NSURL!
 
@@ -74,8 +92,8 @@ class XcodeSpec: QuickSpec {
 			expect(output).to(contain("architecture arm64"))
 
 			// Verify that the dependencies exist at the top level.
-			let expectedDependencies = [ "Archimedes", "ReactiveCocoa" ]
-			for dependency in expectedDependencies {
+			let projectNames = dependencies.map { project in project.name }
+			for dependency in projectNames {
 				let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
 				let iOSPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
 

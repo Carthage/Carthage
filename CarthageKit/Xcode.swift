@@ -469,65 +469,42 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	return (stdoutSignal, buildSignal)
 }
 
-/// Attempts to build each Carthage dependency in the given directory.
+/// Attempts to build the dependency identified by the given project, then
+/// places its build product into the root directory given.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
-/// which will send each dependency successfully built.
-public func buildDependenciesInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<Dependency<PinnedVersion>>) {
-	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
+/// which will send the file URLs to each build product.
+public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
+	let dependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 
-	let dependenciesSignal: ColdSignal<Dependency<PinnedVersion>> = NSString.rac_readContentsOfURL(CartfileLock.URLInDirectory(directoryURL), usedEncoding: nil, scheduler: ImmediateScheduler().asRACScheduler())
-		.asColdSignal()
-		.catch { error in
-			if error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError {
-				return .empty()
-			} else {
-				return .error(error)
-			}
-		}
-		.map { $0! as NSString }
-		.tryMap(CartfileLock.fromString)
-		.map { lockFile in ColdSignal.fromValues(lockFile.dependencies) }
-		.merge(identity)
-		.map { dependency in
-			let dependencyURL = directoryURL.URLByAppendingPathComponent(dependency.project.relativePath)
+	let (buildOutput, buildProducts) = buildInDirectory(dependencyURL, withConfiguration: configuration)
+	let copiedProducts = buildProducts
+		.map { productURL -> ColdSignal<NSURL> in
+			let pathComponents = productURL.pathComponents as [String]
 
-			let (buildOutput, builtDependencies) = buildInDirectory(dependencyURL, withConfiguration: configuration)
-			let outputDisposable = buildOutput.observe(stdoutSink)
+			// The extracted components should be "PLATFORM/PRODUCT".
+			let relativeComponents = [ CarthageBinariesFolderName ] + suffix(pathComponents, 2)
 
-			return builtDependencies
-				.map { productURL -> ColdSignal<NSURL> in
-					let pathComponents = productURL.pathComponents as [String]
+			// Move the built dependency up to the top level.
+			let destinationURL = reduce(relativeComponents, rootDirectoryURL) { $0.URLByAppendingPathComponent($1) }
 
-					// The extracted components should be "PLATFORM/PRODUCT".
-					let relativeComponents = [ CarthageBinariesFolderName ] + suffix(pathComponents, 2)
-
-					// Move the built dependency up to the top level.
-					let destinationURL = reduce(relativeComponents, directoryURL) { $0.URLByAppendingPathComponent($1) }
-
-					return ColdSignal.single(destinationURL)
-						.try { (destinationURL, error) in
-							if NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: error) {
-								// If we removed something at the destination
-								// URL, its parent folder must exist.
-								return true
-							} else {
-								return NSFileManager.defaultManager().createDirectoryAtURL(destinationURL.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: error)
-							}
-						}
-						.try { (destinationURL, error) in
-							return NSFileManager.defaultManager().moveItemAtURL(productURL, toURL: destinationURL, error: error)
-						}
+			return ColdSignal.single(destinationURL)
+				.try { (destinationURL, error) in
+					if NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: error) {
+						// If we removed something at the destination
+						// URL, its parent folder must exist.
+						return true
+					} else {
+						return NSFileManager.defaultManager().createDirectoryAtURL(destinationURL.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: error)
+					}
 				}
-				.merge(identity)
-				.then(.single(dependency))
-				.on(disposed: {
-					outputDisposable.dispose()
-				})
+				.try { (destinationURL, error) in
+					return NSFileManager.defaultManager().moveItemAtURL(productURL, toURL: destinationURL, error: error)
+				}
 		}
-		.concat(identity)
+		.merge(identity)
 
-	return (stdoutSignal, dependenciesSignal)
+	return (buildOutput, copiedProducts)
 }
 
 /// Builds the first project or workspace found within the given directory.
@@ -540,42 +517,33 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
 
-	let productURLs = ColdSignal<NSURL>.lazy {
-		let (buildOutput, builtDependencies) = buildDependenciesInDirectory(directoryURL, withConfiguration: configuration)
-		let outputDisposable = buildOutput.observe(stdoutSink)
+	let productURLs = locatorSignal
+		.filter { (project: ProjectLocator) in
+			switch project {
+			case .ProjectFile:
+				return true
 
-		return builtDependencies
-			.then(locatorSignal)
-			.filter { (project: ProjectLocator) in
-				switch project {
-				case .ProjectFile:
-					return true
+			default:
+				return false
+			}
+		}
+		.take(1)
+		.map { (project: ProjectLocator) -> ColdSignal<String> in
+			return schemesInProject(project)
+		}
+		.merge(identity)
+		.combineLatestWith(locatorSignal.take(1))
+		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<NSURL> in
+			let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+			let outputDisposable = buildOutput.observe(stdoutSink)
 
-				default:
-					return false
-				}
-			}
-			.take(1)
-			.map { (project: ProjectLocator) -> ColdSignal<String> in
-				return schemesInProject(project)
-			}
-			.merge(identity)
-			.combineLatestWith(locatorSignal.take(1))
-			.map { (scheme: String, project: ProjectLocator) in
-				let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
-				let outputDisposable = buildOutput.observe(stdoutSink)
-
-				return productURLs.on(subscribed: {
-					println("*** Building scheme \"\(scheme)\" in \(project)")
-				}, disposed: {
-					outputDisposable.dispose()
-				})
-			}
-			.concat(identity)
-			.on(disposed: {
+			return productURLs.on(subscribed: {
+				println("*** Building scheme \"\(scheme)\" in \(project)")
+			}, disposed: {
 				outputDisposable.dispose()
 			})
-	}
+		}
+		.concat(identity)
 
 	return (stdoutSignal, productURLs)
 }
