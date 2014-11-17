@@ -327,9 +327,8 @@ private func valueForBuildSetting(setting: String, arguments: BuildArguments) ->
 		.merge(identity)
 }
 
-/// Calculates a URL against `BUILT_PRODUCTS_DIR` using a build setting that
-/// represents a relative path.
-private func URLWithPathRelativeToBuildProductsDirectory(pathSettingName: String, settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
+/// Determines the URL to the built products directory for the given settings.
+private func URLToBuildProductsDirectory(settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
 	return valueForBuildSetting("BUILT_PRODUCTS_DIR", settings)
 		.tryMap { productsDir -> Result<NSURL> in
 			if let fileURL = NSURL.fileURLWithPath(productsDir, isDirectory: true) {
@@ -338,6 +337,12 @@ private func URLWithPathRelativeToBuildProductsDirectory(pathSettingName: String
 				return failure(CarthageError.ParseError(description: "expected file URL for built products directory, got \(productsDir)").error)
 			}
 		}
+}
+
+/// Calculates a URL against `BUILT_PRODUCTS_DIR` using a build setting that
+/// represents a relative path.
+private func URLWithPathRelativeToBuildProductsDirectory(pathSettingName: String, settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
+	return URLToBuildProductsDirectory(settings)
 		// TODO: This should be a zip.
 		.combineLatestWith(valueForBuildSetting(pathSettingName, settings))
 		.map { (productsDirURL, path) in productsDirURL.URLByAppendingPathComponent(path) }
@@ -353,6 +358,21 @@ private func URLToBuiltExecutable(settings: Dictionary<String, String>) -> ColdS
 /// built with the given settings.
 private func URLToBuiltProduct(settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
 	return URLWithPathRelativeToBuildProductsDirectory("WRAPPER_NAME", settings)
+}
+
+/// Determines the relative path (from the build folder) where the modules of a
+/// bundle will exist, when built with the given settings.
+///
+/// If the product does not build modules, the returned signal will complete
+/// without sending any values.
+private func pathToModulesFolder(settings: Dictionary<String, String>) -> ColdSignal<String> {
+	return valueForBuildSetting("CONTENTS_FOLDER_PATH", settings)
+		// TODO: This should be a zip.
+		.combineLatestWith(valueForBuildSetting("PRODUCT_MODULE_NAME", settings))
+		.catch { _ in .empty() }
+		.map { (contentsPath, moduleName) -> String in
+			return contentsPath.stringByAppendingPathComponent("Modules").stringByAppendingPathComponent(moduleName).stringByAppendingPathExtension("swiftmodule")!
+		}
 }
 
 /// Finds the built product for the given settings, then copies it (preserving
@@ -389,6 +409,74 @@ private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: Dictio
 public func platformForScheme(scheme: String, inProject project: ProjectLocator) -> ColdSignal<Platform> {
 	return valueForBuildSetting("PLATFORM_NAME", BuildArguments(project: project, scheme: scheme))
 		.tryMap(Platform.fromString)
+}
+
+/// Attempts to merge the given executables into one fat binary, written to
+/// the specified URL.
+private func mergeExecutables(executableURLs: [NSURL], outputURL: NSURL) -> ColdSignal<()> {
+	precondition(outputURL.fileURL)
+
+	return ColdSignal.fromValues(executableURLs)
+		.tryMap { URL -> Result<String> in
+			if let path = URL.path {
+				return success(path)
+			} else {
+				return failure(CarthageError.ParseError(description: "expected file URL to built executable, got (URL)").error)
+			}
+		}
+		.reduce(initial: []) { $0 + [ $1 ] }
+		.map { executablePaths -> ColdSignal<NSData> in
+			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
+
+			// TODO: Redirect stdout.
+			return launchTask(lipoTask)
+		}
+		.merge(identity)
+		.then(.empty())
+}
+
+/// If the given source URL represents an LLVM module, copies its contents into
+/// the destination module.
+///
+/// Sends the URL to each file after copying.
+private func mergeModules(sourceModuleDirectoryURL: NSURL, destinationModuleDirectoryURL: NSURL) -> ColdSignal<NSURL> {
+	precondition(sourceModuleDirectoryURL.fileURL)
+	precondition(destinationModuleDirectoryURL.fileURL)
+
+	return ColdSignal { subscriber in
+		let enumerator = NSFileManager.defaultManager().enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [ NSURLParentDirectoryURLKey ], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, errorHandler: nil)!
+
+		while !subscriber.disposable.disposed {
+			if let URL = enumerator.nextObject() as? NSURL {
+				var parentDirectoryURL: AnyObject?
+				var error: NSError?
+
+				if !URL.getResourceValue(&parentDirectoryURL, forKey: NSURLParentDirectoryURLKey, error: &error) {
+					subscriber.put(.Error(error ?? CarthageError.ReadFailed(URL).error))
+					return
+				}
+
+				if let parentDirectoryURL = parentDirectoryURL as? NSURL {
+					if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+						subscriber.put(.Error(error ?? CarthageError.WriteFailed(parentDirectoryURL).error))
+						return
+					}
+				}
+
+				let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(URL.lastPathComponent!)
+				if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
+					subscriber.put(.Next(Box(destinationURL)))
+				} else {
+					subscriber.put(.Error(error ?? CarthageError.WriteFailed(destinationURL).error))
+					return
+				}
+			} else {
+				break
+			}
+		}
+
+		subscriber.put(.Completed)
+	}
 }
 
 /// Builds one scheme of the given project, for all supported platforms.
@@ -432,23 +520,38 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 						return copyBuildProductIntoDirectory(folderURL, deviceSettings)
 							.map { productURL in
-								return URLToBuiltExecutable(simulatorSettings)
+								let mergeProductBinaries = URLToBuiltExecutable(simulatorSettings)
 									.concat(URLToBuiltExecutable(deviceSettings))
-									.tryMap { URL -> Result<String> in
-										if let path = URL.path {
-											return success(path)
-										} else {
-											return failure(CarthageError.ParseError(description: "expected file URL to built executable, got (URL)").error)
-										}
-									}
 									.reduce(initial: []) { $0 + [ $1 ] }
 									// TODO: This should be a zip.
 									.combineLatestWith(valueForBuildSetting("EXECUTABLE_PATH", deviceSettings).map(folderURL.URLByAppendingPathComponent))
-									.map { (executablePaths: [String], outputURL: NSURL) -> ColdSignal<NSData> in
-										let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
-										return launchTask(lipoTask, standardOutput: stdoutSink)
+									.map { (executableURLs: [NSURL], outputURL: NSURL) -> ColdSignal<()> in
+										return mergeExecutables(executableURLs, outputURL)
 									}
 									.merge(identity)
+
+								let sourceModulesURL = pathToModulesFolder(simulatorSettings)
+									// TODO: This should be a zip.
+									.combineLatestWith(URLToBuildProductsDirectory(simulatorSettings))
+									.map { (modulesPath, productsURL) -> NSURL in
+										return productsURL.URLByAppendingPathComponent(modulesPath)
+									}
+
+								let destinationModulesURL = pathToModulesFolder(deviceSettings)
+									.map { modulesPath -> NSURL in
+										return folderURL.URLByAppendingPathComponent(modulesPath)
+									}
+
+								let mergeProductModules = sourceModulesURL
+									// TODO: This should be a zip.
+									.combineLatestWith(destinationModulesURL)
+									.map { (source: NSURL, destination: NSURL) -> ColdSignal<NSURL> in
+										return mergeModules(source, destination)
+									}
+									.merge(identity)
+
+								return mergeProductBinaries
+									.then(mergeProductModules)
 									.then(.single(productURL))
 							}
 							.merge(identity)
