@@ -77,6 +77,8 @@ extension Cartfile: Printable {
 /// Represents a parsed Cartfile.lock, which specifies which exact version was
 /// checked out for each dependency.
 public struct CartfileLock {
+	/// The dependencies listed in the Cartfile.lock, in the order that they
+	/// should be built.
 	public var dependencies: [Dependency<PinnedVersion>]
 
 	/// Returns the location where Cartfile.lock should exist within the given

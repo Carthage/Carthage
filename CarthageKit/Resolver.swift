@@ -29,8 +29,8 @@ public struct Resolver {
 	/// Attempts to determine the latest valid version to use for each dependency
 	/// specified in the given Cartfile, and all nested dependencies thereof.
 	///
-	/// Sends each recursive dependency with its resolved version, in no particular
-	/// order.
+	/// Sends each recursive dependency with its resolved version, in the order
+	/// that they should be built.
 	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> ColdSignal<Dependency<SemanticVersion>> {
 		return nodePermutationsForCartfile(cartfile)
 			.map { rootNodes in self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph()) }
@@ -40,7 +40,7 @@ public struct Resolver {
 			.dematerializeErrorsIfEmpty(identity)
 			.take(1)
 			.map { graph -> ColdSignal<Dependency<SemanticVersion>> in
-				return ColdSignal.fromValues(graph.allNodes.keys)
+				return ColdSignal.fromValues(graph.orderedNodes)
 					.map { node in node.dependencyVersion }
 			}
 			.merge(identity)
@@ -160,6 +160,33 @@ private struct DependencyGraph: Equatable {
 	/// The root nodes of the graph (i.e., those dependencies that are listed
 	/// by the top-level project).
 	var roots: DependencyNodeSet = [:]
+
+	/// Returns all of the graph nodes, in the order that they should be built.
+	var orderedNodes: [DependencyNode] {
+		return sorted(allNodes.keys) { (lhs, rhs) in
+			// If the right node has a dependency on the left node, the
+			// left node needs to be built first (and is thus ordered
+			// first).
+			if let rightDeps = self.edges[rhs] {
+				if contains(rightDeps.keys, lhs) {
+					return true
+				}
+
+				if let leftDeps = self.edges[lhs] {
+					if contains(leftDeps.keys, rhs) {
+						return false
+					} else {
+						// If neither depend on each other, sort the one with
+						// the fewer dependencies first.
+						return leftDeps.count < rightDeps.count
+					}
+				}
+			}
+
+			// If all else fails, compare names.
+			return lhs.project.name < rhs.project.name
+		}
+	}
 
 	init() {}
 
