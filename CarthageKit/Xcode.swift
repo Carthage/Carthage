@@ -478,31 +478,26 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 	let dependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 
 	let (buildOutput, buildProducts) = buildInDirectory(dependencyURL, withConfiguration: configuration)
-	let copiedProducts = buildProducts
-		.map { productURL -> ColdSignal<NSURL> in
-			let pathComponents = productURL.pathComponents as [String]
+	let copiedProducts = ColdSignal<NSURL>.lazy {
+		let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderName, isDirectory: true)
 
-			// The extracted components should be "PLATFORM/PRODUCT".
-			let relativeComponents = [ CarthageBinariesFolderName ] + suffix(pathComponents, 2)
-
-			// Move the built dependency up to the top level.
-			let destinationURL = reduce(relativeComponents, rootDirectoryURL) { $0.URLByAppendingPathComponent($1) }
-
-			return ColdSignal.single(destinationURL)
-				.try { (destinationURL, error) in
-					if NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: error) {
-						// If we removed something at the destination
-						// URL, its parent folder must exist.
-						return true
-					} else {
-						return NSFileManager.defaultManager().createDirectoryAtURL(destinationURL.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: error)
-					}
-				}
-				.try { (destinationURL, error) in
-					return NSFileManager.defaultManager().moveItemAtURL(productURL, toURL: destinationURL, error: error)
-				}
+		var error: NSError?
+		if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+			return .error(error ?? CarthageError.WriteFailed(rootBinariesURL).error)
 		}
-		.merge(identity)
+
+		// Link this dependency's Carthage.build folder to that of the root
+		// project, so it can see all products built already, and so we can
+		// automatically drop this dependency's product in the right place.
+		let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderName, isDirectory: true)
+		NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL, error: nil)
+
+		if !NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL, error: &error) {
+			return .error(error ?? CarthageError.WriteFailed(dependencyBinariesURL).error)
+		}
+
+		return buildProducts
+	}
 
 	return (buildOutput, copiedProducts)
 }
