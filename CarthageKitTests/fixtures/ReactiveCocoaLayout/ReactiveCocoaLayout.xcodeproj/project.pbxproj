@@ -116,8 +116,8 @@
 		D06C9E52167D896000276090 /* RACSignalRCLGeometryAdditionsSpec.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RACSignalRCLGeometryAdditionsSpec.m; sourceTree = "<group>"; };
 		D06C9E5A167D8A9A00276090 /* NSViewRCLGeometryAdditionsSpec.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSViewRCLGeometryAdditionsSpec.m; sourceTree = "<group>"; };
 		D06C9E5D167D8BD900276090 /* UIViewRCLGeometryAdditionsSpec.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UIViewRCLGeometryAdditionsSpec.m; sourceTree = "<group>"; };
-		D0731B7519FF01B700C01E16 /* Framework.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Framework.xcconfig; path = ReactiveCocoa/External/xcconfigs/Base/Targets/Framework.xcconfig; sourceTree = SOURCE_ROOT; };
-		D0731B7619FF01BC00C01E16 /* iOS-Framework.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = "iOS-Framework.xcconfig"; path = "ReactiveCocoa/External/xcconfigs/iOS/iOS-Framework.xcconfig"; sourceTree = SOURCE_ROOT; };
+		D0731B7519FF01B700C01E16 /* Framework.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Framework.xcconfig; sourceTree = "<group>"; };
+		D0731B7619FF01BC00C01E16 /* iOS-Framework.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "iOS-Framework.xcconfig"; sourceTree = "<group>"; };
 		D0731B7C19FF028F00C01E16 /* ReactiveCocoaLayout.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ReactiveCocoaLayout.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0731B8619FF028F00C01E16 /* ReactiveCocoaLayout iOS Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ReactiveCocoaLayout iOS Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0731BAA19FF04B300C01E16 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.1.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
@@ -243,7 +243,7 @@
 				D094E4C31777661600906BF7 /* README.md */,
 			);
 			name = Configuration;
-			path = ReactiveCocoa/External/xcconfigs;
+			path = Carthage.checkout/ReactiveCocoa/External/xcconfigs;
 			sourceTree = "<group>";
 		};
 		D094E4AF1777661600906BF7 /* Base */ = {

@@ -22,28 +22,26 @@ class ResolverSpec: QuickSpec {
 
 			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency)
 			let result = resolver.resolveDependenciesInCartfile(cartfile)
-				.reduce(initial: [:]) { (var dict, dependency) -> [String: SemanticVersion] in
-					switch dependency.project {
-					case let .GitHub(repo):
-						dict[repo.description] = dependency.version
-
-					case let .Git(URL):
-						dict[URL.URLString] = dependency.version
-					}
-
-					return dict
+				.reduce(initial: []) { (var dependencies, dependency) -> [[String: SemanticVersion]] in
+					dependencies.append([ dependency.project.name: dependency.version ])
+					return dependencies
 				}
 				.first()
 
 			expect(result.error()).to(beNil())
 
-			let versionByRepo = result.value()!
-			expect(versionByRepo["ReactiveCocoa/ReactiveCocoa"]).to(equal(SemanticVersion(major: 3, minor: 0, patch: 0)))
-			expect(versionByRepo["Mantle/Mantle"]).to(equal(SemanticVersion(major: 1, minor: 3, patch: 0)))
-			expect(versionByRepo["jspahrsummers/libextobjc"]).to(equal(SemanticVersion(major: 0, minor: 4, patch: 1)))
-			expect(versionByRepo["jspahrsummers/xcconfigs"]).to(equal(SemanticVersion(major: 1, minor: 3, patch: 0)))
-			expect(versionByRepo["jspahrsummers/objc-build-scripts"]).to(equal(SemanticVersion(major: 3, minor: 0, patch: 0)))
-			expect(versionByRepo["https://enterprise.local/desktop/git-error-translations.git"]).to(equal(SemanticVersion(major: 3, minor: 0, patch: 0)))
+			let dependencies = result.value()!
+			expect(dependencies.count).to(equal(6));
+
+			var generator = dependencies.generate()
+
+			// Dependencies should be listed in build order.
+			expect(generator.next()).to(equal([ "Mantle": SemanticVersion(major: 1, minor: 3, patch: 0) ]))
+			expect(generator.next()).to(equal([ "git-error-translations": SemanticVersion(major: 3, minor: 0, patch: 0) ]))
+			expect(generator.next()).to(equal([ "libextobjc": SemanticVersion(major: 0, minor: 4, patch: 1) ]))
+			expect(generator.next()).to(equal([ "xcconfigs": SemanticVersion(major: 1, minor: 3, patch: 0) ]))
+			expect(generator.next()).to(equal([ "objc-build-scripts": SemanticVersion(major: 3, minor: 0, patch: 0) ]))
+			expect(generator.next()).to(equal([ "ReactiveCocoa": SemanticVersion(major: 3, minor: 0, patch: 0) ]))
 		}
 	}
 

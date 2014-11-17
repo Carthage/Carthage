@@ -49,13 +49,45 @@ public struct BuildCommand: CommandType {
 	/// that will actually begin the work (and indicate success or failure upon
 	/// termination).
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> (HotSignal<NSData>, ColdSignal<()>) {
-		if (options.skipCurrent) {
-			let (stdoutSignal, buildSignal) = buildDependenciesInDirectory(directoryURL, withConfiguration: options.configuration)
-			return (stdoutSignal, buildSignal.then(.empty()))
-		} else {
-			let (stdoutSignal, buildSignal) = buildInDirectory(directoryURL, withConfiguration: options.configuration)
-			return (stdoutSignal, buildSignal.then(.empty()))
+		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
+
+		var buildSignal = ColdSignal<Project>.lazy {
+				return .fromResult(Project.loadFromDirectory(directoryURL))
+			}
+			.catch { error in
+				if options.skipCurrent {
+					return .error(error)
+				} else {
+					// Ignore Cartfile loading failures. Assume the user just
+					// wants to build the enclosing project.
+					return .empty()
+				}
+			}
+			.map { project -> ColdSignal<()> in
+				let (dependenciesOutput, dependenciesSignal) = project.buildCheckedOutDependencies(options.configuration)
+				let dependenciesDisposable = dependenciesOutput.observe(stdoutSink)
+
+				return dependenciesSignal
+					.then(.empty())
+					.on(disposed: {
+						dependenciesDisposable.dispose()
+					})
+			}
+			.merge(identity)
+
+		if !options.skipCurrent {
+			let (currentOutput, currentSignal) = buildInDirectory(directoryURL, withConfiguration: options.configuration)
+			let currentDisposable = currentOutput.observe(stdoutSink)
+
+			buildSignal = buildSignal
+				.then(currentSignal)
+				.then(.empty())
+				.on(disposed: {
+					currentDisposable.dispose()
+				})
 		}
+
+		return (stdoutSignal, buildSignal)
 	}
 
 	/// Opens a temporary file for logging, returning the handle and the URL to

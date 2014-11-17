@@ -10,6 +10,9 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
+/// The relative path to a project's checked out dependencies.
+public let CarthageProjectCheckoutsPath = "Carthage.checkout"
+
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
@@ -77,6 +80,8 @@ extension Cartfile: Printable {
 /// Represents a parsed Cartfile.lock, which specifies which exact version was
 /// checked out for each dependency.
 public struct CartfileLock {
+	/// The dependencies listed in the Cartfile.lock, in the order that they
+	/// should be built.
 	public var dependencies: [Dependency<PinnedVersion>]
 
 	/// Returns the location where Cartfile.lock should exist within the given
@@ -136,7 +141,7 @@ public enum ProjectIdentifier: Equatable {
 	/// The path at which this project will be checked out, relative to the
 	/// working directory of the main project.
 	public var relativePath: String {
-		return name
+		return CarthageProjectCheckoutsPath.stringByAppendingPathComponent(name)
 	}
 }
 

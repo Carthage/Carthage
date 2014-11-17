@@ -34,6 +34,8 @@ public final class Project {
 
 	public required init(directoryURL: NSURL, cartfile: Cartfile) {
 		self.directoryURL = directoryURL
+
+		// TODO: Load this lazily.
 		self.cartfile = cartfile
 	}
 
@@ -70,6 +72,7 @@ public final class Project {
 
 		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
 
+		// TODO: Load this lazily.
 		var error: NSError?
 		let cartfileContents = NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding, error: &error)
 		if let cartfileContents = cartfileContents {
@@ -252,5 +255,32 @@ public final class Project {
 			.map { dependency in self.checkoutOrCloneProject(dependency.project, atRevision: dependency.version.tag) }
 			.merge(identity)
 			.then(.empty())
+	}
+
+	/// Attempts to build each Carthage dependency that has been checked out.
+	///
+	/// Returns a signal of all standard output from `xcodebuild`, and a signal
+	/// which will send each dependency successfully built.
+	public func buildCheckedOutDependencies(configuration: String) -> (HotSignal<NSData>, ColdSignal<Dependency<PinnedVersion>>) {
+		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
+
+		let dependenciesSignal = ColdSignal<CartfileLock>.lazy {
+				return .fromResult(self.readCartfileLock())
+			}
+			.map { lockFile in ColdSignal.fromValues(lockFile.dependencies) }
+			.merge(identity)
+			.map { dependency -> ColdSignal<Dependency<PinnedVersion>> in
+				let (buildOutput, buildProducts) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
+				let outputDisposable = buildOutput.observe(stdoutSink)
+
+				return buildProducts
+					.then(.single(dependency))
+					.on(disposed: {
+						outputDisposable.dispose()
+					})
+			}
+			.concat(identity)
+
+		return (stdoutSignal, dependenciesSignal)
 	}
 }
