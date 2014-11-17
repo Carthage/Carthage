@@ -346,3 +346,22 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String) -
 		}
 		.merge(identity)
 }
+
+/// Determines whether the specified revision identifies a valid commit.
+///
+/// If the specified file URL does not represent a valid Git repository, `false`
+/// will be sent.
+public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String) -> ColdSignal<Bool> {
+	return ColdSignal.lazy {
+		// NSTask throws a hissy fit (a.k.a. exception) if the working directory
+		// doesn't exist, so pre-emptively check for that.
+		var isDirectory: ObjCBool = false
+		if !NSFileManager.defaultManager().fileExistsAtPath(repositoryFileURL.path!, isDirectory: &isDirectory) || !isDirectory {
+			return .single(false)
+		}
+
+		return launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL, standardOutput: SinkOf<NSData> { _ in () }, standardError: SinkOf<NSData> { _ in () })
+			.then(.single(true))
+			.catch { _ in .single(false) }
+	}
+}
