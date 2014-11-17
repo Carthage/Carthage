@@ -27,8 +27,8 @@ class ResolverSpec: QuickSpec {
 					case let .GitHub(repo):
 						dict[repo.description] = dependency.version
 
-					default:
-						break
+					case let .Git(URL):
+						dict[URL.URLString] = dependency.version
 					}
 
 					return dict
@@ -43,6 +43,7 @@ class ResolverSpec: QuickSpec {
 			expect(versionByRepo["jspahrsummers/libextobjc"]).to(equal(SemanticVersion(major: 0, minor: 4, patch: 1)))
 			expect(versionByRepo["jspahrsummers/xcconfigs"]).to(equal(SemanticVersion(major: 1, minor: 3, patch: 0)))
 			expect(versionByRepo["jspahrsummers/objc-build-scripts"]).to(equal(SemanticVersion(major: 3, minor: 0, patch: 0)))
+			expect(versionByRepo["https://enterprise.local/desktop/git-error-translations.git"]).to(equal(SemanticVersion(major: 3, minor: 0, patch: 0)))
 		}
 	}
 
@@ -60,9 +61,9 @@ class ResolverSpec: QuickSpec {
 	private func cartfileForDependency(dependency: Dependency<SemanticVersion>) -> ColdSignal<Cartfile> {
 		var cartfile = Cartfile()
 
-		if dependency.project == ProjectIdentifier.GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {
+		if dependency.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {
 			cartfile = Cartfile.fromString("github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0").value()!
-		} else if dependency.project == ProjectIdentifier.GitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")) {
+		} else if dependency.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "objc-build-scripts")) {
 			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0").value()!
 		}
 

@@ -102,12 +102,14 @@ public final class Project {
 		}
 	}
 
-	/// Returns a string representing the URL that the project's remote repository
-	/// exists at.
-	private func repositoryURLStringForProject(project: ProjectIdentifier) -> String {
+	/// Returns the URL that the project's remote repository exists at.
+	private func repositoryURLForProject(project: ProjectIdentifier) -> GitURL {
 		switch project {
 		case let .GitHub(repository):
-			return repository.cloneURLString
+			return repository.cloneURL
+
+		case let .Git(URL):
+			return URL
 		}
 	}
 
@@ -130,17 +132,17 @@ public final class Project {
 				return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
 			}
 
-			let remoteURLString = self.repositoryURLStringForProject(project)
+			let remoteURL = self.repositoryURLForProject(project)
 			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
 				// If we created the directory, we're now responsible for
 				// cloning it.
-				return cloneRepository(remoteURLString, repositoryURL)
+				return cloneRepository(remoteURL, repositoryURL)
 					.then(.single(repositoryURL))
 					.on(subscribed: {
 						println("*** Cloning \(project.name)")
 					})
 			} else {
-				return fetchRepository(repositoryURL, remoteURLString: remoteURLString)
+				return fetchRepository(repositoryURL, remoteURL: remoteURL)
 					.then(.single(repositoryURL))
 					.on(subscribed: {
 						println("*** Fetching \(project.name)")

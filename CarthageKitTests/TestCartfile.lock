@@ -1,2 +1,2 @@
 github "ReactiveCocoa/ReactiveCocoa" "v2.3.1"
-github "Mantle/Mantle" "1.0"
+git "https://github.com/Mantle/Mantle.git" "1.0"

@@ -10,6 +10,88 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
+/// Represents a URL for a Git remote.
+public struct GitURL: Equatable {
+	/// The string representation of the URL.
+	public let URLString: String
+
+	/// A normalized URL string, without protocol, authentication, or port
+	/// information. This is mostly useful for comparison, and not for any
+	/// actual Git operations.
+	private var normalizedURLString: String {
+		let parsedURL: NSURL? = NSURL(string: URLString)
+
+		if let parsedURL = parsedURL {
+			// Normal, valid URL.
+			let host = parsedURL.host ?? ""
+			let path = stripGitSuffix(parsedURL.path ?? "")
+			return "\(host)\(path)"
+		} else if URLString.hasPrefix("/") {
+			// Local path.
+			return stripGitSuffix(URLString)
+		} else {
+			// scp syntax.
+			var strippedURLString = URLString
+
+			if let index = find(strippedURLString, "@") {
+				strippedURLString.removeRange(Range(start: strippedURLString.startIndex, end: index))
+			}
+
+			var host = ""
+			if let index = find(strippedURLString, ":") {
+				host = strippedURLString[Range(start: strippedURLString.startIndex, end: index.predecessor())]
+				strippedURLString.removeRange(Range(start: strippedURLString.startIndex, end: index))
+			}
+
+			var path = strippedURLString
+			if !path.hasPrefix("/") {
+				// This probably isn't strictly legit, but we'll have a forward
+				// slash for other URL types.
+				path.insert("/", atIndex: path.startIndex)
+			}
+
+			return "\(host)\(path)"
+		}
+	}
+
+	/// The name of the repository, if it can be inferred from the URL.
+	public var name: String? {
+		let components = split(URLString, { $0 == "/" }, allowEmptySlices: false)
+
+		return components.last.map { self.stripGitSuffix($0) }
+	}
+
+	public init(_ URLString: String) {
+		self.URLString = URLString
+	}
+
+	/// Strips any trailing .git in the given name, if one exists.
+	private func stripGitSuffix(string: String) -> String {
+		if string.hasSuffix(".git") {
+			let nsString = string as NSString
+			return nsString.substringToIndex(nsString.length - 4) as String
+		} else {
+			return string
+		}
+	}
+}
+
+public func ==(lhs: GitURL, rhs: GitURL) -> Bool {
+	return lhs.normalizedURLString == rhs.normalizedURLString
+}
+
+extension GitURL: Hashable {
+	public var hashValue: Int {
+		return normalizedURLString.hashValue
+	}
+}
+
+extension GitURL: Printable {
+	public var description: String {
+		return URLString
+	}
+}
+
 /// A Git submodule.
 public struct Submodule: Equatable {
 	/// The name of the submodule. Usually (but not always) the same as the
@@ -20,21 +102,21 @@ public struct Submodule: Equatable {
 	public let path: String
 
 	/// The URL from which the submodule should be cloned, if present.
-	public let URLString: String
+	public let URL: GitURL
 
 	/// The SHA checked out in the submodule.
 	public let SHA: String
 
-	public init(name: String, path: String, URLString: String, SHA: String) {
+	public init(name: String, path: String, URL: GitURL, SHA: String) {
 		self.name = name
 		self.path = path
-		self.URLString = URLString
+		self.URL = URL
 		self.SHA = SHA
 	}
 }
 
 public func ==(lhs: Submodule, rhs: Submodule) -> Bool {
-	return lhs.name == rhs.name && lhs.path == rhs.path && lhs.URLString == rhs.URLString && lhs.SHA == rhs.SHA
+	return lhs.name == rhs.name && lhs.path == rhs.path && lhs.URL == rhs.URL && lhs.SHA == rhs.SHA
 }
 
 extension Submodule: Hashable {
@@ -59,19 +141,19 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 }
 
 /// Returns a signal that completes when cloning completes successfully.
-public func cloneRepository(cloneURLString: String, destinationURL: NSURL) -> ColdSignal<String> {
+public func cloneRepository(cloneURL: GitURL, destinationURL: NSURL) -> ColdSignal<String> {
 	precondition(destinationURL.fileURL)
 
-	return launchGitTask([ "clone", "--bare", "--quiet", cloneURLString, destinationURL.path! ])
+	return launchGitTask([ "clone", "--bare", "--quiet", cloneURL.URLString, destinationURL.path! ])
 }
 
 /// Returns a signal that completes when the fetch completes successfully.
-public func fetchRepository(repositoryFileURL: NSURL, remoteURLString: String? = nil) -> ColdSignal<String> {
+public func fetchRepository(repositoryFileURL: NSURL, remoteURL: GitURL? = nil) -> ColdSignal<String> {
 	precondition(repositoryFileURL.fileURL)
 
 	var arguments = [ "fetch", "--tags", "--prune", "--quiet" ]
-	if let remoteURLString = remoteURLString {
-		arguments.append(remoteURLString)
+	if let remoteURL = remoteURL {
+		arguments.append(remoteURL.URLString)
 	}
 
 	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
@@ -183,7 +265,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 		subscriber.put(.Completed)
 	}
 
-	return launchGitTask([ "clone", "--quiet", submodule.URLString, submodule.path ], repositoryFileURL: workingDirectoryURL)
+	return launchGitTask([ "clone", "--quiet", submodule.URL.URLString, submodule.path ], repositoryFileURL: workingDirectoryURL)
 		.then(launchGitTask([ "checkout", "--quiet", submodule.SHA ], repositoryFileURL: submoduleDirectoryURL))
 		// Clone nested submodules in a separate step, to quiet its output correctly.
 		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleDirectoryURL))
@@ -255,10 +337,11 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String) -
 		.merge(identity)
 		.map { (name, path) -> ColdSignal<Submodule> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
+				.map { GitURL($0) }
 				// TODO: This should be a zip.
 				.combineLatestWith(submoduleSHAForPath(path, repositoryFileURL, revision))
-				.map { (URLString, SHA) in
-					return Submodule(name: name, path: path, URLString: URLString, SHA: SHA)
+				.map { (URL, SHA) in
+					return Submodule(name: name, path: path, URL: URL, SHA: SHA)
 				}
 		}
 		.merge(identity)

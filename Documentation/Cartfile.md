@@ -17,4 +17,7 @@ github "jspahrsummers/libextobjc" == 0.4.1
 
 # Use the latest version
 github "jspahrsummers/xcconfigs"
+
+# Use a project from GitHub Enterprise, or any arbitrary server
+git "https://enterprise.local/desktop/git-error-translations.git" >= 0.1
 ```

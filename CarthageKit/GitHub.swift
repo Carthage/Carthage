@@ -10,13 +10,13 @@ import Foundation
 import LlamaKit
 
 /// Describes a GitHub.com repository.
-public struct Repository: Equatable {
+public struct GitHubRepository: Equatable {
 	public let owner: String
 	public let name: String
 
 	/// The URL string that should be used for cloning the Git repository.
-	public var cloneURLString: String {
-		return "https://github.com/\(owner)/\(name).git"
+	public var cloneURL: GitURL {
+		return GitURL("https://github.com/\(owner)/\(name).git")
 	}
 
 	public init(owner: String, name: String) {
@@ -25,7 +25,7 @@ public struct Repository: Equatable {
 	}
 
 	/// Parses repository information out of a string of the form "owner/name".
-	public static func fromNWO(NWO: String) -> Result<Repository> {
+	public static func fromNWO(NWO: String) -> Result<GitHubRepository> {
 		let components = split(NWO, { $0 == "/" }, maxSplit: 1, allowEmptySlices: false)
 		if components.count < 2 {
 			return failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\"").error)
@@ -35,17 +35,17 @@ public struct Repository: Equatable {
 	}
 }
 
-public func ==(lhs: Repository, rhs: Repository) -> Bool {
+public func ==(lhs: GitHubRepository, rhs: GitHubRepository) -> Bool {
 	return lhs.owner == rhs.owner && lhs.name == rhs.name
 }
 
-extension Repository: Hashable {
+extension GitHubRepository: Hashable {
 	public var hashValue: Int {
 		return owner.hashValue ^ name.hashValue
 	}
 }
 
-extension Repository: Printable {
+extension GitHubRepository: Printable {
 	public var description: String {
 		return "\(owner)/\(name)"
 	}

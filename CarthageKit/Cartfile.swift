@@ -117,13 +117,19 @@ extension CartfileLock: Printable {
 /// Uniquely identifies a project that can be used as a dependency.
 public enum ProjectIdentifier: Equatable {
 	/// A repository hosted on GitHub.com.
-	case GitHub(Repository)
+	case GitHub(GitHubRepository)
+
+	/// An arbitrary Git repository.
+	case Git(GitURL)
 
 	/// The unique, user-visible name for this project.
 	public var name: String {
 		switch (self) {
 		case let .GitHub(repo):
 			return repo.name
+
+		case let .Git(URL):
+			return URL.name ?? URL.URLString
 		}
 	}
 
@@ -138,6 +144,12 @@ public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 	switch (lhs, rhs) {
 	case let (.GitHub(left), .GitHub(right)):
 		return left == right
+
+	case let (.Git(left), .Git(right)):
+		return left == right
+
+	default:
+		return false
 	}
 }
 
@@ -146,6 +158,9 @@ extension ProjectIdentifier: Hashable {
 		switch (self) {
 		case let .GitHub(repo):
 			return repo.hashValue
+
+		case let .Git(URL):
+			return URL.hashValue
 		}
 	}
 }
@@ -153,7 +168,17 @@ extension ProjectIdentifier: Hashable {
 extension ProjectIdentifier: Scannable {
 	/// Attempts to parse a ProjectIdentifier.
 	public static func fromScanner(scanner: NSScanner) -> Result<ProjectIdentifier> {
-		if !scanner.scanString("github", intoString: nil) {
+		var parser: (String -> Result<ProjectIdentifier>)!
+
+		if scanner.scanString("github", intoString: nil) {
+			parser = { repoNWO in
+				return GitHubRepository.fromNWO(repoNWO).map { self.GitHub($0) }
+			}
+		} else if scanner.scanString("git", intoString: nil) {
+			parser = { URLString in
+				return success(self.Git(GitURL(URLString)))
+			}
+		} else {
 			return failure(CarthageError.ParseError(description: "unexpected dependency type in line: \(scanner.currentLine)").error)
 		}
 
@@ -161,13 +186,13 @@ extension ProjectIdentifier: Scannable {
 			return failure(CarthageError.ParseError(description: "expected string after dependency type in line: \(scanner.currentLine)").error)
 		}
 
-		var repoNWO: NSString? = nil
-		if !scanner.scanUpToString("\"", intoString: &repoNWO) || !scanner.scanString("\"", intoString: nil) {
+		var address: NSString? = nil
+		if !scanner.scanUpToString("\"", intoString: &address) || !scanner.scanString("\"", intoString: nil) {
 			return failure(CarthageError.ParseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)").error)
 		}
 
-		if let repoNWO = repoNWO {
-			return Repository.fromNWO(repoNWO).map { self.GitHub($0) }
+		if let address = address {
+			return parser(address)
 		} else {
 			return failure(CarthageError.ParseError(description: "empty string after dependency type in line: \(scanner.currentLine)").error)
 		}
@@ -179,6 +204,9 @@ extension ProjectIdentifier: Printable {
 		switch (self) {
 		case let .GitHub(repo):
 			return "github \"\(repo)\""
+
+		case let .Git(URL):
+			return "git \"\(URL)\""
 		}
 	}
 }
