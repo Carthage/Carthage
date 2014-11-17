@@ -34,7 +34,7 @@ public struct Resolver {
 	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> ColdSignal<Dependency<SemanticVersion>> {
 		return nodePermutationsForCartfile(cartfile)
 			.map { rootNodes in self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph()) }
-			.merge(identity)
+			.concat(identity)
 			// Pass through resolution errors only if we never got
 			// a valid graph.
 			.dematerializeErrorsIfEmpty(identity)
@@ -87,7 +87,7 @@ public struct Resolver {
 			.map { self.nodePermutationsForCartfile($0) }
 			.merge(identity)
 			.map { dependencyNodes in self.graphPermutationsForEachNode(dependencyNodes, dependencyOf: node, basedOnGraph: inputGraph) }
-			.merge(identity)
+			.concat(identity)
 			// Pass through resolution errors only if we never got
 			// a valid graph.
 			.dematerializeErrorsIfEmpty(identity)
@@ -129,7 +129,7 @@ public struct Resolver {
 								return .single(.Error(error))
 							}
 						}
-						.merge(identity)
+						.concat(identity)
 						// Pass through resolution errors only if we never got
 						// a valid graph.
 						.dematerializeErrorsIfEmpty(identity)
