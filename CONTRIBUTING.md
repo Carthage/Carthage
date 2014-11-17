@@ -20,4 +20,4 @@ If you’re interested in contributing code, please have a look at our [style gu
 
 If you have a case that is not covered in the style guide, simply do your best to match the style of the surrounding code.
 
-# Thanks for contributing! :boom::camel:
+**Thanks for contributing! :boom::camel:**
