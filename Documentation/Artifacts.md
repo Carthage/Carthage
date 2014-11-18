@@ -75,6 +75,8 @@ This folder is created by `carthage checkout` in the application project’s wor
 
 You are not required to commit this folder to your repository, but you may wish to, if you want to guarantee that the chosen versions of each dependency will _always_ be accessible at a later date.
 
+The contents of **this directory should not be modified**, as they may be overwritten by a future `carthage checkout` command.
+
 ## ~/.carthage/dependencies
 
 This folder is created by `carthage checkout`, and contains the “bare” Git repositories used for fetching and checking out dependencies. Keeping all repositories in this centralized location avoids polluting individual projects with Git metadata, and allows Carthage to share one copy of each repository across all projects.
