@@ -265,7 +265,14 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 		subscriber.put(.Completed)
 	}
 
-	return launchGitTask([ "clone", "--quiet", submodule.URL.URLString, submodule.path ], repositoryFileURL: workingDirectoryURL)
+	return ColdSignal<String>.lazy {
+			var error: NSError?
+			if !NSFileManager.defaultManager().removeItemAtURL(submoduleDirectoryURL, error: &error) {
+				return .error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout").error)
+			}
+
+			return launchGitTask([ "clone", "--quiet", submodule.URL.URLString, submodule.path ], repositoryFileURL: workingDirectoryURL)
+		}
 		.then(launchGitTask([ "checkout", "--quiet", submodule.SHA ], repositoryFileURL: submoduleDirectoryURL))
 		// Clone nested submodules in a separate step, to quiet its output correctly.
 		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleDirectoryURL))
