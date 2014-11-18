@@ -24,8 +24,6 @@ CocoaPods projects must also have what’s known as a [podspec](http://guides.co
 
 Ultimately, we created Carthage because we wanted the simplest tool possible—a dependency manager that gets the job done without taking over the responsibility of Xcode, and without creating extra work for framework authors. CocoaPods offers many amazing features that Carthage will never have, at the expense of additional complexity.
 
-Whichever tool you choose to use on your project, we’re happy to have offered the choice!
-
 ## Installing Carthage
 
 To install the `carthage` tool on your system, please download and run the `Carthage.pkg` file for the latest  [release](https://github.com/Carthage/Carthage/releases), then follow the on-screen instructions.
