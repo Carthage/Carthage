@@ -18,7 +18,9 @@ If you’d like to run the latest development version (which may be highly unsta
 
 ## Adding frameworks to an application
 
-Once you have Carthage [installed](#installing-carthage), you can begin adding frameworks to your project:
+Once you have Carthage [installed](#installing-carthage), you can begin adding frameworks to your project. Note that Carthage only supports dynamic frameworks, which are **only available on iOS 8 or later** (or any version of OS X).
+
+To get started:
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage.checkout][] folder, then build each one.
