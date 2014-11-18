@@ -42,15 +42,29 @@ If you’ve modified your [Cartfile][], or you want to update to the newest vers
 
 ## Supporting Carthage for your framework
 
+**Carthage only officially supports dynamic frameworks**. Dynamic frameworks can be used on any version of OS X, but only on **iOS 8 or later**.
+
 Because Carthage has no centralized package list, and no project specification format, **most frameworks should build automatically**.
 
-If you are a framework developer, and would like Carthage to be able to build your framework, first see if all your schemes build successfully by running `carthage build --no-skip-current`, then checking the [Carthage.build][] folder.
+The specific requirements of any framework project are listed below.
+
+### Share your Xcode schemes
+
+Carthage will only build Xcode schemes that are shared from your `.xcodeproj`. You can see if all of your intended schemes build successfully by running `carthage build --no-skip-current`, then checking the [Carthage.build][] folder.
 
 If an important scheme is not built when you run that command, open Xcode and make sure that the scheme is marked as “Shared,” so Carthage can discover it.
 
-If you encounter build failures, try running `xcodebuild -scheme SCHEME -workspace WORKSPACE build` or `xcodebuild -scheme SCHEME -project PROJECT build` (with the actual values) and see if the same failure occurs there. This should hopefully yield enough information to resolve the problem.
+### Resolve build failures
 
-If, after all of the above, you’re still not able to build your framework with Carthage, please [open an issue](https://github.com/Carthage/Carthage/issues/new) and we’d be happy to help!
+If you encounter build failures in `carthage build --no-skip-current`, try running `xcodebuild -scheme SCHEME -workspace WORKSPACE build` or `xcodebuild -scheme SCHEME -project PROJECT build` (with the actual values) and see if the same failure occurs there. This should hopefully yield enough information to resolve the problem.
+
+If you’re still not able to build your framework with Carthage, please [open an issue](https://github.com/Carthage/Carthage/issues/new) and we’d be happy to help!
+
+### Tag stable releases
+
+Carthage determines which versions of your framework are available by searching through the tags published on the repository, and trying to interpret each tag name as a [semantic version](http://semver.org/). For example, in the tag "v1.2", the semantic version is 1.2.0.
+
+Tags without any version number, or with any characters following the version number (e.g., `1.2-alpha-1`) are currently unsupported, and will be ignored.
 
 ## CarthageKit
 
