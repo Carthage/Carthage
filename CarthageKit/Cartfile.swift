@@ -84,6 +84,10 @@ public struct CartfileLock {
 	/// should be built.
 	public var dependencies: [Dependency<PinnedVersion>]
 
+	public init(dependencies: [Dependency<PinnedVersion>]) {
+		self.dependencies = dependencies
+	}
+
 	/// Returns the location where Cartfile.lock should exist within the given
 	/// directory.
 	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
