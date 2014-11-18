@@ -64,7 +64,7 @@ If you’re still not able to build your framework with Carthage, please [open a
 
 ### Tag stable releases
 
-Carthage determines which versions of your framework are available by searching through the tags published on the repository, and trying to interpret each tag name as a [semantic version](http://semver.org/). For example, in the tag "v1.2", the semantic version is 1.2.0.
+Carthage determines which versions of your framework are available by searching through the tags published on the repository, and trying to interpret each tag name as a [semantic version](http://semver.org/). For example, in the tag `v1.2`, the semantic version is 1.2.0.
 
 Tags without any version number, or with any characters following the version number (e.g., `1.2-alpha-1`) are currently unsupported, and will be ignored.
 
