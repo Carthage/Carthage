@@ -15,7 +15,7 @@ public let CarthageErrorDomain: NSString = "org.carthage.Carthage"
 public enum CarthageError {
 	/// In a user info dictionary, associated with the exit code from a child
 	/// process.
-	static let exitCodeKey = "CarthageErrorExitCode"
+	public static let exitCodeKey = "CarthageErrorExitCode"
 
 	/// A launched task failed with an erroneous exit code.
 	case ShellTaskFailed(exitCode: Int)
