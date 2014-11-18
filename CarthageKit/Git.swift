@@ -212,7 +212,7 @@ public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirect
 		.map { submodule -> ColdSignal<()> in
 			return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
 		}
-		.merge(identity)
+		.concat(identity)
 		.then(.empty())
 }
 

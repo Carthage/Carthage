@@ -32,6 +32,9 @@ public final class Project {
 		return directoryURL.URLByAppendingPathComponent(CarthageProjectCartfileLockPath, isDirectory: false)
 	}
 
+	/// Whether to prefer HTTPS for cloning (vs. SSH).
+	public var preferHTTPS = true
+
 	public required init(directoryURL: NSURL, cartfile: Cartfile) {
 		self.directoryURL = directoryURL
 
@@ -109,7 +112,11 @@ public final class Project {
 	private func repositoryURLForProject(project: ProjectIdentifier) -> GitURL {
 		switch project {
 		case let .GitHub(repository):
-			return repository.cloneURL
+			if preferHTTPS {
+				return repository.HTTPSURL
+			} else {
+				return repository.SSHURL
+			}
 
 		case let .Git(URL):
 			return URL
@@ -122,6 +129,9 @@ public final class Project {
 		return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
 	}
 
+	/// A scheduler used to serialize all Git operations within this project.
+	private let gitOperationScheduler = QueueScheduler()
+
 	/// Clones the given project to the global repositories folder, or fetches
 	/// inside it if it has already been cloned.
 	///
@@ -129,29 +139,40 @@ public final class Project {
 	/// disk.
 	private func cloneOrFetchProject(project: ProjectIdentifier) -> ColdSignal<NSURL> {
 		let repositoryURL = repositoryFileURLForProject(project)
-		return ColdSignal.lazy {
-			var error: NSError?
-			if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-				return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
+
+		return ColdSignal { subscriber in
+			let schedulerDisposable = self.gitOperationScheduler.schedule {
+				var error: NSError?
+				if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+					subscriber.put(.Error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error))
+					return
+				}
+
+				let remoteURL = self.repositoryURLForProject(project)
+				var result: Result<()>?
+
+				if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
+					// If we created the directory, we're now responsible for
+					// cloning it.
+					println("*** Cloning \(project.name)")
+					result = cloneRepository(remoteURL, repositoryURL).wait()
+				} else {
+					println("*** Fetching \(project.name)")
+					result = fetchRepository(repositoryURL, remoteURL: remoteURL).wait()
+				}
+
+				switch result! {
+				case .Success:
+					subscriber.put(.Next(Box(repositoryURL)))
+					subscriber.put(.Completed)
+
+				case let .Failure(error):
+					subscriber.put(.Error(error))
+				}
 			}
 
-			let remoteURL = self.repositoryURLForProject(project)
-			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
-				// If we created the directory, we're now responsible for
-				// cloning it.
-				return cloneRepository(remoteURL, repositoryURL)
-					.then(.single(repositoryURL))
-					.on(subscribed: {
-						println("*** Cloning \(project.name)")
-					})
-			} else {
-				return fetchRepository(repositoryURL, remoteURL: remoteURL)
-					.then(.single(repositoryURL))
-					.on(subscribed: {
-						println("*** Fetching \(project.name)")
-					})
-			}
-		}
+			subscriber.disposable.addDisposable(schedulerDisposable)
+		}.deliverOn(QueueScheduler())
 	}
 
 	/// Sends all versions available for the given project.

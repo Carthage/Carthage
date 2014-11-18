@@ -22,6 +22,9 @@ public struct BootstrapCommand: CommandType {
 				let buildSignal = BuildCommand().buildWithOptions(BuildOptions(configuration: options.configuration, skipCurrent: true, directoryPath: options.directoryPath))
 
 				return ColdSignal.fromResult(Project.loadFromDirectory(directoryURL))
+					.on(next: { project in
+						project.preferHTTPS = !options.useSSH
+					})
 					.map { project -> ColdSignal<()> in
 						return ColdSignal.lazy {
 							if NSFileManager.defaultManager().fileExistsAtPath(project.cartfileLockURL.path!) {
@@ -43,14 +46,16 @@ public struct BootstrapCommand: CommandType {
 private struct BootstrapOptions: OptionsType {
 	let configuration: String
 	let directoryPath: String
+	let useSSH: Bool
 
-	static func create(configuration: String)(directoryPath: String) -> BootstrapOptions {
-		return self(configuration: configuration, directoryPath: directoryPath)
+	static func create(configuration: String)(useSSH: Bool)(directoryPath: String) -> BootstrapOptions {
+		return self(configuration: configuration, directoryPath: directoryPath, useSSH: useSSH)
 	}
 
 	static func evaluate(m: CommandMode) -> Result<BootstrapOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (if --build is enabled)")
+			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "whether to use SSH for GitHub repositories")
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 }

@@ -14,9 +14,14 @@ public struct GitHubRepository: Equatable {
 	public let owner: String
 	public let name: String
 
-	/// The URL string that should be used for cloning the Git repository.
-	public var cloneURL: GitURL {
+	/// The URL that should be used for cloning this repository over HTTPS.
+	public var HTTPSURL: GitURL {
 		return GitURL("https://github.com/\(owner)/\(name).git")
+	}
+
+	/// The URL that should be used for cloning this repository over SSH.
+	public var SSHURL: GitURL {
+		return GitURL("ssh://git@github.com/\(owner)/\(name).git")
 	}
 
 	public init(owner: String, name: String) {

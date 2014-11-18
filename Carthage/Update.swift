@@ -26,6 +26,9 @@ public struct UpdateCommand: CommandType {
 				}
 
 				return ColdSignal.fromResult(Project.loadFromDirectory(directoryURL))
+					.on(next: { project in
+						project.preferHTTPS = !options.useSSH
+					})
 					.map { $0.updateDependencies() }
 					.merge(identity)
 					.then(buildSignal)
@@ -39,15 +42,17 @@ private struct UpdateOptions: OptionsType {
 	let buildAfterUpdate: Bool
 	let configuration: String
 	let directoryPath: String
+	let useSSH: Bool
 
-	static func create(configuration: String)(buildAfterUpdate: Bool)(directoryPath: String) -> UpdateOptions {
-		return self(buildAfterUpdate: buildAfterUpdate, configuration: configuration, directoryPath: directoryPath)
+	static func create(configuration: String)(buildAfterUpdate: Bool)(useSSH: Bool)(directoryPath: String) -> UpdateOptions {
+		return self(buildAfterUpdate: buildAfterUpdate, configuration: configuration, directoryPath: directoryPath, useSSH: useSSH)
 	}
 
 	static func evaluate(m: CommandMode) -> Result<UpdateOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (if --build is enabled)")
 			<*> m <| Option(key: "build", defaultValue: true, usage: "whether to build dependencies after updating")
+			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "whether to use SSH for GitHub repositories")
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 }
