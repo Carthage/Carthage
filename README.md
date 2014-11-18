@@ -8,7 +8,7 @@ The basic [workflow](#adding-frameworks-to-an-application) looks something like 
 1. [Run Carthage](#adding-frameworks-to-an-application), which fetches and builds each framework you’ve listed.
 1. Drag the built `.framework` binaries into your application’s Xcode project.
 
-Carthage is responsible for building your dependencies and providing you with binary frameworks, but you retain full control over your project structure and setup. Carthage does not automatically modify your project files or your build settings.
+Carthage builds your dependencies and provides you with binary frameworks, but you retain full control over your project structure and setup. Carthage does not automatically modify your project files or your build settings.
 
 ## Installing Carthage
 
