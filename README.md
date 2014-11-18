@@ -10,6 +10,22 @@ The basic [workflow](#adding-frameworks-to-an-application) looks something like 
 
 Carthage builds your dependencies and provides you with binary frameworks, but you retain full control over your project structure and setup. Carthage does not automatically modify your project files or your build settings.
 
+## Differences between Carthage and CocoaPods
+
+[CocoaPods](http://cocoapods.org/) is a long-standing dependency manager for Cocoa, the goal for which is described in its [README](https://github.com/CocoaPods/CocoaPods/blob/1703a3464674baecf54bd7e766f4b37ed8fc43f7/README.md) as follows:
+
+> … to improve discoverability of, and engagement in, third party open-source libraries, by creating a more centralized ecosystem.
+
+By contrast, Carthage has been created as a _decentralized_ dependency manager. There is no central list of projects, which reduces maintenance work and avoids any central point of failure. However, project discovery is more difficult—users must resort to GitHub’s [Trending](https://github.com/trending?l=swift) pages or similar.
+
+CocoaPods automatically creates and updates an Xcode workspace for your application and all dependencies. Carthage builds framework binaries, but leaves the responsibility of integrating them up to the user. CocoaPods’ approach is easier to use, while Carthage’s is flexible and unintrusive.
+
+CocoaPods projects must also have what’s known as a [podspec](http://guides.cocoapods.org/syntax/podspec.html) file, which includes metadata about the project and specifies how it should be built. Because Carthage uses `xcodebuild` to build dependencies, instead of integrating them into a single workspace, it doesn’t have a similar specification file.
+
+Ultimately, we created Carthage because we wanted the simplest tool possible—a dependency manager that gets the job done without taking over the responsibility of Xcode, and without creating extra work for framework authors. CocoaPods offers many amazing features that Carthage will never have, at the expense of additional complexity.
+
+Whichever tool you choose to use on your project, we’re happy to have offered the choice!
+
 ## Installing Carthage
 
 To install the `carthage` tool on your system, please download and run the `Carthage.pkg` file for the latest  [release](https://github.com/Carthage/Carthage/releases), then follow the on-screen instructions.
