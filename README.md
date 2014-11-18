@@ -12,9 +12,9 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 
 ## Installing Carthage
 
-To install the `carthage` tool on your system, please download and run the `pkg` file for the latest  [release](https://github.com/Carthage/Carthage/releases), then follow the on-screen instructions.
+To install the `carthage` tool on your system, please download and run the `Carthage.pkg` file for the latest  [release](https://github.com/Carthage/Carthage/releases), then follow the on-screen instructions.
 
-If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository and run `sudo make install`.
+If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, run `make package`, then open the created `Carthage.pkg` to begin the installation process.
 
 ## Adding frameworks to an application
 
