@@ -17,10 +17,8 @@ public struct VersionCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<()> {
         let versionString = NSBundle(identifier: "org.carthage.CarthageKit")?.objectForInfoDictionaryKey("CFBundleShortVersionString") as String?
-        assert(versionString != nil)
 
         let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString!)).value()
-        assert(semVer != nil)
 
         println(semVer!)
 
