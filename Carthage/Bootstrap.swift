@@ -24,6 +24,7 @@ public struct BootstrapCommand: CommandType {
 				return ColdSignal.fromResult(Project.loadFromDirectory(directoryURL))
 					.on(next: { project in
 						project.preferHTTPS = !options.useSSH
+						project.projectEvents.observe(ProjectEventSink())
 					})
 					.map { project -> ColdSignal<()> in
 						return ColdSignal.lazy {

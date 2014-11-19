@@ -19,6 +19,18 @@ public let CarthageProjectCartfilePath = "Cartfile"
 /// The relative path to a project's Cartfile.lock.
 public let CarthageProjectCartfileLockPath = "Cartfile.lock"
 
+/// Describes an event occurring to or with a project.
+public enum ProjectEvent {
+	/// The project is beginning to clone.
+	case Cloning(ProjectIdentifier)
+
+	/// The project is beginning a fetch.
+	case Fetching(ProjectIdentifier)
+
+	/// The project is being checked out to the specified revision.
+	case CheckingOut(ProjectIdentifier, String)
+}
+
 /// Represents a project that is using Carthage.
 public final class Project {
 	/// File URL to the root directory of the project.
@@ -35,7 +47,16 @@ public final class Project {
 	/// Whether to prefer HTTPS for cloning (vs. SSH).
 	public var preferHTTPS = true
 
+	/// Sends each event that occurs to a project underneath the receiver (or
+	/// the receiver itself).
+	public let projectEvents: HotSignal<ProjectEvent>
+	private let _projectEventsSink: SinkOf<ProjectEvent>
+
 	public required init(directoryURL: NSURL, cartfile: Cartfile) {
+		let (signal, sink) = HotSignal<ProjectEvent>.pipe()
+		projectEvents = signal
+		_projectEventsSink = sink
+
 		self.directoryURL = directoryURL
 
 		// TODO: Load this lazily.
@@ -154,10 +175,10 @@ public final class Project {
 				if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
 					// If we created the directory, we're now responsible for
 					// cloning it.
-					println("*** Cloning \(project.name)")
+					self._projectEventsSink.put(.Cloning(project))
 					result = cloneRepository(remoteURL, repositoryURL).wait()
 				} else {
-					println("*** Fetching \(project.name)")
+					self._projectEventsSink.put(.Fetching(project))
 					result = fetchRepository(repositoryURL, remoteURL: remoteURL).wait()
 				}
 
@@ -248,7 +269,7 @@ public final class Project {
 
 		let checkoutSignal = checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 			.on(subscribed: {
-				println("*** Checking out \(project.name) at \"\(revision)\"")
+				self._projectEventsSink.put(.CheckingOut(project, revision))
 			})
 
 		return commitExistsInRepository(repositoryURL, revision: revision)
@@ -280,28 +301,29 @@ public final class Project {
 
 	/// Attempts to build each Carthage dependency that has been checked out.
 	///
-	/// Returns a signal of all standard output from `xcodebuild`, and a signal
-	/// which will send each dependency successfully built.
-	public func buildCheckedOutDependencies(configuration: String) -> (HotSignal<NSData>, ColdSignal<Dependency<PinnedVersion>>) {
+	/// Returns a signal of all standard output from `xcodebuild`, and a
+	/// signal-of-signals representing each scheme being built.
+	public func buildCheckedOutDependencies(configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
-
-		let dependenciesSignal = ColdSignal<CartfileLock>.lazy {
+		let schemeSignals = ColdSignal<CartfileLock>.lazy {
 				return .fromResult(self.readCartfileLock())
 			}
 			.map { lockFile in ColdSignal.fromValues(lockFile.dependencies) }
 			.merge(identity)
-			.map { dependency -> ColdSignal<Dependency<PinnedVersion>> in
-				let (buildOutput, buildProducts) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
-				let outputDisposable = buildOutput.observe(stdoutSink)
+			.map { dependency -> ColdSignal<BuildSchemeSignal> in
+				let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
 
-				return buildProducts
-					.then(.single(dependency))
-					.on(disposed: {
-						outputDisposable.dispose()
-					})
+				return ColdSignal.lazy {
+					let outputDisposable = buildOutput.observe(stdoutSink)
+
+					return schemeSignals
+						.on(disposed: {
+							outputDisposable.dispose()
+						})
+				}
 			}
 			.concat(identity)
 
-		return (stdoutSignal, dependenciesSignal)
+		return (stdoutSignal, schemeSignals)
 	}
 }

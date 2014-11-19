@@ -572,16 +572,21 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	return (stdoutSignal, buildSignal)
 }
 
+/// A signal representing a scheme being built.
+///
+/// A signal of this type should send the project and scheme name when building
+/// begins, then complete or error when building terminates.
+public typealias BuildSchemeSignal = ColdSignal<(ProjectLocator, String)>
+
 /// Attempts to build the dependency identified by the given project, then
 /// places its build product into the root directory given.
 ///
-/// Returns a signal of all standard output from `xcodebuild`, and a signal
-/// which will send the file URLs to each build product.
-public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
+/// Returns signals in the same format as buildInDirectory().
+public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 	let dependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 
-	let (buildOutput, buildProducts) = buildInDirectory(dependencyURL, withConfiguration: configuration)
-	let copiedProducts = ColdSignal<NSURL>.lazy {
+	let (buildOutput, schemeSignals) = buildInDirectory(dependencyURL, withConfiguration: configuration)
+	let copyProducts = ColdSignal<BuildSchemeSignal>.lazy {
 		let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderName, isDirectory: true)
 
 		var error: NSError?
@@ -599,23 +604,23 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 			return .error(error ?? CarthageError.WriteFailed(dependencyBinariesURL).error)
 		}
 
-		return buildProducts
+		return schemeSignals
 	}
 
-	return (buildOutput, copiedProducts)
+	return (buildOutput, copyProducts)
 }
 
 /// Builds the first project or workspace found within the given directory.
 ///
-/// Returns a signal of all standard output from `xcodebuild`, and a signal
-/// which will send the URL to each product successfully built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
+/// Returns a signal of all standard output from `xcodebuild`, and a
+/// signal-of-signals representing each scheme being built.
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 	precondition(directoryURL.fileURL)
 
 	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
 
-	let productURLs = locatorSignal
+	let schemeSignals = locatorSignal
 		.filter { (project: ProjectLocator) in
 			switch project {
 			case .ProjectFile:
@@ -631,17 +636,19 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 		}
 		.merge(identity)
 		.combineLatestWith(locatorSignal.take(1))
-		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<NSURL> in
+		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<(ProjectLocator, String)> in
 			let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
-			let outputDisposable = buildOutput.observe(stdoutSink)
 
-			return productURLs.on(subscribed: {
-				println("*** Building scheme \"\(scheme)\" in \(project)")
-			}, disposed: {
-				outputDisposable.dispose()
-			})
+			return ColdSignal.lazy {
+				let outputDisposable = buildOutput.observe(stdoutSink)
+
+				return ColdSignal.single((project, scheme))
+					.concat(productURLs.then(.empty()))
+					.on(disposed: {
+						outputDisposable.dispose()
+					})
+			}
 		}
-		.concat(identity)
 
-	return (stdoutSignal, productURLs)
+	return (stdoutSignal, schemeSignals)
 }

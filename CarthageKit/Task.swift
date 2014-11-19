@@ -57,21 +57,34 @@ extension TaskDescription: Printable {
 	}
 }
 
-/// Creates a pipe that, when written to, will place data into the given sink.
-private func pipeForWritingToSink(sink: SinkOf<NSData>) -> NSPipe {
+/// Creates an NSPipe that will aggregate all data sent to it, and eventually
+/// replay it upon the returned signal.
+///
+/// If a sink is given, data received on the pipe will also be forwarded to it
+/// as it arrives.
+private func pipeForAggregatingData(forwardingSink: SinkOf<NSData>?) -> (NSPipe, ColdSignal<NSData>) {
+	let (signal, sink) = HotSignal<NSData>.pipe()
 	let pipe = NSPipe()
 
 	pipe.fileHandleForReading.readabilityHandler = { handle in
-		sink.put(handle.availableData)
+		let data = handle.availableData
+		sink.put(data)
+		forwardingSink?.put(data)
 	}
 
-	return pipe
+	let aggregatedData = signal.scan(initial: NSData()) { (accumulated, data) in
+		let buffer = accumulated.mutableCopy() as NSMutableData
+		buffer.appendData(data)
+		return buffer
+	}.replay(1)
+
+	// Start the aggregated data with an initial value.
+	sink.put(NSData())
+
+	return (pipe, aggregatedData)
 }
 
 /// Launches a new shell task, using the parameters from `taskDescription`.
-///
-/// If `standardError` is not specified, it will be inherited from the parent
-/// process.
 ///
 /// Returns a cold signal that will launch the task when started, then send one
 /// `NSData` value (representing aggregated data from `stdout`) and complete
@@ -105,32 +118,29 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 			subscriber.disposable.addDisposable(disposable)
 		}
 
-		let (stdout, stdoutSink) = HotSignal<NSData>.pipe()
-		task.standardOutput = pipeForWritingToSink(stdoutSink)
+		let (stdoutPipe, stdout) = pipeForAggregatingData(standardOutput)
+		task.standardOutput = stdoutPipe
 
-		let aggregatedOutput = stdout.scan(initial: NSData()) { (accumulated, data) in
-			let buffer = accumulated.mutableCopy() as NSMutableData
-			buffer.appendData(data)
-			return buffer
-		}.replay(1)
-
-		// Start the aggregated output with an initial value.
-		stdoutSink.put(NSData())
-
-		if let output = standardOutput {
-			subscriber.disposable.addDisposable(stdout.observe(output))
-		}
-
-		if let error = standardError {
-			task.standardError = pipeForWritingToSink(error)
-		}
+		let (stderrPipe, stderr) = pipeForAggregatingData(standardError)
+		task.standardError = stderrPipe
 
 		task.terminationHandler = { task in
 			if task.terminationStatus == EXIT_SUCCESS {
-				aggregatedOutput.take(1).start(subscriber)
+				stdout.take(1).start(subscriber)
 			} else {
-				let error = CarthageError.ShellTaskFailed(exitCode: Int(task.terminationStatus))
-				subscriber.put(.Error(error.error))
+				stderr
+					.take(1)
+					.map { data -> String? in
+						if data.length > 0 {
+							return NSString(data: data, encoding: NSUTF8StringEncoding) as String?
+						} else {
+							return nil
+						}
+					}
+					.start(next: { string in
+						let error = CarthageError.ShellTaskFailed(exitCode: Int(task.terminationStatus), standardError: string)
+						subscriber.put(.Error(error.error))
+					})
 			}
 		}
 

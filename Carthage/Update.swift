@@ -28,6 +28,7 @@ public struct UpdateCommand: CommandType {
 				return ColdSignal.fromResult(Project.loadFromDirectory(directoryURL))
 					.on(next: { project in
 						project.preferHTTPS = !options.useSSH
+						project.projectEvents.observe(ProjectEventSink())
 					})
 					.map { $0.updateDependencies() }
 					.merge(identity)
