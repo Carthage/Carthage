@@ -439,7 +439,7 @@ private func mergeExecutables(executableURLs: [NSURL], outputURL: NSURL) -> Cold
 /// the destination module.
 ///
 /// Sends the URL to each file after copying.
-private func mergeModules(sourceModuleDirectoryURL: NSURL, destinationModuleDirectoryURL: NSURL) -> ColdSignal<NSURL> {
+private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationModuleDirectoryURL: NSURL) -> ColdSignal<NSURL> {
 	precondition(sourceModuleDirectoryURL.fileURL)
 	precondition(destinationModuleDirectoryURL.fileURL)
 
@@ -546,7 +546,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 									// TODO: This should be a zip.
 									.combineLatestWith(destinationModulesURL)
 									.map { (source: NSURL, destination: NSURL) -> ColdSignal<NSURL> in
-										return mergeModules(source, destination)
+										return mergeModuleIntoModule(source, destination)
 									}
 									.merge(identity)
 
