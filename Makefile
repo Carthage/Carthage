@@ -10,6 +10,8 @@ BINARIES_FOLDER=/usr/local/bin
 
 OUTPUT_PACKAGE=Carthage.pkg
 
+.PHONY: all bootstrap clean install package
+
 all: bootstrap
 	xcodebuild $(XCODEFLAGS) build
 
