@@ -23,6 +23,7 @@ public struct CheckoutCommand: CommandType {
 				return ColdSignal.fromResult(Project.loadFromDirectory(directoryURL))
 					.on(next: { project in
 						project.preferHTTPS = !options.useSSH
+						project.projectEvents.observe(ProjectEventSink())
 					})
 					.map { $0.checkoutLockedDependencies() }
 					.merge(identity)
