@@ -18,3 +18,4 @@ DerivedData
 *.xcuserstate
 
 Cartfile.lock
+Carthage.pkg
