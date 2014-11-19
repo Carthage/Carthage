@@ -16,7 +16,13 @@ public struct VersionCommand: CommandType {
     public let function = "Display the current version of Carthage"
 
 	public func run(mode: CommandMode) -> Result<()> {
-        println("0.2")
+        let versionString = NSBundle(identifier: "org.carthage.CarthageKit")?.objectForInfoDictionaryKey("CFBundleShortVersionString") as String?
+        assert(versionString != nil)
+
+        let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString!)).value()
+        assert(semVer != nil)
+
+        println(semVer!)
 
         return success(())
     }
