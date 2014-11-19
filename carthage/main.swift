@@ -16,6 +16,7 @@ commands.register(BootstrapCommand())
 commands.register(BuildCommand())
 commands.register(CheckoutCommand())
 commands.register(UpdateCommand())
+commands.register(VersionCommand())
 
 let helpCommand = HelpCommand(registry: commands)
 commands.register(helpCommand)
