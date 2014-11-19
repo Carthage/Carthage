@@ -209,7 +209,7 @@ public final class Project {
 		let pinnedVersion = dependency.version.pinnedVersion!
 		let repositoryURL = repositoryFileURLForProject(dependency.project)
 
-		return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, pinnedVersion.tag)
+		return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: pinnedVersion.tag)
 			.catch { _ in .empty() }
 			.tryMap { Cartfile.fromString($0) }
 	}
@@ -246,12 +246,12 @@ public final class Project {
 		let repositoryURL = self.repositoryFileURLForProject(project)
 		let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
-		let checkoutSignal = checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision)
+		let checkoutSignal = checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 			.on(subscribed: {
 				println("*** Checking out \(project.name) at \"\(revision)\"")
 			})
 
-		return commitExistsInRepository(repositoryURL, revision)
+		return commitExistsInRepository(repositoryURL, revision: revision)
 			.map { exists -> ColdSignal<NSURL> in
 				if exists {
 					return .empty()

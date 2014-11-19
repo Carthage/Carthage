@@ -12,29 +12,29 @@ import ReactiveCocoa
 /// Describes how to execute a shell command.
 public struct TaskDescription {
 	/// The path to the executable that should be launched.
-	var launchPath: String
+	public var launchPath: String
 
 	/// Any arguments to provide to the executable.
-	var arguments: [String]
+	public var arguments: [String]
 
 	/// The path to the working directory in which the process should be
 	/// launched.
 	///
 	/// If nil, the launched task will inherit the working directory of its
 	/// parent.
-	var workingDirectoryPath: String?
+	public var workingDirectoryPath: String?
 
 	/// Environment variables to set for the launched process.
 	///
 	/// If nil, the launched task will inherit the environment of its parent.
-	var environment: [String: String]?
+	public var environment: [String: String]?
 
 	/// Data to stream to standard input of the launched process.
 	///
 	/// An error sent along this signal will interrupt the task.
 	///
 	/// If nil, stdin will be inherited from the parent process.
-	var standardInput: ColdSignal<NSData>?
+	public var standardInput: ColdSignal<NSData>?
 
 	public init(launchPath: String, arguments: [String] = [], workingDirectoryPath: String? = nil, environment: [String: String]? = nil, standardInput: ColdSignal<NSData>? = nil) {
 		self.launchPath = launchPath

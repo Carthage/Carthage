@@ -182,7 +182,7 @@ public func listTags(repositoryFileURL: NSURL) -> ColdSignal<String> {
 
 /// Returns the text contents of the path at the given revision, or an error if
 /// the path could not be loaded.
-public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, revision: String) -> ColdSignal<String> {
+public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, revision: String = "HEAD") -> ColdSignal<String> {
 	let showObject = "\(revision):\(path)"
 	return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
 }
@@ -190,7 +190,7 @@ public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, r
 /// Checks out the working tree of the given (ideally bare) repository, at the
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
-public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String) -> ColdSignal<()> {
+public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD") -> ColdSignal<()> {
 	return ColdSignal.lazy {
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -201,14 +201,14 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 		environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
 
 		return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
-			.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision))
+			.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision))
 	}
 }
 
 /// Clones all submodules for the given repository at the specified revision,
 /// into the given working directory.
-public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String) -> ColdSignal<()> {
-	return submodulesInRepository(repositoryFileURL, revision)
+public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD") -> ColdSignal<()> {
+	return submodulesInRepository(repositoryFileURL, revision: revision)
 		.map { submodule -> ColdSignal<()> in
 			return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
 		}
@@ -318,7 +318,7 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 
 /// Determines the SHA that the submodule at the given path is pinned to, in the
 /// revision of the parent repository specified.
-public func submoduleSHAForPath(path: String, repositoryFileURL: NSURL, revision: String) -> ColdSignal<String> {
+public func submoduleSHAForPath(repositoryFileURL: NSURL, path: String, revision: String = "HEAD") -> ColdSignal<String> {
 	return launchGitTask([ "ls-tree", "-z", revision, path ], repositoryFileURL: repositoryFileURL)
 		.tryMap { string -> Result<String> in
 			// Example:
@@ -334,7 +334,7 @@ public func submoduleSHAForPath(path: String, repositoryFileURL: NSURL, revision
 
 /// Returns each submodule found in the given repository revision, or an empty
 /// signal if none exist.
-public func submodulesInRepository(repositoryFileURL: NSURL, revision: String) -> ColdSignal<Submodule> {
+public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = "HEAD") -> ColdSignal<Submodule> {
 	let modulesObject = "\(revision):.gitmodules"
 	let baseArguments = [ "config", "--blob", modulesObject, "-z" ]
 
@@ -346,7 +346,7 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String) -
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
 				.map { GitURL($0) }
 				// TODO: This should be a zip.
-				.combineLatestWith(submoduleSHAForPath(path, repositoryFileURL, revision))
+				.combineLatestWith(submoduleSHAForPath(repositoryFileURL, path, revision: revision))
 				.map { (URL, SHA) in
 					return Submodule(name: name, path: path, URL: URL, SHA: SHA)
 				}
@@ -358,7 +358,7 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String) -
 ///
 /// If the specified file URL does not represent a valid Git repository, `false`
 /// will be sent.
-public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String) -> ColdSignal<Bool> {
+public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String = "HEAD") -> ColdSignal<Bool> {
 	return ColdSignal.lazy {
 		// NSTask throws a hissy fit (a.k.a. exception) if the working directory
 		// doesn't exist, so pre-emptively check for that.
