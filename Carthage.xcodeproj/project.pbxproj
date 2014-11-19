@@ -236,7 +236,7 @@
 				D0D1211B19E87861005E4BAA /* main.swift */,
 				D0AAC23F1A14933100060F2E /* Update.swift */,
 			);
-			path = Carthage;
+			path = carthage;
 			sourceTree = "<group>";
 		};
 		D0D1212219E878CC005E4BAA /* Configuration */ = {
