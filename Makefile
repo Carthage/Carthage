@@ -12,13 +12,16 @@ OUTPUT_PACKAGE=Carthage.pkg
 
 VERSION_STRING=$(shell agvtool what-marketing-version -terse1)
 
-.PHONY: all bootstrap clean install package
+.PHONY: all bootstrap clean install package test uninstall
 
 all: bootstrap
 	xcodebuild $(XCODEFLAGS) build
 
 bootstrap:
 	script/bootstrap
+
+test: clean bootstrap
+	xcodebuild $(XCODEFLAGS) test
 
 clean:
 	rm -f "$(OUTPUT_PACKAGE)"
@@ -34,6 +37,10 @@ install: clean bootstrap
 
 	install -d "$(BINARIES_FOLDER)"
 	install -CSs "$(CARTHAGE_EXECUTABLE)" "$(BINARIES_FOLDER)/"
+
+uninstall:
+	rm -rf "$(FRAMEWORKS_FOLDER)/CarthageKit.framework"
+	rm -f "$(BINARIES_FOLDER)/carthage"
 
 package: clean bootstrap
 	xcodebuild $(XCODEFLAGS) install
