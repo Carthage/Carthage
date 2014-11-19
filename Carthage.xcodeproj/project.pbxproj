@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
 		D00758481A1C6AC000625DBF /* CarthageKitExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00758471A1C6AC000625DBF /* CarthageKitExtensions.swift */; };
 		D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82D61A10160700F0DD94 /* Resolver.swift */; };
@@ -100,6 +101,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		54911EF21A1D34EC00FFAE5F /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
 		D00758471A1C6AC000625DBF /* CarthageKitExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = CarthageKitExtensions.swift; path = carthage/CarthageKitExtensions.swift; sourceTree = SOURCE_ROOT; };
 		D01D82D61A10160700F0DD94 /* Resolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Resolver.swift; sourceTree = "<group>"; };
@@ -235,6 +237,7 @@
 				D06939B219E8A79F001E44AE /* Help.swift */,
 				D0D1211B19E87861005E4BAA /* main.swift */,
 				D0AAC23F1A14933100060F2E /* Update.swift */,
+				54911EF21A1D34EC00FFAE5F /* Version.swift */,
 			);
 			path = carthage;
 			sourceTree = "<group>";
@@ -619,6 +622,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D095BA3C1A187D40007F15D6 /* Bootstrap.swift in Sources */,
+				54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */,
 				D0AAC2401A14933100060F2E /* Update.swift in Sources */,
 				D0E7B65519E9C76900EDBA4D /* Help.swift in Sources */,
 				D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */,
