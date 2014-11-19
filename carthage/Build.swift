@@ -29,26 +29,30 @@ public struct BuildCommand: CommandType {
 			.map { (stdoutHandle, temporaryURL) -> ColdSignal<()> in
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
 
-				let (stdoutSignal, buildSignal) = self.buildProjectInDirectoryURL(directoryURL, options: options)
+				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
 				let disposable = stdoutSignal.observe { data in
 					stdoutHandle.writeData(data)
 				}
 
-				return buildSignal.on(subscribed: {
-					println("*** xcodebuild output can be found in \(temporaryURL.path!)")
-				}, disposed: {
-					disposable.dispose()
-				})
+				return schemeSignals
+					.concat(identity)
+					.on(subscribed: {
+						println("*** xcodebuild output can be found in \(temporaryURL.path!)")
+					}, next: { (project, scheme) in
+						println("*** Building scheme \"\(scheme)\" in \(project)")
+					}, disposed: {
+						disposable.dispose()
+					})
+					.then(.empty())
 			}
 			.merge(identity)
 	}
 
 	/// Builds the project in the given directory, using the given options.
 	///
-	/// Returns a hot signal of `stdout` from `xcodebuild`, and a cold signal
-	/// that will actually begin the work (and indicate success or failure upon
-	/// termination).
-	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> (HotSignal<NSData>, ColdSignal<()>) {
+	/// Returns a hot signal of `stdout` from `xcodebuild`, and a cold signal of
+	/// cold signals representing each scheme being built.
+	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 
 		var buildSignal = ColdSignal<Project>.lazy {
@@ -63,28 +67,33 @@ public struct BuildCommand: CommandType {
 					return .empty()
 				}
 			}
-			.map { project -> ColdSignal<()> in
-				let (dependenciesOutput, dependenciesSignal) = project.buildCheckedOutDependencies(options.configuration)
-				let dependenciesDisposable = dependenciesOutput.observe(stdoutSink)
+			.map { project -> ColdSignal<BuildSchemeSignal> in
+				let (dependenciesOutput, dependenciesSignals) = project.buildCheckedOutDependencies(options.configuration)
 
-				return dependenciesSignal
-					.then(.empty())
-					.on(disposed: {
-						dependenciesDisposable.dispose()
-					})
+				return ColdSignal.lazy {
+					let dependenciesDisposable = dependenciesOutput.observe(stdoutSink)
+
+					return dependenciesSignals
+						.on(disposed: {
+							dependenciesDisposable.dispose()
+						})
+				}
 			}
 			.merge(identity)
 
 		if !options.skipCurrent {
-			let (currentOutput, currentSignal) = buildInDirectory(directoryURL, withConfiguration: options.configuration)
-			let currentDisposable = currentOutput.observe(stdoutSink)
+			let (currentOutput, currentSignals) = buildInDirectory(directoryURL, withConfiguration: options.configuration)
+			let dependenciesSignal = buildSignal
 
-			buildSignal = buildSignal
-				.then(currentSignal)
-				.then(.empty())
-				.on(disposed: {
-					currentDisposable.dispose()
-				})
+			buildSignal = ColdSignal.lazy {
+				let currentDisposable = currentOutput.observe(stdoutSink)
+
+				return dependenciesSignal
+					.then(currentSignals)
+					.on(disposed: {
+						currentDisposable.dispose()
+					})
+			}
 		}
 
 		return (stdoutSignal, buildSignal)

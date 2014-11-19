@@ -36,10 +36,11 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for project in dependencies {
-				let (outputSignal, productURLs) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
+				let (outputSignal, schemeSignals) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
 				let outputDisposable = outputSignal.observe(stdoutSink)
 
-				let result = productURLs
+				let result = schemeSignals
+					.concat(identity)
 					.on(disposed: {
 						outputDisposable.dispose()
 					})
@@ -48,41 +49,34 @@ class XcodeSpec: QuickSpec {
 				expect(result.error()).to(beNil())
 			}
 
-			var macURL: NSURL!
-			var iOSURL: NSURL!
-
-			let (outputSignal, productURLs) = buildInDirectory(directoryURL, withConfiguration: "Debug")
+			let (outputSignal, schemeSignals) = buildInDirectory(directoryURL, withConfiguration: "Debug")
 			let outputDisposable = outputSignal.observe(stdoutSink)
 
-			let result = productURLs
-				.on(next: { productURL in
-					expect(productURL.lastPathComponent).to(equal("ReactiveCocoaLayout.framework"))
-
-					if contains(productURL.pathComponents as [String], "Mac") {
-						macURL = productURL
-					} else if contains(productURL.pathComponents as [String], "iOS") {
-						iOSURL = productURL
-					}
-				}, disposed: {
-					outputDisposable.dispose()
-				})
+			let result = schemeSignals
+				.concat(identity)
 				.wait()
 
 			expect(result.error()).to(beNil())
 
-			expect(macURL).notTo(beNil())
-			expect(iOSURL).notTo(beNil())
+			// Verify that the build products exist at the top level.
+			var projectNames = dependencies.map { project in project.name }
+			projectNames.append("ReactiveCocoaLayout")
 
-			var isDirectory: ObjCBool = false
-			expect(NSFileManager.defaultManager().fileExistsAtPath(macURL.path!, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beTruthy())
+			for dependency in projectNames {
+				let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
+				let iOSPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
 
-			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSURL.path!, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beTruthy())
+				var isDirectory: ObjCBool = false
+				expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
+				expect(isDirectory).to(beTruthy())
+
+				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
+				expect(isDirectory).to(beTruthy())
+			}
 
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
-			let output = launchTask(TaskDescription(launchPath: "/usr/bin/otool", arguments: [ "-fv", iOSURL.URLByAppendingPathComponent("ReactiveCocoaLayout").path! ]))
+			let output = launchTask(TaskDescription(launchPath: "/usr/bin/otool", arguments: [ "-fv", buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework/ReactiveCocoaLayout").path! ]))
 				.map { NSString(data: $0, encoding: NSStringEncoding(NSUTF8StringEncoding))! }
 				.first()
 				.value()!
@@ -90,19 +84,6 @@ class XcodeSpec: QuickSpec {
 			expect(output).to(contain("architecture i386"))
 			expect(output).to(contain("architecture armv7"))
 			expect(output).to(contain("architecture arm64"))
-
-			// Verify that the dependencies exist at the top level.
-			let projectNames = dependencies.map { project in project.name }
-			for dependency in projectNames {
-				let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
-				let iOSPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
-
-				expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
-				expect(isDirectory).to(beTruthy())
-
-				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
-				expect(isDirectory).to(beTruthy())
-			}
 		}
 
 		it("should locate the workspace") {
