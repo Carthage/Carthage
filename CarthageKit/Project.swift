@@ -328,13 +328,14 @@ public final class Project {
 		return ColdSignal<CartfileLock>.lazy {
 				return ColdSignal.fromResult(self.readCartfileLock())
 			}
-			.map { cartfileLock -> ColdSignal<Dependency<PinnedVersion>> in
-				return ColdSignal.fromValues(cartfileLock.dependencies)
-			}
-			.merge(identity)
+			// TODO: This should be a zip.
 			.combineLatestWith(submodulesSignal)
-			.map { (dependency, submodulesByPath) -> ColdSignal<()> in
-				return self.checkoutOrCloneProject(dependency.project, atRevision: dependency.version.tag, submodulesByPath: submodulesByPath)
+			.map { (cartfileLock, submodulesByPath) -> ColdSignal<()> in
+				return ColdSignal.fromValues(cartfileLock.dependencies)
+					.map { dependency in
+						return self.checkoutOrCloneProject(dependency.project, atRevision: dependency.version.tag, submodulesByPath: submodulesByPath)
+					}
+					.merge(identity)
 			}
 			.merge(identity)
 			.then(.empty())
