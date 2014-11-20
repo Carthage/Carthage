@@ -401,6 +401,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 			// If it doesn't exist, clone and initialize a submodule from our
 			// local bare repository.
 			return cloneRepository(fetchURL, submoduleDirectoryURL, bare: false)
+				.then(launchGitTask([ "remote", "set-url", "origin", submodule.URL.URLString ], repositoryFileURL: submoduleDirectoryURL))
 				.then(checkoutSubmodule)
 				.then(launchGitTask([ "submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.URL.URLString, submodule.path ], repositoryFileURL: repositoryFileURL))
 				.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
