@@ -157,39 +157,18 @@ public final class Project {
 	/// A scheduler used to serialize all Git operations within this project.
 	private let gitOperationScheduler = QueueScheduler()
 
-	/// Clones the given project to the global repositories folder, or fetches
-	/// inside it if it has already been cloned.
-	///
-	/// Returns a signal which will send the URL to the repository's folder on
-	/// disk.
-	private func cloneOrFetchProject(project: ProjectIdentifier) -> ColdSignal<NSURL> {
-		let repositoryURL = repositoryFileURLForProject(project)
-
+	/// Runs the given Git operation, blocking the `gitOperationScheduler` until
+	/// it has completed.
+	private func runGitOperation<T>(operation: ColdSignal<T>) -> ColdSignal<T> {
 		return ColdSignal { subscriber in
 			let schedulerDisposable = self.gitOperationScheduler.schedule {
-				var error: NSError?
-				if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-					subscriber.put(.Error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error))
-					return
-				}
+				let results = operation
+					.reduce(initial: []) { $0 + [ $1 ] }
+					.first()
 
-				let remoteURL = self.repositoryURLForProject(project)
-				var result: Result<()>?
-
-				if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
-					// If we created the directory, we're now responsible for
-					// cloning it.
-					self._projectEventsSink.put(.Cloning(project))
-					result = cloneRepository(remoteURL, repositoryURL).wait()
-				} else {
-					self._projectEventsSink.put(.Fetching(project))
-					result = fetchRepository(repositoryURL, remoteURL: remoteURL).wait()
-				}
-
-				switch result! {
-				case .Success:
-					subscriber.put(.Next(Box(repositoryURL)))
-					subscriber.put(.Completed)
+				switch results {
+				case let .Success(values):
+					ColdSignal.fromValues(values.unbox).start(subscriber)
 
 				case let .Failure(error):
 					subscriber.put(.Error(error))
@@ -198,6 +177,38 @@ public final class Project {
 
 			subscriber.disposable.addDisposable(schedulerDisposable)
 		}.deliverOn(QueueScheduler())
+	}
+
+	/// Clones the given project to the global repositories folder, or fetches
+	/// inside it if it has already been cloned.
+	///
+	/// Returns a signal which will send the URL to the repository's folder on
+	/// disk.
+	private func cloneOrFetchProject(project: ProjectIdentifier) -> ColdSignal<NSURL> {
+		let repositoryURL = repositoryFileURLForProject(project)
+		let operation = ColdSignal<NSURL>.lazy {
+			var error: NSError?
+			if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+				return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
+			}
+
+			let remoteURL = self.repositoryURLForProject(project)
+			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
+				// If we created the directory, we're now responsible for
+				// cloning it.
+				self._projectEventsSink.put(.Cloning(project))
+
+				return cloneRepository(remoteURL, repositoryURL)
+					.then(.single(repositoryURL))
+			} else {
+				self._projectEventsSink.put(.Fetching(project))
+
+				return fetchRepository(repositoryURL, remoteURL: remoteURL)
+					.then(.single(repositoryURL))
+			}
+		}
+
+		return runGitOperation(operation)
 	}
 
 	/// Sends all versions available for the given project.
@@ -271,7 +282,14 @@ public final class Project {
 		let repositoryURL = self.repositoryFileURLForProject(project)
 		let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
-		let checkoutSignal = checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
+		let checkoutSignal = ColdSignal<()>.lazy {
+				if self.useSubmodules {
+					let submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: self.repositoryURLForProject(project), SHA: revision)
+					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!)))
+				} else {
+					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
+				}
+			}
 			.on(subscribed: {
 				self._projectEventsSink.put(.CheckingOut(project, revision))
 			})
@@ -286,7 +304,6 @@ public final class Project {
 			}
 			.merge(identity)
 			.then(checkoutSignal)
-			.then(.empty())
 	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.lock.
