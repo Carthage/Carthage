@@ -206,8 +206,8 @@
 		D0D1210F19E87861005E4BAA = {
 			isa = PBXGroup;
 			children = (
-				D0D1211A19E87861005E4BAA /* Carthage */,
-				D0E7B64419E9C64600EDBA4D /* CarthageTests */,
+				D0D1211A19E87861005E4BAA /* carthage */,
+				D0E7B64419E9C64600EDBA4D /* carthageTests */,
 				D0D1216E19E87B05005E4BAA /* CarthageKit */,
 				D0D1217B19E87B05005E4BAA /* CarthageKitTests */,
 				D0D1211919E87861005E4BAA /* Products */,
@@ -226,7 +226,7 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D0D1211A19E87861005E4BAA /* Carthage */ = {
+		D0D1211A19E87861005E4BAA /* carthage */ = {
 			isa = PBXGroup;
 			children = (
 				D095BA3B1A187D40007F15D6 /* Bootstrap.swift */,
@@ -365,13 +365,12 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		D0E7B64419E9C64600EDBA4D /* CarthageTests */ = {
+		D0E7B64419E9C64600EDBA4D /* carthageTests */ = {
 			isa = PBXGroup;
 			children = (
 				D0D789C519FCD44700F07D81 /* CommandSpec.swift */,
 				D0E7B64519E9C64600EDBA4D /* Supporting Files */,
 			);
-			name = CarthageTests;
 			path = carthageTests;
 			sourceTree = "<group>";
 		};
