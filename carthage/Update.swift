@@ -13,7 +13,7 @@ import CarthageKit
 
 public struct UpdateCommand: CommandType {
 	public let verb = "update"
-	public let function = "Updates to and builds the latest dependencies in the project's Cartfile"
+	public let function = "Update and rebuild the project's dependencies"
 
 	public func run(mode: CommandMode) -> Result<()> {
 		return ColdSignal.fromResult(UpdateOptions.evaluate(mode))

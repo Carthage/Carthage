@@ -13,7 +13,7 @@ import CarthageKit
 
 public struct BootstrapCommand: CommandType {
 	public let verb = "bootstrap"
-	public let function = "Checks out and builds the locked dependency versions of the project"
+	public let function = "Check out and build the project's dependencies"
 
 	public func run(mode: CommandMode) -> Result<()> {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to

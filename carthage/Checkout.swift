@@ -13,7 +13,7 @@ import CarthageKit
 
 public struct CheckoutCommand: CommandType {
 	public let verb = "checkout"
-	public let function = "Check out the dependencies listed in a project's Cartfile.lock"
+	public let function = "Check out the project's dependencies"
 
 	public func run(mode: CommandMode) -> Result<()> {
 		return ColdSignal.fromResult(CheckoutOptions.evaluate(mode))
