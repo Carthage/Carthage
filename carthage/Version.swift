@@ -12,16 +12,16 @@ import ReactiveCocoa
 import CarthageKit
 
 public struct VersionCommand: CommandType {
-    public let verb = "version"
-    public let function = "Display the current version of Carthage"
+	public let verb = "version"
+	public let function = "Display the current version of Carthage"
 
 	public func run(mode: CommandMode) -> Result<()> {
-        let versionString = NSBundle(identifier: "org.carthage.CarthageKit")?.objectForInfoDictionaryKey("CFBundleShortVersionString") as String?
+		let versionString = NSBundle(identifier: "org.carthage.CarthageKit")?.objectForInfoDictionaryKey("CFBundleShortVersionString") as String?
 
-        let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString!)).value()
+		let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString!)).value()
 
-        println(semVer!)
+		println(semVer!)
 
-        return success(())
-    }
+		return success(())
+	}
 }
