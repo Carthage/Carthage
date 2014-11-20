@@ -47,6 +47,10 @@ public final class Project {
 	/// Whether to prefer HTTPS for cloning (vs. SSH).
 	public var preferHTTPS = true
 
+	/// Whether to use submodules for dependencies, or just check out their
+	/// working directories.
+	public var useSubmodules = false
+
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
 	public let projectEvents: HotSignal<ProjectEvent>
