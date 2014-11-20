@@ -22,8 +22,7 @@ public struct BuildCommand: CommandType {
 			.wait()
 	}
 
-	/// Builds the project in the current working directory, with the given
-	/// options.
+	/// Builds a project with the given options.
 	public func buildWithOptions(options: BuildOptions) -> ColdSignal<()> {
 		return self.openTemporaryLogFile()
 			.map { (stdoutHandle, temporaryURL) -> ColdSignal<()> in
@@ -124,9 +123,9 @@ public struct BuildCommand: CommandType {
 }
 
 public struct BuildOptions: OptionsType {
-	let configuration: String
-	let skipCurrent: Bool
-	let directoryPath: String
+	public let configuration: String
+	public let skipCurrent: Bool
+	public let directoryPath: String
 
 	public static func create(configuration: String)(skipCurrent: Bool)(directoryPath: String) -> BuildOptions {
 		return self(configuration: configuration, skipCurrent: skipCurrent, directoryPath: directoryPath)
