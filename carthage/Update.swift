@@ -57,7 +57,7 @@ public struct UpdateOptions: OptionsType {
 	public static func evaluate(m: CommandMode) -> Result<UpdateOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (if --build is enabled)")
-			<*> m <| Option(key: "build", defaultValue: true, usage: "whether to build dependencies after updating")
+			<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating")
 			<*> CheckoutOptions.evaluate(m)
 	}
 }

@@ -40,7 +40,7 @@ public struct CheckoutOptions: OptionsType {
 
 	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions> {
 		return create
-			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "whether to use SSH for GitHub repositories")
+			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 

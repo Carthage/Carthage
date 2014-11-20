@@ -134,7 +134,7 @@ public struct BuildOptions: OptionsType {
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
-			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "whether to skip the project in the current directory, and only build its dependencies")
+			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "build the Carthage project in addition to its dependencies")
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 }
