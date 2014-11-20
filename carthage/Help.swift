@@ -36,8 +36,15 @@ public struct HelpCommand: CommandType {
 
 				println("Available commands:\n")
 
+				let maxVerbLength = maxElement(self.registry.commands.map { countElements($0.verb) })
+
 				for command in self.registry.commands {
-					println("  \(command.verb): \(command.function)")
+					let padding = Repeat<Character>(count: maxVerbLength - countElements(command.verb), repeatedValue: " ")
+
+					var formattedVerb = command.verb
+					formattedVerb.extend(padding)
+
+					println("   \(formattedVerb)   \(command.function)")
 				}
 
 				return success(())
