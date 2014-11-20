@@ -217,7 +217,7 @@ public final class ArgumentParser {
 						break
 					}
 				}
-	
+
 				return failure(missingArgumentError("--\(key)"))
 			} else {
 				rawArguments.append(arg)
@@ -360,7 +360,7 @@ extension String: ArgumentType {
 /// Combines the text of the two errors, if they're both `InvalidArgument`
 /// errors. Otherwise, uses whichever one is not (biased toward the left).
 private func combineUsageErrors(left: NSError, right: NSError) -> NSError {
-	let combinedError = CarthageError.InvalidArgument(description: "\(left.localizedDescription)\n\(right.localizedDescription)").error
+	let combinedError = CarthageError.InvalidArgument(description: "\(left.localizedDescription)\n\n\(right.localizedDescription)").error
 
 	func isUsageError(error: NSError) -> Bool {
 		return error.domain == combinedError.domain && error.code == combinedError.code
