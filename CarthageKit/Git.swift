@@ -102,10 +102,10 @@ public struct Submodule: Equatable {
 	public let path: String
 
 	/// The URL from which the submodule should be cloned, if present.
-	public let URL: GitURL
+	public var URL: GitURL
 
 	/// The SHA checked out in the submodule.
-	public let SHA: String
+	public var SHA: String
 
 	public init(name: String, path: String, URL: GitURL, SHA: String) {
 		self.name = name

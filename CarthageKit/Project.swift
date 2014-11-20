@@ -278,13 +278,22 @@ public final class Project {
 
 	/// Checks out the given project into its intended working directory,
 	/// cloning it first if need be.
-	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String) -> ColdSignal<()> {
+	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> ColdSignal<()> {
 		let repositoryURL = self.repositoryFileURLForProject(project)
 		let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
 		let checkoutSignal = ColdSignal<()>.lazy {
-				if self.useSubmodules {
-					let submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: self.repositoryURLForProject(project), SHA: revision)
+				var submodule: Submodule?
+
+				if var foundSubmodule = submodulesByPath[project.relativePath] {
+					foundSubmodule.URL = self.repositoryURLForProject(project)
+					foundSubmodule.SHA = revision
+					submodule = foundSubmodule
+				} else if self.useSubmodules {
+					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: self.repositoryURLForProject(project), SHA: revision)
+				}
+
+				if let submodule = submodule {
 					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!)))
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
@@ -308,6 +317,14 @@ public final class Project {
 
 	/// Checks out the dependencies listed in the project's Cartfile.lock.
 	public func checkoutLockedDependencies() -> ColdSignal<()> {
+		/// Determine whether the repository currently holds any submodules (if
+		/// it even is a repository).
+		let submodulesSignal = submodulesInRepository(self.directoryURL)
+			.reduce(initial: [:]) { (var submodulesByPath: [String: Submodule], submodule) in
+				submodulesByPath[submodule.path] = submodule
+				return submodulesByPath
+			}
+
 		return ColdSignal<CartfileLock>.lazy {
 				return ColdSignal.fromResult(self.readCartfileLock())
 			}
@@ -315,7 +332,10 @@ public final class Project {
 				return ColdSignal.fromValues(cartfileLock.dependencies)
 			}
 			.merge(identity)
-			.map { dependency in self.checkoutOrCloneProject(dependency.project, atRevision: dependency.version.tag) }
+			.combineLatestWith(submodulesSignal)
+			.map { (dependency, submodulesByPath) -> ColdSignal<()> in
+				return self.checkoutOrCloneProject(dependency.project, atRevision: dependency.version.tag, submodulesByPath: submodulesByPath)
+			}
 			.merge(identity)
 			.then(.empty())
 	}
