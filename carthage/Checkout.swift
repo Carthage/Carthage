@@ -58,3 +58,19 @@ public struct CheckoutOptions: OptionsType {
 		}
 	}
 }
+
+/// Logs project events put into the sink.
+private struct ProjectEventSink: SinkType {
+	mutating func put(event: ProjectEvent) {
+		switch event {
+		case let .Cloning(project):
+			println("*** Cloning \(project.name)")
+
+		case let .Fetching(project):
+			println("*** Fetching \(project.name)")
+
+		case let .CheckingOut(project, revision):
+			println("*** Checking out \(project.name) at \"\(revision)\"")
+		}
+	}
+}
