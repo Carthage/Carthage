@@ -129,7 +129,16 @@ private func informativeUsageError<T: ArgumentType>(option: Option<T>) -> NSErro
 		example += "--\(key) "
 	}
 
-	example += "(\(T.name))"
+	var valueExample = ""
+	if let defaultValue = option.defaultValue {
+		valueExample = "\(defaultValue)"
+	}
+
+	if valueExample.isEmpty {
+		example += "(\(T.name))"
+	} else {
+		example += valueExample
+	}
 
 	return informativeUsageError(example, option)
 }
@@ -139,7 +148,13 @@ private func informativeUsageError<T: ArgumentType>(option: Option<T>) -> NSErro
 private func informativeUsageError(option: Option<Bool>) -> NSError {
 	precondition(option.key != nil)
 
-	return informativeUsageError("--(no-)\(option.key!)", option)
+	let key = option.key!
+
+	if let defaultValue = option.defaultValue {
+		return informativeUsageError((defaultValue ? "--no-\(key)" : "--\(key)"), option)
+	} else {
+		return informativeUsageError("--(no-)\(key)", option)
+	}
 }
 
 /// Destructively parses a list of command-line arguments.
@@ -217,7 +232,7 @@ public final class ArgumentParser {
 						break
 					}
 				}
-	
+
 				return failure(missingArgumentError("--\(key)"))
 			} else {
 				rawArguments.append(arg)
@@ -258,8 +273,8 @@ public enum CommandMode {
 /// Represents a record of options for a command, which can be parsed from
 /// a list of command-line arguments.
 ///
-/// This is most helpful when used in conjunction with the `option` function,
-/// and `<*>` and `<|` combinators.
+/// This is most helpful when used in conjunction with the `Option` type, and
+/// `<*>` and `<|` combinators.
 ///
 /// Example:
 ///
@@ -306,6 +321,10 @@ public struct Option<T> {
 
 	/// A human-readable string describing the purpose of this option. This will
 	/// be shown in help messages.
+	///
+	/// For boolean operations, this should describe the effect of _not_ using
+	/// the default value (i.e., what will happen if you disable/enable the flag
+	/// differently from the default).
 	public let usage: String
 
 	public init(key: String? = nil, defaultValue: T? = nil, usage: String) {
@@ -360,7 +379,7 @@ extension String: ArgumentType {
 /// Combines the text of the two errors, if they're both `InvalidArgument`
 /// errors. Otherwise, uses whichever one is not (biased toward the left).
 private func combineUsageErrors(left: NSError, right: NSError) -> NSError {
-	let combinedError = CarthageError.InvalidArgument(description: "\(left.localizedDescription)\n\(right.localizedDescription)").error
+	let combinedError = CarthageError.InvalidArgument(description: "\(left.localizedDescription)\n\n\(right.localizedDescription)").error
 
 	func isUsageError(error: NSError) -> Bool {
 		return error.domain == combinedError.domain && error.code == combinedError.code
