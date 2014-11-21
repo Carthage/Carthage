@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
-		D00758481A1C6AC000625DBF /* CarthageKitExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00758471A1C6AC000625DBF /* CarthageKitExtensions.swift */; };
 		D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82D61A10160700F0DD94 /* Resolver.swift */; };
 		D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */; };
 		D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; };
@@ -103,7 +102,6 @@
 /* Begin PBXFileReference section */
 		54911EF21A1D34EC00FFAE5F /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
-		D00758471A1C6AC000625DBF /* CarthageKitExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = CarthageKitExtensions.swift; path = carthage/CarthageKitExtensions.swift; sourceTree = SOURCE_ROOT; };
 		D01D82D61A10160700F0DD94 /* Resolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Resolver.swift; sourceTree = "<group>"; };
 		D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResolverSpec.swift; sourceTree = "<group>"; };
 		D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveCocoa.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -206,8 +204,8 @@
 		D0D1210F19E87861005E4BAA = {
 			isa = PBXGroup;
 			children = (
-				D0D1211A19E87861005E4BAA /* Carthage */,
-				D0E7B64419E9C64600EDBA4D /* CarthageTests */,
+				D0D1211A19E87861005E4BAA /* carthage */,
+				D0E7B64419E9C64600EDBA4D /* carthageTests */,
 				D0D1216E19E87B05005E4BAA /* CarthageKit */,
 				D0D1217B19E87B05005E4BAA /* CarthageKitTests */,
 				D0D1211919E87861005E4BAA /* Products */,
@@ -227,12 +225,11 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D0D1211A19E87861005E4BAA /* Carthage */ = {
+		D0D1211A19E87861005E4BAA /* carthage */ = {
 			isa = PBXGroup;
 			children = (
 				D095BA3B1A187D40007F15D6 /* Bootstrap.swift */,
 				D03B32BE19EA49D8007788BE /* Build.swift */,
-				D00758471A1C6AC000625DBF /* CarthageKitExtensions.swift */,
 				F66685FB19E8F1EC00487A88 /* Checkout.swift */,
 				D06939B019E8A757001E44AE /* Command.swift */,
 				D06939B219E8A79F001E44AE /* Help.swift */,
@@ -366,13 +363,12 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		D0E7B64419E9C64600EDBA4D /* CarthageTests */ = {
+		D0E7B64419E9C64600EDBA4D /* carthageTests */ = {
 			isa = PBXGroup;
 			children = (
 				D0D789C519FCD44700F07D81 /* CommandSpec.swift */,
 				D0E7B64519E9C64600EDBA4D /* Supporting Files */,
 			);
-			name = CarthageTests;
 			path = carthageTests;
 			sourceTree = "<group>";
 		};
@@ -628,7 +624,6 @@
 				D0E7B65519E9C76900EDBA4D /* Help.swift in Sources */,
 				D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */,
 				D03B32BF19EA49D8007788BE /* Build.swift in Sources */,
-				D00758481A1C6AC000625DBF /* CarthageKitExtensions.swift in Sources */,
 				D0E7B65619E9C76900EDBA4D /* main.swift in Sources */,
 				F689C33619EA14D4006D1EFA /* Checkout.swift in Sources */,
 			);

@@ -13,47 +13,51 @@ import CarthageKit
 
 public struct UpdateCommand: CommandType {
 	public let verb = "update"
-	public let function = "Updates to and builds the latest dependencies in the project's Cartfile"
+	public let function = "Update and rebuild the project's dependencies"
 
 	public func run(mode: CommandMode) -> Result<()> {
 		return ColdSignal.fromResult(UpdateOptions.evaluate(mode))
 			.map { options -> ColdSignal<()> in
-				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
-
-				var buildSignal: ColdSignal<()> = .empty()
-				if options.buildAfterUpdate {
-					buildSignal = BuildCommand().buildWithOptions(BuildOptions(configuration: options.configuration, skipCurrent: true, directoryPath: options.directoryPath))
-				}
-
-				return ColdSignal.fromResult(Project.loadFromDirectory(directoryURL))
-					.on(next: { project in
-						project.preferHTTPS = !options.useSSH
-						project.projectEvents.observe(ProjectEventSink())
-					})
+				return ColdSignal.fromResult(options.checkoutOptions.loadProject())
 					.map { $0.updateDependencies() }
 					.merge(identity)
-					.then(buildSignal)
+					.then(options.buildSignal)
 			}
 			.merge(identity)
 			.wait()
 	}
 }
 
-private struct UpdateOptions: OptionsType {
-	let buildAfterUpdate: Bool
-	let configuration: String
-	let directoryPath: String
-	let useSSH: Bool
+public struct UpdateOptions: OptionsType {
+	public let buildAfterUpdate: Bool
+	public let configuration: String
+	public let checkoutOptions: CheckoutOptions
 
-	static func create(configuration: String)(buildAfterUpdate: Bool)(useSSH: Bool)(directoryPath: String) -> UpdateOptions {
-		return self(buildAfterUpdate: buildAfterUpdate, configuration: configuration, directoryPath: directoryPath, useSSH: useSSH)
+	/// The build options corresponding to these options.
+	public var buildOptions: BuildOptions {
+		return BuildOptions(configuration: configuration, skipCurrent: true, directoryPath: checkoutOptions.directoryPath)
 	}
 
-	static func evaluate(m: CommandMode) -> Result<UpdateOptions> {
+	/// If `buildAfterUpdate` is true, this will be a signal representing the
+	/// work necessary to build the project.
+	///
+	/// Otherwise, this signal will be empty.
+	public var buildSignal: ColdSignal<()> {
+		if buildAfterUpdate {
+			return BuildCommand().buildWithOptions(buildOptions)
+		} else {
+			return .empty()
+		}
+	}
+
+	public static func create(configuration: String)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
+		return self(buildAfterUpdate: buildAfterUpdate, configuration: configuration, checkoutOptions: checkoutOptions)
+	}
+
+	public static func evaluate(m: CommandMode) -> Result<UpdateOptions> {
 		return create
-			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (if --build is enabled)")
-			<*> m <| Option(key: "build", defaultValue: true, usage: "whether to build dependencies after updating")
-			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "whether to use SSH for GitHub repositories")
-			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
+			<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating")
+			<*> CheckoutOptions.evaluate(m)
 	}
 }
