@@ -33,14 +33,16 @@ public struct CheckoutCommand: CommandType {
 public struct CheckoutOptions: OptionsType {
 	public let directoryPath: String
 	public let useSSH: Bool
+	public let useSubmodules: Bool
 
-	public static func create(useSSH: Bool)(directoryPath: String) -> CheckoutOptions {
-		return self(directoryPath: directoryPath, useSSH: useSSH)
+	public static func create(useSSH: Bool)(useSubmodules: Bool)(directoryPath: String) -> CheckoutOptions {
+		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions> {
 		return create
 			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
+			<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 
@@ -50,6 +52,7 @@ public struct CheckoutOptions: OptionsType {
 		if let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true) {
 			return Project.loadFromDirectory(directoryURL).map { project in
 				project.preferHTTPS = !self.useSSH
+				project.useSubmodules = self.useSubmodules
 				project.projectEvents.observe(ProjectEventSink())
 				return project
 			}
