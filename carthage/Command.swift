@@ -151,11 +151,7 @@ private func informativeUsageError(option: Option<Bool>) -> NSError {
 	let key = option.key!
 
 	if let defaultValue = option.defaultValue {
-		if defaultValue {
-			return informativeUsageError("--no-\(key)", option)
-		} else {
-			return informativeUsageError("--\(key)", option)
-		}
+		return informativeUsageError((defaultValue ? "--no-\(key)" : "--\(key)"), option)
 	} else {
 		return informativeUsageError("--(no-)\(key)", option)
 	}
