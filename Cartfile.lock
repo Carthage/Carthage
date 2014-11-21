@@ -1,0 +1,5 @@
+github "LlamaKit/LlamaKit" "v0.1.0"
+github "Quick/Nimble" "v0.1.0"
+github "Quick/Quick" "v0.2.0"
+github "ReactiveCocoa/ReactiveCocoa" "swift-on-carthage-3.0.0"
+github "jspahrsummers/xcconfigs" "0.6"

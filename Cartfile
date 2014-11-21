@@ -1,0 +1,5 @@
+github "ReactiveCocoa/ReactiveCocoa" == 3.0.0
+github "Quick/Quick" == 0.2.0
+github "Quick/Nimble"
+github "LlamaKit/LlamaKit" == 0.1.0
+github "jspahrsummers/xcconfigs" >= 0.6
