@@ -296,17 +296,7 @@ public final class Project {
 				if let submodule = submodule {
 					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!)))
 				} else {
-					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision) { submodule -> Bool in
-						// Ignore submodules that correspond to Carthage
-						// checkouts _in_ this dependency.
-						if let firstComponent = submodule.path.pathComponents.first {
-							if firstComponent == CarthageProjectCheckoutsPath {
-								return false
-							}
-						}
-
-						return true
-					}
+					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 				}
 			}
 			.on(subscribed: {
