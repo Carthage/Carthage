@@ -214,6 +214,7 @@
 				D0E7B65819E9CA0800EDBA4D /* carthage */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 1;
 		};
 		D0D1211919E87861005E4BAA /* Products */ = {
 			isa = PBXGroup;
