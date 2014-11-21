@@ -151,12 +151,14 @@ private func informativeUsageError(option: Option<Bool>) -> NSError {
 	let key = option.key!
 
 	if let defaultValue = option.defaultValue {
-		if !defaultValue {
+		if defaultValue {
+			return informativeUsageError("--no-\(key)", option)
+		} else {
 			return informativeUsageError("--\(key)", option)
 		}
+	} else {
+		return informativeUsageError("--(no-)\(key)", option)
 	}
-
-	return informativeUsageError("--no-\(key)", option)
 }
 
 /// Destructively parses a list of command-line arguments.
