@@ -6,10 +6,11 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import CarthageKit
+import Commandant
 import Foundation
 import LlamaKit
 import ReactiveCocoa
-import CarthageKit
 
 public struct BootstrapCommand: CommandType {
 	public let verb = "bootstrap"
