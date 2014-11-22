@@ -1,0 +1,5 @@
+language: objective-c
+xcode_workspace: Carthage.xcworkspace
+xcode_scheme: carthage
+
+script: script/cibuild
