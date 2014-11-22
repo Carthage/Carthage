@@ -7,6 +7,7 @@
 //
 
 import CarthageKit
+import Commandant
 import Foundation
 import LlamaKit
 import ReactiveCocoa
