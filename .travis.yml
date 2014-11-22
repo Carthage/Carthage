@@ -3,3 +3,6 @@ xcode_workspace: Carthage.xcworkspace
 xcode_scheme: carthage
 
 script: script/cibuild
+
+notifications:
+  slack: reactivex:lKLbHnGla814zwk5ZB07aBDF
