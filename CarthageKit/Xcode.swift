@@ -79,7 +79,8 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 
 extension ProjectLocator: Printable {
 	public var description: String {
-		return fileURL.lastPathComponent!
+		let lastComponent: String? = fileURL.lastPathComponent
+		return lastComponent!
 	}
 }
 
@@ -463,7 +464,8 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 					}
 				}
 
-				let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(URL.lastPathComponent!)
+				let lastComponent: String? = URL.lastPathComponent
+				let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
 				if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
 					subscriber.put(.Next(Box(destinationURL)))
 				} else {
