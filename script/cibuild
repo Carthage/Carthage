@@ -39,7 +39,7 @@ config ()
     # A whitespace-separated list of default schemes to build.
     #
     # Individual names can be quoted to avoid word splitting.
-    : ${SCHEMES:=$(xcodebuild -list -project "$XCODEPROJ" 2>/dev/null | awk -f "$SCRIPT_DIR/schemes.awk")}
+    : ${SCHEMES:=carthage}
     
     export XCWORKSPACE
     export XCODEPROJ
