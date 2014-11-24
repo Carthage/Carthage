@@ -11,7 +11,7 @@ BINARIES_FOLDER=/usr/local/bin
 OUTPUT_PACKAGE=Carthage.pkg
 
 VERSION_STRING=$(shell agvtool what-marketing-version -terse1)
-COMPONENTS_PLIST=Components.plist
+COMPONENTS_PLIST=carthage/Components.plist
 
 .PHONY: all bootstrap clean install package test uninstall
 

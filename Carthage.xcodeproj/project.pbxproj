@@ -101,6 +101,8 @@
 
 /* Begin PBXFileReference section */
 		54911EF21A1D34EC00FFAE5F /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
+		5499CA961A2394B700783309 /* Components.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Components.plist; sourceTree = "<group>"; };
+		5499CA971A2394B700783309 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
 		D01D82D61A10160700F0DD94 /* Resolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Resolver.swift; sourceTree = "<group>"; };
 		D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResolverSpec.swift; sourceTree = "<group>"; };
@@ -201,6 +203,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		5499CA981A2394BD00783309 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				5499CA961A2394B700783309 /* Components.plist */,
+				5499CA971A2394B700783309 /* Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
 		D0D1210F19E87861005E4BAA = {
 			isa = PBXGroup;
 			children = (
@@ -236,6 +247,7 @@
 				D0D1211B19E87861005E4BAA /* main.swift */,
 				D0AAC23F1A14933100060F2E /* Update.swift */,
 				54911EF21A1D34EC00FFAE5F /* Version.swift */,
+				5499CA981A2394BD00783309 /* Supporting Files */,
 			);
 			path = carthage;
 			sourceTree = "<group>";
