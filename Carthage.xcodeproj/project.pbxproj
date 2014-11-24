@@ -9,14 +9,14 @@
 /* Begin PBXBuildFile section */
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
+		D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00CCE311A20783A00109F8C /* Commandant.framework */; };
+		D00CCE331A20784800109F8C /* Commandant.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D00CCE311A20783A00109F8C /* Commandant.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82D61A10160700F0DD94 /* Resolver.swift */; };
 		D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */; };
 		D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; };
 		D01F8A4119EA28C600643E7C /* LlamaKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; };
 		D01F8A4419EA28E400643E7C /* LlamaKit.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D01F8A4519EA28E600643E7C /* ReactiveCocoa.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		D01F8A4819EA28F600643E7C /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4619EA28F600643E7C /* Nimble.framework */; };
-		D01F8A4919EA28F600643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
 		D01F8A4A19EA28FE00643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
 		D01F8A4C19EA28FE00643E7C /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4B19EA28FE00643E7C /* Nimble.framework */; };
 		D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F8A5319EA2F1700643E7C /* Xcode.swift */; };
@@ -34,14 +34,11 @@
 		D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1218F19E88A15005E4BAA /* Cartfile.swift */; };
 		D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1219119E88B8F005E4BAA /* GitHub.swift */; };
 		D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */; };
-		D0D789C619FCD44700F07D81 /* CommandSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D789C519FCD44700F07D81 /* CommandSpec.swift */; };
-		D0D789C719FCD44B00F07D81 /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
 		D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DB09A319EA354200234B16 /* XcodeSpec.swift */; };
 		D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE893F1A0F2CB00030A3EC /* Version.swift */; };
 		D0DE89421A0F2D450030A3EC /* VersionSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE89411A0F2D450030A3EC /* VersionSpec.swift */; };
 		D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE89431A0F2D9B0030A3EC /* Scannable.swift */; };
 		D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
-		D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B019E8A757001E44AE /* Command.swift */; };
 		D0E7B65519E9C76900EDBA4D /* Help.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B219E8A79F001E44AE /* Help.swift */; };
 		D0E7B65619E9C76900EDBA4D /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1211B19E87861005E4BAA /* main.swift */; };
 		D0F551DC1A0D71AB0093311F /* TestCartfile.lock in Resources */ = {isa = PBXBuildFile; fileRef = D0F551DB1A0D71AB0093311F /* TestCartfile.lock */; };
@@ -64,13 +61,6 @@
 			remoteGlobalIDString = D0D1216C19E87B05005E4BAA;
 			remoteInfo = CarthageKit;
 		};
-		D0E7B64219E9C64600EDBA4D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D0D1211019E87861005E4BAA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = D0E7B63119E9C64500EDBA4D;
-			remoteInfo = carthage;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -82,6 +72,7 @@
 			files = (
 				D01F8A4419EA28E400643E7C /* LlamaKit.framework in Copy Frameworks */,
 				D01F8A4519EA28E600643E7C /* ReactiveCocoa.framework in Copy Frameworks */,
+				D00CCE331A20784800109F8C /* Commandant.framework in Copy Frameworks */,
 			);
 			name = "Copy Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -104,6 +95,7 @@
 		5499CA961A2394B700783309 /* Components.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Components.plist; sourceTree = "<group>"; };
 		5499CA971A2394B700783309 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
+		D00CCE311A20783A00109F8C /* Commandant.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Commandant.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01D82D61A10160700F0DD94 /* Resolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Resolver.swift; sourceTree = "<group>"; };
 		D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResolverSpec.swift; sourceTree = "<group>"; };
 		D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveCocoa.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -114,7 +106,6 @@
 		D01F8A5319EA2F1700643E7C /* Xcode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Xcode.swift; sourceTree = "<group>"; };
 		D03B32BE19EA49D8007788BE /* Build.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Build.swift; path = carthage/Build.swift; sourceTree = SOURCE_ROOT; };
 		D04AEADA19E918C30045C166 /* TaskSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TaskSpec.swift; sourceTree = "<group>"; };
-		D06939B019E8A757001E44AE /* Command.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Command.swift; sourceTree = "<group>"; };
 		D06939B219E8A79F001E44AE /* Help.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Help.swift; sourceTree = "<group>"; };
 		D074EDC41A049283001DE082 /* FrameworkExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensions.swift; sourceTree = "<group>"; };
 		D095BA3B1A187D40007F15D6 /* Bootstrap.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Bootstrap.swift; path = carthage/Bootstrap.swift; sourceTree = SOURCE_ROOT; };
@@ -149,14 +140,11 @@
 		D0D1218F19E88A15005E4BAA /* Cartfile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Cartfile.swift; sourceTree = "<group>"; };
 		D0D1219119E88B8F005E4BAA /* GitHub.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitHub.swift; sourceTree = "<group>"; };
 		D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CartfileSpec.swift; sourceTree = "<group>"; };
-		D0D789C519FCD44700F07D81 /* CommandSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CommandSpec.swift; sourceTree = "<group>"; };
 		D0DB09A319EA354200234B16 /* XcodeSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XcodeSpec.swift; sourceTree = "<group>"; };
 		D0DE893F1A0F2CB00030A3EC /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
 		D0DE89411A0F2D450030A3EC /* VersionSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionSpec.swift; sourceTree = "<group>"; };
 		D0DE89431A0F2D9B0030A3EC /* Scannable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Scannable.swift; sourceTree = "<group>"; };
 		D0E7B63219E9C64500EDBA4D /* carthage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = carthage.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0E7B64119E9C64600EDBA4D /* CarthageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarthageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0E7B64619E9C64600EDBA4D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0E7B65819E9CA0800EDBA4D /* carthage */ = {isa = PBXFileReference; lastKnownFileType = text; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0F551DB1A0D71AB0093311F /* TestCartfile.lock */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfile.lock; sourceTree = "<group>"; };
 		F603929819EA29F80050A6AF /* Project.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
@@ -168,6 +156,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */,
 				D01F8A4119EA28C600643E7C /* LlamaKit.framework in Frameworks */,
 				D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */,
 			);
@@ -191,15 +180,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D0E7B63E19E9C64600EDBA4D /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D01F8A4819EA28F600643E7C /* Nimble.framework in Frameworks */,
-				D01F8A4919EA28F600643E7C /* Quick.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -216,7 +196,6 @@
 			isa = PBXGroup;
 			children = (
 				D0D1211A19E87861005E4BAA /* carthage */,
-				D0E7B64419E9C64600EDBA4D /* carthageTests */,
 				D0D1216E19E87B05005E4BAA /* CarthageKit */,
 				D0D1217B19E87B05005E4BAA /* CarthageKitTests */,
 				D0D1211919E87861005E4BAA /* Products */,
@@ -231,7 +210,6 @@
 				D0D1216D19E87B05005E4BAA /* CarthageKit.framework */,
 				D0D1217719E87B05005E4BAA /* CarthageKitTests.xctest */,
 				D0E7B63219E9C64500EDBA4D /* carthage.app */,
-				D0E7B64119E9C64600EDBA4D /* CarthageTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -242,7 +220,6 @@
 				D095BA3B1A187D40007F15D6 /* Bootstrap.swift */,
 				D03B32BE19EA49D8007788BE /* Build.swift */,
 				F66685FB19E8F1EC00487A88 /* Checkout.swift */,
-				D06939B019E8A757001E44AE /* Command.swift */,
 				D06939B219E8A79F001E44AE /* Help.swift */,
 				D0D1211B19E87861005E4BAA /* main.swift */,
 				D0AAC23F1A14933100060F2E /* Update.swift */,
@@ -341,6 +318,7 @@
 		D0D1216F19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				D00CCE311A20783A00109F8C /* Commandant.framework */,
 				D01F8A4019EA28C600643E7C /* LlamaKit.framework */,
 				D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */,
 				D0D1217019E87B05005E4BAA /* Info.plist */,
@@ -371,23 +349,6 @@
 				D0D1217D19E87B05005E4BAA /* Info.plist */,
 				D0AAAB5419FB1062007B24B3 /* TestCartfile */,
 				D0F551DB1A0D71AB0093311F /* TestCartfile.lock */,
-			);
-			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
-		D0E7B64419E9C64600EDBA4D /* carthageTests */ = {
-			isa = PBXGroup;
-			children = (
-				D0D789C519FCD44700F07D81 /* CommandSpec.swift */,
-				D0E7B64519E9C64600EDBA4D /* Supporting Files */,
-			);
-			path = carthageTests;
-			sourceTree = "<group>";
-		};
-		D0E7B64519E9C64600EDBA4D /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				D0E7B64619E9C64600EDBA4D /* Info.plist */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -464,24 +425,6 @@
 			productReference = D0E7B63219E9C64500EDBA4D /* carthage.app */;
 			productType = "com.apple.product-type.application";
 		};
-		D0E7B64019E9C64600EDBA4D /* CarthageTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = D0E7B64E19E9C64600EDBA4D /* Build configuration list for PBXNativeTarget "CarthageTests" */;
-			buildPhases = (
-				D0E7B63D19E9C64600EDBA4D /* Sources */,
-				D0E7B63E19E9C64600EDBA4D /* Frameworks */,
-				D0E7B63F19E9C64600EDBA4D /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				D0E7B64319E9C64600EDBA4D /* PBXTargetDependency */,
-			);
-			name = CarthageTests;
-			productName = carthageTests;
-			productReference = D0E7B64119E9C64600EDBA4D /* CarthageTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -500,10 +443,6 @@
 					D0E7B63119E9C64500EDBA4D = {
 						CreatedOnToolsVersion = 6.1;
 					};
-					D0E7B64019E9C64600EDBA4D = {
-						CreatedOnToolsVersion = 6.1;
-						TestTargetID = D0E7B63119E9C64500EDBA4D;
-					};
 				};
 			};
 			buildConfigurationList = D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "Carthage" */;
@@ -520,7 +459,6 @@
 			projectRoot = "";
 			targets = (
 				D0E7B63119E9C64500EDBA4D /* carthage */,
-				D0E7B64019E9C64600EDBA4D /* CarthageTests */,
 				D0D1216C19E87B05005E4BAA /* CarthageKit */,
 				D0D1217619E87B05005E4BAA /* CarthageKitTests */,
 			);
@@ -545,13 +483,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D0E7B63019E9C64500EDBA4D /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		D0E7B63F19E9C64600EDBA4D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -634,19 +565,9 @@
 				54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */,
 				D0AAC2401A14933100060F2E /* Update.swift in Sources */,
 				D0E7B65519E9C76900EDBA4D /* Help.swift in Sources */,
-				D0E7B65419E9C76900EDBA4D /* Command.swift in Sources */,
 				D03B32BF19EA49D8007788BE /* Build.swift in Sources */,
 				D0E7B65619E9C76900EDBA4D /* main.swift in Sources */,
 				F689C33619EA14D4006D1EFA /* Checkout.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		D0E7B63D19E9C64600EDBA4D /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D0D789C619FCD44700F07D81 /* CommandSpec.swift in Sources */,
-				D0D789C719FCD44B00F07D81 /* Command.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -662,11 +583,6 @@
 			isa = PBXTargetDependency;
 			target = D0D1216C19E87B05005E4BAA /* CarthageKit */;
 			targetProxy = D0D1217919E87B05005E4BAA /* PBXContainerItemProxy */;
-		};
-		D0E7B64319E9C64600EDBA4D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = D0E7B63119E9C64500EDBA4D /* carthage */;
-			targetProxy = D0E7B64219E9C64600EDBA4D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -863,58 +779,6 @@
 			};
 			name = Profile;
 		};
-		D0E7B64F19E9C64600EDBA4D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(DEVELOPER_FRAMEWORKS_DIR)",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = carthageTests/Info.plist;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		D0E7B65019E9C64600EDBA4D /* Test */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(DEVELOPER_FRAMEWORKS_DIR)",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = carthageTests/Info.plist;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Test;
-		};
-		D0E7B65119E9C64600EDBA4D /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(DEVELOPER_FRAMEWORKS_DIR)",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = carthageTests/Info.plist;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
-		D0E7B65219E9C64600EDBA4D /* Profile */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(DEVELOPER_FRAMEWORKS_DIR)",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = carthageTests/Info.plist;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Profile;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -958,17 +822,6 @@
 				D0E7B64B19E9C64600EDBA4D /* Test */,
 				D0E7B64C19E9C64600EDBA4D /* Release */,
 				D0E7B64D19E9C64600EDBA4D /* Profile */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		D0E7B64E19E9C64600EDBA4D /* Build configuration list for PBXNativeTarget "CarthageTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D0E7B64F19E9C64600EDBA4D /* Debug */,
-				D0E7B65019E9C64600EDBA4D /* Test */,
-				D0E7B65119E9C64600EDBA4D /* Release */,
-				D0E7B65219E9C64600EDBA4D /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

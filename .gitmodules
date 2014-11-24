@@ -13,3 +13,6 @@
 [submodule "Carthage.checkout/xcconfigs"]
 	path = Carthage.checkout/xcconfigs
 	url = https://github.com/jspahrsummers/xcconfigs.git
+[submodule "Carthage.checkout/Commandant"]
+	path = Carthage.checkout/Commandant
+	url = https://github.com/Carthage/Commandant.git
