@@ -5,4 +5,5 @@ xcode_scheme: carthage
 script: script/cibuild
 
 notifications:
+  email: false
   slack: reactivex:lKLbHnGla814zwk5ZB07aBDF
