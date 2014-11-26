@@ -553,7 +553,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments) -> ColdSignal<Boo
 		.tryMap { settings in settings.productType }
 		.map { type in
 			switch type {
-			case let .Framework:
+			case .Framework:
 				return true
 
 			default:
@@ -724,7 +724,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
 			return shouldBuildScheme(buildArguments)
-				.filter { $0 }
+				.filter(identity)
 				.map { _ in
 					let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
 
