@@ -415,6 +415,7 @@ public struct BuildSettings {
 	/// sent on the returned signal.
 	public static func platformForScheme(scheme: String, inProject project: ProjectLocator) -> ColdSignal<Platform> {
 		return loadWithArguments(BuildArguments(project: project, scheme: scheme))
+			.take(1)
 			.tryMap { settings -> Result<String> in
 				return settings["PLATFORM_NAME"]
 			}
