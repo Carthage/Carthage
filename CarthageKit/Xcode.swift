@@ -284,6 +284,36 @@ public enum Platform {
 	}
 }
 
+/// Describes the type of product built by an Xcode target.
+private enum ProductType {
+	/// A framework bundle.
+	case Framework
+
+	/// A static library.
+	case StaticLibrary
+
+	/// A unit test bundle.
+	case TestBundle
+
+	/// Attempts to parse a product type from a string returned from
+	/// `xcodebuild`.
+	static func fromString(string: String) -> Result<ProductType> {
+		switch string {
+		case "com.apple.product-type.framework":
+			return success(.Framework)
+
+		case "com.apple.product-type.library.static":
+			return success(.StaticLibrary)
+
+		case "com.apple.product-type.bundle.unit-test":
+			return success(.TestBundle)
+
+		default:
+			return failure(CarthageError.ParseError(description: "unexpected product type \"(string)\"").error)
+		}
+	}
+}
+
 /// Returns the value of all build settings in the given configuration.
 public func buildSettings(arguments: BuildArguments) -> ColdSignal<Dictionary<String, String>> {
 	let task = xcodebuildTask("-showBuildSettings", arguments)
@@ -325,6 +355,15 @@ private func valueForBuildSetting(setting: String, arguments: BuildArguments) ->
 	return buildSettings(arguments)
 		.map { settings in valueForBuildSetting(setting, settings) }
 		.merge(identity)
+}
+
+/// Attempts to determine the ProductType corresponding to the given build
+/// settings.
+private func productType(settings: Dictionary<String, String>) -> ColdSignal<ProductType> {
+	return valueForBuildSetting("PRODUCT_TYPE", settings)
+		.tryMap { typeString -> Result<ProductType> in
+			return ProductType.fromString(typeString)
+		}
 }
 
 /// Determines the URL to the built products directory for the given settings.
