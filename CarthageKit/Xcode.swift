@@ -607,6 +607,69 @@ private func shouldBuildScheme(buildArguments: BuildArguments) -> ColdSignal<Boo
 		.take(1)
 }
 
+/// Aggregates all of the build settings sent on the given signal, associating
+/// each with the name of its target.
+///
+/// Returns a signal which will send the aggregated dictionary upon completion
+/// of the input signal, then itself complete.
+private func settingsByTarget(signal: ColdSignal<BuildSettings>) -> ColdSignal<[String: BuildSettings]> {
+	return signal
+		.map { settings in [ settings.target: settings ] }
+		.reduce(initial: [:], combineDictionaries)
+}
+
+/// Combines the built products corresponding to the given settings, by creating
+/// a fat binary of their executables and merging any Swift modules together,
+/// generating a new built product in the given directory.
+///
+/// In order for this process to make any sense, the build products should have
+/// been created from the same target, and differ only in the platform they were
+/// built for.
+///
+/// Upon success, sends the URL to the merged product, then completes.
+private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings, secondProductSettings: BuildSettings, destinationFolderURL: NSURL) -> ColdSignal<NSURL> {
+	return copyBuildProductIntoDirectory(destinationFolderURL, firstProductSettings)
+		.map { productURL in
+			let mergeProductBinaries = ColdSignal.fromResult(firstProductSettings.executableURL)
+				.concat(ColdSignal.fromResult(secondProductSettings.executableURL))
+				.reduce(initial: []) { $0 + [ $1 ] }
+				// TODO: This should be a zip.
+				.combineLatestWith(ColdSignal.fromResult(firstProductSettings.executablePath)
+					.map(destinationFolderURL.URLByAppendingPathComponent))
+				.map { (executableURLs: [NSURL], outputURL: NSURL) -> ColdSignal<()> in
+					return mergeExecutables(executableURLs, outputURL)
+				}
+				.merge(identity)
+
+			let sourceModulesURL = ColdSignal.fromResult(secondProductSettings.relativeModulesPath)
+				.filter { $0 != nil }
+				// TODO: This should be a zip.
+				.combineLatestWith(ColdSignal.fromResult(secondProductSettings.builtProductsDirectoryURL))
+				.map { (modulesPath, productsURL) -> NSURL in
+					return productsURL.URLByAppendingPathComponent(modulesPath!)
+				}
+
+			let destinationModulesURL = ColdSignal.fromResult(firstProductSettings.relativeModulesPath)
+				.filter { $0 != nil }
+				.map { modulesPath -> NSURL in
+					return destinationFolderURL.URLByAppendingPathComponent(modulesPath!)
+				}
+
+			let mergeProductModules = sourceModulesURL
+				// TODO: This should be a zip.
+				.combineLatestWith(destinationModulesURL)
+				.map { (source: NSURL, destination: NSURL) -> ColdSignal<NSURL> in
+					return mergeModuleIntoModule(source, destination)
+				}
+				.merge(identity)
+
+			return mergeProductBinaries
+				.then(mergeProductModules)
+				.then(.single(productURL))
+		}
+		.merge(identity)
+}
+
 /// Builds one scheme of the given project, for all supported platforms.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
@@ -633,56 +696,34 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			switch platform {
 			case .iPhoneSimulator: fallthrough
 			case .iPhoneOS:
-				return buildPlatform(.iPhoneSimulator)
-					.concat(buildPlatform(.iPhoneOS))
-					.reduce(initial: []) { $0 + [ $1 ] }
-					.map { buildSettingsPerPlatform in
-						let simulatorSettings = buildSettingsPerPlatform[0]
-						let deviceSettings = buildSettingsPerPlatform[1]
-						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderName)/iOS", isDirectory: true)
+				let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderName)/iOS", isDirectory: true)
 
-						return copyBuildProductIntoDirectory(folderURL, deviceSettings)
-							.map { productURL in
-								let mergeProductBinaries = ColdSignal.fromResult(simulatorSettings.executableURL)
-									.concat(ColdSignal.fromResult(deviceSettings.executableURL))
-									.reduce(initial: []) { $0 + [ $1 ] }
-									// TODO: This should be a zip.
-									.combineLatestWith(ColdSignal.fromResult(deviceSettings.executablePath)
-										.map(folderURL.URLByAppendingPathComponent))
-									.map { (executableURLs: [NSURL], outputURL: NSURL) -> ColdSignal<()> in
-										return mergeExecutables(executableURLs, outputURL)
-									}
-									.merge(identity)
+				return settingsByTarget(buildPlatform(.iPhoneSimulator))
+					// TODO: This should be a zip.
+					.combineLatestWith(settingsByTarget(buildPlatform(.iPhoneOS)))
+					.map { (simulatorSettingsByTarget, deviceSettingsByTarget) -> ColdSignal<(BuildSettings, BuildSettings)> in
+						assert(simulatorSettingsByTarget.count == deviceSettingsByTarget.count, "Number of targets built for iOS Simulator (\(simulatorSettingsByTarget.count)) does not match number of targets built for iOS Device (\(deviceSettingsByTarget.count))")
 
-								let sourceModulesURL = ColdSignal.fromResult(simulatorSettings.relativeModulesPath)
-									.filter { $0 != nil }
-									// TODO: This should be a zip.
-									.combineLatestWith(ColdSignal.fromResult(simulatorSettings.builtProductsDirectoryURL))
-									.map { (modulesPath, productsURL) -> NSURL in
-										return productsURL.URLByAppendingPathComponent(modulesPath!)
-									}
+						return ColdSignal { subscriber in
+							for (target, simulatorSettings) in simulatorSettingsByTarget {
+								if subscriber.disposable.disposed {
+									break
+								}
 
-								let destinationModulesURL = ColdSignal.fromResult(deviceSettings.relativeModulesPath)
-									.filter { $0 != nil }
-									.map { modulesPath -> NSURL in
-										return folderURL.URLByAppendingPathComponent(modulesPath!)
-									}
+								let deviceSettings = deviceSettingsByTarget[target]
+								assert(deviceSettings != nil, "No iOS Device build settings found for target \"\(target)\"")
 
-								let mergeProductModules = sourceModulesURL
-									// TODO: This should be a zip.
-									.combineLatestWith(destinationModulesURL)
-									.map { (source: NSURL, destination: NSURL) -> ColdSignal<NSURL> in
-										return mergeModuleIntoModule(source, destination)
-									}
-									.merge(identity)
-
-								return mergeProductBinaries
-									.then(mergeProductModules)
-									.then(.single(productURL))
+								subscriber.put(.Next(Box((simulatorSettings, deviceSettings!))))
 							}
-							.merge(identity)
+
+							subscriber.put(.Completed)
+						}
 					}
 					.merge(identity)
+					.map { (simulatorSettings, deviceSettings) -> ColdSignal<NSURL> in
+						return mergeBuildProductsIntoDirectory(deviceSettings, simulatorSettings, folderURL)
+					}
+					.concat(identity)
 
 			default:
 				return buildPlatform(platform)
