@@ -1,9 +1,8 @@
 language: objective-c
 xcode_workspace: Carthage.xcworkspace
 xcode_scheme: carthage
-
 script: script/cibuild
-
 notifications:
   email: false
-  slack: reactivex:lKLbHnGla814zwk5ZB07aBDF
+  slack:
+    secure: lblNhCx6581hiPskQQnH663QY/HHqs6y8rMCLIff1Ryq0ngBaTwBJZ6E5tAR8oWTGWg3nMAAm/AaJPQGFC9jnKxtpWJhuEF58RY+EBe1Rz3gjKmacvEZS+PW+k3cRrRPZr6Vh6D8d0cb1gfM7BvGZar21ipBC/WcnNden3LxZ+0=
