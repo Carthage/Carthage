@@ -593,19 +593,17 @@ private func shouldBuildScheme(buildArguments: BuildArguments) -> ColdSignal<Boo
 	precondition(buildArguments.scheme != nil)
 
 	return BuildSettings.loadWithArguments(buildArguments)
-		.tryMap { settings in settings.productType }
-		.map { type in
-			switch type {
-			case .Framework:
-				return true
-
-			default:
-				return false
-			}
+		.map { settings -> ColdSignal<ProductType> in
+			return ColdSignal.fromResult(settings.productType)
+				.catch { _ in .empty() }
 		}
-		// If we don't know what type of product is being built, we probably
-		// don't want to build it automatically.
-		.catch { _ in .single(false) }
+		.concat(identity)
+		.filter { $0 == .Framework }
+		// If we find any framework target, we should indeed build this scheme.
+		.map { _ in true }
+		// Otherwise, nope.
+		.concat(.single(false))
+		.take(1)
 }
 
 /// Builds one scheme of the given project, for all supported platforms.
