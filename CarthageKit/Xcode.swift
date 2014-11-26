@@ -518,6 +518,27 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 	}
 }
 
+/// Determines whether the given scheme should be built automatically.
+private func shouldBuildScheme(buildArguments: BuildArguments) -> ColdSignal<Bool> {
+	precondition(buildArguments.scheme != nil)
+
+	return buildSettings(buildArguments)
+		.map(productType)
+		.merge(identity)
+		.map { type in
+			switch type {
+			case let .Framework:
+				return true
+
+			default:
+				return false
+			}
+		}
+		// If we don't know what type of product is being built, we probably
+		// don't want to build it automatically.
+		.catch { _ in .single(false) }
+}
+
 /// Builds one scheme of the given project, for all supported platforms.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
@@ -541,9 +562,6 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 	// TODO: This should probably return a signal-of-signals, so callers can
 	// track the starting and stopping of each scheme individually.
-	//
-	// This will also allow us to remove the event logging from
-	// buildInDirectory().
 	let buildSignal: ColdSignal<NSURL> = platformForScheme(scheme, inProject: project)
 		.map { (platform: Platform) in
 			switch platform {
@@ -676,17 +694,24 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 		.merge(identity)
 		.combineLatestWith(locatorSignal.take(1))
 		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<(ProjectLocator, String)> in
-			let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
-			return ColdSignal.lazy {
-				let outputDisposable = buildOutput.observe(stdoutSink)
+			return shouldBuildScheme(buildArguments)
+				.filter { $0 }
+				.map { _ in
+					let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
 
-				return ColdSignal.single((project, scheme))
-					.concat(productURLs.then(.empty()))
-					.on(disposed: {
-						outputDisposable.dispose()
-					})
-			}
+					return ColdSignal.lazy {
+						let outputDisposable = buildOutput.observe(stdoutSink)
+
+						return ColdSignal.single((project, scheme))
+							.concat(productURLs.then(.empty()))
+							.on(disposed: {
+								outputDisposable.dispose()
+							})
+					}
+				}
+				.merge(identity)
 		}
 
 	return (stdoutSignal, schemeSignals)
