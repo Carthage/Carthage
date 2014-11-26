@@ -406,6 +406,12 @@ public struct BuildSettings {
 		}
 	}
 
+	/// Attempts to determine the relative path (from the build folder) to the
+	/// built executable.
+	public var executablePath: Result<String> {
+		return self["EXECUTABLE_PATH"]
+	}
+
 	/// Attempts to determine the URL to the built executable.
 	public var executableURL: Result<NSURL> {
 		return builtProductsDirectoryURL.flatMap { builtProductsURL in
@@ -415,10 +421,15 @@ public struct BuildSettings {
 		}
 	}
 
+	/// Attempts to determine the name of the built product's wrapper bundle.
+	public var wrapperName: Result<String> {
+		return self["WRAPPER_NAME"]
+	}
+
 	/// Attempts to determine the URL to the built product's wrapper.
 	public var wrapperURL: Result<NSURL> {
 		return builtProductsDirectoryURL.flatMap { builtProductsURL in
-			return self["WRAPPER_NAME"].map { wrapperName in
+			return self.wrapperName.map { wrapperName in
 				return builtProductsURL.URLByAppendingPathComponent(wrapperName)
 			}
 		}
@@ -444,17 +455,17 @@ public struct BuildSettings {
 /// already exist.
 ///
 /// Returns a signal that will send the URL after copying upon success.
-private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: Dictionary<String, String>) -> ColdSignal<NSURL> {
+private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildSettings) -> ColdSignal<NSURL> {
 	return ColdSignal.lazy {
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(directoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
 			return .error(error ?? CarthageError.WriteFailed(directoryURL).error)
 		}
 
-		return valueForBuildSetting("WRAPPER_NAME", settings)
+		return ColdSignal.fromResult(settings.wrapperName)
 			.map(directoryURL.URLByAppendingPathComponent)
 			.map { destinationURL in
-				return URLToBuiltProduct(settings)
+				return ColdSignal.fromResult(settings.wrapperURL)
 					.try { (productURL, error) in
 						// TODO: Atomic copying.
 						NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: nil)
@@ -538,9 +549,8 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 private func shouldBuildScheme(buildArguments: BuildArguments) -> ColdSignal<Bool> {
 	precondition(buildArguments.scheme != nil)
 
-	return buildSettings(buildArguments)
-		.map(productType)
-		.merge(identity)
+	return BuildSettings.loadWithArguments(buildArguments)
+		.tryMap { settings in settings.productType }
 		.map { type in
 			switch type {
 			case let .Framework:
@@ -565,7 +575,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
-	let buildPlatform = { (platform: Platform) -> ColdSignal<Dictionary<String, String>> in
+	let buildPlatform = { (platform: Platform) -> ColdSignal<BuildSettings> in
 		var copiedArgs = buildArgs
 		copiedArgs.platform = platform
 
@@ -573,10 +583,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 		return launchTask(buildScheme, standardOutput: stdoutSink)
-			.then(buildSettings(copiedArgs))
+			.then(BuildSettings.loadWithArguments(copiedArgs))
 	}
 
-	let buildSignal: ColdSignal<NSURL> = platformForScheme(scheme, inProject: project)
+	let buildSignal: ColdSignal<NSURL> = BuildSettings.platformForScheme(scheme, inProject: project)
 		.map { (platform: Platform) in
 			switch platform {
 			case .iPhoneSimulator: fallthrough
@@ -591,26 +601,29 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 						return copyBuildProductIntoDirectory(folderURL, deviceSettings)
 							.map { productURL in
-								let mergeProductBinaries = URLToBuiltExecutable(simulatorSettings)
-									.concat(URLToBuiltExecutable(deviceSettings))
+								let mergeProductBinaries = ColdSignal.fromResult(simulatorSettings.executableURL)
+									.concat(ColdSignal.fromResult(deviceSettings.executableURL))
 									.reduce(initial: []) { $0 + [ $1 ] }
 									// TODO: This should be a zip.
-									.combineLatestWith(valueForBuildSetting("EXECUTABLE_PATH", deviceSettings).map(folderURL.URLByAppendingPathComponent))
+									.combineLatestWith(ColdSignal.fromResult(deviceSettings.executablePath)
+										.map(folderURL.URLByAppendingPathComponent))
 									.map { (executableURLs: [NSURL], outputURL: NSURL) -> ColdSignal<()> in
 										return mergeExecutables(executableURLs, outputURL)
 									}
 									.merge(identity)
 
-								let sourceModulesURL = pathToModulesFolder(simulatorSettings)
+								let sourceModulesURL = ColdSignal.fromResult(simulatorSettings.relativeModulesPath)
+									.filter { $0 != nil }
 									// TODO: This should be a zip.
-									.combineLatestWith(URLToBuildProductsDirectory(simulatorSettings))
+									.combineLatestWith(ColdSignal.fromResult(simulatorSettings.builtProductsDirectoryURL))
 									.map { (modulesPath, productsURL) -> NSURL in
-										return productsURL.URLByAppendingPathComponent(modulesPath)
+										return productsURL.URLByAppendingPathComponent(modulesPath!)
 									}
 
-								let destinationModulesURL = pathToModulesFolder(deviceSettings)
+								let destinationModulesURL = ColdSignal.fromResult(deviceSettings.relativeModulesPath)
+									.filter { $0 != nil }
 									.map { modulesPath -> NSURL in
-										return folderURL.URLByAppendingPathComponent(modulesPath)
+										return folderURL.URLByAppendingPathComponent(modulesPath!)
 									}
 
 								let mergeProductModules = sourceModulesURL
