@@ -699,25 +699,27 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderName)/iOS", isDirectory: true)
 
 				return settingsByTarget(buildPlatform(.iPhoneSimulator))
-					// TODO: This should be a zip.
-					.combineLatestWith(settingsByTarget(buildPlatform(.iPhoneOS)))
-					.map { (simulatorSettingsByTarget, deviceSettingsByTarget) -> ColdSignal<(BuildSettings, BuildSettings)> in
-						assert(simulatorSettingsByTarget.count == deviceSettingsByTarget.count, "Number of targets built for iOS Simulator (\(simulatorSettingsByTarget.count)) does not match number of targets built for iOS Device (\(deviceSettingsByTarget.count))")
+					.map { simulatorSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
+						return settingsByTarget(buildPlatform(.iPhoneOS))
+							.map { deviceSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
+								assert(simulatorSettingsByTarget.count == deviceSettingsByTarget.count, "Number of targets built for iOS Simulator (\(simulatorSettingsByTarget.count)) does not match number of targets built for iOS Device (\(deviceSettingsByTarget.count))")
 
-						return ColdSignal { subscriber in
-							for (target, simulatorSettings) in simulatorSettingsByTarget {
-								if subscriber.disposable.disposed {
-									break
+								return ColdSignal { subscriber in
+									for (target, simulatorSettings) in simulatorSettingsByTarget {
+										if subscriber.disposable.disposed {
+											break
+										}
+
+										let deviceSettings = deviceSettingsByTarget[target]
+										assert(deviceSettings != nil, "No iOS Device build settings found for target \"\(target)\"")
+
+										subscriber.put(.Next(Box((simulatorSettings, deviceSettings!))))
+									}
+
+									subscriber.put(.Completed)
 								}
-
-								let deviceSettings = deviceSettingsByTarget[target]
-								assert(deviceSettings != nil, "No iOS Device build settings found for target \"\(target)\"")
-
-								subscriber.put(.Next(Box((simulatorSettings, deviceSettings!))))
 							}
-
-							subscriber.put(.Completed)
-						}
+							.merge(identity)
 					}
 					.merge(identity)
 					.map { (simulatorSettings, deviceSettings) -> ColdSignal<NSURL> in
