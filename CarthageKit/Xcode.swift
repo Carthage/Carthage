@@ -589,6 +589,11 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 	}
 }
 
+/// Determines whether the specified product type should be built automatically.
+private func shouldBuildProductType(productType: ProductType) -> Bool {
+	return productType == .Framework
+}
+
 /// Determines whether the given scheme should be built automatically.
 private func shouldBuildScheme(buildArguments: BuildArguments) -> ColdSignal<Bool> {
 	precondition(buildArguments.scheme != nil)
@@ -599,7 +604,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments) -> ColdSignal<Boo
 				.catch { _ in .empty() }
 		}
 		.concat(identity)
-		.filter { $0 == .Framework }
+		.filter(shouldBuildProductType)
 		// If we find any framework target, we should indeed build this scheme.
 		.map { _ in true }
 		// Otherwise, nope.
@@ -689,6 +694,14 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 		return launchTask(buildScheme, standardOutput: stdoutSink)
 			.then(BuildSettings.loadWithArguments(copiedArgs))
+			.filter { settings in
+				// Only copy build products for the product types we care about.
+				if let productType = settings.productType.value() {
+					return shouldBuildProductType(productType)
+				} else {
+					return false
+				}
+			}
 	}
 
 	let buildSignal: ColdSignal<NSURL> = BuildSettings.platformForScheme(scheme, inProject: project)
