@@ -30,7 +30,7 @@ Ultimately, we created Carthage because we wanted the simplest tool possible—a
 
 To install the `carthage` tool on your system, please download and run the `Carthage.pkg` file for the latest  [release](https://github.com/Carthage/Carthage/releases), then follow the on-screen instructions.
 
-If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, run `make package`, then open the created `Carthage.pkg` to begin the installation process.
+If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, run `make package` (requires Xcode 6.1.1 or above), then open the created `Carthage.pkg` to begin the installation process. 
 
 ## Adding frameworks to an application
 
