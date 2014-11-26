@@ -527,7 +527,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments) -> ColdSignal<Boo
 		.merge(identity)
 		.map { type in
 			switch type {
-			case let .Framework:
+			case .Framework:
 				return true
 
 			default:
