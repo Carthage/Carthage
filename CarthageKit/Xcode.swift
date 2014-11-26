@@ -284,6 +284,36 @@ public enum Platform {
 	}
 }
 
+/// Describes the type of product built by an Xcode target.
+private enum ProductType {
+	/// A framework bundle.
+	case Framework
+
+	/// A static library.
+	case StaticLibrary
+
+	/// A unit test bundle.
+	case TestBundle
+
+	/// Attempts to parse a product type from a string returned from
+	/// `xcodebuild`.
+	static func fromString(string: String) -> Result<ProductType> {
+		switch string {
+		case "com.apple.product-type.framework":
+			return success(.Framework)
+
+		case "com.apple.product-type.library.static":
+			return success(.StaticLibrary)
+
+		case "com.apple.product-type.bundle.unit-test":
+			return success(.TestBundle)
+
+		default:
+			return failure(CarthageError.ParseError(description: "unexpected product type \"(string)\"").error)
+		}
+	}
+}
+
 /// Returns the value of all build settings in the given configuration.
 public func buildSettings(arguments: BuildArguments) -> ColdSignal<Dictionary<String, String>> {
 	let task = xcodebuildTask("-showBuildSettings", arguments)
@@ -325,6 +355,15 @@ private func valueForBuildSetting(setting: String, arguments: BuildArguments) ->
 	return buildSettings(arguments)
 		.map { settings in valueForBuildSetting(setting, settings) }
 		.merge(identity)
+}
+
+/// Attempts to determine the ProductType corresponding to the given build
+/// settings.
+private func productType(settings: Dictionary<String, String>) -> ColdSignal<ProductType> {
+	return valueForBuildSetting("PRODUCT_TYPE", settings)
+		.tryMap { typeString -> Result<ProductType> in
+			return ProductType.fromString(typeString)
+		}
 }
 
 /// Determines the URL to the built products directory for the given settings.
@@ -479,6 +518,27 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 	}
 }
 
+/// Determines whether the given scheme should be built automatically.
+private func shouldBuildScheme(buildArguments: BuildArguments) -> ColdSignal<Bool> {
+	precondition(buildArguments.scheme != nil)
+
+	return buildSettings(buildArguments)
+		.map(productType)
+		.merge(identity)
+		.map { type in
+			switch type {
+			case .Framework:
+				return true
+
+			default:
+				return false
+			}
+		}
+		// If we don't know what type of product is being built, we probably
+		// don't want to build it automatically.
+		.catch { _ in .single(false) }
+}
+
 /// Builds one scheme of the given project, for all supported platforms.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
@@ -502,9 +562,6 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 	// TODO: This should probably return a signal-of-signals, so callers can
 	// track the starting and stopping of each scheme individually.
-	//
-	// This will also allow us to remove the event logging from
-	// buildInDirectory().
 	let buildSignal: ColdSignal<NSURL> = platformForScheme(scheme, inProject: project)
 		.map { (platform: Platform) in
 			switch platform {
@@ -637,17 +694,24 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 		.merge(identity)
 		.combineLatestWith(locatorSignal.take(1))
 		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<(ProjectLocator, String)> in
-			let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
-			return ColdSignal.lazy {
-				let outputDisposable = buildOutput.observe(stdoutSink)
+			return shouldBuildScheme(buildArguments)
+				.filter(identity)
+				.map { _ in
+					let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
 
-				return ColdSignal.single((project, scheme))
-					.concat(productURLs.then(.empty()))
-					.on(disposed: {
-						outputDisposable.dispose()
-					})
-			}
+					return ColdSignal.lazy {
+						let outputDisposable = buildOutput.observe(stdoutSink)
+
+						return ColdSignal.single((project, scheme))
+							.concat(productURLs.then(.empty()))
+							.on(disposed: {
+								outputDisposable.dispose()
+							})
+					}
+				}
+				.merge(identity)
 		}
 
 	return (stdoutSignal, schemeSignals)
