@@ -459,7 +459,7 @@ public struct BuildSettings {
 	/// Attempts to determine the URL to the built executable.
 	public var executableURL: Result<NSURL> {
 		return builtProductsDirectoryURL.flatMap { builtProductsURL in
-			return self["EXECUTABLE_PATH"].map { executablePath in
+			return self.executablePath.map { executablePath in
 				return builtProductsURL.URLByAppendingPathComponent(executablePath)
 			}
 		}
