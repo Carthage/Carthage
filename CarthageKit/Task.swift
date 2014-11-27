@@ -66,7 +66,7 @@ extension TaskDescription: Printable {
 private func pipeForAggregatingData(forwardingSink: SinkOf<NSData>?, initialValue: NSData) -> (NSPipe, dispatch_io_t, ColdSignal<NSData>) {
 	let (signal, sink) = HotSignal<Event<NSData>>.pipe()
 	let pipe = NSPipe()
-	
+
 	let queue = dispatch_queue_create("org.carthage.CarthageKit.Task", DISPATCH_QUEUE_SERIAL)
 	let channel = dispatch_io_create(DISPATCH_IO_STREAM, pipe.fileHandleForReading.fileDescriptor, queue) { error in
 		sink.put(.Completed)
@@ -75,13 +75,7 @@ private func pipeForAggregatingData(forwardingSink: SinkOf<NSData>?, initialValu
 	dispatch_io_set_low_water(channel, 1)
 	dispatch_io_read(channel, 0, UInt.max, queue) { (done, data, error) in
 		if let data = data {
-			var buffer = UnsafePointer<()>()
-			var length: UInt = 0
-
-			var copiedData: dispatch_data_t? = dispatch_data_create_map(data, &buffer, &length)
-			let nsData = NSData(bytesNoCopy: UnsafeMutablePointer(buffer), length: Int(length)) { (ptr, size) in
-				copiedData = nil
-			}
+			let nsData = data as NSData
 
 			forwardingSink?.put(nsData)
 			sink.put(.Next(Box(nsData)))
