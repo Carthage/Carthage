@@ -84,6 +84,13 @@ class XcodeSpec: QuickSpec {
 			expect(output).to(contain("architecture i386"))
 			expect(output).to(contain("architecture armv7"))
 			expect(output).to(contain("architecture arm64"))
+
+			// Verify that our dummy framework in the RCL iOS scheme built as
+			// well.
+			let auxiliaryFrameworkPath = buildFolderURL.URLByAppendingPathComponent("iOS/AuxiliaryFramework.framework").path!
+			var isDirectory: ObjCBool = false
+			expect(NSFileManager.defaultManager().fileExistsAtPath(auxiliaryFrameworkPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beTruthy())
 		}
 
 		it("should locate the workspace") {
