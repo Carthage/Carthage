@@ -9,6 +9,20 @@
          <BuildActionEntry
             buildForTesting = "YES"
             buildForRunning = "YES"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "D0BB24881678772C005E9371"
+               BuildableName = "ReactiveCocoaLayout Mac Tests.xctest"
+               BlueprintName = "ReactiveCocoaLayout Mac Tests"
+               ReferencedContainer = "container:ReactiveCocoaLayout.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
             buildForProfiling = "YES"
             buildForArchiving = "YES"
             buildForAnalyzing = "YES">
@@ -39,6 +53,15 @@
             </BuildableReference>
          </TestableReference>
       </Testables>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "D0BB24701678772C005E9371"
+            BuildableName = "ReactiveCocoaLayout.framework"
+            BlueprintName = "ReactiveCocoaLayout Mac"
+            ReferencedContainer = "container:ReactiveCocoaLayout.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </TestAction>
    <LaunchAction
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
@@ -67,6 +90,15 @@
       useCustomWorkingDirectory = "NO"
       buildConfiguration = "Profile"
       debugDocumentVersioning = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "D0BB24701678772C005E9371"
+            BuildableName = "ReactiveCocoaLayout.framework"
+            BlueprintName = "ReactiveCocoaLayout Mac"
+            ReferencedContainer = "container:ReactiveCocoaLayout.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">
