@@ -32,6 +32,7 @@ public struct BuildCommand: CommandType {
 				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
 				let disposable = stdoutSignal.observe { data in
 					stdoutHandle.writeData(data)
+					stdoutHandle.synchronizeFile()
 				}
 
 				return schemeSignals
