@@ -825,16 +825,10 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				.filter(identity)
 				.map { _ in
 					let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+					buildOutput.observe(stdoutSink)
 
-					return ColdSignal.lazy {
-						let outputDisposable = buildOutput.observe(stdoutSink)
-
-						return ColdSignal.single((project, scheme))
-							.concat(productURLs.then(.empty()))
-							.on(disposed: {
-								outputDisposable.dispose()
-							})
-					}
+					return ColdSignal.single((project, scheme))
+						.concat(productURLs.then(.empty()))
 				}
 				.merge(identity)
 		}

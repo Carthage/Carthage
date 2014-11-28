@@ -354,15 +354,9 @@ public final class Project {
 			.merge(identity)
 			.map { dependency -> ColdSignal<BuildSchemeSignal> in
 				let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
+				buildOutput.observe(stdoutSink)
 
-				return ColdSignal.lazy {
-					let outputDisposable = buildOutput.observe(stdoutSink)
-
-					return schemeSignals
-						.on(disposed: {
-							outputDisposable.dispose()
-						})
-				}
+				return schemeSignals
 			}
 			.concat(identity)
 
