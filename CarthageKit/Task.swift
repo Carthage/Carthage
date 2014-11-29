@@ -110,7 +110,7 @@ private func pipeForAggregatingData(forwardingSink: SinkOf<NSData>?, initialValu
 /// `NSData` value (representing aggregated data from `stdout`) and complete
 /// upon success.
 public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<NSData>? = nil, standardError: SinkOf<NSData>? = nil) -> ColdSignal<NSData> {
-	return ColdSignal { subscriber in
+	return ColdSignal { (sink, disposable) in
 		let task = NSTask()
 		task.launchPath = taskDescription.launchPath
 		task.arguments = taskDescription.arguments
@@ -127,15 +127,17 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 			let pipe = NSPipe()
 			task.standardInput = pipe
 
-			let disposable = input.start(next: { data in
-				pipe.fileHandleForWriting.writeData(data)
-			}, error: { error in
-				task.interrupt()
-			}, completed: {
-				pipe.fileHandleForWriting.closeFile()
-			})
+			input.startWithSink { inputDisposable in
+				disposable.addDisposable(inputDisposable)
 
-			subscriber.disposable.addDisposable(disposable)
+				return eventSink(next: { data in
+					pipe.fileHandleForWriting.writeData(data)
+				}, error: { error in
+					task.interrupt()
+				}, completed: {
+					pipe.fileHandleForWriting.closeFile()
+				})
+			}
 		}
 
 		let initialData = ">>> \(taskDescription)\n".dataUsingEncoding(NSUTF8StringEncoding)!
@@ -153,7 +155,10 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 			if task.terminationStatus == EXIT_SUCCESS {
 				stdout
 					.takeLast(1)
-					.start(subscriber)
+					.startWithSink { stdoutDisposable in
+						disposable.addDisposable(stdoutDisposable)
+						return sink
+					}
 			} else {
 				stderr
 					.takeLast(1)
@@ -164,19 +169,19 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 							return nil
 						}
 					}
-					.start(next: { string in
-						let error = CarthageError.ShellTaskFailed(exitCode: Int(task.terminationStatus), standardError: string)
-						subscriber.put(.Error(error.error))
-					})
+					.startWithSink { stderrDisposable in
+						disposable.addDisposable(stderrDisposable)
+
+						return eventSink(next: { string in
+							let error = CarthageError.ShellTaskFailed(exitCode: Int(task.terminationStatus), standardError: string)
+							sink.put(.Error(error.error))
+						})
+					}
 			}
 		}
 
-		if subscriber.disposable.disposed {
-			return
-		}
-
 		task.launch()
-		subscriber.disposable.addDisposable {
+		disposable.addDisposable {
 			task.terminate()
 		}
 	}
