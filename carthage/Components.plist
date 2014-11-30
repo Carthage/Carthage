@@ -13,6 +13,12 @@
 				<key>BundleOverwriteAction</key>
 				<string></string>
 				<key>RootRelativeBundlePath</key>
+				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Commandant.framework</string>
+			</dict>
+			<dict>
+				<key>BundleOverwriteAction</key>
+				<string></string>
+				<key>RootRelativeBundlePath</key>
 				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/LlamaKit.framework</string>
 			</dict>
 			<dict>
