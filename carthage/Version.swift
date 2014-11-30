@@ -6,10 +6,10 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import CarthageKit
+import Commandant
 import Foundation
 import LlamaKit
-import ReactiveCocoa
-import CarthageKit
 
 public struct VersionCommand: CommandType {
 	public let verb = "version"
@@ -20,7 +20,7 @@ public struct VersionCommand: CommandType {
 		case let .Arguments:
 			let versionString = NSBundle(identifier: "org.carthage.CarthageKit")?.objectForInfoDictionaryKey("CFBundleShortVersionString") as String?
 			if let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString!)).value() {
-				println(semVer)
+				carthage.println(semVer)
 			} else {
 				return failure()
 			}

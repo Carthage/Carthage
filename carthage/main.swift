@@ -7,9 +7,9 @@
 //
 
 import CarthageKit
+import Commandant
 import Foundation
 import LlamaKit
-import ReactiveCocoa
 
 let commands = CommandRegistry()
 commands.register(BootstrapCommand())
@@ -38,7 +38,7 @@ case .Some(.Success):
 	exit(EXIT_SUCCESS)
 
 case let .Some(.Failure(error)):
-	let errorDescription = (error.domain == CarthageErrorDomain ? error.localizedDescription : error.description)
+	let errorDescription = (error.domain == CarthageErrorDomain || error.domain == CommandantErrorDomain ? error.localizedDescription : error.description)
 	fputs("\(errorDescription)\n", stderr)
 	exit(EXIT_FAILURE)
 

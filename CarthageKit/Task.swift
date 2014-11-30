@@ -62,7 +62,7 @@ extension TaskDescription: Printable {
 ///
 /// If a sink is given, data received on the pipe will also be forwarded to it
 /// as it arrives.
-private func pipeForAggregatingData(forwardingSink: SinkOf<NSData>?) -> (NSPipe, ColdSignal<NSData>) {
+private func pipeForAggregatingData(forwardingSink: SinkOf<NSData>?, initialValue: NSData) -> (NSPipe, ColdSignal<NSData>) {
 	let (signal, sink) = HotSignal<NSData>.pipe()
 	let pipe = NSPipe()
 
@@ -78,8 +78,9 @@ private func pipeForAggregatingData(forwardingSink: SinkOf<NSData>?) -> (NSPipe,
 		return buffer
 	}.replay(1)
 
-	// Start the aggregated data with an initial value.
-	sink.put(NSData())
+	// Start the aggregated data with an initial value, so it sends at least one
+	// thing.
+	sink.put(initialValue)
 
 	return (pipe, aggregatedData)
 }
@@ -118,10 +119,12 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 			subscriber.disposable.addDisposable(disposable)
 		}
 
-		let (stdoutPipe, stdout) = pipeForAggregatingData(standardOutput)
+		let initialData = ">>> \(taskDescription)\n".dataUsingEncoding(NSUTF8StringEncoding)!
+
+		let (stdoutPipe, stdout) = pipeForAggregatingData(standardOutput, initialData)
 		task.standardOutput = stdoutPipe
 
-		let (stderrPipe, stderr) = pipeForAggregatingData(standardError)
+		let (stderrPipe, stderr) = pipeForAggregatingData(standardError, initialData)
 		task.standardError = stderrPipe
 
 		task.terminationHandler = { task in

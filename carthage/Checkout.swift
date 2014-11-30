@@ -6,10 +6,11 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import CarthageKit
+import Commandant
 import Foundation
 import LlamaKit
 import ReactiveCocoa
-import CarthageKit
 
 public struct CheckoutCommand: CommandType {
 	public let verb = "checkout"
@@ -67,13 +68,13 @@ private struct ProjectEventSink: SinkType {
 	mutating func put(event: ProjectEvent) {
 		switch event {
 		case let .Cloning(project):
-			println("*** Cloning \(project.name)")
+			carthage.println("*** Cloning \(project.name)")
 
 		case let .Fetching(project):
-			println("*** Fetching \(project.name)")
+			carthage.println("*** Fetching \(project.name)")
 
 		case let .CheckingOut(project, revision):
-			println("*** Checking out \(project.name) at \"\(revision)\"")
+			carthage.println("*** Checking out \(project.name) at \"\(revision)\"")
 		}
 	}
 }

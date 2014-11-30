@@ -6,10 +6,11 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import CarthageKit
+import Commandant
 import Foundation
 import LlamaKit
 import ReactiveCocoa
-import CarthageKit
 
 public struct BootstrapCommand: CommandType {
 	public let verb = "bootstrap"
@@ -26,7 +27,7 @@ public struct BootstrapCommand: CommandType {
 							if NSFileManager.defaultManager().fileExistsAtPath(project.cartfileLockURL.path!) {
 								return project.checkoutLockedDependencies()
 							} else {
-								println("*** No Cartfile.lock found, updating dependencies")
+								carthage.println("*** No Cartfile.lock found, updating dependencies")
 								return project.updateDependencies()
 							}
 						}

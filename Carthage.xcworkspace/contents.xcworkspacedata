@@ -5,6 +5,9 @@
       location = "group:Carthage.xcodeproj">
    </FileRef>
    <FileRef
+      location = "group:Carthage.checkout/Commandant/Commandant.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:Carthage.checkout/ReactiveCocoa/ReactiveCocoa.xcodeproj">
    </FileRef>
    <FileRef
