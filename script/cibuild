@@ -98,6 +98,7 @@ import_certs ()
 
     # Create a temporary keychain for code signing.
     security create-keychain -p "$password" "$KEYCHAIN"
+    security default-keychain -s "$KEYCHAIN"
     security unlock-keychain -p "$password" "$KEYCHAIN"
     security set-keychain-settings -t 3600 -l "$KEYCHAIN"
 
