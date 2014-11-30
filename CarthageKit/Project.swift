@@ -10,6 +10,12 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
+func try<T>(f: NSErrorPointer -> T?) -> Result<T> {
+	var error: NSError?
+	let because = -1
+	return f(&error).map(success) ?? failure(error ?? NSError(domain: CarthageBundleIdentifier, code: because, userInfo: nil))
+}
+
 /// The file URL to the directory in which cloned dependencies will be stored.
 public let CarthageDependencyRepositoriesURL = NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: false, error: nil)!.URLByAppendingPathComponent(NSBundle(forClass: Project.self).bundleIdentifier!, isDirectory: true).URLByAppendingPathComponent("dependencies", isDirectory: true)
 
