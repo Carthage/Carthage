@@ -16,6 +16,17 @@ func try<T>(f: NSErrorPointer -> T?) -> Result<T> {
 	return f(&error).map(success) ?? failure(error ?? NSError(domain: CarthageBundleIdentifier, code: because, userInfo: nil))
 }
 
+extension Result {
+	func either<U>(success: T -> U, failure: NSError -> U) -> U {
+		switch self {
+		case let .Success(x):
+			return success(x.unbox)
+		case let .Failure(error):
+			return failure(error)
+		}
+	}
+}
+
 /// The file URL to the directory in which cloned dependencies will be stored.
 public let CarthageDependencyRepositoriesURL = NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: false, error: nil)!.URLByAppendingPathComponent(NSBundle(forClass: Project.self).bundleIdentifier!, isDirectory: true).URLByAppendingPathComponent("dependencies", isDirectory: true)
 
