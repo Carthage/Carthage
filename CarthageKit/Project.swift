@@ -29,6 +29,8 @@ extension Result {
 
 private let CarthageBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
 
+private let CarthageCachesURL = try { NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: false, error: $0) }
+
 /// The file URL to the directory in which cloned dependencies will be stored.
 public let CarthageDependencyRepositoriesURL = NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: false, error: nil)!.URLByAppendingPathComponent(NSBundle(forClass: Project.self).bundleIdentifier!, isDirectory: true).URLByAppendingPathComponent("dependencies", isDirectory: true)
 
