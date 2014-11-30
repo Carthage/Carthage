@@ -101,8 +101,8 @@ private final class Pipe {
 	/// Creates a signal that will take ownership of the `readFD` using
 	/// dispatch_io, then read it to completion.
 	///
-	/// After invoking this method, `readFD` should not be used anywhere else,
-	/// as it may close unexpectedly.
+	/// After subscribing to the returned signal, `readFD` should not be used
+	/// anywhere else, as it may close unexpectedly.
 	func transferReadsToSignal() -> ColdSignal<dispatch_data_t> {
 		let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
 
@@ -135,6 +135,51 @@ private final class Pipe {
 			}
 
 			subscriber.disposable.addDisposable {
+				dispatch_io_close(channel, DISPATCH_IO_STOP)
+			}
+		}
+	}
+
+	/// Creates a dispatch_io channel for writing all data that arrives on
+	/// `signal` into `writeFD`, then closes `writeFD` when the input signal
+	/// terminates.
+	///
+	/// After subscribing to the returned signal, `writeFD` should not be used
+	/// anywhere else, as it may close unexpectedly.
+	///
+	/// Returns a signal that will complete or error.
+	func writeDataFromSignal(signal: ColdSignal<NSData>) -> ColdSignal<()> {
+		let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
+
+		return ColdSignal { subscriber in
+			let channel = dispatch_io_create(DISPATCH_IO_STREAM, self.writeFD, queue) { error in
+				if error == 0 {
+					subscriber.put(.Completed)
+				} else {
+					let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
+					subscriber.put(.Error(nsError))
+				}
+
+				close(self.writeFD)
+			}
+
+			let disposable = signal.start(next: { data in
+				let dispatchData = dispatch_data_create(data.bytes, UInt(data.length), queue, nil)
+
+				dispatch_io_write(channel, 0, dispatchData, queue) { (done, data, error) in
+					if error != 0 {
+						let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
+						subscriber.put(.Error(nsError))
+					}
+				}
+			}, error: { error in
+				subscriber.put(.Error(error))
+			}, completed: {
+				dispatch_io_close(channel, 0)
+			})
+
+			subscriber.disposable.addDisposable {
+				disposable.dispose()
 				dispatch_io_close(channel, DISPATCH_IO_STOP)
 			}
 		}
