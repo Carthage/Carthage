@@ -105,10 +105,10 @@ import_certs ()
     # Certificate Authority.
     local certpath="$SCRIPT_DIR/apple_wwdr.cer"
     curl -v 'https://developer.apple.com/certificationauthority/AppleWWDRCA.cer' > "$certpath"
-    security -v import "$certpath" -k "$KEYCHAIN" -T /usr/bin/codesign
+    security import "$certpath" -k "$KEYCHAIN" -T /usr/bin/codesign
 
     # Import our development certificate.
-    security -v import "$SCRIPT_DIR/certificates/development.p12" -k "$KEYCHAIN" -P "$KEY_PASSWORD" -T /usr/bin/codesign
+    security import "$SCRIPT_DIR/certificates/development.p12" -k "$KEYCHAIN" -P "$KEY_PASSWORD" -T /usr/bin/codesign
 }
 
 delete_keychain ()
