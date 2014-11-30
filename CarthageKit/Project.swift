@@ -31,11 +31,13 @@ private let CarthageBundleIdentifier = NSBundle(forClass: Project.self).bundleId
 
 private let CarthageCachesURL = try { NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: false, error: $0) }
 
+private let CarthageFallbackDependencyRepositoriesURL = NSURL.fileURLWithPath("~/.carthage/dependencies".stringByExpandingTildeInPath, isDirectory:true)!
+
 /// The file URL to the directory in which cloned dependencies will be stored.
 public let CarthageDependencyRepositoriesURL = CarthageCachesURL.either({
 		$0.URLByAppendingPathComponent(CarthageBundleIdentifier, isDirectory: true)
 	}, { _ in
-		NSURL.fileURLWithPath("~/.carthage/dependencies".stringByExpandingTildeInPath, isDirectory:true)!
+		CarthageFallbackDependencyRepositoriesURL
 	}).URLByAppendingPathComponent("dependencies", isDirectory: true)
 
 /// The relative path to a project's Cartfile.
