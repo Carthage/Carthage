@@ -9,28 +9,28 @@
          <BuildActionEntry
             buildForTesting = "YES"
             buildForRunning = "YES"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "D0BB24881678772C005E9371"
-               BuildableName = "ReactiveCocoaLayout Mac Tests.xctest"
-               BlueprintName = "ReactiveCocoaLayout Mac Tests"
+               BlueprintIdentifier = "D02BA9931A25959700A814CB"
+               BuildableName = "libReactiveCocoa.a"
+               BlueprintName = "ReactiveCocoa"
                ReferencedContainer = "container:ReactiveCocoaLayout.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
             buildForTesting = "YES"
             buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "D0BB24701678772C005E9371"
-               BuildableName = "ReactiveCocoaLayout.framework"
-               BlueprintName = "ReactiveCocoaLayout Mac"
+               BlueprintIdentifier = "D02BA99D1A25959700A814CB"
+               BuildableName = "ReactiveCocoaTests.xctest"
+               BlueprintName = "ReactiveCocoaTests"
                ReferencedContainer = "container:ReactiveCocoaLayout.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -46,9 +46,9 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "D0BB24881678772C005E9371"
-               BuildableName = "ReactiveCocoaLayout Mac Tests.xctest"
-               BlueprintName = "ReactiveCocoaLayout Mac Tests"
+               BlueprintIdentifier = "D02BA99D1A25959700A814CB"
+               BuildableName = "ReactiveCocoaTests.xctest"
+               BlueprintName = "ReactiveCocoaTests"
                ReferencedContainer = "container:ReactiveCocoaLayout.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -56,9 +56,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D0BB24701678772C005E9371"
-            BuildableName = "ReactiveCocoaLayout.framework"
-            BlueprintName = "ReactiveCocoaLayout Mac"
+            BlueprintIdentifier = "D02BA9931A25959700A814CB"
+            BuildableName = "libReactiveCocoa.a"
+            BlueprintName = "ReactiveCocoa"
             ReferencedContainer = "container:ReactiveCocoaLayout.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -75,9 +75,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D0BB24701678772C005E9371"
-            BuildableName = "ReactiveCocoaLayout.framework"
-            BlueprintName = "ReactiveCocoaLayout Mac"
+            BlueprintIdentifier = "D02BA9931A25959700A814CB"
+            BuildableName = "libReactiveCocoa.a"
+            BlueprintName = "ReactiveCocoa"
             ReferencedContainer = "container:ReactiveCocoaLayout.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -88,14 +88,14 @@
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
-      buildConfiguration = "Profile"
+      buildConfiguration = "Release"
       debugDocumentVersioning = "YES">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D0BB24701678772C005E9371"
-            BuildableName = "ReactiveCocoaLayout.framework"
-            BlueprintName = "ReactiveCocoaLayout Mac"
+            BlueprintIdentifier = "D02BA9931A25959700A814CB"
+            BuildableName = "libReactiveCocoa.a"
+            BlueprintName = "ReactiveCocoa"
             ReferencedContainer = "container:ReactiveCocoaLayout.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

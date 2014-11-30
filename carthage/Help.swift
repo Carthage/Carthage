@@ -6,6 +6,8 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import CarthageKit
+import Commandant
 import Foundation
 import LlamaKit
 
@@ -26,18 +28,25 @@ public struct HelpCommand: CommandType {
 			.flatMap { options in
 				if let verb = options.verb {
 					if let command = self.registry[verb] {
-						println(command.function)
-						println()
+						carthage.println(command.function)
+						carthage.println()
 						return command.run(.Usage)
 					} else {
 						fputs("Unrecognized command: '\(verb)'\n", stderr)
 					}
 				}
 
-				println("Available commands:\n")
+				carthage.println("Available commands:\n")
+
+				let maxVerbLength = maxElement(self.registry.commands.map { countElements($0.verb) })
 
 				for command in self.registry.commands {
-					println("  \(command.verb): \(command.function)")
+					let padding = Repeat<Character>(count: maxVerbLength - countElements(command.verb), repeatedValue: " ")
+
+					var formattedVerb = command.verb
+					formattedVerb.extend(padding)
+
+					carthage.println("   \(formattedVerb)   \(command.function)")
 				}
 
 				return success(())

@@ -5,15 +5,18 @@
       location = "group:Carthage.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:External/ReactiveCocoa/ReactiveCocoa.xcodeproj">
+      location = "group:Carthage.checkout/Commandant/Commandant.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:External/ReactiveCocoa/External/LlamaKit/LlamaKit.xcodeproj">
+      location = "group:Carthage.checkout/ReactiveCocoa/ReactiveCocoa.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:External/ReactiveCocoa/External/Quick/Quick/Quick.xcodeproj">
+      location = "group:Carthage.checkout/LlamaKit/LlamaKit.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:External/ReactiveCocoa/External/Quick/Externals/Nimble/Nimble.xcodeproj">
+      location = "group:Carthage.checkout/Quick/Quick.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Carthage.checkout/Nimble/Nimble.xcodeproj">
    </FileRef>
 </Workspace>

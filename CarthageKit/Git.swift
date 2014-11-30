@@ -102,10 +102,10 @@ public struct Submodule: Equatable {
 	public let path: String
 
 	/// The URL from which the submodule should be cloned, if present.
-	public let URL: GitURL
+	public var URL: GitURL
 
 	/// The SHA checked out in the submodule.
-	public let SHA: String
+	public var SHA: String
 
 	public init(name: String, path: String, URL: GitURL, SHA: String) {
 		self.name = name
@@ -141,10 +141,15 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 }
 
 /// Returns a signal that completes when cloning completes successfully.
-public func cloneRepository(cloneURL: GitURL, destinationURL: NSURL) -> ColdSignal<String> {
+public func cloneRepository(cloneURL: GitURL, destinationURL: NSURL, bare: Bool = true) -> ColdSignal<String> {
 	precondition(destinationURL.fileURL)
 
-	return launchGitTask([ "clone", "--bare", "--quiet", cloneURL.URLString, destinationURL.path! ])
+	var arguments = [ "clone" ]
+	if bare {
+		arguments.append("--bare")
+	}
+
+	return launchGitTask(arguments + [ "--quiet", cloneURL.URLString, destinationURL.path! ])
 }
 
 /// Returns a signal that completes when the fetch completes successfully.
@@ -190,7 +195,7 @@ public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, r
 /// Checks out the working tree of the given (ideally bare) repository, at the
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
-public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD") -> ColdSignal<()> {
+public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> ColdSignal<()> {
 	return ColdSignal.lazy {
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -201,16 +206,20 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 		environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
 
 		return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
-			.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision))
+			.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision, shouldCloneSubmodule: shouldCloneSubmodule))
 	}
 }
 
-/// Clones all submodules for the given repository at the specified revision,
-/// into the given working directory.
-public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD") -> ColdSignal<()> {
+/// Clones matching submodules for the given repository at the specified
+/// revision, into the given working directory.
+public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> ColdSignal<()> {
 	return submodulesInRepository(repositoryFileURL, revision: revision)
 		.map { submodule -> ColdSignal<()> in
-			return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
+			if shouldCloneSubmodule(submodule) {
+				return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
+			} else {
+				return .empty()
+			}
 		}
 		.concat(identity)
 		.then(.empty())
@@ -271,12 +280,18 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 				return .error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout").error)
 			}
 
-			return launchGitTask([ "clone", "--quiet", submodule.URL.URLString, submodule.path ], repositoryFileURL: workingDirectoryURL)
+			return cloneRepository(submodule.URL, workingDirectoryURL.URLByAppendingPathComponent(submodule.path), bare: false)
 		}
-		.then(launchGitTask([ "checkout", "--quiet", submodule.SHA ], repositoryFileURL: submoduleDirectoryURL))
-		// Clone nested submodules in a separate step, to quiet its output correctly.
-		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleDirectoryURL))
+		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
 		.then(purgeGitDirectories)
+}
+
+/// Recursively checks out the given submodule's revision, in its working
+/// directory.
+private func checkoutSubmodule(submodule: Submodule, submoduleWorkingDirectoryURL: NSURL) -> ColdSignal<()> {
+	return launchGitTask([ "checkout", "--quiet", submodule.SHA ], repositoryFileURL: submoduleWorkingDirectoryURL)
+		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleWorkingDirectoryURL))
+		.then(.empty())
 }
 
 /// Parses each key/value entry from the given config file contents, optionally
@@ -370,5 +385,37 @@ public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String 
 		return launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL, standardOutput: SinkOf<NSData> { _ in () }, standardError: SinkOf<NSData> { _ in () })
 			.then(.single(true))
 			.catch { _ in .single(false) }
+	}
+}
+
+/// Adds the given submodule to the given repository, cloning from `fetchURL` if
+/// the desired revision does not exist or the submodule needs to be cloned.
+public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submodule, fetchURL: GitURL) -> ColdSignal<()> {
+	let submoduleDirectoryURL = repositoryFileURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
+
+	return ColdSignal.lazy {
+		let submoduleGitPath = submoduleDirectoryURL.URLByAppendingPathComponent(".git").path!
+		if NSFileManager.defaultManager().fileExistsAtPath(submoduleGitPath) {
+			// If the submodule repository already exists, just check out and
+			// stage the correct revision.
+			return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL)
+				.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+				.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
+				.then(.empty())
+		} else {
+			let addSubmodule = launchGitTask([ "submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.URL.URLString, submodule.path ], repositoryFileURL: repositoryFileURL)
+				// A failure to add usually means the folder was already added
+				// to the index. That's okay.
+				.catch { _ in .empty() }
+
+			// If it doesn't exist, clone and initialize a submodule from our
+			// local bare repository.
+			return cloneRepository(fetchURL, submoduleDirectoryURL, bare: false)
+				.then(launchGitTask([ "remote", "set-url", "origin", submodule.URL.URLString ], repositoryFileURL: submoduleDirectoryURL))
+				.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+				.then(addSubmodule)
+				.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
+				.then(.empty())
+		}
 	}
 }

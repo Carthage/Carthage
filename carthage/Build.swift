@@ -7,13 +7,14 @@
 //
 
 import CarthageKit
+import Commandant
 import Foundation
 import LlamaKit
 import ReactiveCocoa
 
 public struct BuildCommand: CommandType {
 	public let verb = "build"
-	public let function = "Build the project in the current directory"
+	public let function = "Build the project's dependencies"
 
 	public func run(mode: CommandMode) -> Result<()> {
 		return ColdSignal.fromResult(BuildOptions.evaluate(mode))
@@ -22,8 +23,7 @@ public struct BuildCommand: CommandType {
 			.wait()
 	}
 
-	/// Builds the project in the current working directory, with the given
-	/// options.
+	/// Builds a project with the given options.
 	public func buildWithOptions(options: BuildOptions) -> ColdSignal<()> {
 		return self.openTemporaryLogFile()
 			.map { (stdoutHandle, temporaryURL) -> ColdSignal<()> in
@@ -37,9 +37,9 @@ public struct BuildCommand: CommandType {
 				return schemeSignals
 					.concat(identity)
 					.on(subscribed: {
-						println("*** xcodebuild output can be found in \(temporaryURL.path!)")
+						carthage.println("*** xcodebuild output can be found in \(temporaryURL.path!)")
 					}, next: { (project, scheme) in
-						println("*** Building scheme \"\(scheme)\" in \(project)")
+						carthage.println("*** Building scheme \"\(scheme)\" in \(project)")
 					}, disposed: {
 						disposable.dispose()
 					})
@@ -124,9 +124,9 @@ public struct BuildCommand: CommandType {
 }
 
 public struct BuildOptions: OptionsType {
-	let configuration: String
-	let skipCurrent: Bool
-	let directoryPath: String
+	public let configuration: String
+	public let skipCurrent: Bool
+	public let directoryPath: String
 
 	public static func create(configuration: String)(skipCurrent: Bool)(directoryPath: String) -> BuildOptions {
 		return self(configuration: configuration, skipCurrent: skipCurrent, directoryPath: directoryPath)
@@ -135,7 +135,7 @@ public struct BuildOptions: OptionsType {
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
-			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "whether to skip the project in the current directory, and only build its dependencies")
+			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 }
