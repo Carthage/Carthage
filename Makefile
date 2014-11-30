@@ -11,6 +11,7 @@ BINARIES_FOLDER=/usr/local/bin
 OUTPUT_PACKAGE=Carthage.pkg
 
 VERSION_STRING=$(shell agvtool what-marketing-version -terse1)
+COMPONENTS_PLIST=carthage/Components.plist
 
 .PHONY: all bootstrap clean install package test uninstall
 
@@ -50,4 +51,10 @@ package: clean bootstrap
 	mv -f "$(CARTHAGE_EXECUTABLE)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage"
 	rm -rf "$(BUILT_BUNDLE)"
 
-	productbuild --root "$(TEMPORARY_FOLDER)" "/" --identifier "org.carthage.carthage" --version "$(VERSION_STRING)" "$(OUTPUT_PACKAGE)"
+	pkgbuild \
+		--component-plist "$(COMPONENTS_PLIST)" \
+		--identifier "org.carthage.carthage" \
+		--install-location "/" \
+		--root "$(TEMPORARY_FOLDER)" \
+		--version "$(VERSION_STRING)" \
+		"$(OUTPUT_PACKAGE)"
