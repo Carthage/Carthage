@@ -39,6 +39,8 @@
 		D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE893F1A0F2CB00030A3EC /* Version.swift */; };
 		D0DE89421A0F2D450030A3EC /* VersionSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE89411A0F2D450030A3EC /* VersionSpec.swift */; };
 		D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE89431A0F2D9B0030A3EC /* Scannable.swift */; };
+		D0E0E1B01A2D28AC0097BE2B /* ReactiveTask.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */; };
+		D0E0E1B11A2D28CB0097BE2B /* ReactiveTask.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
 		D0E7B65519E9C76900EDBA4D /* Help.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06939B219E8A79F001E44AE /* Help.swift */; };
 		D0E7B65619E9C76900EDBA4D /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1211B19E87861005E4BAA /* main.swift */; };
@@ -74,6 +76,7 @@
 				D01F8A4419EA28E400643E7C /* LlamaKit.framework in Copy Frameworks */,
 				D01F8A4519EA28E600643E7C /* ReactiveCocoa.framework in Copy Frameworks */,
 				D00CCE331A20784800109F8C /* Commandant.framework in Copy Frameworks */,
+				D0E0E1B11A2D28CB0097BE2B /* ReactiveTask.framework in Copy Frameworks */,
 			);
 			name = "Copy Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -146,6 +149,7 @@
 		D0DE893F1A0F2CB00030A3EC /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
 		D0DE89411A0F2D450030A3EC /* VersionSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionSpec.swift; sourceTree = "<group>"; };
 		D0DE89431A0F2D9B0030A3EC /* Scannable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Scannable.swift; sourceTree = "<group>"; };
+		D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveTask.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B63219E9C64500EDBA4D /* carthage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = carthage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B65819E9CA0800EDBA4D /* carthage */ = {isa = PBXFileReference; lastKnownFileType = text; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0F551DB1A0D71AB0093311F /* TestCartfile.lock */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfile.lock; sourceTree = "<group>"; };
@@ -158,6 +162,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0E0E1B01A2D28AC0097BE2B /* ReactiveTask.framework in Frameworks */,
 				D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */,
 				D01F8A4119EA28C600643E7C /* LlamaKit.framework in Frameworks */,
 				D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */,
@@ -324,6 +329,7 @@
 				D00CCE311A20783A00109F8C /* Commandant.framework */,
 				D01F8A4019EA28C600643E7C /* LlamaKit.framework */,
 				D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */,
+				D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */,
 				D0D1217019E87B05005E4BAA /* Info.plist */,
 			);
 			name = "Supporting Files";
@@ -617,7 +623,6 @@
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -634,7 +639,6 @@
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -685,7 +689,6 @@
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -723,7 +726,6 @@
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = CarthageKit/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
