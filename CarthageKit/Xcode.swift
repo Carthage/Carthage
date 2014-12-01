@@ -363,14 +363,14 @@ public struct BuildSettings {
 				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
 			}
 			.map { (string: String) -> ColdSignal<BuildSettings> in
-				return ColdSignal { subscriber in
+				return ColdSignal { (sink, disposable) in
 					var currentSettings: [String: String] = [:]
 					var currentTarget: String?
 
 					let flushTarget = { () -> () in
 						if let currentTarget = currentTarget {
 							let buildSettings = self(target: currentTarget, settings: currentSettings)
-							subscriber.put(.Next(Box(buildSettings)))
+							sink.put(.Next(Box(buildSettings)))
 						}
 
 						currentTarget = nil
@@ -378,7 +378,7 @@ public struct BuildSettings {
 					}
 
 					(string as NSString).enumerateLinesUsingBlock { (line, stop) in
-						if subscriber.disposable.disposed {
+						if disposable.disposed {
 							stop.memory = true
 							return
 						}
@@ -404,7 +404,7 @@ public struct BuildSettings {
 					}
 
 					flushTarget()
-					subscriber.put(.Completed)
+					sink.put(.Completed)
 				}
 			}
 			.merge(identity)
@@ -554,22 +554,22 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 	precondition(sourceModuleDirectoryURL.fileURL)
 	precondition(destinationModuleDirectoryURL.fileURL)
 
-	return ColdSignal { subscriber in
+	return ColdSignal { (sink, disposable) in
 		let enumerator = NSFileManager.defaultManager().enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [ NSURLParentDirectoryURLKey ], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, errorHandler: nil)!
 
-		while !subscriber.disposable.disposed {
+		while !disposable.disposed {
 			if let URL = enumerator.nextObject() as? NSURL {
 				var parentDirectoryURL: AnyObject?
 				var error: NSError?
 
 				if !URL.getResourceValue(&parentDirectoryURL, forKey: NSURLParentDirectoryURLKey, error: &error) {
-					subscriber.put(.Error(error ?? CarthageError.ReadFailed(URL).error))
+					sink.put(.Error(error ?? CarthageError.ReadFailed(URL).error))
 					return
 				}
 
 				if let parentDirectoryURL = parentDirectoryURL as? NSURL {
 					if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-						subscriber.put(.Error(error ?? CarthageError.WriteFailed(parentDirectoryURL).error))
+						sink.put(.Error(error ?? CarthageError.WriteFailed(parentDirectoryURL).error))
 						return
 					}
 				}
@@ -577,9 +577,9 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 				let lastComponent: String? = URL.lastPathComponent
 				let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
 				if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
-					subscriber.put(.Next(Box(destinationURL)))
+					sink.put(.Next(Box(destinationURL)))
 				} else {
-					subscriber.put(.Error(error ?? CarthageError.WriteFailed(destinationURL).error))
+					sink.put(.Error(error ?? CarthageError.WriteFailed(destinationURL).error))
 					return
 				}
 			} else {
@@ -587,7 +587,7 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 			}
 		}
 
-		subscriber.put(.Completed)
+		sink.put(.Completed)
 	}
 }
 
@@ -719,19 +719,19 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							.map { deviceSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
 								assert(simulatorSettingsByTarget.count == deviceSettingsByTarget.count, "Number of targets built for iOS Simulator (\(simulatorSettingsByTarget.count)) does not match number of targets built for iOS Device (\(deviceSettingsByTarget.count))")
 
-								return ColdSignal { subscriber in
+								return ColdSignal { (sink, disposable) in
 									for (target, simulatorSettings) in simulatorSettingsByTarget {
-										if subscriber.disposable.disposed {
+										if disposable.disposed {
 											break
 										}
 
 										let deviceSettings = deviceSettingsByTarget[target]
 										assert(deviceSettings != nil, "No iOS Device build settings found for target \"\(target)\"")
 
-										subscriber.put(.Next(Box((simulatorSettings, deviceSettings!))))
+										sink.put(.Next(Box((simulatorSettings, deviceSettings!))))
 									}
 
-									subscriber.put(.Completed)
+									sink.put(.Completed)
 								}
 							}
 							.merge(identity)
@@ -827,16 +827,10 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				.filter(identity)
 				.map { _ in
 					let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+					buildOutput.observe(stdoutSink)
 
-					return ColdSignal.lazy {
-						let outputDisposable = buildOutput.observe(stdoutSink)
-
-						return ColdSignal.single((project, scheme))
-							.concat(productURLs.then(.empty()))
-							.on(disposed: {
-								outputDisposable.dispose()
-							})
-					}
+					return ColdSignal.single((project, scheme))
+						.concat(productURLs.then(.empty()))
 				}
 				.merge(identity)
 		}
