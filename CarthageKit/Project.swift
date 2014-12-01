@@ -33,16 +33,18 @@ extension Result {
 
 /// ~/Library/Caches/
 private let CarthageUserCachesURL: NSURL = {
-	let URL = NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: nil)
-	if URL == nil {
-		println("Error: No Caches directory could be found or created.")
-		exit(1)
-	}
+	let URL = try { NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: $0) }
 
-	// Make a best-effort attempt to clean up the old dependencies dir.
-	NSFileManager.defaultManager().removeItemAtURL(NSURL.fileURLWithPath("~/.carthage".stringByExpandingTildeInPath, isDirectory:true)!, error: nil)
+	let fallbackDependenciesURL = NSURL.fileURLWithPath("~/.carthage".stringByExpandingTildeInPath, isDirectory:true)!
 
-	return URL!
+	URL.either({ _ in
+			NSFileManager.defaultManager().removeItemAtURL(fallbackDependenciesURL, error: nil)
+			()
+		}, {
+			println("Warning: No Caches directory could be found or created: \($0.localizedDescription).")
+		})
+
+	return URL.value() ?? fallbackDependenciesURL
 }()
 
 /// The file URL to the directory in which cloned dependencies will be stored.
