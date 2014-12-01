@@ -4,9 +4,11 @@
 # be added to the Carthage workspace. This avoids confusing Xcode with
 # "subprojects" that are actually just originating from a fixture.
 
+set -x
+
 for fixture in "ReactiveCocoaLayout"
 do
 	destination="${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/$fixture"
-	rm -Rfv "$destination"
-	cp -Rv "CarthageKitTests/fixtures/$fixture" "$destination"
+	rm -Rf "$destination"
+	cp -R "CarthageKitTests/fixtures/$fixture" "$destination"
 done

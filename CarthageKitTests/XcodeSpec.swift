@@ -19,11 +19,6 @@ class XcodeSpec: QuickSpec {
 		let workspaceURL = directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout.xcworkspace")
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderName)
 
-		let stdoutHandle = NSFileHandle.fileHandleWithStandardOutput()
-		let stdoutSink = SinkOf<NSData> { data in
-			stdoutHandle.writeData(data)
-		}
-
 		beforeEach {
 			NSFileManager.defaultManager().removeItemAtURL(buildFolderURL, error: nil)
 			return ()
@@ -37,12 +32,10 @@ class XcodeSpec: QuickSpec {
 
 			for project in dependencies {
 				let (outputSignal, schemeSignals) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
-				let outputDisposable = outputSignal.observe(stdoutSink)
-
 				let result = schemeSignals
 					.concat(identity)
-					.on(disposed: {
-						outputDisposable.dispose()
+					.on(next: { (project, scheme) in
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
 					})
 					.wait()
 
@@ -50,10 +43,11 @@ class XcodeSpec: QuickSpec {
 			}
 
 			let (outputSignal, schemeSignals) = buildInDirectory(directoryURL, withConfiguration: "Debug")
-			let outputDisposable = outputSignal.observe(stdoutSink)
-
 			let result = schemeSignals
 				.concat(identity)
+				.on(next: { (project, scheme) in
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
 				.wait()
 
 			expect(result.error()).to(beNil())
