@@ -19,3 +19,4 @@ DerivedData
 
 Cartfile.lock
 Carthage.pkg
+Carthage.build
