@@ -20,17 +20,6 @@ private func try<T>(f: NSErrorPointer -> T?) -> Result<T> {
 	return f(&error).map(success) ?? failure(error ?? NSError(domain: CarthageKitBundleIdentifier, code: because, userInfo: nil))
 }
 
-extension Result {
-	private func either<U>(success: T -> U, failure: NSError -> U) -> U {
-		switch self {
-		case let .Success(x):
-			return success(x.unbox)
-		case let .Failure(error):
-			return failure(error)
-		}
-	}
-}
-
 /// ~/Library/Caches/
 private let CarthageUserCachesURL: NSURL = {
 	let URL = try { error in
@@ -39,12 +28,12 @@ private let CarthageUserCachesURL: NSURL = {
 
 	let fallbackDependenciesURL = NSURL.fileURLWithPath("~/.carthage".stringByExpandingTildeInPath, isDirectory:true)!
 
-	URL.either({ _ in
-			NSFileManager.defaultManager().removeItemAtURL(fallbackDependenciesURL, error: nil)
-			()
-		}, {
-			NSLog("Warning: No Caches directory could be found or created: \($0.localizedDescription).")
-		})
+	switch URL {
+	case .Success:
+		NSFileManager.defaultManager().removeItemAtURL(fallbackDependenciesURL, error: nil)
+	case let .Failure(error):
+		NSLog("Warning: No Caches directory could be found or created: \(error.localizedDescription).")
+	}
 
 	return URL.value() ?? fallbackDependenciesURL
 }()
