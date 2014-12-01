@@ -17,6 +17,5 @@ DerivedData
 *.ipa
 *.xcuserstate
 
-Cartfile.lock
 Carthage.pkg
 Carthage.build
