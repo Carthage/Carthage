@@ -14,16 +14,16 @@ extension String {
 	/// Returns a signal that will enumerate each line of the receiver, then
 	/// complete.
 	internal var linesSignal: ColdSignal<String> {
-		return ColdSignal { subscriber in
+		return ColdSignal { (sink, disposable) in
 			(self as NSString).enumerateLinesUsingBlock { (line, stop) in
-				subscriber.put(.Next(Box(line as String)))
+				sink.put(.Next(Box(line as String)))
 
-				if subscriber.disposable.disposed {
+				if disposable.disposed {
 					stop.memory = true
 				}
 			}
 
-			subscriber.put(.Completed)
+			sink.put(.Completed)
 		}
 	}
 }
@@ -42,94 +42,86 @@ extension ColdSignal {
 	/// Sends each value that occurs on the receiver combined with each value
 	/// that occurs on the given signal (repeats included).
 	internal func permuteWith<U>(signal: ColdSignal<U>) -> ColdSignal<(T, U)> {
-		return ColdSignal<(T, U)> { subscriber in
-			let scheduler = QueueScheduler()
+		return ColdSignal<(T, U)> { (sink, disposable) in
 			var selfValues: [T] = []
 			var selfCompleted = false
 			var otherValues: [U] = []
 			var otherCompleted = false
 
-			let schedulerDisposable = scheduler.schedule {
-				let selfDisposable = self.deliverOn(scheduler).start(next: { value in
+			self.startWithSink { selfDisposable in
+				disposable.addDisposable(selfDisposable)
+
+				return eventSink(next: { value in
 					selfValues.append(value)
 
 					for otherValue in otherValues {
-						subscriber.put(.Next(Box((value, otherValue))))
+						sink.put(.Next(Box((value, otherValue))))
 					}
 				}, error: { error in
-					subscriber.put(.Error(error))
+					sink.put(.Error(error))
 				}, completed: {
 					selfCompleted = true
 					if otherCompleted {
-						subscriber.put(.Completed)
+						sink.put(.Completed)
 					}
 				})
+			}
 
-				subscriber.disposable.addDisposable(selfDisposable)
+			signal.startWithSink { signalDisposable in
+				disposable.addDisposable(signalDisposable)
 
-				if subscriber.disposable.disposed {
-					return
-				}
-
-				let otherDisposable = signal.deliverOn(scheduler).start(next: { value in
+				return eventSink(next: { value in
 					otherValues.append(value)
 
 					for selfValue in selfValues {
-						subscriber.put(.Next(Box((selfValue, value))))
+						sink.put(.Next(Box((selfValue, value))))
 					}
 				}, error: { error in
-					subscriber.put(.Error(error))
+					sink.put(.Error(error))
 				}, completed: {
 					otherCompleted = true
 					if selfCompleted {
-						subscriber.put(.Completed)
+						sink.put(.Completed)
 					}
 				})
-
-				subscriber.disposable.addDisposable(otherDisposable)
 			}
-
-			subscriber.disposable.addDisposable(schedulerDisposable)
 		}
 	}
 
 	/// Dematerializes the signal, like dematerialize(), but only yields Error
 	/// events if no values were sent.
 	internal func dematerializeErrorsIfEmpty<U>(evidence: ColdSignal -> ColdSignal<Event<U>>) -> ColdSignal<U> {
-		return ColdSignal<U> { subscriber in
-			let scheduler = QueueScheduler()
+		return ColdSignal<U> { (sink, disposable) in
 			var receivedValue = false
 			var receivedError: NSError? = nil
 
-			let schedulerDisposable = scheduler.schedule {
-				let selfDisposable = evidence(self).deliverOn(scheduler).start(next: { event in
+			evidence(self).startWithSink { selfDisposable in
+				disposable.addDisposable(selfDisposable)
+
+				return eventSink(next: { event in
 					switch event {
 					case let .Next(value):
 						receivedValue = true
 						fallthrough
 
 					case .Completed:
-						subscriber.put(event)
+						sink.put(event)
 
 					case let .Error(error):
 						receivedError = error
 					}
 				}, error: { error in
-					subscriber.put(.Error(error))
+					sink.put(.Error(error))
 				}, completed: {
 					if !receivedValue {
 						if let receivedError = receivedError {
-							subscriber.put(.Error(receivedError))
+							sink.put(.Error(receivedError))
 						}
 					}
 
-					subscriber.put(.Completed)
+					sink.put(.Completed)
 				})
-
-				subscriber.disposable.addDisposable(selfDisposable)
 			}
-
-			subscriber.disposable.addDisposable(schedulerDisposable)
 		}
 	}
 }

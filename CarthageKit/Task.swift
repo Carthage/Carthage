@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import LlamaKit
 import ReactiveCocoa
 
 /// Describes how to execute a shell command.
@@ -62,27 +63,45 @@ extension TaskDescription: Printable {
 ///
 /// If a sink is given, data received on the pipe will also be forwarded to it
 /// as it arrives.
-private func pipeForAggregatingData(forwardingSink: SinkOf<NSData>?, initialValue: NSData) -> (NSPipe, ColdSignal<NSData>) {
-	let (signal, sink) = HotSignal<NSData>.pipe()
+private func pipeForAggregatingData(forwardingSink: SinkOf<NSData>?, initialValue: NSData) -> (NSPipe, dispatch_io_t, ColdSignal<NSData>) {
+	let (signal, sink) = HotSignal<Event<NSData>>.pipe()
 	let pipe = NSPipe()
 
-	pipe.fileHandleForReading.readabilityHandler = { handle in
-		let data = handle.availableData
-		sink.put(data)
-		forwardingSink?.put(data)
+	let queue = dispatch_queue_create("org.carthage.CarthageKit.Task", DISPATCH_QUEUE_SERIAL)
+	let channel = dispatch_io_create(DISPATCH_IO_STREAM, pipe.fileHandleForReading.fileDescriptor, queue) { error in
+		sink.put(.Completed)
 	}
 
-	let aggregatedData = signal.scan(initial: NSData()) { (accumulated, data) in
-		let buffer = accumulated.mutableCopy() as NSMutableData
-		buffer.appendData(data)
-		return buffer
-	}.replay(1)
+	dispatch_io_set_low_water(channel, 1)
+	dispatch_io_read(channel, 0, UInt.max, queue) { (done, data, error) in
+		if let data = data {
+			let nsData = data as NSData
 
-	// Start the aggregated data with an initial value, so it sends at least one
-	// thing.
-	sink.put(initialValue)
+			forwardingSink?.put(nsData)
+			sink.put(.Next(Box(nsData)))
+		}
 
-	return (pipe, aggregatedData)
+		if error != 0 {
+			let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
+			sink.put(.Error(nsError))
+		}
+
+		if done {
+			dispatch_io_close(channel, 0)
+		}
+	}
+
+	let aggregatedData = signal
+		.replay(Int.max)
+		.dematerialize(identity)
+		// TODO: Aggregate dispatch_data instead.
+		.reduce(initial: NSData()) { (accumulated, data) in
+			let buffer = accumulated.mutableCopy() as NSMutableData
+			buffer.appendData(data)
+			return buffer
+		}
+
+	return (pipe, channel, aggregatedData)
 }
 
 /// Launches a new shell task, using the parameters from `taskDescription`.
@@ -91,7 +110,7 @@ private func pipeForAggregatingData(forwardingSink: SinkOf<NSData>?, initialValu
 /// `NSData` value (representing aggregated data from `stdout`) and complete
 /// upon success.
 public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<NSData>? = nil, standardError: SinkOf<NSData>? = nil) -> ColdSignal<NSData> {
-	return ColdSignal { subscriber in
+	return ColdSignal { (sink, disposable) in
 		let task = NSTask()
 		task.launchPath = taskDescription.launchPath
 		task.arguments = taskDescription.arguments
@@ -108,31 +127,41 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 			let pipe = NSPipe()
 			task.standardInput = pipe
 
-			let disposable = input.start(next: { data in
-				pipe.fileHandleForWriting.writeData(data)
-			}, error: { error in
-				task.interrupt()
-			}, completed: {
-				pipe.fileHandleForWriting.closeFile()
-			})
+			input.startWithSink { inputDisposable in
+				disposable.addDisposable(inputDisposable)
 
-			subscriber.disposable.addDisposable(disposable)
+				return eventSink(next: { data in
+					pipe.fileHandleForWriting.writeData(data)
+				}, error: { error in
+					task.interrupt()
+				}, completed: {
+					pipe.fileHandleForWriting.closeFile()
+				})
+			}
 		}
 
 		let initialData = ">>> \(taskDescription)\n".dataUsingEncoding(NSUTF8StringEncoding)!
 
-		let (stdoutPipe, stdout) = pipeForAggregatingData(standardOutput, initialData)
+		let (stdoutPipe, stdoutChannel, stdout) = pipeForAggregatingData(standardOutput, initialData)
 		task.standardOutput = stdoutPipe
 
-		let (stderrPipe, stderr) = pipeForAggregatingData(standardError, initialData)
+		let (stderrPipe, stderrChannel, stderr) = pipeForAggregatingData(standardError, initialData)
 		task.standardError = stderrPipe
 
 		task.terminationHandler = { task in
+			dispatch_io_close(stdoutChannel, 0)
+			dispatch_io_close(stderrChannel, 0)
+
 			if task.terminationStatus == EXIT_SUCCESS {
-				stdout.take(1).start(subscriber)
+				stdout
+					.takeLast(1)
+					.startWithSink { stdoutDisposable in
+						disposable.addDisposable(stdoutDisposable)
+						return sink
+					}
 			} else {
 				stderr
-					.take(1)
+					.takeLast(1)
 					.map { data -> String? in
 						if data.length > 0 {
 							return NSString(data: data, encoding: NSUTF8StringEncoding) as String?
@@ -140,19 +169,19 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 							return nil
 						}
 					}
-					.start(next: { string in
-						let error = CarthageError.ShellTaskFailed(exitCode: Int(task.terminationStatus), standardError: string)
-						subscriber.put(.Error(error.error))
-					})
+					.startWithSink { stderrDisposable in
+						disposable.addDisposable(stderrDisposable)
+
+						return eventSink(next: { string in
+							let error = CarthageError.ShellTaskFailed(exitCode: Int(task.terminationStatus), standardError: string)
+							sink.put(.Error(error.error))
+						})
+					}
 			}
 		}
 
-		if subscriber.disposable.disposed {
-			return
-		}
-
 		task.launch()
-		subscriber.disposable.addDisposable {
+		disposable.addDisposable {
 			task.terminate()
 		}
 	}
