@@ -10,35 +10,19 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-func try<T>(f: NSErrorPointer -> T?) -> Result<T> {
-	var error: NSError?
-	let because = -1
-	return f(&error).map(success) ?? failure(error ?? NSError(domain: CarthageBundleIdentifier, code: because, userInfo: nil))
-}
-
-extension Result {
-	func either<U>(success: T -> U, failure: NSError -> U) -> U {
-		switch self {
-		case let .Success(x):
-			return success(x.unbox)
-		case let .Failure(error):
-			return failure(error)
-		}
-	}
-}
-
 private let CarthageBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
 
-private let CarthageCachesURL = try { NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: false, error: $0) }
-
-private let CarthageFallbackDependencyRepositoriesURL = NSURL.fileURLWithPath("~/.carthage/dependencies".stringByExpandingTildeInPath, isDirectory:true)!
+private let CarthageCachesURL: NSURL = {
+	let URL = NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: nil)
+	if URL == nil {
+		println("Error: No Caches directory could be found or created.")
+		exit(1)
+	}
+	return URL!
+}()
 
 /// The file URL to the directory in which cloned dependencies will be stored.
-public let CarthageDependencyRepositoriesURL = CarthageCachesURL.either({
-		$0.URLByAppendingPathComponent(CarthageBundleIdentifier, isDirectory: true)
-	}, { _ in
-		CarthageFallbackDependencyRepositoriesURL
-	}).URLByAppendingPathComponent("dependencies", isDirectory: true)
+public let CarthageDependencyRepositoriesURL = CarthageCachesURL.URLByAppendingPathComponent(CarthageBundleIdentifier, isDirectory: true).URLByAppendingPathComponent("dependencies", isDirectory: true)
 
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
