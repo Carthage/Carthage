@@ -11,7 +11,7 @@ import LlamaKit
 import ReactiveCocoa
 
 /// Carthage’s bundle identifier.
-private let CarthageBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
+public let CarthageKitBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
 
 /// ~/Library/Caches/
 private let CarthageUserCachesURL: NSURL = {
@@ -30,7 +30,7 @@ private let CarthageUserCachesURL: NSURL = {
 /// The file URL to the directory in which cloned dependencies will be stored.
 ///
 /// ~/Library/Caches/org.carthage.CarthageKit/dependencies/
-public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppendingPathComponent(CarthageBundleIdentifier, isDirectory: true).URLByAppendingPathComponent("dependencies", isDirectory: true)
+public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true).URLByAppendingPathComponent("dependencies", isDirectory: true)
 
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
