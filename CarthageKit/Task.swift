@@ -98,6 +98,12 @@ private final class Pipe {
 		}
 	}
 
+	/// Closes both file descriptors of the receiver.
+	func closePipe() {
+		close(readFD)
+		close(writeFD)
+	}
+
 	/// Creates a signal that will take ownership of the `readFD` using
 	/// dispatch_io, then read it to completion.
 	///
@@ -267,6 +273,8 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 					task.standardError = stderrPipe.writeHandle
 
 					if subscriber.disposable.disposed {
+						stdoutPipe.closePipe()
+						stderrPipe.closePipe()
 						return
 					}
 
