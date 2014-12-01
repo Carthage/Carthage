@@ -12,25 +12,34 @@
 import Foundation
 import ReactiveCocoa
 
-private let outputScheduler = QueueScheduler(DISPATCH_QUEUE_PRIORITY_HIGH)
+private let outputQueue = { () -> dispatch_queue_t in
+	let queue = dispatch_queue_create("org.carthage.carthage.outputQueue", DISPATCH_QUEUE_SERIAL)
+	dispatch_set_target_queue(queue, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0))
+
+	atexit_b {
+		dispatch_barrier_sync(queue) {}
+	}
+	
+	return queue
+}()
 
 /// A thread-safe version of Swift's standard println().
 internal func println() {
-	outputScheduler.schedule {
+	dispatch_async(outputQueue) {
 		Swift.println()
 	}
 }
 
 /// A thread-safe version of Swift's standard println().
 internal func println<T>(object: T) {
-	outputScheduler.schedule {
+	dispatch_async(outputQueue) {
 		Swift.println(object)
 	}
 }
 
 /// A thread-safe version of Swift's standard print().
 internal func print<T>(object: T) {
-	outputScheduler.schedule {
+	dispatch_async(outputQueue) {
 		Swift.print(object)
 	}
 }
