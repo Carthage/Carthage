@@ -39,13 +39,17 @@ config ()
     # A whitespace-separated list of default schemes to build.
     #
     # Individual names can be quoted to avoid word splitting.
-    : ${SCHEMES:=$(xcodebuild -list -project "$XCODEPROJ" 2>/dev/null | awk -f "$SCRIPT_DIR/schemes.awk")}
-    
+    : ${SCHEMES:=carthage}
+
+    # The name of the keychain to create for iOS code signing.
+    : ${KEYCHAIN:=ios-build.keychain}
+
     export XCWORKSPACE
     export XCODEPROJ
     export BOOTSTRAP
     export XCTOOL_OPTIONS
     export SCHEMES
+    export KEYCHAIN
 }
 
 ##
@@ -62,6 +66,8 @@ main ()
         "$BOOTSTRAP" || exit $?
     fi
 
+    import_certs
+
     echo "*** The following schemes will be built:"
     echo "$SCHEMES" | xargs -n 1 echo "  "
     echo
@@ -74,8 +80,46 @@ main ()
             build_scheme "$scheme" || status=1
         done
 
+        delete_keychain
         exit $status
     )
+}
+
+import_certs ()
+{
+    # If this environment variable is missing, we must not be running on Travis.
+    if [ -z "$KEY_PASSWORD" ]
+    then
+        return 0
+    fi
+
+    echo "*** Setting up code signing..."
+    local password=cibuild
+
+    # Create a temporary keychain for code signing.
+    security create-keychain -p "$password" "$KEYCHAIN"
+    security default-keychain -s "$KEYCHAIN"
+    security unlock-keychain -p "$password" "$KEYCHAIN"
+    security set-keychain-settings -t 3600 -l "$KEYCHAIN"
+
+    # Download the certificate for the Apple Worldwide Developer Relations
+    # Certificate Authority.
+    local certpath="$SCRIPT_DIR/apple_wwdr.cer"
+    curl -v 'https://developer.apple.com/certificationauthority/AppleWWDRCA.cer' > "$certpath"
+    security import "$certpath" -k "$KEYCHAIN" -T /usr/bin/codesign
+
+    # Import our development certificate.
+    security import "$SCRIPT_DIR/certificates/development.p12" -k "$KEYCHAIN" -P "$KEY_PASSWORD" -T /usr/bin/codesign
+}
+
+delete_keychain ()
+{
+    if [ -z "$KEY_PASSWORD" ]
+    then
+        return 0
+    fi
+
+    security delete-keychain "$KEYCHAIN"
 }
 
 find_pattern ()
@@ -149,5 +193,7 @@ build_scheme ()
 export -f build_scheme
 export -f run_xctool
 export -f parse_build
+export -f import_certs
+export -f delete_keychain
 
 main
