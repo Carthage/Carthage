@@ -14,7 +14,7 @@ import ReactiveCocoa
 private let CarthageBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
 
 /// ~/Library/Caches/
-private let CarthageCachesURL: NSURL = {
+private let CarthageUserCachesURL: NSURL = {
 	let URL = NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: nil)
 	if URL == nil {
 		println("Error: No Caches directory could be found or created.")
@@ -30,7 +30,7 @@ private let CarthageCachesURL: NSURL = {
 /// The file URL to the directory in which cloned dependencies will be stored.
 ///
 /// ~/Library/Caches/org.carthage.CarthageKit/dependencies/
-public let CarthageDependencyRepositoriesURL = CarthageCachesURL.URLByAppendingPathComponent(CarthageBundleIdentifier, isDirectory: true).URLByAppendingPathComponent("dependencies", isDirectory: true)
+public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppendingPathComponent(CarthageBundleIdentifier, isDirectory: true).URLByAppendingPathComponent("dependencies", isDirectory: true)
 
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
