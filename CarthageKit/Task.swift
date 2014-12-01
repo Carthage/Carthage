@@ -275,6 +275,7 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 					if subscriber.disposable.disposed {
 						stdoutPipe.closePipe()
 						stderrPipe.closePipe()
+						stdinSignal.start().dispose()
 						return
 					}
 
