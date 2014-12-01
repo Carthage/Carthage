@@ -112,13 +112,13 @@ private final class Pipe {
 	func transferReadsToSignal() -> ColdSignal<dispatch_data_t> {
 		let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
 
-		return ColdSignal { subscriber in
+		return ColdSignal { sink, disposable in
 			let channel = dispatch_io_create(DISPATCH_IO_STREAM, self.readFD, queue) { error in
 				if error == 0 {
-					subscriber.put(.Completed)
+					sink.put(.Completed)
 				} else {
 					let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
-					subscriber.put(.Error(nsError))
+					sink.put(.Error(nsError))
 				}
 
 				close(self.readFD)
@@ -127,12 +127,12 @@ private final class Pipe {
 			dispatch_io_set_low_water(channel, 1)
 			dispatch_io_read(channel, 0, UInt.max, queue) { (done, data, error) in
 				if let data = data {
-					subscriber.put(.Next(Box(data)))
+					sink.put(.Next(Box(data)))
 				}
 
 				if error != 0 {
 					let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
-					subscriber.put(.Error(nsError))
+					sink.put(.Error(nsError))
 				}
 
 				if done {
@@ -140,7 +140,7 @@ private final class Pipe {
 				}
 			}
 
-			subscriber.disposable.addDisposable {
+			disposable.addDisposable {
 				dispatch_io_close(channel, DISPATCH_IO_STOP)
 			}
 		}
@@ -157,35 +157,38 @@ private final class Pipe {
 	func writeDataFromSignal(signal: ColdSignal<NSData>) -> ColdSignal<()> {
 		let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
 
-		return ColdSignal { subscriber in
+		return ColdSignal { sink, disposable in
 			let channel = dispatch_io_create(DISPATCH_IO_STREAM, self.writeFD, queue) { error in
 				if error == 0 {
-					subscriber.put(.Completed)
+					sink.put(.Completed)
 				} else {
 					let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
-					subscriber.put(.Error(nsError))
+					sink.put(.Error(nsError))
 				}
 
 				close(self.writeFD)
 			}
 
-			let disposable = signal.start(next: { data in
-				let dispatchData = dispatch_data_create(data.bytes, UInt(data.length), queue, nil)
+			signal.startWithSink { inputDisposable in
+				disposable.addDisposable(inputDisposable)
 
-				dispatch_io_write(channel, 0, dispatchData, queue) { (done, data, error) in
-					if error != 0 {
-						let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
-						subscriber.put(.Error(nsError))
+				return eventSink(next: { data in
+					let dispatchData = dispatch_data_create(data.bytes, UInt(data.length), queue, nil)
+
+					dispatch_io_write(channel, 0, dispatchData, queue) { (done, data, error) in
+						if error != 0 {
+							let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
+							sink.put(.Error(nsError))
+						}
 					}
-				}
-			}, error: { error in
-				subscriber.put(.Error(error))
-			}, completed: {
-				dispatch_io_close(channel, 0)
-			})
+				}, error: { error in
+					sink.put(.Error(error))
+				}, completed: {
+					dispatch_io_close(channel, 0)
+				})
+			}
 
-			subscriber.disposable.addDisposable {
-				disposable.dispose()
+			disposable.addDisposable {
 				dispatch_io_close(channel, DISPATCH_IO_STOP)
 			}
 		}
@@ -225,7 +228,7 @@ private func aggregateDataReadFromPipe(pipe: Pipe, forwardingSink: SinkOf<NSData
 /// `NSData` value (representing aggregated data from `stdout`) and complete
 /// upon success.
 public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<NSData>? = nil, standardError: SinkOf<NSData>? = nil) -> ColdSignal<NSData> {
-	return ColdSignal { subscriber in
+	return ColdSignal { sink, disposable in
 		let task = NSTask()
 		task.launchPath = taskDescription.launchPath
 		task.arguments = taskDescription.arguments
@@ -251,28 +254,28 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 				}
 
 			case let .Failure(error):
-				subscriber.put(.Error(error))
+				sink.put(.Error(error))
 				return
 			}
 		}
 
-		let taskDisposable = ColdSignal.fromResult(Pipe.create())
+		ColdSignal.fromResult(Pipe.create())
 			// TODO: This should be a zip.
 			.combineLatestWith(ColdSignal.fromResult(Pipe.create()))
-			.map { (stdoutPipe, stderrPipe) in
+			.map { (stdoutPipe, stderrPipe) -> ColdSignal<NSData> in
 				let stdoutSignal = aggregateDataReadFromPipe(stdoutPipe, standardOutput)
 				let stderrSignal = aggregateDataReadFromPipe(stderrPipe, standardError)
 
-				let terminationStatusSignal = ColdSignal<Int32> { subscriber in
+				let terminationStatusSignal = ColdSignal<Int32> { sink, disposable in
 					task.terminationHandler = { task in
-						subscriber.put(.Next(Box(task.terminationStatus)))
-						subscriber.put(.Completed)
+						sink.put(.Next(Box(task.terminationStatus)))
+						sink.put(.Completed)
 					}
 
 					task.standardOutput = stdoutPipe.writeHandle
 					task.standardError = stderrPipe.writeHandle
 
-					if subscriber.disposable.disposed {
+					if disposable.disposed {
 						stdoutPipe.closePipe()
 						stderrPipe.closePipe()
 						stdinSignal.start().dispose()
@@ -283,13 +286,16 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 					close(stdoutPipe.writeFD)
 					close(stderrPipe.writeFD)
 
-					let stdinDisposable = stdinSignal.start(error: { error in
-						subscriber.put(.Error(error))
-					})
+					stdinSignal.startWithSink { stdinDisposable in
+						disposable.addDisposable(stdinDisposable)
 
-					subscriber.disposable.addDisposable {
+						return eventSink(error: { error in
+							sink.put(.Error(error))
+						})
+					}
+
+					disposable.addDisposable {
 						task.terminate()
-						stdinDisposable.dispose()
 					}
 				}
 
@@ -310,8 +316,9 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 					}
 			}
 			.merge(identity)
-			.start(subscriber)
-
-		subscriber.disposable.addDisposable(taskDisposable)
+			.startWithSink { taskDisposable in
+				disposable.addDisposable(taskDisposable)
+				return sink
+			}
 	}
 }

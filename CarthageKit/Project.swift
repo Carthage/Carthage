@@ -161,11 +161,11 @@ public final class Project {
 	private func cloneOrFetchProject(project: ProjectIdentifier) -> ColdSignal<NSURL> {
 		let repositoryURL = repositoryFileURLForProject(project)
 
-		return ColdSignal { subscriber in
+		return ColdSignal { sink, disposable in
 			let schedulerDisposable = self.gitOperationScheduler.schedule {
 				var error: NSError?
 				if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-					subscriber.put(.Error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error))
+					sink.put(.Error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error))
 					return
 				}
 
@@ -184,15 +184,15 @@ public final class Project {
 
 				switch result! {
 				case .Success:
-					subscriber.put(.Next(Box(repositoryURL)))
-					subscriber.put(.Completed)
+					sink.put(.Next(Box(repositoryURL)))
+					sink.put(.Completed)
 
 				case let .Failure(error):
-					subscriber.put(.Error(error))
+					sink.put(.Error(error))
 				}
 			}
 
-			subscriber.disposable.addDisposable(schedulerDisposable)
+			disposable.addDisposable(schedulerDisposable)
 		}.deliverOn(QueueScheduler())
 	}
 
@@ -312,15 +312,9 @@ public final class Project {
 			.merge(identity)
 			.map { dependency -> ColdSignal<BuildSchemeSignal> in
 				let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
+				buildOutput.observe(stdoutSink)
 
-				return ColdSignal.lazy {
-					let outputDisposable = buildOutput.observe(stdoutSink)
-
-					return schemeSignals
-						.on(disposed: {
-							outputDisposable.dispose()
-						})
-				}
+				return schemeSignals
 			}
 			.concat(identity)
 

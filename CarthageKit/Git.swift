@@ -163,18 +163,18 @@ public func fetchRepository(repositoryFileURL: NSURL, remoteURL: GitURL? = nil) 
 public func listTags(repositoryFileURL: NSURL) -> ColdSignal<String> {
 	return launchGitTask([ "tag" ], repositoryFileURL: repositoryFileURL)
 		.map { (allTags: String) -> ColdSignal<String> in
-			return ColdSignal { subscriber in
+			return ColdSignal { (sink, disposable) in
 				let string = allTags as NSString
 
 				string.enumerateSubstringsInRange(NSMakeRange(0, string.length), options: NSStringEnumerationOptions.ByLines | NSStringEnumerationOptions.Reverse) { (line, substringRange, enclosingRange, stop) in
-					if subscriber.disposable.disposed {
+					if disposable.disposed {
 						stop.memory = true
 					}
 
-					subscriber.put(.Next(Box(line as String)))
+					sink.put(.Next(Box(line as String)))
 				}
 
-				subscriber.put(.Completed)
+				sink.put(.Completed)
 			}
 		}
 		.merge(identity)
@@ -220,10 +220,10 @@ public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirect
 /// repository, but without any Git metadata.
 public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirectoryURL: NSURL) -> ColdSignal<()> {
 	let submoduleDirectoryURL = workingDirectoryURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
-	let purgeGitDirectories = ColdSignal<()> { subscriber in
+	let purgeGitDirectories = ColdSignal<()> { (sink, disposable) in
 		let enumerator = NSFileManager.defaultManager().enumeratorAtURL(submoduleDirectoryURL, includingPropertiesForKeys: [ NSURLIsDirectoryKey!, NSURLNameKey! ], options: nil, errorHandler: nil)!
 
-		while !subscriber.disposable.disposed {
+		while !disposable.disposed {
 			let URL: NSURL! = enumerator.nextObject() as? NSURL
 			if URL == nil {
 				break
@@ -232,7 +232,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 			var name: AnyObject?
 			var error: NSError?
 			if !URL.getResourceValue(&name, forKey: NSURLNameKey, error: &error) {
-				subscriber.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)").error))
+				sink.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)").error))
 				return
 			}
 
@@ -246,7 +246,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 
 			var isDirectory: AnyObject?
 			if !URL.getResourceValue(&isDirectory, forKey: NSURLIsDirectoryKey, error: &error) || isDirectory == nil {
-				subscriber.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory").error))
+				sink.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory").error))
 				return
 			}
 
@@ -257,12 +257,12 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 			}
 
 			if !NSFileManager.defaultManager().removeItemAtURL(URL, error: &error) {
-				subscriber.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)").error))
+				sink.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)").error))
 				return
 			}
 		}
 
-		subscriber.put(.Completed)
+		sink.put(.Completed)
 	}
 
 	return ColdSignal<String>.lazy {
@@ -284,9 +284,9 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuffix: String = "") -> ColdSignal<(String, String)> {
 	let entries = split(contents, { $0 == "\0" }, allowEmptySlices: false)
 
-	return ColdSignal { subscriber in
+	return ColdSignal { (sink, disposable) in
 		for entry in entries {
-			if subscriber.disposable.disposed {
+			if disposable.disposed {
 				break
 			}
 
@@ -308,11 +308,11 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 			}
 
 			if let key = key as? String {
-				subscriber.put(.Next(Box((key, value))))
+				sink.put(.Next(Box((key, value))))
 			}
 		}
 
-		subscriber.put(.Completed)
+		sink.put(.Completed)
 	}
 }
 
