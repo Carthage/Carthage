@@ -29,15 +29,8 @@ clean:
 	rm -rf "$(TEMPORARY_FOLDER)"
 	xcodebuild $(XCODEFLAGS) clean
 
-install: clean bootstrap
-	xcodebuild $(XCODEFLAGS) install
-
-	mkdir -p "$(FRAMEWORKS_FOLDER)"
-	rm -rf "$(FRAMEWORKS_FOLDER)/CarthageKit.framework"
-	cp -PR "$(CARTHAGEKIT_BUNDLE)" "$(FRAMEWORKS_FOLDER)/"
-
-	install -d "$(BINARIES_FOLDER)"
-	install -CSs "$(CARTHAGE_EXECUTABLE)" "$(BINARIES_FOLDER)/"
+install: package
+	sudo installer -pkg Carthage.pkg -target /
 
 uninstall:
 	rm -rf "$(FRAMEWORKS_FOLDER)/CarthageKit.framework"
