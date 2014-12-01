@@ -22,7 +22,7 @@ private let CarthageCachesURL: NSURL = {
 	}
 
 	// Make a best-effort attempt to clean up the old dependencies dir.
-	NSFileManager.defaultManager().removeItemAtURL(NSURL.fileURLWithPath("~/.carthage/dependencies".stringByExpandingTildeInPath, isDirectory:true)!, error: nil)
+	NSFileManager.defaultManager().removeItemAtURL(NSURL.fileURLWithPath("~/.carthage".stringByExpandingTildeInPath, isDirectory:true)!, error: nil)
 
 	return URL!
 }()
