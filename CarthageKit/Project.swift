@@ -20,6 +20,10 @@ private let CarthageCachesURL: NSURL = {
 		println("Error: No Caches directory could be found or created.")
 		exit(1)
 	}
+
+	// Make a best-effort attempt to clean up the old dependencies dir.
+	NSFileManager.defaultManager().removeItemAtURL(NSURL.fileURLWithPath("~/.carthage/dependencies".stringByExpandingTildeInPath, isDirectory:true)!, error: nil)
+
 	return URL!
 }()
 
