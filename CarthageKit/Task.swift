@@ -232,19 +232,22 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 			task.environment = env
 		}
 
+		var stdinSignal: ColdSignal<()> = .empty()
+
 		if let input = taskDescription.standardInput {
-			let pipe = NSPipe()
-			task.standardInput = pipe
+			switch Pipe.create() {
+			case let .Success(pipe):
+				task.standardInput = pipe.unbox.readHandle
 
-			let disposable = input.start(next: { data in
-				pipe.fileHandleForWriting.writeData(data)
-			}, error: { error in
-				task.interrupt()
-			}, completed: {
-				pipe.fileHandleForWriting.closeFile()
-			})
+				stdinSignal = ColdSignal.lazy {
+					close(pipe.unbox.readFD)
+					return pipe.unbox.writeDataFromSignal(input)
+				}
 
-			subscriber.disposable.addDisposable(disposable)
+			case let .Failure(error):
+				subscriber.put(.Error(error))
+				return
+			}
 		}
 
 		let taskDisposable = ColdSignal.fromResult(Pipe.create())
@@ -271,8 +274,13 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 					close(stdoutPipe.writeFD)
 					close(stderrPipe.writeFD)
 
+					let stdinDisposable = stdinSignal.start(error: { error in
+						subscriber.put(.Error(error))
+					})
+
 					subscriber.disposable.addDisposable {
 						task.terminate()
+						stdinDisposable.dispose()
 					}
 				}
 
