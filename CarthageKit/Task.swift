@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import LlamaKit
 import ReactiveCocoa
 
 /// Describes how to execute a shell command.
@@ -57,31 +58,165 @@ extension TaskDescription: Printable {
 	}
 }
 
-/// Creates an NSPipe that will aggregate all data sent to it, and eventually
-/// replay it upon the returned signal.
-///
-/// If a sink is given, data received on the pipe will also be forwarded to it
-/// as it arrives.
-private func pipeForAggregatingData(forwardingSink: SinkOf<NSData>?) -> (NSPipe, ColdSignal<NSData>) {
-	let (signal, sink) = HotSignal<NSData>.pipe()
-	let pipe = NSPipe()
+/// A private class used to encapsulate a Unix pipe.
+private final class Pipe {
+	/// The file descriptor for reading data.
+	let readFD: Int32
 
-	pipe.fileHandleForReading.readabilityHandler = { handle in
-		let data = handle.availableData
-		sink.put(data)
-		forwardingSink?.put(data)
+	/// The file descriptor for writing data.
+	let writeFD: Int32
+
+	/// Creates an NSFileHandle corresponding to the `readFD`. The file handle
+	/// will not automatically close the descriptor.
+	var readHandle: NSFileHandle {
+		return NSFileHandle(fileDescriptor: readFD, closeOnDealloc: false)
 	}
 
-	let aggregatedData = signal.scan(initial: NSData()) { (accumulated, data) in
-		let buffer = accumulated.mutableCopy() as NSMutableData
-		buffer.appendData(data)
-		return buffer
-	}.replay(1)
+	/// Creates an NSFileHandle corresponding to the `writeFD`. The file handle
+	/// will not automatically close the descriptor.
+	var writeHandle: NSFileHandle {
+		return NSFileHandle(fileDescriptor: writeFD, closeOnDealloc: false)
+	}
 
-	// Start the aggregated data with an initial value.
-	sink.put(NSData())
+	/// Initializes a pipe object using existing file descriptors.
+	init(readFD: Int32, writeFD: Int32) {
+		precondition(readFD >= 0)
+		precondition(writeFD >= 0)
 
-	return (pipe, aggregatedData)
+		self.readFD = readFD
+		self.writeFD = writeFD
+	}
+
+	/// Instantiates a new descriptor pair.
+	class func create() -> Result<Pipe> {
+		var fildes: [Int32] = [ 0, 0 ]
+		if pipe(&fildes) == 0 {
+			return success(self(readFD: fildes[0], writeFD: fildes[1]))
+		} else {
+			let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil)
+			return failure(nsError)
+		}
+	}
+
+	/// Closes both file descriptors of the receiver.
+	func closePipe() {
+		close(readFD)
+		close(writeFD)
+	}
+
+	/// Creates a signal that will take ownership of the `readFD` using
+	/// dispatch_io, then read it to completion.
+	///
+	/// After subscribing to the returned signal, `readFD` should not be used
+	/// anywhere else, as it may close unexpectedly.
+	func transferReadsToSignal() -> ColdSignal<dispatch_data_t> {
+		let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
+
+		return ColdSignal { subscriber in
+			let channel = dispatch_io_create(DISPATCH_IO_STREAM, self.readFD, queue) { error in
+				if error == 0 {
+					subscriber.put(.Completed)
+				} else {
+					let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
+					subscriber.put(.Error(nsError))
+				}
+
+				close(self.readFD)
+			}
+
+			dispatch_io_set_low_water(channel, 1)
+			dispatch_io_read(channel, 0, UInt.max, queue) { (done, data, error) in
+				if let data = data {
+					subscriber.put(.Next(Box(data)))
+				}
+
+				if error != 0 {
+					let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
+					subscriber.put(.Error(nsError))
+				}
+
+				if done {
+					dispatch_io_close(channel, 0)
+				}
+			}
+
+			subscriber.disposable.addDisposable {
+				dispatch_io_close(channel, DISPATCH_IO_STOP)
+			}
+		}
+	}
+
+	/// Creates a dispatch_io channel for writing all data that arrives on
+	/// `signal` into `writeFD`, then closes `writeFD` when the input signal
+	/// terminates.
+	///
+	/// After subscribing to the returned signal, `writeFD` should not be used
+	/// anywhere else, as it may close unexpectedly.
+	///
+	/// Returns a signal that will complete or error.
+	func writeDataFromSignal(signal: ColdSignal<NSData>) -> ColdSignal<()> {
+		let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
+
+		return ColdSignal { subscriber in
+			let channel = dispatch_io_create(DISPATCH_IO_STREAM, self.writeFD, queue) { error in
+				if error == 0 {
+					subscriber.put(.Completed)
+				} else {
+					let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
+					subscriber.put(.Error(nsError))
+				}
+
+				close(self.writeFD)
+			}
+
+			let disposable = signal.start(next: { data in
+				let dispatchData = dispatch_data_create(data.bytes, UInt(data.length), queue, nil)
+
+				dispatch_io_write(channel, 0, dispatchData, queue) { (done, data, error) in
+					if error != 0 {
+						let nsError = NSError(domain: NSPOSIXErrorDomain, code: Int(error), userInfo: nil)
+						subscriber.put(.Error(nsError))
+					}
+				}
+			}, error: { error in
+				subscriber.put(.Error(error))
+			}, completed: {
+				dispatch_io_close(channel, 0)
+			})
+
+			subscriber.disposable.addDisposable {
+				disposable.dispose()
+				dispatch_io_close(channel, DISPATCH_IO_STOP)
+			}
+		}
+	}
+}
+
+/// Takes ownership of the read handle from the given pipe, then aggregates all
+/// data into one `NSData` object, which is then sent upon the returned signal.
+///
+/// If `forwardingSink` is non-nil, each incremental piece of data will be sent
+/// to it as data is received.
+private func aggregateDataReadFromPipe(pipe: Pipe, forwardingSink: SinkOf<NSData>?) -> ColdSignal<NSData> {
+	return pipe.transferReadsToSignal()
+		.on(next: { (data: dispatch_data_t) in
+			forwardingSink?.put(data as NSData)
+			return ()
+		})
+		.reduce(initial: nil) { (buffer: dispatch_data_t?, data: dispatch_data_t) in
+			if let buffer = buffer {
+				return dispatch_data_create_concat(buffer, data)
+			} else {
+				return data
+			}
+		}
+		.map { (data: dispatch_data_t?) -> NSData in
+			if let data = data {
+				return data as NSData
+			} else {
+				return NSData()
+			}
+		}
 }
 
 /// Launches a new shell task, using the parameters from `taskDescription`.
@@ -103,54 +238,80 @@ public func launchTask(taskDescription: TaskDescription, standardOutput: SinkOf<
 			task.environment = env
 		}
 
+		var stdinSignal: ColdSignal<()> = .empty()
+
 		if let input = taskDescription.standardInput {
-			let pipe = NSPipe()
-			task.standardInput = pipe
+			switch Pipe.create() {
+			case let .Success(pipe):
+				task.standardInput = pipe.unbox.readHandle
 
-			let disposable = input.start(next: { data in
-				pipe.fileHandleForWriting.writeData(data)
-			}, error: { error in
-				task.interrupt()
-			}, completed: {
-				pipe.fileHandleForWriting.closeFile()
-			})
+				stdinSignal = ColdSignal.lazy {
+					close(pipe.unbox.readFD)
+					return pipe.unbox.writeDataFromSignal(input)
+				}
 
-			subscriber.disposable.addDisposable(disposable)
-		}
-
-		let (stdoutPipe, stdout) = pipeForAggregatingData(standardOutput)
-		task.standardOutput = stdoutPipe
-
-		let (stderrPipe, stderr) = pipeForAggregatingData(standardError)
-		task.standardError = stderrPipe
-
-		task.terminationHandler = { task in
-			if task.terminationStatus == EXIT_SUCCESS {
-				stdout.take(1).start(subscriber)
-			} else {
-				stderr
-					.take(1)
-					.map { data -> String? in
-						if data.length > 0 {
-							return NSString(data: data, encoding: NSUTF8StringEncoding) as String?
-						} else {
-							return nil
-						}
-					}
-					.start(next: { string in
-						let error = CarthageError.ShellTaskFailed(exitCode: Int(task.terminationStatus), standardError: string)
-						subscriber.put(.Error(error.error))
-					})
+			case let .Failure(error):
+				subscriber.put(.Error(error))
+				return
 			}
 		}
 
-		if subscriber.disposable.disposed {
-			return
-		}
+		let taskDisposable = ColdSignal.fromResult(Pipe.create())
+			// TODO: This should be a zip.
+			.combineLatestWith(ColdSignal.fromResult(Pipe.create()))
+			.map { (stdoutPipe, stderrPipe) in
+				let stdoutSignal = aggregateDataReadFromPipe(stdoutPipe, standardOutput)
+				let stderrSignal = aggregateDataReadFromPipe(stderrPipe, standardError)
 
-		task.launch()
-		subscriber.disposable.addDisposable {
-			task.terminate()
-		}
+				let terminationStatusSignal = ColdSignal<Int32> { subscriber in
+					task.terminationHandler = { task in
+						subscriber.put(.Next(Box(task.terminationStatus)))
+						subscriber.put(.Completed)
+					}
+
+					task.standardOutput = stdoutPipe.writeHandle
+					task.standardError = stderrPipe.writeHandle
+
+					if subscriber.disposable.disposed {
+						stdoutPipe.closePipe()
+						stderrPipe.closePipe()
+						stdinSignal.start().dispose()
+						return
+					}
+
+					task.launch()
+					close(stdoutPipe.writeFD)
+					close(stderrPipe.writeFD)
+
+					let stdinDisposable = stdinSignal.start(error: { error in
+						subscriber.put(.Error(error))
+					})
+
+					subscriber.disposable.addDisposable {
+						task.terminate()
+						stdinDisposable.dispose()
+					}
+				}
+
+				return stdoutSignal
+					.combineLatestWith(stderrSignal)
+					.combineLatestWith(terminationStatusSignal)
+					.map { (datas, terminationStatus) -> (NSData, NSData, Int32) in
+						return (datas.0, datas.1, terminationStatus)
+					}
+					.tryMap { (stdoutData, stderrData, terminationStatus) -> Result<NSData> in
+						if terminationStatus == EXIT_SUCCESS {
+							return success(stdoutData)
+						} else {
+							let errorString = (stderrData.length > 0 ? NSString(data: stderrData, encoding: NSUTF8StringEncoding) as String? : nil)
+							let error = CarthageError.ShellTaskFailed(exitCode: Int(terminationStatus), standardError: errorString).error
+							return failure(error)
+						}
+					}
+			}
+			.merge(identity)
+			.start(subscriber)
+
+		subscriber.disposable.addDisposable(taskDisposable)
 	}
 }
