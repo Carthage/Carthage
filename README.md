@@ -1,4 +1,4 @@
-# Carthage
+# <img src="https://cloud.githubusercontent.com/assets/432536/5252404/443d64f4-7952-11e4-9d26-fc5cc664cb61.png" width="36" height="36"> Carthage
 
 Carthage is intended to be the simplest way to add frameworks to your Cocoa application.
 
