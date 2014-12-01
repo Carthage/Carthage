@@ -32,7 +32,7 @@ private let CarthageUserCachesURL: NSURL = {
 	case .Success:
 		NSFileManager.defaultManager().removeItemAtURL(fallbackDependenciesURL, error: nil)
 	case let .Failure(error):
-		NSLog("Warning: No Caches directory could be found or created: \(error.localizedDescription).")
+		NSLog("Warning: No Caches directory could be found or created: \(error.localizedDescription). (\(error))")
 	}
 
 	return URL.value() ?? fallbackDependenciesURL
