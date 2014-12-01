@@ -160,7 +160,7 @@ public final class Project {
 	/// Runs the given Git operation, blocking the `gitOperationScheduler` until
 	/// it has completed.
 	private func runGitOperation<T>(operation: ColdSignal<T>) -> ColdSignal<T> {
-		return ColdSignal { subscriber in
+		return ColdSignal { (sink, disposable) in
 			let schedulerDisposable = self.gitOperationScheduler.schedule {
 				let results = operation
 					.reduce(initial: []) { $0 + [ $1 ] }
@@ -168,14 +168,17 @@ public final class Project {
 
 				switch results {
 				case let .Success(values):
-					ColdSignal.fromValues(values.unbox).start(subscriber)
+					ColdSignal.fromValues(values.unbox).startWithSink { valuesDisposable in
+						disposable.addDisposable(valuesDisposable)
+						return sink
+					}
 
 				case let .Failure(error):
-					subscriber.put(.Error(error))
+					sink.put(.Error(error))
 				}
 			}
 
-			subscriber.disposable.addDisposable(schedulerDisposable)
+			disposable.addDisposable(schedulerDisposable)
 		}.deliverOn(QueueScheduler())
 	}
 
@@ -354,15 +357,9 @@ public final class Project {
 			.merge(identity)
 			.map { dependency -> ColdSignal<BuildSchemeSignal> in
 				let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
+				buildOutput.observe(stdoutSink)
 
-				return ColdSignal.lazy {
-					let outputDisposable = buildOutput.observe(stdoutSink)
-
-					return schemeSignals
-						.on(disposed: {
-							outputDisposable.dispose()
-						})
-				}
+				return schemeSignals
 			}
 			.concat(identity)
 

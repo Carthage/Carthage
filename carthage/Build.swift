@@ -70,31 +70,17 @@ public struct BuildCommand: CommandType {
 			}
 			.map { project -> ColdSignal<BuildSchemeSignal> in
 				let (dependenciesOutput, dependenciesSignals) = project.buildCheckedOutDependencies(options.configuration)
+				dependenciesOutput.observe(stdoutSink)
 
-				return ColdSignal.lazy {
-					let dependenciesDisposable = dependenciesOutput.observe(stdoutSink)
-
-					return dependenciesSignals
-						.on(disposed: {
-							dependenciesDisposable.dispose()
-						})
-				}
+				return dependenciesSignals
 			}
 			.merge(identity)
 
 		if !options.skipCurrent {
 			let (currentOutput, currentSignals) = buildInDirectory(directoryURL, withConfiguration: options.configuration)
-			let dependenciesSignal = buildSignal
+			currentOutput.observe(stdoutSink)
 
-			buildSignal = ColdSignal.lazy {
-				let currentDisposable = currentOutput.observe(stdoutSink)
-
-				return dependenciesSignal
-					.then(currentSignals)
-					.on(disposed: {
-						currentDisposable.dispose()
-					})
-			}
+			buildSignal = buildSignal.then(currentSignals)
 		}
 
 		return (stdoutSignal, buildSignal)
