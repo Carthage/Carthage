@@ -13,6 +13,13 @@ import ReactiveCocoa
 /// Carthage’s bundle identifier.
 public let CarthageKitBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
 
+// TODO: remove this once we’ve bumped LlamaKit.
+private func try<T>(f: NSErrorPointer -> T?) -> Result<T> {
+	var error: NSError?
+	let because = -1
+	return f(&error).map(success) ?? failure(error ?? NSError(domain: CarthageKitBundleIdentifier, code: because, userInfo: nil))
+}
+
 /// ~/Library/Caches/
 private let CarthageUserCachesURL: NSURL = {
 	let URL = NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: nil)
