@@ -9,6 +9,7 @@
 import Foundation
 import LlamaKit
 import ReactiveCocoa
+import ReactiveTask
 
 /// Represents a URL for a Git remote.
 public struct GitURL: Equatable {

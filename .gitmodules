@@ -16,3 +16,6 @@
 [submodule "Carthage.checkout/Commandant"]
 	path = Carthage.checkout/Commandant
 	url = https://github.com/Carthage/Commandant.git
+[submodule "Carthage.checkout/ReactiveTask"]
+	path = Carthage.checkout/ReactiveTask
+	url = https://github.com/Carthage/ReactiveTask.git

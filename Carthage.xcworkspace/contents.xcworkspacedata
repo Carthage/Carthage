@@ -19,4 +19,7 @@
    <FileRef
       location = "group:Carthage.checkout/Nimble/Nimble.xcodeproj">
    </FileRef>
+   <FileRef
+      location = "group:Carthage.checkout/ReactiveTask/ReactiveTask.xcodeproj">
+   </FileRef>
 </Workspace>

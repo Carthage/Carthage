@@ -12,6 +12,7 @@ import LlamaKit
 import Nimble
 import Quick
 import ReactiveCocoa
+import ReactiveTask
 
 class XcodeSpec: QuickSpec {
 	override func spec() {
