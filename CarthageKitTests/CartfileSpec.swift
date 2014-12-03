@@ -42,7 +42,7 @@ class CartfileSpec: QuickSpec {
 
 			let depErrorTranslations = cartfile.dependencies[4]
 			expect(depErrorTranslations.project).to(equal(ProjectIdentifier.Git(GitURL("https://enterprise.local/desktop/git-error-translations.git"))))
-			expect(depErrorTranslations.version).to(equal(VersionSpecifier.AtLeast(SemanticVersion(major: 0, minor: 1, patch: 0))))
+			expect(depErrorTranslations.version).to(equal(VersionSpecifier.GitReference("development")))
 		}
 
 		it("should parse a Cartfile.lock") {

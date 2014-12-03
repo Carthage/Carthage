@@ -166,10 +166,11 @@ public enum VersionSpecifier: Equatable {
 	case AtLeast(SemanticVersion)
 	case CompatibleWith(SemanticVersion)
 	case Exactly(SemanticVersion)
+	case GitReference(String)
 
 	/// Determines whether the given version satisfies this version specifier.
 	public func satisfiedBy(version: SemanticVersion) -> Bool {
-		switch (self) {
+		switch self {
 		case .Any:
 			return true
 
@@ -181,6 +182,9 @@ public enum VersionSpecifier: Equatable {
 
 		case let .CompatibleWith(requirement):
 			return version.major == requirement.major && version >= requirement
+
+		case let .GitReference(refName):
+			return false
 		}
 	}
 }
@@ -199,6 +203,9 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 	case let (.CompatibleWith(left), .CompatibleWith(right)):
 		return left == right
 
+	case let (.GitReference(left), .GitReference(right)):
+		return left == right
+
 	default:
 		return false
 	}
@@ -213,6 +220,17 @@ extension VersionSpecifier: Scannable {
 			return SemanticVersion.fromScanner(scanner).map { AtLeast($0) }
 		} else if scanner.scanString("~>", intoString: nil) {
 			return SemanticVersion.fromScanner(scanner).map { CompatibleWith($0) }
+		} else if scanner.scanString("\"", intoString: nil) {
+			var refName: NSString? = nil
+			if !scanner.scanUpToString("\"", intoString: &refName) || refName == nil {
+				return failure(CarthageError.ParseError(description: "expected Git reference name in line: \(scanner.currentLine)").error)
+			}
+
+			if !scanner.scanString("\"", intoString: nil) {
+				return failure(CarthageError.ParseError(description: "unterminated Git reference name in line: \(scanner.currentLine)").error)
+			}
+
+			return success(.GitReference(refName!))
 		} else {
 			return success(Any)
 		}
@@ -235,6 +253,9 @@ extension VersionSpecifier: Printable {
 
 		case let .CompatibleWith(version):
 			return "~> \(version)"
+
+		case let .GitReference(refName):
+			return "\"\(refName)\""
 		}
 	}
 }
@@ -284,6 +305,25 @@ public func intersection(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Versio
 	case (.CompatibleWith, .Any): fallthrough
 	case (.Exactly, .Any):
 		return lhs
+
+	case let (.GitReference(lv), .GitReference(rv)):
+		if lv != rv {
+			return nil
+		}
+
+		return lhs
+
+	case (.GitReference, .Any): fallthrough
+	case (.GitReference, .AtLeast): fallthrough
+	case (.GitReference, .CompatibleWith): fallthrough
+	case (.GitReference, .Exactly):
+		return lhs
+
+	case (.Any, .GitReference): fallthrough
+	case (.AtLeast, .GitReference): fallthrough
+	case (.CompatibleWith, .GitReference): fallthrough
+	case (.Exactly, .GitReference):
+		return rhs
 
 	case let (.AtLeast(lv), .AtLeast(rv)):
 		return .AtLeast(max(lv, rv))
