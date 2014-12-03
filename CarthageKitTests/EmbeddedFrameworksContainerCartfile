@@ -1,0 +1,2 @@
+# Require the EmbeddedFrameworks Example
+github "justinmakaila/EmbeddedFrameworks" == 1.0
