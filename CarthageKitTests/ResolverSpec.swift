@@ -22,7 +22,7 @@ class ResolverSpec: QuickSpec {
 
 			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency)
 			let result = resolver.resolveDependenciesInCartfile(cartfile)
-				.reduce(initial: []) { (var dependencies, dependency) -> [[String: SemanticVersion]] in
+				.reduce(initial: []) { (var dependencies, dependency) -> [[String: PinnedVersion]] in
 					dependencies.append([ dependency.project.name: dependency.version ])
 					return dependencies
 				}
@@ -30,33 +30,33 @@ class ResolverSpec: QuickSpec {
 
 			expect(result.error()).to(beNil())
 
-			let dependencies = result.value()!
+			let dependencies = result.value() ?? []
 			expect(dependencies.count).to(equal(6));
 
 			var generator = dependencies.generate()
 
 			// Dependencies should be listed in build order.
-			expect(generator.next()).to(equal([ "Mantle": SemanticVersion(major: 1, minor: 3, patch: 0) ]))
-			expect(generator.next()).to(equal([ "git-error-translations": SemanticVersion(major: 3, minor: 0, patch: 0) ]))
-			expect(generator.next()).to(equal([ "libextobjc": SemanticVersion(major: 0, minor: 4, patch: 1) ]))
-			expect(generator.next()).to(equal([ "xcconfigs": SemanticVersion(major: 1, minor: 3, patch: 0) ]))
-			expect(generator.next()).to(equal([ "objc-build-scripts": SemanticVersion(major: 3, minor: 0, patch: 0) ]))
-			expect(generator.next()).to(equal([ "ReactiveCocoa": SemanticVersion(major: 3, minor: 0, patch: 0) ]))
+			expect(generator.next()).to(equal([ "Mantle": PinnedVersion("1.3.0") ]))
+			expect(generator.next()).to(equal([ "git-error-translations": PinnedVersion("3.0.0") ]))
+			expect(generator.next()).to(equal([ "libextobjc": PinnedVersion("0.4.1") ]))
+			expect(generator.next()).to(equal([ "xcconfigs": PinnedVersion("1.3.0") ]))
+			expect(generator.next()).to(equal([ "objc-build-scripts": PinnedVersion("3.0.0") ]))
+			expect(generator.next()).to(equal([ "ReactiveCocoa": PinnedVersion("3.0.0") ]))
 		}
 	}
 
-	private func versionsForDependency(dependency: ProjectIdentifier) -> ColdSignal<SemanticVersion> {
+	private func versionsForDependency(dependency: ProjectIdentifier) -> ColdSignal<PinnedVersion> {
 		return .fromValues([
-			SemanticVersion(major: 0, minor: 4, patch: 1),
-			SemanticVersion(major: 0, minor: 9, patch: 0),
-			SemanticVersion(major: 1, minor: 0, patch: 2),
-			SemanticVersion(major: 1, minor: 3, patch: 0),
-			SemanticVersion(major: 2, minor: 4, patch: 0),
-			SemanticVersion(major: 3, minor: 0, patch: 0)
+			PinnedVersion("0.4.1"),
+			PinnedVersion("0.9.0"),
+			PinnedVersion("1.0.2"),
+			PinnedVersion("1.3.0"),
+			PinnedVersion("2.4.0"),
+			PinnedVersion("3.0.0")
 		])
 	}
 
-	private func cartfileForDependency(dependency: Dependency<SemanticVersion>) -> ColdSignal<Cartfile> {
+	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> ColdSignal<Cartfile> {
 		var cartfile = Cartfile()
 
 		if dependency.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {

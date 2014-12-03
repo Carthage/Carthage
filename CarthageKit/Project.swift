@@ -99,12 +99,12 @@ public final class Project {
 
 	/// Caches versions to avoid expensive lookups, and unnecessary
 	/// fetching/cloning.
-	private var cachedVersions: [ProjectIdentifier: [SemanticVersion]] = [:]
+	private var cachedVersions: [ProjectIdentifier: [PinnedVersion]] = [:]
 	private let cachedVersionsScheduler = QueueScheduler()
 
 	/// Reads the current value of `cachedVersions` on the appropriate
 	/// scheduler.
-	private func readCachedVersions() -> ColdSignal<[ProjectIdentifier: [SemanticVersion]]> {
+	private func readCachedVersions() -> ColdSignal<[ProjectIdentifier: [PinnedVersion]]> {
 		return ColdSignal.lazy {
 				return .single(self.cachedVersions)
 			}
@@ -113,7 +113,7 @@ public final class Project {
 	}
 
 	/// Adds a given version to `cachedVersions` on the appropriate scheduler.
-	private func addCachedVersion(version: SemanticVersion, forProject project: ProjectIdentifier) {
+	private func addCachedVersion(version: PinnedVersion, forProject project: ProjectIdentifier) {
 		self.cachedVersionsScheduler.schedule {
 			if var versions = self.cachedVersions[project] {
 				versions.append(version)
@@ -248,20 +248,15 @@ public final class Project {
 	///
 	/// This will automatically clone or fetch the project's repository as
 	/// necessary.
-	private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<SemanticVersion> {
+	private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<PinnedVersion> {
 		let fetchVersions = cloneOrFetchProject(project)
 			.map { repositoryURL in listTags(repositoryURL) }
 			.merge(identity)
-			.map { PinnedVersion(commitish: $0) }
-			.map { version -> ColdSignal<SemanticVersion> in
-				return ColdSignal.fromResult(SemanticVersion.fromPinnedVersion(version))
-					.catch { _ in .empty() }
-			}
-			.merge(identity)
+			.map { PinnedVersion($0) }
 			.on(next: { self.addCachedVersion($0, forProject: project) })
 
 		return readCachedVersions()
-			.map { versionsByProject -> ColdSignal<SemanticVersion> in
+			.map { versionsByProject -> ColdSignal<PinnedVersion> in
 				if let versions = versionsByProject[project] {
 					return .fromValues(versions)
 				} else {
@@ -272,13 +267,10 @@ public final class Project {
 	}
 
 	/// Loads the Cartfile for the given dependency, at the given version.
-	private func cartfileForDependency(dependency: Dependency<SemanticVersion>) -> ColdSignal<Cartfile> {
-		precondition(dependency.version.pinnedVersion != nil)
-
-		let pinnedVersion = dependency.version.pinnedVersion!
+	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> ColdSignal<Cartfile> {
 		let repositoryURL = repositoryFileURLForProject(dependency.project)
 
-		return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: pinnedVersion.commitish)
+		return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
 			.catch { _ in .empty() }
 			.tryMap { Cartfile.fromString($0) }
 	}
@@ -291,9 +283,6 @@ public final class Project {
 	public func updatedCartfileLock() -> ColdSignal<CartfileLock> {
 		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency)
 		return resolver.resolveDependenciesInCartfile(self.cartfile)
-			.map { dependency -> Dependency<PinnedVersion> in
-				return dependency.map { $0.pinnedVersion! }
-			}
 			.reduce(initial: []) { $0 + [ $1 ] }
 			.map { CartfileLock(dependencies: $0) }
 	}

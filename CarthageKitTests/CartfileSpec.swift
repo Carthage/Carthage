@@ -57,11 +57,11 @@ class CartfileSpec: QuickSpec {
 
 			let depReactiveCocoa = cartfileLock.dependencies[0]
 			expect(depReactiveCocoa.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))))
-			expect(depReactiveCocoa.version).to(equal(PinnedVersion(commitish: "v2.3.1")))
+			expect(depReactiveCocoa.version).to(equal(PinnedVersion("v2.3.1")))
 
 			let depMantle = cartfileLock.dependencies[1]
 			expect(depMantle.project).to(equal(ProjectIdentifier.Git(GitURL("https://github.com/Mantle/Mantle.git"))))
-			expect(depMantle.version).to(equal(PinnedVersion(commitish: "40abed6e58b4864afac235c3bb2552e23bc9da47")))
+			expect(depMantle.version).to(equal(PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47")))
 		}
 	}
 }

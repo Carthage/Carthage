@@ -123,7 +123,7 @@ public struct PinnedVersion: Equatable {
 	/// The commit SHA, or name of the tag, to pin to.
 	public let commitish: String
 
-	public init(commitish: String) {
+	public init(_ commitish: String) {
 		self.commitish = commitish
 	}
 }
@@ -147,7 +147,7 @@ extension PinnedVersion: Scannable {
 			return failure(CarthageError.ParseError(description: "unterminated pinned version in line: \(scanner.currentLine)").error)
 		}
 
-		return success(self(commitish: commitish!))
+		return success(self(commitish!))
 	}
 }
 
@@ -169,22 +169,32 @@ public enum VersionSpecifier: Equatable {
 	case GitReference(String)
 
 	/// Determines whether the given version satisfies this version specifier.
-	public func satisfiedBy(version: SemanticVersion) -> Bool {
+	public func satisfiedBy(version: PinnedVersion) -> Bool {
+		func withSemanticVersion(predicate: SemanticVersion -> Bool) -> Bool {
+			if let semanticVersion = SemanticVersion.fromPinnedVersion(version).value() {
+				return predicate(semanticVersion)
+			} else {
+				// Consider non-semantic versions (e.g., branches) to meet every
+				// version range requirement.
+				return true
+			}
+		}
+
 		switch self {
 		case .Any:
 			return true
 
 		case let .Exactly(requirement):
-			return version == requirement
+			return withSemanticVersion { $0 == requirement }
 
 		case let .AtLeast(requirement):
-			return version >= requirement
+			return withSemanticVersion { $0 >= requirement }
 
 		case let .CompatibleWith(requirement):
-			return version.major == requirement.major && version >= requirement
+			return withSemanticVersion { $0.major == requirement.major && $0 >= requirement }
 
 		case let .GitReference(refName):
-			return false
+			return version.commitish == refName
 		}
 	}
 }
