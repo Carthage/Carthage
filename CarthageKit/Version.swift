@@ -376,20 +376,3 @@ public func intersection<S: SequenceType where S.Generator.Element == VersionSpe
 		}
 	}
 }
-
-/// Attempts to determine the highest (latest) version from the given sequence
-/// that will satisfy the given version specifier.
-public func latestSatisfyingVersion<S: SequenceType where S.Generator.Element == SemanticVersion>(versions: S, specifier: VersionSpecifier) -> SemanticVersion? {
-	// TODO: We could improve performance here by not actually sorting the
-	// collection (and just testing successively lesser elements from the
-	// original input).
-	let sortedVersions: [SemanticVersion] = sorted(versions)
-
-	for version in sortedVersions {
-		if specifier.satisfiedBy(version) {
-			return version
-		}
-	}
-
-	return nil
-}
