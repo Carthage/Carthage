@@ -389,6 +389,14 @@ public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String 
 	}
 }
 
+/// Attempts to resolve the given reference into an object SHA.
+public func resolveReferenceInRepository(repositoryFileURL: NSURL, reference: String) -> ColdSignal<String> {
+	return launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
+		.map { string in
+			return string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet())
+		}
+}
+
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if
 /// the desired revision does not exist or the submodule needs to be cloned.
 public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submodule, fetchURL: GitURL) -> ColdSignal<()> {

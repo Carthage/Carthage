@@ -20,7 +20,7 @@ class ResolverSpec: QuickSpec {
 
 			let cartfile = Cartfile.fromString(testCartfile!).value()!
 
-			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency)
+			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency, resolvedGitReference: self.resolvedGitReference)
 			let result = resolver.resolveDependenciesInCartfile(cartfile)
 				.reduce(initial: []) { (var dependencies, dependency) -> [[String: PinnedVersion]] in
 					dependencies.append([ dependency.project.name: dependency.version ])
@@ -37,7 +37,7 @@ class ResolverSpec: QuickSpec {
 
 			// Dependencies should be listed in build order.
 			expect(generator.next()).to(equal([ "Mantle": PinnedVersion("1.3.0") ]))
-			expect(generator.next()).to(equal([ "git-error-translations": PinnedVersion("3.0.0") ]))
+			expect(generator.next()).to(equal([ "git-error-translations": PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9") ]))
 			expect(generator.next()).to(equal([ "libextobjc": PinnedVersion("0.4.1") ]))
 			expect(generator.next()).to(equal([ "xcconfigs": PinnedVersion("1.3.0") ]))
 			expect(generator.next()).to(equal([ "objc-build-scripts": PinnedVersion("3.0.0") ]))
@@ -45,7 +45,7 @@ class ResolverSpec: QuickSpec {
 		}
 	}
 
-	private func versionsForDependency(dependency: ProjectIdentifier) -> ColdSignal<PinnedVersion> {
+	private func versionsForDependency(project: ProjectIdentifier) -> ColdSignal<PinnedVersion> {
 		return .fromValues([
 			PinnedVersion("0.4.1"),
 			PinnedVersion("0.9.0"),
@@ -66,5 +66,9 @@ class ResolverSpec: QuickSpec {
 		}
 
 		return .single(cartfile)
+	}
+
+	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> ColdSignal<PinnedVersion> {
+		return .single(PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"))
 	}
 }

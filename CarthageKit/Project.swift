@@ -275,13 +275,24 @@ public final class Project {
 			.tryMap { Cartfile.fromString($0) }
 	}
 
+	/// Attempts to resolve a Git reference to a version.
+	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> ColdSignal<PinnedVersion> {
+		return cloneOrFetchProject(project)
+			.map { repositoryURL in
+				return resolveReferenceInRepository(repositoryURL, reference)
+			}
+			.merge(identity)
+			.map { PinnedVersion($0) }
+	}
+
 	/// Attempts to determine the latest satisfiable version of the project's
 	/// Carthage dependencies.
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
 	public func updatedCartfileLock() -> ColdSignal<CartfileLock> {
-		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency)
+		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
+
 		return resolver.resolveDependenciesInCartfile(self.cartfile)
 			.reduce(initial: []) { $0 + [ $1 ] }
 			.map { CartfileLock(dependencies: $0) }

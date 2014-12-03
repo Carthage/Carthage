@@ -181,7 +181,8 @@ public enum VersionSpecifier: Equatable {
 		}
 
 		switch self {
-		case .Any:
+		case .Any: fallthrough
+		case .GitReference:
 			return true
 
 		case let .Exactly(requirement):
@@ -192,9 +193,6 @@ public enum VersionSpecifier: Equatable {
 
 		case let .CompatibleWith(requirement):
 			return withSemanticVersion { $0.major == requirement.major && $0 >= requirement }
-
-		case let .GitReference(refName):
-			return version.commitish == refName
 		}
 	}
 }

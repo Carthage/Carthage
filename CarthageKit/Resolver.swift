@@ -13,6 +13,7 @@ import ReactiveCocoa
 /// Responsible for resolving acyclic dependency graphs.
 public struct Resolver {
 	private let versionsForDependency: ProjectIdentifier -> ColdSignal<PinnedVersion>
+	private let resolvedGitReference: (ProjectIdentifier, String) -> ColdSignal<PinnedVersion>
 	private let cartfileForDependency: Dependency<PinnedVersion> -> ColdSignal<Cartfile>
 
 	/// Instantiates a dependency graph resolver with the given behaviors.
@@ -21,9 +22,12 @@ public struct Resolver {
 	///                         dependency.
 	/// cartfileForDependency - Loads the Cartfile for a specific version of a
 	///                         dependency.
-	public init(versionsForDependency: ProjectIdentifier -> ColdSignal<PinnedVersion>, cartfileForDependency: Dependency<PinnedVersion> -> ColdSignal<Cartfile>) {
+	/// resolvedGitReference  - Resolves an arbitrary Git reference to the
+	///                         latest object.
+	public init(versionsForDependency: ProjectIdentifier -> ColdSignal<PinnedVersion>, cartfileForDependency: Dependency<PinnedVersion> -> ColdSignal<Cartfile>, resolvedGitReference: (ProjectIdentifier, String) -> ColdSignal<PinnedVersion>) {
 		self.versionsForDependency = versionsForDependency
 		self.cartfileForDependency = cartfileForDependency
+		self.resolvedGitReference = resolvedGitReference
 	}
 
 	/// Attempts to determine the latest valid version to use for each dependency
@@ -56,8 +60,18 @@ public struct Resolver {
 	/// exist for each).
 	private func nodePermutationsForCartfile(cartfile: Cartfile) -> ColdSignal<[DependencyNode]> {
 		let nodeSignals = cartfile.dependencies.map { dependency -> ColdSignal<DependencyNode> in
-			return self.versionsForDependency(dependency.project)
-				.filter { dependency.version.satisfiedBy($0) }
+			let allowedVersions: ColdSignal<PinnedVersion> = {
+				switch dependency.version {
+				case let .GitReference(refName):
+					return self.resolvedGitReference(dependency.project, refName)
+
+				default:
+					return self.versionsForDependency(dependency.project)
+						.filter { dependency.version.satisfiedBy($0) }
+				}
+			}()
+
+			return allowedVersions
 				.map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
 				.reduce(initial: []) { $0 + [ $1 ] }
 				.map(sorted)
