@@ -395,6 +395,7 @@ public func resolveReferenceInRepository(repositoryFileURL: NSURL, reference: St
 		.map { string in
 			return string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet())
 		}
+		.catch { _ in .error(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists").error) }
 }
 
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if
