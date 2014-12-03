@@ -252,7 +252,7 @@ public final class Project {
 		let fetchVersions = cloneOrFetchProject(project)
 			.map { repositoryURL in listTags(repositoryURL) }
 			.merge(identity)
-			.map { PinnedVersion(tag: $0) }
+			.map { PinnedVersion(commitish: $0) }
 			.map { version -> ColdSignal<SemanticVersion> in
 				return ColdSignal.fromResult(SemanticVersion.fromPinnedVersion(version))
 					.catch { _ in .empty() }
@@ -278,7 +278,7 @@ public final class Project {
 		let pinnedVersion = dependency.version.pinnedVersion!
 		let repositoryURL = repositoryFileURLForProject(dependency.project)
 
-		return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: pinnedVersion.tag)
+		return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: pinnedVersion.commitish)
 			.catch { _ in .empty() }
 			.tryMap { Cartfile.fromString($0) }
 	}
@@ -366,7 +366,7 @@ public final class Project {
 			.map { (cartfileLock, submodulesByPath) -> ColdSignal<()> in
 				return ColdSignal.fromValues(cartfileLock.dependencies)
 					.map { dependency in
-						return self.checkoutOrCloneProject(dependency.project, atRevision: dependency.version.tag, submodulesByPath: submodulesByPath)
+						return self.checkoutOrCloneProject(dependency.project, atRevision: dependency.version.commitish, submodulesByPath: submodulesByPath)
 					}
 					.merge(identity)
 			}

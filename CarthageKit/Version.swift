@@ -51,7 +51,7 @@ public struct SemanticVersion: Comparable {
 
 	/// Attempts to parse a semantic version from a PinnedVersion.
 	public static func fromPinnedVersion(pinnedVersion: PinnedVersion) -> Result<SemanticVersion> {
-		let scanner = NSScanner(string: pinnedVersion.tag)
+		let scanner = NSScanner(string: pinnedVersion.commitish)
 
 		// Skip leading characters, like "v" or "version-" or anything like
 		// that.
@@ -120,16 +120,16 @@ extension SemanticVersion: Printable {
 
 /// An immutable version that a project can be pinned to.
 public struct PinnedVersion: Equatable {
-	/// The name of the tag to pin to.
-	public let tag: String
+	/// The commit SHA, or name of the tag, to pin to.
+	public let commitish: String
 
-	public init(tag: String) {
-		self.tag = tag
+	public init(commitish: String) {
+		self.commitish = commitish
 	}
 }
 
 public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
-	return lhs.tag == rhs.tag
+	return lhs.commitish == rhs.commitish
 }
 
 extension PinnedVersion: Scannable {
@@ -138,8 +138,8 @@ extension PinnedVersion: Scannable {
 			return failure(CarthageError.ParseError(description: "expected pinned version in line: \(scanner.currentLine)").error)
 		}
 
-		var tag: NSString? = nil
-		if !scanner.scanUpToString("\"", intoString: &tag) || tag == nil {
+		var commitish: NSString? = nil
+		if !scanner.scanUpToString("\"", intoString: &commitish) || commitish == nil {
 			return failure(CarthageError.ParseError(description: "empty pinned version in line: \(scanner.currentLine)").error)
 		}
 
@@ -147,7 +147,7 @@ extension PinnedVersion: Scannable {
 			return failure(CarthageError.ParseError(description: "unterminated pinned version in line: \(scanner.currentLine)").error)
 		}
 
-		return success(self(tag: tag!))
+		return success(self(commitish: commitish!))
 	}
 }
 
@@ -155,7 +155,7 @@ extension PinnedVersion: VersionType {}
 
 extension PinnedVersion: Printable {
 	public var description: String {
-		return "\"\(tag)\""
+		return "\"\(commitish)\""
 	}
 }
 
