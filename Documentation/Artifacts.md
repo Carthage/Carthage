@@ -75,7 +75,11 @@ This folder is created by `carthage checkout` in the application project’s wor
 
 You are not required to commit this folder to your repository, but you may wish to, if you want to guarantee that the chosen versions of each dependency will _always_ be accessible at a later date.
 
-The contents of **this directory should not be modified**, as they may be overwritten by a future `carthage checkout` command.
+Unless you are [using submodules](#with-submodules), the contents of **this directory should not be modified**, as they may be overwritten by a future `carthage checkout` command.
+
+### With submodules
+
+If the `--use-submodules` flag was given when a project’s dependencies were bootstrapped, updated, or checked out, the dependencies inside `Carthage.checkout` will be available as Git submodules. This allows you to make changes in the dependencies, and commit and push those changes upstream.
 
 ## ~/.carthage/dependencies
 
