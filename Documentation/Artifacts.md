@@ -4,7 +4,7 @@ This document lists all files and folders used or created by Carthage, and the p
 
 ## Cartfile
 
-A `Cartfile` describes your project’s dependencies to Carthage, allowing it to resolve and build them for you.
+A `Cartfile` describes your project’s dependencies to Carthage, allowing it to resolve and build them for you. Cartfiles are a restricted subset of the [Ordered Graph Data Language](http://ogdl.org/), and any standard OGDL tool should be able to parse them.
 
 Dependency specifications consist of two main parts: the [origin](#origin), and the [version requirement](#version-requirement).
 
