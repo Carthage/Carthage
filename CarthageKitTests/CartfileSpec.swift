@@ -61,7 +61,7 @@ class CartfileSpec: QuickSpec {
 
 			let depMantle = cartfileLock.dependencies[1]
 			expect(depMantle.project).to(equal(ProjectIdentifier.Git(GitURL("https://github.com/Mantle/Mantle.git"))))
-			expect(depMantle.version).to(equal(PinnedVersion(commitish: "1.0")))
+			expect(depMantle.version).to(equal(PinnedVersion(commitish: "40abed6e58b4864afac235c3bb2552e23bc9da47")))
 		}
 	}
 }
