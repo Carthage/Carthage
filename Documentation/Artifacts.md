@@ -26,11 +26,12 @@ Other possible origins may be added in the future. If there’s something specif
 
 #### Version requirement
 
-Carthage supports three kinds of version requirements:
+Carthage supports several kinds of version requirements:
 
 1. `>= 1.0` for “at least version 1.0”
 1. `~> 1.0` for “compatible with version 1.0”
 1. `== 1.0` for “exactly version 1.0”
+1. `"some-branch-or-tag-or-commit"` to pin to a specific Git object (anything allowed by `git rev-parse`)
 
 If no version requirement is given, any version of the dependency is allowed.
 
@@ -51,8 +52,8 @@ github "jspahrsummers/libextobjc" == 0.4.1
 # Use the latest version
 github "jspahrsummers/xcconfigs"
 
-# Use a project from GitHub Enterprise, or any arbitrary server
-git "https://enterprise.local/desktop/git-error-translations.git" >= 0.1
+# Use a project from GitHub Enterprise, or any arbitrary server, on the "development" branch
+git "https://enterprise.local/desktop/git-error-translations.git" "development"
 ```
 
 ## Cartfile.lock
