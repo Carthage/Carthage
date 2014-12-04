@@ -58,6 +58,12 @@ In rare cases, you may want to also copy each dependency into the build product 
 
 If you’ve modified your [Cartfile][], or you want to update to the newest versions of each framework (subject to the requirements you’ve specified), simply run the `carthage update` command again.
 
+### Using submodules for dependencies
+
+By default, Carthage will [check out][Carthage.checkout] the source code of each dependency version, leaving you to commit or ignore it as you choose. If you’d like to have dependencies available as Git submodules instead (perhaps so you can commit and push changes to them), you can run `carthage update` or `carthage checkout` with the `--use-submodules` flag.
+
+When run this way, Carthage will write to your repository’s `.gitmodules` and `.git/config` files, and automatically update the submodules when the dependencies’ versions change.
+
 ## Supporting Carthage for your framework
 
 **Carthage only officially supports dynamic frameworks**. Dynamic frameworks can be used on any version of OS X, but only on **iOS 8 or later**.
