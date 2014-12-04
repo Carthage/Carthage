@@ -164,30 +164,30 @@ private struct DependencyGraph: Equatable {
 	/// Returns all of the graph nodes, in the order that they should be built.
 	var orderedNodes: [DependencyNode] {
 		return sorted(allNodes.keys) { (lhs, rhs) in
-			let leftDeps = self.edges[lhs]
-			let rightDeps = self.edges[rhs]
+			let lhsDependencies = self.edges[lhs]
+			let rhsDependencies = self.edges[rhs]
 
-			if let rightDeps = rightDeps {
+			if let rhsDependencies = rhsDependencies {
 				// If the right node has a dependency on the left node, the
 				// left node needs to be built first (and is thus ordered
 				// first).
-				if contains(rightDeps.keys, lhs) {
+				if contains(rhsDependencies.keys, lhs) {
 					return true
 				}
 			}
 
-			if let leftDeps = leftDeps {
+			if let lhsDependencies = lhsDependencies {
 				// If the left node has a dependency on the right node, the
 				// right node needs to be built first.
-				if contains(leftDeps.keys, rhs) {
+				if contains(lhsDependencies.keys, rhs) {
 					return false
 				}
 			}
 
-			if leftDeps != nil || rightDeps != nil {
+			if lhsDependencies != nil || rhsDependencies != nil {
 				// If neither node depends on each other, sort the one with the
 				// fewer dependencies first.
-				return (leftDeps?.count ?? 0) < (rightDeps?.count ?? 0)
+				return (lhsDependencies?.count ?? 0) < (rhsDependencies?.count ?? 0)
 			}
 
 			// If all else fails, compare names.
