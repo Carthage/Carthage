@@ -31,11 +31,13 @@ Carthage supports several kinds of version requirements:
 1. `>= 1.0` for “at least version 1.0”
 1. `~> 1.0` for “compatible with version 1.0”
 1. `== 1.0` for “exactly version 1.0”
-1. `"some-branch-or-tag-or-commit"` to pin to a specific Git object (anything allowed by `git rev-parse`)
+1. `"some-branch-or-tag-or-commit"` for a specific Git object (anything allowed by `git rev-parse`)
 
 If no version requirement is given, any version of the dependency is allowed.
 
 Compatibility is determined according to [Semantic Versioning](http://semver.org/). This means that any version greater than or equal to 1.5.1, but less than 2.0, will be considered “compatible” with 1.5.1.
+
+**In all cases, Carthage will pin to a tag or SHA**, and only bump the tag or SHA when `carthage update` is run again in the future. This means that following a branch (for example) still results in commits that can be independently checked out just as they were originally.
 
 #### Example Cartfile
 
