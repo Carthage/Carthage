@@ -181,8 +181,7 @@ public enum VersionSpecifier: Equatable {
 		}
 
 		switch self {
-		case .Any: fallthrough
-		case .GitReference:
+		case .Any, .GitReference:
 			return true
 
 		case let .Exactly(requirement):
@@ -303,16 +302,17 @@ public func intersection(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Versio
 	switch (lhs, rhs) {
 	// Unfortunately, patterns with a wildcard _ are not considered exhaustive,
 	// so do the same thing manually.
-	case (.Any, .Any): fallthrough
-	case (.Any, .AtLeast): fallthrough
-	case (.Any, .CompatibleWith): fallthrough
-	case (.Any, .Exactly):
+	case (.Any, .Any), (.Any, .AtLeast), (.Any, .CompatibleWith), (.Any, .Exactly):
 		return rhs
 
-	case (.AtLeast, .Any): fallthrough
-	case (.CompatibleWith, .Any): fallthrough
-	case (.Exactly, .Any):
+	case (.AtLeast, .Any), (.CompatibleWith, .Any), (.Exactly, .Any):
 		return lhs
+
+	case (.GitReference, .Any), (.GitReference, .AtLeast), (.GitReference, .CompatibleWith), (.GitReference, .Exactly):
+		return lhs
+
+	case (.Any, .GitReference), (.AtLeast, .GitReference), (.CompatibleWith, .GitReference), (.Exactly, .GitReference):
+		return rhs
 
 	case let (.GitReference(lv), .GitReference(rv)):
 		if lv != rv {
@@ -320,18 +320,6 @@ public func intersection(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Versio
 		}
 
 		return lhs
-
-	case (.GitReference, .Any): fallthrough
-	case (.GitReference, .AtLeast): fallthrough
-	case (.GitReference, .CompatibleWith): fallthrough
-	case (.GitReference, .Exactly):
-		return lhs
-
-	case (.Any, .GitReference): fallthrough
-	case (.AtLeast, .GitReference): fallthrough
-	case (.CompatibleWith, .GitReference): fallthrough
-	case (.Exactly, .GitReference):
-		return rhs
 
 	case let (.AtLeast(lv), .AtLeast(rv)):
 		return .AtLeast(max(lv, rv))
