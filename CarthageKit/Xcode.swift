@@ -710,8 +710,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	let buildSignal: ColdSignal<NSURL> = BuildSettings.platformForScheme(scheme, inProject: project)
 		.map { (platform: Platform) in
 			switch platform {
-			case .iPhoneSimulator: fallthrough
-			case .iPhoneOS:
+			case .iPhoneSimulator, .iPhoneOS:
 				let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderName)/iOS", isDirectory: true)
 
 				return settingsByTarget(buildPlatform(.iPhoneSimulator))

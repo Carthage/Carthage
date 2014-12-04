@@ -30,21 +30,21 @@ class SemanticVersionSpec: QuickSpec {
 		}
 
 		it("should parse semantic versions") {
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion(tag: "1.4")).value()).to(equal(SemanticVersion(major: 1, minor: 4, patch: 0)))
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion(tag: "v1")).value()).to(equal(SemanticVersion(major: 1, minor: 0, patch: 0)))
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion(tag: "v2.8.9")).value()).to(equal(SemanticVersion(major: 2, minor: 8, patch: 9)))
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion(tag: "v2.8-alpha")).value()).to(beNil())
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("1.4")).value()).to(equal(SemanticVersion(major: 1, minor: 4, patch: 0)))
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v1")).value()).to(equal(SemanticVersion(major: 1, minor: 0, patch: 0)))
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.9")).value()).to(equal(SemanticVersion(major: 2, minor: 8, patch: 9)))
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8-alpha")).value()).to(beNil())
 		}
 	}
 }
 
 class VersionSpecifierSpec: QuickSpec {
 	override func spec() {
-		let versionOne = SemanticVersion(major: 1, minor: 3, patch: 2)
-		let versionTwoZero = SemanticVersion(major: 2, minor: 0, patch: 2)
-		let versionTwoOne = SemanticVersion(major: 2, minor: 1, patch: 1)
-		let versionTwoTwo = SemanticVersion(major: 2, minor: 2, patch: 0)
-		let versionThree = SemanticVersion(major: 3, minor: 0, patch: 0)
+		let versionOne = SemanticVersion.fromPinnedVersion(PinnedVersion("1.3.2")).value()!
+		let versionTwoZero = SemanticVersion.fromPinnedVersion(PinnedVersion("2.0.2")).value()!
+		let versionTwoOne = SemanticVersion.fromPinnedVersion(PinnedVersion("2.1.1")).value()!
+		let versionTwoTwo = SemanticVersion.fromPinnedVersion(PinnedVersion("2.2.0")).value()!
+		let versionThree = SemanticVersion.fromPinnedVersion(PinnedVersion("3.0.0")).value()!
 
 		func testIntersection(lhs: VersionSpecifier, rhs: VersionSpecifier, #expected: VersionSpecifier?) {
 			if let expected = expected {
@@ -59,38 +59,38 @@ class VersionSpecifierSpec: QuickSpec {
 		describe("satisfiedBy") {
 			it("should allow all versions for Any") {
 				let specifier = VersionSpecifier.Any
-				expect(specifier.satisfiedBy(versionOne)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoZero)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoOne)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoTwo)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beTruthy())
 			}
 
 			it("should allow greater or equal versions for AtLeast") {
 				let specifier = VersionSpecifier.AtLeast(versionTwoOne)
-				expect(specifier.satisfiedBy(versionOne)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoZero)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoOne)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoTwo)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beTruthy())
 			}
 
 			it("should allow greater or equal minor and patch versions for CompatibleWith") {
 				let specifier = VersionSpecifier.CompatibleWith(versionTwoOne)
-				expect(specifier.satisfiedBy(versionOne)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoZero)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoOne)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoTwo)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beFalsy())
 			}
 
 			it("should only allow exact versions for Exactly") {
 				let specifier = VersionSpecifier.Exactly(versionTwoTwo)
-				expect(specifier.satisfiedBy(versionOne)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoZero)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoOne)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoTwo)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beFalsy())
 			}
 		}
 

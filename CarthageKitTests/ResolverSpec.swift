@@ -20,9 +20,9 @@ class ResolverSpec: QuickSpec {
 		return Cartfile.fromString(testCartfile!).value()!
 	}
 
-	private func orderedDependencies(resolver: Resolver, fromCartfile cartfile: Cartfile) -> [[String: SemanticVersion]] {
+	private func orderedDependencies(resolver: Resolver, fromCartfile cartfile: Cartfile) -> [[String: PinnedVersion]] {
 		let result = resolver.resolveDependenciesInCartfile(cartfile)
-			.reduce(initial: []) { (var dependencies, dependency) -> [[String: SemanticVersion]] in
+			.reduce(initial: []) { (var dependencies, dependency) -> [[String: PinnedVersion]] in
 				dependencies.append([ dependency.project.name: dependency.version ])
 				return dependencies
 			}
@@ -35,36 +35,36 @@ class ResolverSpec: QuickSpec {
 
 	override func spec() {
 		it("should resolve a Cartfile") {
-			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency)
+			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency, resolvedGitReference: self.resolvedGitReference)
 			let dependencies = self.orderedDependencies(resolver, fromCartfile: self.loadTestCartfile("TestCartfile"))
 			expect(dependencies.count).to(equal(6));
 
 			var generator = dependencies.generate()
 
 			// Dependencies should be listed in build order.
-			expect(generator.next()).to(equal([ "Mantle": SemanticVersion(major: 1, minor: 3, patch: 0) ]))
-			expect(generator.next()).to(equal([ "git-error-translations": SemanticVersion(major: 3, minor: 0, patch: 0) ]))
-			expect(generator.next()).to(equal([ "libextobjc": SemanticVersion(major: 0, minor: 4, patch: 1) ]))
-			expect(generator.next()).to(equal([ "xcconfigs": SemanticVersion(major: 1, minor: 3, patch: 0) ]))
-			expect(generator.next()).to(equal([ "objc-build-scripts": SemanticVersion(major: 3, minor: 0, patch: 0) ]))
-			expect(generator.next()).to(equal([ "ReactiveCocoa": SemanticVersion(major: 3, minor: 0, patch: 0) ]))
+			expect(generator.next()).to(equal([ "Mantle": PinnedVersion("1.3.0") ]))
+			expect(generator.next()).to(equal([ "git-error-translations": PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9") ]))
+			expect(generator.next()).to(equal([ "libextobjc": PinnedVersion("0.4.1") ]))
+			expect(generator.next()).to(equal([ "xcconfigs": PinnedVersion("1.3.0") ]))
+			expect(generator.next()).to(equal([ "objc-build-scripts": PinnedVersion("3.0.0") ]))
+			expect(generator.next()).to(equal([ "ReactiveCocoa": PinnedVersion("3.0.0") ]))
 		}
 
 		it("should correctly order transitive dependencies") {
 			let resolver = Resolver(versionsForDependency: { project in
 				switch project.name {
 				case "EmbeddedFrameworks":
-					return .single(SemanticVersion(major: 1, minor: 0, patch: 0))
+					return .single(PinnedVersion("1.0.0"))
 
 				case "Alamofire":
-					return .single(SemanticVersion(major: 1, minor: 1, patch: 2))
+					return .single(PinnedVersion("1.1.2"))
 
 				case "SwiftyJSON":
-					return .single(SemanticVersion(major: 2, minor: 1, patch: 2))
+					return .single(PinnedVersion("2.1.2"))
 
 				case "Swell":
-					return .single(SemanticVersion(major: 1, minor: 0, patch: 0))
-				
+					return .single(PinnedVersion("1.0.0"))
+
 				default:
 					assert(false)
 				}
@@ -74,7 +74,7 @@ class ResolverSpec: QuickSpec {
 				} else {
 					return .single(Cartfile())
 				}
-			})
+			}, resolvedGitReference: { _ in .error(RACError.Empty.error) })
 
 			let dependencies = self.orderedDependencies(resolver, fromCartfile: self.loadTestCartfile("EmbeddedFrameworksContainerCartfile"))
 			expect(dependencies.count).to(equal(4));
@@ -82,25 +82,25 @@ class ResolverSpec: QuickSpec {
 			var generator = dependencies.generate()
 
 			// Dependencies should be listed in build order.
-			expect(generator.next()).to(equal([ "Alamofire": SemanticVersion(major: 1, minor: 1, patch: 2) ]))
-			expect(generator.next()).to(equal([ "Swell": SemanticVersion(major: 1, minor: 0, patch: 0) ]))
-			expect(generator.next()).to(equal([ "SwiftyJSON": SemanticVersion(major: 2, minor: 1, patch: 2) ]))
-			expect(generator.next()).to(equal([ "EmbeddedFrameworks": SemanticVersion(major: 1, minor: 0, patch: 0) ]))
+			expect(generator.next()).to(equal([ "Alamofire": PinnedVersion("1.1.2") ]))
+			expect(generator.next()).to(equal([ "Swell": PinnedVersion("1.0.0") ]))
+			expect(generator.next()).to(equal([ "SwiftyJSON": PinnedVersion("2.1.2") ]))
+			expect(generator.next()).to(equal([ "EmbeddedFrameworks": PinnedVersion("1.0.0") ]))
 		}
 	}
 
-	private func versionsForDependency(dependency: ProjectIdentifier) -> ColdSignal<SemanticVersion> {
+	private func versionsForDependency(project: ProjectIdentifier) -> ColdSignal<PinnedVersion> {
 		return .fromValues([
-			SemanticVersion(major: 0, minor: 4, patch: 1),
-			SemanticVersion(major: 0, minor: 9, patch: 0),
-			SemanticVersion(major: 1, minor: 0, patch: 2),
-			SemanticVersion(major: 1, minor: 3, patch: 0),
-			SemanticVersion(major: 2, minor: 4, patch: 0),
-			SemanticVersion(major: 3, minor: 0, patch: 0)
+			PinnedVersion("0.4.1"),
+			PinnedVersion("0.9.0"),
+			PinnedVersion("1.0.2"),
+			PinnedVersion("1.3.0"),
+			PinnedVersion("2.4.0"),
+			PinnedVersion("3.0.0")
 		])
 	}
 
-	private func cartfileForDependency(dependency: Dependency<SemanticVersion>) -> ColdSignal<Cartfile> {
+	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> ColdSignal<Cartfile> {
 		var cartfile = Cartfile()
 
 		if dependency.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {
@@ -110,5 +110,9 @@ class ResolverSpec: QuickSpec {
 		}
 
 		return .single(cartfile)
+	}
+
+	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> ColdSignal<PinnedVersion> {
+		return .single(PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"))
 	}
 }

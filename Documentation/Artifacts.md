@@ -4,7 +4,7 @@ This document lists all files and folders used or created by Carthage, and the p
 
 ## Cartfile
 
-A `Cartfile` describes your project’s dependencies to Carthage, allowing it to resolve and build them for you.
+A `Cartfile` describes your project’s dependencies to Carthage, allowing it to resolve and build them for you. Cartfiles are a restricted subset of the [Ordered Graph Data Language](http://ogdl.org/), and any standard OGDL tool should be able to parse them.
 
 Dependency specifications consist of two main parts: the [origin](#origin), and the [version requirement](#version-requirement).
 
@@ -26,15 +26,18 @@ Other possible origins may be added in the future. If there’s something specif
 
 #### Version requirement
 
-Carthage supports three kinds of version requirements:
+Carthage supports several kinds of version requirements:
 
 1. `>= 1.0` for “at least version 1.0”
 1. `~> 1.0` for “compatible with version 1.0”
 1. `== 1.0` for “exactly version 1.0”
+1. `"some-branch-or-tag-or-commit"` for a specific Git object (anything allowed by `git rev-parse`)
 
 If no version requirement is given, any version of the dependency is allowed.
 
 Compatibility is determined according to [Semantic Versioning](http://semver.org/). This means that any version greater than or equal to 1.5.1, but less than 2.0, will be considered “compatible” with 1.5.1.
+
+**In all cases, Carthage will pin to a tag or SHA**, and only bump the tag or SHA when `carthage update` is run again in the future. This means that following a branch (for example) still results in commits that can be independently checked out just as they were originally.
 
 #### Example Cartfile
 
@@ -51,8 +54,8 @@ github "jspahrsummers/libextobjc" == 0.4.1
 # Use the latest version
 github "jspahrsummers/xcconfigs"
 
-# Use a project from GitHub Enterprise, or any arbitrary server
-git "https://enterprise.local/desktop/git-error-translations.git" >= 0.1
+# Use a project from GitHub Enterprise, or any arbitrary server, on the "development" branch
+git "https://enterprise.local/desktop/git-error-translations.git" "development"
 ```
 
 ## Cartfile.lock
