@@ -184,14 +184,19 @@ private struct DependencyGraph: Equatable {
 				}
 			}
 
-			if lhsDependencies != nil || rhsDependencies != nil {
-				// If neither node depends on each other, sort the one with the
-				// fewer dependencies first.
-				return (lhsDependencies?.count ?? 0) < (rhsDependencies?.count ?? 0)
-			}
+			// If neither node depends on each other, sort the one with the
+			// fewer dependencies first.
+			let lhsCount = lhsDependencies?.count ?? 0
+			let rhsCount = rhsDependencies?.count ?? 0
 
-			// If all else fails, compare names.
-			return lhs.project.name < rhs.project.name
+			if lhsCount < rhsCount {
+				return true
+			} else if lhsCount > rhsCount {
+				return false
+			} else {
+				// If all else fails, compare names.
+				return lhs.project.name < rhs.project.name
+			}
 		}
 	}
 
