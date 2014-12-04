@@ -2,6 +2,8 @@
 
 Carthage is intended to be the simplest way to add frameworks to your Cocoa application.
 
+*N.B. Carthage frameworks are currently [inadmissable to the iOS App Store.](https://github.com/Carthage/Carthage/issues/188)*
+
 The basic [workflow](#adding-frameworks-to-an-application) looks something like this:
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
