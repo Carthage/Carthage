@@ -178,27 +178,39 @@ private struct DependencyGraph: Equatable {
 	/// Returns all of the graph nodes, in the order that they should be built.
 	var orderedNodes: [DependencyNode] {
 		return sorted(allNodes.keys) { (lhs, rhs) in
-			// If the right node has a dependency on the left node, the
-			// left node needs to be built first (and is thus ordered
-			// first).
-			if let rightDeps = self.edges[rhs] {
-				if contains(rightDeps.keys, lhs) {
-					return true
-				}
+			let lhsDependencies = self.edges[lhs]
+			let rhsDependencies = self.edges[rhs]
 
-				if let leftDeps = self.edges[lhs] {
-					if contains(leftDeps.keys, rhs) {
-						return false
-					} else {
-						// If neither depend on each other, sort the one with
-						// the fewer dependencies first.
-						return leftDeps.count < rightDeps.count
-					}
+			if let rhsDependencies = rhsDependencies {
+				// If the right node has a dependency on the left node, the
+				// left node needs to be built first (and is thus ordered
+				// first).
+				if contains(rhsDependencies.keys, lhs) {
+					return true
 				}
 			}
 
-			// If all else fails, compare names.
-			return lhs.project.name < rhs.project.name
+			if let lhsDependencies = lhsDependencies {
+				// If the left node has a dependency on the right node, the
+				// right node needs to be built first.
+				if contains(lhsDependencies.keys, rhs) {
+					return false
+				}
+			}
+
+			// If neither node depends on each other, sort the one with the
+			// fewer dependencies first.
+			let lhsCount = lhsDependencies?.count ?? 0
+			let rhsCount = rhsDependencies?.count ?? 0
+
+			if lhsCount < rhsCount {
+				return true
+			} else if lhsCount > rhsCount {
+				return false
+			} else {
+				// If all else fails, compare names.
+				return lhs.project.name < rhs.project.name
+			}
 		}
 	}
 
