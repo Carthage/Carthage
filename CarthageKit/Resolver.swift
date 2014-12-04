@@ -12,18 +12,22 @@ import ReactiveCocoa
 
 /// Responsible for resolving acyclic dependency graphs.
 public struct Resolver {
-	private let versionsForDependency: ProjectIdentifier -> ColdSignal<SemanticVersion>
-	private let cartfileForDependency: Dependency<SemanticVersion> -> ColdSignal<Cartfile>
+	private let versionsForDependency: ProjectIdentifier -> ColdSignal<PinnedVersion>
+	private let resolvedGitReference: (ProjectIdentifier, String) -> ColdSignal<PinnedVersion>
+	private let cartfileForDependency: Dependency<PinnedVersion> -> ColdSignal<Cartfile>
 
 	/// Instantiates a dependency graph resolver with the given behaviors.
 	///
-	/// versionsForDependency - Sends a stream of available SemanticVersions
-	///                         for a dependency.
+	/// versionsForDependency - Sends a stream of available versions for a
+	///                         dependency.
 	/// cartfileForDependency - Loads the Cartfile for a specific version of a
 	///                         dependency.
-	public init(versionsForDependency: ProjectIdentifier -> ColdSignal<SemanticVersion>, cartfileForDependency: Dependency<SemanticVersion> -> ColdSignal<Cartfile>) {
+	/// resolvedGitReference  - Resolves an arbitrary Git reference to the
+	///                         latest object.
+	public init(versionsForDependency: ProjectIdentifier -> ColdSignal<PinnedVersion>, cartfileForDependency: Dependency<PinnedVersion> -> ColdSignal<Cartfile>, resolvedGitReference: (ProjectIdentifier, String) -> ColdSignal<PinnedVersion>) {
 		self.versionsForDependency = versionsForDependency
 		self.cartfileForDependency = cartfileForDependency
+		self.resolvedGitReference = resolvedGitReference
 	}
 
 	/// Attempts to determine the latest valid version to use for each dependency
@@ -31,7 +35,7 @@ public struct Resolver {
 	///
 	/// Sends each recursive dependency with its resolved version, in the order
 	/// that they should be built.
-	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> ColdSignal<Dependency<SemanticVersion>> {
+	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> ColdSignal<Dependency<PinnedVersion>> {
 		return nodePermutationsForCartfile(cartfile)
 			.map { rootNodes in self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph()) }
 			.concat(identity)
@@ -39,7 +43,7 @@ public struct Resolver {
 			// a valid graph.
 			.dematerializeErrorsIfEmpty(identity)
 			.take(1)
-			.map { graph -> ColdSignal<Dependency<SemanticVersion>> in
+			.map { graph -> ColdSignal<Dependency<PinnedVersion>> in
 				return ColdSignal.fromValues(graph.orderedNodes)
 					.map { node in node.dependencyVersion }
 			}
@@ -56,8 +60,18 @@ public struct Resolver {
 	/// exist for each).
 	private func nodePermutationsForCartfile(cartfile: Cartfile) -> ColdSignal<[DependencyNode]> {
 		let nodeSignals = cartfile.dependencies.map { dependency -> ColdSignal<DependencyNode> in
-			return self.versionsForDependency(dependency.project)
-				.filter { dependency.version.satisfiedBy($0) }
+			let allowedVersions: ColdSignal<PinnedVersion> = {
+				switch dependency.version {
+				case let .GitReference(refName):
+					return self.resolvedGitReference(dependency.project, refName)
+
+				default:
+					return self.versionsForDependency(dependency.project)
+						.filter { dependency.version.satisfiedBy($0) }
+				}
+			}()
+
+			return allowedVersions
 				.map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
 				.reduce(initial: []) { $0 + [ $1 ] }
 				.map(sorted)
@@ -313,7 +327,7 @@ private class DependencyNode: Comparable {
 	///
 	/// This version is merely "proposed" because it depends on the final
 	/// resolution of the graph, as well as whether any "better" graphs exist.
-	let proposedVersion: SemanticVersion
+	let proposedVersion: PinnedVersion
 
 	/// The current requirements applied to this dependency.
 	///
@@ -322,11 +336,11 @@ private class DependencyNode: Comparable {
 	var versionSpecifier: VersionSpecifier
 
 	/// A Dependency equivalent to this node.
-	var dependencyVersion: Dependency<SemanticVersion> {
+	var dependencyVersion: Dependency<PinnedVersion> {
 		return Dependency(project: project, version: proposedVersion)
 	}
 
-	init(project: ProjectIdentifier, proposedVersion: SemanticVersion, versionSpecifier: VersionSpecifier) {
+	init(project: ProjectIdentifier, proposedVersion: PinnedVersion, versionSpecifier: VersionSpecifier) {
 		precondition(versionSpecifier.satisfiedBy(proposedVersion))
 
 		self.project = project
@@ -336,8 +350,11 @@ private class DependencyNode: Comparable {
 }
 
 private func <(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
+	let leftSemantic = SemanticVersion.fromPinnedVersion(lhs.proposedVersion).value() ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+	let rightSemantic = SemanticVersion.fromPinnedVersion(rhs.proposedVersion).value() ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+
 	// Try higher versions first.
-	return lhs.proposedVersion > rhs.proposedVersion
+	return leftSemantic > rightSemantic
 }
 
 private func ==(lhs: DependencyNode, rhs: DependencyNode) -> Bool {

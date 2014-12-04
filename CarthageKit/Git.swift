@@ -154,12 +154,16 @@ public func cloneRepository(cloneURL: GitURL, destinationURL: NSURL, bare: Bool 
 }
 
 /// Returns a signal that completes when the fetch completes successfully.
-public func fetchRepository(repositoryFileURL: NSURL, remoteURL: GitURL? = nil) -> ColdSignal<String> {
+public func fetchRepository(repositoryFileURL: NSURL, remoteURL: GitURL? = nil, refspec: String? = nil) -> ColdSignal<String> {
 	precondition(repositoryFileURL.fileURL)
 
 	var arguments = [ "fetch", "--tags", "--prune", "--quiet" ]
 	if let remoteURL = remoteURL {
 		arguments.append(remoteURL.URLString)
+	}
+
+	if let refspec = refspec {
+		arguments.append(refspec)
 	}
 
 	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
@@ -387,6 +391,15 @@ public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String 
 			.then(.single(true))
 			.catch { _ in .single(false) }
 	}
+}
+
+/// Attempts to resolve the given reference into an object SHA.
+public func resolveReferenceInRepository(repositoryFileURL: NSURL, reference: String) -> ColdSignal<String> {
+	return launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
+		.map { string in
+			return string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet())
+		}
+		.catch { _ in .error(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists").error) }
 }
 
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if

@@ -42,7 +42,7 @@ class CartfileSpec: QuickSpec {
 
 			let depErrorTranslations = cartfile.dependencies[4]
 			expect(depErrorTranslations.project).to(equal(ProjectIdentifier.Git(GitURL("https://enterprise.local/desktop/git-error-translations.git"))))
-			expect(depErrorTranslations.version).to(equal(VersionSpecifier.AtLeast(SemanticVersion(major: 0, minor: 1, patch: 0))))
+			expect(depErrorTranslations.version).to(equal(VersionSpecifier.GitReference("development")))
 		}
 
 		it("should parse a Cartfile.lock") {
@@ -57,11 +57,11 @@ class CartfileSpec: QuickSpec {
 
 			let depReactiveCocoa = cartfileLock.dependencies[0]
 			expect(depReactiveCocoa.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))))
-			expect(depReactiveCocoa.version).to(equal(PinnedVersion(tag: "v2.3.1")))
+			expect(depReactiveCocoa.version).to(equal(PinnedVersion("v2.3.1")))
 
 			let depMantle = cartfileLock.dependencies[1]
 			expect(depMantle.project).to(equal(ProjectIdentifier.Git(GitURL("https://github.com/Mantle/Mantle.git"))))
-			expect(depMantle.version).to(equal(PinnedVersion(tag: "1.0")))
+			expect(depMantle.version).to(equal(PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47")))
 		}
 	}
 }
