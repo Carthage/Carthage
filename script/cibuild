@@ -44,12 +44,16 @@ config ()
     # The name of the keychain to create for iOS code signing.
     : ${KEYCHAIN:=ios-build.keychain}
 
+    # A whitespace-separated list of executables that must be present and locatable.
+    : ${REQUIRED_TOOLS="xctool"}
+
     export XCWORKSPACE
     export XCODEPROJ
     export BOOTSTRAP
     export XCTOOL_OPTIONS
     export SCHEMES
     export KEYCHAIN
+    export REQUIRED_TOOLS
 }
 
 ##
@@ -59,6 +63,12 @@ config ()
 main ()
 {
     config
+
+    if [ -n "$REQUIRED_TOOLS" ]
+        then
+        echo "*** Checking dependencies..."
+        check_deps
+    fi
 
     if [ -f "$BOOTSTRAP" ]
     then
@@ -83,6 +93,19 @@ main ()
         delete_keychain
         exit $status
     )
+}
+
+check_deps ()
+{
+    for tool in $REQUIRED_TOOLS
+    do
+        which -s "$tool"
+        if [ "$?" -ne "0" ]
+            then
+            echo "*** Error: $tool not found. Please install it and bootstrap again."
+            exit 1
+        fi
+    done
 }
 
 import_certs ()
