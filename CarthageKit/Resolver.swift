@@ -57,6 +57,15 @@ public struct Resolver {
 	private func nodePermutationsForCartfile(cartfile: Cartfile) -> ColdSignal<[DependencyNode]> {
 		let nodeSignals = cartfile.dependencies.map { dependency -> ColdSignal<DependencyNode> in
 			return self.versionsForDependency(dependency.project)
+				.reduce(initial: []) { $0 + [ $1 ] }
+				.map { nodes -> ColdSignal<SemanticVersion> in
+					if nodes.isEmpty {
+						return .error(CarthageError.TaggedVersionNotFound(dependency.project).error)
+					} else {
+						return .fromValues(nodes)
+					}
+				}
+				.merge(identity)
 				.filter { dependency.version.satisfiedBy($0) }
 				.map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
 				.reduce(initial: []) { $0 + [ $1 ] }

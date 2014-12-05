@@ -21,6 +21,9 @@ public enum CarthageError {
 
 	/// Incompatible version specifiers were given for a dependency.
 	case IncompatibleRequirements(ProjectIdentifier, VersionSpecifier, VersionSpecifier)
+	
+	/// No tagged versions could be found for the dependency.
+	case TaggedVersionNotFound(ProjectIdentifier)
 
 	/// No existent version could be found to satisfy the version specifier for
 	/// a dependency.
@@ -60,24 +63,29 @@ public enum CarthageError {
 			return NSError(domain: CarthageErrorDomain, code: 5, userInfo: [
 				NSLocalizedDescriptionKey: "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(first)\n\t\(second)"
 			])
+			
+		case let .TaggedVersionNotFound(dependency):
+			return NSError(domain: CarthageErrorDomain, code: 6, userInfo: [
+				NSLocalizedDescriptionKey: "No tagged versions found for \(dependency)"
+			])
 
 		case let .RequiredVersionNotFound(dependency, specifier):
-			return NSError(domain: CarthageErrorDomain, code: 6, userInfo: [
+			return NSError(domain: CarthageErrorDomain, code: 7, userInfo: [
 				NSLocalizedDescriptionKey: "No available version for \(dependency) satisfies the requirement: \(specifier)"
 			])
 
 		case let .RepositoryCheckoutFailed(workingDirectoryURL, reason):
-			return NSError(domain: CarthageErrorDomain, code: 7, userInfo: [
+			return NSError(domain: CarthageErrorDomain, code: 8, userInfo: [
 				NSLocalizedDescriptionKey: "Failed to check out repository into \(workingDirectoryURL.path!): \(reason)"
 			])
 
 		case let .WriteFailed(fileURL):
-			return NSError(domain: CarthageErrorDomain, code: 8, userInfo: [
+			return NSError(domain: CarthageErrorDomain, code: 9, userInfo: [
 				NSLocalizedDescriptionKey: "Failed to create \(fileURL.path!)"
 			])
 
 		case let .ParseError(description):
-			return NSError(domain: CarthageErrorDomain, code: 9, userInfo: [
+			return NSError(domain: CarthageErrorDomain, code: 10, userInfo: [
 				NSLocalizedDescriptionKey: "Parse error: \(description)"
 			])
 		}
