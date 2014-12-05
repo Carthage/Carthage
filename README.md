@@ -2,8 +2,6 @@
 
 Carthage is intended to be the simplest way to add frameworks to your Cocoa application.
 
-*N.B. Carthage frameworks are currently [inadmissable to the iOS App Store.](https://github.com/Carthage/Carthage/issues/188)*
-
 The basic [workflow](#adding-frameworks-to-an-application) looks something like this:
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
@@ -11,6 +9,8 @@ The basic [workflow](#adding-frameworks-to-an-application) looks something like 
 1. Drag the built `.framework` binaries into your application’s Xcode project.
 
 Carthage builds your dependencies and provides you with binary frameworks, but you retain full control over your project structure and setup. Carthage does not automatically modify your project files or your build settings.
+
+:warning: Frameworks built using Carthage will currently be rejected in iOS App Store submissions. This is a [known issue](https://github.com/Carthage/Carthage/issues/188) that should be fixed in the next release.
 
 ## Differences between Carthage and CocoaPods
 
