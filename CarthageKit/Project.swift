@@ -361,8 +361,7 @@ public final class Project {
 		return ColdSignal<CartfileLock>.lazy {
 				return ColdSignal.fromResult(self.readCartfileLock())
 			}
-			// TODO: This should be a zip.
-			.combineLatestWith(submodulesSignal)
+			.zipWith(submodulesSignal)
 			.map { (cartfileLock, submodulesByPath) -> ColdSignal<()> in
 				return ColdSignal.fromValues(cartfileLock.dependencies)
 					.map { dependency in
