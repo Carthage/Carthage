@@ -316,7 +316,7 @@ public func intersection(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Versio
 		// another. Only patch versions are compatible under 0.x, meaning 0.1.1 is
 		// compatible with 0.1.2, but not 0.2. This isn't according to the SemVer
 		// spec but keeps ~> useful for 0.x.y versions.
-		if (lv.major == 0) && (rv.major == 0) {
+		if lv.major == 0 && rv.major == 0 {
 			if lv.minor != rv.minor {
 				return nil
 			}
