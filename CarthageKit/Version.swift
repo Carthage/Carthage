@@ -180,6 +180,15 @@ public enum VersionSpecifier: Equatable {
 			return version >= requirement
 
 		case let .CompatibleWith(requirement):
+			// According to SemVer, any 0.x.y release may completely break the
+			// exported API, so it's not safe to consider them compatible with one
+			// another. Only patch versions are compatible under 0.x, meaning 0.1.1 is
+			// compatible with 0.1.2, but not 0.2. This isn't according to the SemVer
+			// spec but keeps ~> useful for 0.x.y versions.
+			if version.major == 0 {
+				return version.minor == requirement.minor && version >= requirement
+			}
+			
 			return version.major == requirement.major && version >= requirement
 		}
 	}
@@ -300,6 +309,17 @@ public func intersection(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Versio
 	case let (.CompatibleWith(lv), .CompatibleWith(rv)):
 		if lv.major != rv.major {
 			return nil
+		}
+		
+		// According to SemVer, any 0.x.y release may completely break the
+		// exported API, so it's not safe to consider them compatible with one
+		// another. Only patch versions are compatible under 0.x, meaning 0.1.1 is
+		// compatible with 0.1.2, but not 0.2. This isn't according to the SemVer
+		// spec but keeps ~> useful for 0.x.y versions.
+		if lv.major == 0 && rv.major == 0 {
+			if lv.minor != rv.minor {
+				return nil
+			}
 		}
 
 		return .CompatibleWith(max(lv, rv))
