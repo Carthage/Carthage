@@ -67,6 +67,15 @@ public struct Resolver {
 
 				default:
 					return self.versionsForDependency(dependency.project)
+						.reduce(initial: []) { $0 + [ $1 ] }
+						.map { nodes -> ColdSignal<PinnedVersion> in
+							if nodes.isEmpty {
+								return .error(CarthageError.TaggedVersionNotFound(dependency.project).error)
+							} else {
+								return .fromValues(nodes)
+							}
+						}
+						.merge(identity)
 						.filter { dependency.version.satisfiedBy($0) }
 				}
 			}()

@@ -40,6 +40,9 @@ class SemanticVersionSpec: QuickSpec {
 
 class VersionSpecifierSpec: QuickSpec {
 	override func spec() {
+		let versionZeroOne = SemanticVersion.fromPinnedVersion(PinnedVersion("0.1.0")).value()!
+		let versionZeroOneOne = SemanticVersion.fromPinnedVersion(PinnedVersion("0.1.1")).value()!
+		let versionZeroTwo = SemanticVersion.fromPinnedVersion(PinnedVersion("0.2.0")).value()!
 		let versionOne = SemanticVersion.fromPinnedVersion(PinnedVersion("1.3.2")).value()!
 		let versionTwoZero = SemanticVersion.fromPinnedVersion(PinnedVersion("2.0.2")).value()!
 		let versionTwoOne = SemanticVersion.fromPinnedVersion(PinnedVersion("2.1.1")).value()!
@@ -92,6 +95,12 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
 				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beFalsy())
 			}
+
+			it("should allow only greater patch versions to satisfy 0.x") {
+				let specifier = VersionSpecifier.CompatibleWith(versionZeroOne)
+				expect(specifier.satisfiedBy(versionZeroOneOne.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionZeroTwo.pinnedVersion!)).to(beFalsy())
+			}
 		}
 
 		describe("intersection") {
@@ -123,6 +132,11 @@ class VersionSpecifierSpec: QuickSpec {
 				testIntersection(VersionSpecifier.CompatibleWith(versionTwoTwo), VersionSpecifier.Exactly(versionTwoOne), expected: nil)
 				testIntersection(VersionSpecifier.Exactly(versionOne), VersionSpecifier.Exactly(versionOne), expected: VersionSpecifier.Exactly(versionOne))
 				testIntersection(VersionSpecifier.Exactly(versionTwoOne), VersionSpecifier.Exactly(versionOne), expected: nil)
+			}
+
+			it("should not let ~> 0.1.1 be compatible with 0.1.2, but not 0.2") {
+				testIntersection(VersionSpecifier.CompatibleWith(versionZeroOne), VersionSpecifier.CompatibleWith(versionZeroOneOne), expected: VersionSpecifier.CompatibleWith(versionZeroOneOne))
+				testIntersection(VersionSpecifier.CompatibleWith(versionZeroOne), VersionSpecifier.CompatibleWith(versionZeroTwo), expected: nil)
 			}
 		}
 	}

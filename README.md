@@ -10,6 +10,8 @@ The basic [workflow](#adding-frameworks-to-an-application) looks something like 
 
 Carthage builds your dependencies and provides you with binary frameworks, but you retain full control over your project structure and setup. Carthage does not automatically modify your project files or your build settings.
 
+:warning: Frameworks built using Carthage will currently be rejected in iOS App Store submissions. This is a [known issue](https://github.com/Carthage/Carthage/issues/188) that should be fixed in the next release.
+
 ## Differences between Carthage and CocoaPods
 
 [CocoaPods](http://cocoapods.org/) is a long-standing dependency manager for Cocoa. So why was Carthage created?

@@ -37,6 +37,8 @@ If no version requirement is given, any version of the dependency is allowed.
 
 Compatibility is determined according to [Semantic Versioning](http://semver.org/). This means that any version greater than or equal to 1.5.1, but less than 2.0, will be considered “compatible” with 1.5.1.
 
+According to SemVer, any 0.x.y release may completely break the exported API, so it's not safe to consider them compatible with one another. Only patch versions are compatible under 0.x, meaning 0.1.1 is compatible with 0.1.2, but not 0.2. This isn't according to the SemVer spec but keeps `~>` useful for 0.x.y versions.
+
 **In all cases, Carthage will pin to a tag or SHA**, and only bump the tag or SHA when `carthage update` is run again in the future. This means that following a branch (for example) still results in commits that can be independently checked out just as they were originally.
 
 #### Example Cartfile
