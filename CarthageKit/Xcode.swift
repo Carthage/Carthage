@@ -837,3 +837,60 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 
 	return (stdoutSignal, schemeSignals)
 }
+
+public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<()> {
+	return ColdSignal.lazy {
+		var error: NSError? = nil
+
+		if !NSFileManager.defaultManager().createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error) {
+			// TODO: Handle error being nil
+			return .error(error!)
+		}
+
+		if NSFileManager.defaultManager().copyItemAtURL(from, toURL: to, error: &error) {
+			return .empty()
+		} else {
+			// TODO: Handle error being nil
+			return .error(error!)
+		}
+	}
+}
+
+// Strips the given architecture from a framework.
+public func stripArchitecture(frameworkURL: NSURL, architecture: String) -> ColdSignal<()> {
+	return ColdSignal.lazy {
+		return ColdSignal.fromResult(binaryURL(frameworkURL))
+			.map { binaryURL -> ColdSignal<NSData> in
+				let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
+
+				// TODO: Redirect stdout.
+				return launchTask(lipoTask)
+			}
+			.merge(identity)
+			.then(.empty())
+	}
+}
+
+// Returns the URL of a binary inside a given framework.
+private func binaryURL(frameworkURL: NSURL) -> Result<NSURL> {
+	let plistURL = frameworkURL.URLByAppendingPathComponent("Info.plist")
+
+	println("Exists?: \(NSFileManager.defaultManager().fileExistsAtPath(plistURL.path!))")
+
+	let plist = NSDictionary(contentsOfURL: plistURL)
+
+	if let binaryName = plist?["CFBundleExecutable"] as String? {
+		return success(frameworkURL.URLByAppendingPathComponent(binaryName))
+	} else {
+		return failure(CarthageError.ReadFailed(plistURL).error)
+	}
+}
+
+public func codesign(frameworkURL: NSURL, expandedIdentity: String) -> ColdSignal<()> {
+	return ColdSignal.lazy { () -> ColdSignal<()> in
+		let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "-s", expandedIdentity, "--preserve-metadata=identifier,entitlements,resource-rules", frameworkURL.path!])
+
+		// TODO: Redirect stdout.
+		return launchTask(codesignTask).then(.empty())
+	}
+}
