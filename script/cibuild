@@ -65,7 +65,7 @@ main ()
     config
 
     if [ -n "$REQUIRED_TOOLS" ]
-        then
+    then
         echo "*** Checking dependencies..."
         check_deps
     fi
@@ -101,7 +101,7 @@ check_deps ()
     do
         which -s "$tool"
         if [ "$?" -ne "0" ]
-            then
+        then
             echo "*** Error: $tool not found. Please install it and bootstrap again."
             exit 1
         fi
