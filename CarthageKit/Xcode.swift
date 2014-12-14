@@ -842,12 +842,20 @@ public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<()> {
 	return ColdSignal.lazy {
 		var error: NSError? = nil
 
-		if !NSFileManager.defaultManager().createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error) {
+		let manager = NSFileManager.defaultManager()
+
+		if !manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error) {
 			// TODO: Handle error being nil
 			return .error(error!)
 		}
 
-		if NSFileManager.defaultManager().copyItemAtURL(from, toURL: to, error: &error) {
+		if manager.fileExistsAtPath(to.path!) {
+			if !manager.removeItemAtURL(to, error: &error) {
+				return .error(error!)
+			}
+		}
+
+		if manager.copyItemAtURL(from, toURL: to, error: &error) {
 			return .empty()
 		} else {
 			// TODO: Handle error being nil
@@ -874,8 +882,6 @@ public func stripArchitecture(frameworkURL: NSURL, architecture: String) -> Cold
 // Returns the URL of a binary inside a given framework.
 private func binaryURL(frameworkURL: NSURL) -> Result<NSURL> {
 	let plistURL = frameworkURL.URLByAppendingPathComponent("Info.plist")
-
-	println("Exists?: \(NSFileManager.defaultManager().fileExistsAtPath(plistURL.path!))")
 
 	let plist = NSDictionary(contentsOfURL: plistURL)
 
