@@ -57,15 +57,9 @@ class XcodeSpec: QuickSpec {
 			var projectNames = dependencies.map { project in project.name }
 			projectNames.append("ReactiveCocoaLayout")
 
-			func buildDirectoryURLPath(pathComponent: String) -> String {
-				let path: String! = buildFolderURL.URLByAppendingPathComponent(pathComponent).path
-				expect(path).notTo(beNil())
-				return path
-			}
-
 			for dependency in projectNames {
-				let macPath = buildDirectoryURLPath("Mac/\(dependency).framework")
-				let iOSPath = buildDirectoryURLPath("iOS/\(dependency).framework")
+				let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
+				let iOSPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
 
 				var isDirectory: ObjCBool = false
 				expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
@@ -81,7 +75,7 @@ class XcodeSpec: QuickSpec {
 				return launchTask(TaskDescription(launchPath: "/usr/bin/otool", arguments: arguments))
 			}
 
-			let otoolResult = otool("-fv", buildDirectoryURLPath("iOS/ReactiveCocoaLayout.framework/ReactiveCocoaLayout")).first()
+			let otoolResult = otool("-fv", buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework/ReactiveCocoaLayout").path!).first()
 			switch otoolResult {
 			case .Success(let data):
 				let output = NSString(data: data.unbox, encoding: NSStringEncoding(NSUTF8StringEncoding))
@@ -96,7 +90,7 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
-			let auxiliaryFrameworkPath = buildDirectoryURLPath("iOS/AuxiliaryFramework.framework")
+			let auxiliaryFrameworkPath = buildFolderURL.URLByAppendingPathComponent("iOS/AuxiliaryFramework.framework").path!
 			var isDirectory: ObjCBool = false
 			expect(NSFileManager.defaultManager().fileExistsAtPath(auxiliaryFrameworkPath, isDirectory: &isDirectory)).to(beTruthy())
 			expect(isDirectory).to(beTruthy())
