@@ -12,7 +12,6 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
-let ExpectedArchitectures = [ "armv7", "armv7s", "arm64", "x86_86", "i386" ]
 
 public struct CopyFrameworksCommand: CommandType {
 	public let verb = "copy-frameworks"
@@ -30,14 +29,14 @@ public struct CopyFrameworksCommand: CommandType {
 			return ColdSignal.fromResult(source)
 				.combineLatestWith(.fromResult(target))
 				.map { (source, target) -> ColdSignal<()> in
-
-					let stripArchitectures = ColdSignal.fromResult(validArchitectures())
-						.map { validArchitectures -> ColdSignal<()> in
-							let tasks = ExpectedArchitectures.filter {
+					let stripArchitectures = architecturesInFramework(target)
+						.combineLatestWith(.fromResult(validArchitectures()))
+						.map { (existingArchitectures, validArchitectures) -> ColdSignal<()> in
+							let tasks = existingArchitectures.filter {
 									!contains(validArchitectures, $0)
 								}
-								.map {
-									stripArchitecture(target, $0)
+								.map { architecture -> ColdSignal<()> in
+									return stripArchitecture(target, architecture)
 								}
 
 							return concat(tasks)

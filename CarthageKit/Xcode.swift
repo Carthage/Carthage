@@ -879,6 +879,38 @@ public func stripArchitecture(frameworkURL: NSURL, architecture: String) -> Cold
 	}
 }
 
+public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<[String]> {
+	return ColdSignal.lazy {
+		return ColdSignal.fromResult(binaryURL(frameworkURL))
+			.map { binaryURL -> ColdSignal<[String]> in
+				let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
+
+				// TODO: Redirect stdout.
+				return launchTask(lipoTask).map { data -> [String] in
+						let output = NSString(data: data, encoding: NSUTF8StringEncoding)
+
+						let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
+						characterSet.addCharactersInString(" _-")
+
+						let scanner = NSScanner(string: output!)
+						var architectures: NSString?
+
+						scanner.scanUpToString(binaryURL.path!, intoString: nil)
+						scanner.scanString(binaryURL.path!, intoString: nil)
+						scanner.scanString("are:", intoString: nil)
+						scanner.scanCharactersFromSet(characterSet, intoString: &architectures)
+
+						let result = architectures?
+							.componentsSeparatedByString(" ")
+							.filter({ countElements($0 as String) > 0 })
+
+						return (result ?? []) as [String]
+					}
+			}
+			.merge(identity)
+	}
+}
+
 // Returns the URL of a binary inside a given framework.
 private func binaryURL(frameworkURL: NSURL) -> Result<NSURL> {
 	let plistURL = frameworkURL.URLByAppendingPathComponent("Info.plist")
