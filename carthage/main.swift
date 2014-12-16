@@ -15,7 +15,7 @@ let commands = CommandRegistry()
 commands.register(BootstrapCommand())
 commands.register(BuildCommand())
 commands.register(CheckoutCommand())
-commands.register(CopyFrameworkCommand())
+commands.register(CopyFrameworksCommand())
 commands.register(UpdateCommand())
 commands.register(VersionCommand())
 

@@ -886,7 +886,8 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<[String]
 				let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
 
 				// TODO: Redirect stdout.
-				return launchTask(lipoTask).map { data -> [String] in
+				return launchTask(lipoTask)
+					.map { data -> [String] in
 						let output = NSString(data: data, encoding: NSUTF8StringEncoding)
 
 						let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
