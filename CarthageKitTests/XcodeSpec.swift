@@ -104,8 +104,9 @@ class XcodeSpec: QuickSpec {
 
 			let stripped = architecturesInFramework(targetURL)
 				.first()
-				.value()!
+				.value()
 
+			expect(stripped).notTo(beNil())
 			expect(stripped).notTo(contain("i386"))
 
 			codesign(targetURL, "-").wait()
