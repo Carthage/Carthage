@@ -68,19 +68,17 @@ class XcodeSpec: QuickSpec {
 				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
 				expect(isDirectory).to(beTruthy())
 			}
-
+	
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
 			let otoolResult = launchTask(TaskDescription(launchPath: "/usr/bin/otool", arguments: [ "-fv", buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework/ReactiveCocoaLayout").path! ]))
+				.map { NSString(data: $0, encoding: NSStringEncoding(NSUTF8StringEncoding))! }
 				.first()
-				.map { (data: NSData) -> String in
-					let string = NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
-					expect(string).to(contain("architecture i386"))
-					expect(string).to(contain("architecture armv7"))
-					expect(string).to(contain("architecture arm64"))
-					return string
-				}
+			
 			expect(otoolResult.error()).to(beNil())
+			expect(otoolResult.value()).to(contain("architecture i386"))
+			expect(otoolResult.value()).to(contain("architecture armv7"))
+			expect(otoolResult.value()).to(contain("architecture arm64"))
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
