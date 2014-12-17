@@ -19,9 +19,11 @@ class XcodeSpec: QuickSpec {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("ReactiveCocoaLayout", withExtension: nil)!
 		let workspaceURL = directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout.xcworkspace")
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderName)
+		let targetFolderURL = NSURL(fileURLWithPath: NSTemporaryDirectory().stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)!
 
 		beforeEach {
 			NSFileManager.defaultManager().removeItemAtURL(buildFolderURL, error: nil)
+			NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil, error: nil)
 			return ()
 		}
 
@@ -69,16 +71,17 @@ class XcodeSpec: QuickSpec {
 				expect(isDirectory).to(beTruthy())
 			}
 
+			let frameworkFolderURL = buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework")
+
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
-			let output = launchTask(TaskDescription(launchPath: "/usr/bin/otool", arguments: [ "-fv", buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework/ReactiveCocoaLayout").path! ]))
-				.map { NSString(data: $0, encoding: NSStringEncoding(NSUTF8StringEncoding))! }
+			let architectures = architecturesInFramework(frameworkFolderURL)
 				.first()
 				.value()!
 
-			expect(output).to(contain("architecture i386"))
-			expect(output).to(contain("architecture armv7"))
-			expect(output).to(contain("architecture arm64"))
+			expect(architectures).to(contain("i386"))
+			expect(architectures).to(contain("armv7"))
+			expect(architectures).to(contain("arm64"))
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
@@ -86,6 +89,35 @@ class XcodeSpec: QuickSpec {
 			var isDirectory: ObjCBool = false
 			expect(NSFileManager.defaultManager().fileExistsAtPath(auxiliaryFrameworkPath, isDirectory: &isDirectory)).to(beTruthy())
 			expect(isDirectory).to(beTruthy())
+
+			// Copy ReactiveCocoaLayout.framework to the temporary folder.
+			let targetURL = targetFolderURL.URLByAppendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
+
+			println(targetURL)
+
+			copyFramework(frameworkFolderURL, targetURL).wait()
+
+			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beTruthy())
+
+			stripArchitecture(targetURL, "i386").wait()
+
+			let stripped = architecturesInFramework(targetURL)
+				.first()
+				.value()!
+
+			expect(stripped).notTo(contain("i386"))
+
+			codesign(targetURL, "-").wait()
+
+			var output: String = ""
+			let codeSign = TaskDescription(launchPath: "/usr/bin/codesign", arguments: [ "--verify", "--verbose", targetURL.path! ])
+
+			launchTask(codeSign, standardError: SinkOf<NSData> { data -> () in
+				output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
+			}).wait()
+
+			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
 
 		it("should locate the workspace") {
