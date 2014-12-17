@@ -77,7 +77,7 @@ class XcodeSpec: QuickSpec {
 			// and simulator.
 			let architectures = architecturesInFramework(frameworkFolderURL)
 				.first()
-				.value()!
+				.value()
 
 			expect(architectures).to(contain("i386"))
 			expect(architectures).to(contain("armv7"))
