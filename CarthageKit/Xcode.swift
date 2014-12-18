@@ -855,7 +855,7 @@ public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<NSURL> {
 	}
 }
 
-// Strips the given architecture from a framework.
+/// Strips the given architecture from a framework.
 public func stripArchitecture(frameworkURL: NSURL, architecture: String) -> ColdSignal<()> {
 	return ColdSignal.lazy {
 		return ColdSignal.fromResult(binaryURL(frameworkURL))
@@ -902,7 +902,7 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<[String]
 	}
 }
 
-// Returns the URL of a binary inside a given framework.
+/// Returns the URL of a binary inside a given framework.
 private func binaryURL(frameworkURL: NSURL) -> Result<NSURL> {
 	let plistURL = frameworkURL.URLByAppendingPathComponent("Info.plist")
 
