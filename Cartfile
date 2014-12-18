@@ -4,4 +4,4 @@ github "Quick/Nimble"
 github "Carthage/LlamaKit" == 0.1.1
 github "jspahrsummers/xcconfigs" >= 0.6
 github "Carthage/Commandant"
-github "Carthage/ReactiveTask"
+github "Carthage/ReactiveTask" "5fbe3c45dc533b25fcccdfde051a0daa8ae17faa"
