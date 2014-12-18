@@ -502,25 +502,13 @@ public struct BuildSettings {
 ///
 /// Returns a signal that will send the URL after copying upon success.
 private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildSettings) -> ColdSignal<NSURL> {
-	return ColdSignal.lazy {
-		var error: NSError?
-		if !NSFileManager.defaultManager().createDirectoryAtURL(directoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-			return .error(error ?? CarthageError.WriteFailed(directoryURL).error)
+	return ColdSignal.fromResult(settings.wrapperName)
+		.map(directoryURL.URLByAppendingPathComponent)
+		.combineLatestWith(.fromResult(settings.wrapperURL))
+		.map { (target, source) in
+			return copyFramework(source, target)
 		}
-
-		return ColdSignal.fromResult(settings.wrapperName)
-			.map(directoryURL.URLByAppendingPathComponent)
-			.map { destinationURL in
-				return ColdSignal.fromResult(settings.wrapperURL)
-					.try { (productURL, error) in
-						// TODO: Atomic copying.
-						NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: nil)
-						return NSFileManager.defaultManager().copyItemAtURL(productURL, toURL: destinationURL, error: error)
-					}
-					.then(.single(destinationURL))
-			}
-			.merge(identity)
-	}
+		.merge(identity)
 }
 
 /// Attempts to merge the given executables into one fat binary, written to
@@ -838,15 +826,18 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 	return (stdoutSignal, schemeSignals)
 }
 
-public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<()> {
+/// Copies a framework into the given folder. The folder will be created if it
+/// does not already exist.
+///
+/// Returns a signal that will send the URL after copying upon success.
+public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<NSURL> {
 	return ColdSignal.lazy {
 		var error: NSError? = nil
 
 		let manager = NSFileManager.defaultManager()
 
 		if !manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error) {
-			// TODO: Handle error being nil
-			return .error(error!)
+			return .error(error ?? CarthageError.WriteFailed(to.URLByDeletingLastPathComponent!).error)
 		}
 
 		if manager.fileExistsAtPath(to.path!) {
@@ -856,7 +847,7 @@ public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<()> {
 		}
 
 		if manager.copyItemAtURL(from, toURL: to, error: &error) {
-			return .empty()
+			return .single(to)
 		} else {
 			// TODO: Handle error being nil
 			return .error(error!)

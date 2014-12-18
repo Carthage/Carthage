@@ -70,6 +70,7 @@ public struct CopyFrameworksCommand: CommandType {
 							}
 
 							return copyFramework(source, target)
+								.then(.empty())
 								.concat(stripArchitectures)
 								.concat(codeSign)
 								.then(.empty())
