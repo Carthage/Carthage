@@ -115,6 +115,6 @@ private func getEnvironmentVariable(variable: String) -> Result<String> {
 	if let value = environment[variable] as String? {
 		return success(value)
 	} else {
-		return failure(CarthageError.MissingEnvironmentVariableError(variable: variable).error)
+		return failure(CarthageError.MissingEnvironmentVariable(variable: variable).error)
 	}
 }

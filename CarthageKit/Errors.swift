@@ -22,7 +22,7 @@ public enum CarthageErrorCode: Int {
 	case ReadFailed
 	case WriteFailed
 	case ParseError
-	case MissingEnvironmentVariableError
+	case MissingEnvironmentVariable
 
 	func error(userInfo: [NSObject: AnyObject]?) -> NSError {
 		return NSError(domain: CarthageErrorDomain, code: self.rawValue, userInfo: userInfo)
@@ -59,7 +59,7 @@ public enum CarthageError {
 	/// An error occurred parsing a Carthage file.
 	case ParseError(description: String)
 
-	case MissingEnvironmentVariableError(variable: String)
+	case MissingEnvironmentVariable(variable: String)
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
@@ -109,8 +109,8 @@ public enum CarthageError {
 				NSLocalizedDescriptionKey: "Parse error: \(description)"
 			])
 
-		case let .MissingEnvironmentVariableError(variable):
-			return CarthageErrorCode.MissingEnvironmentVariableError.error([
+		case let .MissingEnvironmentVariable(variable):
+			return CarthageErrorCode.MissingEnvironmentVariable.error([
 				NSLocalizedDescriptionKey: "Environment variable not set: \(variable)"
 			])
 		}
