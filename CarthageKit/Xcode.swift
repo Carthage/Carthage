@@ -896,6 +896,11 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> 
 						let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
 						characterSet.addCharactersInString(" _-")
 
+						// The output of "lipo -info PathToBinary" looks
+						// roughly like so:
+						//
+						//     Architectures in the fat file: PathToBinary are: armv7 arm64
+						//
 						let scanner = NSScanner(string: output!)
 						var architectures: NSString?
 
