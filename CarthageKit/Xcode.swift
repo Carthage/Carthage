@@ -862,7 +862,6 @@ public func stripArchitecture(frameworkURL: NSURL, architecture: String) -> Cold
 			.map { binaryURL -> ColdSignal<NSData> in
 				let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
 
-				// TODO: Redirect stdout.
 				return launchTask(lipoTask)
 			}
 			.merge(identity)
