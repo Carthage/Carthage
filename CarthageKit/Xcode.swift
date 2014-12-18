@@ -913,7 +913,7 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> 
 							.componentsSeparatedByString(" ")
 							.filter { ($0 as NSString).length > 0 } as [String]
 
-						return components.elementsSignal
+						return ColdSignal.fromValues(components)
 					}
 					.merge(identity)
 			}

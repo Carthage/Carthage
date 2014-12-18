@@ -28,20 +28,6 @@ extension String {
 	}
 }
 
-extension Array {
-	/// Returns a signal that will enumerate each element of the receiver, then
-	/// complete.
-	internal var elementsSignal: ColdSignal<T> {
-		return ColdSignal { (sink, disposable) in
-			for element in self {
-				sink.put(.Next(Box(element)))
-			}
-
-			sink.put(.Completed)
-		}
-	}
-}
-
 /// Merges `rhs` into `lhs` and returns the result.
 internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	var result = lhs
