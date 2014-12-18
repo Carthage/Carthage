@@ -108,7 +108,7 @@ public final class Project {
 		return ColdSignal.lazy {
 				return .single(self.cachedVersions)
 			}
-			.subscribeOn(cachedVersionsScheduler)
+			.evaluateOn(cachedVersionsScheduler)
 			.deliverOn(QueueScheduler())
 	}
 
@@ -332,7 +332,7 @@ public final class Project {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 				}
 			}
-			.on(subscribed: {
+			.on(started: {
 				self._projectEventsSink.put(.CheckingOut(project, revision))
 			})
 
