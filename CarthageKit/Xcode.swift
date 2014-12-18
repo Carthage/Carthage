@@ -827,7 +827,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 }
 
 /// Strips a framework from unexpected architectures, optionally codesigning the
-// result.
+/// result.
 public func stripFramework(frameworkURL: NSURL, #keepingArchitectures: [String], codesigningIdentity: String? = nil) -> ColdSignal<()> {
 	let strip = architecturesInFramework(frameworkURL)
 		.filter { !contains(keepingArchitectures, $0) }
