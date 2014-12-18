@@ -76,7 +76,10 @@ class XcodeSpec: QuickSpec {
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
 			let architectures = architecturesInFramework(frameworkFolderURL)
-				.first()
+				.mapAccumulate(initialState: [] as [String]) { (previous, current) in
+					(previous + [current], previous + [current])
+				}
+				.last()
 				.value()
 
 			expect(architectures).to(contain("i386"))
@@ -98,16 +101,7 @@ class XcodeSpec: QuickSpec {
 			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)).to(beTruthy())
 			expect(isDirectory).to(beTruthy())
 
-			stripArchitecture(targetURL, "i386").wait()
-
-			let stripped = architecturesInFramework(targetURL)
-				.first()
-				.value()
-
-			expect(stripped).notTo(beNil())
-			expect(stripped).notTo(contain("i386"))
-
-			codesign(targetURL, "-").wait()
+			stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
 
 			var output: String = ""
 			let codeSign = TaskDescription(launchPath: "/usr/bin/codesign", arguments: [ "--verify", "--verbose", targetURL.path! ])

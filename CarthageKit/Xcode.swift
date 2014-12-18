@@ -826,6 +826,19 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 	return (stdoutSignal, schemeSignals)
 }
 
+/// Strips a framework from unexpected architectures, optionally codesigning the
+// result.
+public func stripFramework(frameworkURL: NSURL, #keepingArchitectures: [String], codesigningIdentity: String? = nil) -> ColdSignal<()> {
+	let strip = architecturesInFramework(frameworkURL)
+		.filter { !contains(keepingArchitectures, $0) }
+		.map { stripArchitecture(frameworkURL, $0) }
+		.concat(identity)
+
+	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty()
+
+	return strip.concat(sign)
+}
+
 /// Copies a framework into the given folder. The folder will be created if it
 /// does not already exist.
 ///
@@ -856,7 +869,7 @@ public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<NSURL> {
 }
 
 /// Strips the given architecture from a framework.
-public func stripArchitecture(frameworkURL: NSURL, architecture: String) -> ColdSignal<()> {
+private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> ColdSignal<()> {
 	return ColdSignal.lazy {
 		return ColdSignal.fromResult(binaryURL(frameworkURL))
 			.map { binaryURL -> ColdSignal<NSData> in
@@ -869,15 +882,14 @@ public func stripArchitecture(frameworkURL: NSURL, architecture: String) -> Cold
 	}
 }
 
-public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<[String]> {
+public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> {
 	return ColdSignal.lazy {
 		return ColdSignal.fromResult(binaryURL(frameworkURL))
-			.map { binaryURL -> ColdSignal<[String]> in
+			.map { binaryURL -> ColdSignal<String> in
 				let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
 
-				// TODO: Redirect stdout.
 				return launchTask(lipoTask)
-					.map { data -> [String] in
+					.map { data -> ColdSignal<String> in
 						let output = NSString(data: data, encoding: NSUTF8StringEncoding)
 
 						let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
@@ -891,12 +903,13 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<[String]
 						scanner.scanString("are:", intoString: nil)
 						scanner.scanCharactersFromSet(characterSet, intoString: &architectures)
 
-						let result = architectures?
+						let components = architectures?
 							.componentsSeparatedByString(" ")
-							.filter({ countElements($0 as String) > 0 })
+							.filter({ ($0 as NSString).length > 0 }) as [String]
 
-						return (result ?? []) as [String]
+						return components.elementsSignal
 					}
+					.merge(identity)
 			}
 			.merge(identity)
 	}
@@ -916,7 +929,7 @@ private func binaryURL(frameworkURL: NSURL) -> Result<NSURL> {
 }
 
 /// Signs a framework with the given codesigning identity.
-public func codesign(frameworkURL: NSURL, expandedIdentity: String) -> ColdSignal<()> {
+private func codesign(frameworkURL: NSURL, expandedIdentity: String) -> ColdSignal<()> {
 	return ColdSignal.lazy { () -> ColdSignal<()> in
 		let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path!])
 

@@ -46,33 +46,14 @@ public struct CopyFrameworksCommand: CommandType {
 
 					return ColdSignal.single(source)
 						.combineLatestWith(.fromResult(target))
-						.map { (source, target) -> ColdSignal<()> in
-							let stripArchitectures = architecturesInFramework(target)
-								.combineLatestWith(.fromResult(validArchitectures()))
-								.map { (existingArchitectures, validArchitectures) -> ColdSignal<()> in
-									let tasks = existingArchitectures.filter {
-											!contains(validArchitectures, $0)
-										}
-										.map { architecture -> ColdSignal<()> in
-											return stripArchitecture(target, architecture)
-										}
-
-									return concat(tasks)
-								}
-								.merge(identity)
-
-							let codeSign = ColdSignal<()>.lazy {
-								if !codeSigningAllowed() { return .empty() }
-
-								return ColdSignal.fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY"))
-									.map({ codesign(target, $0) })
-									.merge(identity)
-							}
+						.combineLatestWith(.fromResult(validArchitectures()))
+						.map { ($0.0.0, $0.0.1, $0.1) }
+						.map { (source, target, validArchitectures) -> ColdSignal<()> in
 
 							return copyFramework(source, target)
-								.then(.empty())
-								.concat(stripArchitectures)
-								.concat(codeSign)
+								.combineLatestWith(.fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")))
+								.map { stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: $0.1) }
+								.merge(identity)
 								.then(.empty())
 						}
 						.merge(identity)
