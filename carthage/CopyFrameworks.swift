@@ -42,7 +42,7 @@ public struct CopyFrameworksCommand: CommandType {
 					let frameworkName = frameworkPath.lastPathComponent
 
 					let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
-					let target = frameworksFolder().map({ $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) })
+					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
 					return ColdSignal.single(source)
 						.combineLatestWith(.fromResult(target))
@@ -88,7 +88,7 @@ private func frameworksFolder() -> Result<NSURL> {
 }
 
 private func validArchitectures() -> Result<[String]> {
-	return getEnvironmentVariable("VALID_ARCHS").map({ return split($0, { $0 == " " }) })
+	return getEnvironmentVariable("VALID_ARCHS").map { return split($0, { $0 == " " }) }
 }
 
 private func getEnvironmentVariable(variable: String) -> Result<String> {
