@@ -18,50 +18,28 @@ public struct CopyFrameworksCommand: CommandType {
 	public let function = "In a Run Script build phase, copies each framework specified by an SCRIPT_INPUT_FILE environment variable into the built app bundle."
 
 	public func run(mode: CommandMode) -> Result<()> {
-		let files = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT")
-			.map { $0.toInt()! }
-			.flatMap { count -> Result<[String]> in
-				var files = [] as [String]
+		return inputFiles()
+			.map { frameworkPath -> ColdSignal<()> in
+				let frameworkName = frameworkPath.lastPathComponent
 
-				for i in 0..<count {
-					let file = getEnvironmentVariable("SCRIPT_INPUT_FILE_\(i)")
+				let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
+				let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
-					if let file = file.value() {
-						files.append(file)
-					} else {
-						return failure(file.error()!)
+				return ColdSignal.single(source)
+					.combineLatestWith(.fromResult(target))
+					.combineLatestWith(.fromResult(validArchitectures()))
+					.map { ($0.0.0, $0.0.1, $0.1) }
+					.map { (source, target, validArchitectures) -> ColdSignal<()> in
+
+						return copyFramework(source, target)
+							.combineLatestWith(.fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")))
+							.map { stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: $0.1) }
+							.merge(identity)
+							.then(.empty())
 					}
-				}
-
-				return success(files)
+					.merge(identity)
 			}
-
-		return ColdSignal.fromResult(files)
-			.map { files -> ColdSignal<()> in
-				let signals = files.map { frameworkPath -> ColdSignal<()> in
-					let frameworkName = frameworkPath.lastPathComponent
-
-					let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
-					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
-
-					return ColdSignal.single(source)
-						.combineLatestWith(.fromResult(target))
-						.combineLatestWith(.fromResult(validArchitectures()))
-						.map { ($0.0.0, $0.0.1, $0.1) }
-						.map { (source, target, validArchitectures) -> ColdSignal<()> in
-
-							return copyFramework(source, target)
-								.combineLatestWith(.fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")))
-								.map { stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: $0.1) }
-								.merge(identity)
-								.then(.empty())
-						}
-						.merge(identity)
-				}
-
-				return ColdSignal.fromValues(signals).concat(identity)
-			}
-			.merge(identity)
+			.concat(identity)
 			.wait()
 	}
 }
@@ -85,6 +63,19 @@ private func frameworksFolder() -> Result<NSURL> {
 
 private func validArchitectures() -> Result<[String]> {
 	return getEnvironmentVariable("VALID_ARCHS").map { return split($0, { $0 == " " }) }
+}
+
+private func inputFiles() -> ColdSignal<String> {
+	return ColdSignal.fromResult(getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT"))
+		.map { $0.toInt()! }
+		.map { count -> ColdSignal<String> in
+			let variables = (0..<count).map { index -> ColdSignal<String> in
+				return .fromResult(getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
+			}
+
+			return ColdSignal.fromValues(variables).concat(identity)
+		}
+		.merge(identity)
 }
 
 private func getEnvironmentVariable(variable: String) -> Result<String> {
