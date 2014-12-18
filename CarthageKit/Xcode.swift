@@ -882,6 +882,7 @@ private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> Col
 	}
 }
 
+/// Returns a signal of all architectures present in a given framework.
 public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> {
 	return ColdSignal.lazy {
 		return ColdSignal.fromResult(binaryURL(frameworkURL))
