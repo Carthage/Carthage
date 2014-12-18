@@ -917,7 +917,7 @@ private func binaryURL(frameworkURL: NSURL) -> Result<NSURL> {
 
 public func codesign(frameworkURL: NSURL, expandedIdentity: String) -> ColdSignal<()> {
 	return ColdSignal.lazy { () -> ColdSignal<()> in
-		let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "-s", expandedIdentity, "--preserve-metadata=identifier,entitlements,resource-rules", frameworkURL.path!])
+		let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path!])
 
 		// TODO: Redirect stdout.
 		return launchTask(codesignTask).then(.empty())
