@@ -59,15 +59,11 @@ public struct CopyFrameworksCommand: CommandType {
 						.merge(identity)
 				}
 
-				return concat(signals)
+				return ColdSignal.fromValues(signals).concat(identity)
 			}
 			.merge(identity)
 			.wait()
 	}
-}
-
-private func concat<T>(signals: [ColdSignal<T>]) -> ColdSignal<T> {
-	return reduce(signals, ColdSignal<T>.empty(), { $0.concat($1) })
 }
 
 private func codeSigningAllowed() -> Bool {
