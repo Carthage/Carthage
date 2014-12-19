@@ -71,7 +71,7 @@ class XcodeSpec: QuickSpec {
 	
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
-			let otoolResult = launchTask(TaskDescription(launchPath: "/usr/bin/otool", arguments: [ "-fv", buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework/ReactiveCocoaLayout").path! ]))
+			let otoolResult = launchTask(TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "otool", "-fv", buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework/ReactiveCocoaLayout").path! ]))
 				.map { NSString(data: $0, encoding: NSStringEncoding(NSUTF8StringEncoding))! }
 				.first()
 			
