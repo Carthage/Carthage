@@ -32,7 +32,7 @@ Ultimately, we created Carthage because we wanted the simplest tool possible—a
 
 To install the `carthage` tool on your system, please download and run the `Carthage.pkg` file for the latest  [release](https://github.com/Carthage/Carthage/releases), then follow the on-screen instructions.
 
-Alternately, you can use [brew](http://brew.sh) and install the `carthage` tool on your system simply by running `brew update` and `brew install carthage`.
+Alternately, you can use [Homebrew](http://brew.sh) and install the `carthage` tool on your system simply by running `brew update` and `brew install carthage`.
 
 If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, then run `make install`.
 
