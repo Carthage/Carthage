@@ -104,7 +104,7 @@ class XcodeSpec: QuickSpec {
 			stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
 
 			var output: String = ""
-			let codeSign = TaskDescription(launchPath: "/usr/bin/codesign", arguments: [ "--verify", "--verbose", targetURL.path! ])
+			let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
 
 			launchTask(codeSign, standardError: SinkOf<NSData> { data -> () in
 				output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
