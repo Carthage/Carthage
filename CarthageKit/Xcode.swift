@@ -891,29 +891,56 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> 
 
 				return launchTask(lipoTask)
 					.map { data -> ColdSignal<String> in
-						let output = NSString(data: data, encoding: NSUTF8StringEncoding)
+						let output = NSString(data: data, encoding: NSUTF8StringEncoding) ?? ""
 
 						let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
 						characterSet.addCharactersInString(" _-")
 
-						// The output of "lipo -info PathToBinary" looks
-						// roughly like so:
-						//
-						//     Architectures in the fat file: PathToBinary are: armv7 arm64
-						//
-						let scanner = NSScanner(string: output!)
-						var architectures: NSString?
+						if output.hasPrefix("Architectures in the fat file:") {
+							// The output of "lipo -info PathToBinary" for fat
+							// files looks roughly like so:
+							//
+							//     Architectures in the fat file: PathToBinary are: armv7 arm64
+							//
+							let scanner = NSScanner(string: output)
+							var architectures: NSString?
 
-						scanner.scanUpToString(binaryURL.path!, intoString: nil)
-						scanner.scanString(binaryURL.path!, intoString: nil)
-						scanner.scanString("are:", intoString: nil)
-						scanner.scanCharactersFromSet(characterSet, intoString: &architectures)
+							scanner.scanUpToString(binaryURL.path!, intoString: nil)
+							scanner.scanString(binaryURL.path!, intoString: nil)
+							scanner.scanString("are:", intoString: nil)
+							scanner.scanCharactersFromSet(characterSet, intoString: &architectures)
 
-						let components = architectures?
-							.componentsSeparatedByString(" ")
-							.filter { ($0 as NSString).length > 0 } as [String]
+							let components = architectures?
+								.componentsSeparatedByString(" ")
+								.filter { ($0 as NSString).length > 0 } as [String]?
 
-						return ColdSignal.fromValues(components)
+							println("-> \(output)")
+
+							if let components = components {
+								return ColdSignal.fromValues(components)
+							}
+						}
+
+						if output.hasPrefix("Non-fat file") {
+							// The output of "lipo -info PathToBinary" for thin
+							// files looks roughly like so:
+							//
+							//     Non-fat file: PathToBinary is architecture: x86_64
+							//
+							let scanner = NSScanner(string: output)
+							var architecture: NSString?
+
+							scanner.scanUpToString(binaryURL.path!, intoString: nil)
+							scanner.scanString(binaryURL.path!, intoString: nil)
+							scanner.scanString("is architecture:", intoString: nil)
+							scanner.scanCharactersFromSet(characterSet, intoString: &architecture)
+
+							if let architecture = architecture {
+								return ColdSignal.single(architecture)
+							}
+						}
+
+						return ColdSignal.error(CarthageError.InvalidArchitectures(description: "Could not read architectures from \(frameworkURL.path!)").error)
 					}
 					.merge(identity)
 			}
