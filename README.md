@@ -46,7 +46,7 @@ To get started:
 1. Run `carthage update`. This will fetch dependencies into a [Carthage.checkout][] folder, then build each one.
 1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage.build][] folder on disk.
 
-Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.lock][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.lock][]**, because anyone else using the project will need that file to build the same framework versions.
+Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.resolved][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.resolved][]**, because anyone else using the project will need that file to build the same framework versions.
 
 After you’ve finished the above steps and pushed your changes, other users of the project only need to fetch the repository and run `carthage bootstrap` to get started with the frameworks you’ve added.
 
@@ -106,7 +106,7 @@ Carthage is released under the [MIT License](LICENSE.md).
 
 [Artifacts]: Documentation/Artifacts.md
 [Cartfile]: Documentation/Artifacts.md#cartfile
-[Cartfile.lock]: Documentation/Artifacts.md#cartfilelock
+[Cartfile.resolved]: Documentation/Artifacts.md#cartfilelock
 [Carthage.build]: Documentation/Artifacts.md#carthagebuild
 [Carthage.checkout]: Documentation/Artifacts.md#carthagecheckout
 [CarthageKit]: CarthageKit

@@ -46,8 +46,8 @@ public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppend
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
 
-/// The relative path to a project's Cartfile.lock.
-public let CarthageProjectCartfileLockPath = "Cartfile.lock"
+/// The relative path to a project's Cartfile.resolved.
+public let CarthageProjectCartfileLockPath = "Cartfile.resolved"
 
 /// Describes an event occurring to or with a project.
 public enum ProjectEvent {
@@ -69,7 +69,7 @@ public final class Project {
 	/// The project's Cartfile.
 	public let cartfile: Cartfile
 
-	/// The file URL to the project's Cartfile.lock.
+	/// The file URL to the project's Cartfile.resolved.
 	public var cartfileLockURL: NSURL {
 		return directoryURL.URLByAppendingPathComponent(CarthageProjectCartfileLockPath, isDirectory: false)
 	}
@@ -142,7 +142,7 @@ public final class Project {
 		}
 	}
 
-	/// Reads the project's Cartfile.lock.
+	/// Reads the project's Cartfile.resolved.
 	public func readCartfileLock() -> Result<CartfileLock> {
 		var error: NSError?
 		let cartfileLockContents = NSString(contentsOfURL: cartfileLockURL, encoding: NSUTF8StringEncoding, error: &error)
@@ -153,7 +153,7 @@ public final class Project {
 		}
 	}
 
-	/// Writes the given Cartfile.lock out to the project's directory.
+	/// Writes the given Cartfile.resolved out to the project's directory.
 	public func writeCartfileLock(cartfileLock: CartfileLock) -> Result<()> {
 		var error: NSError?
 		if cartfileLock.description.writeToURL(cartfileLockURL, atomically: true, encoding: NSUTF8StringEncoding, error: &error) {
@@ -300,7 +300,7 @@ public final class Project {
 
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in the working directory checkouts and
-	/// Cartfile.lock.
+	/// Cartfile.resolved.
 	public func updateDependencies() -> ColdSignal<()> {
 		return updatedCartfileLock()
 			.tryMap { cartfileLock -> Result<()> in
@@ -348,7 +348,7 @@ public final class Project {
 			.then(checkoutSignal)
 	}
 
-	/// Checks out the dependencies listed in the project's Cartfile.lock.
+	/// Checks out the dependencies listed in the project's Cartfile.resolved.
 	public func checkoutLockedDependencies() -> ColdSignal<()> {
 		/// Determine whether the repository currently holds any submodules (if
 		/// it even is a repository).

@@ -27,7 +27,7 @@ public struct BootstrapCommand: CommandType {
 							if NSFileManager.defaultManager().fileExistsAtPath(project.cartfileLockURL.path!) {
 								return project.checkoutLockedDependencies()
 							} else {
-								carthage.println("*** No Cartfile.lock found, updating dependencies")
+								carthage.println("*** No Cartfile.resolved found, updating dependencies")
 								return project.updateDependencies()
 							}
 						}

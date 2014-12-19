@@ -77,10 +77,10 @@ extension Cartfile: Printable {
 	}
 }
 
-/// Represents a parsed Cartfile.lock, which specifies which exact version was
+/// Represents a parsed Cartfile.resolved, which specifies which exact version was
 /// checked out for each dependency.
 public struct CartfileLock {
-	/// The dependencies listed in the Cartfile.lock, in the order that they
+	/// The dependencies listed in the Cartfile.resolved, in the order that they
 	/// should be built.
 	public var dependencies: [Dependency<PinnedVersion>]
 
@@ -88,13 +88,13 @@ public struct CartfileLock {
 		self.dependencies = dependencies
 	}
 
-	/// Returns the location where Cartfile.lock should exist within the given
+	/// Returns the location where Cartfile.resolved should exist within the given
 	/// directory.
 	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
-		return directoryURL.URLByAppendingPathComponent("Cartfile.lock")
+		return directoryURL.URLByAppendingPathComponent("Cartfile.resolved")
 	}
 
-	/// Attempts to parse Cartfile.lock information from a string.
+	/// Attempts to parse Cartfile.resolved information from a string.
 	public static func fromString(string: String) -> Result<CartfileLock> {
 		var cartfile = self(dependencies: [])
 		var result = success(())

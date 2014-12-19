@@ -45,8 +45,8 @@ class CartfileSpec: QuickSpec {
 			expect(depErrorTranslations.version).to(equal(VersionSpecifier.GitReference("development")))
 		}
 
-		it("should parse a Cartfile.lock") {
-			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("TestCartfile", withExtension: "lock")!
+		it("should parse a Cartfile.resolved") {
+			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("TestCartfile", withExtension: "resolved")!
 			let testCartfile = NSString(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
 
 			let result = CartfileLock.fromString(testCartfile!)
