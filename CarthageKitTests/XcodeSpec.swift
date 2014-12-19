@@ -18,7 +18,7 @@ class XcodeSpec: QuickSpec {
 	override func spec() {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("ReactiveCocoaLayout", withExtension: nil)!
 		let workspaceURL = directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout.xcworkspace")
-		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderName)
+		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 
 		beforeEach {
 			NSFileManager.defaultManager().removeItemAtURL(buildFolderURL, error: nil)

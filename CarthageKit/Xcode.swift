@@ -13,8 +13,7 @@ import ReactiveTask
 
 /// The name of the folder into which Carthage puts binaries it builds (relative
 /// to the working directory).
-// TODO: This should be configurable.
-public let CarthageBinariesFolderName = "Carthage.build"
+public let CarthageBinariesFolderPath = "Carthage/Build"
 
 /// Describes how to locate the actual project or workspace that Xcode should
 /// build.
@@ -708,7 +707,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		.map { (platform: Platform) in
 			switch platform {
 			case .iPhoneSimulator, .iPhoneOS:
-				let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderName)/iOS", isDirectory: true)
+				let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderPath)/iOS", isDirectory: true)
 
 				return settingsByTarget(buildPlatform(.iPhoneSimulator))
 					.map { simulatorSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
@@ -742,7 +741,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			default:
 				return buildPlatform(platform)
 					.map { settings -> ColdSignal<NSURL> in
-						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderName)/Mac", isDirectory: true)
+						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderPath)/Mac", isDirectory: true)
 						return copyBuildProductIntoDirectory(folderURL, settings)
 					}
 					.merge(identity)
@@ -768,7 +767,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 
 	let (buildOutput, schemeSignals) = buildInDirectory(dependencyURL, withConfiguration: configuration)
 	let copyProducts = ColdSignal<BuildSchemeSignal>.lazy {
-		let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderName, isDirectory: true)
+		let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -778,7 +777,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		// Link this dependency's Carthage.build folder to that of the root
 		// project, so it can see all products built already, and so we can
 		// automatically drop this dependency's product in the right place.
-		let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderName, isDirectory: true)
+		let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 		NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL, error: nil)
 
 		if !NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL, error: &error) {
