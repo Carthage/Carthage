@@ -1,7 +1,7 @@
-github "ReactiveCocoa/ReactiveCocoa" == 3.0.2
+github "ReactiveCocoa/ReactiveCocoa" "swift-development"
 github "Quick/Quick" == 0.2.0
 github "Quick/Nimble"
 github "Carthage/LlamaKit" == 0.1.1
 github "jspahrsummers/xcconfigs" >= 0.6
-github "Carthage/Commandant"
-github "Carthage/ReactiveTask"
+github "Carthage/Commandant" "master"
+github "Carthage/ReactiveTask" "master"

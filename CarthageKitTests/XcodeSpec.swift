@@ -70,7 +70,6 @@ class XcodeSpec: QuickSpec {
 				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
 				expect(isDirectory).to(beTruthy())
 			}
-
 			let frameworkFolderURL = buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework")
 
 			// Verify that the iOS framework is a universal binary for device

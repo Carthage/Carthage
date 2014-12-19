@@ -629,8 +629,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 			let mergeProductBinaries = ColdSignal.fromResult(firstProductSettings.executableURL)
 				.concat(ColdSignal.fromResult(secondProductSettings.executableURL))
 				.reduce(initial: []) { $0 + [ $1 ] }
-				// TODO: This should be a zip.
-				.combineLatestWith(ColdSignal.fromResult(firstProductSettings.executablePath)
+				.zipWith(ColdSignal.fromResult(firstProductSettings.executablePath)
 					.map(destinationFolderURL.URLByAppendingPathComponent))
 				.map { (executableURLs: [NSURL], outputURL: NSURL) -> ColdSignal<()> in
 					return mergeExecutables(executableURLs, outputURL)
@@ -639,8 +638,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 
 			let sourceModulesURL = ColdSignal.fromResult(secondProductSettings.relativeModulesPath)
 				.filter { $0 != nil }
-				// TODO: This should be a zip.
-				.combineLatestWith(ColdSignal.fromResult(secondProductSettings.builtProductsDirectoryURL))
+				.zipWith(ColdSignal.fromResult(secondProductSettings.builtProductsDirectoryURL))
 				.map { (modulesPath, productsURL) -> NSURL in
 					return productsURL.URLByAppendingPathComponent(modulesPath!)
 				}
@@ -652,8 +650,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 				}
 
 			let mergeProductModules = sourceModulesURL
-				// TODO: This should be a zip.
-				.combineLatestWith(destinationModulesURL)
+				.zipWith(destinationModulesURL)
 				.map { (source: NSURL, destination: NSURL) -> ColdSignal<NSURL> in
 					return mergeModuleIntoModule(source, destination)
 				}

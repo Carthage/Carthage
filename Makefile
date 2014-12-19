@@ -1,6 +1,8 @@
 XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage'
 
 TEMPORARY_FOLDER=/tmp/Carthage.dst
+PREFIX?=/usr/local
+
 BUILT_BUNDLE=$(TEMPORARY_FOLDER)/Applications/carthage.app
 CARTHAGEKIT_BUNDLE=$(BUILT_BUNDLE)/Contents/Frameworks/CarthageKit.framework
 CARTHAGE_EXECUTABLE=$(BUILT_BUNDLE)/Contents/MacOS/carthage
@@ -36,7 +38,7 @@ uninstall:
 	rm -rf "$(FRAMEWORKS_FOLDER)/CarthageKit.framework"
 	rm -f "$(BINARIES_FOLDER)/carthage"
 
-package: clean bootstrap
+installables: clean bootstrap
 	xcodebuild $(XCODEFLAGS) install
 
 	mkdir -p "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)"
@@ -44,6 +46,14 @@ package: clean bootstrap
 	mv -f "$(CARTHAGE_EXECUTABLE)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage"
 	rm -rf "$(BUILT_BUNDLE)"
 
+prefix_install: installables
+	mkdir -p "$(PREFIX)/Frameworks" "$(PREFIX)/bin"
+	cp -rf "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/CarthageKit.framework" "$(PREFIX)/Frameworks/"
+	cp -f "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage" "$(PREFIX)/bin/"
+	install_name_tool -add_rpath "@executable_path/../Frameworks" "$(PREFIX)/bin/carthage"
+	install_name_tool -add_rpath "@executable_path/../Frameworks/CarthageKit.framework/Versions/Current/Frameworks/"  "$(PREFIX)/bin/carthage"
+
+package: installables
 	pkgbuild \
 		--component-plist "$(COMPONENTS_PLIST)" \
 		--identifier "org.carthage.carthage" \

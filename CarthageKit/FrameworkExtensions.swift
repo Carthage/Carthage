@@ -51,7 +51,7 @@ extension ColdSignal {
 			self.startWithSink { selfDisposable in
 				disposable.addDisposable(selfDisposable)
 
-				return eventSink(next: { value in
+				return Event.sink(next: { value in
 					selfValues.append(value)
 
 					for otherValue in otherValues {
@@ -70,7 +70,7 @@ extension ColdSignal {
 			signal.startWithSink { signalDisposable in
 				disposable.addDisposable(signalDisposable)
 
-				return eventSink(next: { value in
+				return Event.sink(next: { value in
 					otherValues.append(value)
 
 					for selfValue in selfValues {
@@ -98,7 +98,7 @@ extension ColdSignal {
 			evidence(self).startWithSink { selfDisposable in
 				disposable.addDisposable(selfDisposable)
 
-				return eventSink(next: { event in
+				return Event.sink(next: { event in
 					switch event {
 					case let .Next(value):
 						receivedValue = true

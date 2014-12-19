@@ -108,7 +108,7 @@ public final class Project {
 		return ColdSignal.lazy {
 				return .single(self.cachedVersions)
 			}
-			.subscribeOn(cachedVersionsScheduler)
+			.evaluateOn(cachedVersionsScheduler)
 			.deliverOn(QueueScheduler())
 	}
 
@@ -332,7 +332,7 @@ public final class Project {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 				}
 			}
-			.on(subscribed: {
+			.on(started: {
 				self._projectEventsSink.put(.CheckingOut(project, revision))
 			})
 
@@ -361,8 +361,7 @@ public final class Project {
 		return ColdSignal<CartfileLock>.lazy {
 				return ColdSignal.fromResult(self.readCartfileLock())
 			}
-			// TODO: This should be a zip.
-			.combineLatestWith(submodulesSignal)
+			.zipWith(submodulesSignal)
 			.map { (cartfileLock, submodulesByPath) -> ColdSignal<()> in
 				return ColdSignal.fromValues(cartfileLock.dependencies)
 					.map { dependency in
