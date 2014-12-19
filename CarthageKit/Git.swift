@@ -361,8 +361,7 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = 
 		.map { (name, path) -> ColdSignal<Submodule> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
 				.map { GitURL($0) }
-				// TODO: This should be a zip.
-				.combineLatestWith(submoduleSHAForPath(repositoryFileURL, path, revision: revision))
+				.zipWith(submoduleSHAForPath(repositoryFileURL, path, revision: revision))
 				.map { (URL, SHA) in
 					return Submodule(name: name, path: path, URL: URL, SHA: SHA)
 				}
