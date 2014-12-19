@@ -914,8 +914,6 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> 
 								.componentsSeparatedByString(" ")
 								.filter { ($0 as NSString).length > 0 } as [String]?
 
-							println("-> \(output)")
-
 							if let components = components {
 								return ColdSignal.fromValues(components)
 							}
