@@ -114,9 +114,9 @@ public enum CarthageError {
 				NSLocalizedDescriptionKey: "Parse error: \(description)"
 			])
 
-		case let .InvalidArchitectures(variable):
+		case let .InvalidArchitectures(description):
 			return CarthageErrorCode.InvalidArchitectures.error([
-				NSLocalizedDescriptionKey: "Invalid architecture: \(variable)"
+				NSLocalizedDescriptionKey: "Invalid architecture: \(description)"
 			])
 
 		case let .MissingEnvironmentVariable(variable):
