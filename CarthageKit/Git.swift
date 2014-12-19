@@ -135,7 +135,7 @@ extension Submodule: Printable {
 /// Shells out to `git` with the given arguments, optionally in the directory
 /// of an existing repository.
 public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, standardOutput: SinkOf<NSData>? = nil, standardError: SinkOf<NSData>? = nil, environment: [String: String]? = nil) -> ColdSignal<String> {
-	let taskDescription = TaskDescription(launchPath: "/usr/bin/git", arguments: arguments, workingDirectoryPath: repositoryFileURL?.path, environment: environment)
+	let taskDescription = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: environment)
 
 	return launchTask(taskDescription, standardOutput: standardOutput, standardError: standardError)
 		.map { NSString(data: $0, encoding: NSUTF8StringEncoding) as String }
@@ -361,8 +361,7 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = 
 		.map { (name, path) -> ColdSignal<Submodule> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
 				.map { GitURL($0) }
-				// TODO: This should be a zip.
-				.combineLatestWith(submoduleSHAForPath(repositoryFileURL, path, revision: revision))
+				.zipWith(submoduleSHAForPath(repositoryFileURL, path, revision: revision))
 				.map { (URL, SHA) in
 					return Submodule(name: name, path: path, URL: URL, SHA: SHA)
 				}
