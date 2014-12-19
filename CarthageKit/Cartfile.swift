@@ -11,7 +11,7 @@ import LlamaKit
 import ReactiveCocoa
 
 /// The relative path to a project's checked out dependencies.
-public let CarthageProjectCheckoutsPath = "Carthage.checkout"
+public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
 
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
