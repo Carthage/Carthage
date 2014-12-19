@@ -37,7 +37,7 @@ public struct BuildCommand: CommandType {
 
 				return schemeSignals
 					.concat(identity)
-					.on(subscribed: {
+					.on(started: {
 						carthage.println("*** xcodebuild output can be found in \(temporaryURL.path!)")
 					}, next: { (project, scheme) in
 						carthage.println("*** Building scheme \"\(scheme)\" in \(project)")
