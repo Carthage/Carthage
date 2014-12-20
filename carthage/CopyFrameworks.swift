@@ -57,7 +57,9 @@ private func frameworksFolder() -> Result<NSURL> {
 }
 
 private func validArchitectures() -> Result<[String]> {
-	return getEnvironmentVariable("VALID_ARCHS").map { return split($0, { $0 == " " }) }
+	return getEnvironmentVariable("VALID_ARCHS").map { architectures in
+		split(architectures, { $0 == " " })
+	}
 }
 
 private func inputFiles() -> ColdSignal<String> {
