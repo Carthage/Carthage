@@ -401,14 +401,24 @@ public func resolveReferenceInRepository(repositoryFileURL: NSURL, reference: St
 		.catch { _ in .error(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists").error) }
 }
 
+/// Returns the location of the .git folder within the given repository.
+private func gitDirectoryURLInRepository(repositoryFileURL: NSURL) -> NSURL {
+	return repositoryFileURL.URLByAppendingPathComponent(".git")
+}
+
+/// Attempts to determine whether the given directory represents a Git
+/// repository.
+private func isGitRepository(directoryURL: NSURL) -> Bool {
+	return NSFileManager.defaultManager().fileExistsAtPath(gitDirectoryURLInRepository(directoryURL).path!)
+}
+
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if
 /// the desired revision does not exist or the submodule needs to be cloned.
 public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submodule, fetchURL: GitURL) -> ColdSignal<()> {
 	let submoduleDirectoryURL = repositoryFileURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
 
 	return ColdSignal.lazy {
-		let submoduleGitPath = submoduleDirectoryURL.URLByAppendingPathComponent(".git").path!
-		if NSFileManager.defaultManager().fileExistsAtPath(submoduleGitPath) {
+		if isGitRepository(submoduleDirectoryURL) {
 			// If the submodule repository already exists, just check out and
 			// stage the correct revision.
 			return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL)
@@ -431,6 +441,30 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 				.then(addSubmodule)
 				.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
 				.then(.empty())
+		}
+	}
+}
+
+/// Moves an item within a Git repository, or within a simple directory if a Git
+/// repository is not found.
+///
+/// Sends the new URL of the item after moving.
+public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: String, #toPath: String) -> ColdSignal<NSURL> {
+	let toURL = repositoryFileURL.URLByAppendingPathComponent(fromPath)
+
+	return ColdSignal.lazy {
+		if isGitRepository(repositoryFileURL) {
+			return launchGitTask([ "mv", fromPath, toPath ], repositoryFileURL: repositoryFileURL)
+				.then(.single(toURL))
+		} else {
+			let fromURL = repositoryFileURL.URLByAppendingPathComponent(fromPath)
+
+			var error: NSError?
+			if NSFileManager.defaultManager().moveItemAtURL(fromURL, toURL: toURL, error: &error) {
+				return .single(toURL)
+			} else {
+				return .error(error ?? RACError.Empty.error)
+			}
 		}
 	}
 }
