@@ -10,5 +10,5 @@ for fixture in "ReactiveCocoaLayout"
 do
 	destination="${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/$fixture"
 	rm -Rf "$destination"
-	cp -R "CarthageKitTests/fixtures/$fixture" "$destination"
+	cp -R "Source/CarthageKitTests/fixtures/$fixture" "$destination"
 done

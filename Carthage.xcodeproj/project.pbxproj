@@ -108,16 +108,16 @@
 		D01F8A4719EA28F600643E7C /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Quick.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4B19EA28FE00643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../Carthage/Checkouts/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
 		D01F8A5319EA2F1700643E7C /* Xcode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Xcode.swift; sourceTree = "<group>"; };
-		D03B32BE19EA49D8007788BE /* Build.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Build.swift; path = carthage/Build.swift; sourceTree = SOURCE_ROOT; };
+		D03B32BE19EA49D8007788BE /* Build.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Build.swift; sourceTree = "<group>"; };
 		D04A397F1A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = EmbeddedFrameworksContainerCartfile; sourceTree = "<group>"; };
 		D04A39811A2F72FB000C5604 /* EmbeddedFrameworksCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = EmbeddedFrameworksCartfile; sourceTree = "<group>"; };
 		D05BD1981A26864F00A36A0E /* Extensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		D06939B219E8A79F001E44AE /* Help.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Help.swift; sourceTree = "<group>"; };
 		D074EDC41A049283001DE082 /* FrameworkExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensions.swift; sourceTree = "<group>"; };
-		D095BA3B1A187D40007F15D6 /* Bootstrap.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Bootstrap.swift; path = carthage/Bootstrap.swift; sourceTree = SOURCE_ROOT; };
+		D095BA3B1A187D40007F15D6 /* Bootstrap.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Bootstrap.swift; sourceTree = "<group>"; };
 		D0AAAB4919FAEDB4007B24B3 /* Errors.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
 		D0AAAB5419FB1062007B24B3 /* TestCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfile; sourceTree = "<group>"; };
-		D0AAC23F1A14933100060F2E /* Update.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Update.swift; path = carthage/Update.swift; sourceTree = SOURCE_ROOT; };
+		D0AAC23F1A14933100060F2E /* Update.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Update.swift; sourceTree = "<group>"; };
 		D0D1211B19E87861005E4BAA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D0D1212419E878CC005E4BAA /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Common.xcconfig; sourceTree = "<group>"; };
 		D0D1212619E878CC005E4BAA /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
@@ -234,7 +234,8 @@
 				54911EF21A1D34EC00FFAE5F /* Version.swift */,
 				5499CA981A2394BD00783309 /* Supporting Files */,
 			);
-			path = carthage;
+			name = carthage;
+			path = Source/carthage;
 			sourceTree = "<group>";
 		};
 		D0D1212219E878CC005E4BAA /* Configuration */ = {
@@ -319,7 +320,8 @@
 				D01F8A5319EA2F1700643E7C /* Xcode.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
 			);
-			path = CarthageKit;
+			name = CarthageKit;
+			path = Source/CarthageKit;
 			sourceTree = "<group>";
 		};
 		D0D1216F19E87B05005E4BAA /* Supporting Files */ = {
@@ -344,7 +346,8 @@
 				D0D1212219E878CC005E4BAA /* Configuration */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
-			path = CarthageKitTests;
+			name = CarthageKitTests;
+			path = Source/CarthageKitTests;
 			sourceTree = "<group>";
 		};
 		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
@@ -622,7 +625,7 @@
 				DYLIB_CURRENT_VERSION = 1;
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
-				INFOPLIST_FILE = CarthageKit/Info.plist;
+				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -638,7 +641,7 @@
 				DYLIB_CURRENT_VERSION = 1;
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
-				INFOPLIST_FILE = CarthageKit/Info.plist;
+				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -653,7 +656,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = CarthageKitTests/Info.plist;
+				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -666,7 +669,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = CarthageKitTests/Info.plist;
+				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -688,7 +691,7 @@
 				DYLIB_CURRENT_VERSION = 1;
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
-				INFOPLIST_FILE = CarthageKit/Info.plist;
+				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -703,7 +706,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = CarthageKitTests/Info.plist;
+				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Profile;
@@ -725,7 +728,7 @@
 				DYLIB_CURRENT_VERSION = 1;
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
-				INFOPLIST_FILE = CarthageKit/Info.plist;
+				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -740,7 +743,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = CarthageKitTests/Info.plist;
+				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Test;
@@ -749,7 +752,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
-				INFOPLIST_FILE = carthage/Info.plist;
+				INFOPLIST_FILE = Source/carthage/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -759,7 +762,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
-				INFOPLIST_FILE = carthage/Info.plist;
+				INFOPLIST_FILE = Source/carthage/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -769,7 +772,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
-				INFOPLIST_FILE = carthage/Info.plist;
+				INFOPLIST_FILE = Source/carthage/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -779,7 +782,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
-				INFOPLIST_FILE = carthage/Info.plist;
+				INFOPLIST_FILE = Source/carthage/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
