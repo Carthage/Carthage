@@ -75,7 +75,33 @@ extension Project {
 
 			checkFile(cartfileLock, CarthageProjectResolvedCartfilePath)
 			checkFile(carthageBuild, CarthageBinariesFolderPath)
-			checkFile(carthageCheckout, CarthageProjectCheckoutsPath)
+
+			// Carthage.checkout has to be handled specially, because if it
+			// includes submodules, we need to move them one-by-one to ensure
+			// that .gitmodules is properly updated.
+			if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(carthageCheckout)) {
+				let oldCheckoutsURL = self.directoryURL.URLByAppendingPathComponent(carthageCheckout)
+
+				var error: NSError?
+				if let contents = fileManager.contentsOfDirectoryAtURL(oldCheckoutsURL, includingPropertiesForKeys: nil, options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsPackageDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, error: &error) {
+					let moveSignals: ColdSignal<String> = ColdSignal.fromValues(contents)
+						.map { (object: AnyObject) in object as NSURL }
+						.concatMap { (URL: NSURL) -> ColdSignal<NSURL> in
+							let lastPathComponent = URL.lastPathComponent!
+							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
+						}
+						.then(.empty())
+
+					let signal = ColdSignal<String>.single(migrationMessage)
+						.concat(moveSignals)
+
+					sink.put(.Next(Box(signal)))
+				} else {
+					sink.put(.Error(error ?? CarthageError.ReadFailed(oldCheckoutsURL).error))
+					return
+				}
+			}
+
 			sink.put(.Completed)
 		}
 
