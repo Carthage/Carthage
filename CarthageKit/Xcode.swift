@@ -878,66 +878,61 @@ private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> Col
 
 /// Returns a signal of all architectures present in a given framework.
 public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> {
-	return ColdSignal.lazy {
-		return ColdSignal.fromResult(binaryURL(frameworkURL))
-			.map { binaryURL -> ColdSignal<String> in
-				let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
+	return ColdSignal.fromResult(binaryURL(frameworkURL))
+		.mergeMap { binaryURL -> ColdSignal<String> in
+			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
 
-				return launchTask(lipoTask)
-					.map { data -> ColdSignal<String> in
-						let output = NSString(data: data, encoding: NSUTF8StringEncoding) ?? ""
+			return launchTask(lipoTask)
+				.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
+				.mergeMap { output -> ColdSignal<String> in
+					let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
+					characterSet.addCharactersInString(" _-")
 
-						let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
-						characterSet.addCharactersInString(" _-")
+					let scanner = NSScanner(string: output)
 
-						if output.hasPrefix("Architectures in the fat file:") {
-							// The output of "lipo -info PathToBinary" for fat
-							// files looks roughly like so:
-							//
-							//     Architectures in the fat file: PathToBinary are: armv7 arm64
-							//
-							let scanner = NSScanner(string: output)
-							var architectures: NSString?
+					if scanner.scanString("Architectures in the fat file:", intoString: nil) {
+						// The output of "lipo -info PathToBinary" for fat files
+						// looks roughly like so:
+						//
+						//     Architectures in the fat file: PathToBinary are: armv7 arm64
+						//
+						var architectures: NSString?
 
-							scanner.scanUpToString(binaryURL.path!, intoString: nil)
-							scanner.scanString(binaryURL.path!, intoString: nil)
-							scanner.scanString("are:", intoString: nil)
-							scanner.scanCharactersFromSet(characterSet, intoString: &architectures)
+						scanner.scanUpToString(binaryURL.path!, intoString: nil)
+						scanner.scanString(binaryURL.path!, intoString: nil)
+						scanner.scanString("are:", intoString: nil)
+						scanner.scanCharactersFromSet(characterSet, intoString: &architectures)
 
-							let components = architectures?
-								.componentsSeparatedByString(" ")
-								.filter { ($0 as NSString).length > 0 } as [String]?
+						let components = architectures?
+							.componentsSeparatedByString(" ")
+							.filter { ($0 as NSString).length > 0 } as [String]?
 
-							if let components = components {
-								return ColdSignal.fromValues(components)
-							}
+						if let components = components {
+							return ColdSignal.fromValues(components)
 						}
-
-						if output.hasPrefix("Non-fat file") {
-							// The output of "lipo -info PathToBinary" for thin
-							// files looks roughly like so:
-							//
-							//     Non-fat file: PathToBinary is architecture: x86_64
-							//
-							let scanner = NSScanner(string: output)
-							var architecture: NSString?
-
-							scanner.scanUpToString(binaryURL.path!, intoString: nil)
-							scanner.scanString(binaryURL.path!, intoString: nil)
-							scanner.scanString("is architecture:", intoString: nil)
-							scanner.scanCharactersFromSet(characterSet, intoString: &architecture)
-
-							if let architecture = architecture {
-								return ColdSignal.single(architecture)
-							}
-						}
-
-						return ColdSignal.error(CarthageError.InvalidArchitectures(description: "Could not read architectures from \(frameworkURL.path!)").error)
 					}
-					.merge(identity)
-			}
-			.merge(identity)
-	}
+
+					if scanner.scanString("Non-fat file", intoString: nil) {
+						// The output of "lipo -info PathToBinary" for thin
+						// files looks roughly like so:
+						//
+						//     Non-fat file: PathToBinary is architecture: x86_64
+						//
+						var architecture: NSString?
+
+						scanner.scanUpToString(binaryURL.path!, intoString: nil)
+						scanner.scanString(binaryURL.path!, intoString: nil)
+						scanner.scanString("is architecture:", intoString: nil)
+						scanner.scanCharactersFromSet(characterSet, intoString: &architecture)
+
+						if let architecture = architecture {
+							return ColdSignal.single(architecture)
+						}
+					}
+
+					return ColdSignal.error(CarthageError.InvalidArchitectures(description: "Could not read architectures from \(frameworkURL.path!)").error)
+				}
+		}
 }
 
 /// Returns the URL of a binary inside a given framework.
