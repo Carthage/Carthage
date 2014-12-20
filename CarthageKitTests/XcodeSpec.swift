@@ -23,7 +23,8 @@ class XcodeSpec: QuickSpec {
 
 		beforeEach {
 			NSFileManager.defaultManager().removeItemAtURL(buildFolderURL, error: nil)
-			NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil, error: nil)
+			expect(NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil, error: nil)).to(beTruthy())
+
 			return ()
 		}
 
