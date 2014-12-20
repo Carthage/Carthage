@@ -96,7 +96,7 @@ extension Project {
 					let moveSignals: ColdSignal<()> = ColdSignal.fromValues(contents)
 						.map { (object: AnyObject) in object as NSURL }
 						.concatMap { (URL: NSURL) -> ColdSignal<NSURL> in
-							let lastPathComponent = URL.lastPathComponent!
+							let lastPathComponent: String! = URL.lastPathComponent
 							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
 						}
 						.then(trashSignal)
