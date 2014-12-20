@@ -116,9 +116,11 @@ class XcodeSpec: QuickSpec {
 			var output: String = ""
 			let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
 
-			launchTask(codeSign, standardError: SinkOf<NSData> { data -> () in
+			let codesignResult = launchTask(codeSign, standardError: SinkOf<NSData> { data -> () in
 				output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
-			}).wait()
+			}).wait().isSuccess()
+
+			expect(codesignResult).to(beTruthy())
 
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
