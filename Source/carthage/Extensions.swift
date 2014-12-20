@@ -84,16 +84,25 @@ extension Project {
 
 				var error: NSError?
 				if let contents = fileManager.contentsOfDirectoryAtURL(oldCheckoutsURL, includingPropertiesForKeys: nil, options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsPackageDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, error: &error) {
-					let moveSignals: ColdSignal<String> = ColdSignal.fromValues(contents)
+					let trashSignal = ColdSignal<()>.lazy {
+						var error: NSError?
+						if fileManager.trashItemAtURL(oldCheckoutsURL, resultingItemURL: nil, error: &error) {
+							return .empty()
+						} else {
+							return .error(error ?? CarthageError.WriteFailed(oldCheckoutsURL).error)
+						}
+					}
+
+					let moveSignals: ColdSignal<()> = ColdSignal.fromValues(contents)
 						.map { (object: AnyObject) in object as NSURL }
 						.concatMap { (URL: NSURL) -> ColdSignal<NSURL> in
 							let lastPathComponent = URL.lastPathComponent!
 							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
 						}
-						.then(.empty())
+						.then(trashSignal)
 
 					let signal = ColdSignal<String>.single(migrationMessage)
-						.concat(moveSignals)
+						.concat(moveSignals.then(.empty()))
 
 					sink.put(.Next(Box(signal)))
 				} else {
