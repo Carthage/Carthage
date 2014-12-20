@@ -102,7 +102,7 @@ class XcodeSpec: QuickSpec {
 
 			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait().isSuccess()
 
-			expect(strippingResult).to(beTrue())
+			expect(strippingResult).to(beTruthy())
 
 			let strippedArchitectures = architecturesInFramework(targetURL)
 				.reduce(initial: []) { $0 + [ $1 ] }
