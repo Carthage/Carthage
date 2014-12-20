@@ -68,13 +68,18 @@ public struct BuildCommand: CommandType {
 					return .empty()
 				}
 			}
-			.map { project -> ColdSignal<BuildSchemeSignal> in
+			.mergeMap { project in
+				return project
+					.migrateIfNecessary()
+					.on(next: carthage.println)
+					.then(.single(project))
+			}
+			.mergeMap { (project: Project) -> ColdSignal<BuildSchemeSignal> in
 				let (dependenciesOutput, dependenciesSignals) = project.buildCheckedOutDependencies(options.configuration)
 				dependenciesOutput.observe(stdoutSink)
 
 				return dependenciesSignals
 			}
-			.merge(identity)
 
 		if !options.skipCurrent {
 			let (currentOutput, currentSignals) = buildInDirectory(directoryURL, withConfiguration: options.configuration)

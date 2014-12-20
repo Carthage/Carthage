@@ -25,7 +25,7 @@ public struct CheckoutCommand: CommandType {
 
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: CheckoutOptions) -> ColdSignal<()> {
-		return ColdSignal.fromResult(options.loadProject())
+		return options.loadProject()
 			.map { $0.checkoutResolvedDependencies() }
 			.merge(identity)
 	}
@@ -49,16 +49,25 @@ public struct CheckoutOptions: OptionsType {
 
 	/// Attempts to load the project referenced by the options, and configure it
 	/// accordingly.
-	public func loadProject() -> Result<Project> {
+	public func loadProject() -> ColdSignal<Project> {
 		if let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true) {
-			return Project.loadFromDirectory(directoryURL).map { project in
-				project.preferHTTPS = !self.useSSH
-				project.useSubmodules = self.useSubmodules
-				project.projectEvents.observe(ProjectEventSink())
-				return project
-			}
+			return ColdSignal<Project>.lazy {
+					return .fromResult(Project.loadFromDirectory(directoryURL))
+				}
+				.map { project in
+					project.preferHTTPS = !self.useSSH
+					project.useSubmodules = self.useSubmodules
+					project.projectEvents.observe(ProjectEventSink())
+					return project
+				}
+				.mergeMap { (project: Project) -> ColdSignal<Project> in
+					return project
+						.migrateIfNecessary()
+						.on(next: carthage.println)
+						.then(.single(project))
+				}
 		} else {
-			return failure(CarthageError.InvalidArgument(description: "Invalid project path: \(directoryPath)").error)
+			return .error(CarthageError.InvalidArgument(description: "Invalid project path: \(directoryPath)").error)
 		}
 	}
 }

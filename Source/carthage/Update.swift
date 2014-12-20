@@ -19,7 +19,7 @@ public struct UpdateCommand: CommandType {
 	public func run(mode: CommandMode) -> Result<()> {
 		return ColdSignal.fromResult(UpdateOptions.evaluate(mode))
 			.map { options -> ColdSignal<()> in
-				return ColdSignal.fromResult(options.checkoutOptions.loadProject())
+				return options.checkoutOptions.loadProject()
 					.map { $0.updateDependencies() }
 					.merge(identity)
 					.then(options.buildSignal)

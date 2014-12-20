@@ -451,8 +451,14 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 /// Sends the new URL of the item after moving.
 public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: String, #toPath: String) -> ColdSignal<NSURL> {
 	let toURL = repositoryFileURL.URLByAppendingPathComponent(fromPath)
+	let parentDirectoryURL = toURL.URLByDeletingLastPathComponent!
 
 	return ColdSignal.lazy {
+		var error: NSError?
+		if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+			return .error(error ?? CarthageError.WriteFailed(parentDirectoryURL).error)
+		}
+
 		if isGitRepository(repositoryFileURL) {
 			return launchGitTask([ "mv", fromPath, toPath ], repositoryFileURL: repositoryFileURL)
 				.then(.single(toURL))
@@ -463,7 +469,7 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: St
 			if NSFileManager.defaultManager().moveItemAtURL(fromURL, toURL: toURL, error: &error) {
 				return .single(toURL)
 			} else {
-				return .error(error ?? RACError.Empty.error)
+				return .error(error ?? CarthageError.WriteFailed(toURL).error)
 			}
 		}
 	}

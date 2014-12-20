@@ -9,7 +9,9 @@
 // This file contains extensions to anything that's not appropriate for
 // CarthageKit.
 
+import CarthageKit
 import Foundation
+import LlamaKit
 import ReactiveCocoa
 
 private let outputQueue = { () -> dispatch_queue_t in
@@ -19,7 +21,7 @@ private let outputQueue = { () -> dispatch_queue_t in
 	atexit_b {
 		dispatch_barrier_sync(queue) {}
 	}
-	
+
 	return queue
 }()
 
@@ -41,5 +43,42 @@ internal func println<T>(object: T) {
 internal func print<T>(object: T) {
 	dispatch_async(outputQueue) {
 		Swift.print(object)
+	}
+}
+
+extension Project {
+	/// Determines whether the project needs to be migrated from an older
+	/// Carthage version, then performs the work if so.
+	///
+	/// If migration is necessary, sends one or more output lines describing the
+	/// process to the user.
+	internal func migrateIfNecessary() -> ColdSignal<String> {
+		let directoryPath = directoryURL.path!
+		let fileManager = NSFileManager.defaultManager()
+
+		// These don't need to be declared more globally, since they're only for
+		// migration. We shouldn't need these names anywhere else.
+		let cartfileLock = "Cartfile.lock"
+		let carthageBuild = "Carthage.build"
+		let carthageCheckout = "Carthage.checkout"
+
+		let migrationMessage = "\nThis project appears to be set up for an older (pre-0.4) version of Carthage. Unfortunately, the directory structure for Carthage projects has since changed, so this project will be migrated automatically.\n\nSpecifically, the following renames will occur:\n\n\t\(cartfileLock) -> \(CarthageProjectResolvedCartfilePath)\n\t\(carthageBuild) -> \(CarthageBinariesFolderPath)\n\t\(carthageCheckout) -> \(CarthageProjectCheckoutsPath)\n\nFor more information, see https://github.com/Carthage/Carthage/pull/224.\n"
+		let signals = ColdSignal<ColdSignal<String>> { sink, disposable in
+			let checkFile: (String, String) -> () = { oldName, newName in
+				if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(oldName)) {
+					let signal = ColdSignal<String>.single(migrationMessage)
+						.concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName).then(.empty()))
+
+					sink.put(.Next(Box(signal)))
+				}
+			}
+
+			checkFile(cartfileLock, CarthageProjectResolvedCartfilePath)
+			checkFile(carthageBuild, CarthageBinariesFolderPath)
+			checkFile(carthageCheckout, CarthageProjectCheckoutsPath)
+			sink.put(.Completed)
+		}
+
+		return signals.concat(identity).takeLast(1)
 	}
 }
