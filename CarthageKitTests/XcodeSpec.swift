@@ -94,12 +94,24 @@ class XcodeSpec: QuickSpec {
 			// Copy ReactiveCocoaLayout.framework to the temporary folder.
 			let targetURL = targetFolderURL.URLByAppendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
 
-			copyFramework(frameworkFolderURL, targetURL).wait()
+			let resultURL = copyFramework(frameworkFolderURL, targetURL).single().value()
 
+			expect(resultURL).to(equal(targetURL))
 			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)).to(beTruthy())
 			expect(isDirectory).to(beTruthy())
 
-			stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
+			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait().isSuccess()
+
+			expect(strippingResult).to(beTrue())
+
+			let strippedArchitectures = architecturesInFramework(targetURL)
+				.reduce(initial: []) { $0 + [ $1 ] }
+				.single()
+				.value()
+
+			expect(strippedArchitectures).notTo(contain("i386"))
+			expect(strippedArchitectures).to(contain("armv7"))
+			expect(strippedArchitectures).to(contain("arm64"))
 
 			var output: String = ""
 			let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
