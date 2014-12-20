@@ -48,16 +48,13 @@ private func codeSigningAllowed() -> Bool {
 }
 
 private func frameworksFolder() -> Result<NSURL> {
-	let configurationBuildDir = getEnvironmentVariable("CONFIGURATION_BUILD_DIR")
-	let frameworksFolderPath = getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH")
-
-	if !configurationBuildDir.isSuccess() || !frameworksFolderPath.isSuccess() {
-		return failure(configurationBuildDir.error() ?? frameworksFolderPath.error()!)
-	}
-
-	let URL = NSURL(fileURLWithPath: configurationBuildDir.value()!, isDirectory: true)!.URLByAppendingPathComponent(frameworksFolderPath.value()!, isDirectory: true)
-
-	return success(URL)
+	getEnvironmentVariable("CONFIGURATION_BUILD_DIR")
+		.map { NSURL(fileURLWithPath: $0, isDirectory: true) }
+		.flatMap { url in
+			getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH").map {
+				url.URLByAppendingPathComponent(fileURLWithPath: $0, isDirectory: true) }
+			}
+		}
 }
 
 private func validArchitectures() -> Result<[String]> {
