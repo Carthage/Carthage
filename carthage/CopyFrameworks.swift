@@ -42,7 +42,9 @@ public struct CopyFrameworksCommand: CommandType {
 }
 
 private func codeSigningAllowed() -> Bool {
-	return getEnvironmentVariable("CODE_SIGNING_ALLOWED").map({ $0 == "YES" }).value() ?? false
+	return getEnvironmentVariable("CODE_SIGNING_ALLOWED")
+		.map { $0 == "YES" }
+		.value() ?? false
 }
 
 private func frameworksFolder() -> Result<NSURL> {
