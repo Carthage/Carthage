@@ -778,7 +778,13 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		// project, so it can see all products built already, and so we can
 		// automatically drop this dependency's product in the right place.
 		let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
-		NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL, error: nil)
+
+		if !NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL, error: nil) {
+			let dependencyParentURL = dependencyBinariesURL.URLByDeletingLastPathComponent!
+			if !NSFileManager.defaultManager().createDirectoryAtURL(dependencyParentURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+				return .error(error ?? CarthageError.WriteFailed(dependencyParentURL).error)
+			}
+		}
 
 		if !NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL, error: &error) {
 			return .error(error ?? CarthageError.WriteFailed(dependencyBinariesURL).error)
