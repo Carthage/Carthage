@@ -774,7 +774,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 			return .error(error ?? CarthageError.WriteFailed(rootBinariesURL).error)
 		}
 
-		// Link this dependency's Carthage.build folder to that of the root
+		// Link this dependency's Carthage/Build folder to that of the root
 		// project, so it can see all products built already, and so we can
 		// automatically drop this dependency's product in the right place.
 		let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)

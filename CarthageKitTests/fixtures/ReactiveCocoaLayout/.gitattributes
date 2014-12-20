@@ -1,5 +1,5 @@
 Archimedes/** -diff
-Carthage.checkout/** -diff
+Carthage/Checkouts/** -diff
 Demos/** -diff
 ReactiveCocoa/** -diff
 ReactiveCocoaLayout/** -diff

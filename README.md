@@ -43,8 +43,8 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 To get started:
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
-1. Run `carthage update`. This will fetch dependencies into a [Carthage.checkout][] folder, then build each one.
-1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage.build][] folder on disk.
+1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one.
+1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 
 Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.resolved][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.resolved][]**, because anyone else using the project will need that file to build the same framework versions.
 
@@ -54,7 +54,7 @@ After you’ve finished the above steps and pushed your changes, other users of 
 
 Using Carthage for the dependencies of any arbitrary target is fairly similar to [using Carthage for an application](#adding-frameworks-to-an-application). The main difference lies in how the frameworks are actually set up and linked in Xcode.
 
-Because non-application targets are missing the “Embedded Binaries” section in their build settings, you must instead drag the [built frameworks][Carthage.build] to the “Link Binaries With Libraries” build phase.
+Because non-application targets are missing the “Embedded Binaries” section in their build settings, you must instead drag the [built frameworks][Carthage/Build] to the “Link Binaries With Libraries” build phase.
 
 In rare cases, you may want to also copy each dependency into the build product (e.g., to embed dependencies within the outer framework, or make sure dependencies are present in a test bundle). To do this, create a new “Copy Files” build phase with the “Frameworks” destination, then add the framework reference there as well.
 
@@ -64,7 +64,7 @@ If you’ve modified your [Cartfile][], or you want to update to the newest vers
 
 ### Using submodules for dependencies
 
-By default, Carthage will [check out][Carthage.checkout] the source code of each dependency version, leaving you to commit or ignore it as you choose. If you’d like to have dependencies available as Git submodules instead (perhaps so you can commit and push changes to them), you can run `carthage update` or `carthage checkout` with the `--use-submodules` flag.
+By default, Carthage will [check out][Carthage/Checkouts] the source code of each dependency version, leaving you to commit or ignore it as you choose. If you’d like to have dependencies available as Git submodules instead (perhaps so you can commit and push changes to them), you can run `carthage update` or `carthage checkout` with the `--use-submodules` flag.
 
 When run this way, Carthage will write to your repository’s `.gitmodules` and `.git/config` files, and automatically update the submodules when the dependencies’ versions change.
 
@@ -78,7 +78,7 @@ The specific requirements of any framework project are listed below.
 
 ### Share your Xcode schemes
 
-Carthage will only build Xcode schemes that are shared from your `.xcodeproj`. You can see if all of your intended schemes build successfully by running `carthage build --no-skip-current`, then checking the [Carthage.build][] folder.
+Carthage will only build Xcode schemes that are shared from your `.xcodeproj`. You can see if all of your intended schemes build successfully by running `carthage build --no-skip-current`, then checking the [Carthage/Build][] folder.
 
 If an important scheme is not built when you run that command, open Xcode and make sure that the scheme is marked as “Shared,” so Carthage can discover it.
 
@@ -107,6 +107,6 @@ Carthage is released under the [MIT License](LICENSE.md).
 [Artifacts]: Documentation/Artifacts.md
 [Cartfile]: Documentation/Artifacts.md#cartfile
 [Cartfile.resolved]: Documentation/Artifacts.md#cartfilelock
-[Carthage.build]: Documentation/Artifacts.md#carthagebuild
-[Carthage.checkout]: Documentation/Artifacts.md#carthagecheckout
+[Carthage/Build]: Documentation/Artifacts.md#carthagebuild
+[Carthage/Checkouts]: Documentation/Artifacts.md#carthagecheckout
 [CarthageKit]: CarthageKit

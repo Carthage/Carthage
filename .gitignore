@@ -18,4 +18,4 @@ DerivedData
 *.xcuserstate
 
 Carthage.pkg
-Carthage.build
+Carthage/Build
