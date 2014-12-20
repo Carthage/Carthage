@@ -17,7 +17,7 @@ import ReactiveTask
 class XcodeSpec: QuickSpec {
 	override func spec() {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("ReactiveCocoaLayout", withExtension: nil)!
-		let workspaceURL = directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout.xcworkspace")
+		let projectURL = directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout.xcodeproj")
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 
 		beforeEach {
@@ -88,12 +88,12 @@ class XcodeSpec: QuickSpec {
 			expect(isDirectory).to(beTruthy())
 		}
 
-		it("should locate the workspace") {
+		it("should locate the project") {
 			let result = locateProjectsInDirectory(directoryURL).first()
 			expect(result.error()).to(beNil())
 
 			let locator = result.value()!
-			expect(locator).to(equal(ProjectLocator.Workspace(workspaceURL)))
+			expect(locator).to(equal(ProjectLocator.ProjectFile(projectURL)))
 		}
 
 		it("should locate the project from the parent directory") {
@@ -101,7 +101,7 @@ class XcodeSpec: QuickSpec {
 			expect(result.error()).to(beNil())
 
 			let locator = result.value()!
-			expect(locator).to(equal(ProjectLocator.Workspace(workspaceURL)))
+			expect(locator).to(equal(ProjectLocator.ProjectFile(projectURL)))
 		}
 
 		it("should not locate the project from a directory not containing it") {
