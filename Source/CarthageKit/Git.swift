@@ -450,7 +450,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 ///
 /// Sends the new URL of the item after moving.
 public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: String, #toPath: String) -> ColdSignal<NSURL> {
-	let toURL = repositoryFileURL.URLByAppendingPathComponent(fromPath)
+	let toURL = repositoryFileURL.URLByAppendingPathComponent(toPath)
 	let parentDirectoryURL = toURL.URLByDeletingLastPathComponent!
 
 	return ColdSignal.lazy {
