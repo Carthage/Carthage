@@ -866,16 +866,14 @@ public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<NSURL> {
 
 /// Strips the given architecture from a framework.
 private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> ColdSignal<()> {
-	return ColdSignal.lazy {
-		return ColdSignal.fromResult(binaryURL(frameworkURL))
-			.map { binaryURL -> ColdSignal<NSData> in
-				let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
+	return ColdSignal.fromResult(binaryURL(frameworkURL))
+		.map { binaryURL -> ColdSignal<NSData> in
+			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
 
-				return launchTask(lipoTask)
-			}
-			.merge(identity)
-			.then(.empty())
-	}
+			return launchTask(lipoTask)
+		}
+		.merge(identity)
+		.then(.empty())
 }
 
 /// Returns a signal of all architectures present in a given framework.
