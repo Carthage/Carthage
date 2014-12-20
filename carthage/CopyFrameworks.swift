@@ -49,11 +49,10 @@ private func codeSigningAllowed() -> Bool {
 
 private func frameworksFolder() -> Result<NSURL> {
 	return getEnvironmentVariable("CONFIGURATION_BUILD_DIR")
-		.map { NSURL(fileURLWithPath: $0, isDirectory: true) }
-		.flatMap { url in
-			getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH").map {
-				url.URLByAppendingPathComponent(fileURLWithPath: $0, isDirectory: true)
-			}
+		.map { NSURL(fileURLWithPath: $0, isDirectory: true)! }
+		.flatMap { url -> Result<NSURL> in
+			getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH")
+				.map { url.URLByAppendingPathComponent($0, isDirectory: true) }
 		}
 }
 
