@@ -79,7 +79,7 @@ extension Cartfile: Printable {
 
 /// Represents a parsed Cartfile.resolved, which specifies which exact version was
 /// checked out for each dependency.
-public struct CartfileLock {
+public struct ResolvedCartfile {
 	/// The dependencies listed in the Cartfile.resolved, in the order that they
 	/// should be built.
 	public var dependencies: [Dependency<PinnedVersion>]
@@ -95,7 +95,7 @@ public struct CartfileLock {
 	}
 
 	/// Attempts to parse Cartfile.resolved information from a string.
-	public static func fromString(string: String) -> Result<CartfileLock> {
+	public static func fromString(string: String) -> Result<ResolvedCartfile> {
 		var cartfile = self(dependencies: [])
 		var result = success(())
 
@@ -115,7 +115,7 @@ public struct CartfileLock {
 	}
 }
 
-extension CartfileLock: Printable {
+extension ResolvedCartfile: Printable {
 	public var description: String {
 		return dependencies.reduce("") { (string, dependency) in
 			return string + "\(dependency)\n"

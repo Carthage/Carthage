@@ -47,7 +47,7 @@ public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppend
 public let CarthageProjectCartfilePath = "Cartfile"
 
 /// The relative path to a project's Cartfile.resolved.
-public let CarthageProjectCartfileLockPath = "Cartfile.resolved"
+public let CarthageProjectResolvedCartfilePath = "Cartfile.resolved"
 
 /// Describes an event occurring to or with a project.
 public enum ProjectEvent {
@@ -70,8 +70,8 @@ public final class Project {
 	public let cartfile: Cartfile
 
 	/// The file URL to the project's Cartfile.resolved.
-	public var cartfileLockURL: NSURL {
-		return directoryURL.URLByAppendingPathComponent(CarthageProjectCartfileLockPath, isDirectory: false)
+	public var resolvedCartfileURL: NSURL {
+		return directoryURL.URLByAppendingPathComponent(CarthageProjectResolvedCartfilePath, isDirectory: false)
 	}
 
 	/// Whether to prefer HTTPS for cloning (vs. SSH).
@@ -143,23 +143,23 @@ public final class Project {
 	}
 
 	/// Reads the project's Cartfile.resolved.
-	public func readCartfileLock() -> Result<CartfileLock> {
+	public func readResolvedCartfile() -> Result<ResolvedCartfile> {
 		var error: NSError?
-		let cartfileLockContents = NSString(contentsOfURL: cartfileLockURL, encoding: NSUTF8StringEncoding, error: &error)
-		if let cartfileLockContents = cartfileLockContents {
-			return CartfileLock.fromString(cartfileLockContents)
+		let resolvedCartfileContents = NSString(contentsOfURL: resolvedCartfileURL, encoding: NSUTF8StringEncoding, error: &error)
+		if let resolvedCartfileContents = resolvedCartfileContents {
+			return ResolvedCartfile.fromString(resolvedCartfileContents)
 		} else {
-			return failure(error ?? CarthageError.ReadFailed(cartfileLockURL).error)
+			return failure(error ?? CarthageError.ReadFailed(resolvedCartfileURL).error)
 		}
 	}
 
 	/// Writes the given Cartfile.resolved out to the project's directory.
-	public func writeCartfileLock(cartfileLock: CartfileLock) -> Result<()> {
+	public func writeResolvedCartfile(resolvedCartfile: ResolvedCartfile) -> Result<()> {
 		var error: NSError?
-		if cartfileLock.description.writeToURL(cartfileLockURL, atomically: true, encoding: NSUTF8StringEncoding, error: &error) {
+		if resolvedCartfile.description.writeToURL(resolvedCartfileURL, atomically: true, encoding: NSUTF8StringEncoding, error: &error) {
 			return success(())
 		} else {
-			return failure(error ?? CarthageError.WriteFailed(cartfileLockURL).error)
+			return failure(error ?? CarthageError.WriteFailed(resolvedCartfileURL).error)
 		}
 	}
 
@@ -290,23 +290,23 @@ public final class Project {
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func updatedCartfileLock() -> ColdSignal<CartfileLock> {
+	public func updatedResolvedCartfile() -> ColdSignal<ResolvedCartfile> {
 		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
 
 		return resolver.resolveDependenciesInCartfile(self.cartfile)
 			.reduce(initial: []) { $0 + [ $1 ] }
-			.map { CartfileLock(dependencies: $0) }
+			.map { ResolvedCartfile(dependencies: $0) }
 	}
 
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in the working directory checkouts and
 	/// Cartfile.resolved.
 	public func updateDependencies() -> ColdSignal<()> {
-		return updatedCartfileLock()
-			.tryMap { cartfileLock -> Result<()> in
-				return self.writeCartfileLock(cartfileLock)
+		return updatedResolvedCartfile()
+			.tryMap { resolvedCartfile -> Result<()> in
+				return self.writeResolvedCartfile(resolvedCartfile)
 			}
-			.then(checkoutLockedDependencies())
+			.then(checkoutResolvedDependencies())
 	}
 
 	/// Checks out the given project into its intended working directory,
@@ -349,7 +349,7 @@ public final class Project {
 	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved.
-	public func checkoutLockedDependencies() -> ColdSignal<()> {
+	public func checkoutResolvedDependencies() -> ColdSignal<()> {
 		/// Determine whether the repository currently holds any submodules (if
 		/// it even is a repository).
 		let submodulesSignal = submodulesInRepository(self.directoryURL)
@@ -358,12 +358,12 @@ public final class Project {
 				return submodulesByPath
 			}
 
-		return ColdSignal<CartfileLock>.lazy {
-				return ColdSignal.fromResult(self.readCartfileLock())
+		return ColdSignal<ResolvedCartfile>.lazy {
+				return ColdSignal.fromResult(self.readResolvedCartfile())
 			}
 			.zipWith(submodulesSignal)
-			.map { (cartfileLock, submodulesByPath) -> ColdSignal<()> in
-				return ColdSignal.fromValues(cartfileLock.dependencies)
+			.map { (resolvedCartfile, submodulesByPath) -> ColdSignal<()> in
+				return ColdSignal.fromValues(resolvedCartfile.dependencies)
 					.map { dependency in
 						return self.checkoutOrCloneProject(dependency.project, atRevision: dependency.version.commitish, submodulesByPath: submodulesByPath)
 					}
@@ -379,10 +379,10 @@ public final class Project {
 	/// signal-of-signals representing each scheme being built.
 	public func buildCheckedOutDependencies(configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
-		let schemeSignals = ColdSignal<CartfileLock>.lazy {
-				return .fromResult(self.readCartfileLock())
+		let schemeSignals = ColdSignal<ResolvedCartfile>.lazy {
+				return .fromResult(self.readResolvedCartfile())
 			}
-			.map { lockFile in ColdSignal.fromValues(lockFile.dependencies) }
+			.map { resolvedCartfile in ColdSignal.fromValues(resolvedCartfile.dependencies) }
 			.merge(identity)
 			.map { dependency -> ColdSignal<BuildSchemeSignal> in
 				let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)

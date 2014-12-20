@@ -24,8 +24,8 @@ public struct BootstrapCommand: CommandType {
 				return ColdSignal.fromResult(options.checkoutOptions.loadProject())
 					.map { project -> ColdSignal<()> in
 						return ColdSignal.lazy {
-							if NSFileManager.defaultManager().fileExistsAtPath(project.cartfileLockURL.path!) {
-								return project.checkoutLockedDependencies()
+							if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
+								return project.checkoutResolvedDependencies()
 							} else {
 								carthage.println("*** No Cartfile.resolved found, updating dependencies")
 								return project.updateDependencies()

@@ -49,17 +49,17 @@ class CartfileSpec: QuickSpec {
 			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("TestCartfile", withExtension: "resolved")!
 			let testCartfile = NSString(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
 
-			let result = CartfileLock.fromString(testCartfile!)
+			let result = ResolvedCartfile.fromString(testCartfile!)
 			expect(result.error()).to(beNil())
 
-			let cartfileLock = result.value()!
-			expect(cartfileLock.dependencies.count).to(equal(2))
+			let resolvedCartfile = result.value()!
+			expect(resolvedCartfile.dependencies.count).to(equal(2))
 
-			let depReactiveCocoa = cartfileLock.dependencies[0]
+			let depReactiveCocoa = resolvedCartfile.dependencies[0]
 			expect(depReactiveCocoa.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))))
 			expect(depReactiveCocoa.version).to(equal(PinnedVersion("v2.3.1")))
 
-			let depMantle = cartfileLock.dependencies[1]
+			let depMantle = resolvedCartfile.dependencies[1]
 			expect(depMantle.project).to(equal(ProjectIdentifier.Git(GitURL("https://github.com/Mantle/Mantle.git"))))
 			expect(depMantle.version).to(equal(PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47")))
 		}

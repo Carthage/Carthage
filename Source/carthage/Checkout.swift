@@ -26,7 +26,7 @@ public struct CheckoutCommand: CommandType {
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: CheckoutOptions) -> ColdSignal<()> {
 		return ColdSignal.fromResult(options.loadProject())
-			.map { $0.checkoutLockedDependencies() }
+			.map { $0.checkoutResolvedDependencies() }
 			.merge(identity)
 	}
 }
