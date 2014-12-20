@@ -945,10 +945,7 @@ private func binaryURL(frameworkURL: NSURL) -> Result<NSURL> {
 
 /// Signs a framework with the given codesigning identity.
 private func codesign(frameworkURL: NSURL, expandedIdentity: String) -> ColdSignal<()> {
-	return ColdSignal.lazy { () -> ColdSignal<()> in
-		let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path!])
+	let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
 
-		// TODO: Redirect stdout.
-		return launchTask(codesignTask).then(.empty())
-	}
+	return launchTask(codesignTask).then(.empty())
 }
