@@ -859,8 +859,7 @@ public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<NSURL> {
 		if manager.copyItemAtURL(from, toURL: to, error: &error) {
 			return .single(to)
 		} else {
-			// TODO: Handle error being nil
-			return .error(error!)
+			return .error(error ?? RACError.Empty.error)
 		}
 	}
 }
