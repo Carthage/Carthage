@@ -29,15 +29,12 @@ public struct CopyFrameworksCommand: CommandType {
 					.combineLatestWith(.fromResult(target))
 					.combineLatestWith(.fromResult(validArchitectures()))
 					.map { ($0.0.0, $0.0.1, $0.1) }
-					.map { (source, target, validArchitectures) -> ColdSignal<()> in
-
+					.mergeMap { (source, target, validArchitectures) -> ColdSignal<()> in
 						return copyFramework(source, target)
 							.combineLatestWith(.fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")))
-							.map { stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: $0.1) }
-							.merge(identity)
+							.mergeMap { stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: $0.1) }
 							.then(.empty())
 					}
-					.merge(identity)
 			}
 			.concat(identity)
 			.wait()
@@ -68,14 +65,13 @@ private func validArchitectures() -> Result<[String]> {
 private func inputFiles() -> ColdSignal<String> {
 	return ColdSignal.fromResult(getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT"))
 		.map { $0.toInt()! }
-		.map { count -> ColdSignal<String> in
+		.mergeMap { count -> ColdSignal<String> in
 			let variables = (0..<count).map { index -> ColdSignal<String> in
 				return .fromResult(getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
 			}
 
 			return ColdSignal.fromValues(variables).concat(identity)
 		}
-		.merge(identity)
 }
 
 private func getEnvironmentVariable(variable: String) -> Result<String> {
