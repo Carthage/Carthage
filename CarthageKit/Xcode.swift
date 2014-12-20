@@ -934,14 +934,12 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> 
 
 /// Returns the URL of a binary inside a given framework.
 private func binaryURL(frameworkURL: NSURL) -> Result<NSURL> {
-	let plistURL = frameworkURL.URLByAppendingPathComponent("Info.plist")
+	let bundle = NSBundle(path: frameworkURL.path!)
 
-	let plist = NSDictionary(contentsOfURL: plistURL)
-
-	if let binaryName = plist?["CFBundleExecutable"] as String? {
+	if let binaryName = bundle?.objectForInfoDictionaryKey("CFBundleExecutable") as? String {
 		return success(frameworkURL.URLByAppendingPathComponent(binaryName))
 	} else {
-		return failure(CarthageError.ReadFailed(plistURL).error)
+		return failure(CarthageError.ReadFailed(frameworkURL).error)
 	}
 }
 
