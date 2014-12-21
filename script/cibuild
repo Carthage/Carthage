@@ -128,7 +128,7 @@ import_certs ()
     # Download the certificate for the Apple Worldwide Developer Relations
     # Certificate Authority.
     local certpath="$SCRIPT_DIR/apple_wwdr.cer"
-    curl -v 'https://developer.apple.com/certificationauthority/AppleWWDRCA.cer' > "$certpath"
+    curl 'https://developer.apple.com/certificationauthority/AppleWWDRCA.cer' > "$certpath"
     security import "$certpath" -k "$KEYCHAIN" -T /usr/bin/codesign
 
     # Import our development certificate.
