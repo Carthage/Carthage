@@ -234,6 +234,10 @@ public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
 		.skipWhile { line in !line.hasSuffix("Schemes:") }
 		.skip(1)
 		.takeWhile { line in !line.isEmpty }
+		// xcodebuild has a bug where xcodebuild -list can sometimes hang
+		// indefinitely on projects that don't share any schemes, so
+		// automatically bail out if it looks like that's happening.
+		.timeoutWithError(CarthageError.NoSharedSchemes(project).error, afterInterval: 4, onScheduler: QueueScheduler())
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
