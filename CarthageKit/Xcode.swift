@@ -850,8 +850,8 @@ public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<NSURL> {
 			return .error(error ?? CarthageError.WriteFailed(to.URLByDeletingLastPathComponent!).error)
 		}
 
-		if !manager.removeItemAtURL(to, error: &error) && error!.code != NSFileNoSuchFileError {
-			return .error(error!)
+		if !manager.removeItemAtURL(to, error: &error) && error?.code != NSFileNoSuchFileError {
+			return .error(error ?? RACError.Empty.error)
 		}
 
 		if manager.copyItemAtURL(from, toURL: to, error: &error) {
