@@ -1,7 +1,8 @@
 language: objective-c
 xcode_workspace: Carthage.xcworkspace
 xcode_scheme: carthage
-install:
+before_install: true
+install: true
 script: script/cibuild
 notifications:
   email: false
