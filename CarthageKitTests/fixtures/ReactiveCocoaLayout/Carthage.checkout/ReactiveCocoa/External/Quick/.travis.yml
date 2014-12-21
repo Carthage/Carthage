@@ -1,5 +1,0 @@
-language: objective-c
-
-before_install: git submodule update --init --recursive
-script: "rake test:ios"
-

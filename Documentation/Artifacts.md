@@ -60,23 +60,23 @@ github "jspahrsummers/xcconfigs"
 git "https://enterprise.local/desktop/git-error-translations.git" "development"
 ```
 
-## Cartfile.lock
+## Cartfile.resolved
 
-After running the `carthage update` command, a file named `Cartfile.lock` will be created alongside the `Cartfile` in the working directory. This file specifies precisely _which_ versions were chosen of each dependency, and lists all dependencies (even nested ones).
+After running the `carthage update` command, a file named `Cartfile.resolved` will be created alongside the `Cartfile` in the working directory. This file specifies precisely _which_ versions were chosen of each dependency, and lists all dependencies (even nested ones).
 
-The `Cartfile.lock` file ensures that any given commit of a Carthage project can be bootstrapped in exactly the same way, every time. For this reason, you are **strongly recommended** to commit this file to your repository.
+The `Cartfile.resolved` file ensures that any given commit of a Carthage project can be bootstrapped in exactly the same way, every time. For this reason, you are **strongly recommended** to commit this file to your repository.
 
-Although the `Cartfile.lock` file is meant to be human-readable and diffable, you **must not** modify it. The format of the file is very strict, and the order in which dependencies are listed is important for the build process.
+Although the `Cartfile.resolved` file is meant to be human-readable and diffable, you **must not** modify it. The format of the file is very strict, and the order in which dependencies are listed is important for the build process.
 
-## Carthage.build
+## Carthage/Build
 
 This folder is created by `carthage build` in the project’s working directory, and contains the binary frameworks built for each dependency.
 
 Generally, it is not necessary to commit this folder to your repository, so you may want to add it to your `.gitignore` file.
 
-## Carthage.checkout
+## Carthage/Checkouts
 
-This folder is created by `carthage checkout` in the application project’s working directory, and contains the source code (at the appropriate version) for each dependency. The project folders inside `Carthage.checkout` are later used for the `carthage build` command.
+This folder is created by `carthage checkout` in the application project’s working directory, and contains the source code (at the appropriate version) for each dependency. The project folders inside `Carthage/Checkouts` are later used for the `carthage build` command.
 
 You are not required to commit this folder to your repository, but you may wish to, if you want to guarantee that the chosen versions of each dependency will _always_ be accessible at a later date.
 
@@ -84,7 +84,7 @@ Unless you are [using submodules](#with-submodules), the contents of **this dire
 
 ### With submodules
 
-If the `--use-submodules` flag was given when a project’s dependencies were bootstrapped, updated, or checked out, the dependencies inside `Carthage.checkout` will be available as Git submodules. This allows you to make changes in the dependencies, and commit and push those changes upstream.
+If the `--use-submodules` flag was given when a project’s dependencies were bootstrapped, updated, or checked out, the dependencies inside `Carthage/Checkouts` will be available as Git submodules. This allows you to make changes in the dependencies, and commit and push those changes upstream.
 
 ## ~/Library/Caches/org.carthage.CarthageKit
 
