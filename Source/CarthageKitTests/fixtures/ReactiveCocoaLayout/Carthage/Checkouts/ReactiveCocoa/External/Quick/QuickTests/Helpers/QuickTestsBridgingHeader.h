@@ -1,1 +1,0 @@
-#import "QCKSpecRunner.h"
