@@ -22,7 +22,8 @@ public enum CarthageErrorCode: Int {
 	case ReadFailed
 	case WriteFailed
 	case ParseError
-	
+	case NoSharedSchemes
+
 	func error(userInfo: [NSObject: AnyObject]?) -> NSError {
 		return NSError(domain: CarthageErrorDomain, code: self.rawValue, userInfo: userInfo)
 	}
@@ -38,7 +39,7 @@ public enum CarthageError {
 
 	/// Incompatible version specifiers were given for a dependency.
 	case IncompatibleRequirements(ProjectIdentifier, VersionSpecifier, VersionSpecifier)
-	
+
 	/// No tagged versions could be found for the dependency.
 	case TaggedVersionNotFound(ProjectIdentifier)
 
@@ -57,6 +58,10 @@ public enum CarthageError {
 
 	/// An error occurred parsing a Carthage file.
 	case ParseError(description: String)
+
+	/// The project is not sharing any schemes, so Carthage cannot discover
+	/// them.
+	case NoSharedSchemes(ProjectLocator)
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
@@ -80,7 +85,7 @@ public enum CarthageError {
 			return CarthageErrorCode.IncompatibleRequirements.error([
 				NSLocalizedDescriptionKey: "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(first)\n\t\(second)"
 			])
-			
+
 		case let .TaggedVersionNotFound(dependency):
 			return CarthageErrorCode.TaggedVersionNotFound.error([
 				NSLocalizedDescriptionKey: "No tagged versions found for \(dependency)"
@@ -104,6 +109,11 @@ public enum CarthageError {
 		case let .ParseError(description):
 			return CarthageErrorCode.ParseError.error([
 				NSLocalizedDescriptionKey: "Parse error: \(description)"
+			])
+
+		case let .NoSharedSchemes(project):
+			return CarthageErrorCode.NoSharedSchemes.error([
+				NSLocalizedDescriptionKey: "Project \"\(project)\" has no shared schemes"
 			])
 		}
 	}
