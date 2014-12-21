@@ -3,6 +3,8 @@ xcode_workspace: Carthage.xcworkspace
 xcode_scheme: carthage
 before_install: true
 install: true
+git:
+  submodules: false
 script: script/cibuild
 notifications:
   email: false
