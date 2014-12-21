@@ -30,8 +30,9 @@ public struct CopyFrameworksCommand: CommandType {
 					.mergeMap { (target, validArchitectures) -> ColdSignal<()> in
 						return copyFramework(source, target)
 							.combineLatestWith(.fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")))
-							.mergeMap { stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: $0.1) }
-							.then(.empty())
+							.mergeMap { (url, codesigningIdentity) -> ColdSignal<()> in
+								return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
+							}
 					}
 			}
 			.concat(identity)
