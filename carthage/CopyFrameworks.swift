@@ -63,7 +63,9 @@ private func validArchitectures() -> Result<[String]> {
 
 private func inputFiles() -> ColdSignal<String> {
 	return ColdSignal.fromResult(getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT"))
-		.tryMap { $0.0.toInt() }
+		.tryMap { (count, error) -> Int? in
+			return count.toInt()
+		}
 		.mergeMap { count -> ColdSignal<String> in
 			let variables = (0..<count).map { index -> ColdSignal<String> in
 				return .fromResult(getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
