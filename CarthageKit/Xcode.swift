@@ -899,7 +899,6 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> 
 						//
 						var architectures: NSString?
 
-						scanner.scanUpToString(binaryURL.path!, intoString: nil)
 						scanner.scanString(binaryURL.path!, intoString: nil)
 						scanner.scanString("are:", intoString: nil)
 						scanner.scanCharactersFromSet(characterSet, intoString: &architectures)
@@ -913,7 +912,7 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> 
 						}
 					}
 
-					if scanner.scanString("Non-fat file", intoString: nil) {
+					if scanner.scanString("Non-fat file:", intoString: nil) {
 						// The output of "lipo -info PathToBinary" for thin
 						// files looks roughly like so:
 						//
@@ -921,7 +920,6 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> 
 						//
 						var architecture: NSString?
 
-						scanner.scanUpToString(binaryURL.path!, intoString: nil)
 						scanner.scanString(binaryURL.path!, intoString: nil)
 						scanner.scanString("is architecture:", intoString: nil)
 						scanner.scanCharactersFromSet(characterSet, intoString: &architecture)
