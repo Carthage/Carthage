@@ -5,7 +5,7 @@ before_install: true
 install: true
 git:
   submodules: false
-script: script/cibuild
+script: BUILD_TOOL=xctool script/cibuild
 notifications:
   email: false
   slack:
