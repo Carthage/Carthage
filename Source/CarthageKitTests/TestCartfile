@@ -1,0 +1,8 @@
+github "ReactiveCocoa/ReactiveCocoa" >= 2.3.1
+github "Mantle/Mantle" ~> 1.0
+
+# here is a comment
+github "jspahrsummers/libextobjc" == 0.4.1
+github "jspahrsummers/xcconfigs" # here is an intra-line comment
+
+git "https://enterprise.local/desktop/git-error-translations.git" "development"

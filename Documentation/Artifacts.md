@@ -4,7 +4,7 @@ This document lists all files and folders used or created by Carthage, and the p
 
 ## Cartfile
 
-A `Cartfile` describes your project’s dependencies to Carthage, allowing it to resolve and build them for you.
+A `Cartfile` describes your project’s dependencies to Carthage, allowing it to resolve and build them for you. Cartfiles are a restricted subset of the [Ordered Graph Data Language](http://ogdl.org/), and any standard OGDL tool should be able to parse them.
 
 Dependency specifications consist of two main parts: the [origin](#origin), and the [version requirement](#version-requirement).
 
@@ -26,17 +26,20 @@ Other possible origins may be added in the future. If there’s something specif
 
 #### Version requirement
 
-Carthage supports three kinds of version requirements:
+Carthage supports several kinds of version requirements:
 
 1. `>= 1.0` for “at least version 1.0”
 1. `~> 1.0` for “compatible with version 1.0”
 1. `== 1.0` for “exactly version 1.0”
+1. `"some-branch-or-tag-or-commit"` for a specific Git object (anything allowed by `git rev-parse`)
 
 If no version requirement is given, any version of the dependency is allowed.
 
 Compatibility is determined according to [Semantic Versioning](http://semver.org/). This means that any version greater than or equal to 1.5.1, but less than 2.0, will be considered “compatible” with 1.5.1.
 
 According to SemVer, any 0.x.y release may completely break the exported API, so it's not safe to consider them compatible with one another. Only patch versions are compatible under 0.x, meaning 0.1.1 is compatible with 0.1.2, but not 0.2. This isn't according to the SemVer spec but keeps `~>` useful for 0.x.y versions.
+
+**In all cases, Carthage will pin to a tag or SHA**, and only bump the tag or SHA when `carthage update` is run again in the future. This means that following a branch (for example) still results in commits that can be independently checked out just as they were originally.
 
 #### Example Cartfile
 
@@ -53,27 +56,27 @@ github "jspahrsummers/libextobjc" == 0.4.1
 # Use the latest version
 github "jspahrsummers/xcconfigs"
 
-# Use a project from GitHub Enterprise, or any arbitrary server
-git "https://enterprise.local/desktop/git-error-translations.git" >= 0.1
+# Use a project from GitHub Enterprise, or any arbitrary server, on the "development" branch
+git "https://enterprise.local/desktop/git-error-translations.git" "development"
 ```
 
-## Cartfile.lock
+## Cartfile.resolved
 
-After running the `carthage update` command, a file named `Cartfile.lock` will be created alongside the `Cartfile` in the working directory. This file specifies precisely _which_ versions were chosen of each dependency, and lists all dependencies (even nested ones).
+After running the `carthage update` command, a file named `Cartfile.resolved` will be created alongside the `Cartfile` in the working directory. This file specifies precisely _which_ versions were chosen of each dependency, and lists all dependencies (even nested ones).
 
-The `Cartfile.lock` file ensures that any given commit of a Carthage project can be bootstrapped in exactly the same way, every time. For this reason, you are **strongly recommended** to commit this file to your repository.
+The `Cartfile.resolved` file ensures that any given commit of a Carthage project can be bootstrapped in exactly the same way, every time. For this reason, you are **strongly recommended** to commit this file to your repository.
 
-Although the `Cartfile.lock` file is meant to be human-readable and diffable, you **must not** modify it. The format of the file is very strict, and the order in which dependencies are listed is important for the build process.
+Although the `Cartfile.resolved` file is meant to be human-readable and diffable, you **must not** modify it. The format of the file is very strict, and the order in which dependencies are listed is important for the build process.
 
-## Carthage.build
+## Carthage/Build
 
 This folder is created by `carthage build` in the project’s working directory, and contains the binary frameworks built for each dependency.
 
 Generally, it is not necessary to commit this folder to your repository, so you may want to add it to your `.gitignore` file.
 
-## Carthage.checkout
+## Carthage/Checkouts
 
-This folder is created by `carthage checkout` in the application project’s working directory, and contains the source code (at the appropriate version) for each dependency. The project folders inside `Carthage.checkout` are later used for the `carthage build` command.
+This folder is created by `carthage checkout` in the application project’s working directory, and contains the source code (at the appropriate version) for each dependency. The project folders inside `Carthage/Checkouts` are later used for the `carthage build` command.
 
 You are not required to commit this folder to your repository, but you may wish to, if you want to guarantee that the chosen versions of each dependency will _always_ be accessible at a later date.
 
@@ -81,7 +84,7 @@ Unless you are [using submodules](#with-submodules), the contents of **this dire
 
 ### With submodules
 
-If the `--use-submodules` flag was given when a project’s dependencies were bootstrapped, updated, or checked out, the dependencies inside `Carthage.checkout` will be available as Git submodules. This allows you to make changes in the dependencies, and commit and push those changes upstream.
+If the `--use-submodules` flag was given when a project’s dependencies were bootstrapped, updated, or checked out, the dependencies inside `Carthage/Checkouts` will be available as Git submodules. This allows you to make changes in the dependencies, and commit and push those changes upstream.
 
 ## ~/Library/Caches/org.carthage.CarthageKit
 

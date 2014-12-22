@@ -1,21 +1,21 @@
-[submodule "Carthage.checkout/LlamaKit"]
-	path = Carthage.checkout/LlamaKit
+[submodule "Carthage/Checkouts/LlamaKit"]
+	path = Carthage/Checkouts/LlamaKit
 	url = https://github.com/Carthage/LlamaKit.git
-[submodule "Carthage.checkout/Nimble"]
-	path = Carthage.checkout/Nimble
+[submodule "Carthage/Checkouts/Nimble"]
+	path = Carthage/Checkouts/Nimble
 	url = https://github.com/Quick/Nimble.git
-[submodule "Carthage.checkout/Quick"]
-	path = Carthage.checkout/Quick
+[submodule "Carthage/Checkouts/Quick"]
+	path = Carthage/Checkouts/Quick
 	url = https://github.com/Quick/Quick.git
-[submodule "Carthage.checkout/ReactiveCocoa"]
-	path = Carthage.checkout/ReactiveCocoa
+[submodule "Carthage/Checkouts/ReactiveCocoa"]
+	path = Carthage/Checkouts/ReactiveCocoa
 	url = https://github.com/ReactiveCocoa/ReactiveCocoa.git
-[submodule "Carthage.checkout/xcconfigs"]
-	path = Carthage.checkout/xcconfigs
+[submodule "Carthage/Checkouts/xcconfigs"]
+	path = Carthage/Checkouts/xcconfigs
 	url = https://github.com/jspahrsummers/xcconfigs.git
-[submodule "Carthage.checkout/Commandant"]
-	path = Carthage.checkout/Commandant
+[submodule "Carthage/Checkouts/Commandant"]
+	path = Carthage/Checkouts/Commandant
 	url = https://github.com/Carthage/Commandant.git
-[submodule "Carthage.checkout/ReactiveTask"]
-	path = Carthage.checkout/ReactiveTask
+[submodule "Carthage/Checkouts/ReactiveTask"]
+	path = Carthage/Checkouts/ReactiveTask
 	url = https://github.com/Carthage/ReactiveTask.git
