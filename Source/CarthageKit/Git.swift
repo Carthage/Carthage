@@ -460,7 +460,7 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: St
 		}
 
 		if isGitRepository(repositoryFileURL) {
-			return launchGitTask([ "mv", fromPath, toPath ], repositoryFileURL: repositoryFileURL)
+			return launchGitTask([ "mv", "-k", fromPath, toPath ], repositoryFileURL: repositoryFileURL)
 				.then(.single(toURL))
 		} else {
 			let fromURL = repositoryFileURL.URLByAppendingPathComponent(fromPath)
