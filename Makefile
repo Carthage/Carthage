@@ -2,6 +2,7 @@ XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage'
 
 TEMPORARY_FOLDER=/tmp/Carthage.dst
 PREFIX?=/usr/local
+BUILD_TOOL?=xcodebuild
 
 BUILT_BUNDLE=$(TEMPORARY_FOLDER)/Applications/carthage.app
 CARTHAGEKIT_BUNDLE=$(BUILT_BUNDLE)/Contents/Frameworks/CarthageKit.framework
@@ -18,18 +19,18 @@ COMPONENTS_PLIST=carthage/Components.plist
 .PHONY: all bootstrap clean install package test uninstall
 
 all: bootstrap
-	xcodebuild $(XCODEFLAGS) build
+	$(BUILD_TOOL) $(XCODEFLAGS) build
 
 bootstrap:
 	script/bootstrap
 
 test: clean bootstrap
-	xcodebuild $(XCODEFLAGS) test
+	$(BUILD_TOOL) $(XCODEFLAGS) test
 
 clean:
 	rm -f "$(OUTPUT_PACKAGE)"
 	rm -rf "$(TEMPORARY_FOLDER)"
-	xcodebuild $(XCODEFLAGS) clean
+	$(BUILD_TOOL) $(XCODEFLAGS) clean
 
 install: package
 	sudo installer -pkg Carthage.pkg -target /
@@ -39,7 +40,7 @@ uninstall:
 	rm -f "$(BINARIES_FOLDER)/carthage"
 
 installables: clean bootstrap
-	xcodebuild $(XCODEFLAGS) install
+	$(BUILD_TOOL) $(XCODEFLAGS) install
 
 	mkdir -p "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)"
 	mv -f "$(CARTHAGEKIT_BUNDLE)" "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/CarthageKit.framework"
