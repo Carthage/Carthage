@@ -24,6 +24,7 @@ public enum CarthageErrorCode: Int {
 	case ParseError
 	case InvalidArchitectures
 	case MissingEnvironmentVariable
+	case NoSharedSchemes
 
 	func error(userInfo: [NSObject: AnyObject]?) -> NSError {
 		return NSError(domain: CarthageErrorDomain, code: self.rawValue, userInfo: userInfo)
@@ -40,7 +41,7 @@ public enum CarthageError {
 
 	/// Incompatible version specifiers were given for a dependency.
 	case IncompatibleRequirements(ProjectIdentifier, VersionSpecifier, VersionSpecifier)
-	
+
 	/// No tagged versions could be found for the dependency.
 	case TaggedVersionNotFound(ProjectIdentifier)
 
@@ -66,6 +67,10 @@ public enum CarthageError {
 	// An error occurred reading a framework's architectures.
 	case InvalidArchitectures(description: String)
 
+	/// The project is not sharing any schemes, so Carthage cannot discover
+	/// them.
+	case NoSharedSchemes(ProjectLocator)
+
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
 		switch (self) {
@@ -88,7 +93,7 @@ public enum CarthageError {
 			return CarthageErrorCode.IncompatibleRequirements.error([
 				NSLocalizedDescriptionKey: "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(first)\n\t\(second)"
 			])
-			
+
 		case let .TaggedVersionNotFound(dependency):
 			return CarthageErrorCode.TaggedVersionNotFound.error([
 				NSLocalizedDescriptionKey: "No tagged versions found for \(dependency)"
@@ -122,6 +127,11 @@ public enum CarthageError {
 		case let .MissingEnvironmentVariable(variable):
 			return CarthageErrorCode.MissingEnvironmentVariable.error([
 				NSLocalizedDescriptionKey: "Environment variable not set: \(variable)"
+			])
+
+		case let .NoSharedSchemes(project):
+			return CarthageErrorCode.NoSharedSchemes.error([
+				NSLocalizedDescriptionKey: "Project \"\(project)\" has no shared schemes"
 			])
 		}
 	}

@@ -216,13 +216,27 @@ public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
 		}
-		.map { (string: String) -> ColdSignal<String> in
+		.mergeMap { (string: String) -> ColdSignal<String> in
 			return string.linesSignal
 		}
-		.merge(identity)
+		.mergeMap { line -> ColdSignal<String> in
+			// Matches one of these two possible messages:
+			//
+			// '    This project contains no schemes.'
+			// 'There are no schemes in workspace "Carthage".'
+			if line.hasSuffix("contains no schemes.") || line.hasPrefix("There are no schemes") {
+				return .error(CarthageError.NoSharedSchemes(project).error)
+			} else {
+				return .single(line)
+			}
+		}
 		.skipWhile { line in !line.hasSuffix("Schemes:") }
 		.skip(1)
 		.takeWhile { line in !line.isEmpty }
+		// xcodebuild has a bug where xcodebuild -list can sometimes hang
+		// indefinitely on projects that don't share any schemes, so
+		// automatically bail out if it looks like that's happening.
+		.timeoutWithError(CarthageError.NoSharedSchemes(project).error, afterInterval: 4, onScheduler: QueueScheduler())
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 

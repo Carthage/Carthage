@@ -85,7 +85,7 @@ public struct BuildCommand: CommandType {
 			let (currentOutput, currentSignals) = buildInDirectory(directoryURL, withConfiguration: options.configuration)
 			currentOutput.observe(stdoutSink)
 
-			buildSignal = buildSignal.then(currentSignals)
+			buildSignal = buildSignal.concat(currentSignals)
 		}
 
 		return (stdoutSignal, buildSignal)
