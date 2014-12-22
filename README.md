@@ -40,13 +40,13 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 
 ### Getting started
 
-** If you're building for OS X:**
+##### If you're building for OS X
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage.checkout][] folder, then build each one.
 1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage.build][] folder on disk.
 
-** If you're building for iOS:**
+##### If you're building for iOS
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage.checkout][] folder, then build each one.
@@ -64,7 +64,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
   $(SRCROOT)/Carthage.build/iOS/ReactiveCocoa.framework
   ```
 
-** For both platforms:**
+##### For both platforms
 
 Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.lock][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.lock][]**, because anyone else using the project will need that file to build the same framework versions.
 
