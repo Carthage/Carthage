@@ -1,6 +1,7 @@
 language: objective-c
 xcode_workspace: Carthage.xcworkspace
 xcode_scheme: carthage
+osx_image: xcode611
 before_install: true
 install: true
 git:
