@@ -10,8 +10,6 @@ The basic [workflow](#adding-frameworks-to-an-application) looks something like 
 
 Carthage builds your dependencies and provides you with binary frameworks, but you retain full control over your project structure and setup. Carthage does not automatically modify your project files or your build settings.
 
-:warning: Frameworks built using Carthage will currently be rejected in iOS App Store submissions. This is a [known issue](https://github.com/Carthage/Carthage/issues/188) that should be fixed in the next release.
-
 ## Differences between Carthage and CocoaPods
 
 [CocoaPods](http://cocoapods.org/) is a long-standing dependency manager for Cocoa. So why was Carthage created?
@@ -40,11 +38,33 @@ If you’d like to run the latest development version (which may be highly unsta
 
 Once you have Carthage [installed](#installing-carthage), you can begin adding frameworks to your project. Note that Carthage only supports dynamic frameworks, which are **only available on iOS 8 or later** (or any version of OS X).
 
-To get started:
+### Getting started
+
+** If you're building for OS X:**
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage.checkout][] folder, then build each one.
 1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage.build][] folder on disk.
+
+** If you're building for iOS:**
+
+1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
+1. Run `carthage update`. This will fetch dependencies into a [Carthage.checkout][] folder, then build each one.
+1. On your application targets’ “General” settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage.build][] folder on disk.
+1. Create a “Run Script” phase with the following contents:
+  
+  ```sh
+  /usr/local/bin/carthage copy-frameworks
+  ```
+
+  and add the paths to the frameworks you want to use under “Input Files”, e.g.:
+  
+  ```
+  $(SRCROOT)/Carthage.build/iOS/LlamaKit.framework
+  $(SRCROOT)/Carthage.build/iOS/ReactiveCocoa.framework
+  ```
+
+** For both platforms:**
 
 Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.lock][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.lock][]**, because anyone else using the project will need that file to build the same framework versions.
 

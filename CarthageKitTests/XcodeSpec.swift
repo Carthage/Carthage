@@ -19,9 +19,12 @@ class XcodeSpec: QuickSpec {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("ReactiveCocoaLayout", withExtension: nil)!
 		let workspaceURL = directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout.xcworkspace")
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderName)
+		let targetFolderURL = NSURL(fileURLWithPath: NSTemporaryDirectory().stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)!
 
 		beforeEach {
 			NSFileManager.defaultManager().removeItemAtURL(buildFolderURL, error: nil)
+			expect(NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil, error: nil)).to(beTruthy())
+
 			return ()
 		}
 
@@ -68,17 +71,18 @@ class XcodeSpec: QuickSpec {
 				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
 				expect(isDirectory).to(beTruthy())
 			}
-	
+			let frameworkFolderURL = buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework")
+
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
-			let otoolResult = launchTask(TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "otool", "-fv", buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework/ReactiveCocoaLayout").path! ]))
-				.map { NSString(data: $0, encoding: NSStringEncoding(NSUTF8StringEncoding))! }
-				.first()
-			
-			expect(otoolResult.error()).to(beNil())
-			expect(otoolResult.value()).to(contain("architecture i386"))
-			expect(otoolResult.value()).to(contain("architecture armv7"))
-			expect(otoolResult.value()).to(contain("architecture arm64"))
+			let architectures = architecturesInFramework(frameworkFolderURL)
+				.reduce(initial: []) { $0 + [ $1 ] }
+				.single()
+				.value()
+
+			expect(architectures).to(contain("i386"))
+			expect(architectures).to(contain("armv7"))
+			expect(architectures).to(contain("arm64"))
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
@@ -86,6 +90,39 @@ class XcodeSpec: QuickSpec {
 			var isDirectory: ObjCBool = false
 			expect(NSFileManager.defaultManager().fileExistsAtPath(auxiliaryFrameworkPath, isDirectory: &isDirectory)).to(beTruthy())
 			expect(isDirectory).to(beTruthy())
+
+			// Copy ReactiveCocoaLayout.framework to the temporary folder.
+			let targetURL = targetFolderURL.URLByAppendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
+
+			let resultURL = copyFramework(frameworkFolderURL, targetURL).single().value()
+
+			expect(resultURL).to(equal(targetURL))
+			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beTruthy())
+
+			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait().isSuccess()
+
+			expect(strippingResult).to(beTruthy())
+
+			let strippedArchitectures = architecturesInFramework(targetURL)
+				.reduce(initial: []) { $0 + [ $1 ] }
+				.single()
+				.value()
+
+			expect(strippedArchitectures).notTo(contain("i386"))
+			expect(strippedArchitectures).to(contain("armv7"))
+			expect(strippedArchitectures).to(contain("arm64"))
+
+			var output: String = ""
+			let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
+
+			let codesignResult = launchTask(codeSign, standardError: SinkOf<NSData> { data -> () in
+				output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
+			}).wait().isSuccess()
+
+			expect(codesignResult).to(beTruthy())
+
+			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
 
 		it("should locate the workspace") {
