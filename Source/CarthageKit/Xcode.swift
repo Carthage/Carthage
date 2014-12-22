@@ -501,25 +501,13 @@ public struct BuildSettings {
 ///
 /// Returns a signal that will send the URL after copying upon success.
 private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildSettings) -> ColdSignal<NSURL> {
-	return ColdSignal.lazy {
-		var error: NSError?
-		if !NSFileManager.defaultManager().createDirectoryAtURL(directoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-			return .error(error ?? CarthageError.WriteFailed(directoryURL).error)
+	return ColdSignal.fromResult(settings.wrapperName)
+		.map(directoryURL.URLByAppendingPathComponent)
+		.combineLatestWith(.fromResult(settings.wrapperURL))
+		.map { (target, source) in
+			return copyFramework(source, target)
 		}
-
-		return ColdSignal.fromResult(settings.wrapperName)
-			.map(directoryURL.URLByAppendingPathComponent)
-			.map { destinationURL in
-				return ColdSignal.fromResult(settings.wrapperURL)
-					.try { (productURL, error) in
-						// TODO: Atomic copying.
-						NSFileManager.defaultManager().removeItemAtURL(destinationURL, error: nil)
-						return NSFileManager.defaultManager().copyItemAtURL(productURL, toURL: destinationURL, error: error)
-					}
-					.then(.single(destinationURL))
-			}
-			.merge(identity)
-	}
+		.merge(identity)
 }
 
 /// Attempts to merge the given executables into one fat binary, written to
@@ -838,4 +826,133 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 		}
 
 	return (stdoutSignal, schemeSignals)
+}
+
+/// Strips a framework from unexpected architectures, optionally codesigning the
+/// result.
+public func stripFramework(frameworkURL: NSURL, #keepingArchitectures: [String], codesigningIdentity: String? = nil) -> ColdSignal<()> {
+	let strip = architecturesInFramework(frameworkURL)
+		.filter { !contains(keepingArchitectures, $0) }
+		.map { stripArchitecture(frameworkURL, $0) }
+		.concat(identity)
+
+	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty()
+
+	return strip.concat(sign)
+}
+
+/// Copies a framework into the given folder. The folder will be created if it
+/// does not already exist.
+///
+/// Returns a signal that will send the URL after copying upon success.
+public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<NSURL> {
+	return ColdSignal.lazy {
+		var error: NSError? = nil
+
+		let manager = NSFileManager.defaultManager()
+
+		if !manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error) {
+			return .error(error ?? CarthageError.WriteFailed(to.URLByDeletingLastPathComponent!).error)
+		}
+
+		if !manager.removeItemAtURL(to, error: &error) && error?.code != NSFileNoSuchFileError {
+			return .error(error ?? RACError.Empty.error)
+		}
+
+		if manager.copyItemAtURL(from, toURL: to, error: &error) {
+			return .single(to)
+		} else {
+			return .error(error ?? RACError.Empty.error)
+		}
+	}
+}
+
+/// Strips the given architecture from a framework.
+private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> ColdSignal<()> {
+	return ColdSignal.lazy { () -> ColdSignal<NSURL> in
+			return .fromResult(binaryURL(frameworkURL))
+		}
+		.mergeMap { binaryURL -> ColdSignal<NSData> in
+			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
+
+			return launchTask(lipoTask)
+		}
+		.then(.empty())
+}
+
+/// Returns a signal of all architectures present in a given framework.
+public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> {
+	return ColdSignal.lazy { () -> ColdSignal<NSURL> in
+			return .fromResult(binaryURL(frameworkURL))
+		}
+		.mergeMap { binaryURL -> ColdSignal<String> in
+			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
+
+			return launchTask(lipoTask)
+				.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
+				.mergeMap { output -> ColdSignal<String> in
+					let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
+					characterSet.addCharactersInString(" _-")
+
+					let scanner = NSScanner(string: output)
+
+					if scanner.scanString("Architectures in the fat file:", intoString: nil) {
+						// The output of "lipo -info PathToBinary" for fat files
+						// looks roughly like so:
+						//
+						//     Architectures in the fat file: PathToBinary are: armv7 arm64
+						//
+						var architectures: NSString?
+
+						scanner.scanString(binaryURL.path!, intoString: nil)
+						scanner.scanString("are:", intoString: nil)
+						scanner.scanCharactersFromSet(characterSet, intoString: &architectures)
+
+						let components = architectures?
+							.componentsSeparatedByString(" ")
+							.filter { ($0 as NSString).length > 0 } as [String]?
+
+						if let components = components {
+							return ColdSignal.fromValues(components)
+						}
+					}
+
+					if scanner.scanString("Non-fat file:", intoString: nil) {
+						// The output of "lipo -info PathToBinary" for thin
+						// files looks roughly like so:
+						//
+						//     Non-fat file: PathToBinary is architecture: x86_64
+						//
+						var architecture: NSString?
+
+						scanner.scanString(binaryURL.path!, intoString: nil)
+						scanner.scanString("is architecture:", intoString: nil)
+						scanner.scanCharactersFromSet(characterSet, intoString: &architecture)
+
+						if let architecture = architecture {
+							return ColdSignal.single(architecture)
+						}
+					}
+
+					return ColdSignal.error(CarthageError.InvalidArchitectures(description: "Could not read architectures from \(frameworkURL.path!)").error)
+				}
+		}
+}
+
+/// Returns the URL of a binary inside a given framework.
+private func binaryURL(frameworkURL: NSURL) -> Result<NSURL> {
+	let bundle = NSBundle(path: frameworkURL.path!)
+
+	if let binaryName = bundle?.objectForInfoDictionaryKey("CFBundleExecutable") as? String {
+		return success(frameworkURL.URLByAppendingPathComponent(binaryName))
+	} else {
+		return failure(CarthageError.ReadFailed(frameworkURL).error)
+	}
+}
+
+/// Signs a framework with the given codesigning identity.
+private func codesign(frameworkURL: NSURL, expandedIdentity: String) -> ColdSignal<()> {
+	let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
+
+	return launchTask(codesignTask).then(.empty())
 }
