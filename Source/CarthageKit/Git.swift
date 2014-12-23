@@ -503,3 +503,17 @@ public func mergeIntoHEAD(repositoryFileURL: NSURL, revision: String, options: [
 	return launchGitTask([ "merge" ] + options + [ revision ], repositoryFileURL: repositoryFileURL)
 		.then(.empty())
 }
+
+/// Attempts to detach the repository's `HEAD`, so changes can be made without
+/// affecting the original branch.
+public func detachHEAD(repositoryFileURL: NSURL) -> ColdSignal<()> {
+	return launchGitTask([ "checkout", "--quiet", "--detach", "HEAD" ], repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}
+
+/// After another checkout command, this returns the repository to the `HEAD` it
+/// had before the last checkout.
+public func checkoutOriginalHEAD(repositoryFileURL: NSURL) -> ColdSignal<()> {
+	return launchGitTask([ "checkout", "--quiet", "-" ], repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}
