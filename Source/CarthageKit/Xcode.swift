@@ -662,8 +662,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 					return destinationFolderURL.URLByAppendingPathComponent(modulesPath!)
 				}
 
-			let mergeProductModules = sourceModulesURL
-				.zipWith(destinationModulesURL)
+			let mergeProductModules = zip(sourceModulesURL, destinationModulesURL)
 				.map { (source: NSURL, destination: NSURL) -> ColdSignal<NSURL> in
 					return mergeModuleIntoModule(source, destination)
 				}
