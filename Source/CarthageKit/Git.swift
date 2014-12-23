@@ -500,7 +500,7 @@ private func readTree(repositoryFileURL: NSURL, treeish: String, intoPrefix pref
 
 /// Attempts to merge the given revision into the repository's `HEAD`.
 public func mergeIntoHEAD(repositoryFileURL: NSURL, revision: String, options: [String] = []) -> ColdSignal<()> {
-	return launchGitTask([ "merge" ] + options + [ revision ], repositoryFileURL: repositoryFileURL)
+	return launchGitTask([ "merge", "--quiet" ] + options + [ revision ], repositoryFileURL: repositoryFileURL)
 		.then(.empty())
 }
 
@@ -516,4 +516,10 @@ public func detachHEAD(repositoryFileURL: NSURL) -> ColdSignal<()> {
 public func checkoutOriginalHEAD(repositoryFileURL: NSURL) -> ColdSignal<()> {
 	return launchGitTask([ "checkout", "--quiet", "-" ], repositoryFileURL: repositoryFileURL)
 		.then(.empty())
+}
+
+/// Attempts to merge the prior `HEAD` into the repository's current `HEAD`,
+/// using the given message, and committing (or not).
+public func mergeLastHEAD(repositoryFileURL: NSURL, message: String, shouldCommit: Bool = false) -> ColdSignal<()> {
+	return mergeIntoHEAD(repositoryFileURL, "-", options: [ "-m", message, (shouldCommit ? "--no-commit" : "--commit") ])
 }
