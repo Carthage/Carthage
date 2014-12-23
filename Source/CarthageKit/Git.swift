@@ -474,3 +474,22 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: St
 		}
 	}
 }
+
+/// Attempts to determine the merge-base of the given commits (of which there
+/// must be at least two).
+///
+/// Returns an error if the merge-base does not exist, or could not be
+/// determined.
+public func mergeBase(repositoryFileURL: NSURL, commits: [String]) -> ColdSignal<String> {
+	precondition(commits.count >= 2)
+
+	return launchGitTask([ "merge-base" ] + commits, repositoryFileURL: repositoryFileURL)
+		.mergeMap { string -> ColdSignal<String> in
+			let trimmedString = string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet())
+			if trimmedString.isEmpty {
+				return .error(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No merge base found between commits \(commits)").error)
+			} else {
+				return .single(trimmedString)
+			}
+		}
+}
