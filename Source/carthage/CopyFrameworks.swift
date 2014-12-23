@@ -25,11 +25,9 @@ public struct CopyFrameworksCommand: CommandType {
 				let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
 				let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
-				return ColdSignal.fromResult(target)
-					.combineLatestWith(.fromResult(validArchitectures()))
+				return combineLatest(ColdSignal.fromResult(target), .fromResult(validArchitectures()))
 					.mergeMap { (target, validArchitectures) -> ColdSignal<()> in
-						return copyFramework(source, target)
-							.combineLatestWith(.fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")))
+						return combineLatest(copyFramework(source, target), .fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")))
 							.mergeMap { (url, codesigningIdentity) -> ColdSignal<()> in
 								return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 							}
