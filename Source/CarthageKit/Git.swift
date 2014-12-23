@@ -488,3 +488,9 @@ public func mergeBase(repositoryFileURL: NSURL, commits: [String]) -> ColdSignal
 			}
 		}
 }
+
+/// Attempts to merge the given revision into the repository's `HEAD`.
+public func mergeIntoHEAD(repositoryFileURL: NSURL, revision: String, options: [String] = []) -> ColdSignal<()> {
+	return launchGitTask([ "merge" ] + options + [ revision ], repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}
