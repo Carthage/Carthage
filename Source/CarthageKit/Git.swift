@@ -489,6 +489,15 @@ public func mergeBase(repositoryFileURL: NSURL, commits: [String]) -> ColdSignal
 		}
 }
 
+/// Attempts to read the given treeish into the repository's working directory,
+/// with each path prefixed by the given prefix (which must end with a slash).
+private func readTree(repositoryFileURL: NSURL, treeish: String, intoPrefix prefix: String) -> ColdSignal<()> {
+	assert(prefix.hasSuffix("/"))
+
+	return launchGitTask([ "read-tree", "--prefix=\(prefix)", "-u", treeish ], repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}
+
 /// Attempts to merge the given revision into the repository's `HEAD`.
 public func mergeIntoHEAD(repositoryFileURL: NSURL, revision: String, options: [String] = []) -> ColdSignal<()> {
 	return launchGitTask([ "merge" ] + options + [ revision ], repositoryFileURL: repositoryFileURL)
