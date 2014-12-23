@@ -30,7 +30,7 @@ public struct BuildCommand: CommandType {
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
 
 				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
-				let disposable = stdoutSignal.observe { data in
+				stdoutSignal.observe { data in
 					stdoutHandle.writeData(data)
 					stdoutHandle.synchronizeFile()
 				}
@@ -41,8 +41,6 @@ public struct BuildCommand: CommandType {
 						carthage.println("*** xcodebuild output can be found in \(temporaryURL.path!)")
 					}, next: { (project, scheme) in
 						carthage.println("*** Building scheme \"\(scheme)\" in \(project)")
-					}, disposed: {
-						disposable.dispose()
 					})
 					.then(.empty())
 			}
