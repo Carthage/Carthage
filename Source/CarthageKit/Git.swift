@@ -233,7 +233,7 @@ public func checkoutSubtreeToDirectory(#parentRepositoryFileURL: NSURL, #subtree
 			if hasMergeBase {
 				// If there is a merge-base, we just need to update the existing
 				// subtree.
-				return mergeIntoHEAD(parentRepositoryFileURL, revision, shouldCommit: true, message: message, strategy: "subtree")
+				return mergeIntoHEAD(parentRepositoryFileURL, revision, shouldCommit: true, message: message, strategy: "subtree", strategyOption: "theirs")
 			} else {
 				// Ensure that the prefix has a trailing slash.
 				let pathPrefix = (relativePath.hasSuffix("/") ? relativePath : relativePath + "/")
@@ -531,7 +531,7 @@ private func readTree(repositoryFileURL: NSURL, treeish: String, intoPrefix pref
 }
 
 /// Attempts to merge the given revision into the repository's `HEAD`.
-public func mergeIntoHEAD(repositoryFileURL: NSURL, revision: String, shouldCommit: Bool = false, message: String? = nil, strategy: String? = nil) -> ColdSignal<()> {
+public func mergeIntoHEAD(repositoryFileURL: NSURL, revision: String, shouldCommit: Bool = false, message: String? = nil, strategy: String? = nil, strategyOption: String? = nil) -> ColdSignal<()> {
 	var arguments = [ "merge", "--quiet", (shouldCommit ? "--commit" : "--no-commit") ]
 
 	if let message = message {
@@ -540,6 +540,10 @@ public func mergeIntoHEAD(repositoryFileURL: NSURL, revision: String, shouldComm
 
 	if let strategy = strategy {
 		arguments.append("--strategy=\(strategy)")
+	}
+
+	if let strategyOption = strategyOption {
+		arguments.append("--strategy-option=\(strategyOption)")
 	}
 
 	arguments.append(revision)
