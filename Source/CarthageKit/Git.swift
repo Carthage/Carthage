@@ -236,7 +236,7 @@ public func checkoutSubtreeToDirectory(#parentRepositoryFileURL: NSURL, #subtree
 
 				// If there's not a merge-base, we need to checkout the subtree
 				// for the first time.
-				return mergeIntoHEAD(parentRepositoryFileURL, revision, shouldCommit: false, message: message, strategy: "subtree")
+				return mergeIntoHEAD(parentRepositoryFileURL, revision, shouldCommit: false, message: message, strategy: "ours")
 					.then(readTree(parentRepositoryFileURL, revision, intoPrefix: pathPrefix))
 					.then(commit(parentRepositoryFileURL, nil))
 			}
