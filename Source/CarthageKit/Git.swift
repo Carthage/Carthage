@@ -600,3 +600,18 @@ public func currentSymbolicHEAD(repositoryFileURL: NSURL) -> ColdSignal<String> 
 		}
 		.map { $0.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
 }
+
+/// Determines whether the repository's index has any staged changes.
+public func hasStagedChanges(repositoryFileURL: NSURL) -> ColdSignal<Bool> {
+	return launchGitTask([ "diff", "-z", "--shortstat", "--cached" ], repositoryFileURL: repositoryFileURL)
+		.map { string in
+			let trimmedString = string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet())
+			return !trimmedString.isEmpty
+		}
+}
+
+/// Aborts an in-progress merge in the repository.
+public func abortMerge(repositoryFileURL: NSURL) -> ColdSignal<()> {
+	return launchGitTask([ "merge", "--quiet", "--abort" ], repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}

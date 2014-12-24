@@ -389,6 +389,15 @@ public final class Project {
 				.then(mergeIntoHEAD(directoryURL, "-", shouldCommit: false, message: "Updated Carthage dependencies"))
 				.then(stagePaths(directoryURL, [ CarthageProjectResolvedCartfilePath ])
 					.catch { _ in .empty() })
+				.then(hasStagedChanges(directoryURL))
+				.mergeMap { hasChanges -> ColdSignal<()> in
+					if hasChanges {
+						return .empty()
+					} else {
+						// If there are no changes, back out of all this nonsense.
+						return abortMerge(self.directoryURL)
+					}
+				}
 		} else {
 			return checkoutDependencies
 		}
