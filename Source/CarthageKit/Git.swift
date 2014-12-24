@@ -215,6 +215,33 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 	}
 }
 
+/// Checks out the given repository as a subtree within a parent repository,
+/// rooted at the given path. If the subtree already exists, it will be merged.
+public func checkoutSubtreeToDirectory(#parentRepositoryFileURL: NSURL, #subtreeRepositoryFileURL: NSURL, #relativePath: String, revision: String = "HEAD", message: String? = nil) -> ColdSignal<()> {
+	// Fetch the latest from the subtree repo into the parent, then try to
+	// determine if there's a merge-base between the specified revision and the
+	// current history.
+	return fetchRepository(parentRepositoryFileURL, remoteURL: GitURL(subtreeRepositoryFileURL.path!))
+		.then(mergeBase(parentRepositoryFileURL, [ "HEAD", revision ])
+			.then(.single(true))
+			.catch { _ in .single(false) })
+		.mergeMap { hasMergeBase -> ColdSignal<()> in
+			if hasMergeBase {
+				// TODO
+				return .error(RACError.Empty.error)
+			} else {
+				// Ensure that the prefix has a trailing slash.
+				let pathPrefix = (relativePath.hasSuffix("/") ? relativePath : relativePath + "/")
+
+				// If there's not a merge-base, we need to checkout the subtree
+				// for the first time.
+				return mergeIntoHEAD(parentRepositoryFileURL, revision, shouldCommit: false, message: message, strategy: "subtree")
+					.then(readTree(parentRepositoryFileURL, revision, intoPrefix: pathPrefix))
+					.then(commit(parentRepositoryFileURL, nil))
+			}
+		}
+}
+
 /// Clones submodules for the given repository at the specified
 /// revision, into the given working directory.
 public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD") -> ColdSignal<()> {
@@ -499,8 +526,34 @@ private func readTree(repositoryFileURL: NSURL, treeish: String, intoPrefix pref
 }
 
 /// Attempts to merge the given revision into the repository's `HEAD`.
-public func mergeIntoHEAD(repositoryFileURL: NSURL, revision: String, options: [String] = []) -> ColdSignal<()> {
-	return launchGitTask([ "merge", "--quiet" ] + options + [ revision ], repositoryFileURL: repositoryFileURL)
+public func mergeIntoHEAD(repositoryFileURL: NSURL, revision: String, shouldCommit: Bool = false, message: String? = nil, strategy: String? = nil) -> ColdSignal<()> {
+	var arguments = [ "merge", "--quiet", (shouldCommit ? "--commit" : "--no-commit") ]
+
+	if let message = message {
+		arguments += [ "-m", message ]
+	}
+
+	if let strategy = strategy {
+		arguments.append("--strategy=\(strategy)")
+	}
+
+	arguments.append(revision)
+
+	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}
+
+/// Attempts to commit the current index to the repository.
+public func commit(repositoryFileURL: NSURL, message: String?) -> ColdSignal<()> {
+	var arguments = [ "commit" ]
+
+	if let message = message {
+		arguments += [ "-m", message ]
+	} else {
+		arguments.append("--no-edit")
+	}
+
+	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
 		.then(.empty())
 }
 
@@ -516,10 +569,4 @@ public func detachHEAD(repositoryFileURL: NSURL) -> ColdSignal<()> {
 public func checkoutOriginalHEAD(repositoryFileURL: NSURL) -> ColdSignal<()> {
 	return launchGitTask([ "checkout", "--quiet", "-" ], repositoryFileURL: repositoryFileURL)
 		.then(.empty())
-}
-
-/// Attempts to merge the prior `HEAD` into the repository's current `HEAD`,
-/// using the given message, and committing (or not).
-public func mergeLastHEAD(repositoryFileURL: NSURL, message: String, shouldCommit: Bool = false) -> ColdSignal<()> {
-	return mergeIntoHEAD(repositoryFileURL, "-", options: [ "-m", message, (shouldCommit ? "--no-commit" : "--commit") ])
 }
