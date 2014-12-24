@@ -379,12 +379,13 @@ public final class Project {
 			.merge(identity)
 			.then(.empty())
 
-		if isGitRepository(self.directoryURL) {
-			return detachHEAD(self.directoryURL)
+		if isGitRepository(directoryURL) {
+			return detachHEAD(directoryURL)
 				.then(checkoutDependencies)
-				.then(checkoutOriginalHEAD(self.directoryURL))
+				.then(checkoutOriginalHEAD(directoryURL))
 				// TODO: Better message here.
-				.then(mergeIntoHEAD(self.directoryURL, "-", shouldCommit: false, message: "Updated Carthage dependencies"))
+				.then(mergeIntoHEAD(directoryURL, "-", shouldCommit: false, message: "Updated Carthage dependencies"))
+				.then(stagePaths(directoryURL, [ CarthageProjectResolvedCartfilePath ]))
 		} else {
 			return checkoutDependencies
 		}

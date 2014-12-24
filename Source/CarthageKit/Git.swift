@@ -444,7 +444,7 @@ internal func isGitRepository(directoryURL: NSURL) -> Bool {
 public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submodule, fetchURL: GitURL, message: String? = nil) -> ColdSignal<()> {
 	let submoduleDirectoryURL = repositoryFileURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
 
-	return ColdSignal<String>.lazy {
+	return ColdSignal<()>.lazy {
 			if isGitRepository(submoduleDirectoryURL) {
 				// If the submodule repository already exists, just check out and
 				// commit the correct revision.
@@ -452,7 +452,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 					.then(launchGitTask([ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.URL.URLString ], repositoryFileURL: repositoryFileURL))
 					.then(launchGitTask([ "submodule", "--quiet", "sync" ], repositoryFileURL: repositoryFileURL))
 					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-					.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
+					.then(stagePaths(repositoryFileURL, [ submodule.path ]))
 			} else {
 				let addSubmodule = launchGitTask([ "submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.URL.URLString, submodule.path ], repositoryFileURL: repositoryFileURL)
 					// A failure to add usually means the folder was already added
@@ -466,6 +466,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
 					.then(addSubmodule)
 					.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
+					.then(.empty())
 			}
 		}
 		.then(commit(repositoryFileURL, message))
@@ -572,5 +573,11 @@ public func detachHEAD(repositoryFileURL: NSURL) -> ColdSignal<()> {
 /// had before the last checkout.
 public func checkoutOriginalHEAD(repositoryFileURL: NSURL) -> ColdSignal<()> {
 	return launchGitTask([ "checkout", "--quiet", "-" ], repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}
+
+/// Stages the given paths into the index.
+public func stagePaths(repositoryFileURL: NSURL, paths: [String]) -> ColdSignal<()> {
+	return launchGitTask([ "add", "--force" ] + paths, repositoryFileURL: repositoryFileURL)
 		.then(.empty())
 }
