@@ -313,7 +313,6 @@ public final class Project {
 	/// cloning it first if need be.
 	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> ColdSignal<()> {
 		let repositoryURL = self.repositoryFileURLForProject(project)
-		let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
 		let checkoutSignal = ColdSignal<()>.lazy {
 				var submodule: Submodule?
@@ -327,8 +326,14 @@ public final class Project {
 				}
 
 				if let submodule = submodule {
+					// Git submodules
 					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!)))
+				} else if isGitRepository(self.directoryURL) {
+					// Git subtrees
+					return self.runGitOperation(checkoutSubtreeToDirectory(parentRepositoryFileURL: self.directoryURL, subtreeRepositoryFileURL: repositoryURL, relativePath: project.relativePath, revision: revision))
 				} else {
+					// `git checkout`
+					let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 				}
 			}

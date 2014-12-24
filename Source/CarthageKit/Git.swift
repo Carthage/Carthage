@@ -430,7 +430,7 @@ private func gitDirectoryURLInRepository(repositoryFileURL: NSURL) -> NSURL {
 
 /// Attempts to determine whether the given directory represents a Git
 /// repository.
-private func isGitRepository(directoryURL: NSURL) -> Bool {
+internal func isGitRepository(directoryURL: NSURL) -> Bool {
 	return NSFileManager.defaultManager().fileExistsAtPath(gitDirectoryURLInRepository(directoryURL).path!)
 }
 
