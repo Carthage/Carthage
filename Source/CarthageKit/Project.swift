@@ -387,7 +387,8 @@ public final class Project {
 				}
 				// TODO: Better message here.
 				.then(mergeIntoHEAD(directoryURL, "-", shouldCommit: false, message: "Updated Carthage dependencies"))
-				.then(stagePaths(directoryURL, [ CarthageProjectResolvedCartfilePath ]))
+				.then(stagePaths(directoryURL, [ CarthageProjectResolvedCartfilePath ])
+					.catch { _ in .empty() })
 		} else {
 			return checkoutDependencies
 		}
