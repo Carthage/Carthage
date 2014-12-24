@@ -564,15 +564,20 @@ public func commit(repositoryFileURL: NSURL, message: String?) -> ColdSignal<()>
 
 /// Attempts to detach the repository's `HEAD`, so changes can be made without
 /// affecting the original branch.
-public func detachHEAD(repositoryFileURL: NSURL) -> ColdSignal<()> {
-	return launchGitTask([ "checkout", "--quiet", "--detach", "HEAD" ], repositoryFileURL: repositoryFileURL)
-		.then(.empty())
+///
+/// Upon success, returns the original `HEAD` for the repository.
+public func detachHEAD(repositoryFileURL: NSURL) -> ColdSignal<String> {
+	return currentSymbolicHEAD(repositoryFileURL)
+		.mergeMap { previousHEAD in
+			return launchGitTask([ "checkout", "--quiet", "--detach", "HEAD" ], repositoryFileURL: repositoryFileURL)
+				.then(.single(previousHEAD))
+		}
 }
 
-/// After another checkout command, this returns the repository to the `HEAD` it
-/// had before the last checkout.
-public func checkoutOriginalHEAD(repositoryFileURL: NSURL) -> ColdSignal<()> {
-	return launchGitTask([ "checkout", "--quiet", "-" ], repositoryFileURL: repositoryFileURL)
+/// Checks out the specified revision in the given repository, without doing
+/// anything else.
+public func checkoutRevision(repositoryFileURL: NSURL, revision: String) -> ColdSignal<()> {
+	return launchGitTask([ "checkout", "--quiet", revision ], repositoryFileURL: repositoryFileURL)
 		.then(.empty())
 }
 
@@ -580,4 +585,14 @@ public func checkoutOriginalHEAD(repositoryFileURL: NSURL) -> ColdSignal<()> {
 public func stagePaths(repositoryFileURL: NSURL, paths: [String]) -> ColdSignal<()> {
 	return launchGitTask([ "add", "--force" ] + paths, repositoryFileURL: repositoryFileURL)
 		.then(.empty())
+}
+
+/// Attempts to determine the repository's current `HEAD` reference, using a
+/// symbolic name if possible.
+public func currentSymbolicHEAD(repositoryFileURL: NSURL) -> ColdSignal<String> {
+	return launchGitTask([ "symbolic-ref", "--short", "HEAD" ], repositoryFileURL: repositoryFileURL)
+		.catch { _ in
+			return launchGitTask([ "describe", "--all", "--always", "HEAD" ], repositoryFileURL: repositoryFileURL)
+		}
+		.map { $0.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
 }

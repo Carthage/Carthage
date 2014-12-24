@@ -381,8 +381,10 @@ public final class Project {
 
 		if isGitRepository(directoryURL) {
 			return detachHEAD(directoryURL)
-				.then(checkoutDependencies)
-				.then(checkoutOriginalHEAD(directoryURL))
+				.mergeMap { previousHEAD -> ColdSignal<()> in
+					return checkoutDependencies
+						.then(checkoutRevision(self.directoryURL, previousHEAD))
+				}
 				// TODO: Better message here.
 				.then(mergeIntoHEAD(directoryURL, "-", shouldCommit: false, message: "Updated Carthage dependencies"))
 				.then(stagePaths(directoryURL, [ CarthageProjectResolvedCartfilePath ]))
