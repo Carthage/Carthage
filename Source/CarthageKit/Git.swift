@@ -469,7 +469,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 					.then(.empty())
 			}
 		}
-		.then(commit(repositoryFileURL, message))
+		.then(commit(repositoryFileURL, message, allowEmpty: true))
 }
 
 /// Moves an item within a Git repository, or within a simple directory if a Git
@@ -549,13 +549,17 @@ public func mergeIntoHEAD(repositoryFileURL: NSURL, revision: String, shouldComm
 }
 
 /// Attempts to commit the current index to the repository.
-public func commit(repositoryFileURL: NSURL, message: String?) -> ColdSignal<()> {
+public func commit(repositoryFileURL: NSURL, message: String?, allowEmpty: Bool = false) -> ColdSignal<()> {
 	var arguments = [ "commit" ]
 
 	if let message = message {
 		arguments += [ "-m", message ]
 	} else {
 		arguments.append("--no-edit")
+	}
+
+	if allowEmpty {
+		arguments.append("--allow-empty")
 	}
 
 	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
