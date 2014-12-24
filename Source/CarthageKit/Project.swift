@@ -330,7 +330,7 @@ public final class Project {
 					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!)))
 				} else if isGitRepository(self.directoryURL) {
 					// Git subtrees
-					return self.runGitOperation(checkoutSubtreeToDirectory(parentRepositoryFileURL: self.directoryURL, subtreeRepositoryFileURL: repositoryURL, relativePath: project.relativePath, revision: revision))
+					return self.runGitOperation(checkoutSubtreeToDirectory(parentRepositoryFileURL: self.directoryURL, subtreeRepositoryFileURL: repositoryURL, relativePath: project.relativePath, revision: revision, message: "Updating \(project.name) to \(revision)"))
 				} else {
 					// `git checkout`
 					let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
