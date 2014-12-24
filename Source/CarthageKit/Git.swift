@@ -200,7 +200,7 @@ public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, r
 /// Checks out the working tree of the given (ideally bare) repository, at the
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
-public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> ColdSignal<()> {
+public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD") -> ColdSignal<()> {
 	return ColdSignal.lazy {
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -211,22 +211,49 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 		environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
 
 		return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
-			.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision, shouldCloneSubmodule: shouldCloneSubmodule))
+			.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision))
 	}
 }
 
-/// Clones matching submodules for the given repository at the specified
-/// revision, into the given working directory.
-public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> ColdSignal<()> {
-	return submodulesInRepository(repositoryFileURL, revision: revision)
-		.map { submodule -> ColdSignal<()> in
-			if shouldCloneSubmodule(submodule) {
-				return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
+/// Checks out the given repository as a subtree within a parent repository,
+/// rooted at the given path. If the subtree already exists, it will be merged.
+public func checkoutSubtreeToDirectory(#parentRepositoryFileURL: NSURL, #subtreeRepositoryFileURL: NSURL, #relativePath: String, revision: String = "HEAD", message: String? = nil) -> ColdSignal<()> {
+	// Ensures that the refs for this subtree actually get fetched, and (less
+	// importantly) that they get kept around.
+	let refspec = "refs/heads/*:refs/carthage/\(relativePath.lastPathComponent)/*" /* lol syntax highlighting */
+
+	// Fetch the latest from the subtree repo into the parent, then try to
+	// determine if there's a merge-base between the specified revision and the
+	// current history.
+	return fetchRepository(parentRepositoryFileURL, remoteURL: GitURL(subtreeRepositoryFileURL.path!), refspec: refspec)
+		.then(mergeBase(parentRepositoryFileURL, [ "HEAD", revision ])
+			.then(.single(true))
+			.catch { _ in .single(false) })
+		.mergeMap { hasMergeBase -> ColdSignal<()> in
+			if hasMergeBase {
+				// If there is a merge-base, we just need to update the existing
+				// subtree.
+				return mergeIntoHEAD(parentRepositoryFileURL, revision, shouldCommit: true, message: message, strategy: "subtree", strategyOption: "theirs")
 			} else {
-				return .empty()
+				// Ensure that the prefix has a trailing slash.
+				let pathPrefix = (relativePath.hasSuffix("/") ? relativePath : relativePath + "/")
+
+				// If there's not a merge-base, we need to checkout the subtree
+				// for the first time.
+				return mergeIntoHEAD(parentRepositoryFileURL, revision, shouldCommit: false, message: message, strategy: "ours")
+					.then(readTree(parentRepositoryFileURL, revision, intoPrefix: pathPrefix))
+					.then(commit(parentRepositoryFileURL, nil))
 			}
 		}
-		.concat(identity)
+}
+
+/// Clones submodules for the given repository at the specified
+/// revision, into the given working directory.
+public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD") -> ColdSignal<()> {
+	return submodulesInRepository(repositoryFileURL, revision: revision)
+		.concatMap { submodule -> ColdSignal<()> in
+			return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
+		}
 		.then(.empty())
 }
 
@@ -408,41 +435,41 @@ private func gitDirectoryURLInRepository(repositoryFileURL: NSURL) -> NSURL {
 
 /// Attempts to determine whether the given directory represents a Git
 /// repository.
-private func isGitRepository(directoryURL: NSURL) -> Bool {
+internal func isGitRepository(directoryURL: NSURL) -> Bool {
 	return NSFileManager.defaultManager().fileExistsAtPath(gitDirectoryURLInRepository(directoryURL).path!)
 }
 
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if
 /// the desired revision does not exist or the submodule needs to be cloned.
-public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submodule, fetchURL: GitURL) -> ColdSignal<()> {
+public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submodule, fetchURL: GitURL, message: String? = nil) -> ColdSignal<()> {
 	let submoduleDirectoryURL = repositoryFileURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
 
-	return ColdSignal.lazy {
-		if isGitRepository(submoduleDirectoryURL) {
-			// If the submodule repository already exists, just check out and
-			// stage the correct revision.
-			return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL)
-				.then(launchGitTask([ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.URL.URLString ], repositoryFileURL: repositoryFileURL))
-				.then(launchGitTask([ "submodule", "--quiet", "sync" ], repositoryFileURL: repositoryFileURL))
-				.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-				.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
-				.then(.empty())
-		} else {
-			let addSubmodule = launchGitTask([ "submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.URL.URLString, submodule.path ], repositoryFileURL: repositoryFileURL)
-				// A failure to add usually means the folder was already added
-				// to the index. That's okay.
-				.catch { _ in .empty() }
+	return ColdSignal<()>.lazy {
+			if isGitRepository(submoduleDirectoryURL) {
+				// If the submodule repository already exists, just check out and
+				// commit the correct revision.
+				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL)
+					.then(launchGitTask([ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.URL.URLString ], repositoryFileURL: repositoryFileURL))
+					.then(launchGitTask([ "submodule", "--quiet", "sync" ], repositoryFileURL: repositoryFileURL))
+					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+					.then(stagePaths(repositoryFileURL, [ submodule.path ]))
+			} else {
+				let addSubmodule = launchGitTask([ "submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.URL.URLString, submodule.path ], repositoryFileURL: repositoryFileURL)
+					// A failure to add usually means the folder was already added
+					// to the index. That's okay.
+					.catch { _ in .empty() }
 
-			// If it doesn't exist, clone and initialize a submodule from our
-			// local bare repository.
-			return cloneRepository(fetchURL, submoduleDirectoryURL, bare: false)
-				.then(launchGitTask([ "remote", "set-url", "origin", submodule.URL.URLString ], repositoryFileURL: submoduleDirectoryURL))
-				.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-				.then(addSubmodule)
-				.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
-				.then(.empty())
+				// If it doesn't exist, clone and initialize a submodule from our
+				// local bare repository.
+				return cloneRepository(fetchURL, submoduleDirectoryURL, bare: false)
+					.then(launchGitTask([ "remote", "set-url", "origin", submodule.URL.URLString ], repositoryFileURL: submoduleDirectoryURL))
+					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+					.then(addSubmodule)
+					.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
+					.then(.empty())
+			}
 		}
-	}
+		.then(commit(repositoryFileURL, message, allowEmpty: true))
 }
 
 /// Moves an item within a Git repository, or within a simple directory if a Git
@@ -473,4 +500,122 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: St
 			}
 		}
 	}
+}
+
+/// Attempts to determine the merge-base of the given commits (of which there
+/// must be at least two).
+///
+/// Returns an error if the merge-base does not exist, or could not be
+/// determined.
+public func mergeBase(repositoryFileURL: NSURL, commits: [String]) -> ColdSignal<String> {
+	precondition(commits.count >= 2)
+
+	return launchGitTask([ "merge-base" ] + commits, repositoryFileURL: repositoryFileURL)
+		.mergeMap { string -> ColdSignal<String> in
+			let trimmedString = string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet())
+			if trimmedString.isEmpty {
+				return .error(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No merge base found between commits \(commits)").error)
+			} else {
+				return .single(trimmedString)
+			}
+		}
+}
+
+/// Attempts to read the given treeish into the repository's working directory,
+/// with each path prefixed by the given prefix (which must end with a slash).
+private func readTree(repositoryFileURL: NSURL, treeish: String, intoPrefix prefix: String) -> ColdSignal<()> {
+	assert(prefix.hasSuffix("/"))
+
+	return launchGitTask([ "read-tree", "--prefix=\(prefix)", "-u", treeish ], repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}
+
+/// Attempts to merge the given revision into the repository's `HEAD`.
+public func mergeIntoHEAD(repositoryFileURL: NSURL, revision: String, shouldCommit: Bool = false, message: String? = nil, strategy: String? = nil, strategyOption: String? = nil) -> ColdSignal<()> {
+	var arguments = [ "merge", "--quiet", (shouldCommit ? "--commit" : "--no-commit") ]
+
+	if let message = message {
+		arguments += [ "-m", message ]
+	}
+
+	if let strategy = strategy {
+		arguments.append("--strategy=\(strategy)")
+	}
+
+	if let strategyOption = strategyOption {
+		arguments.append("--strategy-option=\(strategyOption)")
+	}
+
+	arguments.append(revision)
+
+	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}
+
+/// Attempts to commit the current index to the repository.
+public func commit(repositoryFileURL: NSURL, message: String?, allowEmpty: Bool = false) -> ColdSignal<()> {
+	var arguments = [ "commit" ]
+
+	if let message = message {
+		arguments += [ "-m", message ]
+	} else {
+		arguments.append("--no-edit")
+	}
+
+	if allowEmpty {
+		arguments.append("--allow-empty")
+	}
+
+	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}
+
+/// Attempts to detach the repository's `HEAD`, so changes can be made without
+/// affecting the original branch.
+///
+/// Upon success, returns the original `HEAD` for the repository.
+public func detachHEAD(repositoryFileURL: NSURL) -> ColdSignal<String> {
+	return currentSymbolicHEAD(repositoryFileURL)
+		.mergeMap { previousHEAD in
+			return launchGitTask([ "checkout", "--quiet", "--detach", "HEAD" ], repositoryFileURL: repositoryFileURL)
+				.then(.single(previousHEAD))
+		}
+}
+
+/// Checks out the specified revision in the given repository, without doing
+/// anything else.
+public func checkoutRevision(repositoryFileURL: NSURL, revision: String) -> ColdSignal<()> {
+	return launchGitTask([ "checkout", "--quiet", revision ], repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}
+
+/// Stages the given paths into the index.
+public func stagePaths(repositoryFileURL: NSURL, paths: [String]) -> ColdSignal<()> {
+	return launchGitTask([ "add", "--force" ] + paths, repositoryFileURL: repositoryFileURL)
+		.then(.empty())
+}
+
+/// Attempts to determine the repository's current `HEAD` reference, using a
+/// symbolic name if possible.
+public func currentSymbolicHEAD(repositoryFileURL: NSURL) -> ColdSignal<String> {
+	return launchGitTask([ "symbolic-ref", "--short", "HEAD" ], repositoryFileURL: repositoryFileURL)
+		.catch { _ in
+			return launchGitTask([ "describe", "--all", "--always", "HEAD" ], repositoryFileURL: repositoryFileURL)
+		}
+		.map { $0.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
+}
+
+/// Determines whether the repository's index has any staged changes.
+public func hasStagedChanges(repositoryFileURL: NSURL) -> ColdSignal<Bool> {
+	return launchGitTask([ "diff", "-z", "--shortstat", "--cached" ], repositoryFileURL: repositoryFileURL)
+		.map { string in
+			let trimmedString = string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet())
+			return !trimmedString.isEmpty
+		}
+}
+
+/// Aborts an in-progress merge in the repository.
+public func abortMerge(repositoryFileURL: NSURL) -> ColdSignal<()> {
+	return launchGitTask([ "merge", "--quiet", "--abort" ], repositoryFileURL: repositoryFileURL)
+		.then(.empty())
 }

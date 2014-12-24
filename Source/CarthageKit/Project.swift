@@ -236,7 +236,7 @@ public final class Project {
 			} else {
 				self._projectEventsSink.put(.Fetching(project))
 
-				return fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
+				return fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
 					.then(.single(repositoryURL))
 			}
 		}
@@ -313,7 +313,6 @@ public final class Project {
 	/// cloning it first if need be.
 	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> ColdSignal<()> {
 		let repositoryURL = self.repositoryFileURLForProject(project)
-		let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
 		let checkoutSignal = ColdSignal<()>.lazy {
 				var submodule: Submodule?
@@ -326,9 +325,17 @@ public final class Project {
 					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: self.repositoryURLForProject(project), SHA: revision)
 				}
 
+				let message = "Updating \(project.name) to \"\(revision)\""
+
 				if let submodule = submodule {
-					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!)))
+					// Git submodules
+					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!), message: message))
+				} else if isGitRepository(self.directoryURL) {
+					// Git subtrees
+					return self.runGitOperation(checkoutSubtreeToDirectory(parentRepositoryFileURL: self.directoryURL, subtreeRepositoryFileURL: repositoryURL, relativePath: project.relativePath, revision: revision, message: message))
 				} else {
+					// `git checkout`
+					let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 				}
 			}
@@ -358,7 +365,7 @@ public final class Project {
 				return submodulesByPath
 			}
 
-		return ColdSignal<ResolvedCartfile>.lazy {
+		let checkoutDependencies: ColdSignal<()> = ColdSignal<ResolvedCartfile>.lazy {
 				return ColdSignal.fromResult(self.readResolvedCartfile())
 			}
 			.zipWith(submodulesSignal)
@@ -371,6 +378,29 @@ public final class Project {
 			}
 			.merge(identity)
 			.then(.empty())
+
+		if isGitRepository(directoryURL) {
+			return detachHEAD(directoryURL)
+				.mergeMap { previousHEAD -> ColdSignal<()> in
+					return checkoutDependencies
+						.then(checkoutRevision(self.directoryURL, previousHEAD))
+				}
+				// TODO: Better message here.
+				.then(mergeIntoHEAD(directoryURL, "-", shouldCommit: false, message: "Updated Carthage dependencies"))
+				.then(stagePaths(directoryURL, [ CarthageProjectResolvedCartfilePath ])
+					.catch { _ in .empty() })
+				.then(hasStagedChanges(directoryURL))
+				.mergeMap { hasChanges -> ColdSignal<()> in
+					if hasChanges {
+						return .empty()
+					} else {
+						// If there are no changes, back out of all this nonsense.
+						return abortMerge(self.directoryURL)
+					}
+				}
+		} else {
+			return checkoutDependencies
+		}
 	}
 
 	/// Attempts to build each Carthage dependency that has been checked out.
