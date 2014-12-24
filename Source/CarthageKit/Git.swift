@@ -218,10 +218,14 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 /// Checks out the given repository as a subtree within a parent repository,
 /// rooted at the given path. If the subtree already exists, it will be merged.
 public func checkoutSubtreeToDirectory(#parentRepositoryFileURL: NSURL, #subtreeRepositoryFileURL: NSURL, #relativePath: String, revision: String = "HEAD", message: String? = nil) -> ColdSignal<()> {
+	// Ensures that the refs for this subtree actually get fetched, and (less
+	// importantly) that they get kept around.
+	let refspec = "refs/heads/*:refs/carthage/\(relativePath.lastPathComponent)/*" /* lol syntax highlighting */
+
 	// Fetch the latest from the subtree repo into the parent, then try to
 	// determine if there's a merge-base between the specified revision and the
 	// current history.
-	return fetchRepository(parentRepositoryFileURL, remoteURL: GitURL(subtreeRepositoryFileURL.path!))
+	return fetchRepository(parentRepositoryFileURL, remoteURL: GitURL(subtreeRepositoryFileURL.path!), refspec: refspec)
 		.then(mergeBase(parentRepositoryFileURL, [ "HEAD", revision ])
 			.then(.single(true))
 			.catch { _ in .single(false) })
