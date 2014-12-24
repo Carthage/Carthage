@@ -227,8 +227,9 @@ public func checkoutSubtreeToDirectory(#parentRepositoryFileURL: NSURL, #subtree
 			.catch { _ in .single(false) })
 		.mergeMap { hasMergeBase -> ColdSignal<()> in
 			if hasMergeBase {
-				// TODO
-				return .error(RACError.Empty.error)
+				// If there is a merge-base, we just need to update the existing
+				// subtree.
+				return mergeIntoHEAD(parentRepositoryFileURL, revision, shouldCommit: true, message: message, strategy: "subtree")
 			} else {
 				// Ensure that the prefix has a trailing slash.
 				let pathPrefix = (relativePath.hasSuffix("/") ? relativePath : relativePath + "/")
