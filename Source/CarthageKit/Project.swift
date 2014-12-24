@@ -363,7 +363,7 @@ public final class Project {
 				return submodulesByPath
 			}
 
-		return ColdSignal<ResolvedCartfile>.lazy {
+		let checkoutDependencies: ColdSignal<()> = ColdSignal<ResolvedCartfile>.lazy {
 				return ColdSignal.fromResult(self.readResolvedCartfile())
 			}
 			.zipWith(submodulesSignal)
@@ -376,6 +376,16 @@ public final class Project {
 			}
 			.merge(identity)
 			.then(.empty())
+
+		if isGitRepository(self.directoryURL) {
+			return detachHEAD(self.directoryURL)
+				.then(checkoutDependencies)
+				.then(checkoutOriginalHEAD(self.directoryURL))
+				// TODO: Better message here.
+				.then(mergeIntoHEAD(self.directoryURL, "-", shouldCommit: false, message: "Updated Carthage dependencies"))
+		} else {
+			return checkoutDependencies
+		}
 	}
 
 	/// Attempts to build each Carthage dependency that has been checked out.
