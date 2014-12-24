@@ -441,35 +441,34 @@ internal func isGitRepository(directoryURL: NSURL) -> Bool {
 
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if
 /// the desired revision does not exist or the submodule needs to be cloned.
-public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submodule, fetchURL: GitURL) -> ColdSignal<()> {
+public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submodule, fetchURL: GitURL, message: String? = nil) -> ColdSignal<()> {
 	let submoduleDirectoryURL = repositoryFileURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
 
-	return ColdSignal.lazy {
-		if isGitRepository(submoduleDirectoryURL) {
-			// If the submodule repository already exists, just check out and
-			// stage the correct revision.
-			return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL)
-				.then(launchGitTask([ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.URL.URLString ], repositoryFileURL: repositoryFileURL))
-				.then(launchGitTask([ "submodule", "--quiet", "sync" ], repositoryFileURL: repositoryFileURL))
-				.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-				.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
-				.then(.empty())
-		} else {
-			let addSubmodule = launchGitTask([ "submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.URL.URLString, submodule.path ], repositoryFileURL: repositoryFileURL)
-				// A failure to add usually means the folder was already added
-				// to the index. That's okay.
-				.catch { _ in .empty() }
+	return ColdSignal<String>.lazy {
+			if isGitRepository(submoduleDirectoryURL) {
+				// If the submodule repository already exists, just check out and
+				// commit the correct revision.
+				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL)
+					.then(launchGitTask([ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.URL.URLString ], repositoryFileURL: repositoryFileURL))
+					.then(launchGitTask([ "submodule", "--quiet", "sync" ], repositoryFileURL: repositoryFileURL))
+					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+					.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
+			} else {
+				let addSubmodule = launchGitTask([ "submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.URL.URLString, submodule.path ], repositoryFileURL: repositoryFileURL)
+					// A failure to add usually means the folder was already added
+					// to the index. That's okay.
+					.catch { _ in .empty() }
 
-			// If it doesn't exist, clone and initialize a submodule from our
-			// local bare repository.
-			return cloneRepository(fetchURL, submoduleDirectoryURL, bare: false)
-				.then(launchGitTask([ "remote", "set-url", "origin", submodule.URL.URLString ], repositoryFileURL: submoduleDirectoryURL))
-				.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-				.then(addSubmodule)
-				.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
-				.then(.empty())
+				// If it doesn't exist, clone and initialize a submodule from our
+				// local bare repository.
+				return cloneRepository(fetchURL, submoduleDirectoryURL, bare: false)
+					.then(launchGitTask([ "remote", "set-url", "origin", submodule.URL.URLString ], repositoryFileURL: submoduleDirectoryURL))
+					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+					.then(addSubmodule)
+					.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
+			}
 		}
-	}
+		.then(commit(repositoryFileURL, message))
 }
 
 /// Moves an item within a Git repository, or within a simple directory if a Git

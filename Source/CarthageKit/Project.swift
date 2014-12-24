@@ -325,12 +325,14 @@ public final class Project {
 					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: self.repositoryURLForProject(project), SHA: revision)
 				}
 
+				let message = "Updating \(project.name) to \"\(revision)\""
+
 				if let submodule = submodule {
 					// Git submodules
-					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!)))
+					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!), message: message))
 				} else if isGitRepository(self.directoryURL) {
 					// Git subtrees
-					return self.runGitOperation(checkoutSubtreeToDirectory(parentRepositoryFileURL: self.directoryURL, subtreeRepositoryFileURL: repositoryURL, relativePath: project.relativePath, revision: revision, message: "Updating \(project.name) to \(revision)"))
+					return self.runGitOperation(checkoutSubtreeToDirectory(parentRepositoryFileURL: self.directoryURL, subtreeRepositoryFileURL: repositoryURL, relativePath: project.relativePath, revision: revision, message: message))
 				} else {
 					// `git checkout`
 					let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
