@@ -63,6 +63,8 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
   $(SRCROOT)/Carthage/Build/iOS/LlamaKit.framework
   $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
   ```
+  
+  This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries.
 
 ##### For both platforms
 
