@@ -3,5 +3,5 @@ github "Quick/Quick" == 0.2.0
 github "Quick/Nimble"
 github "Carthage/LlamaKit" == 0.1.1
 github "jspahrsummers/xcconfigs" >= 0.6
-github "Carthage/Commandant" "master"
+github "Carthage/Commandant" "add-help-command"
 github "Carthage/ReactiveTask" "master"
