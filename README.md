@@ -126,7 +126,7 @@ Carthage is released under the [MIT License](LICENSE.md).
 
 [Artifacts]: Documentation/Artifacts.md
 [Cartfile]: Documentation/Artifacts.md#cartfile
-[Cartfile.resolved]: Documentation/Artifacts.md#cartfilelock
+[Cartfile.resolved]: Documentation/Artifacts.md#cartfileresolved
 [Carthage/Build]: Documentation/Artifacts.md#carthagebuild
 [Carthage/Checkouts]: Documentation/Artifacts.md#carthagecheckouts
 [CarthageKit]: Source/CarthageKit
