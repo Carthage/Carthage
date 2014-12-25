@@ -53,10 +53,12 @@ public struct BuildCommand: CommandType {
 	/// cold signals representing each scheme being built.
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
+		let project = Project(directoryURL: directoryURL)
 
-		var buildSignal = ColdSignal<Project>.lazy {
-				return .fromResult(Project.loadFromDirectory(directoryURL))
+		var buildSignal = ColdSignal<Cartfile>.lazy {
+				return .fromResult(project.readCartfile())
 			}
+			.map { _ in project }
 			.catch { error in
 				if options.skipCurrent {
 					return .error(error)

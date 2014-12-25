@@ -51,21 +51,15 @@ public struct CheckoutOptions: OptionsType {
 	/// accordingly.
 	public func loadProject() -> ColdSignal<Project> {
 		if let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true) {
-			return ColdSignal<Project>.lazy {
-					return .fromResult(Project.loadFromDirectory(directoryURL))
-				}
-				.map { project in
-					project.preferHTTPS = !self.useSSH
-					project.useSubmodules = self.useSubmodules
-					project.projectEvents.observe(ProjectEventSink())
-					return project
-				}
-				.mergeMap { (project: Project) -> ColdSignal<Project> in
-					return project
-						.migrateIfNecessary()
-						.on(next: carthage.println)
-						.then(.single(project))
-				}
+			let project = Project(directoryURL: directoryURL)
+			project.preferHTTPS = !self.useSSH
+			project.useSubmodules = self.useSubmodules
+			project.projectEvents.observe(ProjectEventSink())
+
+			return project
+				.migrateIfNecessary()
+				.on(next: carthage.println)
+				.then(.single(project))
 		} else {
 			return .error(CarthageError.InvalidArgument(description: "Invalid project path: \(directoryPath)").error)
 		}
