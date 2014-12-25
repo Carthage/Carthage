@@ -10,6 +10,7 @@
 // CarthageKit.
 
 import CarthageKit
+import Commandant
 import Foundation
 import LlamaKit
 import ReactiveCocoa
@@ -43,6 +44,14 @@ internal func println<T>(object: T) {
 internal func print<T>(object: T) {
 	dispatch_async(outputQueue) {
 		Swift.print(object)
+	}
+}
+
+extension GitURL: ArgumentType {
+	public static let name = "URL"
+
+	public static func fromString(string: String) -> GitURL? {
+		return self(string)
 	}
 }
 
