@@ -8,6 +8,7 @@
 
 import Foundation
 import LlamaKit
+import ReactiveCocoa
 
 /// Describes a GitHub.com repository.
 public struct GitHubRepository: Equatable {
@@ -53,5 +54,43 @@ extension GitHubRepository: Hashable {
 extension GitHubRepository: Printable {
 	public var description: String {
 		return "\(owner)/\(name)"
+	}
+}
+
+/// Represents credentials suitable for logging in to GitHub.com.
+internal struct GitHubCredentials {
+	let username: String
+	let password: String
+
+	/// Attempts to load credentials from the Git credential store.
+	///
+	/// If valid credentials are found, they are sent. Otherwise, the returned
+	/// signal will be empty.
+	static func loadFromGit() -> ColdSignal<GitHubCredentials> {
+		let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
+
+		return launchGitTask([ "credential", "fill" ], standardInput: ColdSignal.single(data))
+			.mergeMap { $0.linesSignal }
+			.reduce(initial: [:]) { (var values: [String: String], line) in
+				let parts = split(line, { $0 == "=" }, maxSplit: 1, allowEmptySlices: false)
+				if parts.count >= 2 {
+					let key = parts[0]
+					let value = parts[1]
+
+					values[key] = value
+				}
+
+				return values
+			}
+			.tryMap { (values, _) -> GitHubCredentials? in
+				if let username = values["username"] {
+					if let password = values["password"] {
+						return self(username: username, password: password)
+					}
+				}
+
+				return nil
+			}
+			.catch { _ in .empty() }
 	}
 }
