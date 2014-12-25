@@ -17,6 +17,7 @@ commands.register(BootstrapCommand())
 commands.register(BuildCommand())
 commands.register(CheckoutCommand())
 commands.register(CopyFrameworksCommand())
+commands.register(FetchCommand())
 commands.register(UpdateCommand())
 commands.register(VersionCommand())
 

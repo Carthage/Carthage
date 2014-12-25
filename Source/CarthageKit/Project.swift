@@ -383,7 +383,7 @@ private func repositoryURLForProject(project: ProjectIdentifier, #preferHTTPS: B
 /// Returns a signal which will send the operation type once started, and
 /// the URL to where the repository's folder will exist on disk, then complete
 /// when the operation completes.
-private func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) -> ColdSignal<(ProjectEvent, NSURL)> {
+public func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) -> ColdSignal<(ProjectEvent, NSURL)> {
 	let repositoryURL = repositoryFileURLForProject(project)
 
 	return ColdSignal.lazy {
