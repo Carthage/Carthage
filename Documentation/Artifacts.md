@@ -60,6 +60,12 @@ github "jspahrsummers/xcconfigs"
 git "https://enterprise.local/desktop/git-error-translations.git" "development"
 ```
 
+## Cartfile.private
+
+Frameworks that want to include dependencies via Carthage, but do _not_ want to force those dependencies on parent projects, can list them in the optional `Cartfile.private` file, identically to how they would be specified in the main [Cartfile](#cartfile).
+
+Anything listed in the private Cartfile will not be seen by dependent (parent) projects, which is useful for dependencies that may be important during development, but not when building releases—for example, test frameworks.
+
 ## Cartfile.resolved
 
 After running the `carthage update` command, a file named `Cartfile.resolved` will be created alongside the `Cartfile` in the working directory. This file specifies precisely _which_ versions were chosen of each dependency, and lists all dependencies (even nested ones).
