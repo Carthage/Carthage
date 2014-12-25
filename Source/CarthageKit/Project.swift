@@ -185,34 +185,18 @@ public final class Project {
 		}.deliverOn(QueueScheduler())
 	}
 
-	/// Clones the given project to the global repositories folder, or fetches
+	/// Clones the given dependency to the global repositories folder, or fetches
 	/// inside it if it has already been cloned.
 	///
 	/// Returns a signal which will send the URL to the repository's folder on
-	/// disk.
-	private func cloneOrFetchProject(project: ProjectIdentifier) -> ColdSignal<NSURL> {
-		let repositoryURL = repositoryFileURLForProject(project)
-		let operation = ColdSignal<NSURL>.lazy {
-			var error: NSError?
-			if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-				return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
-			}
-
-			let remoteURL = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
-			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
-				// If we created the directory, we're now responsible for
-				// cloning it.
-				self._projectEventsSink.put(.Cloning(project))
-
-				return cloneRepository(remoteURL, repositoryURL)
-					.then(.single(repositoryURL))
-			} else {
-				self._projectEventsSink.put(.Fetching(project))
-
-				return fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
-					.then(.single(repositoryURL))
-			}
-		}
+	/// disk once cloning or fetching has completed.
+	private func cloneOrFetchDependency(project: ProjectIdentifier) -> ColdSignal<NSURL> {
+		let operation = cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS)
+			.on(next: { event, _ in
+				self._projectEventsSink.put(event)
+			})
+			.map { _, URL in URL }
+			.takeLast(1)
 
 		return runGitOperation(operation)
 	}
@@ -222,7 +206,7 @@ public final class Project {
 	/// This will automatically clone or fetch the project's repository as
 	/// necessary.
 	private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<PinnedVersion> {
-		let fetchVersions = cloneOrFetchProject(project)
+		let fetchVersions = cloneOrFetchDependency(project)
 			.map { repositoryURL in listTags(repositoryURL) }
 			.merge(identity)
 			.map { PinnedVersion($0) }
@@ -241,7 +225,7 @@ public final class Project {
 
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> ColdSignal<PinnedVersion> {
-		return cloneOrFetchProject(project)
+		return cloneOrFetchDependency(project)
 			.map { repositoryURL in
 				return resolveReferenceInRepository(repositoryURL, reference)
 			}
@@ -308,7 +292,7 @@ public final class Project {
 				if exists {
 					return .empty()
 				} else {
-					return self.cloneOrFetchProject(project)
+					return self.cloneOrFetchDependency(project)
 				}
 			}
 			.merge(identity)
@@ -390,5 +374,37 @@ private func repositoryURLForProject(project: ProjectIdentifier, #preferHTTPS: B
 
 	case let .Git(URL):
 		return URL
+	}
+}
+
+/// Clones the given project to the global repositories folder, or fetches
+/// inside it if it has already been cloned.
+///
+/// Returns a signal which will send the operation type once started, and
+/// the URL to where the repository's folder will exist on disk, then complete
+/// when the operation completes.
+private func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) -> ColdSignal<(ProjectEvent, NSURL)> {
+	let repositoryURL = repositoryFileURLForProject(project)
+
+	return ColdSignal.lazy {
+		var error: NSError?
+		if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+			return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
+		}
+
+		let remoteURL = repositoryURLForProject(project, preferHTTPS: preferHTTPS)
+		if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
+			// If we created the directory, we're now responsible for
+			// cloning it.
+			let cloneSignal = cloneRepository(remoteURL, repositoryURL)
+
+			return ColdSignal.single((ProjectEvent.Cloning(project), repositoryURL))
+				.concat(cloneSignal.then(.empty()))
+		} else {
+			let fetchSignal = fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
+
+			return ColdSignal.single((ProjectEvent.Fetching(project), repositoryURL))
+				.concat(fetchSignal.then(.empty()))
+		}
 	}
 }
