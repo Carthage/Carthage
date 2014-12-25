@@ -236,7 +236,7 @@ public final class Project {
 			} else {
 				self._projectEventsSink.put(.Fetching(project))
 
-				return fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
+				return fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
 					.then(.single(repositoryURL))
 			}
 		}
