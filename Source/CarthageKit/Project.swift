@@ -172,12 +172,6 @@ public final class Project {
 		}
 	}
 
-	/// Returns the file URL at which the given project's repository will be
-	/// located.
-	private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
-		return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
-	}
-
 	/// A scheduler used to serialize all Git operations within this project.
 	private let gitOperationScheduler = QueueScheduler()
 
@@ -260,15 +254,6 @@ public final class Project {
 			.merge(identity)
 	}
 
-	/// Loads the Cartfile for the given dependency, at the given version.
-	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> ColdSignal<Cartfile> {
-		let repositoryURL = repositoryFileURLForProject(dependency.project)
-
-		return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
-			.catch { _ in .empty() }
-			.tryMap { Cartfile.fromString($0) }
-	}
-
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> ColdSignal<PinnedVersion> {
 		return cloneOrFetchProject(project)
@@ -309,8 +294,8 @@ public final class Project {
 	/// Checks out the given project into its intended working directory,
 	/// cloning it first if need be.
 	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> ColdSignal<()> {
-		let repositoryURL = self.repositoryFileURLForProject(project)
-		let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
+		let repositoryURL = repositoryFileURLForProject(project)
+		let workingDirectoryURL = directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
 		let checkoutSignal = ColdSignal<()>.lazy {
 				var submodule: Submodule?
@@ -391,4 +376,19 @@ public final class Project {
 
 		return (stdoutSignal, schemeSignals)
 	}
+}
+
+/// Returns the file URL at which the given project's repository will be
+/// located.
+private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
+	return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
+}
+
+/// Loads the Cartfile for the given dependency, at the given version.
+private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> ColdSignal<Cartfile> {
+	let repositoryURL = repositoryFileURLForProject(dependency.project)
+
+	return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
+		.catch { _ in .empty() }
+		.tryMap { Cartfile.fromString($0) }
 }
