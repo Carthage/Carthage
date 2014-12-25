@@ -57,6 +57,79 @@ extension GitHubRepository: Printable {
 	}
 }
 
+public struct GitHubRelease: Equatable {
+	public let ID: String
+	public let tag: String
+	public let draft: Bool
+	public let prerelease: Bool
+	public let assets: [Asset]
+
+	public struct Asset: Equatable, Hashable, Printable {
+		public let ID: String
+		public let name: String
+		public let contentType: String
+		public let downloadURL: NSURL
+
+		public var hashValue: Int {
+			return ID.hashValue
+		}
+
+		public var description: String {
+			return "Asset { name = \(name), contentType = \(contentType), downloadURL = \(downloadURL) }"
+		}
+
+		public init?(JSONDictionary: NSDictionary) {
+			if let ID: AnyObject = JSONDictionary["id"] {
+				self.ID = toString(ID)
+			} else {
+				return nil
+			}
+
+			if let name = JSONDictionary["name"] as? String {
+				self.name = name
+			} else {
+				return nil
+			}
+
+			if let contentType = JSONDictionary["content_type"] as? String {
+				self.contentType = contentType
+			} else {
+				return nil
+			}
+
+			if let downloadURLString = JSONDictionary["browser_download_url"] as? String {
+				if let downloadURL = NSURL(string: downloadURLString) {
+					self.downloadURL = downloadURL
+				} else {
+					return nil
+				}
+			} else {
+				return nil
+			}
+		}
+	}
+}
+
+public func == (lhs: GitHubRelease, rhs: GitHubRelease) -> Bool {
+	return lhs.ID == rhs.ID
+}
+
+public func == (lhs: GitHubRelease.Asset, rhs: GitHubRelease.Asset) -> Bool {
+	return lhs.ID == rhs.ID
+}
+
+extension GitHubRelease: Hashable {
+	public var hashValue: Int {
+		return ID.hashValue
+	}
+}
+
+extension GitHubRelease: Printable {
+	public var description: String {
+		return "Release { ID = \(ID), tag = \(tag) } with assets: \(assets)"
+	}
+}
+
 /// Represents credentials suitable for logging in to GitHub.com.
 internal struct GitHubCredentials {
 	let username: String
