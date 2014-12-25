@@ -55,6 +55,22 @@ extension GitURL: ArgumentType {
 	}
 }
 
+/// Logs project events put into the sink.
+internal struct ProjectEventSink: SinkType {
+	mutating func put(event: ProjectEvent) {
+		switch event {
+		case let .Cloning(project):
+			carthage.println("*** Cloning \(project.name)")
+
+		case let .Fetching(project):
+			carthage.println("*** Fetching \(project.name)")
+
+		case let .CheckingOut(project, revision):
+			carthage.println("*** Checking out \(project.name) at \"\(revision)\"")
+		}
+	}
+}
+
 extension Project {
 	/// Determines whether the project needs to be migrated from an older
 	/// Carthage version, then performs the work if so.

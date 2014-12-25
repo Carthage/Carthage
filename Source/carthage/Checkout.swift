@@ -65,19 +65,3 @@ public struct CheckoutOptions: OptionsType {
 		}
 	}
 }
-
-/// Logs project events put into the sink.
-private struct ProjectEventSink: SinkType {
-	mutating func put(event: ProjectEvent) {
-		switch event {
-		case let .Cloning(project):
-			carthage.println("*** Cloning \(project.name)")
-
-		case let .Fetching(project):
-			carthage.println("*** Fetching \(project.name)")
-
-		case let .CheckingOut(project, revision):
-			carthage.println("*** Checking out \(project.name) at \"\(revision)\"")
-		}
-	}
-}
