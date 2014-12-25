@@ -157,21 +157,6 @@ public final class Project {
 		}
 	}
 
-	/// Returns the URL that the project's remote repository exists at.
-	private func repositoryURLForProject(project: ProjectIdentifier) -> GitURL {
-		switch project {
-		case let .GitHub(repository):
-			if preferHTTPS {
-				return repository.HTTPSURL
-			} else {
-				return repository.SSHURL
-			}
-
-		case let .Git(URL):
-			return URL
-		}
-	}
-
 	/// A scheduler used to serialize all Git operations within this project.
 	private let gitOperationScheduler = QueueScheduler()
 
@@ -213,7 +198,7 @@ public final class Project {
 				return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
 			}
 
-			let remoteURL = self.repositoryURLForProject(project)
+			let remoteURL = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
 			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
 				// If we created the directory, we're now responsible for
 				// cloning it.
@@ -301,11 +286,11 @@ public final class Project {
 				var submodule: Submodule?
 
 				if var foundSubmodule = submodulesByPath[project.relativePath] {
-					foundSubmodule.URL = self.repositoryURLForProject(project)
+					foundSubmodule.URL = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
 					foundSubmodule.SHA = revision
 					submodule = foundSubmodule
 				} else if self.useSubmodules {
-					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: self.repositoryURLForProject(project), SHA: revision)
+					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), SHA: revision)
 				}
 
 				if let submodule = submodule {
@@ -391,4 +376,19 @@ private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> Col
 	return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
 		.catch { _ in .empty() }
 		.tryMap { Cartfile.fromString($0) }
+}
+
+/// Returns the URL that the project's remote repository exists at.
+private func repositoryURLForProject(project: ProjectIdentifier, #preferHTTPS: Bool) -> GitURL {
+	switch project {
+	case let .GitHub(repository):
+		if preferHTTPS {
+			return repository.HTTPSURL
+		} else {
+			return repository.SSHURL
+		}
+
+	case let .Git(URL):
+		return URL
+	}
 }
