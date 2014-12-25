@@ -154,3 +154,12 @@ extension NSScanner {
 		return nsString.substringWithRange(lineRange)
 	}
 }
+
+extension Result {
+	internal func catch(transform: NSError -> Result<T>) -> Result<T> {
+		switch self {
+			case Success(let value): return .Success(value)
+			case Failure(let error): return transform(error)
+		}
+	}
+}

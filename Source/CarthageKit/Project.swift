@@ -135,24 +135,33 @@ public final class Project {
 		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
 		// TODO: Load this lazily.
-		var error: NSError?
-		if let cartfileContents = NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding, error: &error) {
-			return Cartfile.fromString(cartfileContents).flatMap { (var cartfile) in
-				if let privateCartfileContents = NSString(contentsOfURL: privateCartfileURL, encoding: NSUTF8StringEncoding, error: nil) {
-					switch Cartfile.fromString(privateCartfileContents) {
-					case let .Success(privateCartfile):
-						cartfile.appendCartfile(privateCartfile.unbox)
-
-					case let .Failure(error):
-						return failure(error)
-					}
+		return Cartfile.fromFile(cartfileURL)
+			.catch { error -> Result<Cartfile> in
+				if error.code == NSFileReadNoSuchFileError && NSFileManager.defaultManager().fileExistsAtPath(privateCartfileURL.path!) {
+					return success(Cartfile())
 				}
 
-				return success(self(directoryURL: directoryURL, cartfile: cartfile))
+				return failure(error)
 			}
-		} else {
-			return failure(error ?? CarthageError.ReadFailed(cartfileURL).error)
-		}
+			.flatMap { cartfile -> Result<Cartfile> in
+				return Cartfile.fromFile(privateCartfileURL)
+					.catch { error -> Result<Cartfile> in
+						if error.code == NSFileReadNoSuchFileError {
+							return success(Cartfile())
+						}
+
+						return failure(error)
+					}
+					.map { additional in
+						var existing = cartfile
+						existing.appendCartfile(additional)
+
+						return existing
+					}
+			}
+			.map { cartfile -> Project in
+				return self(directoryURL: directoryURL, cartfile: cartfile)
+			}
 	}
 
 	/// Reads the project's Cartfile.resolved.
