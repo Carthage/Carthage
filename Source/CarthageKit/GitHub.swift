@@ -62,6 +62,14 @@ internal struct GitHubCredentials {
 	let username: String
 	let password: String
 
+	/// Returns the credentials encoded into a value suitable for the
+	/// `Authorization` HTTP header.
+	var authorizationHeaderValue: String {
+		let data = "\(username):\(password)".dataUsingEncoding(NSUTF8StringEncoding)!
+		let encodedString = data.base64EncodedStringWithOptions(nil)
+		return "Basic \(encodedString)"
+	}
+
 	/// Attempts to load credentials from the Git credential store.
 	///
 	/// If valid credentials are found, they are sent. Otherwise, the returned
