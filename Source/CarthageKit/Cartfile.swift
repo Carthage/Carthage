@@ -69,6 +69,11 @@ public struct Cartfile {
 
 		return result.map { _ in cartfile }
 	}
+
+	/// Appends the contents of another Cartfile to that of the receiver.
+	public mutating func appendCartfile(cartfile: Cartfile) {
+		dependencies += cartfile.dependencies
+	}
 }
 
 extension Cartfile: Printable {
