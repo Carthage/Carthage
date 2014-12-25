@@ -46,6 +46,9 @@ public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppend
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
 
+/// The relative path to a project's Cartfile.private.
+public let CarthageProjectPrivateCartfilePath = "Cartfile.private"
+
 /// The relative path to a project's Cartfile.resolved.
 public let CarthageProjectResolvedCartfilePath = "Cartfile.resolved"
 
@@ -130,7 +133,20 @@ public final class Project {
 		var error: NSError?
 		let cartfileContents = NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding, error: &error)
 		if let cartfileContents = cartfileContents {
-			return Cartfile.fromString(cartfileContents)
+			let cartfileResult = Cartfile.fromString(cartfileContents)
+
+			let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
+			if let privateCartfileContents = NSString(contentsOfURL: privateCartfileURL, encoding: NSUTF8StringEncoding, error: nil) {
+				return cartfileResult.flatMap { cartfile in
+					return Cartfile.fromString(privateCartfileContents).map { privateCartfile in
+						var newCartfile = cartfile
+						newCartfile.appendCartfile(privateCartfile)
+						return newCartfile
+					}
+				}
+			} else {
+				return cartfileResult
+			}
 		} else {
 			return failure(error ?? CarthageError.ReadFailed(cartfileURL).error)
 		}
