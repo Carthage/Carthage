@@ -131,6 +131,17 @@ public final class Project {
 	public class func loadFromDirectory(directoryURL: NSURL) -> Result<Project> {
 		precondition(directoryURL.fileURL)
 
+		return loadCombinedCartfile(directoryURL)
+			.map { cartfile -> Project in
+				return self(directoryURL: directoryURL, cartfile: cartfile)
+			}
+	}
+
+	/// Attempts to load Cartfile or Cartfile.private from the given directory,
+	/// merging their depencies.
+	public class func loadCombinedCartfile(directoryURL: NSURL) -> Result<Cartfile> {
+		precondition(directoryURL.fileURL)
+
 		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
 		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
@@ -157,10 +168,7 @@ public final class Project {
 						existing.appendCartfile(additional)
 
 						return existing
-					}
-			}
-			.map { cartfile -> Project in
-				return self(directoryURL: directoryURL, cartfile: cartfile)
+				}
 			}
 	}
 
