@@ -57,17 +57,69 @@ extension GitHubRepository: Printable {
 	}
 }
 
+/// Represents a Release on a GitHub repository.
 public struct GitHubRelease: Equatable {
+	/// The unique ID for this release.
 	public let ID: String
+
+	/// The name of the tag upon which this release is based.
 	public let tag: String
+
+	/// Whether this release is a draft (only visible to the authenticted user).
 	public let draft: Bool
+
+	/// Whether this release represents a prerelease version.
 	public let prerelease: Bool
+
+	/// Any assets attached to the release.
 	public let assets: [Asset]
 
+	/// Attempts to parse a release from JSON.
+	public init?(JSONDictionary: NSDictionary) {
+		if let ID: AnyObject = JSONDictionary["id"] {
+			self.ID = toString(ID)
+		} else {
+			return nil
+		}
+
+		if let tag = JSONDictionary["tag_name"] as? String {
+			self.tag = tag
+		} else {
+			return nil
+		}
+
+		self.draft = JSONDictionary["draft"]?.boolValue ?? false
+		self.prerelease = JSONDictionary["prerelease"]?.boolValue ?? false
+
+		if let assets = JSONDictionary["assets"] as? NSArray {
+			var parsedAssets: [Asset] = []
+
+			for dictionary in assets {
+				if let dictionary = dictionary as? NSDictionary {
+					if let asset = Asset(JSONDictionary: dictionary) {
+						parsedAssets.append(asset)
+					}
+				}
+			}
+
+			self.assets = parsedAssets
+		} else {
+			return nil
+		}
+	}
+
+	/// An asset attached to a GitHub Release.
 	public struct Asset: Equatable, Hashable, Printable {
+		/// The unique ID for this release asset.
 		public let ID: String
+
+		/// The filename of this asset.
 		public let name: String
+
+		/// The MIME type of this asset.
 		public let contentType: String
+
+		/// The URL at which the asset can be downloaded directly.
 		public let downloadURL: NSURL
 
 		public var hashValue: Int {
@@ -78,6 +130,7 @@ public struct GitHubRelease: Equatable {
 			return "Asset { name = \(name), contentType = \(contentType), downloadURL = \(downloadURL) }"
 		}
 
+		/// Attempts to parse an asset from JSON.
 		public init?(JSONDictionary: NSDictionary) {
 			if let ID: AnyObject = JSONDictionary["id"] {
 				self.ID = toString(ID)
