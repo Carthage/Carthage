@@ -154,3 +154,26 @@ extension NSScanner {
 		return nsString.substringWithRange(lineRange)
 	}
 }
+
+extension NSURLSession {
+	/// Returns a signal that will download a file using the given request.
+	internal func rac_downloadWithRequest(request: NSURLRequest) -> ColdSignal<(NSURL, NSURLResponse)> {
+		return ColdSignal { (sink, disposable) in
+			let task = self.downloadTaskWithRequest(request) { (URL, response, error) in
+				if URL == nil || response == nil {
+					sink.put(.Error(error))
+				} else {
+					let value = (URL!, response!)
+					sink.put(.Next(Box(value)))
+					sink.put(.Completed)
+				}
+			}
+
+			disposable.addDisposable {
+				task.cancel()
+			}
+
+			task.resume()
+		}
+	}
+}
