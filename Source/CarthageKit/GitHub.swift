@@ -10,6 +10,15 @@ import Foundation
 import LlamaKit
 import ReactiveCocoa
 
+/// The User-Agent to use for GitHub requests.
+private let userAgent: String = {
+	let bundle = NSBundle.mainBundle() ?? NSBundle(identifier: CarthageKitBundleIdentifier)
+	let version: AnyObject = bundle?.objectForInfoDictionaryKey("CFBundleShortVersionString") ?? bundle?.objectForInfoDictionaryKey(kCFBundleVersionKey) ?? "unknown"
+	let identifier = bundle?.bundleIdentifier ?? "CarthageKit-unknown"
+
+	return "\(identifier)/\(version)"
+}()
+
 /// Describes a GitHub.com repository.
 public struct GitHubRepository: Equatable {
 	public let owner: String
@@ -227,4 +236,18 @@ internal struct GitHubCredentials {
 			}
 			.catch { _ in .empty() }
 	}
+}
+
+/// Creates a request to fetch the given GitHub URL, optionally authenticating
+/// with the given credentials.
+internal func createGitHubRequest(URL: NSURL, credentials: GitHubCredentials?) -> NSURLRequest {
+	let request = NSMutableURLRequest(URL: URL)
+	request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+	request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+
+	if let credentials = credentials {
+		request.setValue(credentials.authorizationHeaderValue, forHTTPHeaderField: "Authorization")
+	}
+
+	return request
 }
