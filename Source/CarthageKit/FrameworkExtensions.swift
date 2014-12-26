@@ -179,12 +179,13 @@ extension NSURLSession {
 	}
 }
 
-extension NSURL: JSONDecodable {
-	public class func decode(json: JSON) -> Self? {
-		if let URLString = String.decode(json) {
-			return self(string: URLString)
-		} else {
-			return nil
+/// Attempts to parse a URL from a JSON key
+internal func decodeURLFromJSON(key: String)(json: JSONValue) -> NSURL? {
+	if let value = json[key] {
+		if let URLString = String.decoder(value) {
+			return NSURL(string: URLString)
 		}
 	}
+
+	return nil
 }
