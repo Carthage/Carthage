@@ -19,6 +19,9 @@ private let userAgent: String = {
 	return "\(identifier)/\(version)"
 }()
 
+/// The type of content to request from the GitHub API.
+private let APIContentType = "application/vnd.github.v3+json"
+
 /// Describes a GitHub.com repository.
 public struct GitHubRepository: Equatable {
 	public let owner: String
@@ -242,7 +245,7 @@ internal struct GitHubCredentials {
 /// with the given credentials.
 internal func createGitHubRequest(URL: NSURL, credentials: GitHubCredentials?) -> NSURLRequest {
 	let request = NSMutableURLRequest(URL: URL)
-	request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+	request.setValue(APIContentType, forHTTPHeaderField: "Accept")
 	request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
 
 	if let credentials = credentials {
@@ -250,4 +253,30 @@ internal func createGitHubRequest(URL: NSURL, credentials: GitHubCredentials?) -
 	}
 
 	return request
+}
+
+/// Fetches all releases on the given repository, sending each along the
+/// returned signal.
+internal func releasesForRepository(repository: GitHubRepository, credentials: GitHubCredentials?) -> ColdSignal<GitHubRelease> {
+	let request = createGitHubRequest(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases")!, credentials)
+
+	// TODO: Automatically fetch additional pages.
+	return NSURLSession.sharedSession()
+		.rac_dataWithRequest(request)
+		.map { data, _ in data }
+		.tryMap { data, error -> NSArray? in
+			return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error) as? NSArray
+		}
+		.mergeMap { releases -> ColdSignal<AnyObject> in
+			return ColdSignal.fromValues(releases)
+		}
+		.concatMap { releaseDictionary -> ColdSignal<GitHubRelease> in
+			if let releaseDictionary = releaseDictionary as? NSDictionary {
+				if let release = GitHubRelease(JSONDictionary: releaseDictionary) {
+					return .single(release)
+				}
+			}
+
+			return .empty()
+		}
 }
