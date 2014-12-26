@@ -6,6 +6,7 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import Argo
 import Foundation
 import LlamaKit
 import ReactiveCocoa
@@ -86,42 +87,8 @@ public struct GitHubRelease: Equatable {
 	/// Any assets attached to the release.
 	public let assets: [Asset]
 
-	/// Attempts to parse a release from JSON.
-	public init?(JSONDictionary: NSDictionary) {
-		if let ID: AnyObject = JSONDictionary["id"] {
-			self.ID = toString(ID)
-		} else {
-			return nil
-		}
-
-		if let tag = JSONDictionary["tag_name"] as? String {
-			self.tag = tag
-		} else {
-			return nil
-		}
-
-		self.draft = JSONDictionary["draft"]?.boolValue ?? false
-		self.prerelease = JSONDictionary["prerelease"]?.boolValue ?? false
-
-		if let assets = JSONDictionary["assets"] as? NSArray {
-			var parsedAssets: [Asset] = []
-
-			for dictionary in assets {
-				if let dictionary = dictionary as? NSDictionary {
-					if let asset = Asset(JSONDictionary: dictionary) {
-						parsedAssets.append(asset)
-					}
-				}
-			}
-
-			self.assets = parsedAssets
-		} else {
-			return nil
-		}
-	}
-
 	/// An asset attached to a GitHub Release.
-	public struct Asset: Equatable, Hashable, Printable {
+	public struct Asset: Equatable, Hashable, Printable, JSONDecodable {
 		/// The unique ID for this release asset.
 		public let ID: String
 
@@ -142,34 +109,17 @@ public struct GitHubRelease: Equatable {
 			return "Asset { name = \(name), contentType = \(contentType), downloadURL = \(downloadURL) }"
 		}
 
-		/// Attempts to parse an asset from JSON.
-		public init?(JSONDictionary: NSDictionary) {
-			if let ID: AnyObject = JSONDictionary["id"] {
-				self.ID = toString(ID)
-			} else {
-				return nil
-			}
+		public static func create(ID: String)(name: String)(contentType: String)(downloadURL: NSURL) -> Asset {
+			return self(ID: ID, name: name, contentType: contentType, downloadURL: downloadURL)
+		}
 
-			if let name = JSONDictionary["name"] as? String {
-				self.name = name
-			} else {
-				return nil
-			}
-
-			if let contentType = JSONDictionary["content_type"] as? String {
-				self.contentType = contentType
-			} else {
-				return nil
-			}
-
-			if let downloadURLString = JSONDictionary["browser_download_url"] as? String {
-				if let downloadURL = NSURL(string: downloadURLString) {
-					self.downloadURL = downloadURL
-				} else {
-					return nil
-				}
-			} else {
-				return nil
+		public static func decode(json: JSON) -> Asset? {
+			return _JSONParse(json) >>- { d in
+				self.create
+					<^> d <| "id"
+					<*> d <| "name"
+					<*> d <| "content_type"
+					<*> d <| "browser_download_url"
 			}
 		}
 	}
@@ -192,6 +142,23 @@ extension GitHubRelease: Hashable {
 extension GitHubRelease: Printable {
 	public var description: String {
 		return "Release { ID = \(ID), tag = \(tag) } with assets: \(assets)"
+	}
+}
+
+extension GitHubRelease: JSONDecodable {
+	public static func create(ID: String)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
+		return self(ID: ID, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
+	}
+
+	public static func decode(json: JSON) -> GitHubRelease? {
+		return _JSONParse(json) >>- { d in
+			self.create
+				<^> d <| "id"
+				<*> d <| "tag_name"
+				<*> d <| "draft"
+				<*> d <| "prerelease"
+				<*> d <| "assets"
+		}
 	}
 }
 
@@ -271,13 +238,11 @@ internal func releasesForRepository(repository: GitHubRepository, credentials: G
 			return ColdSignal.fromValues(releases)
 		}
 		.concatMap { releaseDictionary -> ColdSignal<GitHubRelease> in
-			if let releaseDictionary = releaseDictionary as? NSDictionary {
-				if let release = GitHubRelease(JSONDictionary: releaseDictionary) {
-					return .single(release)
-				}
+			if let release = GitHubRelease.decode(releaseDictionary) {
+				return .single(release)
+			} else {
+				return .empty()
 			}
-
-			return .empty()
 		}
 }
 

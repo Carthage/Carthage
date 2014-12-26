@@ -6,6 +6,7 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import Argo
 import Foundation
 import LlamaKit
 import ReactiveCocoa
@@ -174,6 +175,16 @@ extension NSURLSession {
 			}
 
 			task.resume()
+		}
+	}
+}
+
+extension NSURL: JSONDecodable {
+	public class func decode(json: JSON) -> Self? {
+		if let URLString = String.decode(json) {
+			return self(string: URLString)
+		} else {
+			return nil
 		}
 	}
 }
