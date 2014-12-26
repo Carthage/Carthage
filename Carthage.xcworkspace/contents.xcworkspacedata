@@ -22,4 +22,7 @@
    <FileRef
       location = "group:Carthage/Checkouts/ReactiveTask/ReactiveTask.xcodeproj">
    </FileRef>
+   <FileRef
+      location = "group:Carthage/Checkouts/Argo/Argo.xcodeproj">
+   </FileRef>
 </Workspace>
