@@ -385,6 +385,23 @@ public final class Project {
 						}
 						.filter { asset in contains(CarthageProjectBinaryAssetContentTypes, asset.contentType) }
 						.concatMap { asset in downloadAsset(asset, credentials) }
+						.concatMap { downloadURL in unzipArchiveToTemporaryDirectory(downloadURL) }
+						.concatMap { directoryURL in
+							return NSFileManager.defaultManager()
+								.enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants)
+								.filter { URL in
+									var typeIdentifier: AnyObject?
+									if URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: nil) {
+										if let typeIdentifier: AnyObject = typeIdentifier {
+											if UTTypeConformsTo(typeIdentifier as String, kUTTypeFramework) != 0 {
+												return true
+											}
+										}
+									}
+
+									return false
+								}
+						}
 				}
 
 			return downloadedAssets.then(checkoutOrClone)
