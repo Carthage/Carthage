@@ -20,7 +20,7 @@ private func try<T>(f: NSErrorPointer -> T?) -> Result<T> {
 	return f(&error).map(success) ?? failure(error ?? NSError(domain: CarthageKitBundleIdentifier, code: because, userInfo: nil))
 }
 
-/// ~/Library/Caches/
+/// ~/Library/Caches/org.carthage.CarthageKit/
 private let CarthageUserCachesURL: NSURL = {
 	let URL = try { error in
 		NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: error)
@@ -31,17 +31,24 @@ private let CarthageUserCachesURL: NSURL = {
 	switch URL {
 	case .Success:
 		NSFileManager.defaultManager().removeItemAtURL(fallbackDependenciesURL, error: nil)
+
 	case let .Failure(error):
 		NSLog("Warning: No Caches directory could be found or created: \(error.localizedDescription). (\(error))")
 	}
 
-	return URL.value() ?? fallbackDependenciesURL
+	return URL.value()?.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true) ?? fallbackDependenciesURL
 }()
+
+/// The file URL to the directory in which downloaded release binaries will be
+/// stored.
+///
+/// ~/Library/Caches/org.carthage.CarthageKit/binaries/
+public let CarthageDependencyAssetsURL = CarthageUserCachesURL.URLByAppendingPathComponent("binaries", isDirectory: true)
 
 /// The file URL to the directory in which cloned dependencies will be stored.
 ///
 /// ~/Library/Caches/org.carthage.CarthageKit/dependencies/
-public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true).URLByAppendingPathComponent("dependencies", isDirectory: true)
+public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppendingPathComponent("dependencies", isDirectory: true)
 
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
@@ -378,14 +385,20 @@ public final class Project {
 						.skipWhile { release in release.tag != revision }
 						.take(1)
 						.filter { release in !release.draft && !release.prerelease }
-						.concatMap { release in ColdSignal.fromValues(release.assets) }
-						.filter { asset in
-							let name = asset.name as NSString
-							return name.rangeOfString(CarthageProjectBinaryAssetPattern).location != NSNotFound
+						.concatMap { release in
+							return ColdSignal
+								.fromValues(release.assets)
+								.filter { asset in
+									let name = asset.name as NSString
+									return name.rangeOfString(CarthageProjectBinaryAssetPattern).location != NSNotFound
+								}
+								.filter { asset in contains(CarthageProjectBinaryAssetContentTypes, asset.contentType) }
+								.concatMap { asset in
+									return downloadAsset(asset, credentials)
+										.concatMap { downloadURL in cacheDownloadedBinary(project, release, asset, downloadURL) }
+								}
 						}
-						.filter { asset in contains(CarthageProjectBinaryAssetContentTypes, asset.contentType) }
-						.concatMap { asset in downloadAsset(asset, credentials) }
-						.concatMap { downloadURL in unzipArchiveToTemporaryDirectory(downloadURL) }
+						.concatMap { zipURL in unzipArchiveToTemporaryDirectory(zipURL) }
 						.concatMap { directoryURL in
 							return NSFileManager.defaultManager()
 								.enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants)
@@ -404,7 +417,7 @@ public final class Project {
 						}
 				}
 
-			return downloadedAssets.then(checkoutOrClone)
+			return downloadedAssets.logNext().then(checkoutOrClone)
 
 		case .Git:
 			return checkoutOrClone
@@ -457,4 +470,18 @@ public final class Project {
 
 		return (stdoutSignal, schemeSignals)
 	}
+}
+
+/// Caches the downloaded binary for the given project, returning the new URL to
+/// the download.
+private func cacheDownloadedBinary(project: ProjectIdentifier, release: GitHubRelease, asset: GitHubRelease.Asset, downloadURL: NSURL) -> ColdSignal<NSURL> {
+	return ColdSignal
+		.single(CarthageDependencyAssetsURL.URLByAppendingPathComponent("\(project.name)/\(release.tag)", isDirectory: true))
+		.try { directoryURL, error in
+			return NSFileManager.defaultManager().createDirectoryAtURL(directoryURL, withIntermediateDirectories: true, attributes: nil, error: error)
+		}
+		.map { $0.URLByAppendingPathComponent("\(asset.ID)-\(asset.name)", isDirectory: false) }
+		.try { newDownloadURL, error in
+			return NSFileManager.defaultManager().copyItemAtURL(downloadURL, toURL: newDownloadURL, error: error)
+		}
 }
