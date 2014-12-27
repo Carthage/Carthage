@@ -283,6 +283,15 @@ public enum Platform {
 		}
 	}
 
+	/// The relative path at which binaries for this platform will be stored.
+	public var relativePath: String {
+		if targetsiOS {
+			return CarthageBinariesFolderPath.stringByAppendingPathComponent("iOS")
+		} else {
+			return CarthageBinariesFolderPath.stringByAppendingPathComponent("Mac")
+		}
+	}
+
 	/// The arguments that should be passed to `xcodebuild` to select this
 	/// platform for building.
 	private var arguments: [String] {
@@ -695,10 +704,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 	let buildSignal: ColdSignal<NSURL> = BuildSettings.platformForScheme(scheme, inProject: project)
 		.map { (platform: Platform) in
+			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
+
 			switch platform {
 			case .iPhoneSimulator, .iPhoneOS:
-				let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderPath)/iOS", isDirectory: true)
-
 				return settingsByTarget(buildPlatform(.iPhoneSimulator))
 					.map { simulatorSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
 						return settingsByTarget(buildPlatform(.iPhoneOS))
@@ -730,10 +739,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 			default:
 				return buildPlatform(platform)
-					.map { settings -> ColdSignal<NSURL> in
-						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderPath)/Mac", isDirectory: true)
-						return copyBuildProductIntoDirectory(folderURL, settings)
-					}
+					.map { settings in copyBuildProductIntoDirectory(folderURL, settings) }
 					.merge(identity)
 			}
 		}
