@@ -379,7 +379,7 @@ public final class Project {
 
 		switch project {
 		case let .GitHub(repository):
-			let downloadedAssets: ColdSignal<NSURL> = GitHubCredentials.loadFromGit()
+			let installedBinaries: ColdSignal<Bool> = GitHubCredentials.loadFromGit()
 				.mergeMap { credentials in
 					return releasesForRepository(repository, credentials)
 						.skipWhile { release in release.tag != revision }
@@ -398,26 +398,43 @@ public final class Project {
 										.concatMap { downloadURL in cacheDownloadedBinary(project, release, asset, downloadURL) }
 								}
 						}
-						.concatMap { zipURL in unzipArchiveToTemporaryDirectory(zipURL) }
-						.concatMap { directoryURL in
-							return NSFileManager.defaultManager()
-								.enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants)
-								.filter { URL in
-									var typeIdentifier: AnyObject?
-									if URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: nil) {
-										if let typeIdentifier: AnyObject = typeIdentifier {
-											if UTTypeConformsTo(typeIdentifier as String, kUTTypeFramework) != 0 {
-												return true
-											}
-										}
-									}
-
-									return false
-								}
-						}
 				}
+				.concatMap { zipURL in unzipArchiveToTemporaryDirectory(zipURL) }
+				.concatMap { directoryURL in
+					return NSFileManager.defaultManager()
+						.enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants)
+						.filter { URL in
+							var typeIdentifier: AnyObject?
+							if URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: nil) {
+								if let typeIdentifier: AnyObject = typeIdentifier {
+									if UTTypeConformsTo(typeIdentifier as String, kUTTypeFramework) != 0 {
+										return true
+									}
+								}
+							}
 
-			return downloadedAssets.logNext().then(checkoutOrClone)
+							return false
+						}
+						.mergeMap { frameworkURL -> ColdSignal<Bool> in
+							return architecturesInFramework(frameworkURL)
+								.filter { arch in arch.hasPrefix("arm") }
+								.map { _ in Platform.iPhoneOS }
+								.concat(ColdSignal.single(Platform.MacOSX))
+								.take(1)
+								.mergeMap { platform -> ColdSignal<NSURL> in
+									let destinationURL = self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
+									return copyFramework(frameworkURL, destinationURL)
+								}
+								.then(.single(true))
+						}
+						.takeLast(1)
+				}
+				.concat(.single(false))
+				.take(1)
+
+			return installedBinaries
+				.filter { installed in !installed }
+				.mergeMap { _ in checkoutOrClone }
 
 		case .Git:
 			return checkoutOrClone
