@@ -421,10 +421,9 @@ public final class Project {
 								.map { _ in Platform.iPhoneOS }
 								.concat(ColdSignal.single(Platform.MacOSX))
 								.take(1)
-								.mergeMap { platform -> ColdSignal<NSURL> in
-									let destinationURL = self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
-									return copyFramework(frameworkURL, destinationURL)
-								}
+								.map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
+								.map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
+								.mergeMap { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL) }
 								.then(.single(true))
 						}
 						.takeLast(1)
