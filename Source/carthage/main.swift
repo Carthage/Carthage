@@ -12,40 +12,19 @@ import Foundation
 import LlamaKit
 import ReactiveTask
 
-let commands = CommandRegistry()
-commands.register(BootstrapCommand())
-commands.register(BuildCommand())
-commands.register(CheckoutCommand())
-commands.register(CopyFrameworksCommand())
-commands.register(FetchCommand())
-commands.register(UpdateCommand())
-commands.register(VersionCommand())
+let registry = CommandRegistry()
+registry.register(BootstrapCommand())
+registry.register(BuildCommand())
+registry.register(CheckoutCommand())
+registry.register(CopyFrameworksCommand())
+registry.register(FetchCommand())
+registry.register(UpdateCommand())
+registry.register(VersionCommand())
 
-let helpCommand = HelpCommand(registry: commands)
-commands.register(helpCommand)
+let helpCommand = HelpCommand(registry: registry)
+registry.register(helpCommand)
 
-var arguments = Process.arguments
-
-// Remove the executable name.
-assert(arguments.count >= 1)
-arguments.removeAtIndex(0)
-
-let verb = arguments.first ?? helpCommand.verb
-if arguments.count > 0 {
-	// Remove the command name.
-	arguments.removeAtIndex(0)
-}
-
-switch commands.runCommand(verb, arguments: arguments) {
-case .Some(.Success):
-	exit(EXIT_SUCCESS)
-
-case let .Some(.Failure(error)):
+registry.main(defaultCommand: helpCommand) { error in
 	let errorDescription = (error.domain == CarthageErrorDomain || error.domain == CommandantErrorDomain || error.domain == ReactiveTaskError.domain ? error.localizedDescription : error.description)
 	fputs("\(errorDescription)\n", stderr)
-	exit(EXIT_FAILURE)
-
-case .None:
-	fputs("Unrecognized command: '\(verb)'. See `carthage help`.\n", stderr)
-	exit(EXIT_FAILURE)
 }
