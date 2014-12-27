@@ -157,10 +157,17 @@ extension NSScanner {
 }
 
 extension NSURLSession {
-	/// Returns a signal that will download a file using the given request.
+	/// Returns a signal that will download a file using the given request. The
+	/// file will be deleted after the URL has been sent upon the signal.
 	internal func rac_downloadWithRequest(request: NSURLRequest) -> ColdSignal<(NSURL, NSURLResponse)> {
 		return ColdSignal { (sink, disposable) in
+			let serialDisposable = SerialDisposable()
+			let handle = disposable.addDisposable(serialDisposable)
+
 			let task = self.downloadTaskWithRequest(request) { (URL, response, error) in
+				// Avoid invoking cancel(), or the download may be deleted.
+				handle.remove()
+
 				if URL == nil || response == nil {
 					sink.put(.Error(error))
 				} else {
@@ -170,7 +177,7 @@ extension NSURLSession {
 				}
 			}
 
-			disposable.addDisposable {
+			serialDisposable.innerDisposable = ActionDisposable {
 				task.cancel()
 			}
 

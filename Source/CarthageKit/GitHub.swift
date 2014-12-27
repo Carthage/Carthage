@@ -240,6 +240,9 @@ internal func releasesForRepository(repository: GitHubRepository, credentials: G
 
 /// Downloads the indicated release asset to a temporary file, returning the
 /// URL to the file on disk.
+///
+/// The downloaded file will be deleted after the URL has been sent upon the
+/// signal.
 internal func downloadAsset(asset: GitHubRelease.Asset, credentials: GitHubCredentials?) -> ColdSignal<NSURL> {
 	let request = createGitHubRequest(asset.downloadURL, credentials)
 
