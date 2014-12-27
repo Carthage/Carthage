@@ -172,10 +172,7 @@ internal struct GitHubCredentials {
 	}
 
 	/// Attempts to load credentials from the Git credential store.
-	///
-	/// If valid credentials are found, they are sent. Otherwise, the returned
-	/// signal will be empty.
-	static func loadFromGit() -> ColdSignal<GitHubCredentials> {
+	static func loadFromGit() -> ColdSignal<GitHubCredentials?> {
 		let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
 
 		return launchGitTask([ "credential", "fill" ], standardInput: ColdSignal.single(data))
@@ -191,7 +188,7 @@ internal struct GitHubCredentials {
 
 				return values
 			}
-			.tryMap { (values, _) -> GitHubCredentials? in
+			.map { values -> GitHubCredentials? in
 				if let username = values["username"] {
 					if let password = values["password"] {
 						return self(username: username, password: password)
@@ -200,7 +197,6 @@ internal struct GitHubCredentials {
 
 				return nil
 			}
-			.catch { _ in .empty() }
 	}
 }
 

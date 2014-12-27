@@ -52,6 +52,16 @@ public let CarthageProjectPrivateCartfilePath = "Cartfile.private"
 /// The relative path to a project's Cartfile.resolved.
 public let CarthageProjectResolvedCartfilePath = "Cartfile.resolved"
 
+/// The text that needs to exist in a GitHub Release asset's name, for it to be
+/// tried as a binary framework.
+public let CarthageProjectBinaryAssetPattern = ".framework"
+
+/// MIME types allowed for GitHub Release assets, for them to be considered as
+/// binary frameworks.
+public let CarthageProjectBinaryAssetContentTypes = [
+	"application/zip"
+]
+
 /// Describes an event occurring to or with a project.
 public enum ProjectEvent {
 	/// The project is beginning to clone.
@@ -349,7 +359,7 @@ public final class Project {
 				self._projectEventsSink.put(.CheckingOut(project, revision))
 			})
 
-		return commitExistsInRepository(repositoryURL, revision: revision)
+		let checkoutOrClone = commitExistsInRepository(repositoryURL, revision: revision)
 			.map { exists -> ColdSignal<NSURL> in
 				if exists {
 					return .empty()
@@ -359,6 +369,29 @@ public final class Project {
 			}
 			.merge(identity)
 			.then(checkoutSignal)
+
+		switch project {
+		case let .GitHub(repository):
+			let downloadedAssets: ColdSignal<NSURL> = GitHubCredentials.loadFromGit()
+				.mergeMap { credentials in
+					return releasesForRepository(repository, credentials)
+						.skipWhile { release in release.tag != revision }
+						.take(1)
+						.filter { release in !release.draft && !release.prerelease }
+						.concatMap { release in ColdSignal.fromValues(release.assets) }
+						.filter { asset in
+							let name = asset.name as NSString
+							return name.rangeOfString(CarthageProjectBinaryAssetPattern).location != NSNotFound
+						}
+						.filter { asset in contains(CarthageProjectBinaryAssetContentTypes, asset.contentType) }
+						.concatMap { asset in downloadAsset(asset, credentials) }
+				}
+
+			return downloadedAssets.logNext().then(checkoutOrClone)
+
+		case .Git:
+			return checkoutOrClone
+		}
 	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved.
