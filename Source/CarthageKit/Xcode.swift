@@ -556,41 +556,30 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 	precondition(sourceModuleDirectoryURL.fileURL)
 	precondition(destinationModuleDirectoryURL.fileURL)
 
-	return ColdSignal { (sink, disposable) in
-		let enumerator = NSFileManager.defaultManager().enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [ NSURLParentDirectoryURLKey ], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, errorHandler: nil)!
+	return NSFileManager.defaultManager()
+		.enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [ NSURLParentDirectoryURLKey ], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles)
+		.mergeMap { URL in
+			var parentDirectoryURL: AnyObject?
+			var error: NSError?
 
-		while !disposable.disposed {
-			if let URL = enumerator.nextObject() as? NSURL {
-				var parentDirectoryURL: AnyObject?
-				var error: NSError?
+			if !URL.getResourceValue(&parentDirectoryURL, forKey: NSURLParentDirectoryURLKey, error: &error) {
+				return .error(error ?? CarthageError.ReadFailed(URL).error)
+			}
 
-				if !URL.getResourceValue(&parentDirectoryURL, forKey: NSURLParentDirectoryURLKey, error: &error) {
-					sink.put(.Error(error ?? CarthageError.ReadFailed(URL).error))
-					return
+			if let parentDirectoryURL = parentDirectoryURL as? NSURL {
+				if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+					return .error(error ?? CarthageError.WriteFailed(parentDirectoryURL).error)
 				}
+			}
 
-				if let parentDirectoryURL = parentDirectoryURL as? NSURL {
-					if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-						sink.put(.Error(error ?? CarthageError.WriteFailed(parentDirectoryURL).error))
-						return
-					}
-				}
-
-				let lastComponent: String? = URL.lastPathComponent
-				let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
-				if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
-					sink.put(.Next(Box(destinationURL)))
-				} else {
-					sink.put(.Error(error ?? CarthageError.WriteFailed(destinationURL).error))
-					return
-				}
+			let lastComponent: String? = URL.lastPathComponent
+			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
+			if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
+				return .single(destinationURL)
 			} else {
-				break
+				return .error(error ?? CarthageError.WriteFailed(destinationURL).error)
 			}
 		}
-
-		sink.put(.Completed)
-	}
 }
 
 /// Determines whether the specified product type should be built automatically.

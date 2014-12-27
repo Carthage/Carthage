@@ -189,3 +189,25 @@ internal func decodeURLFromJSON(key: String)(json: JSONValue) -> NSURL? {
 
 	return nil
 }
+
+extension NSFileManager {
+	/// Creates a directory enumerator at the given URL.
+	internal func enumeratorAtURL(URL: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions) -> ColdSignal<NSURL> {
+		return ColdSignal { (sink, disposable) in
+			let enumerator = self.enumeratorAtURL(URL, includingPropertiesForKeys: keys, options: options) { (URL, error) in
+				sink.put(.Error(error ?? RACError.Empty.error))
+				return false
+			}
+
+			while !disposable.disposed {
+				if let URL = enumerator!.nextObject() as? NSURL {
+					sink.put(.Next(Box(URL)))
+				} else {
+					break
+				}
+			}
+
+			sink.put(.Completed)
+		}
+	}
+}
