@@ -132,6 +132,7 @@ public final class Project {
 		precondition(directoryURL.fileURL)
 
 		return loadCombinedCartfile(directoryURL)
+			.single()
 			.map { cartfile -> Project in
 				return self(directoryURL: directoryURL, cartfile: cartfile)
 			}
@@ -139,36 +140,37 @@ public final class Project {
 
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their depencies.
-	public class func loadCombinedCartfile(directoryURL: NSURL) -> Result<Cartfile> {
+	public class func loadCombinedCartfile(directoryURL: NSURL) -> ColdSignal<Cartfile> {
 		precondition(directoryURL.fileURL)
 
 		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
 		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
-		// TODO: Load this lazily.
-		return Cartfile.fromFile(cartfileURL)
-			.catch { error -> Result<Cartfile> in
+		return ColdSignal.lazy {
+				.fromResult(Cartfile.fromFile(cartfileURL))
+			}
+			.catch { error -> ColdSignal<Cartfile> in
 				if error.code == NSFileReadNoSuchFileError && NSFileManager.defaultManager().fileExistsAtPath(privateCartfileURL.path!) {
-					return success(Cartfile())
+					return .single(Cartfile())
 				}
 
-				return failure(error)
+				return .error(error)
 			}
-			.flatMap { cartfile -> Result<Cartfile> in
-				return Cartfile.fromFile(privateCartfileURL)
-					.catch { error -> Result<Cartfile> in
+			.mergeMap { cartfile -> ColdSignal<Cartfile> in
+				return ColdSignal.fromResult(Cartfile.fromFile(privateCartfileURL))
+					.catch { error -> ColdSignal<Cartfile> in
 						if error.code == NSFileReadNoSuchFileError {
-							return success(Cartfile())
+							return .single(Cartfile())
 						}
 
-						return failure(error)
+						return .error(error)
 					}
 					.map { additional in
 						var existing = cartfile
 						existing.appendCartfile(additional)
 
 						return existing
-				}
+					}
 			}
 	}
 
