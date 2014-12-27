@@ -25,6 +25,7 @@
 		D04A39801A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile in Resources */ = {isa = PBXBuildFile; fileRef = D04A397F1A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile */; };
 		D04A39821A2F72FB000C5604 /* EmbeddedFrameworksCartfile in Resources */ = {isa = PBXBuildFile; fileRef = D04A39811A2F72FB000C5604 /* EmbeddedFrameworksCartfile */; };
 		D05BD1991A26864F00A36A0E /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05BD1981A26864F00A36A0E /* Extensions.swift */; };
+		D069CA241A4E3B2700314A85 /* Archive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D069CA231A4E3B2700314A85 /* Archive.swift */; };
 		D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D074EDC41A049283001DE082 /* FrameworkExtensions.swift */; };
 		D095BA3C1A187D40007F15D6 /* Bootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = D095BA3B1A187D40007F15D6 /* Bootstrap.swift */; };
 		D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAAB4919FAEDB4007B24B3 /* Errors.swift */; };
@@ -116,6 +117,7 @@
 		D04A397F1A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = EmbeddedFrameworksContainerCartfile; sourceTree = "<group>"; };
 		D04A39811A2F72FB000C5604 /* EmbeddedFrameworksCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = EmbeddedFrameworksCartfile; sourceTree = "<group>"; };
 		D05BD1981A26864F00A36A0E /* Extensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		D069CA231A4E3B2700314A85 /* Archive.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Archive.swift; sourceTree = "<group>"; };
 		D074EDC41A049283001DE082 /* FrameworkExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensions.swift; sourceTree = "<group>"; };
 		D095BA3B1A187D40007F15D6 /* Bootstrap.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Bootstrap.swift; sourceTree = "<group>"; };
 		D0AAAB4919FAEDB4007B24B3 /* Errors.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
@@ -313,12 +315,13 @@
 			isa = PBXGroup;
 			children = (
 				D0D1217119E87B05005E4BAA /* CarthageKit.h */,
-				F603929819EA29F80050A6AF /* Project.swift */,
+				D069CA231A4E3B2700314A85 /* Archive.swift */,
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
-				88ED56D519ECE34900CBF5C4 /* Git.swift */,
 				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
 				D074EDC41A049283001DE082 /* FrameworkExtensions.swift */,
+				88ED56D519ECE34900CBF5C4 /* Git.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
+				F603929819EA29F80050A6AF /* Project.swift */,
 				D01D82D61A10160700F0DD94 /* Resolver.swift */,
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
 				D0DE893F1A0F2CB00030A3EC /* Version.swift */,
@@ -576,6 +579,7 @@
 				D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */,
 				D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */,
 				F603929919EA29F80050A6AF /* Project.swift in Sources */,
+				D069CA241A4E3B2700314A85 /* Archive.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
