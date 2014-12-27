@@ -482,6 +482,6 @@ private func cacheDownloadedBinary(project: ProjectIdentifier, release: GitHubRe
 		}
 		.map { $0.URLByAppendingPathComponent("\(asset.ID)-\(asset.name)", isDirectory: false) }
 		.try { newDownloadURL, error in
-			return NSFileManager.defaultManager().copyItemAtURL(downloadURL, toURL: newDownloadURL, error: error)
+			return NSFileManager.defaultManager().moveItemAtURL(downloadURL, toURL: newDownloadURL, error: error)
 		}
 }
