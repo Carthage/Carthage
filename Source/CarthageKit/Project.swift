@@ -79,6 +79,11 @@ public enum ProjectEvent {
 
 	/// The project is being checked out to the specified revision.
 	case CheckingOut(ProjectIdentifier, String)
+
+	/// Any available binaries for the specified release of the project are
+	/// being downloaded. This may still be followed by `CheckingOut` event if
+	/// there weren't any viable binaries after all.
+	case DownloadingBinaries(ProjectIdentifier, String)
 }
 
 /// Represents a project that is using Carthage.
@@ -382,9 +387,11 @@ public final class Project {
 			let installedBinaries: ColdSignal<Bool> = GitHubCredentials.loadFromGit()
 				.mergeMap { credentials in
 					return releasesForRepository(repository, credentials)
-						.skipWhile { release in release.tag != revision }
+						.filter { release in release.tag == revision && !release.draft && !release.prerelease && !release.assets.isEmpty }
 						.take(1)
-						.filter { release in !release.draft && !release.prerelease }
+						.on(next: { release in
+							self._projectEventsSink.put(.DownloadingBinaries(project, release.name))
+						})
 						.concatMap { release in
 							return ColdSignal
 								.fromValues(release.assets)

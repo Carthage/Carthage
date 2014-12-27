@@ -75,6 +75,9 @@ public struct GitHubRelease: Equatable {
 	/// The unique ID for this release.
 	public let ID: Int
 
+	/// The name of this release.
+	public let name: String
+
 	/// The name of the tag upon which this release is based.
 	public let tag: String
 
@@ -139,18 +142,19 @@ extension GitHubRelease: Hashable {
 
 extension GitHubRelease: Printable {
 	public var description: String {
-		return "Release { ID = \(ID), tag = \(tag) } with assets: \(assets)"
+		return "Release { ID = \(ID), name = \(name), tag = \(tag) } with assets: \(assets)"
 	}
 }
 
 extension GitHubRelease: JSONDecodable {
-	public static func create(ID: Int)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
-		return self(ID: ID, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
+	public static func create(ID: Int)(name: String)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
+		return self(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
 	}
 
 	public static var decoder: JSONValue -> GitHubRelease? {
 		return self.create
 			<^> <|"id"
+			<*> <|"name"
 			<*> <|"tag_name"
 			<*> <|"draft"
 			<*> <|"prerelease"

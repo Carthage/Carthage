@@ -84,6 +84,9 @@ private struct ProjectEventSink: SinkType {
 
 		case let .CheckingOut(project, revision):
 			carthage.println("*** Checking out \(project.name) at \"\(revision)\"")
+
+		case let .DownloadingBinaries(project, release):
+			carthage.println("*** Downloading \(project.name) release \"\(release)\"")
 		}
 	}
 }
