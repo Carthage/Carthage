@@ -387,7 +387,7 @@ public final class Project {
 						.concatMap { asset in downloadAsset(asset, credentials) }
 				}
 
-			return downloadedAssets.logNext().then(checkoutOrClone)
+			return downloadedAssets.then(checkoutOrClone)
 
 		case .Git:
 			return checkoutOrClone
