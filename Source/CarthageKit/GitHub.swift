@@ -73,7 +73,7 @@ extension GitHubRepository: Printable {
 /// Represents a Release on a GitHub repository.
 public struct GitHubRelease: Equatable {
 	/// The unique ID for this release.
-	public let ID: String
+	public let ID: Int
 
 	/// The name of the tag upon which this release is based.
 	public let tag: String
@@ -90,7 +90,7 @@ public struct GitHubRelease: Equatable {
 	/// An asset attached to a GitHub Release.
 	public struct Asset: Equatable, Hashable, Printable, JSONDecodable {
 		/// The unique ID for this release asset.
-		public let ID: String
+		public let ID: Int
 
 		/// The filename of this asset.
 		public let name: String
@@ -109,7 +109,7 @@ public struct GitHubRelease: Equatable {
 			return "Asset { name = \(name), contentType = \(contentType), downloadURL = \(downloadURL) }"
 		}
 
-		public static func create(ID: String)(name: String)(contentType: String)(downloadURL: NSURL) -> Asset {
+		public static func create(ID: Int)(name: String)(contentType: String)(downloadURL: NSURL) -> Asset {
 			return self(ID: ID, name: name, contentType: contentType, downloadURL: downloadURL)
 		}
 
@@ -144,7 +144,7 @@ extension GitHubRelease: Printable {
 }
 
 extension GitHubRelease: JSONDecodable {
-	public static func create(ID: String)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
+	public static func create(ID: Int)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
 		return self(ID: ID, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
 	}
 
