@@ -568,21 +568,10 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 	return NSFileManager.defaultManager()
 		.enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [ NSURLParentDirectoryURLKey ], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles)
 		.mergeMap { URL in
-			var parentDirectoryURL: AnyObject?
-			var error: NSError?
-
-			if !URL.getResourceValue(&parentDirectoryURL, forKey: NSURLParentDirectoryURLKey, error: &error) {
-				return .error(error ?? CarthageError.ReadFailed(URL).error)
-			}
-
-			if let parentDirectoryURL = parentDirectoryURL as? NSURL {
-				if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-					return .error(error ?? CarthageError.WriteFailed(parentDirectoryURL).error)
-				}
-			}
-
 			let lastComponent: String? = URL.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
+			
+			var error: NSError?
 			if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
 				return .single(destinationURL)
 			} else {
