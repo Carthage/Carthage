@@ -564,7 +564,7 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 	precondition(destinationModuleDirectoryURL.fileURL)
 
 	return NSFileManager.defaultManager()
-		.rac_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles)
+		.rac_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, catchErrors: true)
 		.mergeMap { enumerator, URL in
 			let lastComponent: String? = URL.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
