@@ -344,6 +344,66 @@ public final class Project {
 			.then(checkoutResolvedDependencies())
 	}
 
+	/// Installs binaries for the given proejctproject, if available.
+	///
+	/// Sends a boolean indicating whether binaries were installed.
+	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> ColdSignal<Bool> {
+		switch project {
+		case let .GitHub(repository):
+			return GitHubCredentials.loadFromGit()
+				.mergeMap { credentials in self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials) }
+				.concatMap(unzipArchiveToTemporaryDirectory)
+				.concatMap { directoryURL in
+					return frameworksInDirectory(directoryURL)
+						.mergeMap(self.copyFrameworkToBuildFolder)
+						.then(.single(true))
+				}
+				.concat(.single(false))
+				.take(1)
+
+		case .Git:
+			return .single(false)
+		}
+	}
+
+	/// Downloads any binaries that may be able to be used instead of a
+	/// repository checkout.
+	///
+	/// Sends the URL to each downloaded zip, after it has been moved to a
+	/// less temporary location.
+	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withCredentials credentials: GitHubCredentials?) -> ColdSignal<NSURL> {
+		return releasesForRepository(repository, credentials)
+			.filter(binaryFrameworksCanBeProvidedByRelease(revision))
+			.take(1)
+			.on(next: { release in
+				self._projectEventsSink.put(.DownloadingBinaries(project, release.name))
+			})
+			.concatMap { release in
+				return ColdSignal
+					.fromValues(release.assets)
+					.filter(binaryFrameworksCanBeProvidedByAsset)
+					.concatMap { asset in
+						return downloadAsset(asset, credentials)
+							.concatMap { downloadURL in cacheDownloadedBinary(project, release, asset, downloadURL) }
+					}
+			}
+	}
+
+	/// Copies the framework at the given URL into the current project's build
+	/// folder.
+	///
+	/// Sends the URL to the framework after copying.
+	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> ColdSignal<NSURL> {
+		return architecturesInFramework(frameworkURL)
+			.filter { arch in arch.hasPrefix("arm") }
+			.map { _ in Platform.iPhoneOS }
+			.concat(ColdSignal.single(Platform.MacOSX))
+			.take(1)
+			.map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
+			.map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
+			.mergeMap { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL) }
+	}
+
 	/// Checks out the given project into its intended working directory,
 	/// cloning it first if need be.
 	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> ColdSignal<()> {
@@ -371,7 +431,7 @@ public final class Project {
 				self._projectEventsSink.put(.CheckingOut(project, revision))
 			})
 
-		let checkoutOrClone = commitExistsInRepository(repositoryURL, revision: revision)
+		return commitExistsInRepository(repositoryURL, revision: revision)
 			.map { exists -> ColdSignal<NSURL> in
 				if exists {
 					return .empty()
@@ -381,71 +441,6 @@ public final class Project {
 			}
 			.merge(identity)
 			.then(checkoutSignal)
-
-		switch project {
-		case let .GitHub(repository):
-			let installedBinaries: ColdSignal<Bool> = GitHubCredentials.loadFromGit()
-				.mergeMap { credentials in
-					return releasesForRepository(repository, credentials)
-						.filter { release in release.tag == revision && !release.draft && !release.prerelease && !release.assets.isEmpty }
-						.take(1)
-						.on(next: { release in
-							self._projectEventsSink.put(.DownloadingBinaries(project, release.name))
-						})
-						.concatMap { release in
-							return ColdSignal
-								.fromValues(release.assets)
-								.filter { asset in
-									let name = asset.name as NSString
-									return name.rangeOfString(CarthageProjectBinaryAssetPattern).location != NSNotFound
-								}
-								.filter { asset in contains(CarthageProjectBinaryAssetContentTypes, asset.contentType) }
-								.concatMap { asset in
-									return downloadAsset(asset, credentials)
-										.concatMap { downloadURL in cacheDownloadedBinary(project, release, asset, downloadURL) }
-								}
-						}
-				}
-				.concatMap { zipURL in unzipArchiveToTemporaryDirectory(zipURL) }
-				.concatMap { directoryURL in
-					return NSFileManager.defaultManager()
-						.rac_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants, catchErrors: true)
-						.map { enumerator, URL in URL }
-						.filter { URL in
-							var typeIdentifier: AnyObject?
-							if URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: nil) {
-								if let typeIdentifier: AnyObject = typeIdentifier {
-									if UTTypeConformsTo(typeIdentifier as String, kUTTypeFramework) != 0 {
-										return true
-									}
-								}
-							}
-
-							return false
-						}
-						.mergeMap { frameworkURL -> ColdSignal<Bool> in
-							return architecturesInFramework(frameworkURL)
-								.filter { arch in arch.hasPrefix("arm") }
-								.map { _ in Platform.iPhoneOS }
-								.concat(ColdSignal.single(Platform.MacOSX))
-								.take(1)
-								.map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
-								.map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
-								.mergeMap { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL) }
-								.then(.single(true))
-						}
-						.takeLast(1)
-				}
-				.concat(.single(false))
-				.take(1)
-
-			return installedBinaries
-				.filter { installed in !installed }
-				.mergeMap { _ in checkoutOrClone }
-
-		case .Git:
-			return checkoutOrClone
-		}
 	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved.
@@ -464,10 +459,19 @@ public final class Project {
 			.zipWith(submodulesSignal)
 			.map { (resolvedCartfile, submodulesByPath) -> ColdSignal<()> in
 				return ColdSignal.fromValues(resolvedCartfile.dependencies)
-					.map { dependency in
-						return self.checkoutOrCloneProject(dependency.project, atRevision: dependency.version.commitish, submodulesByPath: submodulesByPath)
+					.mergeMap { dependency in
+						let project = dependency.project
+						let revision = dependency.version.commitish
+
+						return self.installBinariesForProject(project, atRevision: revision)
+							.mergeMap { installed in
+								if installed {
+									return .empty()
+								} else {
+									return self.checkoutOrCloneProject(project, atRevision: revision, submodulesByPath: submodulesByPath)
+								}
+							}
 					}
-					.merge(identity)
 			}
 			.merge(identity)
 			.then(.empty())
@@ -513,4 +517,39 @@ private func cacheDownloadedBinary(project: ProjectIdentifier, release: GitHubRe
 				return false
 			}
 		}
+}
+
+/// Sends the URL to each framework bundle found in the given directory.
+private func frameworksInDirectory(directoryURL: NSURL) -> ColdSignal<NSURL> {
+	return NSFileManager.defaultManager()
+		.rac_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants, catchErrors: true)
+		.map { enumerator, URL in URL }
+		.filter { URL in
+			var typeIdentifier: AnyObject?
+			if URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: nil) {
+				if let typeIdentifier: AnyObject = typeIdentifier {
+					if UTTypeConformsTo(typeIdentifier as String, kUTTypeFramework) != 0 {
+						return true
+					}
+				}
+			}
+
+			return false
+		}
+}
+
+/// Determines whether a Release is a suitable candidate for binary frameworks.
+private func binaryFrameworksCanBeProvidedByRelease(revision: String)(release: GitHubRelease) -> Bool {
+	return release.tag == revision && !release.draft && !release.prerelease && !release.assets.isEmpty
+}
+
+/// Determines whether a release asset is a suitable candidate for binary
+/// frameworks.
+private func binaryFrameworksCanBeProvidedByAsset(asset: GitHubRelease.Asset) -> Bool {
+	let name = asset.name as NSString
+	if name.rangeOfString(CarthageProjectBinaryAssetPattern).location == NSNotFound {
+		return false
+	}
+
+	return contains(CarthageProjectBinaryAssetContentTypes, asset.contentType)
 }
