@@ -145,31 +145,37 @@ public final class Project {
 		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
 		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
-		return ColdSignal.lazy {
+		let isNoSuchFileError = { (error: NSError) -> Bool in
+			return error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError
+		}
+
+		let cartfile = ColdSignal.lazy {
 				.fromResult(Cartfile.fromFile(cartfileURL))
 			}
 			.catch { error -> ColdSignal<Cartfile> in
-				if error.code == NSFileReadNoSuchFileError && NSFileManager.defaultManager().fileExistsAtPath(privateCartfileURL.path!) {
+				if isNoSuchFileError(error) && NSFileManager.defaultManager().fileExistsAtPath(privateCartfileURL.path!) {
 					return .single(Cartfile())
 				}
 
 				return .error(error)
 			}
-			.mergeMap { cartfile -> ColdSignal<Cartfile> in
-				return ColdSignal.fromResult(Cartfile.fromFile(privateCartfileURL))
-					.catch { error -> ColdSignal<Cartfile> in
-						if error.code == NSFileReadNoSuchFileError {
-							return .single(Cartfile())
-						}
 
-						return .error(error)
-					}
-					.map { additional in
-						var existing = cartfile
-						existing.appendCartfile(additional)
+		let privateCartfile = ColdSignal.lazy {
+				.fromResult(Cartfile.fromFile(privateCartfileURL))
+			}
+			.catch { error -> ColdSignal<Cartfile> in
+				if isNoSuchFileError(error) {
+					return .single(Cartfile())
+				}
 
-						return existing
-					}
+				return .error(error)
+		}
+
+		return cartfile.zipWith(privateCartfile)
+			.map { (var cartfile, privateCartfile) -> Cartfile in
+				cartfile.appendCartfile(privateCartfile)
+
+				return cartfile
 			}
 	}
 
