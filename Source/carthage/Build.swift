@@ -54,9 +54,7 @@ public struct BuildCommand: CommandType {
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 
-		var buildSignal = ColdSignal<Project>.lazy {
-				return .fromResult(Project.loadFromDirectory(directoryURL))
-			}
+		var buildSignal = Project.loadFromDirectory(directoryURL)
 			.catch { error in
 				if options.skipCurrent {
 					return .error(error)

@@ -128,11 +128,10 @@ public final class Project {
 	}
 
 	/// Attempts to load project information from the given directory.
-	public class func loadFromDirectory(directoryURL: NSURL) -> Result<Project> {
+	public class func loadFromDirectory(directoryURL: NSURL) -> ColdSignal<Project> {
 		precondition(directoryURL.fileURL)
 
 		return loadCombinedCartfile(directoryURL)
-			.single()
 			.map { cartfile -> Project in
 				return self(directoryURL: directoryURL, cartfile: cartfile)
 			}
