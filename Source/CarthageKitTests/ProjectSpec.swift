@@ -20,10 +20,10 @@ class ProjectSpec: QuickSpec {
 
 			expect(result.isSuccess()).to(beTruthy())
 
-			let dependencies = result.value()!.dependencies
+			let dependencies = result.value()?.dependencies ?? []
 
 			expect(countElements(dependencies)).to(equal(1))
-			expect(dependencies[0].project.name).to(equal("Carthage"))
+			expect(dependencies.first?.project.name).to(equal("Carthage"))
 		}
 	}
 }
