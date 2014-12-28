@@ -234,34 +234,26 @@ public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirect
 /// repository, but without any Git metadata.
 public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirectoryURL: NSURL) -> ColdSignal<()> {
 	let submoduleDirectoryURL = workingDirectoryURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
-	let purgeGitDirectories = ColdSignal<()> { (sink, disposable) in
-		let enumerator = NSFileManager.defaultManager().enumeratorAtURL(submoduleDirectoryURL, includingPropertiesForKeys: [ NSURLIsDirectoryKey!, NSURLNameKey! ], options: nil, errorHandler: nil)!
-
-		while !disposable.disposed {
-			let URL: NSURL! = enumerator.nextObject() as? NSURL
-			if URL == nil {
-				break
-			}
-
+	let purgeGitDirectories = NSFileManager.defaultManager()
+		.rac_enumeratorAtURL(submoduleDirectoryURL, includingPropertiesForKeys: [ NSURLIsDirectoryKey, NSURLNameKey ], options: nil, catchErrors: true)
+		.mergeMap { enumerator, URL -> ColdSignal<()> in
 			var name: AnyObject?
 			var error: NSError?
 			if !URL.getResourceValue(&name, forKey: NSURLNameKey, error: &error) {
-				sink.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)").error))
-				return
+				return .error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)").error)
 			}
 
 			if let name = name as? NSString {
 				if name != ".git" {
-					continue
+					return .empty()
 				}
 			} else {
-				continue
+				return .empty()
 			}
 
 			var isDirectory: AnyObject?
 			if !URL.getResourceValue(&isDirectory, forKey: NSURLIsDirectoryKey, error: &error) || isDirectory == nil {
-				sink.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory").error))
-				return
+				return .error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory").error)
 			}
 
 			if let directory = isDirectory?.boolValue {
@@ -270,14 +262,12 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 				}
 			}
 
-			if !NSFileManager.defaultManager().removeItemAtURL(URL, error: &error) {
-				sink.put(.Error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)").error))
-				return
+			if NSFileManager.defaultManager().removeItemAtURL(URL, error: &error) {
+				return .empty()
+			} else {
+				return .error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)").error)
 			}
 		}
-
-		sink.put(.Completed)
-	}
 
 	return ColdSignal<String>.lazy {
 			var error: NSError?

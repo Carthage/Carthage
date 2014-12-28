@@ -178,28 +178,26 @@ private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bo
 public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<ProjectLocator> {
 	let enumerationOptions = NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants
 
-	return ColdSignal.lazy {
-		var enumerationError: NSError?
-		let enumerator = NSFileManager.defaultManager().enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions) { (URL, error) in
-			enumerationError = error
-			return false
-		}
-
-		if let enumerator = enumerator {
-			var matches: [ProjectEnumerationMatch] = []
-
-			while let URL = enumerator.nextObject() as? NSURL {
-				if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value() {
-					matches.append(match)
-				}
+	return NSFileManager.defaultManager()
+		.rac_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+		.reduce(initial: []) { (var matches: [ProjectEnumerationMatch], tuple) -> [ProjectEnumerationMatch] in
+			let (enumerator, URL) = tuple
+			if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value() {
+				matches.append(match)
 			}
 
-			sort(&matches)
-			return ColdSignal.fromValues(matches).map { $0.locator }
+			return matches
 		}
-
-		return .error(enumerationError ?? CarthageError.ReadFailed(directoryURL).error)
-	}
+		.map { (var matches) -> [ProjectEnumerationMatch] in
+			sort(&matches)
+			return matches
+		}
+		.mergeMap { matches -> ColdSignal<ProjectEnumerationMatch> in
+			return ColdSignal.fromValues(matches)
+		}
+		.map { (match: ProjectEnumerationMatch) -> ProjectLocator in
+			return match.locator
+		}
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
@@ -566,11 +564,11 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 	precondition(destinationModuleDirectoryURL.fileURL)
 
 	return NSFileManager.defaultManager()
-		.enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [ NSURLParentDirectoryURLKey ], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles)
-		.mergeMap { URL in
+		.rac_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles)
+		.mergeMap { enumerator, URL in
 			let lastComponent: String? = URL.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
-			
+
 			var error: NSError?
 			if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
 				return .single(destinationURL)

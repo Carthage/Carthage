@@ -409,7 +409,8 @@ public final class Project {
 				.concatMap { zipURL in unzipArchiveToTemporaryDirectory(zipURL) }
 				.concatMap { directoryURL in
 					return NSFileManager.defaultManager()
-						.enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants)
+						.rac_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants, catchErrors: true)
+						.map { enumerator, URL in URL }
 						.filter { URL in
 							var typeIdentifier: AnyObject?
 							if URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: nil) {
