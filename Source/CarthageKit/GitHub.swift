@@ -218,15 +218,62 @@ internal func createGitHubRequest(URL: NSURL, credentials: GitHubCredentials?) -
 	return request
 }
 
+/// Parses the value of a `Link` header field into a list of URLs and their
+/// associated parameter lists.
+private func parseLinkHeader(linkValue: String) -> [(NSURL, [String])] {
+	let components = split(linkValue, { $0 == "," }, allowEmptySlices: false)
+
+	return reduce(components, []) { (var links, component) in
+		var pieces = split(component, { $0 == ";" }, allowEmptySlices: false)
+		if let URLPiece = pieces.first {
+			pieces.removeAtIndex(0)
+
+			let scanner = NSScanner(string: URLPiece)
+
+			var URLString: NSString?
+			if scanner.scanString("<", intoString: nil) && scanner.scanUpToString(">", intoString: &URLString) {
+				if let URL = NSURL(string: URLString!) {
+					let value: (NSURL, [String]) = (URL, pieces)
+					links.append(value)
+				}
+			}
+		}
+
+		return links
+	}
+}
+
+/// Fetches the given GitHub URL, automatically paginating to the end.
+///
+/// Returns a signal that will send one `NSData` for each page fetched.
+private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdSignal<NSData> {
+	let request = createGitHubRequest(URL, credentials)
+
+	return NSURLSession.sharedSession()
+		.rac_dataWithRequest(request)
+		.mergeMap { data, response -> ColdSignal<NSData> in
+			let thisData = ColdSignal.single(data)
+
+			if let HTTPResponse = response as? NSHTTPURLResponse {
+				if let linkHeader = HTTPResponse.allHeaderFields["Link"] as? String {
+					let links = parseLinkHeader(linkHeader)
+					for (URL, parameters) in links {
+						if contains(parameters, "rel=\"next\"") {
+							// Automatically fetch the next page too.
+							return thisData.concat(fetchAllPages(URL, credentials))
+						}
+					}
+				}
+			}
+
+			return thisData
+		}
+}
+
 /// Fetches all releases on the given repository, sending each along the
 /// returned signal.
 internal func releasesForRepository(repository: GitHubRepository, credentials: GitHubCredentials?) -> ColdSignal<GitHubRelease> {
-	let request = createGitHubRequest(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases")!, credentials)
-
-	// TODO: Automatically fetch additional pages.
-	return NSURLSession.sharedSession()
-		.rac_dataWithRequest(request)
-		.map { data, _ in data }
+	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases?per_page=100")!, credentials)
 		.tryMap { data, error -> NSArray? in
 			return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error) as? NSArray
 		}
