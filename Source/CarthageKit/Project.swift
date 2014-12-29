@@ -524,15 +524,22 @@ public final class Project {
 	}
 }
 
+/// Constructs a file URL to where the binary corresponding to the given
+/// arguments should live.
+private func fileURLToCachedBinary(project: ProjectIdentifier, release: GitHubRelease, asset: GitHubRelease.Asset) -> NSURL {
+	// ~/Library/Caches/org.carthage.CarthageKit/binaries/ReactiveCocoa/v2.3.1/1234-ReactiveCocoa.framework.zip
+	return CarthageDependencyAssetsURL.URLByAppendingPathComponent("\(project.name)/\(release.tag)/\(asset.ID)-\(asset.name)", isDirectory: false)
+}
+
 /// Caches the downloaded binary for the given project, returning the new URL to
 /// the download.
 private func cacheDownloadedBinary(project: ProjectIdentifier, release: GitHubRelease, asset: GitHubRelease.Asset, downloadURL: NSURL) -> ColdSignal<NSURL> {
 	return ColdSignal
-		.single(CarthageDependencyAssetsURL.URLByAppendingPathComponent("\(project.name)/\(release.tag)", isDirectory: true))
-		.try { directoryURL, error in
-			return NSFileManager.defaultManager().createDirectoryAtURL(directoryURL, withIntermediateDirectories: true, attributes: nil, error: error)
+		.single(fileURLToCachedBinary(project, release, asset))
+		.try { fileURL, error in
+			let parentDirectoryURL = fileURL.URLByDeletingLastPathComponent!
+			return NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: error)
 		}
-		.map { $0.URLByAppendingPathComponent("\(asset.ID)-\(asset.name)", isDirectory: false) }
 		.try { newDownloadURL, error in
 			if rename(downloadURL.fileSystemRepresentation, newDownloadURL.fileSystemRepresentation) == 0 {
 				return true
