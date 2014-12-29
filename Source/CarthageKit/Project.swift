@@ -407,8 +407,16 @@ public final class Project {
 					.fromValues(release.assets)
 					.filter(binaryFrameworksCanBeProvidedByAsset)
 					.concatMap { asset in
-						return downloadAsset(asset, credentials)
-							.concatMap { downloadURL in cacheDownloadedBinary(project, release, asset, downloadURL) }
+						let fileURL = fileURLToCachedBinary(project, release, asset)
+
+						return ColdSignal<NSURL>.lazy {
+							if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!) {
+								return .single(fileURL)
+							} else {
+								return downloadAsset(asset, credentials)
+									.concatMap { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
+							}
+						}
 					}
 			}
 	}
@@ -531,11 +539,13 @@ private func fileURLToCachedBinary(project: ProjectIdentifier, release: GitHubRe
 	return CarthageDependencyAssetsURL.URLByAppendingPathComponent("\(project.name)/\(release.tag)/\(asset.ID)-\(asset.name)", isDirectory: false)
 }
 
-/// Caches the downloaded binary for the given project, returning the new URL to
-/// the download.
-private func cacheDownloadedBinary(project: ProjectIdentifier, release: GitHubRelease, asset: GitHubRelease.Asset, downloadURL: NSURL) -> ColdSignal<NSURL> {
+/// Caches the downloaded binary at the given URL, moving it to the other URL
+/// given.
+///
+/// Sends the final file URL upon success.
+private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -> ColdSignal<NSURL> {
 	return ColdSignal
-		.single(fileURLToCachedBinary(project, release, asset))
+		.single(cachedURL)
 		.try { fileURL, error in
 			let parentDirectoryURL = fileURL.URLByDeletingLastPathComponent!
 			return NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: error)
