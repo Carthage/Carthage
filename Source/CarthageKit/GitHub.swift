@@ -116,12 +116,12 @@ public struct GitHubRelease: Equatable {
 			return self(ID: ID, name: name, contentType: contentType, downloadURL: downloadURL)
 		}
 
-		public static var decoder: JSONValue -> Asset? {
+		public static func decode(j: JSONValue) -> Asset? {
 			return self.create
-				<^> <|"id"
-				<*> <|"name"
-				<*> <|"content_type"
-				<*> decodeURLFromJSON("browser_download_url")
+				<^> j <| "id"
+				<*> j <| "name"
+				<*> j <| "content_type"
+				<*> j <| "browser_download_url"
 		}
 	}
 }
@@ -151,14 +151,14 @@ extension GitHubRelease: JSONDecodable {
 		return self(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
 	}
 
-	public static var decoder: JSONValue -> GitHubRelease? {
+	public static func decode(j: JSONValue) -> GitHubRelease? {
 		return self.create
-			<^> <|"id"
-			<*> <|"name"
-			<*> <|"tag_name"
-			<*> <|"draft"
-			<*> <|"prerelease"
-			<*> <||"assets"
+			<^> j <| "id"
+			<*> j <| "name"
+			<*> j <| "tag_name"
+			<*> j <| "draft"
+			<*> j <| "prerelease"
+			<*> j <|| "assets"
 	}
 }
 
@@ -281,7 +281,7 @@ internal func releasesForRepository(repository: GitHubRepository, credentials: G
 			return ColdSignal.fromValues(releases)
 		}
 		.concatMap { releaseDictionary -> ColdSignal<GitHubRelease> in
-			if let release = GitHubRelease.decoder(JSONValue.parse(releaseDictionary)) {
+			if let release = GitHubRelease.decode(JSONValue.parse(releaseDictionary)) {
 				return .single(release)
 			} else {
 				return .empty()
