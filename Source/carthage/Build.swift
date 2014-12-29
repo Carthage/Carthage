@@ -55,9 +55,7 @@ public struct BuildCommand: CommandType {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 		let project = Project(directoryURL: directoryURL)
 
-		var buildSignal = ColdSignal<Cartfile>.lazy {
-				return .fromResult(project.readCartfile())
-			}
+		var buildSignal = project.readCartfile()
 			.map { _ in project }
 			.catch { error in
 				if options.skipCurrent {
