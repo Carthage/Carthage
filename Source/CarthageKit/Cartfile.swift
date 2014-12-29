@@ -70,6 +70,16 @@ public struct Cartfile {
 		return result.map { _ in cartfile }
 	}
 
+	/// Attempts to parse a Cartfile from a file at a given URL.
+	public static func fromFile(cartfileURL: NSURL) -> Result<Cartfile> {
+		var error: NSError?
+		if let cartfileContents = NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding, error: &error) {
+			return Cartfile.fromString(cartfileContents)
+		} else {
+			return failure(error ?? CarthageError.ReadFailed(cartfileURL).error)
+		}
+	}
+
 	/// Appends the contents of another Cartfile to that of the receiver.
 	public mutating func appendCartfile(cartfile: Cartfile) {
 		dependencies += cartfile.dependencies

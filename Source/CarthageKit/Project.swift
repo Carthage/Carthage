@@ -128,28 +128,52 @@ public final class Project {
 		}
 	}
 
-	/// Reads the project's Cartfile.
-	public func readCartfile() -> Result<Cartfile> {
-		var error: NSError?
-		let cartfileContents = NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding, error: &error)
-		if let cartfileContents = cartfileContents {
-			let cartfileResult = Cartfile.fromString(cartfileContents)
 
-			let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
-			if let privateCartfileContents = NSString(contentsOfURL: privateCartfileURL, encoding: NSUTF8StringEncoding, error: nil) {
-				return cartfileResult.flatMap { cartfile in
-					return Cartfile.fromString(privateCartfileContents).map { privateCartfile in
-						var newCartfile = cartfile
-						newCartfile.appendCartfile(privateCartfile)
-						return newCartfile
-					}
-				}
-			} else {
-				return cartfileResult
-			}
-		} else {
-			return failure(error ?? CarthageError.ReadFailed(cartfileURL).error)
+	/// Reads the project's Cartfile.
+	public func readCartfile() -> ColdSignal<Cartfile> {
+		return Project.loadCombinedCartfile(directoryURL)
+	}
+
+	/// Attempts to load Cartfile or Cartfile.private from the given directory,
+	/// merging their depencies.
+	public class func loadCombinedCartfile(directoryURL: NSURL) -> ColdSignal<Cartfile> {
+		precondition(directoryURL.fileURL)
+
+		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
+		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
+
+		let isNoSuchFileError = { (error: NSError) -> Bool in
+			return error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError
 		}
+
+		let cartfile = ColdSignal.lazy {
+				.fromResult(Cartfile.fromFile(cartfileURL))
+			}
+			.catch { error -> ColdSignal<Cartfile> in
+				if isNoSuchFileError(error) && NSFileManager.defaultManager().fileExistsAtPath(privateCartfileURL.path!) {
+					return .single(Cartfile())
+				}
+
+				return .error(error)
+			}
+
+		let privateCartfile = ColdSignal.lazy {
+				.fromResult(Cartfile.fromFile(privateCartfileURL))
+			}
+			.catch { error -> ColdSignal<Cartfile> in
+				if isNoSuchFileError(error) {
+					return .single(Cartfile())
+				}
+
+				return .error(error)
+		}
+
+		return cartfile.zipWith(privateCartfile)
+			.map { (var cartfile, privateCartfile) -> Cartfile in
+				cartfile.appendCartfile(privateCartfile)
+
+				return cartfile
+			}
 	}
 
 	/// Reads the project's Cartfile.resolved.
@@ -257,9 +281,7 @@ public final class Project {
 	public func updatedResolvedCartfile() -> ColdSignal<ResolvedCartfile> {
 		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
 
-		return ColdSignal.lazy {
-				return .fromResult(self.readCartfile())
-			}
+		return self.readCartfile()
 			.mergeMap { cartfile in resolver.resolveDependenciesInCartfile(cartfile) }
 			.reduce(initial: []) { $0 + [ $1 ] }
 			.map { ResolvedCartfile(dependencies: $0) }
