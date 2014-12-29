@@ -51,9 +51,7 @@ public struct CheckoutOptions: OptionsType {
 	/// accordingly.
 	public func loadProject() -> ColdSignal<Project> {
 		if let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true) {
-			return ColdSignal<Project>.lazy {
-					return .fromResult(Project.loadFromDirectory(directoryURL))
-				}
+			return Project.loadFromDirectory(directoryURL)
 				.map { project in
 					project.preferHTTPS = !self.useSSH
 					project.useSubmodules = self.useSubmodules
