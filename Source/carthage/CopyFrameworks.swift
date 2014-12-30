@@ -27,7 +27,7 @@ public struct CopyFrameworksCommand: CommandType {
 
 				return combineLatest(ColdSignal.fromResult(target), .fromResult(validArchitectures()))
 					.mergeMap { (target, validArchitectures) -> ColdSignal<()> in
-						return combineLatest(copyFramework(source, target), .fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")))
+						return combineLatest(copyFramework(source, target), codeSigningIdentity())
 							.mergeMap { (url, codesigningIdentity) -> ColdSignal<()> in
 								return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 							}
@@ -35,6 +35,16 @@ public struct CopyFrameworksCommand: CommandType {
 			}
 			.concat(identity)
 			.wait()
+	}
+}
+
+private func codeSigningIdentity() -> ColdSignal<String?> {
+	return ColdSignal.lazy {
+		if codeSigningAllowed() {
+			return ColdSignal.fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")).map(identity)
+		} else {
+			return .single(nil)
+		}
 	}
 }
 
