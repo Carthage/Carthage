@@ -128,17 +128,9 @@ public final class Project {
 		}
 	}
 
-
-	/// Reads the project's Cartfile.
-	public func readCartfile() -> ColdSignal<Cartfile> {
-		return Project.loadCombinedCartfile(directoryURL)
-	}
-
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
-	/// merging their depencies.
-	public class func loadCombinedCartfile(directoryURL: NSURL) -> ColdSignal<Cartfile> {
-		precondition(directoryURL.fileURL)
-
+	/// merging their dependencies.
+	public func loadCombinedCartfile() -> ColdSignal<Cartfile> {
 		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
 		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
@@ -177,13 +169,15 @@ public final class Project {
 	}
 
 	/// Reads the project's Cartfile.resolved.
-	public func readResolvedCartfile() -> Result<ResolvedCartfile> {
-		var error: NSError?
-		let resolvedCartfileContents = NSString(contentsOfURL: resolvedCartfileURL, encoding: NSUTF8StringEncoding, error: &error)
-		if let resolvedCartfileContents = resolvedCartfileContents {
-			return ResolvedCartfile.fromString(resolvedCartfileContents)
-		} else {
-			return failure(error ?? CarthageError.ReadFailed(resolvedCartfileURL).error)
+	public func loadResolvedCartfile() -> ColdSignal<ResolvedCartfile> {
+		return ColdSignal.lazy {
+			var error: NSError?
+			let resolvedCartfileContents = NSString(contentsOfURL: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding, error: &error)
+			if let resolvedCartfileContents = resolvedCartfileContents {
+				return .fromResult(ResolvedCartfile.fromString(resolvedCartfileContents))
+			} else {
+				return .error(error ?? CarthageError.ReadFailed(self.resolvedCartfileURL).error)
+			}
 		}
 	}
 
@@ -281,7 +275,7 @@ public final class Project {
 	public func updatedResolvedCartfile() -> ColdSignal<ResolvedCartfile> {
 		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
 
-		return self.readCartfile()
+		return loadCombinedCartfile()
 			.mergeMap { cartfile in resolver.resolveDependenciesInCartfile(cartfile) }
 			.reduce(initial: []) { $0 + [ $1 ] }
 			.map { ResolvedCartfile(dependencies: $0) }
@@ -347,9 +341,7 @@ public final class Project {
 				return submodulesByPath
 			}
 
-		return ColdSignal<ResolvedCartfile>.lazy {
-				return ColdSignal.fromResult(self.readResolvedCartfile())
-			}
+		return loadResolvedCartfile()
 			.zipWith(submodulesSignal)
 			.map { (resolvedCartfile, submodulesByPath) -> ColdSignal<()> in
 				return ColdSignal.fromValues(resolvedCartfile.dependencies)
@@ -368,9 +360,7 @@ public final class Project {
 	/// signal-of-signals representing each scheme being built.
 	public func buildCheckedOutDependencies(configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
-		let schemeSignals = ColdSignal<ResolvedCartfile>.lazy {
-				return .fromResult(self.readResolvedCartfile())
-			}
+		let schemeSignals = loadResolvedCartfile()
 			.map { resolvedCartfile in ColdSignal.fromValues(resolvedCartfile.dependencies) }
 			.merge(identity)
 			.map { dependency -> ColdSignal<BuildSchemeSignal> in

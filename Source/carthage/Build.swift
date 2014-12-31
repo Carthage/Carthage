@@ -55,7 +55,7 @@ public struct BuildCommand: CommandType {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 		let project = Project(directoryURL: directoryURL)
 
-		var buildSignal = project.readCartfile()
+		var buildSignal = project.loadCombinedCartfile()
 			.map { _ in project }
 			.catch { error in
 				if options.skipCurrent {
