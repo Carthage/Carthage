@@ -53,8 +53,10 @@ public struct BuildCommand: CommandType {
 	/// cold signals representing each scheme being built.
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
+		let project = Project(directoryURL: directoryURL)
 
-		var buildSignal = Project.loadFromDirectory(directoryURL)
+		var buildSignal = project.loadCombinedCartfile()
+			.map { _ in project }
 			.catch { error in
 				if options.skipCurrent {
 					return .error(error)
