@@ -331,8 +331,22 @@ public final class Project {
 
 			switch project {
 			case let .GitHub(repository):
-				return GitHubCredentials.loadFromGit()
-					.mergeMap { credentials in self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials) }
+				return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: nil)
+					.catch { error in
+						// If we were unable to fetch releases, try loading credentials from Git.
+						if error.domain == NSURLErrorDomain {
+							return GitHubCredentials.loadFromGit()
+								.mergeMap { credentials in
+									if let credentials = credentials {
+										return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials)
+									} else {
+										return .error(error)
+									}
+								}
+						} else {
+							return .error(error)
+						}
+					}
 					.concatMap(unzipArchiveToTemporaryDirectory)
 					.concatMap { directoryURL in
 						return frameworksInDirectory(directoryURL)
