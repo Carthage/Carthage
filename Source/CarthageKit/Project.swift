@@ -355,7 +355,14 @@ public final class Project {
 								NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
 								return
 							})
-							.then(.single(true))
+							.then(.single(directoryURL))
+					}
+					.tryMap { (temporaryDirectoryURL: NSURL, error: NSErrorPointer) -> Bool? in
+						if NSFileManager.defaultManager().removeItemAtURL(temporaryDirectoryURL, error: error) {
+							return true
+						} else {
+							return nil
+						}
 					}
 					.concat(.single(false))
 					.take(1)
