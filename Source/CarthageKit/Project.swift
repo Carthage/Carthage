@@ -493,10 +493,17 @@ public final class Project {
 			.map { resolvedCartfile in ColdSignal.fromValues(resolvedCartfile.dependencies) }
 			.merge(identity)
 			.map { dependency -> ColdSignal<BuildSchemeSignal> in
-				let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
-				buildOutput.observe(stdoutSink)
+				return ColdSignal.lazy {
+					let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
+					if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
+						return .empty()
+					}
 
-				return schemeSignals
+					let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
+					buildOutput.observe(stdoutSink)
+
+					return schemeSignals
+				}
 			}
 			.concat(identity)
 
