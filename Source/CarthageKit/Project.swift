@@ -108,6 +108,10 @@ public final class Project {
 	/// working directories.
 	public var useSubmodules = false
 
+	/// Whether to download binaries for dependencies, or just check out their
+	/// repositories.
+	public var useBinaries = false
+
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
 	public let projectEvents: HotSignal<ProjectEvent>
@@ -318,27 +322,33 @@ public final class Project {
 	///
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> ColdSignal<Bool> {
-		let checkoutDirectoryURL = directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
+		return ColdSignal.lazy {
+			if !self.useBinaries {
+				return .single(false)
+			}
 
-		switch project {
-		case let .GitHub(repository):
-			return GitHubCredentials.loadFromGit()
-				.mergeMap { credentials in self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials) }
-				.concatMap(unzipArchiveToTemporaryDirectory)
-				.concatMap { directoryURL in
-					return frameworksInDirectory(directoryURL)
-						.mergeMap(self.copyFrameworkToBuildFolder)
-						.on(completed: {
-							NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
-							return
-						})
-						.then(.single(true))
-				}
-				.concat(.single(false))
-				.take(1)
+			let checkoutDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
-		case .Git:
-			return .single(false)
+			switch project {
+			case let .GitHub(repository):
+				return GitHubCredentials.loadFromGit()
+					.mergeMap { credentials in self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials) }
+					.concatMap(unzipArchiveToTemporaryDirectory)
+					.concatMap { directoryURL in
+						return frameworksInDirectory(directoryURL)
+							.mergeMap(self.copyFrameworkToBuildFolder)
+							.on(completed: {
+								NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
+								return
+							})
+							.then(.single(true))
+					}
+					.concat(.single(false))
+					.take(1)
+
+			case .Git:
+				return .single(false)
+			}
 		}
 	}
 
