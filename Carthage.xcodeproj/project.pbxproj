@@ -216,6 +216,7 @@
 				D0D1211A19E87861005E4BAA /* carthage */,
 				D0D1216E19E87B05005E4BAA /* CarthageKit */,
 				D0D1217B19E87B05005E4BAA /* CarthageKitTests */,
+				D0D1212219E878CC005E4BAA /* Configuration */,
 				D0D1211919E87861005E4BAA /* Products */,
 				D0E7B65819E9CA0800EDBA4D /* carthage */,
 			);
@@ -358,7 +359,6 @@
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
 				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
 				D0DB09A319EA354200234B16 /* XcodeSpec.swift */,
-				D0D1212219E878CC005E4BAA /* Configuration */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
 			name = CarthageKitTests;
