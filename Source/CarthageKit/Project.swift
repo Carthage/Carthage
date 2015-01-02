@@ -314,10 +314,12 @@ public final class Project {
 			.then(checkoutResolvedDependencies())
 	}
 
-	/// Installs binaries for the given proejctproject, if available.
+	/// Installs binaries for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> ColdSignal<Bool> {
+		let checkoutDirectoryURL = directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
+
 		switch project {
 		case let .GitHub(repository):
 			return GitHubCredentials.loadFromGit()
@@ -326,6 +328,10 @@ public final class Project {
 				.concatMap { directoryURL in
 					return frameworksInDirectory(directoryURL)
 						.mergeMap(self.copyFrameworkToBuildFolder)
+						.on(completed: {
+							NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
+							return
+						})
 						.then(.single(true))
 				}
 				.concat(.single(false))
