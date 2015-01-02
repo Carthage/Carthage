@@ -91,8 +91,10 @@ public final class Project {
 	/// File URL to the root directory of the project.
 	public let directoryURL: NSURL
 
-	/// The project's Cartfile.
-	public let cartfile: Cartfile
+	/// The file URL to the project's Cartfile.
+	public var cartfileURL: NSURL {
+		return directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
+	}
 
 	/// The file URL to the project's Cartfile.resolved.
 	public var resolvedCartfileURL: NSURL {
@@ -111,15 +113,14 @@ public final class Project {
 	public let projectEvents: HotSignal<ProjectEvent>
 	private let _projectEventsSink: SinkOf<ProjectEvent>
 
-	public required init(directoryURL: NSURL, cartfile: Cartfile) {
+	public init(directoryURL: NSURL) {
+		precondition(directoryURL.fileURL)
+
 		let (signal, sink) = HotSignal<ProjectEvent>.pipe()
 		projectEvents = signal
 		_projectEventsSink = sink
 
 		self.directoryURL = directoryURL
-
-		// TODO: Load this lazily.
-		self.cartfile = cartfile
 	}
 
 	/// Caches versions to avoid expensive lookups, and unnecessary
@@ -149,21 +150,9 @@ public final class Project {
 		}
 	}
 
-	/// Attempts to load project information from the given directory.
-	public class func loadFromDirectory(directoryURL: NSURL) -> ColdSignal<Project> {
-		precondition(directoryURL.fileURL)
-
-		return loadCombinedCartfile(directoryURL)
-			.map { cartfile -> Project in
-				return self(directoryURL: directoryURL, cartfile: cartfile)
-			}
-	}
-
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
-	/// merging their depencies.
-	public class func loadCombinedCartfile(directoryURL: NSURL) -> ColdSignal<Cartfile> {
-		precondition(directoryURL.fileURL)
-
+	/// merging their dependencies.
+	public func loadCombinedCartfile() -> ColdSignal<Cartfile> {
 		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
 		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
@@ -202,13 +191,15 @@ public final class Project {
 	}
 
 	/// Reads the project's Cartfile.resolved.
-	public func readResolvedCartfile() -> Result<ResolvedCartfile> {
-		var error: NSError?
-		let resolvedCartfileContents = NSString(contentsOfURL: resolvedCartfileURL, encoding: NSUTF8StringEncoding, error: &error)
-		if let resolvedCartfileContents = resolvedCartfileContents {
-			return ResolvedCartfile.fromString(resolvedCartfileContents)
-		} else {
-			return failure(error ?? CarthageError.ReadFailed(resolvedCartfileURL).error)
+	public func loadResolvedCartfile() -> ColdSignal<ResolvedCartfile> {
+		return ColdSignal.lazy {
+			var error: NSError?
+			let resolvedCartfileContents = NSString(contentsOfURL: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding, error: &error)
+			if let resolvedCartfileContents = resolvedCartfileContents {
+				return .fromResult(ResolvedCartfile.fromString(resolvedCartfileContents))
+			} else {
+				return .error(error ?? CarthageError.ReadFailed(self.resolvedCartfileURL).error)
+			}
 		}
 	}
 
@@ -220,27 +211,6 @@ public final class Project {
 		} else {
 			return failure(error ?? CarthageError.WriteFailed(resolvedCartfileURL).error)
 		}
-	}
-
-	/// Returns the URL that the project's remote repository exists at.
-	private func repositoryURLForProject(project: ProjectIdentifier) -> GitURL {
-		switch project {
-		case let .GitHub(repository):
-			if preferHTTPS {
-				return repository.HTTPSURL
-			} else {
-				return repository.SSHURL
-			}
-
-		case let .Git(URL):
-			return URL
-		}
-	}
-
-	/// Returns the file URL at which the given project's repository will be
-	/// located.
-	private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
-		return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
 	}
 
 	/// A scheduler used to serialize all Git operations within this project.
@@ -271,34 +241,18 @@ public final class Project {
 		}.deliverOn(QueueScheduler())
 	}
 
-	/// Clones the given project to the global repositories folder, or fetches
+	/// Clones the given dependency to the global repositories folder, or fetches
 	/// inside it if it has already been cloned.
 	///
 	/// Returns a signal which will send the URL to the repository's folder on
-	/// disk.
-	private func cloneOrFetchProject(project: ProjectIdentifier) -> ColdSignal<NSURL> {
-		let repositoryURL = repositoryFileURLForProject(project)
-		let operation = ColdSignal<NSURL>.lazy {
-			var error: NSError?
-			if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-				return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
-			}
-
-			let remoteURL = self.repositoryURLForProject(project)
-			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
-				// If we created the directory, we're now responsible for
-				// cloning it.
-				self._projectEventsSink.put(.Cloning(project))
-
-				return cloneRepository(remoteURL, repositoryURL)
-					.then(.single(repositoryURL))
-			} else {
-				self._projectEventsSink.put(.Fetching(project))
-
-				return fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
-					.then(.single(repositoryURL))
-			}
-		}
+	/// disk once cloning or fetching has completed.
+	private func cloneOrFetchDependency(project: ProjectIdentifier) -> ColdSignal<NSURL> {
+		let operation = cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS)
+			.on(next: { event, _ in
+				self._projectEventsSink.put(event)
+			})
+			.map { _, URL in URL }
+			.takeLast(1)
 
 		return runGitOperation(operation)
 	}
@@ -308,7 +262,7 @@ public final class Project {
 	/// This will automatically clone or fetch the project's repository as
 	/// necessary.
 	private func versionsForProject(project: ProjectIdentifier) -> ColdSignal<PinnedVersion> {
-		let fetchVersions = cloneOrFetchProject(project)
+		let fetchVersions = cloneOrFetchDependency(project)
 			.map { repositoryURL in listTags(repositoryURL) }
 			.merge(identity)
 			.map { PinnedVersion($0) }
@@ -325,18 +279,9 @@ public final class Project {
 			.merge(identity)
 	}
 
-	/// Loads the Cartfile for the given dependency, at the given version.
-	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> ColdSignal<Cartfile> {
-		let repositoryURL = repositoryFileURLForProject(dependency.project)
-
-		return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
-			.catch { _ in .empty() }
-			.tryMap { Cartfile.fromString($0) }
-	}
-
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> ColdSignal<PinnedVersion> {
-		return cloneOrFetchProject(project)
+		return cloneOrFetchDependency(project)
 			.map { repositoryURL in
 				return resolveReferenceInRepository(repositoryURL, reference)
 			}
@@ -352,7 +297,8 @@ public final class Project {
 	public func updatedResolvedCartfile() -> ColdSignal<ResolvedCartfile> {
 		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
 
-		return resolver.resolveDependenciesInCartfile(self.cartfile)
+		return loadCombinedCartfile()
+			.mergeMap { cartfile in resolver.resolveDependenciesInCartfile(cartfile) }
 			.reduce(initial: []) { $0 + [ $1 ] }
 			.map { ResolvedCartfile(dependencies: $0) }
 	}
@@ -439,18 +385,18 @@ public final class Project {
 	/// Checks out the given project into its intended working directory,
 	/// cloning it first if need be.
 	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> ColdSignal<()> {
-		let repositoryURL = self.repositoryFileURLForProject(project)
-		let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
+		let repositoryURL = repositoryFileURLForProject(project)
+		let workingDirectoryURL = directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
 		let checkoutSignal = ColdSignal<()>.lazy {
 				var submodule: Submodule?
 
 				if var foundSubmodule = submodulesByPath[project.relativePath] {
-					foundSubmodule.URL = self.repositoryURLForProject(project)
+					foundSubmodule.URL = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
 					foundSubmodule.SHA = revision
 					submodule = foundSubmodule
 				} else if self.useSubmodules {
-					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: self.repositoryURLForProject(project), SHA: revision)
+					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), SHA: revision)
 				}
 
 				if let submodule = submodule {
@@ -468,7 +414,7 @@ public final class Project {
 				if exists {
 					return .empty()
 				} else {
-					return self.cloneOrFetchProject(project)
+					return self.cloneOrFetchDependency(project)
 				}
 			}
 			.merge(identity)
@@ -485,9 +431,7 @@ public final class Project {
 				return submodulesByPath
 			}
 
-		return ColdSignal<ResolvedCartfile>.lazy {
-				return ColdSignal.fromResult(self.readResolvedCartfile())
-			}
+		return loadResolvedCartfile()
 			.zipWith(submodulesSignal)
 			.map { (resolvedCartfile, submodulesByPath) -> ColdSignal<()> in
 				return ColdSignal.fromValues(resolvedCartfile.dependencies)
@@ -515,9 +459,7 @@ public final class Project {
 	/// signal-of-signals representing each scheme being built.
 	public func buildCheckedOutDependencies(configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
-		let schemeSignals = ColdSignal<ResolvedCartfile>.lazy {
-				return .fromResult(self.readResolvedCartfile())
-			}
+		let schemeSignals = loadResolvedCartfile()
 			.map { resolvedCartfile in ColdSignal.fromValues(resolvedCartfile.dependencies) }
 			.merge(identity)
 			.map { dependency -> ColdSignal<BuildSchemeSignal> in
@@ -593,4 +535,66 @@ private func binaryFrameworksCanBeProvidedByAsset(asset: GitHubRelease.Asset) ->
 	}
 
 	return contains(CarthageProjectBinaryAssetContentTypes, asset.contentType)
+}
+
+/// Returns the file URL at which the given project's repository will be
+/// located.
+private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
+	return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
+}
+
+/// Loads the Cartfile for the given dependency, at the given version.
+private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> ColdSignal<Cartfile> {
+	let repositoryURL = repositoryFileURLForProject(dependency.project)
+
+	return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
+		.catch { _ in .empty() }
+		.tryMap { Cartfile.fromString($0) }
+}
+
+/// Returns the URL that the project's remote repository exists at.
+private func repositoryURLForProject(project: ProjectIdentifier, #preferHTTPS: Bool) -> GitURL {
+	switch project {
+	case let .GitHub(repository):
+		if preferHTTPS {
+			return repository.HTTPSURL
+		} else {
+			return repository.SSHURL
+		}
+
+	case let .Git(URL):
+		return URL
+	}
+}
+
+/// Clones the given project to the global repositories folder, or fetches
+/// inside it if it has already been cloned.
+///
+/// Returns a signal which will send the operation type once started, and
+/// the URL to where the repository's folder will exist on disk, then complete
+/// when the operation completes.
+public func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) -> ColdSignal<(ProjectEvent, NSURL)> {
+	let repositoryURL = repositoryFileURLForProject(project)
+
+	return ColdSignal.lazy {
+		var error: NSError?
+		if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+			return .error(error ?? CarthageError.WriteFailed(CarthageDependencyRepositoriesURL).error)
+		}
+
+		let remoteURL = repositoryURLForProject(project, preferHTTPS: preferHTTPS)
+		if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
+			// If we created the directory, we're now responsible for
+			// cloning it.
+			let cloneSignal = cloneRepository(remoteURL, repositoryURL)
+
+			return ColdSignal.single((ProjectEvent.Cloning(project), repositoryURL))
+				.concat(cloneSignal.then(.empty()))
+		} else {
+			let fetchSignal = fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
+
+			return ColdSignal.single((ProjectEvent.Fetching(project), repositoryURL))
+				.concat(fetchSignal.then(.empty()))
+		}
+	}
 }
