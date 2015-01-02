@@ -42,10 +42,14 @@ public struct CheckoutOptions: OptionsType {
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions> {
+		return evaluate(m, useBinariesAddendum: "")
+	}
+
+	public static func evaluate(m: CommandMode, useBinariesAddendum: String) -> Result<CheckoutOptions> {
 		return create
 			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 			<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
-			<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist")
+			<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist" + useBinariesAddendum)
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 

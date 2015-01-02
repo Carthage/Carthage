@@ -19,7 +19,7 @@ public struct UpdateCommand: CommandType {
 	public func run(mode: CommandMode) -> Result<()> {
 		return ColdSignal.fromResult(UpdateOptions.evaluate(mode))
 			.map { options -> ColdSignal<()> in
-				return options.checkoutOptions.loadProject()
+				return options.loadProject()
 					.map { $0.updateDependencies() }
 					.merge(identity)
 					.then(options.buildSignal)
@@ -32,7 +32,7 @@ public struct UpdateCommand: CommandType {
 public struct UpdateOptions: OptionsType {
 	public let buildAfterUpdate: Bool
 	public let configuration: String
-	public let checkoutOptions: CheckoutOptions
+	private let checkoutOptions: CheckoutOptions
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
@@ -59,6 +59,18 @@ public struct UpdateOptions: OptionsType {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
 			<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating")
-			<*> CheckoutOptions.evaluate(m)
+			<*> CheckoutOptions.evaluate(m, useBinariesAddendum: " (ignored if --no-build option is present)")
+	}
+
+	/// Attempts to load the project referenced by the options, and configure it
+	/// accordingly.
+	public func loadProject() -> ColdSignal<Project> {
+		return checkoutOptions.loadProject().on(next: { project in
+			// Never check out binaries if we're skipping the build step,
+			// because that means users may need the repository checkout.
+			if !self.buildAfterUpdate {
+				project.useBinaries = false
+			}
+		})
 	}
 }
