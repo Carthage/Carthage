@@ -1,5 +1,3 @@
-We love that you’re interested in contributing to Carthage!
-
 ## Carthage is simple
 
 Please file issues or submit pull requests for anything you’d like to see! However, we make no promises that they’ll be accepted—many suggestions will be rejected to preserve simplicity.
