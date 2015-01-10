@@ -41,7 +41,13 @@ public struct CopyFrameworksCommand: CommandType {
 private func codeSigningIdentity() -> ColdSignal<String?> {
 	return ColdSignal.lazy {
 		if codeSigningAllowed() {
-			return ColdSignal.fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")).map(identity)
+			switch getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY") {
+			case let .Success(value):
+				return .single(value.unbox)
+
+			case let .Failure(error):
+				return .error(error)
+			}
 		} else {
 			return .single(nil)
 		}
