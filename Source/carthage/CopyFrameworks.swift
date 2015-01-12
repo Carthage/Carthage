@@ -15,7 +15,7 @@ import ReactiveCocoa
 
 public struct CopyFrameworksCommand: CommandType {
 	public let verb = "copy-frameworks"
-	public let function = "In a Run Script build phase, copies each framework specified by an SCRIPT_INPUT_FILE environment variable into the built app bundle"
+	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
 
 	public func run(mode: CommandMode) -> Result<()> {
 		return inputFiles()
