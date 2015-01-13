@@ -18,23 +18,31 @@ public struct CopyFrameworksCommand: CommandType {
 	public let function = "In a Run Script build phase, copies each framework specified by an SCRIPT_INPUT_FILE environment variable into the built app bundle"
 
 	public func run(mode: CommandMode) -> Result<()> {
-		return inputFiles()
-			.map { frameworkPath -> ColdSignal<()> in
-				let frameworkName = frameworkPath.lastPathComponent
+		switch mode {
+		case .Arguments:
+			return inputFiles()
+				.map { frameworkPath -> ColdSignal<()> in
+					let frameworkName = frameworkPath.lastPathComponent
 
-				let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
-				let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
+					let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
+					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
-				return combineLatest(ColdSignal.fromResult(target), .fromResult(validArchitectures()))
-					.mergeMap { (target, validArchitectures) -> ColdSignal<()> in
-						return combineLatest(copyFramework(source, target), codeSigningIdentity())
-							.mergeMap { (url, codesigningIdentity) -> ColdSignal<()> in
-								return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
-							}
-					}
-			}
-			.concat(identity)
-			.wait()
+					return combineLatest(ColdSignal.fromResult(target), .fromResult(validArchitectures()))
+						.mergeMap { (target, validArchitectures) -> ColdSignal<()> in
+							return combineLatest(copyFramework(source, target), codeSigningIdentity())
+								.mergeMap { (url, codesigningIdentity) -> ColdSignal<()> in
+									return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
+								}
+						}
+				}
+				.concat(identity)
+				.wait()
+
+		default:
+			break
+		}
+
+		return success(())
 	}
 }
 
