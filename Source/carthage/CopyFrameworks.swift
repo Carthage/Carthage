@@ -38,11 +38,9 @@ public struct CopyFrameworksCommand: CommandType {
 				.concat(identity)
 				.wait()
 
-		default:
-			break
+		case .Usage:
+			return success(())
 		}
-
-		return success(())
 	}
 }
 
