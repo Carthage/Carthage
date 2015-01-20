@@ -1,8 +1,8 @@
-XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage'
-
-TEMPORARY_FOLDER=/tmp/Carthage.dst
+TEMPORARY_FOLDER?=/tmp/Carthage.dst
 PREFIX?=/usr/local
 BUILD_TOOL?=xcodebuild
+
+XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage' DSTROOT=$(TEMPORARY_FOLDER)
 
 BUILT_BUNDLE=$(TEMPORARY_FOLDER)/Applications/carthage.app
 CARTHAGEKIT_BUNDLE=$(BUILT_BUNDLE)/Contents/Frameworks/CarthageKit.framework
