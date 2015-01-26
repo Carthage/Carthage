@@ -352,8 +352,7 @@ public final class Project {
 						return frameworksInDirectory(directoryURL)
 							.mergeMap(self.copyFrameworkToBuildFolder)
 							.on(completed: {
-								NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
-								return
+								_ = NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
 							})
 							.then(.single(directoryURL))
 					}
