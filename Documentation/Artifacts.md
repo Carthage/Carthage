@@ -76,15 +76,15 @@ Although the `Cartfile.resolved` file is meant to be human-readable and diffable
 
 ## Carthage/Build
 
-This folder is created by `carthage build` in the project’s working directory, and contains the binary frameworks built for each dependency.
+This folder is created by `carthage build` in the project’s working directory, and contains the binary frameworks for each dependency (whether built from scratch or downloaded).
 
-Generally, it is not necessary to commit this folder to your repository, so you may want to add it to your `.gitignore` file.
+You are not required to commit this folder to your repository, but you may wish to, if you want to guarantee that the built versions of each dependency will _always_ be accessible at a later date.
 
 ## Carthage/Checkouts
 
-This folder is created by `carthage checkout` in the application project’s working directory, and contains the source code (at the appropriate version) for each dependency. The project folders inside `Carthage/Checkouts` are later used for the `carthage build` command.
+This folder is created by `carthage checkout` in the application project’s working directory, and contains your dependencies’ source code (when prebuilt binaries are not available). The project folders inside `Carthage/Checkouts` are later used for the `carthage build` command.
 
-You are not required to commit this folder to your repository, but you may wish to, if you want to guarantee that the chosen versions of each dependency will _always_ be accessible at a later date.
+You are not required to commit this folder to your repository, but you may wish to, if you want to guarantee that the source checkouts of each dependency will _always_ be accessible at a later date.
 
 Unless you are [using submodules](#with-submodules), the contents of **this directory should not be modified**, as they may be overwritten by a future `carthage checkout` command.
 
@@ -94,6 +94,6 @@ If the `--use-submodules` flag was given when a project’s dependencies were bo
 
 ## ~/Library/Caches/org.carthage.CarthageKit
 
-This folder is created automatically by Carthage, and contains the “bare” Git repositories used for fetching and checking out dependencies. Keeping all repositories in this centralized location avoids polluting individual projects with Git metadata, and allows Carthage to share one copy of each repository across all projects.
+This folder is created automatically by Carthage, and contains the “bare” Git repositories used for fetching and checking out dependencies, as well as prebuilt binaries that have been downloaded. Keeping all repositories in this centralized location avoids polluting individual projects with Git metadata, and allows Carthage to share one copy of each repository across all projects.
 
-If you need to reclaim disk space, you can safely delete this folder, or any of its repository folders inside. The folder will be automatically repopulated the next time `carthage checkout` is run.
+If you need to reclaim disk space, you can safely delete this folder, or any of the individual folders inside. The folder will be automatically repopulated the next time `carthage checkout` is run.
