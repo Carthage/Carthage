@@ -746,12 +746,11 @@ public typealias BuildSchemeSignal = ColdSignal<(ProjectLocator, String)>
 ///
 /// Returns signals in the same format as buildInDirectory().
 public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
+	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 	let dependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 
 	let (buildOutput, schemeSignals) = buildInDirectory(dependencyURL, withConfiguration: configuration)
 	let copyProducts = ColdSignal<BuildSchemeSignal>.lazy {
-		let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
-
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
 			return .error(error ?? CarthageError.WriteFailed(rootBinariesURL).error)
@@ -769,7 +768,17 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 			}
 		}
 
-		if !NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL, error: &error) {
+		// The relative path to this dependency's Carthage/Build folder, from
+		// the root.
+		let dependencyBinariesRelativePath = dependency.relativePath.stringByAppendingPathComponent(CarthageBinariesFolderPath)
+		let componentsForGettingTheHellOutOfThisRelativePath = Array(count: dependencyBinariesRelativePath.pathComponents.count - 1, repeatedValue: "..")
+
+		// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
+		let linkDestinationPath = reduce(componentsForGettingTheHellOutOfThisRelativePath, CarthageBinariesFolderPath) { trailingPath, pathComponent in
+			return pathComponent.stringByAppendingPathComponent(trailingPath)
+		}
+
+		if !NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath, error: &error) {
 			return .error(error ?? CarthageError.WriteFailed(dependencyBinariesURL).error)
 		}
 

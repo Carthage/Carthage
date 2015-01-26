@@ -15,33 +15,45 @@ import ReactiveCocoa
 
 public struct CopyFrameworksCommand: CommandType {
 	public let verb = "copy-frameworks"
-	public let function = "In a Run Script build phase, copies each framework specified by an SCRIPT_INPUT_FILE environment variable into the built app bundle"
+	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
 
 	public func run(mode: CommandMode) -> Result<()> {
-		return inputFiles()
-			.map { frameworkPath -> ColdSignal<()> in
-				let frameworkName = frameworkPath.lastPathComponent
+		switch mode {
+		case .Arguments:
+			return inputFiles()
+				.map { frameworkPath -> ColdSignal<()> in
+					let frameworkName = frameworkPath.lastPathComponent
 
-				let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
-				let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
+					let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
+					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
-				return combineLatest(ColdSignal.fromResult(target), .fromResult(validArchitectures()))
-					.mergeMap { (target, validArchitectures) -> ColdSignal<()> in
-						return combineLatest(copyFramework(source, target), codeSigningIdentity())
-							.mergeMap { (url, codesigningIdentity) -> ColdSignal<()> in
-								return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
-							}
-					}
-			}
-			.concat(identity)
-			.wait()
+					return combineLatest(ColdSignal.fromResult(target), .fromResult(validArchitectures()))
+						.mergeMap { (target, validArchitectures) -> ColdSignal<()> in
+							return combineLatest(copyFramework(source, target), codeSigningIdentity())
+								.mergeMap { (url, codesigningIdentity) -> ColdSignal<()> in
+									return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
+								}
+						}
+				}
+				.concat(identity)
+				.wait()
+
+		case .Usage:
+			return success(())
+		}
 	}
 }
 
 private func codeSigningIdentity() -> ColdSignal<String?> {
 	return ColdSignal.lazy {
 		if codeSigningAllowed() {
-			return ColdSignal.fromResult(getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")).map(identity)
+			switch getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY") {
+			case let .Success(value):
+				return .single(value.unbox)
+
+			case let .Failure(error):
+				return .error(error)
+			}
 		} else {
 			return .single(nil)
 		}
