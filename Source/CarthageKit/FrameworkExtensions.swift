@@ -159,7 +159,7 @@ extension NSScanner {
 extension NSURLSession {
 	/// Returns a signal that will download a file using the given request. The
 	/// file will be deleted after the URL has been sent upon the signal.
-	internal func rac_downloadWithRequest(request: NSURLRequest) -> ColdSignal<(NSURL, NSURLResponse)> {
+	internal func carthage_downloadWithRequest(request: NSURLRequest) -> ColdSignal<(NSURL, NSURLResponse)> {
 		return ColdSignal { (sink, disposable) in
 			let serialDisposable = SerialDisposable()
 			let handle = disposable.addDisposable(serialDisposable)
@@ -200,7 +200,7 @@ extension NSFileManager {
 	/// Creates a directory enumerator at the given URL. Sends each URL
 	/// enumerated, along with the enumerator itself (so it can be introspected
 	/// and modified as enumeration progresses).
-	internal func rac_enumeratorAtURL(URL: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions, catchErrors: Bool = false) -> ColdSignal<(NSDirectoryEnumerator, NSURL)> {
+	internal func carthage_enumeratorAtURL(URL: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions, catchErrors: Bool = false) -> ColdSignal<(NSDirectoryEnumerator, NSURL)> {
 		return ColdSignal { (sink, disposable) in
 			let enumerator = self.enumeratorAtURL(URL, includingPropertiesForKeys: keys, options: options) { (URL, error) in
 				if catchErrors {

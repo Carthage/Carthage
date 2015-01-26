@@ -298,6 +298,6 @@ internal func downloadAsset(asset: GitHubRelease.Asset, credentials: GitHubCrede
 	let request = createGitHubRequest(asset.downloadURL, credentials)
 
 	return NSURLSession.sharedSession()
-		.rac_downloadWithRequest(request)
+		.carthage_downloadWithRequest(request)
 		.map { URL, _ in URL }
 }

@@ -179,7 +179,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<Project
 	let enumerationOptions = NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants
 
 	return NSFileManager.defaultManager()
-		.rac_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+		.carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
 		.reduce(initial: []) { (var matches: [ProjectEnumerationMatch], tuple) -> [ProjectEnumerationMatch] in
 			let (enumerator, URL) = tuple
 			if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value() {
@@ -564,7 +564,7 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 	precondition(destinationModuleDirectoryURL.fileURL)
 
 	return NSFileManager.defaultManager()
-		.rac_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, catchErrors: true)
+		.carthage_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, catchErrors: true)
 		.mergeMap { enumerator, URL in
 			let lastComponent: String? = URL.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
