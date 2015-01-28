@@ -31,6 +31,12 @@ public struct BuildCommand: CommandType {
 
 				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
 				stdoutSignal.observe { data in
+					if options.verbose {
+						if let outString = NSString(data: data, encoding: NSUTF8StringEncoding) {
+							carthage.print(outString)
+						}
+					}
+
 					stdoutHandle.writeData(data)
 					stdoutHandle.synchronizeFile()
 				}
