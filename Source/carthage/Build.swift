@@ -39,9 +39,9 @@ public struct BuildCommand: CommandType {
 				return schemeSignals
 					.concat(identity)
 					.on(started: {
-						carthage.println(bullets + "xcodebuild output can be found in " + Color.Wrap(foreground: .Yellow).wrap(temporaryURL.path!))
+						carthage.println(Formatting.bullets + "xcodebuild output can be found in " + Formatting.path.autowrap(temporaryURL.path!))
 					}, next: { (project, scheme) in
-						carthage.println(bullets + "Building scheme " + Color.Wrap(foreground: .Green).wrap(quote(scheme)) + " in " + bold.wrap(project.description))
+						carthage.println(Formatting.bullets + "Building scheme " + Formatting.quote(scheme) + " in " + Formatting.projectName.autowrap(project.description))
 					})
 					.then(.empty())
 			}

@@ -28,7 +28,7 @@ public struct BootstrapCommand: CommandType {
 							if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
 								return project.checkoutResolvedDependencies()
 							} else {
-								carthage.println(bullets + "No Cartfile.resolved found, updating dependencies")
+								carthage.println(Formatting.bullets + "No Cartfile.resolved found, updating dependencies")
 								return project.updateDependencies()
 							}
 						}
