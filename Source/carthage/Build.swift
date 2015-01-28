@@ -10,6 +10,7 @@ import CarthageKit
 import Commandant
 import Foundation
 import LlamaKit
+import PrettyColors
 import ReactiveCocoa
 
 public struct BuildCommand: CommandType {
@@ -38,9 +39,9 @@ public struct BuildCommand: CommandType {
 				return schemeSignals
 					.concat(identity)
 					.on(started: {
-						carthage.println("*** xcodebuild output can be found in \(temporaryURL.path!)")
+						carthage.println(bullets + "xcodebuild output can be found in " + Color.Wrap(foreground: .Yellow).wrap(temporaryURL.path!))
 					}, next: { (project, scheme) in
-						carthage.println("*** Building scheme \"\(scheme)\" in \(project)")
+						carthage.println(bullets + "Building scheme " + Color.Wrap(foreground: .Green).wrap(quote(scheme)) + " in " + bold.wrap(project.description))
 					})
 					.then(.empty())
 			}

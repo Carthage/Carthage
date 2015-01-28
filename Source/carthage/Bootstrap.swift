@@ -10,6 +10,7 @@ import CarthageKit
 import Commandant
 import Foundation
 import LlamaKit
+import PrettyColors
 import ReactiveCocoa
 
 public struct BootstrapCommand: CommandType {
@@ -27,7 +28,7 @@ public struct BootstrapCommand: CommandType {
 							if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
 								return project.checkoutResolvedDependencies()
 							} else {
-								carthage.println("*** No Cartfile.resolved found, updating dependencies")
+								carthage.println(bullets + "No Cartfile.resolved found, updating dependencies")
 								return project.updateDependencies()
 							}
 						}
