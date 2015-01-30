@@ -48,9 +48,12 @@ public enum ColorArgument: String, ArgumentType {
 	
 	public var isColorful: Bool {
 		switch self {
-		case .Always: return true
-		case .Never:  return false
-		case .Auto:   return Terminal.isTTY && !Terminal.isDumb
+		case .Always:
+			return true
+		case .Never:
+			return false
+		case .Auto:
+			return Terminal.isTTY && !Terminal.isDumb
 		}
 	}
 	
