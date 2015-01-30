@@ -95,7 +95,7 @@ private func inputFiles() -> ColdSignal<String> {
 		}
 }
 
-private func getEnvironmentVariable(variable: String) -> Result<String> {
+internal func getEnvironmentVariable(variable: String) -> Result<String> {
 	let environment = NSProcessInfo.processInfo().environment
 
 	if let value = environment[variable] as String? {
