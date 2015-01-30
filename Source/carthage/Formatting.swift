@@ -14,7 +14,7 @@ import ReactiveCocoa
 
 extension Color.Wrap {
 	func autowrap(string: String) -> String {
-		return ColorOptions.colorful ? self.wrap(string) : string
+		return ColorOptions.colorful ? wrap(string) : string
 	}
 }
 
