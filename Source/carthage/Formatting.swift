@@ -78,7 +78,7 @@ public struct ColorOptions: OptionsType {
 	}
 	
 	public static func create(argument: ColorArgument) -> ColorOptions {
-		dispatch_once(&Static.token, { Static.colorful = argument.isColorful })
+		dispatch_once(&Static.token) { Static.colorful = argument.isColorful }
 		return self(argument: argument)
 	}
 	
