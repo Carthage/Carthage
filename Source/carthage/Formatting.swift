@@ -69,10 +69,8 @@ public struct ColorOptions: OptionsType {
 	public let argument: ColorArgument
 	
 	static var colorful: Bool {
-		get {
-			if Static.colorful == nil { fatalError("`ColorOptions.create` might not have been called…") }
-			return Static.colorful!
-		}
+		if Static.colorful == nil { fatalError("`ColorOptions.create` might not have been called…") }
+		return Static.colorful!
 	}
 
 	private struct Static {
