@@ -29,7 +29,7 @@ internal struct Formatting {
 	static let projectName = [StyleParameter.Bold] as Color.Wrap
 	static let path = Color.Wrap(foreground: .Yellow)
 	
-	static func quote(string: String, quotationMark: String = "\u{0022}" /* double quote */) -> String {
+	static func quote(string: String, quotationMark: String = "\"") -> String {
 		return Color.Wrap(foreground: .Green).autowrap(quotationMark + string + quotationMark)
 	}
 	
