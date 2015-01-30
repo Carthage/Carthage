@@ -36,7 +36,7 @@ internal struct Formatting {
 }
 
 internal struct Terminal {
-	static let isTTY: Bool = isatty(1) == 1
 	static let term: String? = getEnvironmentVariable("TERM").value()
 	static let isDumb: Bool = (Terminal.term?.lowercaseString as NSString?)?.isEqualToString("dumb") ?? false
+	static let isTTY: Bool = isatty(STDOUT_FILENO) == 1
 }
