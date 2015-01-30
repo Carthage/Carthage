@@ -119,12 +119,13 @@ public struct BuildOptions: OptionsType {
 	public let skipCurrent: Bool
 	public let directoryPath: String
 
-	public static func create(configuration: String)(skipCurrent: Bool)(directoryPath: String) -> BuildOptions {
+	public static func create(color: ColorOptions)(configuration: String)(skipCurrent: Bool)(directoryPath: String) -> BuildOptions {
 		return self(configuration: configuration, skipCurrent: skipCurrent, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
+			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")

@@ -37,7 +37,7 @@ public struct CheckoutOptions: OptionsType {
 	public let useSubmodules: Bool
 	public let useBinaries: Bool
 
-	public static func create(useSSH: Bool)(useSubmodules: Bool)(useBinaries: Bool)(directoryPath: String) -> CheckoutOptions {
+	public static func create(useSSH: Bool)(useSubmodules: Bool)(useBinaries: Bool)(color: ColorOptions)(directoryPath: String) -> CheckoutOptions {
 		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: useBinaries)
 	}
 
@@ -50,6 +50,7 @@ public struct CheckoutOptions: OptionsType {
 			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 			<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 			<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist" + useBinariesAddendum)
+			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 

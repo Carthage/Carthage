@@ -35,12 +35,13 @@ public struct FetchCommand: CommandType {
 private struct FetchOptions: OptionsType {
 	let repositoryURL: GitURL
 
-	static func create(repositoryURL: GitURL) -> FetchOptions {
+	static func create(color: ColorOptions)(repositoryURL: GitURL) -> FetchOptions {
 		return self(repositoryURL: repositoryURL)
 	}
 
 	static func evaluate(m: CommandMode) -> Result<FetchOptions> {
 		return create
+			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(usage: "the Git repository that should be cloned or fetched")
 	}
 }
