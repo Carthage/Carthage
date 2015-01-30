@@ -29,9 +29,9 @@ internal struct Formatting {
 	static let URL = [StyleParameter.Underlined] as Color.Wrap
 	static let projectName = [StyleParameter.Bold] as Color.Wrap
 	static let path = Color.Wrap(foreground: .Yellow)
-
-	static func quote(string: String) -> String {
-		return Color.Wrap(foreground: .Green).autowrap("\u{0022}" + string + "\u{0022}")
+	
+	static func quote(string: String, quotationMark: String = "\u{0022}" /* double quote */) -> String {
+		return Color.Wrap(foreground: .Green).autowrap(quotationMark + string + quotationMark)
 	}
 }
 
