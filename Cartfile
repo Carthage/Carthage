@@ -4,4 +4,4 @@ github "jspahrsummers/xcconfigs" >= 0.6
 github "Carthage/Commandant" "master"
 github "Carthage/ReactiveTask" "master"
 github "thoughtbot/Argo" ~> 0.2
-github "jdhealy/PrettyColors" "edf8291df2"
+github "jdhealy/PrettyColors" ~> 1.0.0
