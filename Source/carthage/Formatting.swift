@@ -70,7 +70,7 @@ public struct ColorOptions: OptionsType {
 	
 	static var colorful: Bool {
 
-		if let colorful = Static.colorful {
+		if let colorful = Static.Colorful.singleton {
 			return colorful
 		} else {
 			var arguments = Process.arguments
@@ -91,12 +91,14 @@ public struct ColorOptions: OptionsType {
 	}
 
 	private struct Static {
-		static var colorful: Bool? = nil
-		static var token: dispatch_once_t = 0
+		struct Colorful {
+			static var singleton: Bool? = nil
+			static var token: dispatch_once_t = 0
+		}
 	}
 	
 	public static func create(argument: ColorArgument) -> ColorOptions {
-		dispatch_once(&Static.token) { Static.colorful = argument.isColorful }
+		dispatch_once(&Static.Colorful.token) { Static.Colorful.singleton = argument.isColorful }
 		return self(argument: argument)
 	}
 	
