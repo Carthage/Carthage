@@ -83,6 +83,7 @@ public struct ColorOptions: OptionsType {
 			case .Success(let options):
 				return options.unbox.argument.isColorful
 			case .Failure(let error):
+				// Most likely an illegal value for `--color`.
 				fatalError(error.description)
 			}
 
