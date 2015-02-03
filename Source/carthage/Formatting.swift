@@ -25,8 +25,8 @@ internal struct Formatting {
 		return bulletin.autowrap("***") + " "
 	}()
 	
-	static let URL = [StyleParameter.Underlined] as Color.Wrap
-	static let projectName = [StyleParameter.Bold] as Color.Wrap
+	static let URL = Color.Wrap(styles: .Underlined)
+	static let projectName = Color.Wrap(styles: .Bold)
 	static let path = Color.Wrap(foreground: .Yellow)
 	
 	static func quote(string: String, quotationMark: String = "\"") -> String {
