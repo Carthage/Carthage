@@ -69,8 +69,24 @@ public struct ColorOptions: OptionsType {
 	public let argument: ColorArgument
 	
 	static var colorful: Bool {
-		if Static.colorful == nil { fatalError("`ColorOptions.create` might not have been called…") }
-		return Static.colorful!
+
+		if let colorful = Static.colorful {
+			return colorful
+		} else {
+			var arguments = Process.arguments
+			assert(arguments.count >= 1)
+			
+			// Remove the executable name.
+			arguments.removeAtIndex(0)
+			
+			switch ColorOptions.evaluate(.Arguments(ArgumentParser(arguments))) {
+			case .Success(let options):
+				return options.unbox.argument.isColorful
+			case .Failure(let error):
+				fatalError(error.description)
+			}
+
+		}
 	}
 
 	private struct Static {
