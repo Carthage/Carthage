@@ -51,13 +51,12 @@ public struct UpdateOptions: OptionsType {
 		}
 	}
 
-	public static func create(color: ColorOptions)(configuration: String)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
+	public static func create(configuration: String)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
 		return self(buildAfterUpdate: buildAfterUpdate, configuration: configuration, checkoutOptions: checkoutOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<UpdateOptions> {
 		return create
-			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
 			<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating")
 			<*> CheckoutOptions.evaluate(m, useBinariesAddendum: " (ignored if --no-build option is present)")
