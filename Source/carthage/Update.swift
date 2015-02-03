@@ -36,7 +36,7 @@ public struct UpdateOptions: OptionsType {
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
-		return BuildOptions(configuration: configuration, skipCurrent: true, directoryPath: checkoutOptions.directoryPath)
+		return BuildOptions(configuration: configuration, skipCurrent: true, verbose: false, directoryPath: checkoutOptions.directoryPath)
 	}
 
 	/// If `buildAfterUpdate` is true, this will be a signal representing the
