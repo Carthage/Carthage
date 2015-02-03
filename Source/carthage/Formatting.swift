@@ -41,7 +41,7 @@ internal struct Terminal {
 	static let isTTY: Bool = isatty(STDOUT_FILENO) == 1
 }
 
-public enum ColorArgument: String, ArgumentType {
+public enum ColorArgument: String, ArgumentType, Printable {
 	case Auto = "auto"
 	case Never = "never"
 	case Always = "always"
@@ -56,6 +56,8 @@ public enum ColorArgument: String, ArgumentType {
 			return Terminal.isTTY && !Terminal.isDumb
 		}
 	}
+	
+	public var description: String { return "‘auto’ || ‘always’ || ‘never’" }
 	
 	public static let name = "color"
 	
@@ -104,6 +106,6 @@ public struct ColorOptions: OptionsType {
 	
 	public static func evaluate(m: CommandMode) -> Result<ColorOptions> {
 		return create
-			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "Terminal coloring and styling — values: ‘auto’ || ‘always’ || ‘never’")
+			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "Terminal coloring and styling")
 	}
 }
