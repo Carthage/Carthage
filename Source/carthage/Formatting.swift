@@ -17,9 +17,15 @@ func wrap(colorful: Bool)(wrap: Color.Wrap)(string: String) -> String {
 }
 
 internal struct Terminal {
-	static let term: String? = getEnvironmentVariable("TERM").value()
-	static let isDumb: Bool = (Terminal.term?.lowercaseString as NSString?)?.isEqualToString("dumb") ?? false
-	static let isTTY: Bool = isatty(STDOUT_FILENO) == 1
+	static var term: String? {
+		return getEnvironmentVariable("TERM").value()
+	}
+	static var isDumb: Bool {
+		return (Terminal.term?.lowercaseString as NSString?)?.isEqualToString("dumb") ?? false
+	}
+	static var isTTY: Bool {
+		return isatty(STDOUT_FILENO) == 1
+	}
 }
 
 public enum ColorArgument: String, ArgumentType, Printable {
