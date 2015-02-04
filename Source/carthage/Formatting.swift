@@ -93,6 +93,6 @@ public struct ColorOptions: OptionsType {
 	
 	public static func evaluate(m: CommandMode) -> Result<ColorOptions> {
 		return create
-			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "Terminal coloring and styling")
+			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "whether to apply formatting and colors to terminal messages")
 	}
 }
