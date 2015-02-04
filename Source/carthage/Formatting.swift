@@ -44,7 +44,9 @@ public enum ColorArgument: String, ArgumentType, Printable {
 		}
 	}
 	
-	public var description: String { return "‘auto’ || ‘always’ || ‘never’" }
+	public var description: String {
+		return "‘auto’ || ‘always’ || ‘never’"
+	}
 	
 	public static let name = "color"
 	
