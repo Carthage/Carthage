@@ -35,13 +35,15 @@ public struct BuildCommand: CommandType {
 					stdoutHandle.writeData(data)
 					stdoutHandle.synchronizeFile()
 				}
-
+				
+				let formatting = options.colorOptions.formatting
+				
 				return schemeSignals
 					.concat(identity)
 					.on(started: {
-						carthage.println(Formatting.bullets + "xcodebuild output can be found in " + Formatting.path.autowrap(temporaryURL.path!))
+						carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: temporaryURL.path!))
 					}, next: { (project, scheme) in
-						carthage.println(Formatting.bullets + "Building scheme " + Formatting.quote(scheme) + " in " + Formatting.projectName.autowrap(project.description))
+						carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(string: project.description))
 					})
 					.then(.empty())
 			}
@@ -69,7 +71,7 @@ public struct BuildCommand: CommandType {
 			}
 			.mergeMap { project in
 				return project
-					.migrateIfNecessary()
+					.migrateIfNecessary(options.colorOptions)
 					.on(next: carthage.println)
 					.then(.single(project))
 			}
@@ -117,17 +119,18 @@ public struct BuildCommand: CommandType {
 public struct BuildOptions: OptionsType {
 	public let configuration: String
 	public let skipCurrent: Bool
+	public let colorOptions: ColorOptions
 	public let directoryPath: String
 
-	public static func create(color: ColorOptions)(configuration: String)(skipCurrent: Bool)(directoryPath: String) -> BuildOptions {
-		return self(configuration: configuration, skipCurrent: skipCurrent, directoryPath: directoryPath)
+	public static func create(configuration: String)(skipCurrent: Bool)(colorOptions: ColorOptions)(directoryPath: String) -> BuildOptions {
+		return self(configuration: configuration, skipCurrent: skipCurrent, colorOptions: colorOptions, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
-			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
+			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 }

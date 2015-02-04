@@ -12,27 +12,8 @@ import LlamaKit
 import PrettyColors
 import ReactiveCocoa
 
-extension Color.Wrap {
-	func autowrap(string: String) -> String {
-		return ColorOptions.colorful ? wrap(string) : string
-	}
-}
-
-internal struct Formatting {
-
-	static let bulletin = Color.Wrap(foreground: .Blue, style: .Bold)
-	static let bullets: String = {
-		return bulletin.autowrap("***") + " "
-	}()
-	
-	static let URL = Color.Wrap(styles: .Underlined)
-	static let projectName = Color.Wrap(styles: .Bold)
-	static let path = Color.Wrap(foreground: .Yellow)
-	
-	static func quote(string: String, quotationMark: String = "\"") -> String {
-		return Color.Wrap(foreground: .Green).autowrap(quotationMark + string + quotationMark)
-	}
-	
+func wrap(colorful: Bool)(wrap: Color.Wrap)(string: String) -> String {
+	return colorful ? wrap.wrap(string) : string
 }
 
 internal struct Terminal {
@@ -68,40 +49,38 @@ public enum ColorArgument: String, ArgumentType, Printable {
 }
 
 public struct ColorOptions: OptionsType {
-	public let argument: ColorArgument
+	let argument: ColorArgument
+	let formatting: Formatting
 	
-	static var colorful: Bool {
-
-		if let colorful = Static.Colorful.singleton {
-			return colorful
-		} else {
-			var arguments = Process.arguments
-			assert(arguments.count >= 1)
-			
-			// Remove the executable name.
-			arguments.removeAtIndex(0)
-			
-			switch ColorOptions.evaluate(.Arguments(ArgumentParser(arguments))) {
-			case .Success(let options):
-				return options.unbox.argument.isColorful
-			case .Failure(let error):
-				// Most likely an illegal value for `--color`.
-				fatalError(error.description)
-			}
-
+	struct Formatting {
+		let colorful: Bool
+		
+		typealias Wrap = (string: String) -> String
+		
+		init(_ colorful: Bool) {
+			self.colorful    = colorful
+			self.bulletin    = wrap(colorful)(wrap: Color.Wrap(foreground: .Blue, style: .Bold))
+			self.bullets     = self.bulletin(string: "***") + " "
+			self.URL         = wrap(colorful)(wrap: Color.Wrap(styles: .Underlined))
+			self.projectName = wrap(colorful)(wrap: Color.Wrap(styles: .Bold))
+			self.path        = wrap(colorful)(wrap: Color.Wrap(foreground: .Yellow))
 		}
-	}
-
-	private struct Static {
-		struct Colorful {
-			static var singleton: Bool? = nil
-			static var token: dispatch_once_t = 0
+		
+		let bulletin: Wrap
+		let bullets: String
+		
+		let URL: Wrap
+		let projectName: Wrap
+		let path: Wrap
+		
+		func quote(string: String, quotationMark: String = "\"") -> String {
+			return wrap(colorful)(wrap: Color.Wrap(foreground: .Green))(string: quotationMark + string + quotationMark)
 		}
+		
 	}
 	
-	public static func create(argument: ColorArgument) -> ColorOptions {
-		dispatch_once(&Static.Colorful.token) { Static.Colorful.singleton = argument.isColorful }
-		return self(argument: argument)
+	static func create(argument: ColorArgument) -> ColorOptions {
+		return self(argument: argument, formatting: Formatting(argument.isColorful))
 	}
 	
 	public static func evaluate(m: CommandMode) -> Result<ColorOptions> {

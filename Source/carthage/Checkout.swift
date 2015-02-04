@@ -36,9 +36,10 @@ public struct CheckoutOptions: OptionsType {
 	public let useSSH: Bool
 	public let useSubmodules: Bool
 	public let useBinaries: Bool
+	public let colorOptions: ColorOptions
 
-	public static func create(useSSH: Bool)(useSubmodules: Bool)(useBinaries: Bool)(color: ColorOptions)(directoryPath: String) -> CheckoutOptions {
-		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: useBinaries)
+	public static func create(useSSH: Bool)(useSubmodules: Bool)(useBinaries: Bool)(colorOptions: ColorOptions)(directoryPath: String) -> CheckoutOptions {
+		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: useBinaries, colorOptions: colorOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions> {
@@ -62,10 +63,10 @@ public struct CheckoutOptions: OptionsType {
 			project.preferHTTPS = !self.useSSH
 			project.useSubmodules = self.useSubmodules
 			project.useBinaries = self.useBinaries
-			project.projectEvents.observe(ProjectEventSink())
+			project.projectEvents.observe(ProjectEventSink(colorOptions))
 
 			return project
-				.migrateIfNecessary()
+				.migrateIfNecessary(colorOptions)
 				.on(next: carthage.println)
 				.then(.single(project))
 		} else {

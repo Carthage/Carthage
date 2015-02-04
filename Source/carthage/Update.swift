@@ -32,11 +32,11 @@ public struct UpdateCommand: CommandType {
 public struct UpdateOptions: OptionsType {
 	public let buildAfterUpdate: Bool
 	public let configuration: String
-	private let checkoutOptions: CheckoutOptions
+	internal let checkoutOptions: CheckoutOptions
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
-		return BuildOptions(configuration: configuration, skipCurrent: true, directoryPath: checkoutOptions.directoryPath)
+		return BuildOptions(configuration: configuration, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, directoryPath: checkoutOptions.directoryPath)
 	}
 
 	/// If `buildAfterUpdate` is true, this will be a signal representing the
