@@ -12,10 +12,12 @@ import LlamaKit
 import PrettyColors
 import ReactiveCocoa
 
+/// Wraps or passes through a string.
 func wrap(colorful: Bool)(wrap: Color.Wrap)(string: String) -> String {
 	return colorful ? wrap.wrap(string) : string
 }
 
+/// Information about the possible parent terminal.
 internal struct Terminal {
 	static var term: String? {
 		return getEnvironmentVariable("TERM").value()
@@ -33,6 +35,7 @@ public enum ColorArgument: String, ArgumentType, Printable {
 	case Never = "never"
 	case Always = "always"
 	
+	/// Whether to color and format.
 	public var isColorful: Bool {
 		switch self {
 		case .Always:
@@ -63,6 +66,7 @@ public struct ColorOptions: OptionsType {
 	struct Formatting {
 		let colorful: Bool
 		
+		/// Wraps or passes through a string.
 		typealias Wrap = (string: String) -> String
 		
 		init(_ colorful: Bool) {
@@ -81,6 +85,7 @@ public struct ColorOptions: OptionsType {
 		let projectName: Wrap
 		let path: Wrap
 		
+		/// Wraps a string in quotation marks and formatting.
 		func quote(string: String, quotationMark: String = "\"") -> String {
 			return wrap(colorful)(wrap: Color.Wrap(foreground: .Green))(string: quotationMark + string + quotationMark)
 		}
