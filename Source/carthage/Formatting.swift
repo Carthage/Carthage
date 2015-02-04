@@ -45,7 +45,7 @@ public enum ColorArgument: String, ArgumentType, Printable {
 	}
 	
 	public var description: String {
-		return "‘auto’ || ‘always’ || ‘never’"
+		return self.rawValue
 	}
 	
 	public static let name = "color"
@@ -93,6 +93,6 @@ public struct ColorOptions: OptionsType {
 	
 	public static func evaluate(m: CommandMode) -> Result<ColorOptions> {
 		return create
-			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "whether to apply formatting and colors to terminal messages")
+			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "apply Terminal colors and formatting — ‘auto’ || ‘always’ || ‘never’")
 	}
 }
