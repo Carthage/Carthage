@@ -32,11 +32,12 @@ public struct UpdateCommand: CommandType {
 public struct UpdateOptions: OptionsType {
 	public let buildAfterUpdate: Bool
 	public let configuration: String
+	public let verbose: Bool
 	public let checkoutOptions: CheckoutOptions
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
-		return BuildOptions(configuration: configuration, skipCurrent: true, verbose: false, directoryPath: checkoutOptions.directoryPath)
+		return BuildOptions(configuration: configuration, skipCurrent: true, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
 	}
 
 	/// If `buildAfterUpdate` is true, this will be a signal representing the
@@ -51,13 +52,14 @@ public struct UpdateOptions: OptionsType {
 		}
 	}
 
-	public static func create(configuration: String)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
-		return self(buildAfterUpdate: buildAfterUpdate, configuration: configuration, checkoutOptions: checkoutOptions)
+	public static func create(configuration: String)(verbose: Bool)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
+		return self(buildAfterUpdate: buildAfterUpdate, configuration: configuration, verbose: verbose, checkoutOptions: checkoutOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<UpdateOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
+			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 			<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating")
 			<*> CheckoutOptions.evaluate(m)
 	}
