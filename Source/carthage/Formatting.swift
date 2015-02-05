@@ -10,7 +10,6 @@ import Commandant
 import Foundation
 import LlamaKit
 import PrettyColors
-import ReactiveCocoa
 
 /// Wraps or passes through a string.
 func wrap(colorful: Bool)(wrap: Color.Wrap)(string: String) -> String {
