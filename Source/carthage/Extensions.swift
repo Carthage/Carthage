@@ -57,7 +57,7 @@ extension GitURL: ArgumentType {
 
 /// Logs project events put into the sink.
 internal struct ProjectEventSink: SinkType {
-	let colorOptions: ColorOptions
+	private let colorOptions: ColorOptions
 	
 	init(_ colorOptions: ColorOptions) {
 		self.colorOptions = colorOptions
