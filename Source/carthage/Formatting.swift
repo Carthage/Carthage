@@ -12,7 +12,7 @@ import LlamaKit
 import PrettyColors
 
 /// Wraps or passes through a string.
-func wrap(colorful: Bool)(wrap: Color.Wrap)(string: String) -> String {
+private func wrap(colorful: Bool)(wrap: Color.Wrap)(string: String) -> String {
 	return colorful ? wrap.wrap(string) : string
 }
 
