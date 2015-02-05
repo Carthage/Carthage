@@ -10,7 +10,6 @@ import CarthageKit
 import Commandant
 import Foundation
 import LlamaKit
-import PrettyColors
 import ReactiveCocoa
 
 public struct BuildCommand: CommandType {

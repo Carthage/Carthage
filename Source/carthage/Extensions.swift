@@ -13,7 +13,6 @@ import CarthageKit
 import Commandant
 import Foundation
 import LlamaKit
-import PrettyColors
 import ReactiveCocoa
 
 private let outputQueue = { () -> dispatch_queue_t in
