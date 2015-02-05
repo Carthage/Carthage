@@ -64,7 +64,6 @@ internal struct ProjectEventSink: SinkType {
 	}
 	
 	mutating func put(event: ProjectEvent) {
-		
 		let formatting = colorOptions.formatting
 		
 		switch event {
