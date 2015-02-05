@@ -30,7 +30,7 @@ internal struct Terminal {
 	
 	/// Whether STDOUT is a TTY.
 	static var isTTY: Bool {
-		return isatty(STDOUT_FILENO) == 1
+		return isatty(STDOUT_FILENO) != 0
 	}
 }
 
