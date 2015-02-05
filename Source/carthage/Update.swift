@@ -32,7 +32,7 @@ public struct UpdateCommand: CommandType {
 public struct UpdateOptions: OptionsType {
 	public let buildAfterUpdate: Bool
 	public let configuration: String
-	internal let checkoutOptions: CheckoutOptions
+	public let checkoutOptions: CheckoutOptions
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
