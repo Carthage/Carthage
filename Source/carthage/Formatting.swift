@@ -67,7 +67,7 @@ public struct ColorOptions: OptionsType {
 	let argument: ColorArgument
 	let formatting: Formatting
 	
-	struct Formatting {
+	public struct Formatting {
 		let colorful: Bool
 		
 		/// Wraps a string with terminal colors and formatting or passes it through.
