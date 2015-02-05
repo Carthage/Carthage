@@ -90,7 +90,6 @@ public struct ColorOptions: OptionsType {
 		func quote(string: String, quotationMark: String = "\"") -> String {
 			return wrap(colorful)(wrap: Color.Wrap(foreground: .Green))(string: quotationMark + string + quotationMark)
 		}
-		
 	}
 	
 	static func create(argument: ColorArgument) -> ColorOptions {
