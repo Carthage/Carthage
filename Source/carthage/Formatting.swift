@@ -84,6 +84,11 @@ public struct ColorOptions: OptionsType {
 		
 		let bulletin: Wrap
 		let bullets: String
+
+		/// Wraps a string in bullets, one space of padding, and formatting.
+		func bulletinTitle(string: String) -> String {
+			return bulletin(string: "*** " + string + " ***")
+		}
 		
 		let URL: Wrap
 		let projectName: Wrap
