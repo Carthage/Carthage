@@ -20,7 +20,7 @@ public struct FetchCommand: CommandType {
 		return ColdSignal.fromResult(FetchOptions.evaluate(mode))
 			.mergeMap { options -> ColdSignal<()> in
 				let project = ProjectIdentifier.Git(options.repositoryURL)
-				var eventSink = ProjectEventSink(options.colorOptions)
+				var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
 				return cloneOrFetchProject(project, preferHTTPS: true)
 					.on(next: { event, _ in

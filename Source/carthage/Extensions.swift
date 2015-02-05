@@ -59,7 +59,7 @@ extension GitURL: ArgumentType {
 internal struct ProjectEventSink: SinkType {
 	private let colorOptions: ColorOptions
 	
-	init(_ colorOptions: ColorOptions) {
+	init(colorOptions: ColorOptions) {
 		self.colorOptions = colorOptions
 	}
 	

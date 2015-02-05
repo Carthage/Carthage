@@ -63,7 +63,7 @@ public struct CheckoutOptions: OptionsType {
 			project.preferHTTPS = !self.useSSH
 			project.useSubmodules = self.useSubmodules
 			project.useBinaries = self.useBinaries
-			project.projectEvents.observe(ProjectEventSink(colorOptions))
+			project.projectEvents.observe(ProjectEventSink(colorOptions: colorOptions))
 
 			return project
 				.migrateIfNecessary(colorOptions)
