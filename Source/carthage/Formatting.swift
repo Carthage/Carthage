@@ -74,12 +74,12 @@ public struct ColorOptions: OptionsType {
 		typealias Wrap = (string: String) -> String
 		
 		init(_ colorful: Bool) {
-			self.colorful    = colorful
-			self.bulletin    = wrap(colorful)(wrap: Color.Wrap(foreground: .Blue, style: .Bold))
-			self.bullets     = self.bulletin(string: "***") + " "
-			self.URL         = wrap(colorful)(wrap: Color.Wrap(styles: .Underlined))
-			self.projectName = wrap(colorful)(wrap: Color.Wrap(styles: .Bold))
-			self.path        = wrap(colorful)(wrap: Color.Wrap(foreground: .Yellow))
+			self.colorful = colorful
+			bulletin    = wrap(colorful)(wrap: Color.Wrap(foreground: .Blue, style: .Bold))
+			bullets     = self.bulletin(string: "***") + " "
+			URL         = wrap(colorful)(wrap: Color.Wrap(styles: .Underlined))
+			projectName = wrap(colorful)(wrap: Color.Wrap(styles: .Bold))
+			path        = wrap(colorful)(wrap: Color.Wrap(foreground: .Yellow))
 		}
 		
 		let bulletin: Wrap
