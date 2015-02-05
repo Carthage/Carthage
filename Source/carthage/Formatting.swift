@@ -19,11 +19,11 @@ func wrap(colorful: Bool)(wrap: Color.Wrap)(string: String) -> String {
 
 /// Information about the possible parent terminal.
 internal struct Terminal {
-	static var term: String? {
+	static var terminalType: String? {
 		return getEnvironmentVariable("TERM").value()
 	}
 	static var isDumb: Bool {
-		return (Terminal.term?.lowercaseString as NSString?)?.isEqualToString("dumb") ?? false
+		return terminalType?.caseInsensitiveCompare("dumb") == NSComparisonResult.OrderedSame ?? false
 	}
 	static var isTTY: Bool {
 		return isatty(STDOUT_FILENO) == 1
