@@ -21,9 +21,11 @@ internal struct Terminal {
 	static var terminalType: String? {
 		return getEnvironmentVariable("TERM").value()
 	}
+	
 	static var isDumb: Bool {
 		return terminalType?.caseInsensitiveCompare("dumb") == NSComparisonResult.OrderedSame ?? false
 	}
+	
 	static var isTTY: Bool {
 		return isatty(STDOUT_FILENO) == 1
 	}
