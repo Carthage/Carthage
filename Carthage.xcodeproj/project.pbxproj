@@ -10,6 +10,7 @@
 		5482DAF11A3849D700197FB8 /* CopyFrameworks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */; };
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */; };
+		6724C86A1A850A4600E47F00 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6724C8691A850A4600E47F00 /* Environment.swift */; };
 		67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; };
 		67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		67C870081A7A04E100F6647C /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C870071A7A04E100F6647C /* Formatting.swift */; };
@@ -112,6 +113,7 @@
 		5499CA961A2394B700783309 /* Components.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Components.plist; sourceTree = "<group>"; };
 		5499CA971A2394B700783309 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectSpec.swift; sourceTree = "<group>"; };
+		6724C8691A850A4600E47F00 /* Environment.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		67AFA9891A79430B00B7DA78 /* PrettyColors.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PrettyColors.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		67C870071A7A04E100F6647C /* Formatting.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
@@ -251,6 +253,7 @@
 				D03B32BE19EA49D8007788BE /* Build.swift */,
 				F66685FB19E8F1EC00487A88 /* Checkout.swift */,
 				5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */,
+				6724C8691A850A4600E47F00 /* Environment.swift */,
 				D05BD1981A26864F00A36A0E /* Extensions.swift */,
 				67C870071A7A04E100F6647C /* Formatting.swift */,
 				D02DB8DF1A4BC9B600097CDE /* Fetch.swift */,
@@ -629,6 +632,7 @@
 				54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */,
 				D0AAC2401A14933100060F2E /* Update.swift in Sources */,
 				D05BD1991A26864F00A36A0E /* Extensions.swift in Sources */,
+				6724C86A1A850A4600E47F00 /* Environment.swift in Sources */,
 				D03B32BF19EA49D8007788BE /* Build.swift in Sources */,
 				D0E7B65619E9C76900EDBA4D /* main.swift in Sources */,
 				F689C33619EA14D4006D1EFA /* Checkout.swift in Sources */,

@@ -16,24 +16,6 @@ private func wrap(colorful: Bool)(wrap: Color.Wrap)(string: String) -> String {
 	return colorful ? wrap.wrap(string) : string
 }
 
-/// Information about the possible parent terminal.
-internal struct Terminal {
-	/// Terminal type retrieved from `TERM` environment variable.
-	static var terminalType: String? {
-		return getEnvironmentVariable("TERM").value()
-	}
-	
-	/// Whether terminal type is `dumb`.
-	static var isDumb: Bool {
-		return terminalType?.caseInsensitiveCompare("dumb") == NSComparisonResult.OrderedSame ?? false
-	}
-	
-	/// Whether STDOUT is a TTY.
-	static var isTTY: Bool {
-		return isatty(STDOUT_FILENO) != 0
-	}
-}
-
 public enum ColorArgument: String, ArgumentType, Printable {
 	case Auto = "auto"
 	case Never = "never"
