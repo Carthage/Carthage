@@ -84,7 +84,7 @@ public struct ColorOptions: OptionsType {
 		}
 	}
 	
-	static func create(argument: ColorArgument) -> ColorOptions {
+	public static func create(argument: ColorArgument) -> ColorOptions {
 		return self(argument: argument, formatting: Formatting(argument.isColorful))
 	}
 	
