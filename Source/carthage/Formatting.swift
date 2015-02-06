@@ -16,6 +16,7 @@ private func wrap(colorful: Bool)(wrap: Color.Wrap)(string: String) -> String {
 	return colorful ? wrap.wrap(string) : string
 }
 
+/// Argument for whether to color and format terminal output.
 public enum ColorArgument: String, ArgumentType, Printable {
 	case Auto = "auto"
 	case Never = "never"
@@ -45,6 +46,7 @@ public enum ColorArgument: String, ArgumentType, Printable {
 	
 }
 
+/// Options for whether to color and format terminal output.
 public struct ColorOptions: OptionsType {
 	let argument: ColorArgument
 	let formatting: Formatting
