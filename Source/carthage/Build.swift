@@ -25,7 +25,7 @@ public struct BuildCommand: CommandType {
 
 	/// Builds a project with the given options.
 	public func buildWithOptions(options: BuildOptions) -> ColdSignal<()> {
-		return self.openTemporaryLogFile()
+		return self.openTemporaryLogFile(options)
 			.map { (stdoutHandle, temporaryURL) -> ColdSignal<()> in
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
 
@@ -35,12 +35,16 @@ public struct BuildCommand: CommandType {
 					stdoutHandle.synchronizeFile()
 				}
 
+				let formatting = options.colorOptions.formatting
+
 				return schemeSignals
 					.concat(identity)
 					.on(started: {
-						carthage.println("*** xcodebuild output can be found in \(temporaryURL.path!)")
+						if let temporaryURL = temporaryURL {
+							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: temporaryURL.path!))
+						}
 					}, next: { (project, scheme) in
-						carthage.println("*** Building scheme \"\(scheme)\" in \(project)")
+						carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(string: project.description))
 					})
 					.then(.empty())
 			}
@@ -68,7 +72,7 @@ public struct BuildCommand: CommandType {
 			}
 			.mergeMap { project in
 				return project
-					.migrateIfNecessary()
+					.migrateIfNecessary(options.colorOptions)
 					.on(next: carthage.println)
 					.then(.single(project))
 			}
@@ -91,7 +95,12 @@ public struct BuildCommand: CommandType {
 
 	/// Opens a temporary file for logging, returning the handle and the URL to
 	/// the file on disk.
-	private func openTemporaryLogFile() -> ColdSignal<(NSFileHandle, NSURL)> {
+	private func openTemporaryLogFile(options: BuildOptions) -> ColdSignal<(NSFileHandle, NSURL?)> {
+		if options.verbose {
+			let out: (NSFileHandle, NSURL?) = (NSFileHandle.fileHandleWithStandardOutput(), nil)
+			return .single(out)
+		}
+
 		return ColdSignal.lazy {
 			var temporaryDirectoryTemplate: ContiguousArray<CChar> = NSTemporaryDirectory().stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
 			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
@@ -108,7 +117,9 @@ public struct BuildCommand: CommandType {
 
 			let stdoutHandle = NSFileHandle(fileDescriptor: logFD, closeOnDealloc: true)
 			let temporaryURL = NSURL.fileURLWithPath(temporaryPath, isDirectory: false)!
-			return .single((stdoutHandle, temporaryURL))
+
+			let out: (NSFileHandle, NSURL?) = (stdoutHandle, temporaryURL)
+			return .single(out)
 		}
 	}
 }
@@ -116,16 +127,20 @@ public struct BuildCommand: CommandType {
 public struct BuildOptions: OptionsType {
 	public let configuration: String
 	public let skipCurrent: Bool
+	public let colorOptions: ColorOptions
+	public let verbose: Bool
 	public let directoryPath: String
 
-	public static func create(configuration: String)(skipCurrent: Bool)(directoryPath: String) -> BuildOptions {
-		return self(configuration: configuration, skipCurrent: skipCurrent, directoryPath: directoryPath)
+	public static func create(configuration: String)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
+		return self(configuration: configuration, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
+			<*> ColorOptions.evaluate(m)
+			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 }

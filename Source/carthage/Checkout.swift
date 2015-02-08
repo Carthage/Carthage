@@ -36,9 +36,10 @@ public struct CheckoutOptions: OptionsType {
 	public let useSSH: Bool
 	public let useSubmodules: Bool
 	public let useBinaries: Bool
+	public let colorOptions: ColorOptions
 
-	public static func create(useSSH: Bool)(useSubmodules: Bool)(useBinaries: Bool)(directoryPath: String) -> CheckoutOptions {
-		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: useBinaries)
+	public static func create(useSSH: Bool)(useSubmodules: Bool)(useBinaries: Bool)(colorOptions: ColorOptions)(directoryPath: String) -> CheckoutOptions {
+		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: useBinaries, colorOptions: colorOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions> {
@@ -50,6 +51,7 @@ public struct CheckoutOptions: OptionsType {
 			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 			<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 			<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist" + useBinariesAddendum)
+			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 
@@ -61,10 +63,10 @@ public struct CheckoutOptions: OptionsType {
 			project.preferHTTPS = !self.useSSH
 			project.useSubmodules = self.useSubmodules
 			project.useBinaries = self.useBinaries
-			project.projectEvents.observe(ProjectEventSink())
+			project.projectEvents.observe(ProjectEventSink(colorOptions: colorOptions))
 
 			return project
-				.migrateIfNecessary()
+				.migrateIfNecessary(colorOptions)
 				.on(next: carthage.println)
 				.then(.single(project))
 		} else {
