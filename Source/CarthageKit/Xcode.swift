@@ -178,28 +178,26 @@ private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bo
 public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<ProjectLocator> {
 	let enumerationOptions = NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants
 
-	return ColdSignal.lazy {
-		var enumerationError: NSError?
-		let enumerator = NSFileManager.defaultManager().enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions) { (URL, error) in
-			enumerationError = error
-			return false
-		}
-
-		if let enumerator = enumerator {
-			var matches: [ProjectEnumerationMatch] = []
-
-			while let URL = enumerator.nextObject() as? NSURL {
-				if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value() {
-					matches.append(match)
-				}
+	return NSFileManager.defaultManager()
+		.carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+		.reduce(initial: []) { (var matches: [ProjectEnumerationMatch], tuple) -> [ProjectEnumerationMatch] in
+			let (enumerator, URL) = tuple
+			if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value() {
+				matches.append(match)
 			}
 
-			sort(&matches)
-			return ColdSignal.fromValues(matches).map { $0.locator }
+			return matches
 		}
-
-		return .error(enumerationError ?? CarthageError.ReadFailed(directoryURL).error)
-	}
+		.map { (var matches) -> [ProjectEnumerationMatch] in
+			sort(&matches)
+			return matches
+		}
+		.mergeMap { matches -> ColdSignal<ProjectEnumerationMatch> in
+			return ColdSignal.fromValues(matches)
+		}
+		.map { (match: ProjectEnumerationMatch) -> ProjectLocator in
+			return match.locator
+		}
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
@@ -280,6 +278,15 @@ public enum Platform {
 
 		case .MacOSX:
 			return false
+		}
+	}
+
+	/// The relative path at which binaries for this platform will be stored.
+	public var relativePath: String {
+		if targetsiOS {
+			return CarthageBinariesFolderPath.stringByAppendingPathComponent("iOS")
+		} else {
+			return CarthageBinariesFolderPath.stringByAppendingPathComponent("Mac")
 		}
 	}
 
@@ -556,41 +563,19 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 	precondition(sourceModuleDirectoryURL.fileURL)
 	precondition(destinationModuleDirectoryURL.fileURL)
 
-	return ColdSignal { (sink, disposable) in
-		let enumerator = NSFileManager.defaultManager().enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [ NSURLParentDirectoryURLKey ], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, errorHandler: nil)!
+	return NSFileManager.defaultManager()
+		.carthage_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, catchErrors: true)
+		.mergeMap { enumerator, URL in
+			let lastComponent: String? = URL.lastPathComponent
+			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
 
-		while !disposable.disposed {
-			if let URL = enumerator.nextObject() as? NSURL {
-				var parentDirectoryURL: AnyObject?
-				var error: NSError?
-
-				if !URL.getResourceValue(&parentDirectoryURL, forKey: NSURLParentDirectoryURLKey, error: &error) {
-					sink.put(.Error(error ?? CarthageError.ReadFailed(URL).error))
-					return
-				}
-
-				if let parentDirectoryURL = parentDirectoryURL as? NSURL {
-					if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-						sink.put(.Error(error ?? CarthageError.WriteFailed(parentDirectoryURL).error))
-						return
-					}
-				}
-
-				let lastComponent: String? = URL.lastPathComponent
-				let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
-				if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
-					sink.put(.Next(Box(destinationURL)))
-				} else {
-					sink.put(.Error(error ?? CarthageError.WriteFailed(destinationURL).error))
-					return
-				}
+			var error: NSError?
+			if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
+				return .single(destinationURL)
 			} else {
-				break
+				return .error(error ?? CarthageError.WriteFailed(destinationURL).error)
 			}
 		}
-
-		sink.put(.Completed)
-	}
 }
 
 /// Determines whether the specified product type should be built automatically.
@@ -706,10 +691,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 	let buildSignal: ColdSignal<NSURL> = BuildSettings.platformForScheme(scheme, inProject: project)
 		.map { (platform: Platform) in
+			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
+
 			switch platform {
 			case .iPhoneSimulator, .iPhoneOS:
-				let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderPath)/iOS", isDirectory: true)
-
 				return settingsByTarget(buildPlatform(.iPhoneSimulator))
 					.map { simulatorSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
 						return settingsByTarget(buildPlatform(.iPhoneOS))
@@ -741,10 +726,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 			default:
 				return buildPlatform(platform)
-					.map { settings -> ColdSignal<NSURL> in
-						let folderURL = workingDirectoryURL.URLByAppendingPathComponent("\(CarthageBinariesFolderPath)/Mac", isDirectory: true)
-						return copyBuildProductIntoDirectory(folderURL, settings)
-					}
+					.map { settings in copyBuildProductIntoDirectory(folderURL, settings) }
 					.merge(identity)
 			}
 		}
@@ -764,12 +746,11 @@ public typealias BuildSchemeSignal = ColdSignal<(ProjectLocator, String)>
 ///
 /// Returns signals in the same format as buildInDirectory().
 public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
+	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 	let dependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 
 	let (buildOutput, schemeSignals) = buildInDirectory(dependencyURL, withConfiguration: configuration)
 	let copyProducts = ColdSignal<BuildSchemeSignal>.lazy {
-		let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
-
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
 			return .error(error ?? CarthageError.WriteFailed(rootBinariesURL).error)
@@ -787,7 +768,17 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 			}
 		}
 
-		if !NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL, error: &error) {
+		// The relative path to this dependency's Carthage/Build folder, from
+		// the root.
+		let dependencyBinariesRelativePath = dependency.relativePath.stringByAppendingPathComponent(CarthageBinariesFolderPath)
+		let componentsForGettingTheHellOutOfThisRelativePath = Array(count: dependencyBinariesRelativePath.pathComponents.count - 1, repeatedValue: "..")
+
+		// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
+		let linkDestinationPath = reduce(componentsForGettingTheHellOutOfThisRelativePath, CarthageBinariesFolderPath) { trailingPath, pathComponent in
+			return pathComponent.stringByAppendingPathComponent(trailingPath)
+		}
+
+		if !NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath, error: &error) {
 			return .error(error ?? CarthageError.WriteFailed(dependencyBinariesURL).error)
 		}
 

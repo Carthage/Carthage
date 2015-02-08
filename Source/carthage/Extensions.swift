@@ -57,16 +57,27 @@ extension GitURL: ArgumentType {
 
 /// Logs project events put into the sink.
 internal struct ProjectEventSink: SinkType {
+	private let colorOptions: ColorOptions
+	
+	init(colorOptions: ColorOptions) {
+		self.colorOptions = colorOptions
+	}
+	
 	mutating func put(event: ProjectEvent) {
+		let formatting = colorOptions.formatting
+		
 		switch event {
 		case let .Cloning(project):
-			carthage.println("*** Cloning \(project.name)")
+			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(string: project.name))
 
 		case let .Fetching(project):
-			carthage.println("*** Fetching \(project.name)")
+			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(string: project.name))
 
 		case let .CheckingOut(project, revision):
-			carthage.println("*** Checking out \(project.name) at \"\(revision)\"")
+			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(string: project.name) + " at " + formatting.quote(revision))
+
+		case let .DownloadingBinaries(project, release):
+			carthage.println(formatting.bullets + "Downloading " + formatting.projectName(string: project.name) + " at " + formatting.quote(release))
 		}
 	}
 }
@@ -77,7 +88,7 @@ extension Project {
 	///
 	/// If migration is necessary, sends one or more output lines describing the
 	/// process to the user.
-	internal func migrateIfNecessary() -> ColdSignal<String> {
+	internal func migrateIfNecessary(colorOptions: ColorOptions) -> ColdSignal<String> {
 		let directoryPath = directoryURL.path!
 		let fileManager = NSFileManager.defaultManager()
 
@@ -86,8 +97,10 @@ extension Project {
 		let cartfileLock = "Cartfile.lock"
 		let carthageBuild = "Carthage.build"
 		let carthageCheckout = "Carthage.checkout"
-
-		let migrationMessage = "*** MIGRATION WARNING ***\n\nThis project appears to be set up for an older (pre-0.4) version of Carthage. Unfortunately, the directory structure for Carthage projects has since changed, so this project will be migrated automatically.\n\nSpecifically, the following renames will occur:\n\n  \(cartfileLock) -> \(CarthageProjectResolvedCartfilePath)\n  \(carthageBuild) -> \(CarthageBinariesFolderPath)\n  \(carthageCheckout) -> \(CarthageProjectCheckoutsPath)\n\nFor more information, see https://github.com/Carthage/Carthage/pull/224.\n"
+		
+		let formatting = colorOptions.formatting
+		
+		let migrationMessage = formatting.bulletinTitle("MIGRATION WARNING") + "\n\nThis project appears to be set up for an older (pre-0.4) version of Carthage. Unfortunately, the directory structure for Carthage projects has since changed, so this project will be migrated automatically.\n\nSpecifically, the following renames will occur:\n\n  \(cartfileLock) -> \(CarthageProjectResolvedCartfilePath)\n  \(carthageBuild) -> \(CarthageBinariesFolderPath)\n  \(carthageCheckout) -> \(CarthageProjectCheckoutsPath)\n\nFor more information, see " + formatting.URL(string: "https://github.com/Carthage/Carthage/pull/224") + ".\n"
 		let signals = ColdSignal<ColdSignal<String>> { sink, disposable in
 			let checkFile: (String, String) -> () = { oldName, newName in
 				if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(oldName)) {

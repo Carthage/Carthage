@@ -63,7 +63,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
   $(SRCROOT)/Carthage/Build/iOS/LlamaKit.framework
   $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
   ```
-  
+
   This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries.
 
 ##### For both platforms
@@ -86,7 +86,7 @@ If you’ve modified your [Cartfile][], or you want to update to the newest vers
 
 ### Using submodules for dependencies
 
-By default, Carthage will [check out][Carthage/Checkouts] the source code of each dependency version, leaving you to commit or ignore it as you choose. If you’d like to have dependencies available as Git submodules instead (perhaps so you can commit and push changes to them), you can run `carthage update` or `carthage checkout` with the `--use-submodules` flag.
+By default, Carthage will directly [check out][Carthage/Checkouts] dependencies’ source files into your project folder, leaving you to commit or ignore them as you choose. If you’d like to have dependencies available as Git submodules instead (perhaps so you can commit and push changes within them), you can run `carthage update` or `carthage checkout` with the `--use-submodules` flag.
 
 When run this way, Carthage will write to your repository’s `.gitmodules` and `.git/config` files, and automatically update the submodules when the dependencies’ versions change.
 
@@ -115,6 +115,14 @@ If you’re still not able to build your framework with Carthage, please [open a
 Carthage determines which versions of your framework are available by searching through the tags published on the repository, and trying to interpret each tag name as a [semantic version](http://semver.org/). For example, in the tag `v1.2`, the semantic version is 1.2.0.
 
 Tags without any version number, or with any characters following the version number (e.g., `1.2-alpha-1`) are currently unsupported, and will be ignored.
+
+### Archive prebuilt frameworks into one zip file
+
+Carthage can automatically use prebuilt frameworks, instead of building from scratch, if they are attached to a [GitHub Release](https://help.github.com/articles/about-releases/) on your project’s repository.
+
+To offer prebuilt frameworks for a specific tag, the binaries for _all_ supported platforms should be zipped up together into _one_ archive, and that archive should be attached to a published Release corresponding to that tag. The attachment should include `.framework` in its name (e.g., `ReactiveCocoa.framework.zip`), to indicate to Carthage that it contains binaries.
+
+Prerelease or draft Releases will be automatically ignored, even if they correspond to the desired tag.
 
 ## CarthageKit
 

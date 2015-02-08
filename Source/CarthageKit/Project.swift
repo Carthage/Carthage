@@ -20,7 +20,7 @@ private func try<T>(f: NSErrorPointer -> T?) -> Result<T> {
 	return f(&error).map(success) ?? failure(error ?? NSError(domain: CarthageKitBundleIdentifier, code: because, userInfo: nil))
 }
 
-/// ~/Library/Caches/
+/// ~/Library/Caches/org.carthage.CarthageKit/
 private let CarthageUserCachesURL: NSURL = {
 	let URL = try { error in
 		NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: error)
@@ -31,17 +31,24 @@ private let CarthageUserCachesURL: NSURL = {
 	switch URL {
 	case .Success:
 		NSFileManager.defaultManager().removeItemAtURL(fallbackDependenciesURL, error: nil)
+
 	case let .Failure(error):
 		NSLog("Warning: No Caches directory could be found or created: \(error.localizedDescription). (\(error))")
 	}
 
-	return URL.value() ?? fallbackDependenciesURL
+	return URL.value()?.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true) ?? fallbackDependenciesURL
 }()
+
+/// The file URL to the directory in which downloaded release binaries will be
+/// stored.
+///
+/// ~/Library/Caches/org.carthage.CarthageKit/binaries/
+public let CarthageDependencyAssetsURL = CarthageUserCachesURL.URLByAppendingPathComponent("binaries", isDirectory: true)
 
 /// The file URL to the directory in which cloned dependencies will be stored.
 ///
 /// ~/Library/Caches/org.carthage.CarthageKit/dependencies/
-public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true).URLByAppendingPathComponent("dependencies", isDirectory: true)
+public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppendingPathComponent("dependencies", isDirectory: true)
 
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
@@ -51,6 +58,16 @@ public let CarthageProjectPrivateCartfilePath = "Cartfile.private"
 
 /// The relative path to a project's Cartfile.resolved.
 public let CarthageProjectResolvedCartfilePath = "Cartfile.resolved"
+
+/// The text that needs to exist in a GitHub Release asset's name, for it to be
+/// tried as a binary framework.
+public let CarthageProjectBinaryAssetPattern = ".framework"
+
+/// MIME types allowed for GitHub Release assets, for them to be considered as
+/// binary frameworks.
+public let CarthageProjectBinaryAssetContentTypes = [
+	"application/zip"
+]
 
 /// Describes an event occurring to or with a project.
 public enum ProjectEvent {
@@ -62,6 +79,11 @@ public enum ProjectEvent {
 
 	/// The project is being checked out to the specified revision.
 	case CheckingOut(ProjectIdentifier, String)
+
+	/// Any available binaries for the specified release of the project are
+	/// being downloaded. This may still be followed by `CheckingOut` event if
+	/// there weren't any viable binaries after all.
+	case DownloadingBinaries(ProjectIdentifier, String)
 }
 
 /// Represents a project that is using Carthage.
@@ -85,6 +107,10 @@ public final class Project {
 	/// Whether to use submodules for dependencies, or just check out their
 	/// working directories.
 	public var useSubmodules = false
+
+	/// Whether to download binaries for dependencies, or just check out their
+	/// repositories.
+	public var useBinaries = false
 
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
@@ -292,6 +318,106 @@ public final class Project {
 			.then(checkoutResolvedDependencies())
 	}
 
+	/// Installs binaries for the given project, if available.
+	///
+	/// Sends a boolean indicating whether binaries were installed.
+	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> ColdSignal<Bool> {
+		return ColdSignal.lazy {
+			if !self.useBinaries {
+				return .single(false)
+			}
+
+			let checkoutDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
+
+			switch project {
+			case let .GitHub(repository):
+				return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: nil)
+					.catch { error in
+						// If we were unable to fetch releases, try loading credentials from Git.
+						if error.domain == NSURLErrorDomain {
+							return GitHubCredentials.loadFromGit()
+								.mergeMap { credentials in
+									if let credentials = credentials {
+										return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials)
+									} else {
+										return .error(error)
+									}
+								}
+						} else {
+							return .error(error)
+						}
+					}
+					.concatMap(unzipArchiveToTemporaryDirectory)
+					.concatMap { directoryURL in
+						return frameworksInDirectory(directoryURL)
+							.mergeMap(self.copyFrameworkToBuildFolder)
+							.on(completed: {
+								_ = NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
+							})
+							.then(.single(directoryURL))
+					}
+					.tryMap { (temporaryDirectoryURL: NSURL, error: NSErrorPointer) -> Bool? in
+						if NSFileManager.defaultManager().removeItemAtURL(temporaryDirectoryURL, error: error) {
+							return true
+						} else {
+							return nil
+						}
+					}
+					.concat(.single(false))
+					.take(1)
+
+			case .Git:
+				return .single(false)
+			}
+		}
+	}
+
+	/// Downloads any binaries that may be able to be used instead of a
+	/// repository checkout.
+	///
+	/// Sends the URL to each downloaded zip, after it has been moved to a
+	/// less temporary location.
+	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withCredentials credentials: GitHubCredentials?) -> ColdSignal<NSURL> {
+		return releasesForRepository(repository, credentials)
+			.filter(binaryFrameworksCanBeProvidedByRelease(revision))
+			.take(1)
+			.on(next: { release in
+				self._projectEventsSink.put(.DownloadingBinaries(project, release.name))
+			})
+			.concatMap { release in
+				return ColdSignal
+					.fromValues(release.assets)
+					.filter(binaryFrameworksCanBeProvidedByAsset)
+					.concatMap { asset in
+						let fileURL = fileURLToCachedBinary(project, release, asset)
+
+						return ColdSignal<NSURL>.lazy {
+							if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!) {
+								return .single(fileURL)
+							} else {
+								return downloadAsset(asset, credentials)
+									.concatMap { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
+							}
+						}
+					}
+			}
+	}
+
+	/// Copies the framework at the given URL into the current project's build
+	/// folder.
+	///
+	/// Sends the URL to the framework after copying.
+	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> ColdSignal<NSURL> {
+		return architecturesInFramework(frameworkURL)
+			.filter { arch in arch.hasPrefix("arm") }
+			.map { _ in Platform.iPhoneOS }
+			.concat(ColdSignal.single(Platform.MacOSX))
+			.take(1)
+			.map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
+			.map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
+			.mergeMap { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL) }
+	}
+
 	/// Checks out the given project into its intended working directory,
 	/// cloning it first if need be.
 	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> ColdSignal<()> {
@@ -345,10 +471,19 @@ public final class Project {
 			.zipWith(submodulesSignal)
 			.map { (resolvedCartfile, submodulesByPath) -> ColdSignal<()> in
 				return ColdSignal.fromValues(resolvedCartfile.dependencies)
-					.map { dependency in
-						return self.checkoutOrCloneProject(dependency.project, atRevision: dependency.version.commitish, submodulesByPath: submodulesByPath)
+					.mergeMap { dependency in
+						let project = dependency.project
+						let revision = dependency.version.commitish
+
+						return self.installBinariesForProject(project, atRevision: revision)
+							.mergeMap { installed in
+								if installed {
+									return .empty()
+								} else {
+									return self.checkoutOrCloneProject(project, atRevision: revision, submodulesByPath: submodulesByPath)
+								}
+							}
 					}
-					.merge(identity)
 			}
 			.merge(identity)
 			.then(.empty())
@@ -364,15 +499,85 @@ public final class Project {
 			.map { resolvedCartfile in ColdSignal.fromValues(resolvedCartfile.dependencies) }
 			.merge(identity)
 			.map { dependency -> ColdSignal<BuildSchemeSignal> in
-				let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
-				buildOutput.observe(stdoutSink)
+				return ColdSignal.lazy {
+					let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
+					if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
+						return .empty()
+					}
 
-				return schemeSignals
+					let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
+					buildOutput.observe(stdoutSink)
+
+					return schemeSignals
+				}
 			}
 			.concat(identity)
 
 		return (stdoutSignal, schemeSignals)
 	}
+}
+
+/// Constructs a file URL to where the binary corresponding to the given
+/// arguments should live.
+private func fileURLToCachedBinary(project: ProjectIdentifier, release: GitHubRelease, asset: GitHubRelease.Asset) -> NSURL {
+	// ~/Library/Caches/org.carthage.CarthageKit/binaries/ReactiveCocoa/v2.3.1/1234-ReactiveCocoa.framework.zip
+	return CarthageDependencyAssetsURL.URLByAppendingPathComponent("\(project.name)/\(release.tag)/\(asset.ID)-\(asset.name)", isDirectory: false)
+}
+
+/// Caches the downloaded binary at the given URL, moving it to the other URL
+/// given.
+///
+/// Sends the final file URL upon success.
+private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -> ColdSignal<NSURL> {
+	return ColdSignal
+		.single(cachedURL)
+		.try { fileURL, error in
+			let parentDirectoryURL = fileURL.URLByDeletingLastPathComponent!
+			return NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: error)
+		}
+		.try { newDownloadURL, error in
+			if rename(downloadURL.fileSystemRepresentation, newDownloadURL.fileSystemRepresentation) == 0 {
+				return true
+			} else {
+				error.memory = NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil)
+				return false
+			}
+		}
+}
+
+/// Sends the URL to each framework bundle found in the given directory.
+private func frameworksInDirectory(directoryURL: NSURL) -> ColdSignal<NSURL> {
+	return NSFileManager.defaultManager()
+		.carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants, catchErrors: true)
+		.map { enumerator, URL in URL }
+		.filter { URL in
+			var typeIdentifier: AnyObject?
+			if URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: nil) {
+				if let typeIdentifier: AnyObject = typeIdentifier {
+					if UTTypeConformsTo(typeIdentifier as String, kUTTypeFramework) != 0 {
+						return true
+					}
+				}
+			}
+
+			return false
+		}
+}
+
+/// Determines whether a Release is a suitable candidate for binary frameworks.
+private func binaryFrameworksCanBeProvidedByRelease(revision: String)(release: GitHubRelease) -> Bool {
+	return release.tag == revision && !release.draft && !release.prerelease && !release.assets.isEmpty
+}
+
+/// Determines whether a release asset is a suitable candidate for binary
+/// frameworks.
+private func binaryFrameworksCanBeProvidedByAsset(asset: GitHubRelease.Asset) -> Bool {
+	let name = asset.name as NSString
+	if name.rangeOfString(CarthageProjectBinaryAssetPattern).location == NSNotFound {
+		return false
+	}
+
+	return contains(CarthageProjectBinaryAssetContentTypes, asset.contentType)
 }
 
 /// Returns the file URL at which the given project's repository will be

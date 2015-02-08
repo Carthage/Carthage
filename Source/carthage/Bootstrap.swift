@@ -21,13 +21,14 @@ public struct BootstrapCommand: CommandType {
 		// `update` flags.
 		return ColdSignal.fromResult(UpdateOptions.evaluate(mode))
 			.map { options -> ColdSignal<()> in
-				return options.checkoutOptions.loadProject()
+				return options.loadProject()
 					.map { project -> ColdSignal<()> in
 						return ColdSignal.lazy {
 							if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
 								return project.checkoutResolvedDependencies()
 							} else {
-								carthage.println("*** No Cartfile.resolved found, updating dependencies")
+								let formatting = options.checkoutOptions.colorOptions.formatting
+								carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
 								return project.updateDependencies()
 							}
 						}
