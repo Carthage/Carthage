@@ -90,6 +90,16 @@ By default, Carthage will directly [check out][Carthage/Checkouts] dependencies�
 
 When run this way, Carthage will write to your repository’s `.gitmodules` and `.git/config` files, and automatically update the submodules when the dependencies’ versions change.
 
+### Automatically rebuilding dependencies
+
+If you want to work on your dependencies during development, and want them to be automatically rebuilt when you build your parent project, you can add a Run Script build phase that invokes Carthage, like so (replacing `iOS` with `Mac` if appropriate):
+
+```sh
+/usr/local/bin/carthage build --platform iOS "$SRCROOT"
+```
+
+Note that you should be [using submodules](#using-submodules-for-dependencies) before doing this, because plain checkouts [should not be modified][Carthage/Checkouts] directly.
+
 ## Supporting Carthage for your framework
 
 **Carthage only officially supports dynamic frameworks**. Dynamic frameworks can be used on any version of OS X, but only on **iOS 8 or later**.
