@@ -494,7 +494,7 @@ public final class Project {
 	///
 	/// Returns a signal of all standard output from `xcodebuild`, and a
 	/// signal-of-signals representing each scheme being built.
-	public func buildCheckedOutDependencies(configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatform platform: Platform?) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 		let schemeSignals = loadResolvedCartfile()
 			.map { resolvedCartfile in ColdSignal.fromValues(resolvedCartfile.dependencies) }
@@ -506,7 +506,7 @@ public final class Project {
 						return .empty()
 					}
 
-					let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
+					let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platform: platform)
 					buildOutput.observe(stdoutSink)
 
 					return schemeSignals

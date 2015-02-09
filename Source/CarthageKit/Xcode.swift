@@ -513,10 +513,7 @@ public struct BuildSettings {
 	public static func SDKForScheme(scheme: String, inProject project: ProjectLocator) -> ColdSignal<SDK> {
 		return loadWithArguments(BuildArguments(project: project, scheme: scheme))
 			.take(1)
-			.tryMap { settings -> Result<String> in
-				return settings["PLATFORM_NAME"]
-			}
-			.tryMap(SDK.fromString)
+			.tryMap { $0.buildSDK }
 	}
 
 	/// Returns the value for the given build setting, or an error if it could
@@ -527,6 +524,11 @@ public struct BuildSettings {
 		} else {
 			return failure(CarthageError.MissingBuildSetting(key).error)
 		}
+	}
+
+	/// Attempts to determine the SDK this scheme builds for.
+	public var buildSDK: Result<SDK> {
+		return self["PLATFORM_NAME"].flatMap(SDK.fromString)
 	}
 
 	/// Attempts to determine the ProductType specified in these build settings.
@@ -659,13 +661,22 @@ private func shouldBuildProductType(productType: ProductType) -> Bool {
 }
 
 /// Determines whether the given scheme should be built automatically.
-private func shouldBuildScheme(buildArguments: BuildArguments) -> ColdSignal<Bool> {
+private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Platform?) -> ColdSignal<Bool> {
 	precondition(buildArguments.scheme != nil)
 
 	return BuildSettings.loadWithArguments(buildArguments)
 		.map { settings -> ColdSignal<ProductType> in
-			return ColdSignal.fromResult(settings.productType)
-				.catch { _ in .empty() }
+			let productType = ColdSignal.fromResult(settings.productType)
+
+			if let forPlatform = forPlatform {
+				return ColdSignal.fromResult(settings.buildSDK)
+					.map { $0.platform }
+					.filter { $0 != forPlatform }
+					.then(productType)
+					.catch { _ in .empty() }
+			} else {
+				return productType.catch { _ in .empty() }
+			}
 		}
 		.concat(identity)
 		.filter(shouldBuildProductType)
@@ -828,11 +839,11 @@ public typealias BuildSchemeSignal = ColdSignal<(ProjectLocator, String)>
 /// places its build product into the root directory given.
 ///
 /// Returns signals in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
+public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 	let dependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 
-	let (buildOutput, schemeSignals) = buildInDirectory(dependencyURL, withConfiguration: configuration)
+	let (buildOutput, schemeSignals) = buildInDirectory(dependencyURL, withConfiguration: configuration, platform: platform)
 	let copyProducts = ColdSignal<BuildSchemeSignal>.lazy {
 		var error: NSError?
 		if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -875,7 +886,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 	precondition(directoryURL.fileURL)
 
 	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
@@ -900,7 +911,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<(ProjectLocator, String)> in
 			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
-			return shouldBuildScheme(buildArguments)
+			return shouldBuildScheme(buildArguments, platform)
 				.filter(identity)
 				.map { _ in
 					let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)

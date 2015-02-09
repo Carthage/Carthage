@@ -77,14 +77,14 @@ public struct BuildCommand: CommandType {
 					.then(.single(project))
 			}
 			.mergeMap { (project: Project) -> ColdSignal<BuildSchemeSignal> in
-				let (dependenciesOutput, dependenciesSignals) = project.buildCheckedOutDependencies(options.configuration)
+				let (dependenciesOutput, dependenciesSignals) = project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.platform.platform)
 				dependenciesOutput.observe(stdoutSink)
 
 				return dependenciesSignals
 			}
 
 		if !options.skipCurrent {
-			let (currentOutput, currentSignals) = buildInDirectory(directoryURL, withConfiguration: options.configuration)
+			let (currentOutput, currentSignals) = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.platform.platform)
 			currentOutput.observe(stdoutSink)
 
 			buildSignal = buildSignal.concat(currentSignals)
@@ -157,6 +157,20 @@ public enum BuildPlatform: Equatable {
 
 	/// Build only for OS X.
 	case Mac
+
+	/// The `Platform` corresponding to this setting.
+	public var platform: Platform? {
+		switch self {
+		case .All:
+			return nil
+
+		case .iOS:
+			return .iOS
+
+		case .Mac:
+			return .Mac
+		}
+	}
 }
 
 public func == (lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
