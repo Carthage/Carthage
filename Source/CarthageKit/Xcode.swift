@@ -817,7 +817,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					}
 					.merge(identity)
 					.map { (firstSettings, secondSettings) -> ColdSignal<NSURL> in
-						return mergeBuildProductsIntoDirectory(firstSettings, secondSettings, folderURL)
+						return mergeBuildProductsIntoDirectory(secondSettings, firstSettings, folderURL)
 					}
 					.concat(identity)
 
