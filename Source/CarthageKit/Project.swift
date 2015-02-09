@@ -413,6 +413,7 @@ public final class Project {
 			.map { _ in SDK.iPhoneOS }
 			.concat(ColdSignal.single(SDK.MacOSX))
 			.take(1)
+			.map { sdk in sdk.platform }
 			.map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
 			.map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
 			.mergeMap { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL) }

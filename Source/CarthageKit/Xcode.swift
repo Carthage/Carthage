@@ -238,6 +238,63 @@ public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
+/// Represents a platform to build for.
+public enum Platform: Equatable {
+	/// Mac OS X.
+	case Mac
+
+	/// iOS for device and simulator.
+	case iOS
+
+	/// The relative path at which binaries corresponding to this platform will
+	/// be stored.
+	public var relativePath: String {
+		switch self {
+		case .Mac:
+			return CarthageBinariesFolderPath.stringByAppendingPathComponent("Mac")
+
+		case .iOS:
+			return CarthageBinariesFolderPath.stringByAppendingPathComponent("iOS")
+		}
+	}
+
+	/// The SDKs that need to be built for this platform.
+	public var SDKs: [SDK] {
+		switch self {
+		case .Mac:
+			return [ .MacOSX ]
+
+		case .iOS:
+			return [ .iPhoneSimulator, .iPhoneOS ]
+		}
+	}
+}
+
+public func == (lhs: Platform, rhs: Platform) -> Bool {
+	switch (lhs, rhs) {
+	case (.Mac, .Mac):
+		return true
+
+	case (.iOS, .iOS):
+		return true
+
+	default:
+		return false
+	}
+}
+
+extension Platform: Printable {
+	public var description: String {
+		switch self {
+		case .Mac:
+			return "Mac"
+
+		case .iOS:
+			return "iOS"
+		}
+	}
+}
+
 /// Represents an SDK buildable by Xcode.
 public enum SDK: Equatable {
 	/// Mac OS X.
@@ -266,27 +323,14 @@ public enum SDK: Equatable {
 		}
 	}
 
-	/// Whether this SDK targets iOS.
-	public var targetsiOS: Bool {
+	/// The platform that this SDK targets.
+	public var platform: Platform {
 		switch self {
-		case .iPhoneOS:
-			return true
-
-		case .iPhoneSimulator:
-			return true
+		case .iPhoneOS, .iPhoneSimulator:
+			return .iOS
 
 		case .MacOSX:
-			return false
-		}
-	}
-
-	/// The relative path at which binaries corresponding to this SDK will be
-	/// stored.
-	public var relativePath: String {
-		if targetsiOS {
-			return CarthageBinariesFolderPath.stringByAppendingPathComponent("iOS")
-		} else {
-			return CarthageBinariesFolderPath.stringByAppendingPathComponent("Mac")
+			return .Mac
 		}
 	}
 
@@ -319,6 +363,21 @@ public func == (lhs: SDK, rhs: SDK) -> Bool {
 
 	default:
 		return false
+	}
+}
+
+extension SDK: Printable {
+	public var description: String {
+		switch self {
+		case .iPhoneOS:
+			return "iOS Device"
+
+		case .iPhoneSimulator:
+			return "iOS Simulator"
+
+		case .MacOSX:
+			return "Mac OS X"
+		}
 	}
 }
 
@@ -706,27 +765,37 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 
 	let buildSignal: ColdSignal<NSURL> = BuildSettings.SDKForScheme(scheme, inProject: project)
-		.map { (sdk: SDK) in
-			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(sdk.relativePath, isDirectory: true)
+		.map { $0.platform }
+		.map { (platform: Platform) in
+			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
 
-			switch sdk {
-			case .iPhoneSimulator, .iPhoneOS:
-				return settingsByTarget(buildSDK(.iPhoneSimulator))
-					.map { simulatorSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
-						return settingsByTarget(buildSDK(.iPhoneOS))
-							.map { deviceSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
-								assert(simulatorSettingsByTarget.count == deviceSettingsByTarget.count, "Number of targets built for iOS Simulator (\(simulatorSettingsByTarget.count)) does not match number of targets built for iOS Device (\(deviceSettingsByTarget.count))")
+			// TODO: Generalize this further?
+			switch platform.SDKs.count {
+			case 1:
+				return buildSDK(platform.SDKs[0])
+					.map { settings in copyBuildProductIntoDirectory(folderURL, settings) }
+					.merge(identity)
+
+			case 2:
+				let firstSDK = platform.SDKs[0]
+				let secondSDK = platform.SDKs[1]
+
+				return settingsByTarget(buildSDK(firstSDK))
+					.map { firstSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
+						return settingsByTarget(buildSDK(secondSDK))
+							.map { secondSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
+								assert(firstSettingsByTarget.count == secondSettingsByTarget.count, "Number of targets built for \(firstSDK) (\(firstSettingsByTarget.count)) does not match number of targets built for \(secondSDK) (\(secondSettingsByTarget.count))")
 
 								return ColdSignal { (sink, disposable) in
-									for (target, simulatorSettings) in simulatorSettingsByTarget {
+									for (target, firstSettings) in firstSettingsByTarget {
 										if disposable.disposed {
 											break
 										}
 
-										let deviceSettings = deviceSettingsByTarget[target]
-										assert(deviceSettings != nil, "No iOS Device build settings found for target \"\(target)\"")
+										let secondSettings = secondSettingsByTarget[target]
+										assert(secondSettings != nil, "No \(secondSDK) build settings found for target \"\(target)\"")
 
-										sink.put(.Next(Box((simulatorSettings, deviceSettings!))))
+										sink.put(.Next(Box((firstSettings, secondSettings!))))
 									}
 
 									sink.put(.Completed)
@@ -735,15 +804,13 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							.merge(identity)
 					}
 					.merge(identity)
-					.map { (simulatorSettings, deviceSettings) -> ColdSignal<NSURL> in
-						return mergeBuildProductsIntoDirectory(deviceSettings, simulatorSettings, folderURL)
+					.map { (firstSettings, secondSettings) -> ColdSignal<NSURL> in
+						return mergeBuildProductsIntoDirectory(firstSettings, secondSettings, folderURL)
 					}
 					.concat(identity)
 
 			default:
-				return buildSDK(sdk)
-					.map { settings in copyBuildProductIntoDirectory(folderURL, settings) }
-					.merge(identity)
+				assert(false, "SDK count \(platform.SDKs.count) for platform \(platform) is not supported")
 			}
 		}
 		.merge(identity)
