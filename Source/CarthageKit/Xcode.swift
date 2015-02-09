@@ -95,14 +95,14 @@ public struct BuildArguments {
 	/// The configuration to use when building the project.
 	public var configuration: String?
 
-	/// The platform to build for.
-	public var platform: Platform?
+	/// The platform SDK to build for.
+	public var sdk: SDK?
 
-	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, platform: Platform? = nil) {
+	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, sdk: SDK? = nil) {
 		self.project = project
 		self.scheme = scheme
 		self.configuration = configuration
-		self.platform = platform
+		self.sdk = sdk
 	}
 
 	/// The `xcodebuild` invocation corresponding to the receiver.
@@ -117,8 +117,8 @@ public struct BuildArguments {
 			args += [ "-configuration", configuration ]
 		}
 
-		if let platform = platform {
-			args += platform.arguments
+		if let sdk = sdk {
+			args += sdk.arguments
 		}
 
 		return args
@@ -238,8 +238,8 @@ public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
-/// Represents a platform or SDK buildable by Xcode.
-public enum Platform {
+/// Represents an SDK buildable by Xcode.
+public enum SDK {
 	/// Mac OS X.
 	case MacOSX
 
@@ -249,9 +249,8 @@ public enum Platform {
 	/// iOS, for the simulator.
 	case iPhoneSimulator
 
-	/// Attempts to parse a platform name from a string returned from
-	/// `xcodebuild`.
-	public static func fromString(string: String) -> Result<Platform> {
+	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
+	public static func fromString(string: String) -> Result<SDK> {
 		switch string {
 		case "macosx":
 			return success(.MacOSX)
@@ -263,11 +262,11 @@ public enum Platform {
 			return success(.iPhoneSimulator)
 
 		default:
-			return failure(CarthageError.ParseError(description: "unexpected platform key \"(string)\"").error)
+			return failure(CarthageError.ParseError(description: "unexpected SDK key \"(string)\"").error)
 		}
 	}
 
-	/// Whether this platform targets iOS.
+	/// Whether this SDK targets iOS.
 	public var targetsiOS: Bool {
 		switch self {
 		case .iPhoneOS:
@@ -281,7 +280,8 @@ public enum Platform {
 		}
 	}
 
-	/// The relative path at which binaries for this platform will be stored.
+	/// The relative path at which binaries corresponding to this SDK will be
+	/// stored.
 	public var relativePath: String {
 		if targetsiOS {
 			return CarthageBinariesFolderPath.stringByAppendingPathComponent("iOS")
@@ -291,7 +291,7 @@ public enum Platform {
 	}
 
 	/// The arguments that should be passed to `xcodebuild` to select this
-	/// platform for building.
+	/// SDK for building.
 	private var arguments: [String] {
 		switch self {
 		case .MacOSX:
@@ -431,17 +431,17 @@ public struct BuildSettings {
 			.merge(identity)
 	}
 
-	/// Determines which platform the given scheme builds for, by default.
+	/// Determines which SDK the given scheme builds for, by default.
 	///
-	/// If the platform is unrecognized or could not be determined, an error will be
+	/// If the SDK is unrecognized or could not be determined, an error will be
 	/// sent on the returned signal.
-	public static func platformForScheme(scheme: String, inProject project: ProjectLocator) -> ColdSignal<Platform> {
+	public static func SDKForScheme(scheme: String, inProject project: ProjectLocator) -> ColdSignal<SDK> {
 		return loadWithArguments(BuildArguments(project: project, scheme: scheme))
 			.take(1)
 			.tryMap { settings -> Result<String> in
 				return settings["PLATFORM_NAME"]
 			}
-			.tryMap(Platform.fromString)
+			.tryMap(SDK.fromString)
 	}
 
 	/// Returns the value for the given build setting, or an error if it could
@@ -617,7 +617,7 @@ private func settingsByTarget(signal: ColdSignal<BuildSettings>) -> ColdSignal<[
 /// generating a new built product in the given directory.
 ///
 /// In order for this process to make any sense, the build products should have
-/// been created from the same target, and differ only in the platform they were
+/// been created from the same target, and differ only in the SDK they were
 /// built for.
 ///
 /// Upon success, sends the URL to the merged product, then completes.
@@ -660,7 +660,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 		.merge(identity)
 }
 
-/// Builds one scheme of the given project, for all supported platforms.
+/// Builds one scheme of the given project, for all supported SDKs.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
@@ -670,9 +670,9 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
-	let buildPlatform = { (platform: Platform) -> ColdSignal<BuildSettings> in
+	let buildSDK = { (sdk: SDK) -> ColdSignal<BuildSettings> in
 		var copiedArgs = buildArgs
-		copiedArgs.platform = platform
+		copiedArgs.sdk = sdk
 
 		var buildScheme = xcodebuildTask("build", copiedArgs)
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
@@ -689,15 +689,15 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			}
 	}
 
-	let buildSignal: ColdSignal<NSURL> = BuildSettings.platformForScheme(scheme, inProject: project)
-		.map { (platform: Platform) in
-			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
+	let buildSignal: ColdSignal<NSURL> = BuildSettings.SDKForScheme(scheme, inProject: project)
+		.map { (sdk: SDK) in
+			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(sdk.relativePath, isDirectory: true)
 
-			switch platform {
+			switch sdk {
 			case .iPhoneSimulator, .iPhoneOS:
-				return settingsByTarget(buildPlatform(.iPhoneSimulator))
+				return settingsByTarget(buildSDK(.iPhoneSimulator))
 					.map { simulatorSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
-						return settingsByTarget(buildPlatform(.iPhoneOS))
+						return settingsByTarget(buildSDK(.iPhoneOS))
 							.map { deviceSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
 								assert(simulatorSettingsByTarget.count == deviceSettingsByTarget.count, "Number of targets built for iOS Simulator (\(simulatorSettingsByTarget.count)) does not match number of targets built for iOS Device (\(deviceSettingsByTarget.count))")
 
@@ -725,7 +725,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					.concat(identity)
 
 			default:
-				return buildPlatform(platform)
+				return buildSDK(sdk)
 					.map { settings in copyBuildProductIntoDirectory(folderURL, settings) }
 					.merge(identity)
 			}

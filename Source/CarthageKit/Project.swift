@@ -410,8 +410,8 @@ public final class Project {
 	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> ColdSignal<NSURL> {
 		return architecturesInFramework(frameworkURL)
 			.filter { arch in arch.hasPrefix("arm") }
-			.map { _ in Platform.iPhoneOS }
-			.concat(ColdSignal.single(Platform.MacOSX))
+			.map { _ in SDK.iPhoneOS }
+			.concat(ColdSignal.single(SDK.MacOSX))
 			.take(1)
 			.map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
 			.map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
