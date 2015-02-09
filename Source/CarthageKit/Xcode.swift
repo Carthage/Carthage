@@ -239,7 +239,7 @@ public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
 }
 
 /// Represents an SDK buildable by Xcode.
-public enum SDK {
+public enum SDK: Equatable {
 	/// Mac OS X.
 	case MacOSX
 
@@ -303,6 +303,22 @@ public enum SDK {
 		case .iPhoneSimulator:
 			return [ "-sdk", "iphonesimulator" ]
 		}
+	}
+}
+
+public func == (lhs: SDK, rhs: SDK) -> Bool {
+	switch (lhs, rhs) {
+	case (.MacOSX, .MacOSX):
+		return true
+
+	case (.iPhoneSimulator, .iPhoneSimulator):
+		return true
+
+	case (.iPhoneOS, .iPhoneOS):
+		return true
+
+	default:
+		return false
 	}
 }
 
