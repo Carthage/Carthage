@@ -671,8 +671,9 @@ private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Plat
 			if let forPlatform = forPlatform {
 				return ColdSignal.fromResult(settings.buildSDK)
 					.map { $0.platform }
-					.filter { $0 != forPlatform }
-					.then(productType)
+					.filter { $0 == forPlatform }
+					.map { _ in productType }
+					.merge(identity)
 					.catch { _ in .empty() }
 			} else {
 				return productType.catch { _ in .empty() }
