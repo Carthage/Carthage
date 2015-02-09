@@ -77,14 +77,14 @@ public struct BuildCommand: CommandType {
 					.then(.single(project))
 			}
 			.mergeMap { (project: Project) -> ColdSignal<BuildSchemeSignal> in
-				let (dependenciesOutput, dependenciesSignals) = project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.platform.platform)
+				let (dependenciesOutput, dependenciesSignals) = project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform)
 				dependenciesOutput.observe(stdoutSink)
 
 				return dependenciesSignals
 			}
 
 		if !options.skipCurrent {
-			let (currentOutput, currentSignals) = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.platform.platform)
+			let (currentOutput, currentSignals) = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform)
 			currentOutput.observe(stdoutSink)
 
 			buildSignal = buildSignal.concat(currentSignals)
@@ -126,14 +126,14 @@ public struct BuildCommand: CommandType {
 
 public struct BuildOptions: OptionsType {
 	public let configuration: String
-	public let platform: BuildPlatform
+	public let buildPlatform: BuildPlatform
 	public let skipCurrent: Bool
 	public let colorOptions: ColorOptions
 	public let verbose: Bool
 	public let directoryPath: String
 
-	public static func create(configuration: String)(platform: BuildPlatform)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
-		return self(configuration: configuration, platform: platform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+	public static func create(configuration: String)(buildPlatform: BuildPlatform)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
+		return self(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions> {

@@ -32,13 +32,13 @@ public struct UpdateCommand: CommandType {
 public struct UpdateOptions: OptionsType {
 	public let buildAfterUpdate: Bool
 	public let configuration: String
-	public let platform: BuildPlatform
+	public let buildPlatform: BuildPlatform
 	public let verbose: Bool
 	public let checkoutOptions: CheckoutOptions
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
-		return BuildOptions(configuration: configuration, platform: platform, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
+		return BuildOptions(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
 	}
 
 	/// If `buildAfterUpdate` is true, this will be a signal representing the
@@ -53,8 +53,8 @@ public struct UpdateOptions: OptionsType {
 		}
 	}
 
-	public static func create(configuration: String)(platform: BuildPlatform)(verbose: Bool)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
-		return self(buildAfterUpdate: buildAfterUpdate, configuration: configuration, platform: platform, verbose: verbose, checkoutOptions: checkoutOptions)
+	public static func create(configuration: String)(buildPlatform: BuildPlatform)(verbose: Bool)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
+		return self(buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<UpdateOptions> {
