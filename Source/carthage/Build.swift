@@ -207,15 +207,19 @@ extension BuildPlatform: Printable {
 extension BuildPlatform: ArgumentType {
 	public static let name = "platform"
 
+	private static let acceptedStrings: [String: BuildPlatform] = [
+		"Mac": .Mac, "macosx": .Mac,
+		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
+		"all": .All
+	]
+
 	public static func fromString(string: String) -> BuildPlatform? {
-		if string.caseInsensitiveCompare("Mac") == NSComparisonResult.OrderedSame {
-			return .Mac
-		} else if string.caseInsensitiveCompare("iOS") == NSComparisonResult.OrderedSame {
-			return .iOS
-		} else if string.caseInsensitiveCompare("all") == NSComparisonResult.OrderedSame {
-			return .All
-		} else {
-			return nil
+		for (key, platform) in acceptedStrings {
+			if string.caseInsensitiveCompare(key) == NSComparisonResult.OrderedSame {
+				return platform
+			}
 		}
+		
+		return nil
 	}
 }
