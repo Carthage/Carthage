@@ -272,10 +272,7 @@ public enum Platform: Equatable {
 
 public func == (lhs: Platform, rhs: Platform) -> Bool {
 	switch (lhs, rhs) {
-	case (.Mac, .Mac):
-		return true
-
-	case (.iOS, .iOS):
+	case (.Mac, .Mac), (.iOS, .iOS):
 		return true
 
 	default:
@@ -352,13 +349,7 @@ public enum SDK: Equatable {
 
 public func == (lhs: SDK, rhs: SDK) -> Bool {
 	switch (lhs, rhs) {
-	case (.MacOSX, .MacOSX):
-		return true
-
-	case (.iPhoneSimulator, .iPhoneSimulator):
-		return true
-
-	case (.iPhoneOS, .iPhoneOS):
+	case (.MacOSX, .MacOSX), (.iPhoneSimulator, .iPhoneSimulator), (.iPhoneOS, .iPhoneOS):
 		return true
 
 	default:
