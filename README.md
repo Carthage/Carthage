@@ -84,23 +84,15 @@ In rare cases, you may want to also copy each dependency into the build product 
 
 If you’ve modified your [Cartfile][], or you want to update to the newest versions of each framework (subject to the requirements you’ve specified), simply run the `carthage update` command again.
 
+### Transitive dependencies
+
+If the framework you want to add to your project has dependencies, Carthage will automatically fetch and build them for you. Once you've added a dependency and ran `carthage update`, Carthage will look for a Cartfile, fetch those repositories and build the associated frameworks that **you will have to drag yourself into your project**. You do not need the framework to have any spec file whatsoever.
+
 ### Using submodules for dependencies
 
 By default, Carthage will directly [check out][Carthage/Checkouts] dependencies’ source files into your project folder, leaving you to commit or ignore them as you choose. If you’d like to have dependencies available as Git submodules instead (perhaps so you can commit and push changes within them), you can run `carthage update` or `carthage checkout` with the `--use-submodules` flag.
 
 When run this way, Carthage will write to your repository’s `.gitmodules` and `.git/config` files, and automatically update the submodules when the dependencies’ versions change.
-
-### Transitive dependencies
-
-If the framework you want to add to your project has dependencies, Carthage will automatically fetch and build them for you. Let's take a real life example with the command-line arguments parsing framework [Commandant](https://github.com/Carthage/Commandant) (also used in Carthage).
-
-Commandant currently depends on [the following frameworks](https://github.com/Carthage/Commandant/blob/master/Cartfile):
-
-  * [Quick](http://github.com/Quick/Quick)
-  * [Nimble](http://github.com/Quick/Nimble)
-  * Carthage's [own fork](https://github.com/Carthage/LlamaKit) of [LlamaKit](https://github.com/LlamaKit/LlamaKit)
-
-Once you've added [Commandant](https://github.com/Carthage/Commandant) as a dependency and ran `carthage update`, Carthage will look for a Cartfile, fetch those repositories for you and build the associated frameworks that **you will have to drag yourself into your project**. You do not need the framework to have any spec file whatsoever.
 
 ## Supporting Carthage for your framework
 
