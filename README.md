@@ -100,7 +100,7 @@ Commandant currently depends on [the following frameworks](https://github.com/Ca
   * [Nimble](http://github.com/Quick/Nimble)
   * Carthage's [own fork](https://github.com/Carthage/LlamaKit) of [LlamaKit](https://github.com/LlamaKit/LlamaKit)
 
-Once you've added [Commandant](https://github.com/Carthage/Commandant) as a dependency and ran `carthage update`, Carthage will look for a Cartfile, fetch those repositories for you and build the associated frameworks. You do not need the framework to have any spec file whatsoever.
+Once you've added [Commandant](https://github.com/Carthage/Commandant) as a dependency and ran `carthage update`, Carthage will look for a Cartfile, fetch those repositories for you and build the associated frameworks that **you will have to drag yourself into your project**. You do not need the framework to have any spec file whatsoever.
 
 ## Supporting Carthage for your framework
 
