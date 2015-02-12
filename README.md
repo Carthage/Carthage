@@ -84,9 +84,9 @@ In rare cases, you may want to also copy each dependency into the build product 
 
 If you’ve modified your [Cartfile][], or you want to update to the newest versions of each framework (subject to the requirements you’ve specified), simply run the `carthage update` command again.
 
-### Transitive dependencies
+### Nested dependencies
 
-If the framework you want to add to your project has dependencies, Carthage will automatically fetch and build them for you. Once you've added a dependency and ran `carthage update`, Carthage will look for a Cartfile, fetch those repositories and build the associated frameworks that **you will have to drag yourself into your project**. You do not need the framework to have any spec file whatsoever.
+If the framework you want to add to your project has dependencies explicitly listed in a [Cartfile][], Carthage will automatically retrieve them for you. You will then have to **drag them yourself into your project** from the [Carthage/Build] folder.
 
 ### Using submodules for dependencies
 
