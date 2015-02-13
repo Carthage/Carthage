@@ -285,11 +285,10 @@ public final class Project {
 
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> ColdSignal<PinnedVersion> {
-		return cloneOrFetchDependency(project)
-			.map { repositoryURL in
-				return resolveReferenceInRepository(repositoryURL, reference)
-			}
-			.merge(identity)
+		// We don't need the version list, but this takes care of
+		// cloning/fetching for us, while avoiding duplication.
+		return versionsForProject(project)
+			.then(resolveReferenceInRepository(repositoryFileURLForProject(project), reference))
 			.map { PinnedVersion($0) }
 	}
 
