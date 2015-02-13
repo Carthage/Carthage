@@ -246,6 +246,9 @@ public enum Platform: Equatable {
 	/// iOS for device and simulator.
 	case iOS
 
+	/// All supported build platforms.
+	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS ]
+
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
 	public var relativePath: String {
