@@ -24,6 +24,9 @@ public struct ArchiveCommand: CommandType {
 				return ColdSignal.fromValues(Platform.supportedPlatforms)
 					.map { platform in platform.relativePath.stringByAppendingPathComponent(options.frameworkName).stringByAppendingPathExtension("framework")! }
 					.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+					.on(next: { path in
+						carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
+					})
 					.reduce(initial: []) { $0 + [ $1 ] }
 					.mergeMap { paths -> ColdSignal<()> in
 						if paths.isEmpty {
@@ -34,7 +37,7 @@ public struct ArchiveCommand: CommandType {
 						let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)!
 
 						return zipIntoArchive(outputURL, paths).on(completed: {
-							carthage.println(formatting.bullets + "Created " + formatting.path(string: outputURL.path!))
+							carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
 						})
 					}
 			}
@@ -55,6 +58,6 @@ private struct ArchiveOptions: OptionsType {
 		return create
 			<*> m <| Option(key: "output", defaultValue: "", usage: "the path at which to create the zip file (or blank to infer it from the framework name)")
 			<*> ColorOptions.evaluate(m)
-			<*> m <| Option(usage: "the name of the built framework to archive, without any extension")
+			<*> m <| Option(usage: "the name of the built framework to archive (without any extension)")
 	}
 }
