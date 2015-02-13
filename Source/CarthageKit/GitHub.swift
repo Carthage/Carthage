@@ -278,6 +278,7 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, credentia
 		.tryMap { data, error -> AnyObject? in
 			return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error)
 		}
+		.catch { _ in .empty() }
 		.concatMap { releaseDictionary -> ColdSignal<GitHubRelease> in
 			if let release = GitHubRelease.decode(JSONValue.parse(releaseDictionary)) {
 				return .single(release)

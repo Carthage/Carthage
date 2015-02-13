@@ -946,13 +946,13 @@ public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<NSURL> {
 		}
 
 		if !manager.removeItemAtURL(to, error: &error) && error?.code != NSFileNoSuchFileError {
-			return .error(error ?? RACError.Empty.error)
+			return .error(error ?? CarthageError.WriteFailed(to).error)
 		}
 
 		if manager.copyItemAtURL(from, toURL: to, error: &error) {
 			return .single(to)
 		} else {
-			return .error(error ?? RACError.Empty.error)
+			return .error(error ?? CarthageError.WriteFailed(to).error)
 		}
 	}
 }
