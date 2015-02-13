@@ -206,7 +206,7 @@ extension NSFileManager {
 				if catchErrors {
 					return true
 				} else {
-					sink.put(.Error(error ?? RACError.Empty.error))
+					sink.put(.Error(error ?? CarthageError.ReadFailed(URL).error))
 					return false
 				}
 			}!
