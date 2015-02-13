@@ -377,9 +377,8 @@ public final class Project {
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
 	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withCredentials credentials: GitHubCredentials?) -> ColdSignal<NSURL> {
-		return releasesForRepository(repository, credentials)
-			.filter(binaryFrameworksCanBeProvidedByRelease(revision))
-			.take(1)
+		return releaseForTag(revision, repository, credentials)
+			.filter(binaryFrameworksCanBeProvidedByRelease)
 			.on(next: { release in
 				self._projectEventsSink.put(.DownloadingBinaries(project, release.name))
 			})
@@ -565,8 +564,8 @@ private func frameworksInDirectory(directoryURL: NSURL) -> ColdSignal<NSURL> {
 }
 
 /// Determines whether a Release is a suitable candidate for binary frameworks.
-private func binaryFrameworksCanBeProvidedByRelease(revision: String)(release: GitHubRelease) -> Bool {
-	return release.tag == revision && !release.draft && !release.prerelease && !release.assets.isEmpty
+private func binaryFrameworksCanBeProvidedByRelease(release: GitHubRelease) -> Bool {
+	return !release.draft && !release.prerelease && !release.assets.isEmpty
 }
 
 /// Determines whether a release asset is a suitable candidate for binary
