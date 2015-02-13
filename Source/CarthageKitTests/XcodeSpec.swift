@@ -23,9 +23,14 @@ class XcodeSpec: QuickSpec {
 
 		beforeEach {
 			NSFileManager.defaultManager().removeItemAtURL(buildFolderURL, error: nil)
-			expect(NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil, error: nil)).to(beTruthy())
 
-			return ()
+			expect(NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil, error: nil)).to(beTruthy())
+			return
+		}
+		
+		afterEach {
+			NSFileManager.defaultManager().removeItemAtURL(targetFolderURL, error: nil)
+			return
 		}
 
 		it("should build for all platforms") {

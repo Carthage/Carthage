@@ -10,6 +10,17 @@ import Foundation
 import ReactiveCocoa
 import ReactiveTask
 
+/// Zips the given input items (recursively) into an archive that will be
+/// located at the given URL.
+public func zipIntoArchive(destinationArchiveURL: NSURL, inputPaths: [String]) -> ColdSignal<()> {
+	precondition(destinationArchiveURL.fileURL)
+	precondition(!inputPaths.isEmpty)
+
+	let task = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "zip", "-q", "-r", destinationArchiveURL.path! ] + inputPaths)
+	return launchTask(task)
+		.then(.empty())
+}
+
 /// Unzips the archive at the given file URL, extracting into the given
 /// directory URL (which must already exist).
 public func unzipArchiveToDirectory(fileURL: NSURL, destinationDirectoryURL: NSURL) -> ColdSignal<()> {
@@ -17,7 +28,6 @@ public func unzipArchiveToDirectory(fileURL: NSURL, destinationDirectoryURL: NSU
 	precondition(destinationDirectoryURL.fileURL)
 
 	let task = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "unzip", "-qq", "-d", destinationDirectoryURL.path!, fileURL.path! ])
-
 	return launchTask(task)
 		.then(.empty())
 }
