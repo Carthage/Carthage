@@ -51,7 +51,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one.
 1. On your application targets’ “General” settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
-1. Create a “Run Script” phase with the following contents:
+1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script with the following contents:
 
   ```sh
   /usr/local/bin/carthage copy-frameworks
@@ -83,6 +83,10 @@ In rare cases, you may want to also copy each dependency into the build product 
 ### Upgrading frameworks
 
 If you’ve modified your [Cartfile][], or you want to update to the newest versions of each framework (subject to the requirements you’ve specified), simply run the `carthage update` command again.
+
+### Nested dependencies
+
+If the framework you want to add to your project has dependencies explicitly listed in a [Cartfile][], Carthage will automatically retrieve them for you. You will then have to **drag them yourself into your project** from the [Carthage/Build] folder.
 
 ### Using submodules for dependencies
 
