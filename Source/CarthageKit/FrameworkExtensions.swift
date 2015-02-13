@@ -200,7 +200,7 @@ extension NSFileManager {
 	/// Creates a directory enumerator at the given URL. Sends each URL
 	/// enumerated, along with the enumerator itself (so it can be introspected
 	/// and modified as enumeration progresses).
-	internal func carthage_enumeratorAtURL(URL: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions, catchErrors: Bool = false) -> ColdSignal<(NSDirectoryEnumerator, NSURL)> {
+	public func carthage_enumeratorAtURL(URL: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions, catchErrors: Bool = false) -> ColdSignal<(NSDirectoryEnumerator, NSURL)> {
 		return ColdSignal { (sink, disposable) in
 			let enumerator = self.enumeratorAtURL(URL, includingPropertiesForKeys: keys, options: options) { (URL, error) in
 				if catchErrors {
