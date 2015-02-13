@@ -277,6 +277,7 @@ internal func releasesForRepository(repository: GitHubRepository, credentials: G
 		.tryMap { data, error -> NSArray? in
 			return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error) as? NSArray
 		}
+		.catch { _ in .empty() }
 		.mergeMap { releases -> ColdSignal<AnyObject> in
 			return ColdSignal.fromValues(releases)
 		}
