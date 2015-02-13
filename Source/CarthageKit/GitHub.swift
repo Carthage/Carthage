@@ -270,16 +270,15 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdS
 		}
 }
 
-/// Fetches all releases on the given repository, sending each along the
-/// returned signal.
-internal func releasesForRepository(repository: GitHubRepository, credentials: GitHubCredentials?) -> ColdSignal<GitHubRelease> {
-	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases?per_page=100")!, credentials)
-		.tryMap { data, error -> NSArray? in
-			return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error) as? NSArray
+/// Fetches the release corresponding to the given tag on the given repository,
+/// sending it along the returned signal. If no release matches, the signal will
+/// complete without sending any values.
+internal func releaseForTag(tag: String, repository: GitHubRepository, credentials: GitHubCredentials?) -> ColdSignal<GitHubRelease> {
+	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, credentials)
+		.tryMap { data, error -> AnyObject? in
+			return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error)
 		}
-		.mergeMap { releases -> ColdSignal<AnyObject> in
-			return ColdSignal.fromValues(releases)
-		}
+		.catch { _ in .empty() }
 		.concatMap { releaseDictionary -> ColdSignal<GitHubRelease> in
 			if let release = GitHubRelease.decode(JSONValue.parse(releaseDictionary)) {
 				return .single(release)

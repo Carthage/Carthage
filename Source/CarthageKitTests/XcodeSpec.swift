@@ -23,9 +23,14 @@ class XcodeSpec: QuickSpec {
 
 		beforeEach {
 			NSFileManager.defaultManager().removeItemAtURL(buildFolderURL, error: nil)
-			expect(NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil, error: nil)).to(beTruthy())
 
-			return ()
+			expect(NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil, error: nil)).to(beTruthy())
+			return
+		}
+		
+		afterEach {
+			NSFileManager.defaultManager().removeItemAtURL(targetFolderURL, error: nil)
+			return
 		}
 
 		it("should build for all platforms") {
@@ -123,6 +128,29 @@ class XcodeSpec: QuickSpec {
 			expect(codesignResult).to(beTruthy())
 
 			expect(output).to(contain("satisfies its Designated Requirement"))
+		}
+
+		it("should build for one platform") {
+			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
+			let (outputSignal, schemeSignals) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platform: .Mac)
+			let result = schemeSignals
+				.concat(identity)
+				.on(next: { (project, scheme) in
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+
+			expect(result.error()).to(beNil())
+
+			// Verify that the build product exists at the top level.
+			let path = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
+			var isDirectory: ObjCBool = false
+			expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beTruthy())
+
+			// Verify that the other platform wasn't built.
+			let incorrectPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
+			expect(NSFileManager.defaultManager().fileExistsAtPath(incorrectPath, isDirectory: nil)).to(beFalsy())
 		}
 
 		it("should locate the project") {

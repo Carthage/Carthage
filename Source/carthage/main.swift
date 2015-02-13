@@ -13,6 +13,7 @@ import LlamaKit
 import ReactiveTask
 
 let registry = CommandRegistry()
+registry.register(ArchiveCommand())
 registry.register(BootstrapCommand())
 registry.register(BuildCommand())
 registry.register(CheckoutCommand())

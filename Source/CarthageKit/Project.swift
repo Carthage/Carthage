@@ -377,9 +377,8 @@ public final class Project {
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
 	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withCredentials credentials: GitHubCredentials?) -> ColdSignal<NSURL> {
-		return releasesForRepository(repository, credentials)
-			.filter(binaryFrameworksCanBeProvidedByRelease(revision))
-			.take(1)
+		return releaseForTag(revision, repository, credentials)
+			.filter(binaryFrameworksCanBeProvidedByRelease)
 			.on(next: { release in
 				self._projectEventsSink.put(.DownloadingBinaries(project, release.name))
 			})
@@ -409,9 +408,10 @@ public final class Project {
 	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> ColdSignal<NSURL> {
 		return architecturesInFramework(frameworkURL)
 			.filter { arch in arch.hasPrefix("arm") }
-			.map { _ in Platform.iPhoneOS }
-			.concat(ColdSignal.single(Platform.MacOSX))
+			.map { _ in SDK.iPhoneOS }
+			.concat(ColdSignal.single(SDK.MacOSX))
 			.take(1)
+			.map { sdk in sdk.platform }
 			.map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
 			.map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
 			.mergeMap { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL) }
@@ -492,7 +492,7 @@ public final class Project {
 	///
 	/// Returns a signal of all standard output from `xcodebuild`, and a
 	/// signal-of-signals representing each scheme being built.
-	public func buildCheckedOutDependencies(configuration: String) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatform platform: Platform?) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
 		let schemeSignals = loadResolvedCartfile()
 			.map { resolvedCartfile in ColdSignal.fromValues(resolvedCartfile.dependencies) }
@@ -504,7 +504,7 @@ public final class Project {
 						return .empty()
 					}
 
-					let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration)
+					let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platform: platform)
 					buildOutput.observe(stdoutSink)
 
 					return schemeSignals
@@ -564,8 +564,8 @@ private func frameworksInDirectory(directoryURL: NSURL) -> ColdSignal<NSURL> {
 }
 
 /// Determines whether a Release is a suitable candidate for binary frameworks.
-private func binaryFrameworksCanBeProvidedByRelease(revision: String)(release: GitHubRelease) -> Bool {
-	return release.tag == revision && !release.draft && !release.prerelease && !release.assets.isEmpty
+private func binaryFrameworksCanBeProvidedByRelease(release: GitHubRelease) -> Bool {
+	return !release.draft && !release.prerelease && !release.assets.isEmpty
 }
 
 /// Determines whether a release asset is a suitable candidate for binary
