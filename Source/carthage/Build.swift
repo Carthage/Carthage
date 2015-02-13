@@ -77,14 +77,14 @@ public struct BuildCommand: CommandType {
 					.then(.single(project))
 			}
 			.mergeMap { (project: Project) -> ColdSignal<BuildSchemeSignal> in
-				let (dependenciesOutput, dependenciesSignals) = project.buildCheckedOutDependencies(options.configuration)
+				let (dependenciesOutput, dependenciesSignals) = project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform)
 				dependenciesOutput.observe(stdoutSink)
 
 				return dependenciesSignals
 			}
 
 		if !options.skipCurrent {
-			let (currentOutput, currentSignals) = buildInDirectory(directoryURL, withConfiguration: options.configuration)
+			let (currentOutput, currentSignals) = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform)
 			currentOutput.observe(stdoutSink)
 
 			buildSignal = buildSignal.concat(currentSignals)
@@ -126,21 +126,100 @@ public struct BuildCommand: CommandType {
 
 public struct BuildOptions: OptionsType {
 	public let configuration: String
+	public let buildPlatform: BuildPlatform
 	public let skipCurrent: Bool
 	public let colorOptions: ColorOptions
 	public let verbose: Bool
 	public let directoryPath: String
 
-	public static func create(configuration: String)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
-		return self(configuration: configuration, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+	public static func create(configuration: String)(buildPlatform: BuildPlatform)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
+		return self(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
+			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platform to build for (one of ‘all’, ‘Mac’, or ‘iOS’)")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+	}
+}
+
+/// Represents the user’s chosen platform to build for.
+public enum BuildPlatform: Equatable {
+	/// Build for all available platforms.
+	case All
+
+	/// Build only for iOS.
+	case iOS
+
+	/// Build only for OS X.
+	case Mac
+
+	/// The `Platform` corresponding to this setting.
+	public var platform: Platform? {
+		switch self {
+		case .All:
+			return nil
+
+		case .iOS:
+			return .iOS
+
+		case .Mac:
+			return .Mac
+		}
+	}
+}
+
+public func == (lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
+	switch (lhs, rhs) {
+	case (.All, .All):
+		return true
+
+	case (.iOS, .iOS):
+		return true
+
+	case (.Mac, .Mac):
+		return true
+
+	default:
+		return false
+	}
+}
+
+extension BuildPlatform: Printable {
+	public var description: String {
+		switch self {
+		case .All:
+			return "all"
+
+		case .iOS:
+			return "iOS"
+
+		case .Mac:
+			return "Mac"
+		}
+	}
+}
+
+extension BuildPlatform: ArgumentType {
+	public static let name = "platform"
+
+	private static let acceptedStrings: [String: BuildPlatform] = [
+		"Mac": .Mac, "macosx": .Mac,
+		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
+		"all": .All
+	]
+
+	public static func fromString(string: String) -> BuildPlatform? {
+		for (key, platform) in acceptedStrings {
+			if string.caseInsensitiveCompare(key) == NSComparisonResult.OrderedSame {
+				return platform
+			}
+		}
+		
+		return nil
 	}
 }
