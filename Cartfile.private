@@ -1,3 +1,5 @@
 github "Quick/Quick" == 0.2.0
 github "Quick/Nimble"
 github "jspahrsummers/xcconfigs" >= 0.6
+github "Carthage/Commandant" "master"
+github "jdhealy/PrettyColors" ~> 1.0.0
