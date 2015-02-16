@@ -12,7 +12,7 @@ import OGDL
 import ReactiveCocoa
 
 /// An abstract type representing a way to specify versions.
-public protocol VersionType: Equatable, NodeParseable {}
+public protocol VersionType: Equatable {}
 
 /// A semantic version.
 public struct SemanticVersion: Comparable {
@@ -98,7 +98,7 @@ extension SemanticVersion: Scannable {
 }
 
 extension SemanticVersion: NodeParseable {
-	public static func fromNode(node: Node?) -> Result<(SemanticVersion, Node?)> {
+	internal static func fromNode(node: Node?) -> Result<(SemanticVersion, Node?)> {
 		if let node = node {
 			let scanner = NSScanner(string: node.value)
 			return fromScanner(scanner).map { version in (version, node.children.first) }
@@ -145,7 +145,7 @@ public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
 }
 
 extension PinnedVersion: NodeParseable {
-	public static func fromNode(node: Node?) -> Result<(PinnedVersion, Node?)> {
+	internal static func fromNode(node: Node?) -> Result<(PinnedVersion, Node?)> {
 		switch node?.value {
 		case .Some(""):
 			return failure(CarthageError.ParseError(description: "empty pinned version at \(node)").error)
@@ -238,7 +238,7 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 }
 
 extension VersionSpecifier: NodeParseable {
-	public static func fromNode(node: Node?) -> Result<(VersionSpecifier, Node?)> {
+	internal static func fromNode(node: Node?) -> Result<(VersionSpecifier, Node?)> {
 		let versionResult = SemanticVersion.fromNode(node?.children.first)
 
 		switch node?.value {

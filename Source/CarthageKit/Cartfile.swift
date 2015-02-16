@@ -17,8 +17,7 @@ public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
 
 /// Represents anything that can be parsed from an OGDL node (and its
 /// descendants).
-// TODO: This should be internal, but `VersionType` currently prevents it.
-public protocol NodeParseable {
+internal protocol NodeParseable {
 	/// Attempts to parse an instance of the receiver from the given node. If
 	/// `node` is nil, the receiver should assume a default value (if allowed).
 	///
@@ -163,7 +162,7 @@ extension ProjectIdentifier: Hashable {
 }
 
 extension GitHubRepository: NodeParseable {
-	public static func fromNode(node: Node?) -> Result<(GitHubRepository, Node?)> {
+	internal static func fromNode(node: Node?) -> Result<(GitHubRepository, Node?)> {
 		if let node = node {
 			return fromNWO(node.value).map { repo in (repo, node.children.first) }
 		} else {
@@ -173,7 +172,7 @@ extension GitHubRepository: NodeParseable {
 }
 
 extension GitURL: NodeParseable {
-	public static func fromNode(node: Node?) -> Result<(GitURL, Node?)> {
+	internal static func fromNode(node: Node?) -> Result<(GitURL, Node?)> {
 		if let node = node {
 			return success(self(node.value), node.children.first)
 		} else {
@@ -183,7 +182,7 @@ extension GitURL: NodeParseable {
 }
 
 extension ProjectIdentifier: NodeParseable {
-	public static func fromNode(node: Node?) -> Result<(ProjectIdentifier, Node?)> {
+	internal static func fromNode(node: Node?) -> Result<(ProjectIdentifier, Node?)> {
 		switch node?.value {
 		case .Some("github"):
 			return GitHubRepository.fromNode(node?.children.first).map { repo, remainder in (self.GitHub(repo), remainder) }
@@ -235,11 +234,10 @@ public func == <V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 	return lhs.project == rhs.project && lhs.version == rhs.version
 }
 
-extension Dependency: NodeParseable {
-	public static func fromNode(node: Node?) -> Result<(Dependency, Node?)> {
-		return ProjectIdentifier.fromNode(node).flatMap { identifier, remainder in
-			return V.fromNode(remainder).map { version, remainder in (self(project: identifier, version: version), remainder) }
-		}
+/// Parses dependency information from an OGDL subgraph.
+private func dependencyFromNode<V: VersionType where V: NodeParseable>(node: Node?) -> Result<(Dependency<V>, Node?)> {
+	return ProjectIdentifier.fromNode(node).flatMap { identifier, remainder in
+		return V.fromNode(remainder).map { version, remainder in (Dependency<V>(project: identifier, version: version), remainder) }
 	}
 }
 
@@ -250,11 +248,13 @@ extension Dependency: Printable {
 }
 
 /// Attempts to parse dependencies from top-level nodes in an OGDL graph.
-private func dependenciesFromNodes<V: VersionType>(nodes: [Node]) -> Result<[Dependency<V>]> {
+private func dependenciesFromNodes<V: VersionType where V: NodeParseable>(nodes: [Node]) -> Result<[Dependency<V>]> {
 	var dependencies: [Dependency<V>] = []
 
 	for node in nodes {
-		switch (Dependency<V>.fromNode(node)) {
+		let result: Result<(Dependency<V>, Node?)> = dependencyFromNode(node)
+
+		switch result {
 		case let .Success(dependencyAndRemainder):
 			let (dependency, remainder) = dependencyAndRemainder.unbox
 
