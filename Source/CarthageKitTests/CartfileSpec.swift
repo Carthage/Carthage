@@ -21,28 +21,28 @@ class CartfileSpec: QuickSpec {
 			let result = Cartfile.fromString(testCartfile!)
 			expect(result.error()).to(beNil())
 
-			let cartfile = result.value()!
-			expect(cartfile.dependencies.count).to(equal(5))
+			let cartfile = result.value()
+			expect(cartfile?.dependencies.count).to(equal(5))
 
-			let depReactiveCocoa = cartfile.dependencies[0]
-			expect(depReactiveCocoa.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))))
-			expect(depReactiveCocoa.version).to(equal(VersionSpecifier.AtLeast(SemanticVersion(major: 2, minor: 3, patch: 1))))
+			let depReactiveCocoa = cartfile?.dependencies[0]
+			expect(depReactiveCocoa?.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))))
+			expect(depReactiveCocoa?.version).to(equal(VersionSpecifier.AtLeast(SemanticVersion(major: 2, minor: 3, patch: 1))))
 
-			let depMantle = cartfile.dependencies[1]
-			expect(depMantle.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "Mantle", name: "Mantle"))))
-			expect(depMantle.version).to(equal(VersionSpecifier.CompatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0))))
+			let depMantle = cartfile?.dependencies[1]
+			expect(depMantle?.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "Mantle", name: "Mantle"))))
+			expect(depMantle?.version).to(equal(VersionSpecifier.CompatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0))))
 
-			let depLibextobjc = cartfile.dependencies[2]
-			expect(depLibextobjc.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "libextobjc"))))
-			expect(depLibextobjc.version).to(equal(VersionSpecifier.Exactly(SemanticVersion(major: 0, minor: 4, patch: 1))))
+			let depLibextobjc = cartfile?.dependencies[2]
+			expect(depLibextobjc?.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "libextobjc"))))
+			expect(depLibextobjc?.version).to(equal(VersionSpecifier.Exactly(SemanticVersion(major: 0, minor: 4, patch: 1))))
 
-			let depConfigs = cartfile.dependencies[3]
-			expect(depConfigs.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "xcconfigs"))))
-			expect(depConfigs.version).to(equal(VersionSpecifier.Any))
+			let depConfigs = cartfile?.dependencies[3]
+			expect(depConfigs?.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "xcconfigs"))))
+			expect(depConfigs?.version).to(equal(VersionSpecifier.Any))
 
-			let depErrorTranslations = cartfile.dependencies[4]
-			expect(depErrorTranslations.project).to(equal(ProjectIdentifier.Git(GitURL("https://enterprise.local/desktop/git-error-translations.git"))))
-			expect(depErrorTranslations.version).to(equal(VersionSpecifier.GitReference("development")))
+			let depErrorTranslations = cartfile?.dependencies[4]
+			expect(depErrorTranslations?.project).to(equal(ProjectIdentifier.Git(GitURL("https://enterprise.local/desktop/git-error-translations.git"))))
+			expect(depErrorTranslations?.version).to(equal(VersionSpecifier.GitReference("development")))
 		}
 
 		it("should parse a Cartfile.resolved") {
@@ -52,16 +52,16 @@ class CartfileSpec: QuickSpec {
 			let result = ResolvedCartfile.fromString(testCartfile!)
 			expect(result.error()).to(beNil())
 
-			let resolvedCartfile = result.value()!
-			expect(resolvedCartfile.dependencies.count).to(equal(2))
+			let resolvedCartfile = result.value()
+			expect(resolvedCartfile?.dependencies.count).to(equal(2))
 
-			let depReactiveCocoa = resolvedCartfile.dependencies[0]
-			expect(depReactiveCocoa.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))))
-			expect(depReactiveCocoa.version).to(equal(PinnedVersion("v2.3.1")))
+			let depReactiveCocoa = resolvedCartfile?.dependencies[0]
+			expect(depReactiveCocoa?.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))))
+			expect(depReactiveCocoa?.version).to(equal(PinnedVersion("v2.3.1")))
 
-			let depMantle = resolvedCartfile.dependencies[1]
-			expect(depMantle.project).to(equal(ProjectIdentifier.Git(GitURL("https://github.com/Mantle/Mantle.git"))))
-			expect(depMantle.version).to(equal(PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47")))
+			let depMantle = resolvedCartfile?.dependencies[1]
+			expect(depMantle?.project).to(equal(ProjectIdentifier.Git(GitURL("https://github.com/Mantle/Mantle.git"))))
+			expect(depMantle?.version).to(equal(PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47")))
 		}
 	}
 }
