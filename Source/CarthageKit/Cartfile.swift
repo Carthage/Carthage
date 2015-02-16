@@ -8,6 +8,7 @@
 
 import Foundation
 import LlamaKit
+import Madness
 import OGDL
 import ReactiveCocoa
 
@@ -122,24 +123,37 @@ public struct ResolvedCartfile {
 		return directoryURL.URLByAppendingPathComponent("Cartfile.resolved")
 	}
 
-	/// Attempts to parse Cartfile.resolved information from a string.
-	public static func fromString(string: String) -> Result<ResolvedCartfile> {
+	/// Attempts to parse Cartfile.resolved infromation from an OGDL graph.
+	private static func fromNodes(nodes: [Node]) -> Result<ResolvedCartfile> {
 		var cartfile = self(dependencies: [])
-		var result = success(())
 
-		let scanner = NSScanner(string: string)
-		scannerLoop: while !scanner.atEnd {
-			switch (Dependency<PinnedVersion>.fromScanner(scanner)) {
-			case let .Success(dep):
-				cartfile.dependencies.append(dep.unbox)
+		for node in nodes {
+			switch (Dependency<PinnedVersion>.fromNode(node)) {
+			case let .Success(dependencyAndRemainder):
+				let (dependency, remainder) = dependencyAndRemainder.unbox
+
+				if let remainder = remainder {
+					return failure(CarthageError.ParseError(description: "Unexpected node after parsing \(dependency): \(remainder)").error)
+				} else {
+					cartfile.dependencies.append(dependency)
+				}
 
 			case let .Failure(error):
-				result = failure(error)
-				break scannerLoop
+				return failure(error)
 			}
 		}
 
-		return result.map { _ in cartfile }
+		return success(cartfile)
+	}
+
+	/// Attempts to parse Cartfile.resolved information from a string.
+	public static func fromString(string: String) -> Result<ResolvedCartfile> {
+		// TODO: Wrap this in ogdl-swift.
+		if let nodes = parse(graph, string) {
+			return fromNodes(nodes)
+		} else {
+			return failure(CarthageError.ParseError(description: "OGDL parse error").error)
+		}
 	}
 }
 
