@@ -14,6 +14,16 @@ import ReactiveCocoa
 /// The relative path to a project's checked out dependencies.
 public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
 
+/// Represents anything that can be parsed from an OGDL node (and its
+/// descendants).
+internal protocol NodeParseable {
+	/// Attempts to parse an instance of the receiver from the given node.
+	///
+	/// Upon success, returns the parsed value, and the first descendant node
+	/// that was not touched.
+	class func fromNode(node: Node) -> Result<(Self, Node?)>
+}
+
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
@@ -220,6 +230,45 @@ extension ProjectIdentifier: Scannable {
 			return parser(address)
 		} else {
 			return failure(CarthageError.ParseError(description: "empty string after dependency type in line: \(scanner.currentLine)").error)
+		}
+	}
+}
+
+extension GitHubRepository: NodeParseable {
+	internal static func fromNode(node: Node) -> Result<(GitHubRepository, Node?)> {
+		return fromNWO(node.value).map { repo in (repo, node.children.first) }
+	}
+}
+
+extension GitURL: NodeParseable {
+	internal static func fromNode(node: Node) -> Result<(GitURL, Node?)> {
+		return success(self(node.value), node.children.first)
+	}
+}
+
+extension ProjectIdentifier: NodeParseable {
+	internal static func fromNode(node: Node) -> Result<(ProjectIdentifier, Node?)> {
+		let addressResult: Result<Node> = {
+			if let addressNode = node.children.first {
+				return success(addressNode)
+			} else {
+				return failure(CarthageError.ParseError(description: "expected string after dependency type in \(node)").error)
+			}
+		}()
+
+		switch node.value {
+		case "github":
+			return addressResult
+				.flatMap { addressNode in GitHubRepository.fromNode(addressNode) }
+				.map { repo, remainder in (self.GitHub(repo), remainder) }
+
+		case "git":
+			return addressResult
+				.flatMap { addressNode in GitURL.fromNode(addressNode) }
+				.map { repo, remainder in (self.Git(repo), remainder) }
+
+		default:
+			return failure(CarthageError.ParseError(description: "unexpected dependency type in \(node)").error)
 		}
 	}
 }
