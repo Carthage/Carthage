@@ -12,19 +12,7 @@ import OGDL
 import ReactiveCocoa
 
 /// An abstract type representing a way to specify versions.
-public protocol VersionType: Scannable, Equatable {}
-
-/// Attempts to parse a version from the OGDL subgraph rooted at the given node.
-///
-/// Returns the result of parsing, and a list of sibling nodes that were not
-/// parsed.
-public func versionFromNode<V: VersionType>(node: Node) -> (Result<V>, [Node]) {
-	let scanner = NSScanner(string: node.value)
-	let result = V.fromScanner(scanner)
-
-	let remaining = (result.isSuccess() ? node.children : [ node ])
-	return (result, remaining)
-}
+public protocol VersionType: Equatable, NodeParseable {}
 
 /// A semantic version.
 public struct SemanticVersion: Comparable {
@@ -109,6 +97,13 @@ extension SemanticVersion: Scannable {
 	}
 }
 
+extension SemanticVersion: NodeParseable {
+	static func fromNode(node: Node) -> Result<(SemanticVersion, Node?)> {
+		let scanner = NSScanner(string: node.value)
+		return fromScanner(scanner).map { version in (version, node.children.first) }
+	}
+}
+
 extension SemanticVersion: VersionType {}
 
 public func <(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
@@ -145,22 +140,13 @@ public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
 	return lhs.commitish == rhs.commitish
 }
 
-extension PinnedVersion: Scannable {
-	public static func fromScanner(scanner: NSScanner) -> Result<PinnedVersion> {
-		if !scanner.scanString("\"", intoString: nil) {
-			return failure(CarthageError.ParseError(description: "expected pinned version in line: \(scanner.currentLine)").error)
+extension PinnedVersion: NodeParseable {
+	static func fromNode(node: Node) -> Result<(PinnedVersion, Node?)> {
+		if node.value.isEmpty {
+			return failure(CarthageError.ParseError(description: "empty pinned version at \(node)").error)
+		} else {
+			return success(self(node.value), node.children.first)
 		}
-
-		var commitish: NSString? = nil
-		if !scanner.scanUpToString("\"", intoString: &commitish) || commitish == nil {
-			return failure(CarthageError.ParseError(description: "empty pinned version in line: \(scanner.currentLine)").error)
-		}
-
-		if !scanner.scanString("\"", intoString: nil) {
-			return failure(CarthageError.ParseError(description: "unterminated pinned version in line: \(scanner.currentLine)").error)
-		}
-
-		return success(self(commitish!))
 	}
 }
 
@@ -218,30 +204,6 @@ public enum VersionSpecifier: Equatable {
 			}
 		}
 	}
-
-	/// Attempts to parse a version specifier from the OGDL subgraph rooted at
-	/// the given node.
-	///
-	/// Returns the result of parsing, and a list of sibling nodes that were not
-	/// parsed.
-	public static func fromNode(node: Node) -> (Result<VersionSpecifier>, [Node]) {
-		let parseVersion: () -> (Result<SemanticVerison>, [Node]) = {
-			if node.children.count < 1 {
-				return (failure(CarthageError.ParseError(description: "expected a version after specifier \(node)")), [])
-			} else if node.children.count > 1 {
-				return (failure(CarthageError.ParseError(description: "expected one version after specifier \(node), got all of \(node.children)")), node.children)
-			} else {
-				return fromNode(node.children[0])
-			}
-		}
-
-		switch node.value {
-		case "==":
-		case ">=":
-		case "~>":
-		default:
-		}
-	}
 }
 
 public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
@@ -266,28 +228,28 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 	}
 }
 
-extension VersionSpecifier: Scannable {
-	/// Attempts to parse a VersionSpecifier.
-	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
-		if scanner.scanString("==", intoString: nil) {
-			return SemanticVersion.fromScanner(scanner).map { Exactly($0) }
-		} else if scanner.scanString(">=", intoString: nil) {
-			return SemanticVersion.fromScanner(scanner).map { AtLeast($0) }
-		} else if scanner.scanString("~>", intoString: nil) {
-			return SemanticVersion.fromScanner(scanner).map { CompatibleWith($0) }
-		} else if scanner.scanString("\"", intoString: nil) {
-			var refName: NSString? = nil
-			if !scanner.scanUpToString("\"", intoString: &refName) || refName == nil {
-				return failure(CarthageError.ParseError(description: "expected Git reference name in line: \(scanner.currentLine)").error)
+extension VersionSpecifier: NodeParseable {
+	static func fromNode(node: Node) -> Result<(VersionSpecifier, Node?)> {
+		let versionResult: Result<(SemanticVersion, Node?)> = {
+			if let versionNode = node.children.first {
+				return SemanticVersion.fromNode(versionNode)
+			} else {
+				return failure(CarthageError.ParseError(description: "expected semantic version after specifier \(node)").error)
 			}
+		}()
 
-			if !scanner.scanString("\"", intoString: nil) {
-				return failure(CarthageError.ParseError(description: "unterminated Git reference name in line: \(scanner.currentLine)").error)
-			}
+		switch node.value {
+		case "==":
+			return versionResult.map { version, remainder in (Exactly(version), remainder) }
 
-			return success(.GitReference(refName!))
-		} else {
-			return success(Any)
+		case ">=":
+			return versionResult.map { version, remainder in (AtLeast(version), remainder) }
+
+		case "~>":
+			return versionResult.map { version, remainder in (CompatibleWith(version), remainder) }
+
+		default:
+			return success(.GitReference(node.value))
 		}
 	}
 }
