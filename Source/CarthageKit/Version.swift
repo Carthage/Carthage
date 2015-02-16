@@ -218,6 +218,30 @@ public enum VersionSpecifier: Equatable {
 			}
 		}
 	}
+
+	/// Attempts to parse a version specifier from the OGDL subgraph rooted at
+	/// the given node.
+	///
+	/// Returns the result of parsing, and a list of sibling nodes that were not
+	/// parsed.
+	public static func fromNode(node: Node) -> (Result<VersionSpecifier>, [Node]) {
+		let parseVersion: () -> (Result<SemanticVerison>, [Node]) = {
+			if node.children.count < 1 {
+				return (failure(CarthageError.ParseError(description: "expected a version after specifier \(node)")), [])
+			} else if node.children.count > 1 {
+				return (failure(CarthageError.ParseError(description: "expected one version after specifier \(node), got all of \(node.children)")), node.children)
+			} else {
+				return fromNode(node.children[0])
+			}
+		}
+
+		switch node.value {
+		case "==":
+		case ">=":
+		case "~>":
+		default:
+		}
+	}
 }
 
 public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
@@ -267,8 +291,6 @@ extension VersionSpecifier: Scannable {
 		}
 	}
 }
-
-extension VersionSpecifier: VersionType {}
 
 extension VersionSpecifier: Printable {
 	public var description: String {

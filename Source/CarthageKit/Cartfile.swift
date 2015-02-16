@@ -8,6 +8,7 @@
 
 import Foundation
 import LlamaKit
+import OGDL
 import ReactiveCocoa
 
 /// The relative path to a project's checked out dependencies.
@@ -236,7 +237,7 @@ extension ProjectIdentifier: Printable {
 }
 
 /// Represents a single dependency of a project.
-public struct Dependency<V: VersionType>: Equatable {
+public struct Dependency<V: Equatable>: Equatable {
 	/// The project corresponding to this dependency.
 	public let project: ProjectIdentifier
 
@@ -249,12 +250,12 @@ public struct Dependency<V: VersionType>: Equatable {
 	}
 
 	/// Maps over the `version` in the receiver.
-	public func map<W: VersionType>(f: V -> W) -> Dependency<W> {
+	public func map<W>(f: V -> W) -> Dependency<W> {
 		return Dependency<W>(project: project, version: f(version))
 	}
 }
 
-public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
+public func == <V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 	return lhs.project == rhs.project && lhs.version == rhs.version
 }
 
