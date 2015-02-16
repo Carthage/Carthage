@@ -98,9 +98,13 @@ extension SemanticVersion: Scannable {
 }
 
 extension SemanticVersion: NodeParseable {
-	public static func fromNode(node: Node) -> Result<(SemanticVersion, Node?)> {
-		let scanner = NSScanner(string: node.value)
-		return fromScanner(scanner).map { version in (version, node.children.first) }
+	public static func fromNode(node: Node?) -> Result<(SemanticVersion, Node?)> {
+		if let node = node {
+			let scanner = NSScanner(string: node.value)
+			return fromScanner(scanner).map { version in (version, node.children.first) }
+		} else {
+			return failure(CarthageError.ParseError(description: "expected semantic version").error)
+		}
 	}
 }
 
@@ -141,11 +145,16 @@ public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
 }
 
 extension PinnedVersion: NodeParseable {
-	public static func fromNode(node: Node) -> Result<(PinnedVersion, Node?)> {
-		if node.value.isEmpty {
+	public static func fromNode(node: Node?) -> Result<(PinnedVersion, Node?)> {
+		switch node?.value {
+		case .Some(""):
 			return failure(CarthageError.ParseError(description: "empty pinned version at \(node)").error)
-		} else {
-			return success(self(node.value), node.children.first)
+		
+		case let .Some(other):
+			return success((self(other), node?.children.first))
+
+		case .None:
+			return failure(CarthageError.ParseError(description: "expected pinned version").error)
 		}
 	}
 }
@@ -229,27 +238,24 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 }
 
 extension VersionSpecifier: NodeParseable {
-	public static func fromNode(node: Node) -> Result<(VersionSpecifier, Node?)> {
-		let versionResult: Result<(SemanticVersion, Node?)> = {
-			if let versionNode = node.children.first {
-				return SemanticVersion.fromNode(versionNode)
-			} else {
-				return failure(CarthageError.ParseError(description: "expected semantic version after specifier \(node)").error)
-			}
-		}()
+	public static func fromNode(node: Node?) -> Result<(VersionSpecifier, Node?)> {
+		let versionResult = SemanticVersion.fromNode(node?.children.first)
 
-		switch node.value {
-		case "==":
+		switch node?.value {
+		case .Some("=="):
 			return versionResult.map { version, remainder in (Exactly(version), remainder) }
 
-		case ">=":
+		case .Some(">="):
 			return versionResult.map { version, remainder in (AtLeast(version), remainder) }
 
-		case "~>":
+		case .Some("~>"):
 			return versionResult.map { version, remainder in (CompatibleWith(version), remainder) }
 
-		default:
-			return success(GitReference(node.value), node.children.first)
+		case let .Some(other):
+			return success((GitReference(other), node?.children.first))
+
+		case .None:
+			return success((Any, nil))
 		}
 	}
 }

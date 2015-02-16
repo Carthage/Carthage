@@ -18,11 +18,12 @@ public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
 /// descendants).
 // TODO: This should be internal, but `VersionType` currently prevents it.
 public protocol NodeParseable {
-	/// Attempts to parse an instance of the receiver from the given node.
+	/// Attempts to parse an instance of the receiver from the given node. If
+	/// `node` is nil, the receiver should assume a default value (if allowed).
 	///
 	/// Upon success, returns the parsed value, and the first descendant node
 	/// that was not touched.
-	class func fromNode(node: Node) -> Result<(Self, Node?)>
+	class func fromNode(node: Node?) -> Result<(Self, Node?)>
 }
 
 /// Represents a Cartfile, which is a specification of a project's dependencies
@@ -202,37 +203,36 @@ extension ProjectIdentifier: Hashable {
 }
 
 extension GitHubRepository: NodeParseable {
-	public static func fromNode(node: Node) -> Result<(GitHubRepository, Node?)> {
-		return fromNWO(node.value).map { repo in (repo, node.children.first) }
+	public static func fromNode(node: Node?) -> Result<(GitHubRepository, Node?)> {
+		if let node = node {
+			return fromNWO(node.value).map { repo in (repo, node.children.first) }
+		} else {
+			return failure(CarthageError.ParseError(description: "expected GitHub repository name").error)
+		}
 	}
 }
 
 extension GitURL: NodeParseable {
-	public static func fromNode(node: Node) -> Result<(GitURL, Node?)> {
-		return success(self(node.value), node.children.first)
+	public static func fromNode(node: Node?) -> Result<(GitURL, Node?)> {
+		if let node = node {
+			return success(self(node.value), node.children.first)
+		} else {
+			return failure(CarthageError.ParseError(description: "expected Git repository URL").error)
+		}
 	}
 }
 
 extension ProjectIdentifier: NodeParseable {
-	public static func fromNode(node: Node) -> Result<(ProjectIdentifier, Node?)> {
-		let addressResult: Result<Node> = {
-			if let addressNode = node.children.first {
-				return success(addressNode)
-			} else {
-				return failure(CarthageError.ParseError(description: "expected string after dependency type in \(node)").error)
-			}
-		}()
+	public static func fromNode(node: Node?) -> Result<(ProjectIdentifier, Node?)> {
+		switch node?.value {
+		case .Some("github"):
+			return GitHubRepository.fromNode(node?.children.first).map { repo, remainder in (self.GitHub(repo), remainder) }
 
-		switch node.value {
-		case "github":
-			return addressResult
-				.flatMap { addressNode in GitHubRepository.fromNode(addressNode) }
-				.map { repo, remainder in (self.GitHub(repo), remainder) }
+		case .Some("git"):
+			return GitURL.fromNode(node?.children.first).map { repo, remainder in (self.Git(repo), remainder) }
 
-		case "git":
-			return addressResult
-				.flatMap { addressNode in GitURL.fromNode(addressNode) }
-				.map { repo, remainder in (self.Git(repo), remainder) }
+		case .None:
+			return failure(CarthageError.ParseError(description: "expected dependency type").error)
 
 		default:
 			return failure(CarthageError.ParseError(description: "unexpected dependency type in \(node)").error)
