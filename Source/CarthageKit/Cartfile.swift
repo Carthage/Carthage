@@ -200,40 +200,6 @@ extension ProjectIdentifier: Hashable {
 	}
 }
 
-extension ProjectIdentifier: Scannable {
-	/// Attempts to parse a ProjectIdentifier.
-	public static func fromScanner(scanner: NSScanner) -> Result<ProjectIdentifier> {
-		var parser: (String -> Result<ProjectIdentifier>)!
-
-		if scanner.scanString("github", intoString: nil) {
-			parser = { repoNWO in
-				return GitHubRepository.fromNWO(repoNWO).map { self.GitHub($0) }
-			}
-		} else if scanner.scanString("git", intoString: nil) {
-			parser = { URLString in
-				return success(self.Git(GitURL(URLString)))
-			}
-		} else {
-			return failure(CarthageError.ParseError(description: "unexpected dependency type in line: \(scanner.currentLine)").error)
-		}
-
-		if !scanner.scanString("\"", intoString: nil) {
-			return failure(CarthageError.ParseError(description: "expected string after dependency type in line: \(scanner.currentLine)").error)
-		}
-
-		var address: NSString? = nil
-		if !scanner.scanUpToString("\"", intoString: &address) || !scanner.scanString("\"", intoString: nil) {
-			return failure(CarthageError.ParseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)").error)
-		}
-
-		if let address = address {
-			return parser(address)
-		} else {
-			return failure(CarthageError.ParseError(description: "empty string after dependency type in line: \(scanner.currentLine)").error)
-		}
-	}
-}
-
 extension GitHubRepository: NodeParseable {
 	internal static func fromNode(node: Node) -> Result<(GitHubRepository, Node?)> {
 		return fromNWO(node.value).map { repo in (repo, node.children.first) }
