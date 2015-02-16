@@ -97,17 +97,6 @@ extension SemanticVersion: Scannable {
 	}
 }
 
-extension SemanticVersion: NodeParseable {
-	internal static func fromNode(node: Node?) -> Result<(SemanticVersion, Node?)> {
-		if let node = node {
-			let scanner = NSScanner(string: node.value)
-			return fromScanner(scanner).map { version in (version, node.children.first) }
-		} else {
-			return failure(CarthageError.ParseError(description: "expected semantic version").error)
-		}
-	}
-}
-
 extension SemanticVersion: VersionType {}
 
 public func <(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
@@ -142,21 +131,6 @@ public struct PinnedVersion: Equatable {
 
 public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
 	return lhs.commitish == rhs.commitish
-}
-
-extension PinnedVersion: NodeParseable {
-	internal static func fromNode(node: Node?) -> Result<(PinnedVersion, Node?)> {
-		switch node?.value {
-		case .Some(""):
-			return failure(CarthageError.ParseError(description: "empty pinned version at \(node)").error)
-
-		case let .Some(other):
-			return success((self(other), node?.children.first))
-
-		case .None:
-			return failure(CarthageError.ParseError(description: "expected pinned version").error)
-		}
-	}
 }
 
 extension PinnedVersion: VersionType {}
@@ -234,29 +208,6 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 
 	default:
 		return false
-	}
-}
-
-extension VersionSpecifier: NodeParseable {
-	internal static func fromNode(node: Node?) -> Result<(VersionSpecifier, Node?)> {
-		let versionResult = SemanticVersion.fromNode(node?.children.first)
-
-		switch node?.value {
-		case .Some("=="):
-			return versionResult.map { version, remainder in (Exactly(version), remainder) }
-
-		case .Some(">="):
-			return versionResult.map { version, remainder in (AtLeast(version), remainder) }
-
-		case .Some("~>"):
-			return versionResult.map { version, remainder in (CompatibleWith(version), remainder) }
-
-		case let .Some(other):
-			return success((GitReference(other), node?.children.first))
-
-		case .None:
-			return success((Any, nil))
-		}
 	}
 }
 

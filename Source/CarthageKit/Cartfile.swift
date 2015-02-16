@@ -17,7 +17,7 @@ public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
 
 /// Represents anything that can be parsed from an OGDL node (and its
 /// descendants).
-internal protocol NodeParseable {
+private protocol NodeParseable {
 	/// Attempts to parse an instance of the receiver from the given node. If
 	/// `node` is nil, the receiver should assume a default value (if allowed).
 	///
@@ -162,7 +162,7 @@ extension ProjectIdentifier: Hashable {
 }
 
 extension GitHubRepository: NodeParseable {
-	internal static func fromNode(node: Node?) -> Result<(GitHubRepository, Node?)> {
+	private static func fromNode(node: Node?) -> Result<(GitHubRepository, Node?)> {
 		if let node = node {
 			return fromNWO(node.value).map { repo in (repo, node.children.first) }
 		} else {
@@ -172,7 +172,7 @@ extension GitHubRepository: NodeParseable {
 }
 
 extension GitURL: NodeParseable {
-	internal static func fromNode(node: Node?) -> Result<(GitURL, Node?)> {
+	private static func fromNode(node: Node?) -> Result<(GitURL, Node?)> {
 		if let node = node {
 			return success(self(node.value), node.children.first)
 		} else {
@@ -182,7 +182,7 @@ extension GitURL: NodeParseable {
 }
 
 extension ProjectIdentifier: NodeParseable {
-	internal static func fromNode(node: Node?) -> Result<(ProjectIdentifier, Node?)> {
+	private static func fromNode(node: Node?) -> Result<(ProjectIdentifier, Node?)> {
 		switch node?.value {
 		case .Some("github"):
 			return GitHubRepository.fromNode(node?.children.first).map { repo, remainder in (self.GitHub(repo), remainder) }
@@ -270,4 +270,53 @@ private func dependenciesFromNodes<V: VersionType where V: NodeParseable>(nodes:
 	}
 
 	return success(dependencies)
+}
+
+extension SemanticVersion: NodeParseable {
+	private static func fromNode(node: Node?) -> Result<(SemanticVersion, Node?)> {
+		if let node = node {
+			let scanner = NSScanner(string: node.value)
+			return fromScanner(scanner).map { version in (version, node.children.first) }
+		} else {
+			return failure(CarthageError.ParseError(description: "expected semantic version").error)
+		}
+	}
+}
+
+extension PinnedVersion: NodeParseable {
+	private static func fromNode(node: Node?) -> Result<(PinnedVersion, Node?)> {
+		switch node?.value {
+		case .Some(""):
+			return failure(CarthageError.ParseError(description: "empty pinned version at \(node)").error)
+
+		case let .Some(other):
+			return success((self(other), node?.children.first))
+
+		case .None:
+			return failure(CarthageError.ParseError(description: "expected pinned version").error)
+		}
+	}
+}
+
+extension VersionSpecifier: NodeParseable {
+	private static func fromNode(node: Node?) -> Result<(VersionSpecifier, Node?)> {
+		let versionResult = SemanticVersion.fromNode(node?.children.first)
+
+		switch node?.value {
+		case .Some("=="):
+			return versionResult.map { version, remainder in (Exactly(version), remainder) }
+
+		case .Some(">="):
+			return versionResult.map { version, remainder in (AtLeast(version), remainder) }
+
+		case .Some("~>"):
+			return versionResult.map { version, remainder in (CompatibleWith(version), remainder) }
+
+		case let .Some(other):
+			return success((GitReference(other), node?.children.first))
+
+		case .None:
+			return success((Any, nil))
+		}
+	}
 }
