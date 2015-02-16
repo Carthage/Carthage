@@ -45,43 +45,12 @@ public struct Cartfile {
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile> {
-		var cartfile = self()
-		var result = success(())
-
-		let commentIndicator = "#"
-		(string as NSString).enumerateLinesUsingBlock { (line, stop) in
-			let scanner = NSScanner(string: line)
-			if scanner.scanString(commentIndicator, intoString: nil) {
-				// Skip the rest of the line.
-				return
-			}
-
-			if scanner.atEnd {
-				// The line was all whitespace.
-				return
-			}
-
-			switch (Dependency<VersionSpecifier>.fromScanner(scanner)) {
-			case let .Success(dep):
-				cartfile.dependencies.append(dep.unbox)
-
-			case let .Failure(error):
-				result = failure(error)
-				stop.memory = true
-			}
-
-			if scanner.scanString(commentIndicator, intoString: nil) {
-				// Skip the rest of the line.
-				return
-			}
-
-			if !scanner.atEnd {
-				result = failure(CarthageError.ParseError(description: "unexpected trailing characters in line: \(line)").error)
-				stop.memory = true
-			}
+		// TODO: Wrap this in ogdl-swift.
+		if let nodes = parse(graph, string) {
+			return dependenciesFromNodes(nodes).map { self(dependencies: $0) }
+		} else {
+			return failure(CarthageError.ParseError(description: "OGDL parse error").error)
 		}
-
-		return result.map { _ in cartfile }
 	}
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
@@ -123,34 +92,11 @@ public struct ResolvedCartfile {
 		return directoryURL.URLByAppendingPathComponent("Cartfile.resolved")
 	}
 
-	/// Attempts to parse Cartfile.resolved infromation from an OGDL graph.
-	private static func fromNodes(nodes: [Node]) -> Result<ResolvedCartfile> {
-		var cartfile = self(dependencies: [])
-
-		for node in nodes {
-			switch (Dependency<PinnedVersion>.fromNode(node)) {
-			case let .Success(dependencyAndRemainder):
-				let (dependency, remainder) = dependencyAndRemainder.unbox
-
-				if let remainder = remainder {
-					return failure(CarthageError.ParseError(description: "Unexpected node after parsing \(dependency): \(remainder)").error)
-				} else {
-					cartfile.dependencies.append(dependency)
-				}
-
-			case let .Failure(error):
-				return failure(error)
-			}
-		}
-
-		return success(cartfile)
-	}
-
 	/// Attempts to parse Cartfile.resolved information from a string.
 	public static func fromString(string: String) -> Result<ResolvedCartfile> {
 		// TODO: Wrap this in ogdl-swift.
 		if let nodes = parse(graph, string) {
-			return fromNodes(nodes)
+			return dependenciesFromNodes(nodes).map { self(dependencies: $0) }
 		} else {
 			return failure(CarthageError.ParseError(description: "OGDL parse error").error)
 		}
@@ -301,4 +247,27 @@ extension Dependency: Printable {
 	public var description: String {
 		return "\(project) \(version)"
 	}
+}
+
+/// Attempts to parse dependencies from top-level nodes in an OGDL graph.
+private func dependenciesFromNodes<V: VersionType>(nodes: [Node]) -> Result<[Dependency<V>]> {
+	var dependencies: [Dependency<V>] = []
+
+	for node in nodes {
+		switch (Dependency<V>.fromNode(node)) {
+		case let .Success(dependencyAndRemainder):
+			let (dependency, remainder) = dependencyAndRemainder.unbox
+
+			if let remainder = remainder {
+				return failure(CarthageError.ParseError(description: "Unexpected node after parsing \(dependency): \(remainder)").error)
+			} else {
+				dependencies.append(dependency)
+			}
+
+		case let .Failure(error):
+			return failure(error)
+		}
+	}
+
+	return success(dependencies)
 }
