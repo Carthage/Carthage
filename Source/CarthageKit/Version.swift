@@ -69,12 +69,10 @@ public struct SemanticVersion: Comparable {
 			}
 		}
 	}
-}
 
-extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
-	static public func fromScanner(scanner: NSScanner) -> Result<SemanticVersion> {
+	internal static func fromScanner(scanner: NSScanner) -> Result<SemanticVersion> {
 		var version: NSString? = nil
 		if !scanner.scanCharactersFromSet(versionCharacterSet, intoString: &version) || version == nil {
 			return failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)").error)

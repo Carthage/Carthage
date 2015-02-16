@@ -59,7 +59,6 @@
 		D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DB09A319EA354200234B16 /* XcodeSpec.swift */; };
 		D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE893F1A0F2CB00030A3EC /* Version.swift */; };
 		D0DE89421A0F2D450030A3EC /* VersionSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE89411A0F2D450030A3EC /* VersionSpec.swift */; };
-		D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE89431A0F2D9B0030A3EC /* Scannable.swift */; };
 		D0E0E1B01A2D28AC0097BE2B /* ReactiveTask.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */; };
 		D0E0E1B11A2D28CB0097BE2B /* ReactiveTask.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
@@ -191,7 +190,6 @@
 		D0DB09A319EA354200234B16 /* XcodeSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XcodeSpec.swift; sourceTree = "<group>"; };
 		D0DE893F1A0F2CB00030A3EC /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
 		D0DE89411A0F2D450030A3EC /* VersionSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionSpec.swift; sourceTree = "<group>"; };
-		D0DE89431A0F2D9B0030A3EC /* Scannable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Scannable.swift; sourceTree = "<group>"; };
 		D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveTask.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B63219E9C64500EDBA4D /* carthage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = carthage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B65819E9CA0800EDBA4D /* carthage */ = {isa = PBXFileReference; lastKnownFileType = text; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -372,7 +370,6 @@
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
 				F603929819EA29F80050A6AF /* Project.swift */,
 				D01D82D61A10160700F0DD94 /* Resolver.swift */,
-				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
 				D0DE893F1A0F2CB00030A3EC /* Version.swift */,
 				D01F8A5319EA2F1700643E7C /* Xcode.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
@@ -628,7 +625,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */,
-				D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */,
 				D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */,
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
