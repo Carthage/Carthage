@@ -16,7 +16,8 @@ public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
 
 /// Represents anything that can be parsed from an OGDL node (and its
 /// descendants).
-internal protocol NodeParseable {
+// TODO: This should be internal, but `VersionType` currently prevents it.
+public protocol NodeParseable {
 	/// Attempts to parse an instance of the receiver from the given node.
 	///
 	/// Upon success, returns the parsed value, and the first descendant node
@@ -201,19 +202,19 @@ extension ProjectIdentifier: Hashable {
 }
 
 extension GitHubRepository: NodeParseable {
-	internal static func fromNode(node: Node) -> Result<(GitHubRepository, Node?)> {
+	public static func fromNode(node: Node) -> Result<(GitHubRepository, Node?)> {
 		return fromNWO(node.value).map { repo in (repo, node.children.first) }
 	}
 }
 
 extension GitURL: NodeParseable {
-	internal static func fromNode(node: Node) -> Result<(GitURL, Node?)> {
+	public static func fromNode(node: Node) -> Result<(GitURL, Node?)> {
 		return success(self(node.value), node.children.first)
 	}
 }
 
 extension ProjectIdentifier: NodeParseable {
-	internal static func fromNode(node: Node) -> Result<(ProjectIdentifier, Node?)> {
+	public static func fromNode(node: Node) -> Result<(ProjectIdentifier, Node?)> {
 		let addressResult: Result<Node> = {
 			if let addressNode = node.children.first {
 				return success(addressNode)

@@ -98,7 +98,7 @@ extension SemanticVersion: Scannable {
 }
 
 extension SemanticVersion: NodeParseable {
-	static func fromNode(node: Node) -> Result<(SemanticVersion, Node?)> {
+	public static func fromNode(node: Node) -> Result<(SemanticVersion, Node?)> {
 		let scanner = NSScanner(string: node.value)
 		return fromScanner(scanner).map { version in (version, node.children.first) }
 	}
@@ -141,7 +141,7 @@ public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
 }
 
 extension PinnedVersion: NodeParseable {
-	static func fromNode(node: Node) -> Result<(PinnedVersion, Node?)> {
+	public static func fromNode(node: Node) -> Result<(PinnedVersion, Node?)> {
 		if node.value.isEmpty {
 			return failure(CarthageError.ParseError(description: "empty pinned version at \(node)").error)
 		} else {
@@ -229,7 +229,7 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 }
 
 extension VersionSpecifier: NodeParseable {
-	static func fromNode(node: Node) -> Result<(VersionSpecifier, Node?)> {
+	public static func fromNode(node: Node) -> Result<(VersionSpecifier, Node?)> {
 		let versionResult: Result<(SemanticVersion, Node?)> = {
 			if let versionNode = node.children.first {
 				return SemanticVersion.fromNode(versionNode)
@@ -249,7 +249,7 @@ extension VersionSpecifier: NodeParseable {
 			return versionResult.map { version, remainder in (CompatibleWith(version), remainder) }
 
 		default:
-			return success(.GitReference(node.value))
+			return success(GitReference(node.value), node.children.first)
 		}
 	}
 }
