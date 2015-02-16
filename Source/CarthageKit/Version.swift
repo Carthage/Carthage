@@ -8,10 +8,23 @@
 
 import Foundation
 import LlamaKit
+import OGDL
 import ReactiveCocoa
 
 /// An abstract type representing a way to specify versions.
 public protocol VersionType: Scannable, Equatable {}
+
+/// Attempts to parse a version from the OGDL subgraph rooted at the given node.
+///
+/// Returns the result of parsing, and a list of sibling nodes that were not
+/// parsed.
+public func versionFromNode<V: VersionType>(node: Node) -> (Result<V>, [Node]) {
+	let scanner = NSScanner(string: node.value)
+	let result = V.fromScanner(scanner)
+
+	let remaining = (result.isSuccess() ? node.children : [ node ])
+	return (result, remaining)
+}
 
 /// A semantic version.
 public struct SemanticVersion: Comparable {
