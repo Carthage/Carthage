@@ -275,8 +275,7 @@ private func dependenciesFromNodes<V: VersionType where V: NodeParseable>(nodes:
 extension SemanticVersion: NodeParseable {
 	private static func fromNode(node: Node?) -> Result<(SemanticVersion, Node?)> {
 		if let node = node {
-			let scanner = NSScanner(string: node.value)
-			return fromScanner(scanner).map { version in (version, node.children.first) }
+			return fromString(node.value).map { version in (version, node.children.first) }
 		} else {
 			return failure(CarthageError.ParseError(description: "expected semantic version").error)
 		}

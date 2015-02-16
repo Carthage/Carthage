@@ -58,7 +58,7 @@ public struct SemanticVersion: Comparable {
 		// that.
 		scanner.scanUpToCharactersFromSet(versionCharacterSet, intoString: nil)
 
-		return self.fromScanner(scanner).flatMap { (var version) in
+		return fromScanner(scanner).flatMap { (var version) in
 			if scanner.atEnd {
 				version.pinnedVersion = pinnedVersion
 				return success(version)
@@ -72,7 +72,13 @@ public struct SemanticVersion: Comparable {
 
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
-	internal static func fromScanner(scanner: NSScanner) -> Result<SemanticVersion> {
+	public static func fromString(string: String) -> Result<SemanticVersion> {
+		let scanner = NSScanner(string: string)
+		return fromScanner(scanner)
+	}
+
+	/// Attempts to parse a semantic version out of the given scanner.
+	private static func fromScanner(scanner: NSScanner) -> Result<SemanticVersion> {
 		var version: NSString? = nil
 		if !scanner.scanCharactersFromSet(versionCharacterSet, intoString: &version) || version == nil {
 			return failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)").error)
