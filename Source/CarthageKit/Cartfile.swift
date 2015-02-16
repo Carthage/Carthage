@@ -23,7 +23,7 @@ private protocol NodeParseable {
 	///
 	/// Upon success, returns the parsed value, and the first descendant node
 	/// that was not touched.
-	class func fromNode(node: Node?) -> Result<(Self, Node?)>
+	class func fromNode(node: Node?, afterNode: Node) -> Result<(Self, Node?)>
 }
 
 /// Represents a Cartfile, which is a specification of a project's dependencies
@@ -162,39 +162,39 @@ extension ProjectIdentifier: Hashable {
 }
 
 extension GitHubRepository: NodeParseable {
-	private static func fromNode(node: Node?) -> Result<(GitHubRepository, Node?)> {
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(GitHubRepository, Node?)> {
 		if let node = node {
 			return fromNWO(node.value).map { repo in (repo, node.children.first) }
 		} else {
-			return failure(CarthageError.ParseError(description: "expected GitHub repository name").error)
+			return failure(CarthageError.ParseError(description: "expected GitHub repository name after \(afterNode)").error)
 		}
 	}
 }
 
 extension GitURL: NodeParseable {
-	private static func fromNode(node: Node?) -> Result<(GitURL, Node?)> {
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(GitURL, Node?)> {
 		if let node = node {
 			return success(self(node.value), node.children.first)
 		} else {
-			return failure(CarthageError.ParseError(description: "expected Git repository URL").error)
+			return failure(CarthageError.ParseError(description: "expected Git repository URL after \(afterNode)").error)
 		}
 	}
 }
 
 extension ProjectIdentifier: NodeParseable {
-	private static func fromNode(node: Node?) -> Result<(ProjectIdentifier, Node?)> {
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(ProjectIdentifier, Node?)> {
 		switch node?.value {
 		case .Some("github"):
-			return GitHubRepository.fromNode(node?.children.first).map { repo, remainder in (self.GitHub(repo), remainder) }
+			return GitHubRepository.fromNode(node!.children.first, afterNode: node!).map { repo, remainder in (self.GitHub(repo), remainder) }
 
 		case .Some("git"):
-			return GitURL.fromNode(node?.children.first).map { repo, remainder in (self.Git(repo), remainder) }
+			return GitURL.fromNode(node!.children.first, afterNode: node!).map { repo, remainder in (self.Git(repo), remainder) }
 
 		case let .Some(other):
-			return failure(CarthageError.ParseError(description: "unexpected dependency type \"\(other)\"").error)
+			return failure(CarthageError.ParseError(description: "unexpected dependency type \"\(other)\" after \(afterNode)").error)
 
 		case .None:
-			return failure(CarthageError.ParseError(description: "expected dependency type").error)
+			return failure(CarthageError.ParseError(description: "expected dependency type after \(afterNode)").error)
 		}
 	}
 }
@@ -235,9 +235,9 @@ public func == <V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 }
 
 /// Parses dependency information from an OGDL subgraph.
-private func dependencyFromNode<V: VersionType where V: NodeParseable>(node: Node?) -> Result<(Dependency<V>, Node?)> {
-	return ProjectIdentifier.fromNode(node).flatMap { identifier, remainder in
-		return V.fromNode(remainder).map { version, remainder in (Dependency<V>(project: identifier, version: version), remainder) }
+private func dependencyFromNode<V: VersionType where V: NodeParseable>(node: Node?, #afterNode: Node) -> Result<(Dependency<V>, Node?)> {
+	return ProjectIdentifier.fromNode(node, afterNode: afterNode).flatMap { identifier, remainder in
+		return V.fromNode(remainder, afterNode: node?.children.first ?? node ?? afterNode).map { version, remainder in (Dependency<V>(project: identifier, version: version), remainder) }
 	}
 }
 
@@ -250,9 +250,11 @@ extension Dependency: Printable {
 /// Attempts to parse dependencies from top-level nodes in an OGDL graph.
 private func dependenciesFromNodes<V: VersionType where V: NodeParseable>(nodes: [Node]) -> Result<[Dependency<V>]> {
 	var dependencies: [Dependency<V>] = []
+	var previousNode = Node(value: "(start)")
 
 	for node in nodes {
-		let result: Result<(Dependency<V>, Node?)> = dependencyFromNode(node)
+		let result: Result<(Dependency<V>, Node?)> = dependencyFromNode(node, afterNode: previousNode)
+		previousNode = node
 
 		switch result {
 		case let .Success(dependencyAndRemainder):
@@ -273,33 +275,33 @@ private func dependenciesFromNodes<V: VersionType where V: NodeParseable>(nodes:
 }
 
 extension SemanticVersion: NodeParseable {
-	private static func fromNode(node: Node?) -> Result<(SemanticVersion, Node?)> {
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(SemanticVersion, Node?)> {
 		if let node = node {
 			return fromString(node.value).map { version in (version, node.children.first) }
 		} else {
-			return failure(CarthageError.ParseError(description: "expected semantic version").error)
+			return failure(CarthageError.ParseError(description: "expected semantic version after \(afterNode)").error)
 		}
 	}
 }
 
 extension PinnedVersion: NodeParseable {
-	private static func fromNode(node: Node?) -> Result<(PinnedVersion, Node?)> {
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(PinnedVersion, Node?)> {
 		switch node?.value {
 		case .Some(""):
-			return failure(CarthageError.ParseError(description: "empty pinned version at \(node)").error)
+			return failure(CarthageError.ParseError(description: "empty pinned version after \(afterNode)").error)
 
 		case let .Some(other):
-			return success((self(other), node?.children.first))
+			return success((self(other), node!.children.first))
 
 		case .None:
-			return failure(CarthageError.ParseError(description: "expected pinned version").error)
+			return failure(CarthageError.ParseError(description: "expected pinned version after \(afterNode)").error)
 		}
 	}
 }
 
 extension VersionSpecifier: NodeParseable {
-	private static func fromNode(node: Node?) -> Result<(VersionSpecifier, Node?)> {
-		let versionResult = SemanticVersion.fromNode(node?.children.first)
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(VersionSpecifier, Node?)> {
+		let versionResult = SemanticVersion.fromNode(node?.children.first, afterNode: node ?? afterNode)
 
 		switch node?.value {
 		case .Some("=="):
