@@ -231,11 +231,11 @@ extension ProjectIdentifier: NodeParseable {
 		case .Some("git"):
 			return GitURL.fromNode(node?.children.first).map { repo, remainder in (self.Git(repo), remainder) }
 
+		case let .Some(other):
+			return failure(CarthageError.ParseError(description: "unexpected dependency type \"\(other)\"").error)
+
 		case .None:
 			return failure(CarthageError.ParseError(description: "expected dependency type").error)
-
-		default:
-			return failure(CarthageError.ParseError(description: "unexpected dependency type in \(node)").error)
 		}
 	}
 }
@@ -253,7 +253,7 @@ extension ProjectIdentifier: Printable {
 }
 
 /// Represents a single dependency of a project.
-public struct Dependency<V: Equatable>: Equatable {
+public struct Dependency<V: VersionType>: Equatable {
 	/// The project corresponding to this dependency.
 	public let project: ProjectIdentifier
 
@@ -275,11 +275,10 @@ public func == <V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 	return lhs.project == rhs.project && lhs.version == rhs.version
 }
 
-extension Dependency: Scannable {
-	/// Attempts to parse a Dependency specification.
-	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
-		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
-			return V.fromScanner(scanner).map { specifier in self(project: identifier, version: specifier) }
+extension Dependency: NodeParseable {
+	public static func fromNode(node: Node?) -> Result<(Dependency, Node?)> {
+		return ProjectIdentifier.fromNode(node).flatMap { identifier, remainder in
+			return V.fromNode(remainder).map { version, remainder in (self(project: identifier, version: version), remainder) }
 		}
 	}
 }

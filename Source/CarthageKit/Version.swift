@@ -149,7 +149,7 @@ extension PinnedVersion: NodeParseable {
 		switch node?.value {
 		case .Some(""):
 			return failure(CarthageError.ParseError(description: "empty pinned version at \(node)").error)
-		
+
 		case let .Some(other):
 			return success((self(other), node?.children.first))
 
@@ -259,6 +259,8 @@ extension VersionSpecifier: NodeParseable {
 		}
 	}
 }
+
+extension VersionSpecifier: VersionType {}
 
 extension VersionSpecifier: Printable {
 	public var description: String {
