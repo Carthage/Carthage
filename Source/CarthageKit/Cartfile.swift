@@ -8,10 +8,23 @@
 
 import Foundation
 import LlamaKit
+import Madness
+import OGDL
 import ReactiveCocoa
 
 /// The relative path to a project's checked out dependencies.
 public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
+
+/// Represents anything that can be parsed from an OGDL node (and its
+/// descendants).
+private protocol NodeParseable {
+	/// Attempts to parse an instance of the receiver from the given node. If
+	/// `node` is nil, the receiver should assume a default value (if allowed).
+	///
+	/// Upon success, returns the parsed value, and the first descendant node
+	/// that was not touched.
+	class func fromNode(node: Node?, afterNode: Node) -> Result<(Self, Node?)>
+}
 
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
@@ -31,43 +44,12 @@ public struct Cartfile {
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile> {
-		var cartfile = self()
-		var result = success(())
-
-		let commentIndicator = "#"
-		(string as NSString).enumerateLinesUsingBlock { (line, stop) in
-			let scanner = NSScanner(string: line)
-			if scanner.scanString(commentIndicator, intoString: nil) {
-				// Skip the rest of the line.
-				return
-			}
-
-			if scanner.atEnd {
-				// The line was all whitespace.
-				return
-			}
-
-			switch (Dependency<VersionSpecifier>.fromScanner(scanner)) {
-			case let .Success(dep):
-				cartfile.dependencies.append(dep.unbox)
-
-			case let .Failure(error):
-				result = failure(error)
-				stop.memory = true
-			}
-
-			if scanner.scanString(commentIndicator, intoString: nil) {
-				// Skip the rest of the line.
-				return
-			}
-
-			if !scanner.atEnd {
-				result = failure(CarthageError.ParseError(description: "unexpected trailing characters in line: \(line)").error)
-				stop.memory = true
-			}
+		// TODO: Wrap this in ogdl-swift.
+		if let nodes = parse(graph, string) {
+			return dependenciesFromNodes(nodes).map { self(dependencies: $0) }
+		} else {
+			return failure(CarthageError.ParseError(description: "OGDL parse error").error)
 		}
-
-		return result.map { _ in cartfile }
 	}
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
@@ -111,22 +93,12 @@ public struct ResolvedCartfile {
 
 	/// Attempts to parse Cartfile.resolved information from a string.
 	public static func fromString(string: String) -> Result<ResolvedCartfile> {
-		var cartfile = self(dependencies: [])
-		var result = success(())
-
-		let scanner = NSScanner(string: string)
-		scannerLoop: while !scanner.atEnd {
-			switch (Dependency<PinnedVersion>.fromScanner(scanner)) {
-			case let .Success(dep):
-				cartfile.dependencies.append(dep.unbox)
-
-			case let .Failure(error):
-				result = failure(error)
-				break scannerLoop
-			}
+		// TODO: Wrap this in ogdl-swift.
+		if let nodes = parse(graph, string) {
+			return dependenciesFromNodes(nodes).map { self(dependencies: $0) }
+		} else {
+			return failure(CarthageError.ParseError(description: "OGDL parse error").error)
 		}
-
-		return result.map { _ in cartfile }
 	}
 }
 
@@ -189,36 +161,40 @@ extension ProjectIdentifier: Hashable {
 	}
 }
 
-extension ProjectIdentifier: Scannable {
-	/// Attempts to parse a ProjectIdentifier.
-	public static func fromScanner(scanner: NSScanner) -> Result<ProjectIdentifier> {
-		var parser: (String -> Result<ProjectIdentifier>)!
-
-		if scanner.scanString("github", intoString: nil) {
-			parser = { repoNWO in
-				return GitHubRepository.fromNWO(repoNWO).map { self.GitHub($0) }
-			}
-		} else if scanner.scanString("git", intoString: nil) {
-			parser = { URLString in
-				return success(self.Git(GitURL(URLString)))
-			}
+extension GitHubRepository: NodeParseable {
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(GitHubRepository, Node?)> {
+		if let node = node {
+			return fromNWO(node.value).map { repo in (repo, node.children.first) }
 		} else {
-			return failure(CarthageError.ParseError(description: "unexpected dependency type in line: \(scanner.currentLine)").error)
+			return failure(CarthageError.ParseError(description: "expected GitHub repository name after \(afterNode)").error)
 		}
+	}
+}
 
-		if !scanner.scanString("\"", intoString: nil) {
-			return failure(CarthageError.ParseError(description: "expected string after dependency type in line: \(scanner.currentLine)").error)
-		}
-
-		var address: NSString? = nil
-		if !scanner.scanUpToString("\"", intoString: &address) || !scanner.scanString("\"", intoString: nil) {
-			return failure(CarthageError.ParseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)").error)
-		}
-
-		if let address = address {
-			return parser(address)
+extension GitURL: NodeParseable {
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(GitURL, Node?)> {
+		if let node = node {
+			return success(self(node.value), node.children.first)
 		} else {
-			return failure(CarthageError.ParseError(description: "empty string after dependency type in line: \(scanner.currentLine)").error)
+			return failure(CarthageError.ParseError(description: "expected Git repository URL after \(afterNode)").error)
+		}
+	}
+}
+
+extension ProjectIdentifier: NodeParseable {
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(ProjectIdentifier, Node?)> {
+		switch node?.value {
+		case .Some("github"):
+			return GitHubRepository.fromNode(node!.children.first, afterNode: node!).map { repo, remainder in (self.GitHub(repo), remainder) }
+
+		case .Some("git"):
+			return GitURL.fromNode(node!.children.first, afterNode: node!).map { repo, remainder in (self.Git(repo), remainder) }
+
+		case let .Some(other):
+			return failure(CarthageError.ParseError(description: "unexpected dependency type \"\(other)\" after \(afterNode)").error)
+
+		case .None:
+			return failure(CarthageError.ParseError(description: "expected dependency type after \(afterNode)").error)
 		}
 	}
 }
@@ -249,26 +225,99 @@ public struct Dependency<V: VersionType>: Equatable {
 	}
 
 	/// Maps over the `version` in the receiver.
-	public func map<W: VersionType>(f: V -> W) -> Dependency<W> {
+	public func map<W>(f: V -> W) -> Dependency<W> {
 		return Dependency<W>(project: project, version: f(version))
 	}
 }
 
-public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
+public func == <V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 	return lhs.project == rhs.project && lhs.version == rhs.version
 }
 
-extension Dependency: Scannable {
-	/// Attempts to parse a Dependency specification.
-	public static func fromScanner(scanner: NSScanner) -> Result<Dependency> {
-		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
-			return V.fromScanner(scanner).map { specifier in self(project: identifier, version: specifier) }
-		}
+/// Parses dependency information from an OGDL subgraph.
+private func dependencyFromNode<V: VersionType where V: NodeParseable>(node: Node?, #afterNode: Node) -> Result<(Dependency<V>, Node?)> {
+	return ProjectIdentifier.fromNode(node, afterNode: afterNode).flatMap { identifier, remainder in
+		return V.fromNode(remainder, afterNode: node?.children.first ?? node ?? afterNode).map { version, remainder in (Dependency<V>(project: identifier, version: version), remainder) }
 	}
 }
 
 extension Dependency: Printable {
 	public var description: String {
 		return "\(project) \(version)"
+	}
+}
+
+/// Attempts to parse dependencies from top-level nodes in an OGDL graph.
+private func dependenciesFromNodes<V: VersionType where V: NodeParseable>(nodes: [Node]) -> Result<[Dependency<V>]> {
+	var dependencies: [Dependency<V>] = []
+	var previousNode = Node(value: "(start)")
+
+	for node in nodes {
+		let result: Result<(Dependency<V>, Node?)> = dependencyFromNode(node, afterNode: previousNode)
+		previousNode = node
+
+		switch result {
+		case let .Success(dependencyAndRemainder):
+			let (dependency, remainder) = dependencyAndRemainder.unbox
+
+			if let remainder = remainder {
+				return failure(CarthageError.ParseError(description: "Unexpected node after parsing \(dependency): \(remainder)").error)
+			} else {
+				dependencies.append(dependency)
+			}
+
+		case let .Failure(error):
+			return failure(error)
+		}
+	}
+
+	return success(dependencies)
+}
+
+extension SemanticVersion: NodeParseable {
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(SemanticVersion, Node?)> {
+		if let node = node {
+			return fromString(node.value).map { version in (version, node.children.first) }
+		} else {
+			return failure(CarthageError.ParseError(description: "expected semantic version after \(afterNode)").error)
+		}
+	}
+}
+
+extension PinnedVersion: NodeParseable {
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(PinnedVersion, Node?)> {
+		switch node?.value {
+		case .Some(""):
+			return failure(CarthageError.ParseError(description: "empty pinned version after \(afterNode)").error)
+
+		case let .Some(other):
+			return success((self(other), node!.children.first))
+
+		case .None:
+			return failure(CarthageError.ParseError(description: "expected pinned version after \(afterNode)").error)
+		}
+	}
+}
+
+extension VersionSpecifier: NodeParseable {
+	private static func fromNode(node: Node?, afterNode: Node) -> Result<(VersionSpecifier, Node?)> {
+		let versionResult = SemanticVersion.fromNode(node?.children.first, afterNode: node ?? afterNode)
+
+		switch node?.value {
+		case .Some("=="):
+			return versionResult.map { version, remainder in (Exactly(version), remainder) }
+
+		case .Some(">="):
+			return versionResult.map { version, remainder in (AtLeast(version), remainder) }
+
+		case .Some("~>"):
+			return versionResult.map { version, remainder in (CompatibleWith(version), remainder) }
+
+		case let .Some(other):
+			return success((GitReference(other), node?.children.first))
+
+		case .None:
+			return success((Any, nil))
+		}
 	}
 }

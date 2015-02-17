@@ -17,7 +17,9 @@ class ResolverSpec: QuickSpec {
 		let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource(name, withExtension: "")!
 		let testCartfile = NSString(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
 
-		return Cartfile.fromString(testCartfile!).value()!
+		let parsedCartfile = Cartfile.fromString(testCartfile!).value()
+		expect(parsedCartfile).notTo(beNil())
+		return parsedCartfile ?? Cartfile(dependencies: [])
 	}
 
 	private func orderedDependencies(resolver: Resolver, fromCartfile cartfile: Cartfile) -> [[String: PinnedVersion]] {

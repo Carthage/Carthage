@@ -25,3 +25,18 @@
 [submodule "Carthage/Checkouts/PrettyColors"]
 	path = Carthage/Checkouts/PrettyColors
 	url = https://github.com/jdhealy/PrettyColors.git
+[submodule "Carthage/Checkouts/Box"]
+	path = Carthage/Checkouts/Box
+	url = https://github.com/robrix/Box.git
+[submodule "Carthage/Checkouts/Prelude"]
+	path = Carthage/Checkouts/Prelude
+	url = https://github.com/robrix/Prelude.git
+[submodule "Carthage/Checkouts/Either"]
+	path = Carthage/Checkouts/Either
+	url = https://github.com/robrix/Either.git
+[submodule "Carthage/Checkouts/Madness"]
+	path = Carthage/Checkouts/Madness
+	url = https://github.com/robrix/Madness.git
+[submodule "Carthage/Checkouts/ogdl-swift"]
+	path = Carthage/Checkouts/ogdl-swift
+	url = https://github.com/Carthage/ogdl-swift.git
