@@ -16,7 +16,7 @@ public func zipIntoArchive(destinationArchiveURL: NSURL, inputPaths: [String]) -
 	precondition(destinationArchiveURL.fileURL)
 	precondition(!inputPaths.isEmpty)
 
-	let task = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "zip", "-q", "-r", destinationArchiveURL.path! ] + inputPaths)
+	let task = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "zip", "-q", "-r", "--symlinks", destinationArchiveURL.path! ] + inputPaths)
 	return launchTask(task)
 		.then(.empty())
 }
