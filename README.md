@@ -138,6 +138,18 @@ To offer prebuilt frameworks for a specific tag, the binaries for _all_ supporte
 
 Prerelease or draft Releases will be automatically ignored, even if they correspond to the desired tag.
 
+### Declare your compatibility
+
+Want to advertise that your project can be used with Carthage? You can add a compatibility badge:
+
+[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
+
+… to your README, by simply inserting the following Markdown:
+
+```markdown
+[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
+```
+
 ## CarthageKit
 
 Most of the functionality of the `carthage` command line tool is actually encapsulated in a framework named CarthageKit.
