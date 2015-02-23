@@ -16,8 +16,7 @@ class ProjectSpec: QuickSpec {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("CartfilePrivateOnly", withExtension: nil)!
 
 		it("should load a combined Cartfile when only a Cartfile.private is present") {
-			let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
-
+			let result = Project(settings: ProjectSettings(directoryURL: directoryURL)).loadCombinedCartfile().single()
 			expect(result.isSuccess()).to(beTruthy())
 
 			let dependencies = result.value()?.dependencies ?? []
