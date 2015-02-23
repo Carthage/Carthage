@@ -21,7 +21,9 @@ public struct BootstrapCommand: CommandType {
 		// `update` flags.
 		return ColdSignal.fromResult(UpdateOptions.evaluate(mode))
 			.map { options -> ColdSignal<()> in
-				return options.loadProject()
+				return ColdSignal.fromResult(options.projectSettings)
+					.map { settings in loadProjectWithSettings(settings, options.checkoutOptions.colorOptions) }
+					.merge(identity)
 					.map { project -> ColdSignal<()> in
 						return ColdSignal.lazy {
 							if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {

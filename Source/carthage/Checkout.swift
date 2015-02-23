@@ -25,7 +25,9 @@ public struct CheckoutCommand: CommandType {
 
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: CheckoutOptions) -> ColdSignal<()> {
-		return options.loadProject()
+		return ColdSignal.fromResult(options.projectSettings)
+			.map { settings in loadProjectWithSettings(settings, options.colorOptions) }
+			.merge(identity)
 			.map { $0.checkoutResolvedDependencies() }
 			.merge(identity)
 	}
@@ -55,22 +57,29 @@ public struct CheckoutOptions: OptionsType {
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 
-	/// Attempts to load the project referenced by the options, and configure it
-	/// accordingly.
-	public func loadProject() -> ColdSignal<Project> {
+	/// Attempts to instantiate the `ProjectSettings` corresponding to the given
+	/// options.
+	public var projectSettings: Result<ProjectSettings> {
 		if let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true) {
-			let project = Project(directoryURL: directoryURL)
-			project.preferHTTPS = !self.useSSH
-			project.useSubmodules = self.useSubmodules
-			project.useBinaries = self.useBinaries
-			project.projectEvents.observe(ProjectEventSink(colorOptions: colorOptions))
-
-			return project
-				.migrateIfNecessary(colorOptions)
-				.on(next: carthage.println)
-				.then(.single(project))
+			var settings = ProjectSettings(directoryURL: directoryURL)
+			settings.preferHTTPS = !useSSH
+			settings.useSubmodules = useSubmodules
+			settings.useBinaries = useBinaries
+			return success(settings)
 		} else {
-			return .error(CarthageError.InvalidArgument(description: "Invalid project path: \(directoryPath)").error)
+			return failure(CarthageError.InvalidArgument(description: "Invalid project path: \(directoryPath)").error)
 		}
 	}
+}
+
+/// Loads a `Project` identified by the given settings, and connects its events
+/// to the standard file handles.
+public func loadProjectWithSettings(settings: ProjectSettings, colorOptions: ColorOptions) -> ColdSignal<Project> {
+	let project = Project(settings: settings)
+	project.projectEvents.observe(ProjectEventSink(colorOptions: colorOptions))
+
+	return project
+		.migrateIfNecessary(colorOptions)
+		.on(next: carthage.println)
+		.then(.single(project))
 }

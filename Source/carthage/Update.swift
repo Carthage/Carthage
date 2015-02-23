@@ -19,7 +19,9 @@ public struct UpdateCommand: CommandType {
 	public func run(mode: CommandMode) -> Result<()> {
 		return ColdSignal.fromResult(UpdateOptions.evaluate(mode))
 			.map { options -> ColdSignal<()> in
-				return options.loadProject()
+				return ColdSignal.fromResult(options.projectSettings)
+					.map { settings in loadProjectWithSettings(settings, options.checkoutOptions.colorOptions) }
+					.merge(identity)
 					.map { $0.updateDependencies() }
 					.merge(identity)
 					.then(options.buildSignal)
@@ -34,6 +36,8 @@ public struct UpdateOptions: OptionsType {
 	public let configuration: String
 	public let buildPlatform: BuildPlatform
 	public let verbose: Bool
+
+	// TODO: Hide this?
 	public let checkoutOptions: CheckoutOptions
 
 	/// The build options corresponding to these options.
@@ -66,15 +70,17 @@ public struct UpdateOptions: OptionsType {
 			<*> CheckoutOptions.evaluate(m, useBinariesAddendum: " (ignored if --no-build option is present)")
 	}
 
-	/// Attempts to load the project referenced by the options, and configure it
-	/// accordingly.
-	public func loadProject() -> ColdSignal<Project> {
-		return checkoutOptions.loadProject().on(next: { project in
+	/// Attempts to instantiate the `ProjectSettings` corresponding to the given
+	/// options.
+	public var projectSettings: Result<ProjectSettings> {
+		return checkoutOptions.projectSettings.map { (var settings) in
 			// Never check out binaries if we're skipping the build step,
 			// because that means users may need the repository checkout.
 			if !self.buildAfterUpdate {
-				project.useBinaries = false
+				settings.useBinaries = false
 			}
-		})
+
+			return settings
+		}
 	}
 }
