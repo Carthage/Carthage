@@ -31,16 +31,8 @@ public struct BuildCommand: CommandType {
 
 				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
 				stdoutSignal.observe { data in
-
 					stdoutHandle.writeData(data)
-
-					switch stdoutHandle {
-					case NSFileHandle.fileHandleWithStandardOutput(): fflush(stdout)
-					case NSFileHandle.fileHandleWithStandardError(): fflush(stderr)
-					case NSFileHandle.fileHandleWithStandardInput(): break
-					default: stdoutHandle.synchronizeFile()
-					}
-
+					stdoutHandle.synchronizeFile()
 				}
 
 				let formatting = options.colorOptions.formatting
