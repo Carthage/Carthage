@@ -89,7 +89,7 @@ extension Project {
 	/// If migration is necessary, sends one or more output lines describing the
 	/// process to the user.
 	internal func migrateIfNecessary(colorOptions: ColorOptions) -> ColdSignal<String> {
-		let directoryPath = directoryURL.path!
+		let directoryPath = settings.directoryURL.path!
 		let fileManager = NSFileManager.defaultManager()
 
 		// These don't need to be declared more globally, since they're only for
@@ -105,7 +105,7 @@ extension Project {
 			let checkFile: (String, String) -> () = { oldName, newName in
 				if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(oldName)) {
 					let signal = ColdSignal<String>.single(migrationMessage)
-						.concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName).then(.empty()))
+						.concat(moveItemInPossibleRepository(self.settings.directoryURL, fromPath: oldName, toPath: newName).then(.empty()))
 
 					sink.put(.Next(Box(signal)))
 				}
@@ -118,7 +118,7 @@ extension Project {
 			// includes submodules, we need to move them one-by-one to ensure
 			// that .gitmodules is properly updated.
 			if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(carthageCheckout)) {
-				let oldCheckoutsURL = self.directoryURL.URLByAppendingPathComponent(carthageCheckout)
+				let oldCheckoutsURL = self.settings.directoryURL.URLByAppendingPathComponent(carthageCheckout)
 
 				var error: NSError?
 				if let contents = fileManager.contentsOfDirectoryAtURL(oldCheckoutsURL, includingPropertiesForKeys: nil, options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsPackageDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, error: &error) {
@@ -135,7 +135,7 @@ extension Project {
 						.map { (object: AnyObject) in object as NSURL }
 						.concatMap { (URL: NSURL) -> ColdSignal<NSURL> in
 							let lastPathComponent: String! = URL.lastPathComponent
-							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
+							return moveItemInPossibleRepository(self.settings.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
 						}
 						.then(trashSignal)
 

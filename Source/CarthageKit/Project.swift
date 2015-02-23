@@ -86,20 +86,10 @@ public enum ProjectEvent {
 	case DownloadingBinaries(ProjectIdentifier, String)
 }
 
-/// Represents a project that is using Carthage.
-public final class Project {
+/// The settings for identifying and configuring a Carthage project.
+public struct ProjectSettings: Equatable {
 	/// File URL to the root directory of the project.
 	public let directoryURL: NSURL
-
-	/// The file URL to the project's Cartfile.
-	public var cartfileURL: NSURL {
-		return directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
-	}
-
-	/// The file URL to the project's Cartfile.resolved.
-	public var resolvedCartfileURL: NSURL {
-		return directoryURL.URLByAppendingPathComponent(CarthageProjectResolvedCartfilePath, isDirectory: false)
-	}
 
 	/// Whether to prefer HTTPS for cloning (vs. SSH).
 	public var preferHTTPS = true
@@ -112,19 +102,55 @@ public final class Project {
 	/// repositories.
 	public var useBinaries = false
 
+	public init(directoryURL: NSURL) {
+		precondition(directoryURL.fileURL)
+
+		self.directoryURL = directoryURL
+	}
+}
+
+public func == (lhs: ProjectSettings, rhs: ProjectSettings) -> Bool {
+	return lhs.directoryURL == rhs.directoryURL && lhs.preferHTTPS == rhs.preferHTTPS && lhs.useSubmodules == rhs.useSubmodules && lhs.useBinaries == rhs.useBinaries
+}
+
+extension ProjectSettings: Hashable {
+	public var hashValue: Int {
+		return directoryURL.hashValue
+	}
+}
+
+extension ProjectSettings: Printable {
+	public var description: String {
+		return "ProjectSettings { path = \(directoryURL.path!), preferHTTPS = \(preferHTTPS), useSubmodules = \(useSubmodules), useBinaries = \(useBinaries) }"
+	}
+}
+
+/// Represents a project that is using Carthage.
+public final class Project {
+	/// The settings with which this project is configured.
+	public let settings: ProjectSettings
+
+	/// The file URL to the project's Cartfile.
+	public var cartfileURL: NSURL {
+		return settings.directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
+	}
+
+	/// The file URL to the project's Cartfile.resolved.
+	public var resolvedCartfileURL: NSURL {
+		return settings.directoryURL.URLByAppendingPathComponent(CarthageProjectResolvedCartfilePath, isDirectory: false)
+	}
+
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
 	public let projectEvents: HotSignal<ProjectEvent>
 	private let _projectEventsSink: SinkOf<ProjectEvent>
 
-	public init(directoryURL: NSURL) {
-		precondition(directoryURL.fileURL)
+	public init(settings: ProjectSettings) {
+		self.settings = settings
 
 		let (signal, sink) = HotSignal<ProjectEvent>.pipe()
 		projectEvents = signal
 		_projectEventsSink = sink
-
-		self.directoryURL = directoryURL
 	}
 
 	/// Caches versions to avoid expensive lookups, and unnecessary
@@ -157,8 +183,8 @@ public final class Project {
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.
 	public func loadCombinedCartfile() -> ColdSignal<Cartfile> {
-		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
-		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
+		let cartfileURL = settings.directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
+		let privateCartfileURL = settings.directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
 		let isNoSuchFileError = { (error: NSError) -> Bool in
 			return error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError
@@ -251,7 +277,7 @@ public final class Project {
 	/// Returns a signal which will send the URL to the repository's folder on
 	/// disk once cloning or fetching has completed.
 	private func cloneOrFetchDependency(project: ProjectIdentifier) -> ColdSignal<NSURL> {
-		let operation = cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS)
+		let operation = cloneOrFetchProject(project, preferHTTPS: settings.preferHTTPS)
 			.on(next: { event, _ in
 				self._projectEventsSink.put(event)
 			})
@@ -322,11 +348,11 @@ public final class Project {
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> ColdSignal<Bool> {
 		return ColdSignal.lazy {
-			if !self.useBinaries {
+			if !self.settings.useBinaries {
 				return .single(false)
 			}
 
-			let checkoutDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
+			let checkoutDirectoryURL = self.settings.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
 			switch project {
 			case let .GitHub(repository):
@@ -412,7 +438,7 @@ public final class Project {
 			.concat(ColdSignal.single(SDK.MacOSX))
 			.take(1)
 			.map { sdk in sdk.platform }
-			.map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
+			.map { platform in self.settings.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
 			.map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
 			.mergeMap { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL) }
 	}
@@ -421,21 +447,21 @@ public final class Project {
 	/// cloning it first if need be.
 	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> ColdSignal<()> {
 		let repositoryURL = repositoryFileURLForProject(project)
-		let workingDirectoryURL = directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
+		let workingDirectoryURL = settings.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
 		let checkoutSignal = ColdSignal<()>.lazy {
 				var submodule: Submodule?
 
 				if var foundSubmodule = submodulesByPath[project.relativePath] {
-					foundSubmodule.URL = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
+					foundSubmodule.URL = repositoryURLForProject(project, preferHTTPS: self.settings.preferHTTPS)
 					foundSubmodule.SHA = revision
 					submodule = foundSubmodule
-				} else if self.useSubmodules {
-					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), SHA: revision)
+				} else if self.settings.useSubmodules {
+					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: repositoryURLForProject(project, preferHTTPS: self.settings.preferHTTPS), SHA: revision)
 				}
 
 				if let submodule = submodule {
-					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!)))
+					return self.runGitOperation(addSubmoduleToRepository(self.settings.directoryURL, submodule, GitURL(repositoryURL.path!)))
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 				}
@@ -460,7 +486,7 @@ public final class Project {
 	public func checkoutResolvedDependencies() -> ColdSignal<()> {
 		/// Determine whether the repository currently holds any submodules (if
 		/// it even is a repository).
-		let submodulesSignal = submodulesInRepository(self.directoryURL)
+		let submodulesSignal = submodulesInRepository(settings.directoryURL)
 			.reduce(initial: [:]) { (var submodulesByPath: [String: Submodule], submodule) in
 				submodulesByPath[submodule.path] = submodule
 				return submodulesByPath
@@ -499,12 +525,12 @@ public final class Project {
 			.merge(identity)
 			.map { dependency -> ColdSignal<BuildSchemeSignal> in
 				return ColdSignal.lazy {
-					let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
+					let dependencyPath = self.settings.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
 					if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
 						return .empty()
 					}
 
-					let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platform: platform)
+					let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.settings.directoryURL, withConfiguration: configuration, platform: platform)
 					buildOutput.observe(stdoutSink)
 
 					return schemeSignals

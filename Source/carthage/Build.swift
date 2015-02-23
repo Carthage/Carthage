@@ -57,7 +57,7 @@ public struct BuildCommand: CommandType {
 	/// cold signals representing each scheme being built.
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
-		let project = Project(directoryURL: directoryURL)
+		let project = Project(settings: ProjectSettings(directoryURL: directoryURL))
 
 		var buildSignal = project.loadCombinedCartfile()
 			.map { _ in project }
@@ -219,7 +219,7 @@ extension BuildPlatform: ArgumentType {
 				return platform
 			}
 		}
-		
+
 		return nil
 	}
 }
