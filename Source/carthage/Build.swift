@@ -31,8 +31,8 @@ public struct BuildCommand: CommandType {
 
 				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
 				stdoutSignal.observe { data in
-					stdoutHandle.writeData(data)
-					stdoutHandle.synchronizeFile()
+					stdoutHandle.write(data)
+					stdoutHandle.flush()
 				}
 
 				let formatting = options.colorOptions.formatting
@@ -95,9 +95,9 @@ public struct BuildCommand: CommandType {
 
 	/// Opens a temporary file for logging, returning the handle and the URL to
 	/// the file on disk.
-	private func openTemporaryLogFile(options: BuildOptions) -> ColdSignal<(NSFileHandle, NSURL?)> {
+	private func openTemporaryLogFile(options: BuildOptions) -> ColdSignal<(FileHandle, NSURL?)> {
 		if options.verbose {
-			let out: (NSFileHandle, NSURL?) = (NSFileHandle.fileHandleWithStandardOutput(), nil)
+			let out: (FileHandle, NSURL?) = (FileHandle(fileDescriptor: STDOUT_FILENO), nil)
 			return .single(out)
 		}
 
@@ -115,10 +115,10 @@ public struct BuildCommand: CommandType {
 				return String.fromCString(ptr.baseAddress)!
 			}
 
-			let stdoutHandle = NSFileHandle(fileDescriptor: logFD, closeOnDealloc: true)
+			let stdoutHandle = FileHandle(fileDescriptor: logFD)
 			let temporaryURL = NSURL.fileURLWithPath(temporaryPath, isDirectory: false)!
 
-			let out: (NSFileHandle, NSURL?) = (stdoutHandle, temporaryURL)
+			let out: (FileHandle, NSURL?) = (stdoutHandle, temporaryURL)
 			return .single(out)
 		}
 	}
