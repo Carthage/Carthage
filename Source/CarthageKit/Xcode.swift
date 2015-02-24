@@ -878,6 +878,23 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		}
 
 		return schemeSignals
+			// For no shared scheme errors in GitHub repositories, suggest
+			// filing a GitHub issue.
+			.catch { error in
+				switch (dependency, error.code) {
+				case (.GitHub(let repo), CarthageErrorCode.NoSharedSchemes.rawValue):
+					var msg = error.localizedDescription + "\n\nIf you believe this to be an error, please file an issue with the maintainers"
+					if let newIssueURL = repo.newIssueURL?.absoluteString {
+						msg += " at \(newIssueURL)"
+					}
+					let fileAnIssueError = CarthageErrorCode.NoSharedSchemes.error([
+						NSLocalizedDescriptionKey: msg
+						])
+					return .error(fileAnIssueError)
+				default:
+					return .error(error)
+				}
+		}
 	}
 
 	return (buildOutput, copyProducts)
