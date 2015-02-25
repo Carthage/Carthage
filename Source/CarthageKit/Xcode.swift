@@ -879,23 +879,28 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		}
 
 		return schemeSignals
-			// For no shared scheme errors in GitHub repositories, suggest
-			// filing a GitHub issue.
 			.catch { error in
 				switch (dependency, error.code) {
 				case (.GitHub(let repo), CarthageErrorCode.NoSharedSchemes.rawValue):
-					let msg = error.localizedDescription + "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repo.newIssueURL.absoluteString!)"
-					let fileAnIssueError = CarthageErrorCode.NoSharedSchemes.error([
-						NSLocalizedDescriptionKey: msg
-						])
-					return .error(fileAnIssueError)
+					return .error(addIssueFilingSuggestionToError(error, repo))
 				default:
 					return .error(error)
 				}
-		}
+			}
 	}
 
 	return (buildOutput, copyProducts)
+}
+
+/// Augments a no shared schemes error description to include a suggestion
+/// to file a GitHub issue in GitHub repositories.
+///
+/// Returns a no shared schemes error with an issue filing suggestion.
+private func addIssueFilingSuggestionToError(error: NSError, repo: GitHubRepository) -> NSError {
+	let msg = error.localizedDescription + "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repo.newIssueURL.absoluteString!)"
+	return CarthageErrorCode.NoSharedSchemes.error([
+		    NSLocalizedDescriptionKey: msg
+		])
 }
 
 /// Builds the first project or workspace found within the given directory.
