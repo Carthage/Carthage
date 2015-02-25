@@ -39,8 +39,8 @@ public struct GitHubRepository: Equatable {
 	}
 
 	/// The URL for filing a new GitHub issue for this repository.
-	public var newIssueURL: NSURL? {
-		return NSURL(string: "https://github.com/\(owner)/\(name)/issues/new")
+	public var newIssueURL: NSURL {
+		return NSURL(string: "https://github.com/\(owner)/\(name)/issues/new")!
 	}
 
 	public init(owner: String, name: String) {

@@ -222,6 +222,7 @@ public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
 			//
 			// '    This project contains no schemes.'
 			// 'There are no schemes in workspace "Carthage".'
+			return .error(CarthageError.NoSharedSchemes(project).error)
 			if line.hasSuffix("contains no schemes.") || line.hasPrefix("There are no schemes") {
 				return .error(CarthageError.NoSharedSchemes(project).error)
 			} else {
@@ -883,10 +884,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 			.catch { error in
 				switch (dependency, error.code) {
 				case (.GitHub(let repo), CarthageErrorCode.NoSharedSchemes.rawValue):
-					var msg = error.localizedDescription + "\n\nIf you believe this to be an error, please file an issue with the maintainers"
-					if let newIssueURL = repo.newIssueURL?.absoluteString {
-						msg += " at \(newIssueURL)"
-					}
+					let msg = error.localizedDescription + "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repo.newIssueURL.absoluteString!)"
 					let fileAnIssueError = CarthageErrorCode.NoSharedSchemes.error([
 						NSLocalizedDescriptionKey: msg
 						])
