@@ -222,7 +222,6 @@ public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
 			//
 			// '    This project contains no schemes.'
 			// 'There are no schemes in workspace "Carthage".'
-			return .error(CarthageError.NoSharedSchemes(project).error)
 			if line.hasSuffix("contains no schemes.") || line.hasPrefix("There are no schemes") {
 				return .error(CarthageError.NoSharedSchemes(project).error)
 			} else {
