@@ -188,7 +188,21 @@ public final class Project {
 
 		return cartfile.zipWith(privateCartfile)
 			.map { (var cartfile, privateCartfile) -> Cartfile in
-				cartfile.appendCartfile(privateCartfile)
+				// Why hello, O(nm)
+				let duplicateDeps = filter(privateCartfile.dependencies) { privateDep in
+					contains(cartfile.dependencies, {$0.project == privateDep.project})
+				}
+
+				if duplicateDeps.count > 0 {
+					println("The following \(CarthageProjectPrivateCartfilePath) dependencies are already present in the main Cartfile:")
+					for dep in duplicateDeps {
+						println("\t\(dep.project)")
+					}
+					// TODO: error out
+				}
+				else {
+					cartfile.appendCartfile(privateCartfile)
+				}
 
 				return cartfile
 			}
