@@ -187,25 +187,19 @@ public final class Project {
 		}
 
 		return cartfile.zipWith(privateCartfile)
-			.map { (var cartfile, privateCartfile) -> Cartfile in
+			.map { (var cartfile, privateCartfile) -> ColdSignal<Cartfile> in
 				// Why hello, O(nm)
 				let duplicateDeps = filter(privateCartfile.dependencies) { privateDep in
 					contains(cartfile.dependencies, {$0.project == privateDep.project})
 				}
 
-				if duplicateDeps.count > 0 {
-					println("The following \(CarthageProjectPrivateCartfilePath) dependencies are already present in the main Cartfile:")
-					for dep in duplicateDeps {
-						println("\t\(dep.project)")
-					}
-					// TODO: error out
-				}
-				else {
-					cartfile.appendCartfile(privateCartfile)
+				if duplicateDeps.count == 0 {
+					return .single(cartfile)
 				}
 
-				return cartfile
+				return .error(CarthageError.DuplicateDependenciesInPrivateCartfile(duplicateDeps).error)
 			}
+			.first().value()!
 	}
 
 	/// Reads the project's Cartfile.resolved.
