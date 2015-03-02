@@ -25,7 +25,7 @@ public enum CarthageErrorCode: Int {
 	case InvalidArchitectures
 	case MissingEnvironmentVariable
 	case NoSharedSchemes
-	case DuplicateDependenciesInPrivateCartfile
+	case DuplicateDependencies
 
 	func error(userInfo: [NSObject: AnyObject]?) -> NSError {
 		return NSError(domain: CarthageErrorDomain, code: self.rawValue, userInfo: userInfo)
@@ -74,7 +74,7 @@ public enum CarthageError {
 
 	/// The private cartfile contains dependencies that are already present in
 	/// the main cartfile.
-	case DuplicateDependenciesInPrivateCartfile([Dependency<VersionSpecifier>])
+	case DuplicateDependencies([ProjectIdentifier])
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
@@ -139,10 +139,12 @@ public enum CarthageError {
 				NSLocalizedDescriptionKey: "Project \"\(project)\" has no shared schemes"
 			])
 
-		case let .DuplicateDependenciesInPrivateCartfile(duplicateDeps):
-			let deps = duplicateDeps.reduce("", combine: {(acc, dep) in "\(acc), \(dep.project)"})
-			return CarthageErrorCode.DuplicateDependenciesInPrivateCartfile.error([
-				NSLocalizedDescriptionKey: "The following \(CarthageProjectPrivateCartfilePath) dependencies are already present in the main Cartfile: \(deps)"
+		case let .DuplicateDependencies(duplicateDeps):
+			let deps = duplicateDeps.reduce("") { (acc, dep) in
+				"\(acc)\n\t\(dep)"
+			}
+			return CarthageErrorCode.DuplicateDependencies.error([
+				NSLocalizedDescriptionKey: "The following \(CarthageProjectPrivateCartfilePath) dependencies are already present in the main Cartfile:\(deps)"
 			])
 		}
 	}
