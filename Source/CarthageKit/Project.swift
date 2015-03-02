@@ -187,7 +187,7 @@ public final class Project {
 		}
 
 		return cartfile.zipWith(privateCartfile)
-			.map { (var cartfile, privateCartfile) -> ColdSignal<Cartfile> in
+			.tryMap { (var cartfile, privateCartfile) -> Result<Cartfile> in
 				// TODO: use Set when Carthage supports Swift 1.2
 				let mainDeps = cartfile.dependencies.map { $0.project }
 				let privateDeps = privateCartfile.dependencies.map { $0.project }
@@ -197,12 +197,11 @@ public final class Project {
 				}
 
 				if duplicateDeps.count == 0 {
-					return .single(cartfile)
+					return success(cartfile)
 				}
 
-				return .error(CarthageError.DuplicateDependencies(duplicateDeps).error)
+				return failure(CarthageError.DuplicateDependencies(duplicateDeps).error)
 			}
-			.first().value()!
 	}
 
 	/// Reads the project's Cartfile.resolved.
