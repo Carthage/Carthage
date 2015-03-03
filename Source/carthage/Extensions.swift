@@ -47,7 +47,7 @@ internal func print<T>(object: T) {
 	}
 }
 
-internal class FileHandle {
+internal final class FileHandle {
 	let fileDescriptor: Int32
 	let pointer: UnsafeMutablePointer<FILE>
 
