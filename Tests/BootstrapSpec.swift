@@ -29,8 +29,6 @@ class BootstrapSpec: QuickSpec {
 			for ttyEnabled in [true, false] {
 				let suffix = " with" + (ttyEnabled ? "" : "out") + " TTY"
 
-				let with·or·without = "xxx"
-
 				let out = ttyEnabled ? "" : "out"
 				let reverseOut = ttyEnabled ? "out" : ""
 
