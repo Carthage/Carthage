@@ -74,7 +74,7 @@ public enum CarthageError {
 
 	/// The private cartfile contains dependencies that are already present in
 	/// the main cartfile.
-	case DuplicateDependencies([ProjectIdentifier])
+	case DuplicateDependencies([(ProjectIdentifier, /*label*/ String)])
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
@@ -141,10 +141,10 @@ public enum CarthageError {
 
 		case let .DuplicateDependencies(duplicateDeps):
 			let deps = duplicateDeps.reduce("") { (acc, dep) in
-				"\(acc)\n\t\(dep)"
+				"\(acc)\n\t\(dep.0) \(dep.1)"
 			}
 			return CarthageErrorCode.DuplicateDependencies.error([
-				NSLocalizedDescriptionKey: "The following \(CarthageProjectPrivateCartfilePath) dependencies are already present in the main Cartfile:\(deps)"
+				NSLocalizedDescriptionKey: "The following dependencies are duplicates:\(deps)"
 			])
 		}
 	}

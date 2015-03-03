@@ -92,6 +92,35 @@ extension Cartfile: Printable {
 	}
 }
 
+// Duplicates
+// TODO: use Set when Carthage supports Swift 1.2
+extension Cartfile {
+	/// Returns an array containing projects that are listed as duplicate
+	/// dependencies.
+	public func duplicateProjects() -> [ProjectIdentifier] {
+		return repeatedElements(self.sortedProjects())
+	}
+
+	/// Returns an array containing projects that are listed as dependencies
+	/// in both the receiver and the argument.
+	public func duplicateProjects(cartfile: Cartfile) -> [ProjectIdentifier] {
+		let selfProjects = self.dependencies.map { $0.project }
+		let otherProjects = cartfile.sortedProjects()
+
+		return filter(selfProjects) {
+			otherProjects.binarySearch($0, isOrderedBefore: { $0.description < $1.description })
+		}
+	}
+
+	/// Returns an array containing the underlying projects of all dependencies
+	/// in the receiver, sorted by project description.
+	private func sortedProjects() -> [ProjectIdentifier] {
+		return self.dependencies
+			.map { $0.project }
+			.sorted { $0.description < $1.description }
+	}
+}
+
 /// Represents a parsed Cartfile.resolved, which specifies which exact version was
 /// checked out for each dependency.
 public struct ResolvedCartfile {

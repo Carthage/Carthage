@@ -188,15 +188,12 @@ public final class Project {
 
 		return cartfile.zipWith(privateCartfile)
 			.tryMap { (var cartfile, privateCartfile) -> Result<Cartfile> in
-				// TODO: use Set when Carthage supports Swift 1.2
-				let mainDeps = cartfile.dependencies.map { $0.project }
-				let privateDeps = privateCartfile.dependencies.map { $0.project }
-
-				let duplicateDeps = filter(privateDeps) { privateDep in
-					contains(mainDeps) { $0 == privateDep }
-				}
+				let duplicateDeps = cartfile.duplicateProjects().map { ($0, "(found in \(CarthageProjectCartfilePath))") }
+					+ privateCartfile.duplicateProjects().map { ($0, "(found in \(CarthageProjectPrivateCartfilePath))") }
+					+ cartfile.duplicateProjects(privateCartfile).map { ($0, "(found in \(CarthageProjectCartfilePath) and \(CarthageProjectPrivateCartfilePath))") }
 
 				if duplicateDeps.count == 0 {
+					cartfile.appendCartfile(privateCartfile)
 					return success(cartfile)
 				}
 
