@@ -56,12 +56,22 @@ internal final class FileHandle {
 		pointer = fdopen(fd, "r+")
 	}
 
-	func write(data: NSData) -> Result<()> {
-		return Darwin.write(fileDescriptor, data.bytes, UInt(data.length)) != 0 ? success() : failure()
+	func write(data: NSData) -> Result<Int> {
+		switch Darwin.write(fileDescriptor, data.bytes, UInt(data.length)) {
+		case (let value) where value != 0:
+			return success(value)
+		default:
+			return failure()
+		}
 	}
 
-	func flush() -> Result<()> {
-		return fflush(pointer) != 0 ? success() : failure()
+	func flush() -> Result<Int32> {
+		switch fflush(pointer) {
+		case (let value) where value != 0:
+			return success(value)
+		default:
+			return failure()
+		}
 	}
 
 	deinit {
