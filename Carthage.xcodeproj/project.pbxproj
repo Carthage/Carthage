@@ -11,9 +11,32 @@
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */; };
 		6724C86A1A850A4600E47F00 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6724C8691A850A4600E47F00 /* Environment.swift */; };
+		67609E191A9AC1F100D35BA6 /* CLISpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67609E181A9AC1F100D35BA6 /* CLISpec.swift */; };
+		67609E211A9AC29A00D35BA6 /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
+		67609E221A9AC2CD00D35BA6 /* ReactiveCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; };
+		67609E231A9AC2CF00D35BA6 /* ReactiveTask.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */; };
+		67609E241A9AC2D300D35BA6 /* LlamaKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; };
+		67609E251A9AC2D900D35BA6 /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4B19EA28FE00643E7C /* Nimble.framework */; };
+		67609E2A1A9AC93900D35BA6 /* Quick.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		67609E2B1A9AC93E00D35BA6 /* Nimble.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4B19EA28FE00643E7C /* Nimble.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		67609E2C1A9AC94700D35BA6 /* LlamaKit.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		67609E2D1A9AC94A00D35BA6 /* ReactiveCocoa.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		67609E2E1A9AC94D00D35BA6 /* ReactiveTask.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		676587971A9ACD4B00AFD733 /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 676587961A9ACD4B00AFD733 /* Utilities.swift */; };
+		679322321AA53247002D4A6C /* DependsOnPrelude.zip in Copy Resources — Fixtures */ = {isa = PBXBuildFile; fileRef = 679322301AA53209002D4A6C /* DependsOnPrelude.zip */; };
 		67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; };
 		67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		67C0986E1AA500D2001E0E4B /* Archive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D069CA231A4E3B2700314A85 /* Archive.swift */; };
 		67C870081A7A04E100F6647C /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C870071A7A04E100F6647C /* Formatting.swift */; };
+		67CDDEFA1AA4E20700A58BE2 /* no-tty.zsh in Copy Resources — CLI Modifier Scripts */ = {isa = PBXBuildFile; fileRef = 67CDDEF71AA4E1DE00A58BE2 /* no-tty.zsh */; };
+		67CDDEFB1AA4E20700A58BE2 /* tty.zsh in Copy Resources — CLI Modifier Scripts */ = {isa = PBXBuildFile; fileRef = 67CDDEF81AA4E1DE00A58BE2 /* tty.zsh */; };
+		67CDDEFC1AA4E20700A58BE2 /* zsh-argumentized.zsh in Copy Resources — CLI Modifier Scripts */ = {isa = PBXBuildFile; fileRef = 67CDDEF91AA4E1DE00A58BE2 /* zsh-argumentized.zsh */; };
+		67CDDEFE1AA4E2D600A58BE2 /* VersionSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67CDDEFD1AA4E2D600A58BE2 /* VersionSpec.swift */; };
+		67CDDF001AA4E3B100A58BE2 /* BootstrapSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67CDDEFF1AA4E3B100A58BE2 /* BootstrapSpec.swift */; };
+		67FE17C41AA6099A00F35253 /* CLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67FE17C21AA6088800F35253 /* CLI.swift */; };
+		67FE17C61AA60BAD00F35253 /* Assertion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67FE17C51AA60BAD00F35253 /* Assertion.swift */; };
+		67FE17C81AA60C0D00F35253 /* Fixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67FE17C71AA60C0D00F35253 /* Fixture.swift */; };
+		67FE17CA1AA60C9100F35253 /* Error.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67FE17C91AA60C9100F35253 /* Error.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
 		D00105061A8EA74E0059D0A0 /* Archive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00105051A8EA74E0059D0A0 /* Archive.swift */; };
 		D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00CCE311A20783A00109F8C /* Commandant.framework */; };
@@ -62,6 +85,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		67609E1A1A9AC1F100D35BA6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0D1211019E87861005E4BAA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D0E7B63119E9C64500EDBA4D;
+			remoteInfo = carthage;
+		};
 		D0AAAB5119FB0960007B24B3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D0D1211019E87861005E4BAA /* Project object */;
@@ -79,6 +109,45 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		67609E291A9AC93300D35BA6 /* Copy Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				67609E2A1A9AC93900D35BA6 /* Quick.framework in Copy Frameworks */,
+				67609E2B1A9AC93E00D35BA6 /* Nimble.framework in Copy Frameworks */,
+				67609E2C1A9AC94700D35BA6 /* LlamaKit.framework in Copy Frameworks */,
+				67609E2D1A9AC94A00D35BA6 /* ReactiveCocoa.framework in Copy Frameworks */,
+				67609E2E1A9AC94D00D35BA6 /* ReactiveTask.framework in Copy Frameworks */,
+			);
+			name = "Copy Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		679322311AA53239002D4A6C /* Copy Resources — Fixtures */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				679322321AA53247002D4A6C /* DependsOnPrelude.zip in Copy Resources — Fixtures */,
+			);
+			name = "Copy Resources — Fixtures";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		67CDDEF61AA4E1BA00A58BE2 /* Copy Resources — CLI Modifier Scripts */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				67CDDEFA1AA4E20700A58BE2 /* no-tty.zsh in Copy Resources — CLI Modifier Scripts */,
+				67CDDEFB1AA4E20700A58BE2 /* tty.zsh in Copy Resources — CLI Modifier Scripts */,
+				67CDDEFC1AA4E20700A58BE2 /* zsh-argumentized.zsh in Copy Resources — CLI Modifier Scripts */,
+			);
+			name = "Copy Resources — CLI Modifier Scripts";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D039935519E9A9F500D13E71 /* Copy Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -115,8 +184,22 @@
 		5499CA971A2394B700783309 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectSpec.swift; sourceTree = "<group>"; };
 		6724C8691A850A4600E47F00 /* Environment.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
+		67609E141A9AC1F000D35BA6 /* CarthageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CarthageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		67609E171A9AC1F100D35BA6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		67609E181A9AC1F100D35BA6 /* CLISpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLISpec.swift; sourceTree = "<group>"; };
+		676587961A9ACD4B00AFD733 /* Utilities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
+		679322301AA53209002D4A6C /* DependsOnPrelude.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; path = DependsOnPrelude.zip; sourceTree = "<group>"; };
 		67AFA9891A79430B00B7DA78 /* PrettyColors.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PrettyColors.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		67C870071A7A04E100F6647C /* Formatting.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
+		67CDDEF71AA4E1DE00A58BE2 /* no-tty.zsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "no-tty.zsh"; sourceTree = "<group>"; };
+		67CDDEF81AA4E1DE00A58BE2 /* tty.zsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = tty.zsh; sourceTree = "<group>"; };
+		67CDDEF91AA4E1DE00A58BE2 /* zsh-argumentized.zsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "zsh-argumentized.zsh"; sourceTree = "<group>"; };
+		67CDDEFD1AA4E2D600A58BE2 /* VersionSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionSpec.swift; sourceTree = "<group>"; };
+		67CDDEFF1AA4E3B100A58BE2 /* BootstrapSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BootstrapSpec.swift; sourceTree = "<group>"; };
+		67FE17C21AA6088800F35253 /* CLI.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CLI.swift; sourceTree = "<group>"; };
+		67FE17C51AA60BAD00F35253 /* Assertion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Assertion.swift; sourceTree = "<group>"; };
+		67FE17C71AA60C0D00F35253 /* Fixture.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Fixture.swift; sourceTree = "<group>"; };
+		67FE17C91AA60C9100F35253 /* Error.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Error.swift; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
 		D00105051A8EA74E0059D0A0 /* Archive.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Archive.swift; sourceTree = "<group>"; };
 		D00CCE311A20783A00109F8C /* Commandant.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Commandant.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -124,9 +207,8 @@
 		D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResolverSpec.swift; sourceTree = "<group>"; };
 		D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveCocoa.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4019EA28C600643E7C /* LlamaKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = LlamaKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D01F8A4619EA28F600643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../Carthage/Checkouts/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
 		D01F8A4719EA28F600643E7C /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Quick.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D01F8A4B19EA28FE00643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../Carthage/Checkouts/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
+		D01F8A4B19EA28FE00643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Nimble.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A5319EA2F1700643E7C /* Xcode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Xcode.swift; sourceTree = "<group>"; };
 		D02DB8DF1A4BC9B600097CDE /* Fetch.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Fetch.swift; sourceTree = "<group>"; };
 		D03B32BE19EA49D8007788BE /* Build.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Build.swift; sourceTree = "<group>"; };
@@ -182,6 +264,18 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		67609E111A9AC1F000D35BA6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				67609E211A9AC29A00D35BA6 /* Quick.framework in Frameworks */,
+				67609E251A9AC2D900D35BA6 /* Nimble.framework in Frameworks */,
+				67609E241A9AC2D300D35BA6 /* LlamaKit.framework in Frameworks */,
+				67609E221A9AC2CD00D35BA6 /* ReactiveCocoa.framework in Frameworks */,
+				67609E231A9AC2CF00D35BA6 /* ReactiveTask.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0D1216919E87B05005E4BAA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -225,6 +319,58 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
+		67609E151A9AC1F100D35BA6 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				67609E181A9AC1F100D35BA6 /* CLISpec.swift */,
+				67CDDEFF1AA4E3B100A58BE2 /* BootstrapSpec.swift */,
+				67CDDEFD1AA4E2D600A58BE2 /* VersionSpec.swift */,
+				67FE17C11AA6086900F35253 /* Utilities */,
+				67609E161A9AC1F100D35BA6 /* Supporting Files */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		67609E161A9AC1F100D35BA6 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				6793222E1AA531FE002D4A6C /* fixtures */,
+				67CDDEF41A9FC47500A58BE2 /* Scripts */,
+				67609E171A9AC1F100D35BA6 /* Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		6793222E1AA531FE002D4A6C /* fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				679322301AA53209002D4A6C /* DependsOnPrelude.zip */,
+			);
+			path = fixtures;
+			sourceTree = "<group>";
+		};
+		67CDDEF41A9FC47500A58BE2 /* Scripts */ = {
+			isa = PBXGroup;
+			children = (
+				67CDDEF71AA4E1DE00A58BE2 /* no-tty.zsh */,
+				67CDDEF81AA4E1DE00A58BE2 /* tty.zsh */,
+				67CDDEF91AA4E1DE00A58BE2 /* zsh-argumentized.zsh */,
+			);
+			path = Scripts;
+			sourceTree = "<group>";
+		};
+		67FE17C11AA6086900F35253 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				67FE17C51AA60BAD00F35253 /* Assertion.swift */,
+				67FE17C21AA6088800F35253 /* CLI.swift */,
+				67FE17C91AA60C9100F35253 /* Error.swift */,
+				67FE17C71AA60C0D00F35253 /* Fixture.swift */,
+				676587961A9ACD4B00AFD733 /* Utilities.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
 		D0D1210F19E87861005E4BAA = {
 			isa = PBXGroup;
 			children = (
@@ -232,6 +378,7 @@
 				D0D1216E19E87B05005E4BAA /* CarthageKit */,
 				D0D1217B19E87B05005E4BAA /* CarthageKitTests */,
 				D0D1212219E878CC005E4BAA /* Configuration */,
+				67609E151A9AC1F100D35BA6 /* Tests */,
 				D0D1211919E87861005E4BAA /* Products */,
 				D0E7B65819E9CA0800EDBA4D /* carthage */,
 			);
@@ -244,6 +391,7 @@
 				D0D1216D19E87B05005E4BAA /* CarthageKit.framework */,
 				D0D1217719E87B05005E4BAA /* CarthageKitTests.xctest */,
 				D0E7B63219E9C64500EDBA4D /* carthage.app */,
+				67609E141A9AC1F000D35BA6 /* CarthageTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -390,7 +538,6 @@
 			children = (
 				D0C6E5751A57042100A5E3E7 /* CartfilePrivateOnly.zip */,
 				D01F8A4B19EA28FE00643E7C /* Nimble.framework */,
-				D01F8A4619EA28F600643E7C /* Nimble.framework */,
 				D01F8A4719EA28F600643E7C /* Quick.framework */,
 				D0D1217D19E87B05005E4BAA /* Info.plist */,
 				D0AAAB5419FB1062007B24B3 /* TestCartfile */,
@@ -415,6 +562,26 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		67609E131A9AC1F000D35BA6 /* CarthageTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 67609E201A9AC1F200D35BA6 /* Build configuration list for PBXNativeTarget "CarthageTests" */;
+			buildPhases = (
+				67609E101A9AC1F000D35BA6 /* Sources */,
+				67609E111A9AC1F000D35BA6 /* Frameworks */,
+				67609E291A9AC93300D35BA6 /* Copy Frameworks */,
+				67CDDEF61AA4E1BA00A58BE2 /* Copy Resources — CLI Modifier Scripts */,
+				679322311AA53239002D4A6C /* Copy Resources — Fixtures */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				67609E1B1A9AC1F100D35BA6 /* PBXTargetDependency */,
+			);
+			name = CarthageTests;
+			productName = CarthageTests;
+			productReference = 67609E141A9AC1F000D35BA6 /* CarthageTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		D0D1216C19E87B05005E4BAA /* CarthageKit */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D0D1218419E87B05005E4BAA /* Build configuration list for PBXNativeTarget "CarthageKit" */;
@@ -483,6 +650,9 @@
 				LastUpgradeCheck = 0610;
 				ORGANIZATIONNAME = Carthage;
 				TargetAttributes = {
+					67609E131A9AC1F000D35BA6 = {
+						CreatedOnToolsVersion = 6.2;
+					};
 					D0D1216C19E87B05005E4BAA = {
 						CreatedOnToolsVersion = 6.1;
 					};
@@ -508,6 +678,7 @@
 			projectRoot = "";
 			targets = (
 				D0E7B63119E9C64500EDBA4D /* carthage */,
+				67609E131A9AC1F000D35BA6 /* CarthageTests */,
 				D0D1216C19E87B05005E4BAA /* CarthageKit */,
 				D0D1217619E87B05005E4BAA /* CarthageKitTests */,
 			);
@@ -593,6 +764,22 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		67609E101A9AC1F000D35BA6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				67C0986E1AA500D2001E0E4B /* Archive.swift in Sources */,
+				67CDDEFE1AA4E2D600A58BE2 /* VersionSpec.swift in Sources */,
+				67FE17C41AA6099A00F35253 /* CLI.swift in Sources */,
+				67FE17C61AA60BAD00F35253 /* Assertion.swift in Sources */,
+				67609E191A9AC1F100D35BA6 /* CLISpec.swift in Sources */,
+				676587971A9ACD4B00AFD733 /* Utilities.swift in Sources */,
+				67CDDF001AA4E3B100A58BE2 /* BootstrapSpec.swift in Sources */,
+				67FE17CA1AA60C9100F35253 /* Error.swift in Sources */,
+				67FE17C81AA60C0D00F35253 /* Fixture.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0D1216819E87B05005E4BAA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -646,6 +833,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		67609E1B1A9AC1F100D35BA6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D0E7B63119E9C64500EDBA4D /* carthage */;
+			targetProxy = 67609E1A1A9AC1F100D35BA6 /* PBXContainerItemProxy */;
+		};
 		D0AAAB5219FB0960007B24B3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = D0D1216C19E87B05005E4BAA /* CarthageKit */;
@@ -659,6 +851,184 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		67609E1C1A9AC1F200D35BA6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Tests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		67609E1D1A9AC1F200D35BA6 /* Test */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Tests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Test;
+		};
+		67609E1E1A9AC1F200D35BA6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Tests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		67609E1F1A9AC1F200D35BA6 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Tests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Profile;
+		};
 		D0D1211D19E87861005E4BAA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212619E878CC005E4BAA /* Debug.xcconfig */;
@@ -854,6 +1224,17 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		67609E201A9AC1F200D35BA6 /* Build configuration list for PBXNativeTarget "CarthageTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				67609E1C1A9AC1F200D35BA6 /* Debug */,
+				67609E1D1A9AC1F200D35BA6 /* Test */,
+				67609E1E1A9AC1F200D35BA6 /* Release */,
+				67609E1F1A9AC1F200D35BA6 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "Carthage" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
