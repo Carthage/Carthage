@@ -72,7 +72,7 @@ class CartfileSpec: QuickSpec {
 			expect(result.error()).to(beNil())
 
 			let cartfile = result.value()!
-			expect(cartfile.dependencies.count).to(equal(6))
+			expect(cartfile.dependencies.count).to(equal(11))
 
 			let dupes = cartfile.duplicateProjects().sorted { $0.description < $1.description }
 			expect(dupes.count).to(equal(2))
@@ -82,6 +82,38 @@ class CartfileSpec: QuickSpec {
 
 			let self3Dupe = dupes[1]
 			expect(self3Dupe).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "self3", name: "self3"))))
+		}
+
+		it("should detect duplicate dependencies across two Cartfiles") {
+			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependenciesCartfile", withExtension: "")!
+			let testCartfile2URL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependenciesCartfile2", withExtension: "")!
+
+			let testCartfile = NSString(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
+			let testCartfile2 = NSString(contentsOfURL: testCartfile2URL, encoding: NSUTF8StringEncoding, error: nil)
+
+			let result = Cartfile.fromString(testCartfile!)
+			expect(result.error()).to(beNil())
+
+			let result2 = Cartfile.fromString(testCartfile2!)
+			expect(result2.error()).to(beNil())
+
+			let cartfile = result.value()!
+			expect(cartfile.dependencies.count).to(equal(11))
+
+			let cartfile2 = result2.value()!
+			expect(cartfile2.dependencies.count).to(equal(3))
+
+			let dupes = duplicateProjectsInCartfiles(cartfile, cartfile2).sorted { $0.description < $1.description }
+			expect(dupes.count).to(equal(3))
+
+			let dupe1 = dupes[0]
+			expect(dupe1).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "1", name: "1"))))
+
+			let dupe3 = dupes[1]
+			expect(dupe3).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "3", name: "3"))))
+
+			let dupe5 = dupes[2]
+			expect(dupe5).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "5", name: "5"))))
 		}
 	}
 }

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1406918C1AA79A5C006F62D4 /* DuplicateDependenciesCartfile2 in Resources */ = {isa = PBXBuildFile; fileRef = 1406918A1AA799AD006F62D4 /* DuplicateDependenciesCartfile2 */; };
 		14879CE31AA736CD00477487 /* DuplicateDependenciesCartfile in Resources */ = {isa = PBXBuildFile; fileRef = 14879CE11AA735ED00477487 /* DuplicateDependenciesCartfile */; };
 		5482DAF11A3849D700197FB8 /* CopyFrameworks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */; };
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
@@ -110,6 +111,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1406918A1AA799AD006F62D4 /* DuplicateDependenciesCartfile2 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = DuplicateDependenciesCartfile2; sourceTree = "<group>"; };
 		14879CE11AA735ED00477487 /* DuplicateDependenciesCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = DuplicateDependenciesCartfile; sourceTree = "<group>"; };
 		5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CopyFrameworks.swift; sourceTree = "<group>"; };
 		54911EF21A1D34EC00FFAE5F /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
@@ -400,6 +402,7 @@
 				D04A39811A2F72FB000C5604 /* EmbeddedFrameworksCartfile */,
 				D04A397F1A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile */,
 				14879CE11AA735ED00477487 /* DuplicateDependenciesCartfile */,
+				1406918A1AA799AD006F62D4 /* DuplicateDependenciesCartfile2 */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -530,6 +533,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D04A39801A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile in Resources */,
+				1406918C1AA79A5C006F62D4 /* DuplicateDependenciesCartfile2 in Resources */,
 				D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */,
 				D0F551DC1A0D71AB0093311F /* TestCartfile.resolved in Resources */,
 				D04A39821A2F72FB000C5604 /* EmbeddedFrameworksCartfile in Resources */,
