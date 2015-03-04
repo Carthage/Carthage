@@ -225,52 +225,17 @@ extension NSFileManager {
 	}
 }
 
-/// Checks whether `elem` is an element of the receiver using binary search.
-/// The receiver is assumed to be sorted according to `isOrderedBefore`.
-extension Array {
-	internal func binarySearch (elem: T, isOrderedBefore: (T, T) -> Bool) -> Bool {
-		var startIndex = 0
-		var endIndex = self.count - 1
-
-		while startIndex <= endIndex {
-			let middleIndex = (startIndex + endIndex) / 2
-			if isOrderedBefore(self[middleIndex], elem) {
-				startIndex = middleIndex + 1
-			}
-			else if isOrderedBefore(elem, self[middleIndex]) {
-				endIndex = middleIndex - 1
-			}
-			else {
-				return true
-			}
+/// Creates a counted set from a sequence. The counted set is represented as a
+/// dictionary where the keys are elements from the sequence and values count
+/// how many times elements are present in the sequence.
+internal func buildCountedSet<S: SequenceType>(sequence: S) -> [S.Generator.Element: Int] {
+	return reduce(sequence, [:]) { (var set, elem) in
+		if let count = set[elem] {
+			set[elem] = count + 1
 		}
-
-		return false
-	}
-}
-
-/// Returns an array containing all repeated elements in `array`, which is
-/// assumed to be sorted. Each repeated element is listed exactly once.
-internal func repeatedElements<T: Equatable>(array: [T]) -> [T] {
-	var previous: T? = nil
-	var previousCount = 1
-	var dupes: [T] = []
-
-	for elem in array {
-		if let previous = previous {
-			if previous == elem {
-				previousCount++
-				if previousCount == 2 {
-					dupes.append(elem)
-				}
-			}
-			else {
-				previousCount = 1
-			}
+		else {
+			set[elem] = 1
 		}
-
-		previous = elem
+		return set
 	}
-
-	return dupes
 }

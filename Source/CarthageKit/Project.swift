@@ -190,7 +190,7 @@ public final class Project {
 			.tryMap { (var cartfile, privateCartfile) -> Result<Cartfile> in
 				let duplicateDeps = cartfile.duplicateProjects().map { ($0, "(found in \(CarthageProjectCartfilePath))") }
 					+ privateCartfile.duplicateProjects().map { ($0, "(found in \(CarthageProjectPrivateCartfilePath))") }
-					+ cartfile.duplicateProjects(privateCartfile).map { ($0, "(found in \(CarthageProjectCartfilePath) and \(CarthageProjectPrivateCartfilePath))") }
+					+ duplicateProjectsInCartfiles(cartfile, privateCartfile).map { ($0, "(found in \(CarthageProjectCartfilePath) and \(CarthageProjectPrivateCartfilePath))") }
 
 				if duplicateDeps.count == 0 {
 					cartfile.appendCartfile(privateCartfile)
