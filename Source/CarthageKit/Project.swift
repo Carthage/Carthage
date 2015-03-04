@@ -188,9 +188,9 @@ public final class Project {
 
 		return cartfile.zipWith(privateCartfile)
 			.tryMap { (var cartfile, privateCartfile) -> Result<Cartfile> in
-				let duplicateDeps = cartfile.duplicateProjects().map { ($0, "(found in \(CarthageProjectCartfilePath))") }
-					+ privateCartfile.duplicateProjects().map { ($0, "(found in \(CarthageProjectPrivateCartfilePath))") }
-					+ duplicateProjectsInCartfiles(cartfile, privateCartfile).map { ($0, "(found in \(CarthageProjectCartfilePath) and \(CarthageProjectPrivateCartfilePath))") }
+				let duplicateDeps = cartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)"]) }
+					+ privateCartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectPrivateCartfilePath)"]) }
+					+ duplicateProjectsInCartfiles(cartfile, privateCartfile).map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]) }
 
 				if duplicateDeps.count == 0 {
 					cartfile.appendCartfile(privateCartfile)

@@ -72,9 +72,9 @@ public enum CarthageError {
 	/// them.
 	case NoSharedSchemes(ProjectLocator)
 
-	/// The private cartfile contains dependencies that are already present in
-	/// the main cartfile.
-	case DuplicateDependencies([(ProjectIdentifier, /*label*/ String)])
+	/// A cartfile contains duplicate dependencies, either in itself or across
+	/// other cartfiles.
+	case DuplicateDependencies([DuplicateDependency])
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
@@ -141,11 +141,38 @@ public enum CarthageError {
 
 		case let .DuplicateDependencies(duplicateDeps):
 			let deps = duplicateDeps.reduce("") { (acc, dep) in
-				"\(acc)\n\t\(dep.0) \(dep.1)"
+				"\(acc)\n\t\(dep)"
 			}
 			return CarthageErrorCode.DuplicateDependencies.error([
 				NSLocalizedDescriptionKey: "The following dependencies are duplicates:\(deps)"
 			])
 		}
+	}
+}
+
+/// A duplicate dependency, used in CarthageError.DuplicateDependencies.
+public struct DuplicateDependency {
+	/// The duplicate dependency as a project.
+	let project: ProjectIdentifier
+
+	/// The locations where the dependency was found as duplicate.
+	let locations: [String]
+}
+
+extension DuplicateDependency: Printable {
+	public var description: String {
+		return "\(project) \(printableLocations())"
+	}
+
+	private func printableLocations() -> String {
+		if locations.count == 0 {
+			return ""
+		}
+
+		return " (found in \(locations[0])"
+			+ locations[1..<locations.count].reduce("") { (acc, location) in
+				  "\(acc) and \(location)"
+			  }
+			+ ")"
 	}
 }
