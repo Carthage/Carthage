@@ -63,5 +63,25 @@ class CartfileSpec: QuickSpec {
 			expect(depMantle.project).to(equal(ProjectIdentifier.Git(GitURL("https://github.com/Mantle/Mantle.git"))))
 			expect(depMantle.version).to(equal(PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47")))
 		}
+
+		it("should detect duplicate dependencies in a single Cartfile") {
+			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependenciesCartfile", withExtension: "")!
+			let testCartfile = NSString(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
+
+			let result = Cartfile.fromString(testCartfile!)
+			expect(result.error()).to(beNil())
+
+			let cartfile = result.value()!
+			expect(cartfile.dependencies.count).to(equal(6))
+
+			let dupes = cartfile.duplicateProjects().sorted { $0.description < $1.description }
+			expect(dupes.count).to(equal(2))
+
+			let self2Dupe = dupes[0]
+			expect(self2Dupe).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "self2", name: "self2"))))
+
+			let self3Dupe = dupes[1]
+			expect(self3Dupe).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "self3", name: "self3"))))
+		}
 	}
 }

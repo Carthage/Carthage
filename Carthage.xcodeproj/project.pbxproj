@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		14879CE31AA736CD00477487 /* DuplicateDependenciesCartfile in Resources */ = {isa = PBXBuildFile; fileRef = 14879CE11AA735ED00477487 /* DuplicateDependenciesCartfile */; };
 		5482DAF11A3849D700197FB8 /* CopyFrameworks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */; };
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */; };
@@ -109,6 +110,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		14879CE11AA735ED00477487 /* DuplicateDependenciesCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = DuplicateDependenciesCartfile; sourceTree = "<group>"; };
 		5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CopyFrameworks.swift; sourceTree = "<group>"; };
 		54911EF21A1D34EC00FFAE5F /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
 		5499CA961A2394B700783309 /* Components.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Components.plist; sourceTree = "<group>"; };
@@ -397,6 +399,7 @@
 				D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */,
 				D04A39811A2F72FB000C5604 /* EmbeddedFrameworksCartfile */,
 				D04A397F1A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile */,
+				14879CE11AA735ED00477487 /* DuplicateDependenciesCartfile */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -531,6 +534,7 @@
 				D0F551DC1A0D71AB0093311F /* TestCartfile.resolved in Resources */,
 				D04A39821A2F72FB000C5604 /* EmbeddedFrameworksCartfile in Resources */,
 				D0C6E5761A57042100A5E3E7 /* CartfilePrivateOnly.zip in Resources */,
+				14879CE31AA736CD00477487 /* DuplicateDependenciesCartfile in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
