@@ -97,20 +97,25 @@ extension Cartfile {
 	/// Returns an array containing projects that are listed as duplicate
 	/// dependencies.
 	public func duplicateProjects() -> [ProjectIdentifier] {
-		let projectSet = buildCountedSet(self.dependencies.map { $0.project })
-		return filter(projectSet) { $0.1 > 1}
+		return filter(self.dependencyCountedSet) { $0.1 > 1}
 			.map { $0.0 }
+	}
+
+	/// Returns the dependencies in a cartfile as a counted set containing the
+    /// corresponding projects, represented as a dictionary.
+	private var dependencyCountedSet: [ProjectIdentifier: Int] {
+		return buildCountedSet(self.dependencies.map { $0.project })
 	}
 }
 
 /// Returns an array containing projects that are listed as dependencies
 /// in both arguments.
 public func duplicateProjectsInCartfiles(cartfile1: Cartfile, cartfile2: Cartfile) -> [ProjectIdentifier] {
-	let projectSet1 = buildCountedSet(cartfile1.dependencies.map { $0.project }).keys
+	let projectSet1 = cartfile1.dependencyCountedSet
 
 	return cartfile2.dependencies
 		.map { $0.project }
-		.filter { contains(projectSet1, $0) }
+		.filter { projectSet1[$0] != nil }
 }
 
 /// Represents a parsed Cartfile.resolved, which specifies which exact version was
