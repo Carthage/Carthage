@@ -180,10 +180,8 @@ extension DuplicateDependency: Printable {
 			return ""
 		}
 
-		return " (found in \(locations[0])"
-			+ locations[1..<locations.count].reduce("") { (acc, location) in
-				  "\(acc) and \(location)"
-			  }
+		return "(found in "
+			+ " and ".join(locations)
 			+ ")"
 	}
 }
