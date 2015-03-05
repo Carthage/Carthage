@@ -47,6 +47,38 @@ internal func print<T>(object: T) {
 	}
 }
 
+internal final class FileHandle {
+	let fileDescriptor: Int32
+	let pointer: UnsafeMutablePointer<FILE>
+
+	init(fileDescriptor fd: Int32) {
+		fileDescriptor = fd
+		pointer = fdopen(fd, "r+")
+	}
+
+	func write(data: NSData) -> Result<Int> {
+		switch Darwin.write(fileDescriptor, data.bytes, UInt(data.length)) {
+		case (let value) where value != 0:
+			return success(value)
+		default:
+			return failure()
+		}
+	}
+
+	func flush() -> Result<Int32> {
+		switch fflush(pointer) {
+		case (let value) where value != 0:
+			return success(value)
+		default:
+			return failure()
+		}
+	}
+
+	deinit {
+		fclose(pointer)
+	}
+}
+
 extension GitURL: ArgumentType {
 	public static let name = "URL"
 
