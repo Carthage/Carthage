@@ -140,9 +140,11 @@ public enum CarthageError {
 			])
 
 		case let .DuplicateDependencies(duplicateDeps):
-			let deps = duplicateDeps.reduce("") { (acc, dep) in
-				"\(acc)\n\t\(dep)"
-			}
+			let deps = duplicateDeps
+				.sorted(<) // important to match expected order in test cases
+				.reduce("") { (acc, dep) in
+					"\(acc)\n\t\(dep)"
+				}
 			return CarthageErrorCode.DuplicateDependencies.error([
 				NSLocalizedDescriptionKey: "The following dependencies are duplicates:\(deps)"
 			])
@@ -157,6 +159,15 @@ public struct DuplicateDependency {
 
 	/// The locations where the dependency was found as duplicate.
 	let locations: [String]
+
+	// The generated memberwise initialiser has internal access control and
+	// cannot be used in test cases, so we reimplement it as public. We are also
+	// sorting locations, which makes sure that we can match them in a
+	// test case.
+	public init(project: ProjectIdentifier, locations: [String]) {
+		self.project = project
+		self.locations = locations.sorted(<)
+	}
 }
 
 extension DuplicateDependency: Printable {
@@ -175,4 +186,28 @@ extension DuplicateDependency: Printable {
 			  }
 			+ ")"
 	}
+}
+
+private func <(lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
+	if lhs.description < rhs.description {
+		return true
+	}
+
+	if lhs.locations.count < rhs.locations.count {
+		return true
+	}
+	else if lhs.locations.count > rhs.locations.count {
+		return false
+	}
+
+	for (index, lhsLocation) in enumerate(lhs.locations) {
+		if lhsLocation < rhs.locations[index] {
+			return true
+		}
+		else if lhsLocation > rhs.locations[index] {
+			return false
+		}
+	}
+
+	return false
 }
