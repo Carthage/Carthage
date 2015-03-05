@@ -172,10 +172,10 @@ public struct DuplicateDependency {
 
 extension DuplicateDependency: Printable {
 	public var description: String {
-		return "\(project) \(printableLocations())"
+		return "\(project) \(printableLocations)"
 	}
 
-	private func printableLocations() -> String {
+	private var printableLocations: String {
 		if locations.count == 0 {
 			return ""
 		}
