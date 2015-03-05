@@ -155,10 +155,10 @@ public enum CarthageError {
 /// A duplicate dependency, used in CarthageError.DuplicateDependencies.
 public struct DuplicateDependency {
 	/// The duplicate dependency as a project.
-	let project: ProjectIdentifier
+	public let project: ProjectIdentifier
 
 	/// The locations where the dependency was found as duplicate.
-	let locations: [String]
+	public let locations: [String]
 
 	// The generated memberwise initialiser has internal access control and
 	// cannot be used in test cases, so we reimplement it as public. We are also
