@@ -25,6 +25,7 @@ public enum CarthageErrorCode: Int {
 	case InvalidArchitectures
 	case MissingEnvironmentVariable
 	case NoSharedSchemes
+	case DuplicateDependencies
 
 	func error(userInfo: [NSObject: AnyObject]?) -> NSError {
 		return NSError(domain: CarthageErrorDomain, code: self.rawValue, userInfo: userInfo)
@@ -70,6 +71,10 @@ public enum CarthageError {
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
 	case NoSharedSchemes(ProjectLocator)
+
+	/// A cartfile contains duplicate dependencies, either in itself or across
+	/// other cartfiles.
+	case DuplicateDependencies([DuplicateDependency])
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
@@ -133,6 +138,74 @@ public enum CarthageError {
 			return CarthageErrorCode.NoSharedSchemes.error([
 				NSLocalizedDescriptionKey: "Project \"\(project)\" has no shared schemes"
 			])
+
+		case let .DuplicateDependencies(duplicateDeps):
+			let deps = duplicateDeps
+				.sorted(<) // important to match expected order in test cases
+				.reduce("") { (acc, dep) in
+					"\(acc)\n\t\(dep)"
+				}
+			return CarthageErrorCode.DuplicateDependencies.error([
+				NSLocalizedDescriptionKey: "The following dependencies are duplicates:\(deps)"
+			])
 		}
 	}
+}
+
+/// A duplicate dependency, used in CarthageError.DuplicateDependencies.
+public struct DuplicateDependency {
+	/// The duplicate dependency as a project.
+	public let project: ProjectIdentifier
+
+	/// The locations where the dependency was found as duplicate.
+	public let locations: [String]
+
+	// The generated memberwise initialiser has internal access control and
+	// cannot be used in test cases, so we reimplement it as public. We are also
+	// sorting locations, which makes sure that we can match them in a
+	// test case.
+	public init(project: ProjectIdentifier, locations: [String]) {
+		self.project = project
+		self.locations = locations.sorted(<)
+	}
+}
+
+extension DuplicateDependency: Printable {
+	public var description: String {
+		return "\(project) \(printableLocations)"
+	}
+
+	private var printableLocations: String {
+		if locations.count == 0 {
+			return ""
+		}
+
+		return "(found in "
+			+ " and ".join(locations)
+			+ ")"
+	}
+}
+
+private func <(lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
+	if lhs.description < rhs.description {
+		return true
+	}
+
+	if lhs.locations.count < rhs.locations.count {
+		return true
+	}
+	else if lhs.locations.count > rhs.locations.count {
+		return false
+	}
+
+	for (lhsLocation, rhsLocation) in Zip2(lhs.locations, rhs.locations) {
+		if lhsLocation < rhsLocation {
+			return true
+		}
+		else if lhsLocation > rhsLocation {
+			return false
+		}
+	}
+
+	return false
 }

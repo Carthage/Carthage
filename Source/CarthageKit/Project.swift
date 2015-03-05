@@ -187,10 +187,17 @@ public final class Project {
 		}
 
 		return cartfile.zipWith(privateCartfile)
-			.map { (var cartfile, privateCartfile) -> Cartfile in
-				cartfile.appendCartfile(privateCartfile)
+			.tryMap { (var cartfile, privateCartfile) -> Result<Cartfile> in
+				let duplicateDeps = cartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)"]) }
+					+ privateCartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectPrivateCartfilePath)"]) }
+					+ duplicateProjectsInCartfiles(cartfile, privateCartfile).map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]) }
 
-				return cartfile
+				if duplicateDeps.count == 0 {
+					cartfile.appendCartfile(privateCartfile)
+					return success(cartfile)
+				}
+
+				return failure(CarthageError.DuplicateDependencies(duplicateDeps).error)
 			}
 	}
 

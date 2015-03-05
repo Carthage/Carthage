@@ -224,3 +224,18 @@ extension NSFileManager {
 		}
 	}
 }
+
+/// Creates a counted set from a sequence. The counted set is represented as a
+/// dictionary where the keys are elements from the sequence and values count
+/// how many times elements are present in the sequence.
+internal func buildCountedSet<S: SequenceType>(sequence: S) -> [S.Generator.Element: Int] {
+	return reduce(sequence, [:]) { (var set, elem) in
+		if let count = set[elem] {
+			set[elem] = count + 1
+		}
+		else {
+			set[elem] = 1
+		}
+		return set
+	}
+}
