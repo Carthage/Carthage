@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1406918C1AA79A5C006F62D4 /* DuplicateDependenciesCartfile2 in Resources */ = {isa = PBXBuildFile; fileRef = 1406918A1AA799AD006F62D4 /* DuplicateDependenciesCartfile2 */; };
-		14879CE31AA736CD00477487 /* DuplicateDependenciesCartfile in Resources */ = {isa = PBXBuildFile; fileRef = 14879CE11AA735ED00477487 /* DuplicateDependenciesCartfile */; };
+		14A7BF4C1AA811D800C70ABB /* Cartfile in Copy Bundle Resources/DuplicateDependencies */ = {isa = PBXBuildFile; fileRef = 14A7BF471AA810B200C70ABB /* Cartfile */; };
+		14A7BF4D1AA811E600C70ABB /* Cartfile.private in Copy Bundle Resources/DuplicateDependencies */ = {isa = PBXBuildFile; fileRef = 14A7BF481AA810B200C70ABB /* Cartfile.private */; };
 		5482DAF11A3849D700197FB8 /* CopyFrameworks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */; };
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */; };
@@ -81,6 +81,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		14A7BF4B1AA8119800C70ABB /* Copy Bundle Resources/DuplicateDependencies */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = DuplicateDependencies;
+			dstSubfolderSpec = 7;
+			files = (
+				14A7BF4D1AA811E600C70ABB /* Cartfile.private in Copy Bundle Resources/DuplicateDependencies */,
+				14A7BF4C1AA811D800C70ABB /* Cartfile in Copy Bundle Resources/DuplicateDependencies */,
+			);
+			name = "Copy Bundle Resources/DuplicateDependencies";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D039935519E9A9F500D13E71 /* Copy Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -111,8 +123,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		1406918A1AA799AD006F62D4 /* DuplicateDependenciesCartfile2 */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = DuplicateDependenciesCartfile2; sourceTree = "<group>"; };
-		14879CE11AA735ED00477487 /* DuplicateDependenciesCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = DuplicateDependenciesCartfile; sourceTree = "<group>"; };
+		14A7BF471AA810B200C70ABB /* Cartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Cartfile; path = DuplicateDependencies/Cartfile; sourceTree = "<group>"; };
+		14A7BF481AA810B200C70ABB /* Cartfile.private */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Cartfile.private; path = DuplicateDependencies/Cartfile.private; sourceTree = "<group>"; };
 		5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CopyFrameworks.swift; sourceTree = "<group>"; };
 		54911EF21A1D34EC00FFAE5F /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
 		5499CA961A2394B700783309 /* Components.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Components.plist; sourceTree = "<group>"; };
@@ -220,6 +232,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		14A7BF461AA810A300C70ABB /* DuplicateDependencies */ = {
+			isa = PBXGroup;
+			children = (
+				14A7BF471AA810B200C70ABB /* Cartfile */,
+				14A7BF481AA810B200C70ABB /* Cartfile.private */,
+			);
+			name = DuplicateDependencies;
+			sourceTree = "<group>";
+		};
 		5499CA981A2394BD00783309 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
@@ -392,6 +413,7 @@
 		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				14A7BF461AA810A300C70ABB /* DuplicateDependencies */,
 				D0C6E5751A57042100A5E3E7 /* CartfilePrivateOnly.zip */,
 				D01F8A4B19EA28FE00643E7C /* Nimble.framework */,
 				D01F8A4619EA28F600643E7C /* Nimble.framework */,
@@ -401,8 +423,6 @@
 				D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */,
 				D04A39811A2F72FB000C5604 /* EmbeddedFrameworksCartfile */,
 				D04A397F1A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile */,
-				14879CE11AA735ED00477487 /* DuplicateDependenciesCartfile */,
-				1406918A1AA799AD006F62D4 /* DuplicateDependenciesCartfile2 */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -448,6 +468,7 @@
 				D0D1217419E87B05005E4BAA /* Frameworks */,
 				D0D1217519E87B05005E4BAA /* Resources */,
 				D0AE6B171A0E931300E0E17D /* Copy Fixtures */,
+				14A7BF4B1AA8119800C70ABB /* Copy Bundle Resources/DuplicateDependencies */,
 			);
 			buildRules = (
 			);
@@ -533,12 +554,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				D04A39801A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile in Resources */,
-				1406918C1AA79A5C006F62D4 /* DuplicateDependenciesCartfile2 in Resources */,
 				D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */,
 				D0F551DC1A0D71AB0093311F /* TestCartfile.resolved in Resources */,
 				D04A39821A2F72FB000C5604 /* EmbeddedFrameworksCartfile in Resources */,
 				D0C6E5761A57042100A5E3E7 /* CartfilePrivateOnly.zip in Resources */,
-				14879CE31AA736CD00477487 /* DuplicateDependenciesCartfile in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -65,7 +65,7 @@ class CartfileSpec: QuickSpec {
 		}
 
 		it("should detect duplicate dependencies in a single Cartfile") {
-			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependenciesCartfile", withExtension: "")!
+			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependencies/Cartfile", withExtension: "")!
 			let testCartfile = NSString(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
 
 			let result = Cartfile.fromString(testCartfile!)
@@ -85,8 +85,8 @@ class CartfileSpec: QuickSpec {
 		}
 
 		it("should detect duplicate dependencies across two Cartfiles") {
-			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependenciesCartfile", withExtension: "")!
-			let testCartfile2URL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependenciesCartfile2", withExtension: "")!
+			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependencies/Cartfile", withExtension: "")!
+			let testCartfile2URL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependencies/Cartfile.private", withExtension: "")!
 
 			let testCartfile = NSString(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
 			let testCartfile2 = NSString(contentsOfURL: testCartfile2URL, encoding: NSUTF8StringEncoding, error: nil)
