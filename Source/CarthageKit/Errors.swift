@@ -198,11 +198,11 @@ private func <(lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
 		return false
 	}
 
-	for (index, lhsLocation) in enumerate(lhs.locations) {
-		if lhsLocation < rhs.locations[index] {
+	for (lhsLocation, rhsLocation) in Zip2(lhs.locations, rhs.locations) {
+		if lhsLocation < rhsLocation {
 			return true
 		}
-		else if lhsLocation > rhs.locations[index] {
+		else if lhsLocation > rhsLocation {
 			return false
 		}
 	}
