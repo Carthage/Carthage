@@ -8,10 +8,11 @@
 
 import Foundation
 import LlamaKit
+import OGDL
 import ReactiveCocoa
 
 /// An abstract type representing a way to specify versions.
-public protocol VersionType: Scannable, Equatable {}
+public protocol VersionType: Equatable {}
 
 /// A semantic version.
 public struct SemanticVersion: Comparable {
@@ -57,7 +58,7 @@ public struct SemanticVersion: Comparable {
 		// that.
 		scanner.scanUpToCharactersFromSet(versionCharacterSet, intoString: nil)
 
-		return self.fromScanner(scanner).flatMap { (var version) in
+		return fromScanner(scanner).flatMap { (var version) in
 			if scanner.atEnd {
 				version.pinnedVersion = pinnedVersion
 				return success(version)
@@ -68,12 +69,16 @@ public struct SemanticVersion: Comparable {
 			}
 		}
 	}
-}
 
-extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
-	static public func fromScanner(scanner: NSScanner) -> Result<SemanticVersion> {
+	public static func fromString(string: String) -> Result<SemanticVersion> {
+		let scanner = NSScanner(string: string)
+		return fromScanner(scanner)
+	}
+
+	/// Attempts to parse a semantic version out of the given scanner.
+	private static func fromScanner(scanner: NSScanner) -> Result<SemanticVersion> {
 		var version: NSString? = nil
 		if !scanner.scanCharactersFromSet(versionCharacterSet, intoString: &version) || version == nil {
 			return failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)").error)
@@ -130,25 +135,6 @@ public struct PinnedVersion: Equatable {
 
 public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
 	return lhs.commitish == rhs.commitish
-}
-
-extension PinnedVersion: Scannable {
-	public static func fromScanner(scanner: NSScanner) -> Result<PinnedVersion> {
-		if !scanner.scanString("\"", intoString: nil) {
-			return failure(CarthageError.ParseError(description: "expected pinned version in line: \(scanner.currentLine)").error)
-		}
-
-		var commitish: NSString? = nil
-		if !scanner.scanUpToString("\"", intoString: &commitish) || commitish == nil {
-			return failure(CarthageError.ParseError(description: "empty pinned version in line: \(scanner.currentLine)").error)
-		}
-
-		if !scanner.scanString("\"", intoString: nil) {
-			return failure(CarthageError.ParseError(description: "unterminated pinned version in line: \(scanner.currentLine)").error)
-		}
-
-		return success(self(commitish!))
-	}
 }
 
 extension PinnedVersion: VersionType {}
@@ -226,32 +212,6 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 
 	default:
 		return false
-	}
-}
-
-extension VersionSpecifier: Scannable {
-	/// Attempts to parse a VersionSpecifier.
-	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier> {
-		if scanner.scanString("==", intoString: nil) {
-			return SemanticVersion.fromScanner(scanner).map { Exactly($0) }
-		} else if scanner.scanString(">=", intoString: nil) {
-			return SemanticVersion.fromScanner(scanner).map { AtLeast($0) }
-		} else if scanner.scanString("~>", intoString: nil) {
-			return SemanticVersion.fromScanner(scanner).map { CompatibleWith($0) }
-		} else if scanner.scanString("\"", intoString: nil) {
-			var refName: NSString? = nil
-			if !scanner.scanUpToString("\"", intoString: &refName) || refName == nil {
-				return failure(CarthageError.ParseError(description: "expected Git reference name in line: \(scanner.currentLine)").error)
-			}
-
-			if !scanner.scanString("\"", intoString: nil) {
-				return failure(CarthageError.ParseError(description: "unterminated Git reference name in line: \(scanner.currentLine)").error)
-			}
-
-			return success(.GitReference(refName!))
-		} else {
-			return success(Any)
-		}
 	}
 }
 

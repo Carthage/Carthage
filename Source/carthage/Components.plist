@@ -45,6 +45,36 @@
 				<key>RootRelativeBundlePath</key>
 				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/PrettyColors.framework</string>
 			</dict>
+			<dict>
+				<key>BundleOverwriteAction</key>
+				<string></string>
+				<key>RootRelativeBundlePath</key>
+				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Box.framework</string>
+			</dict>
+			<dict>
+				<key>BundleOverwriteAction</key>
+				<string></string>
+				<key>RootRelativeBundlePath</key>
+				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Either.framework</string>
+			</dict>
+			<dict>
+				<key>BundleOverwriteAction</key>
+				<string></string>
+				<key>RootRelativeBundlePath</key>
+				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Madness.framework</string>
+			</dict>
+			<dict>
+				<key>BundleOverwriteAction</key>
+				<string></string>
+				<key>RootRelativeBundlePath</key>
+				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/OGDL.framework</string>
+			</dict>
+			<dict>
+				<key>BundleOverwriteAction</key>
+				<string></string>
+				<key>RootRelativeBundlePath</key>
+				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Prelude.framework</string>
+			</dict>
 		</array>
 		<key>RootRelativeBundlePath</key>
 		<string>Library/Frameworks/CarthageKit.framework</string>

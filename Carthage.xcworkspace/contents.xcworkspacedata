@@ -28,4 +28,19 @@
    <FileRef
       location = "group:Carthage/Checkouts/PrettyColors/PrettyColors.xcodeproj">
    </FileRef>
+   <FileRef
+      location = "group:Carthage/Checkouts/Box/Box.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Carthage/Checkouts/Either/Either.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Carthage/Checkouts/Madness/Madness.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Carthage/Checkouts/ogdl-swift/OGDL.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Carthage/Checkouts/Prelude/Prelude.xcodeproj">
+   </FileRef>
 </Workspace>
