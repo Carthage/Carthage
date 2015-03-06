@@ -8,6 +8,7 @@
 
 import Foundation
 import ReactiveCocoa
+import ReactiveTask
 
 /// Possible errors that can originate from Carthage.
 public enum CarthageError {
@@ -52,6 +53,9 @@ public enum CarthageError {
 	/// A cartfile contains duplicate dependencies, either in itself or across
 	/// other cartfiles.
 	case DuplicateDependencies([DuplicateDependency])
+	
+	/// An error occurred while shelling out.
+	case TaskError(ReactiveTaskError)
 }
 
 extension CarthageError: Printable {
@@ -101,15 +105,24 @@ extension CarthageError: Printable {
 				}
 
 			return "The following dependencies are duplicates:\(deps)"
+
+		case let .TaskError(taskError):
+			return taskError.description
 		}
 	}
 }
 
 extension CarthageError: ErrorType {
 	public var nsError: NSError {
-		return NSError(domain: "org.carthage.CarthageKit", code: 0, userInfo: [
-			NSLocalizedDescriptionKey: description
-		])
+		switch self {
+		case let .TaskError(taskError):
+			return taskError.nsError
+
+		default:
+			return NSError(domain: "org.carthage.CarthageKit", code: 0, userInfo: [
+				NSLocalizedDescriptionKey: description
+			])
+		}
 	}
 }
 
