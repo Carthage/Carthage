@@ -269,9 +269,18 @@ public struct Dependency<V: VersionType>: Equatable {
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: V
 
+	/// The root dependencies that require this dependency, represented as
+	/// their corresponding projects.
+	public let rootProjects: [ProjectIdentifier] = []
+
 	public init(project: ProjectIdentifier, version: V) {
+		self.init(project: project, version: version, rootProjects: [])
+	}
+
+	public init(project: ProjectIdentifier, version: V, rootProjects: [ProjectIdentifier]) {
 		self.project = project
 		self.version = version
+		self.rootProjects = rootProjects
 	}
 
 	/// Maps over the `version` in the receiver.
