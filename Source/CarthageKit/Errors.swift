@@ -7,32 +7,9 @@
 //
 
 import Foundation
+import ReactiveCocoa
 
-/// The domain for all errors originating within Carthage.
-public let CarthageErrorDomain: NSString = "org.carthage.Carthage"
-
-/// Possible error codes with `CarthageErrorDomain`.
-public enum CarthageErrorCode: Int {
-	case InvalidArgument
-	case MissingBuildSetting
-	case IncompatibleRequirements
-	case TaggedVersionNotFound
-	case RequiredVersionNotFound
-	case RepositoryCheckoutFailed
-	case ReadFailed
-	case WriteFailed
-	case ParseError
-	case InvalidArchitectures
-	case MissingEnvironmentVariable
-	case NoSharedSchemes
-	case DuplicateDependencies
-
-	func error(userInfo: [NSObject: AnyObject]?) -> NSError {
-		return NSError(domain: CarthageErrorDomain, code: self.rawValue, userInfo: userInfo)
-	}
-}
-
-/// Possible errors within `CarthageErrorDomain`.
+/// Possible errors that can originate from Carthage.
 public enum CarthageError {
 	/// One or more arguments was invalid.
 	case InvalidArgument(description: String)
@@ -75,69 +52,46 @@ public enum CarthageError {
 	/// A cartfile contains duplicate dependencies, either in itself or across
 	/// other cartfiles.
 	case DuplicateDependencies([DuplicateDependency])
+}
 
-	/// An `NSError` object corresponding to this error code.
-	public var error: NSError {
-		switch (self) {
+extension CarthageError: Printable {
+	public var description: String {
+		switch self {
 		case let .InvalidArgument(description):
-			return CarthageErrorCode.InvalidArgument.error([
-				NSLocalizedDescriptionKey: description
-			])
+			return description
 
 		case let .MissingBuildSetting(setting):
-			return CarthageErrorCode.MissingBuildSetting.error([
-				NSLocalizedDescriptionKey: "xcodebuild did not return a value for build setting \(setting)"
-			])
+			return "xcodebuild did not return a value for build setting \(setting)"
 
 		case let .ReadFailed(fileURL):
-			return CarthageErrorCode.ReadFailed.error([
-				NSLocalizedDescriptionKey: "Failed to read file or folder at \(fileURL.path!)"
-			])
+			return "Failed to read file or folder at \(fileURL.path!)"
 
 		case let .IncompatibleRequirements(dependency, first, second):
-			return CarthageErrorCode.IncompatibleRequirements.error([
-				NSLocalizedDescriptionKey: "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(first)\n\t\(second)"
-			])
+			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(first)\n\t\(second)"
 
 		case let .TaggedVersionNotFound(dependency):
-			return CarthageErrorCode.TaggedVersionNotFound.error([
-				NSLocalizedDescriptionKey: "No tagged versions found for \(dependency)"
-			])
+			return "No tagged versions found for \(dependency)"
 
 		case let .RequiredVersionNotFound(dependency, specifier):
-			return CarthageErrorCode.RequiredVersionNotFound.error([
-				NSLocalizedDescriptionKey: "No available version for \(dependency) satisfies the requirement: \(specifier)"
-			])
+			return "No available version for \(dependency) satisfies the requirement: \(specifier)"
 
 		case let .RepositoryCheckoutFailed(workingDirectoryURL, reason):
-			return CarthageErrorCode.RepositoryCheckoutFailed.error([
-				NSLocalizedDescriptionKey: "Failed to check out repository into \(workingDirectoryURL.path!): \(reason)"
-			])
+			return "Failed to check out repository into \(workingDirectoryURL.path!): \(reason)"
 
 		case let .WriteFailed(fileURL):
-			return CarthageErrorCode.WriteFailed.error([
-				NSLocalizedDescriptionKey: "Failed to create \(fileURL.path!)"
-			])
+			return "Failed to create \(fileURL.path!)"
 
 		case let .ParseError(description):
-			return CarthageErrorCode.ParseError.error([
-				NSLocalizedDescriptionKey: "Parse error: \(description)"
-			])
+			return "Parse error: \(description)"
 
 		case let .InvalidArchitectures(description):
-			return CarthageErrorCode.InvalidArchitectures.error([
-				NSLocalizedDescriptionKey: "Invalid architecture: \(description)"
-			])
+			return "Invalid architecture: \(description)"
 
 		case let .MissingEnvironmentVariable(variable):
-			return CarthageErrorCode.MissingEnvironmentVariable.error([
-				NSLocalizedDescriptionKey: "Environment variable not set: \(variable)"
-			])
+			return "Environment variable not set: \(variable)"
 
 		case let .NoSharedSchemes(project):
-			return CarthageErrorCode.NoSharedSchemes.error([
-				NSLocalizedDescriptionKey: "Project \"\(project)\" has no shared schemes"
-			])
+			return "Project \"\(project)\" has no shared schemes"
 
 		case let .DuplicateDependencies(duplicateDeps):
 			let deps = duplicateDeps
@@ -145,10 +99,17 @@ public enum CarthageError {
 				.reduce("") { (acc, dep) in
 					"\(acc)\n\t\(dep)"
 				}
-			return CarthageErrorCode.DuplicateDependencies.error([
-				NSLocalizedDescriptionKey: "The following dependencies are duplicates:\(deps)"
-			])
+
+			return "The following dependencies are duplicates:\(deps)"
 		}
+	}
+}
+
+extension CarthageError: ErrorType {
+	public var nsError: NSError {
+		return NSError(domain: "org.carthage.CarthageKit", code: 0, userInfo: [
+			NSLocalizedDescriptionKey: description
+		])
 	}
 }
 
