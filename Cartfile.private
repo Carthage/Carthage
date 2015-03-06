@@ -1,5 +1,5 @@
 github "Quick/Quick" ~> 0.2
 github "Quick/Nimble" ~> 0.3
 github "jspahrsummers/xcconfigs" >= 0.6
-github "Carthage/Commandant" "upgrade-dependencies"
+github "Carthage/Commandant" ~> 0.3
 github "jdhealy/PrettyColors" ~> 1.0.0
