@@ -41,6 +41,7 @@
 		D0AAAB5019FB0960007B24B3 /* CarthageKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */ = {isa = PBXBuildFile; fileRef = D0AAAB5419FB1062007B24B3 /* TestCartfile */; };
 		D0AAC2401A14933100060F2E /* Update.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAC23F1A14933100060F2E /* Update.swift */; };
+		D0C6CF8C1AAAD13A00180D68 /* FileSink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C6CF8B1AAAD13A00180D68 /* FileSink.swift */; };
 		D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C6E5731A57040B00A5E3E7 /* ArchiveSpec.swift */; };
 		D0C6E5761A57042100A5E3E7 /* CartfilePrivateOnly.zip in Resources */ = {isa = PBXBuildFile; fileRef = D0C6E5751A57042100A5E3E7 /* CartfilePrivateOnly.zip */; };
 		D0D1217219E87B05005E4BAA /* CarthageKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1217119E87B05005E4BAA /* CarthageKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -155,6 +156,7 @@
 		D0AAAB4919FAEDB4007B24B3 /* Errors.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
 		D0AAAB5419FB1062007B24B3 /* TestCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfile; sourceTree = "<group>"; };
 		D0AAC23F1A14933100060F2E /* Update.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Update.swift; sourceTree = "<group>"; };
+		D0C6CF8B1AAAD13A00180D68 /* FileSink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FileSink.swift; sourceTree = "<group>"; };
 		D0C6E5731A57040B00A5E3E7 /* ArchiveSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchiveSpec.swift; sourceTree = "<group>"; };
 		D0C6E5751A57042100A5E3E7 /* CartfilePrivateOnly.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; name = CartfilePrivateOnly.zip; path = fixtures/CartfilePrivateOnly.zip; sourceTree = "<group>"; };
 		D0D1211B19E87861005E4BAA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -367,6 +369,7 @@
 				D069CA231A4E3B2700314A85 /* Archive.swift */,
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
 				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
+				D0C6CF8B1AAAD13A00180D68 /* FileSink.swift */,
 				D074EDC41A049283001DE082 /* FrameworkExtensions.swift */,
 				88ED56D519ECE34900CBF5C4 /* Git.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
@@ -626,6 +629,7 @@
 			files = (
 				D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */,
 				D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */,
+				D0C6CF8C1AAAD13A00180D68 /* FileSink.swift in Sources */,
 				D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */,
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
