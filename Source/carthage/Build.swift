@@ -25,15 +25,14 @@ public struct BuildCommand: CommandType {
 
 	/// Builds a project with the given options.
 	public func buildWithOptions(options: BuildOptions) -> ColdSignal<()> {
-		return self.openTemporaryLogFile(options)
-			.map { (stdoutHandle, temporaryURL) -> ColdSignal<()> in
+		return self.createLoggingSink(options)
+			.map { (stdoutSink, temporaryURL) -> ColdSignal<()> in
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
 
 				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
-				stdoutSignal.observe { data in
-					stdoutHandle.writeData(data)
-					stdoutHandle.synchronizeFile()
-				}
+				stdoutSignal
+					.map { .Next(Box($0)) }
+					.observe(stdoutSink)
 
 				let formatting = options.colorOptions.formatting
 
@@ -93,33 +92,15 @@ public struct BuildCommand: CommandType {
 		return (stdoutSignal, buildSignal)
 	}
 
-	/// Opens a temporary file for logging, returning the handle and the URL to
-	/// the file on disk.
-	private func openTemporaryLogFile(options: BuildOptions) -> ColdSignal<(NSFileHandle, NSURL?)> {
+	/// Creates a sink for logging, returning the sink and the URL to any
+	/// temporary file on disk.
+	private func createLoggingSink(options: BuildOptions) -> ColdSignal<(FileSink, NSURL?)> {
 		if options.verbose {
-			let out: (NSFileHandle, NSURL?) = (NSFileHandle.fileHandleWithStandardOutput(), nil)
+			let out: (FileSink, NSURL?) = (FileSink.standardOutputSink(), nil)
 			return .single(out)
-		}
-
-		return ColdSignal.lazy {
-			var temporaryDirectoryTemplate: ContiguousArray<CChar> = NSTemporaryDirectory().stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
-			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
-				return mkstemps(template.baseAddress, 4)
-			}
-
-			if logFD < 0 {
-				return .error(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
-			}
-
-			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
-				return String.fromCString(ptr.baseAddress)!
-			}
-
-			let stdoutHandle = NSFileHandle(fileDescriptor: logFD, closeOnDealloc: true)
-			let temporaryURL = NSURL.fileURLWithPath(temporaryPath, isDirectory: false)!
-
-			let out: (NSFileHandle, NSURL?) = (stdoutHandle, temporaryURL)
-			return .single(out)
+		} else {
+			return FileSink.openTemporaryFile()
+				.map { sink, URL in (sink, .Some(URL)) }
 		}
 	}
 }
