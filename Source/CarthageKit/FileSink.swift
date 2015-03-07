@@ -58,6 +58,16 @@ public final class FileSink: SinkType {
 		}
 	}
 
+	/// Creates a sink that will write to `stdout`.
+	public class func standardOutputSink() -> FileSink {
+		return self(filePointer: stdout, closeWhenDone: false)
+	}
+
+	/// Creates a sink that will write to `stderr`.
+	public class func standardErrorSink() -> FileSink {
+		return self(filePointer: stderr, closeWhenDone: false)
+	}
+
 	/// Flushes the file, and closes it if appropriate.
 	private func done() {
 		if let filePointer = filePointer {
