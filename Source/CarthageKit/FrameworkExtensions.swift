@@ -12,19 +12,19 @@ import LlamaKit
 import ReactiveCocoa
 
 extension String {
-	/// Returns a signal that will enumerate each line of the receiver, then
+	/// Returns a producer that will enumerate each line of the receiver, then
 	/// complete.
-	internal var linesSignal: ColdSignal<String> {
-		return ColdSignal { (sink, disposable) in
+	internal var linesProducer: SignalProducer<String, NoError> {
+		return SignalProducer { observer, disposable in
 			(self as NSString).enumerateLinesUsingBlock { (line, stop) in
-				sink.put(.Next(Box(line as String)))
+				sendNext(observer, line)
 
 				if disposable.disposed {
 					stop.memory = true
 				}
 			}
 
-			sink.put(.Completed)
+			sendCompleted(observer)
 		}
 	}
 }
@@ -39,105 +39,128 @@ internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	return result
 }
 
-extension ColdSignal {
-	/// Sends each value that occurs on the receiver combined with each value
-	/// that occurs on the given signal (repeats included).
-	internal func permuteWith<U>(signal: ColdSignal<U>) -> ColdSignal<(T, U)> {
-		return ColdSignal<(T, U)> { (sink, disposable) in
-			var selfValues: [T] = []
-			var selfCompleted = false
-			var otherValues: [U] = []
-			var otherCompleted = false
+/// Sends each value that occurs on `signal` combined with each value that
+/// occurs on `otherSignal` (repeats included).
+internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>)(signal: Signal<T, E>) -> Signal<(T, U), E> {
+	return Signal { observer in
+		let lock = NSRecursiveLock()
+		lock.name = "org.carthage.CarthageKit.permuteWith"
 
-			self.startWithSink { selfDisposable in
-				disposable.addDisposable(selfDisposable)
+		var signalValues: [T] = []
+		var signalCompleted = false
+		var otherValues: [U] = []
+		var otherCompleted = false
 
-				return Event.sink(next: { value in
-					selfValues.append(value)
+		let signalDisposable = signal.observe(next: { value in
+			lock.lock()
 
-					for otherValue in otherValues {
-						sink.put(.Next(Box((value, otherValue))))
-					}
-				}, error: { error in
-					sink.put(.Error(error))
-				}, completed: {
-					selfCompleted = true
-					if otherCompleted {
-						sink.put(.Completed)
-					}
-				})
+			signalValues.append(value)
+			for otherValue in otherValues {
+				sendNext(observer, (value, otherValue))
 			}
 
-			signal.startWithSink { signalDisposable in
-				disposable.addDisposable(signalDisposable)
+			lock.unlock()
+		}, error: { error in
+			sendError(observer, error)
+		}, completed: {
+			lock.lock()
 
-				return Event.sink(next: { value in
-					otherValues.append(value)
-
-					for selfValue in selfValues {
-						sink.put(.Next(Box((selfValue, value))))
-					}
-				}, error: { error in
-					sink.put(.Error(error))
-				}, completed: {
-					otherCompleted = true
-					if selfCompleted {
-						sink.put(.Completed)
-					}
-				})
+			signalCompleted = true
+			if otherCompleted {
+				sendCompleted(observer)
 			}
-		}
-	}
 
-	/// Dematerializes the signal, like dematerialize(), but only yields Error
-	/// events if no values were sent.
-	internal func dematerializeErrorsIfEmpty<U>(evidence: ColdSignal -> ColdSignal<Event<U>>) -> ColdSignal<U> {
-		return ColdSignal<U> { (sink, disposable) in
-			var receivedValue = false
-			var receivedError: NSError? = nil
+			lock.unlock()
+		}, interrupted: {
+			sendInterrupted(observer)
+		})
 
-			evidence(self).startWithSink { selfDisposable in
-				disposable.addDisposable(selfDisposable)
+		let otherDisposable = otherSignal.observe(next: { value in
+			lock.lock()
 
-				return Event.sink(next: { event in
-					switch event {
-					case let .Next(value):
-						receivedValue = true
-						fallthrough
-
-					case .Completed:
-						sink.put(event)
-
-					case let .Error(error):
-						receivedError = error
-					}
-				}, error: { error in
-					sink.put(.Error(error))
-				}, completed: {
-					if !receivedValue {
-						if let receivedError = receivedError {
-							sink.put(.Error(receivedError))
-						}
-					}
-
-					sink.put(.Completed)
-				})
+			otherValues.append(value)
+			for signalValue in signalValues {
+				sendNext(observer, (signalValue, value))
 			}
-		}
+
+			lock.unlock()
+		}, error: { error in
+			sendError(observer, error)
+		}, completed: {
+			lock.lock()
+
+			otherCompleted = true
+			if signalCompleted {
+				sendCompleted(observer)
+			}
+
+			lock.unlock()
+		}, interrupted: {
+			sendInterrupted(observer)
+		})
+
+		let compositeDisposable = CompositeDisposable()
+		compositeDisposable.addDisposable(signalDisposable)
+		compositeDisposable.addDisposable(otherDisposable)
+		return compositeDisposable
 	}
 }
 
-/// Sends all permutations of the values from the input signals, as they arrive.
-///
-/// If no input signals are given, sends a single empty array then completes.
-internal func permutations<T>(signals: [ColdSignal<T>]) -> ColdSignal<[T]> {
-	var combined: ColdSignal<[T]> = .single([])
+/// Sends each value that occurs on `producer` combined with each value that
+/// occurs on `otherProducer` (repeats included).
+internal func permuteWith<T, U, E>(otherProducer: SignalProducer<U, E>)(producer: SignalProducer<T, E>) -> SignalProducer<(T, U), E> {
+	return producer.lift(permuteWith)(otherProducer)
+}
 
-	for signal in signals {
-		combined = combined.permuteWith(signal).map { (var array, value) in
-			array.append(value)
-			return array
-		}
+/// Dematerializes the signal, like dematerialize(), but only yields Error
+/// events if no values were sent.
+internal func dematerializeErrorsIfEmpty<T, E>(signal: Signal<Event<T, E>, NoError>) -> Signal<T, E> {
+	return Signal { observer in
+		var receivedValue = false
+		var receivedError: E? = nil
+
+		return signal.observe(next: { event in
+			switch event {
+			case let .Next(value):
+				receivedValue = true
+				sendNext(observer, value.unbox)
+
+			case let .Error(error):
+				receivedError = error.unbox
+
+			case .Completed:
+				sendCompleted(observer)
+
+			case .Interrupted:
+				sendInterrupted(observer)
+			}
+		}, completed: {
+			if !receivedValue {
+				if let receivedError = receivedError {
+					sendError(observer, receivedError)
+				}
+			}
+
+			sendCompleted(observer)
+		}, interrupted: {
+			sendInterrupted(observer)
+		})
+	}
+}
+
+/// Sends all permutations of the values from the input producers, as they arrive.
+///
+/// If no input producers are given, sends a single empty array then completes.
+internal func permutations<T, E>(producers: [SignalProducer<T, E>]) -> SignalProducer<[T], E> {
+	var combined: SignalProducer<[T], E> = SignalProducer(value: [])
+
+	for producer in producers {
+		combined = combined
+			|> permuteWith(producer)
+			|> map { (var array, value) in
+				array.append(value)
+				return array
+			}
 	}
 
 	return combined
@@ -157,10 +180,10 @@ extension NSScanner {
 }
 
 extension NSURLSession {
-	/// Returns a signal that will download a file using the given request. The
-	/// file will be deleted after the URL has been sent upon the signal.
-	internal func carthage_downloadWithRequest(request: NSURLRequest) -> ColdSignal<(NSURL, NSURLResponse)> {
-		return ColdSignal { (sink, disposable) in
+	/// Returns a producer that will download a file using the given request. The
+	/// file will be deleted after the producer terminates.
+	internal func carthage_downloadWithRequest(request: NSURLRequest) -> SignalProducer<(NSURL, NSURLResponse), NSError> {
+		return SignalProducer { observer, disposable in
 			let serialDisposable = SerialDisposable()
 			let handle = disposable.addDisposable(serialDisposable)
 
@@ -169,11 +192,11 @@ extension NSURLSession {
 				handle.remove()
 
 				if URL == nil || response == nil {
-					sink.put(.Error(error))
+					sendError(observer, error)
 				} else {
 					let value = (URL!, response!)
-					sink.put(.Next(Box(value)))
-					sink.put(.Completed)
+					sendNext(observer, value)
+					sendCompleted(observer)
 				}
 			}
 
@@ -200,13 +223,13 @@ extension NSFileManager {
 	/// Creates a directory enumerator at the given URL. Sends each URL
 	/// enumerated, along with the enumerator itself (so it can be introspected
 	/// and modified as enumeration progresses).
-	public func carthage_enumeratorAtURL(URL: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions, catchErrors: Bool = false) -> ColdSignal<(NSDirectoryEnumerator, NSURL)> {
-		return ColdSignal { (sink, disposable) in
+	public func carthage_enumeratorAtURL(URL: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions, catchErrors: Bool = false) -> SignalProducer<(NSDirectoryEnumerator, NSURL), CarthageError> {
+		return SignalProducer { observer, disposable in
 			let enumerator = self.enumeratorAtURL(URL, includingPropertiesForKeys: keys, options: options) { (URL, error) in
 				if catchErrors {
 					return true
 				} else {
-					sink.put(.Error(error ?? CarthageError.ReadFailed(URL).error))
+					sendError(observer, CarthageError.ReadFailed(URL, error))
 					return false
 				}
 			}!
@@ -214,13 +237,13 @@ extension NSFileManager {
 			while !disposable.disposed {
 				if let URL = enumerator.nextObject() as? NSURL {
 					let value = (enumerator, URL)
-					sink.put(.Next(Box(value)))
+					sendNext(observer, value)
 				} else {
 					break
 				}
 			}
 
-			sink.put(.Completed)
+			sendCompleted(observer)
 		}
 	}
 }
