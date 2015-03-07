@@ -32,10 +32,10 @@ public enum CarthageError {
 	case RepositoryCheckoutFailed(workingDirectoryURL: NSURL, reason: String)
 
 	/// Failed to read a file or directory at the given URL.
-	case ReadFailed(NSURL)
+	case ReadFailed(NSURL, NSError?)
 
 	/// Failed to write a file or directory at the given URL.
-	case WriteFailed(NSURL)
+	case WriteFailed(NSURL, NSError?)
 
 	/// An error occurred parsing a Carthage file.
 	case ParseError(description: String)
@@ -67,8 +67,23 @@ extension CarthageError: Printable {
 		case let .MissingBuildSetting(setting):
 			return "xcodebuild did not return a value for build setting \(setting)"
 
-		case let .ReadFailed(fileURL):
-			return "Failed to read file or folder at \(fileURL.path!)"
+		case let .ReadFailed(fileURL, underlyingError):
+			var description = "Failed to read file or folder at \(fileURL.path!)"
+
+			if let underlyingError = underlyingError {
+				description += ": \(underlyingError)"
+			}
+
+			return description
+
+		case let .WriteFailed(fileURL, underlyingError):
+			var description = "Failed to write to \(fileURL.path!)"
+
+			if let underlyingError = underlyingError {
+				description += ": \(underlyingError)"
+			}
+
+			return description
 
 		case let .IncompatibleRequirements(dependency, first, second):
 			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(first)\n\t\(second)"
@@ -81,9 +96,6 @@ extension CarthageError: Printable {
 
 		case let .RepositoryCheckoutFailed(workingDirectoryURL, reason):
 			return "Failed to check out repository into \(workingDirectoryURL.path!): \(reason)"
-
-		case let .WriteFailed(fileURL):
-			return "Failed to create \(fileURL.path!)"
 
 		case let .ParseError(description):
 			return "Parse error: \(description)"
@@ -114,14 +126,24 @@ extension CarthageError: Printable {
 
 extension CarthageError: ErrorType {
 	public var nsError: NSError {
+		let defaultError: () -> NSError = {
+			return NSError(domain: "org.carthage.CarthageKit", code: 0, userInfo: [
+				NSLocalizedDescriptionKey: self.description
+			])
+		}
+
 		switch self {
 		case let .TaskError(taskError):
 			return taskError.nsError
 
+		case let .ReadFailed(_, underlyingError):
+			return underlyingError ?? defaultError()
+
+		case let .WriteFailed(_, underlyingError):
+			return underlyingError ?? defaultError()
+
 		default:
-			return NSError(domain: "org.carthage.CarthageKit", code: 0, userInfo: [
-				NSLocalizedDescriptionKey: description
-			])
+			return defaultError()
 		}
 	}
 }
