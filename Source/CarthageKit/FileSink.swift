@@ -23,7 +23,7 @@ public final class FileSink: SinkType {
 	}
 
 	/// Creates a sink that will take over the given file descriptor.
-	public class func sinkWithDescriptor(fileDescriptor: Int32, closeWhenDone: Bool) -> ColdSignal<FileSink> {
+	private class func sinkWithDescriptor(fileDescriptor: Int32, closeWhenDone: Bool) -> ColdSignal<FileSink> {
 		return ColdSignal.lazy {
 			let pointer = fdopen(fileDescriptor, "a")
 			
