@@ -30,9 +30,7 @@ public struct BuildCommand: CommandType {
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
 
 				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
-				stdoutSignal
-					.map { .Next(Box($0)) }
-					.observe(stdoutSink)
+				stdoutSignal.observe(stdoutSink)
 
 				let formatting = options.colorOptions.formatting
 
@@ -94,9 +92,9 @@ public struct BuildCommand: CommandType {
 
 	/// Creates a sink for logging, returning the sink and the URL to any
 	/// temporary file on disk.
-	private func createLoggingSink(options: BuildOptions) -> ColdSignal<(FileSink, NSURL?)> {
+	private func createLoggingSink(options: BuildOptions) -> ColdSignal<(FileSink<NSData>, NSURL?)> {
 		if options.verbose {
-			let out: (FileSink, NSURL?) = (FileSink.standardOutputSink(), nil)
+			let out: (FileSink<NSData>, NSURL?) = (FileSink.standardOutputSink(), nil)
 			return .single(out)
 		} else {
 			return FileSink.openTemporaryFile()

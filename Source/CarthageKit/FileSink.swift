@@ -9,8 +9,26 @@
 import Foundation
 import ReactiveCocoa
 
+/// Represents anything that can be written directly to a file.
+public protocol FileWriteable {
+	// TODO: Error handling.
+	func writeToFile(filePointer: UnsafeMutablePointer<FILE>)
+}
+
+extension NSData: FileWriteable {
+	public func writeToFile(filePointer: UnsafeMutablePointer<FILE>) {
+		fwrite(bytes, UInt(length), 1, filePointer)
+	}
+}
+
+extension String: FileWriteable {
+	public func writeToFile(filePointer: UnsafeMutablePointer<FILE>) {
+		fputs(self, filePointer)
+	}
+}
+
 /// A sink which streams its events to a file handle.
-public final class FileSink: SinkType {
+public final class FileSink<T: FileWriteable>: SinkType {
 	private var filePointer: UnsafeMutablePointer<FILE>?
 	private let closeWhenDone: Bool
 
@@ -82,25 +100,13 @@ public final class FileSink: SinkType {
 	}
 
 	/// Writes the event data to the file, or the error if one occurred.
-	///
-	/// Upon a terminating event, the file will be flushed, and closed if
-	/// appropriate.
-	public func put(event: Event<NSData>) {
+	public func put(value: T) {
 		if let filePointer = filePointer {
-			switch event {
-			case let .Next(data):
-				fwrite(data.unbox.bytes, UInt(data.unbox.length), 1, filePointer)
+			value.writeToFile(filePointer)
 
-			case let .Error(error):
-				fputs(error.description + "\n", filePointer)
-
-			default:
-				break
-			}
-
-			if event.isTerminating {
-				done()
-			}
+			// TODO:
+			// Upon a terminating event, the file will be flushed, and closed if
+			// appropriate.
 		}
 	}
 
