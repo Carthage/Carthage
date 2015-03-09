@@ -112,9 +112,9 @@ internal func permuteWith<T, U, E>(otherProducer: SignalProducer<U, E>)(producer
 	return producer.lift(permuteWith)(otherProducer)
 }
 
-/// Dematerializes the signal, like dematerialize(), but only yields Error
+/// Dematerializes the signal, like dematerialize(), but only yields inner Error
 /// events if no values were sent.
-internal func dematerializeErrorsIfEmpty<T, E>(signal: Signal<Event<T, E>, NoError>) -> Signal<T, E> {
+internal func dematerializeErrorsIfEmpty<T, E>(signal: Signal<Event<T, E>, E>) -> Signal<T, E> {
 	return Signal { observer in
 		var receivedValue = false
 		var receivedError: E? = nil
@@ -134,6 +134,8 @@ internal func dematerializeErrorsIfEmpty<T, E>(signal: Signal<Event<T, E>, NoErr
 			case .Interrupted:
 				sendInterrupted(observer)
 			}
+		}, error: { error in
+			sendError(observer, error)
 		}, completed: {
 			if !receivedValue {
 				if let receivedError = receivedError {
