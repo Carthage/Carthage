@@ -201,59 +201,57 @@ public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, r
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
 public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
-	return ColdSignal.lazy {
-		var error: NSError?
-		if !NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-			return .error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory").error)
+	return SignalProducer.try {
+			var error: NSError?
+			if !NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+				return failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory", underlyingError: error))
+			}
+
+			var environment = NSProcessInfo.processInfo().environment as [String: String]
+			environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
+			return success(environment)
 		}
-
-		var environment = NSProcessInfo.processInfo().environment as [String: String]
-		environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
-
-		return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
-			.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision, shouldCloneSubmodule: shouldCloneSubmodule))
-	}
+		|> joinMap(.Concat) { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
+		|> then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision, shouldCloneSubmodule: shouldCloneSubmodule))
 }
 
 /// Clones matching submodules for the given repository at the specified
 /// revision, into the given working directory.
 public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
 	return submodulesInRepository(repositoryFileURL, revision: revision)
-		.map { submodule -> ColdSignal<()> in
+		|> joinMap(.Concat) { submodule -> SignalProducer<(), CarthageError> in
 			if shouldCloneSubmodule(submodule) {
 				return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
 			} else {
-				return .empty()
+				return .empty
 			}
 		}
-		.concat(identity)
-		.then(.empty())
+		|> filter { _ in false }
 }
 
 /// Clones the given submodule into the working directory of its parent
 /// repository, but without any Git metadata.
 public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = workingDirectoryURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
-	let purgeGitDirectories = NSFileManager.defaultManager()
-		.carthage_enumeratorAtURL(submoduleDirectoryURL, includingPropertiesForKeys: [ NSURLIsDirectoryKey, NSURLNameKey ], options: nil, catchErrors: true)
-		.mergeMap { enumerator, URL -> ColdSignal<()> in
+	let purgeGitDirectories = NSFileManager.defaultManager().carthage_enumeratorAtURL(submoduleDirectoryURL, includingPropertiesForKeys: [ NSURLIsDirectoryKey, NSURLNameKey ], options: nil, catchErrors: true)
+		|> joinMap(.Merge) { enumerator, URL -> SignalProducer<(), CarthageError> in
 			var name: AnyObject?
 			var error: NSError?
 			if !URL.getResourceValue(&name, forKey: NSURLNameKey, error: &error) {
-				return .error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)").error)
+				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)", underlyingError: error))
 			}
 
 			if let name = name as? NSString {
 				if name != ".git" {
-					return .empty()
+					return .empty
 				}
 			} else {
-				return .empty()
+				return .empty
 			}
 
 			var isDirectory: AnyObject?
 			if !URL.getResourceValue(&isDirectory, forKey: NSURLIsDirectoryKey, error: &error) || isDirectory == nil {
-				return .error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory").error)
+				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: error))
 			}
 
 			if let directory = isDirectory?.boolValue {
@@ -263,30 +261,31 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 			}
 
 			if NSFileManager.defaultManager().removeItemAtURL(URL, error: &error) {
-				return .empty()
+				return .empty
 			} else {
-				return .error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)").error)
+				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)", underlyingError: error))
 			}
 		}
 
-	return ColdSignal<String>.lazy {
+	return SignalProducer.try {
 			var error: NSError?
 			if !NSFileManager.defaultManager().removeItemAtURL(submoduleDirectoryURL, error: &error) {
-				return .error(error ?? CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout").error)
+				return failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout", underlyingError: error))
 			}
 
-			return cloneRepository(submodule.URL, workingDirectoryURL.URLByAppendingPathComponent(submodule.path), bare: false)
+			return success(workingDirectoryURL.URLByAppendingPathComponent(submodule.path))
 		}
-		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-		.then(purgeGitDirectories)
+		|> joinMap(.Concat) { submoduleDirectoryURL in cloneRepository(submodule.URL, submoduleDirectoryURL, bare: false) }
+		|> then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+		|> then(purgeGitDirectories)
 }
 
 /// Recursively checks out the given submodule's revision, in its working
 /// directory.
 private func checkoutSubmodule(submodule: Submodule, submoduleWorkingDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
 	return launchGitTask([ "checkout", "--quiet", submodule.SHA ], repositoryFileURL: submoduleWorkingDirectoryURL)
-		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleWorkingDirectoryURL))
-		.then(.empty())
+		|> then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleWorkingDirectoryURL))
+		|> then(.empty)
 }
 
 /// Parses each key/value entry from the given config file contents, optionally
@@ -294,7 +293,7 @@ private func checkoutSubmodule(submodule: Submodule, submoduleWorkingDirectoryUR
 private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuffix: String = "") -> SignalProducer<(String, String), NoError> {
 	let entries = split(contents, { $0 == "\0" }, allowEmptySlices: false)
 
-	return ColdSignal { (sink, disposable) in
+	return SignalProducer { observer, disposable in
 		for entry in entries {
 			if disposable.disposed {
 				break
@@ -318,11 +317,11 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 			}
 
 			if let key = key as? String {
-				sink.put(.Next(Box((key, value))))
+				sendNext(observer, (key, value))
 			}
 		}
 
-		sink.put(.Completed)
+		sendCompleted(observer)
 	}
 }
 
@@ -330,14 +329,14 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 /// revision of the parent repository specified.
 public func submoduleSHAForPath(repositoryFileURL: NSURL, path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
 	return launchGitTask([ "ls-tree", "-z", revision, path ], repositoryFileURL: repositoryFileURL)
-		.tryMap { string -> Result<String> in
+		|> tryMap { string in
 			// Example:
 			// 160000 commit 083fd81ecf00124cbdaa8f86ef10377737f6325a	External/ObjectiveGit
 			let components = split(string, { $0 == " " || $0 == "\t" }, maxSplit: 3, allowEmptySlices: false)
 			if components.count >= 3 {
 				return success(components[2])
 			} else {
-				return failure(CarthageError.ParseError(description: "expected submodule commit SHA in ls-tree output: \(string)").error)
+				return failure(CarthageError.ParseError(description: "expected submodule commit SHA in ls-tree output: \(string)"))
 			}
 		}
 }
@@ -349,18 +348,15 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = 
 	let baseArguments = [ "config", "--blob", modulesObject, "-z" ]
 
 	return launchGitTask(baseArguments + [ "--get-regexp", "submodule\\..*\\.path" ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
-		.catch { _ in .empty() }
-		.map { parseConfigEntries($0, keyPrefix: "submodule.", keySuffix: ".path") }
-		.merge(identity)
-		.map { (name, path) -> ColdSignal<Submodule> in
+		|> catch { _ in SignalProducer<String, NoError>.empty }
+		|> joinMap(.Concat) { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
+		|> promoteErrors(CarthageError.self)
+		|> joinMap(.Concat) { name, path -> SignalProducer<Submodule, CarthageError> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
-				.map { GitURL($0) }
-				.zipWith(submoduleSHAForPath(repositoryFileURL, path, revision: revision))
-				.map { (URL, SHA) in
-					return Submodule(name: name, path: path, URL: URL, SHA: SHA)
-				}
+				|> map { GitURL($0) }
+				|> zipWith(submoduleSHAForPath(repositoryFileURL, path, revision: revision))
+				|> map { URL, SHA in Submodule(name: name, path: path, URL: URL, SHA: SHA) }
 		}
-		.merge(identity)
 }
 
 /// Determines whether the specified revision identifies a valid commit.
@@ -368,27 +364,30 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = 
 /// If the specified file URL does not represent a valid Git repository, `false`
 /// will be sent.
 public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String = "HEAD") -> SignalProducer<Bool, NoError> {
-	return ColdSignal.lazy {
+	return SignalProducer { observer, disposable in
 		// NSTask throws a hissy fit (a.k.a. exception) if the working directory
 		// doesn't exist, so pre-emptively check for that.
 		var isDirectory: ObjCBool = false
 		if !NSFileManager.defaultManager().fileExistsAtPath(repositoryFileURL.path!, isDirectory: &isDirectory) || !isDirectory {
-			return .single(false)
+			sendNext(observer, false)
+			return
 		}
 
-		return launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL, standardOutput: SinkOf<NSData> { _ in () }, standardError: SinkOf<NSData> { _ in () })
-			.then(.single(true))
-			.catch { _ in .single(false) }
+		launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL, standardOutput: SinkOf<NSData> { _ in () }, standardError: SinkOf<NSData> { _ in () })
+			|> then(SignalProducer<Bool, CarthageError>(value: true))
+			|> catch { _ in SignalProducer<Bool, NoError>(value: false) }
+			|> startWithSignal { signal, signalDisposable in
+				disposable.addDisposable(signalDisposable)
+				signal.observe(observer)
+			}
 	}
 }
 
 /// Attempts to resolve the given reference into an object SHA.
 public func resolveReferenceInRepository(repositoryFileURL: NSURL, reference: String) -> SignalProducer<String, CarthageError> {
 	return launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
-		.map { string in
-			return string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet())
-		}
-		.catch { _ in .error(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists").error) }
+		|> map { string in string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
+		|> catch { _ in SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists", underlyingError: nil)) }
 }
 
 /// Returns the location of the .git folder within the given repository.
@@ -407,32 +406,35 @@ private func isGitRepository(directoryURL: NSURL) -> Bool {
 public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submodule, fetchURL: GitURL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = repositoryFileURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
 
-	return ColdSignal.lazy {
-		if isGitRepository(submoduleDirectoryURL) {
-			// If the submodule repository already exists, just check out and
-			// stage the correct revision.
-			return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL)
-				.then(launchGitTask([ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.URL.URLString ], repositoryFileURL: repositoryFileURL))
-				.then(launchGitTask([ "submodule", "--quiet", "sync" ], repositoryFileURL: repositoryFileURL))
-				.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-				.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
-				.then(.empty())
-		} else {
-			let addSubmodule = launchGitTask([ "submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.URL.URLString, submodule.path ], repositoryFileURL: repositoryFileURL)
-				// A failure to add usually means the folder was already added
-				// to the index. That's okay.
-				.catch { _ in .empty() }
-
-			// If it doesn't exist, clone and initialize a submodule from our
-			// local bare repository.
-			return cloneRepository(fetchURL, submoduleDirectoryURL, bare: false)
-				.then(launchGitTask([ "remote", "set-url", "origin", submodule.URL.URLString ], repositoryFileURL: submoduleDirectoryURL))
-				.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-				.then(addSubmodule)
-				.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
-				.then(.empty())
+	return SignalProducer<Bool, CarthageError> { observer, disposable in
+			sendNext(observer, isGitRepository(submoduleDirectoryURL))
+			sendCompleted(observer)
 		}
-	}
+		|> joinMap(.Merge) { submoduleExists in
+			if (submoduleExists) {
+				// Just check out and stage the correct revision.
+				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL)
+					|> then(launchGitTask([ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.URL.URLString ], repositoryFileURL: repositoryFileURL))
+					|> then(launchGitTask([ "submodule", "--quiet", "sync" ], repositoryFileURL: repositoryFileURL))
+					|> then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+					|> then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
+					|> then(.empty)
+			} else {
+				let addSubmodule = launchGitTask([ "submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.URL.URLString, submodule.path ], repositoryFileURL: repositoryFileURL)
+					// A failure to add usually means the folder was already added
+					// to the index. That's okay.
+					|> catch { _ in SignalProducer<String, CarthageError>.empty }
+
+				// If it doesn't exist, clone and initialize a submodule from our
+				// local bare repository.
+				return cloneRepository(fetchURL, submoduleDirectoryURL, bare: false)
+					|> then(launchGitTask([ "remote", "set-url", "origin", submodule.URL.URLString ], repositoryFileURL: submoduleDirectoryURL))
+					|> then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+					|> then(addSubmodule)
+					|> then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
+					|> then(.empty)
+			}
+		}
 }
 
 /// Moves an item within a Git repository, or within a simple directory if a Git
@@ -443,24 +445,27 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: St
 	let toURL = repositoryFileURL.URLByAppendingPathComponent(toPath)
 	let parentDirectoryURL = toURL.URLByDeletingLastPathComponent!
 
-	return ColdSignal.lazy {
-		var error: NSError?
-		if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-			return .error(error ?? CarthageError.WriteFailed(parentDirectoryURL).error)
-		}
-
-		if isGitRepository(repositoryFileURL) {
-			return launchGitTask([ "mv", "-k", fromPath, toPath ], repositoryFileURL: repositoryFileURL)
-				.then(.single(toURL))
-		} else {
-			let fromURL = repositoryFileURL.URLByAppendingPathComponent(fromPath)
-
+	return SignalProducer<Bool, CarthageError>.try {
 			var error: NSError?
-			if NSFileManager.defaultManager().moveItemAtURL(fromURL, toURL: toURL, error: &error) {
-				return .single(toURL)
+			if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+				return failure(CarthageError.WriteFailed(parentDirectoryURL, error))
+			}
+
+			return success(isGitRepository(repositoryFileURL))
+		}
+		|> joinMap(.Merge) { isRepository -> SignalProducer<NSURL, CarthageError> in
+			if isRepository {
+				return launchGitTask([ "mv", "-k", fromPath, toPath ], repositoryFileURL: repositoryFileURL)
+					|> then(SignalProducer(value: toURL))
 			} else {
-				return .error(error ?? CarthageError.WriteFailed(toURL).error)
+				let fromURL = repositoryFileURL.URLByAppendingPathComponent(fromPath)
+
+				var error: NSError?
+				if NSFileManager.defaultManager().moveItemAtURL(fromURL, toURL: toURL, error: &error) {
+					return SignalProducer(value: toURL)
+				} else {
+					return SignalProducer(error: .WriteFailed(toURL, error))
+				}
 			}
 		}
-	}
 }

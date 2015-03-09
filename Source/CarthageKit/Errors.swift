@@ -29,7 +29,7 @@ public enum CarthageError {
 	case RequiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
 
 	/// Failed to check out a repository.
-	case RepositoryCheckoutFailed(workingDirectoryURL: NSURL, reason: String)
+	case RepositoryCheckoutFailed(workingDirectoryURL: NSURL, reason: String, underlyingError: NSError?)
 
 	/// Failed to read a file or directory at the given URL.
 	case ReadFailed(NSURL, NSError?)
@@ -97,8 +97,14 @@ extension CarthageError: Printable {
 		case let .RequiredVersionNotFound(dependency, specifier):
 			return "No available version for \(dependency) satisfies the requirement: \(specifier)"
 
-		case let .RepositoryCheckoutFailed(workingDirectoryURL, reason):
-			return "Failed to check out repository into \(workingDirectoryURL.path!): \(reason)"
+		case let .RepositoryCheckoutFailed(workingDirectoryURL, reason, underlyingError):
+			var description = "Failed to check out repository into \(workingDirectoryURL.path!): \(reason)"
+
+			if let underlyingError = underlyingError {
+				description += " (\(underlyingError))"
+			}
+
+			return description
 
 		case let .ParseError(description):
 			return "Parse error: \(description)"
@@ -150,6 +156,9 @@ extension CarthageError: ErrorType {
 
 		case let .NetworkError(underlyingError):
 			return underlyingError
+
+		case let .RepositoryCheckoutFailed(_, _, underlyingError):
+			return underlyingError ?? defaultError()
 
 		default:
 			return defaultError()
