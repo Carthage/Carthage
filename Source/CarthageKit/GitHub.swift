@@ -10,6 +10,7 @@ import Argo
 import Foundation
 import LlamaKit
 import ReactiveCocoa
+import Runes
 
 /// The User-Agent to use for GitHub requests.
 private let userAgent: String = {
@@ -49,10 +50,10 @@ public struct GitHubRepository: Equatable {
 	}
 
 	/// Parses repository information out of a string of the form "owner/name".
-	public static func fromNWO(NWO: String) -> Result<GitHubRepository> {
+	public static func fromNWO(NWO: String) -> Result<GitHubRepository, CarthageError> {
 		let components = split(NWO, { $0 == "/" }, maxSplit: 1, allowEmptySlices: false)
 		if components.count < 2 {
-			return failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\"").error)
+			return failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\""))
 		}
 
 		return success(self(owner: components[0], name: components[1]))
@@ -181,12 +182,14 @@ internal struct GitHubCredentials {
 	}
 
 	/// Attempts to load credentials from the Git credential store.
-	static func loadFromGit() -> ColdSignal<GitHubCredentials?> {
+	static func loadFromGit() -> SignalProducer<GitHubCredentials?, CarthageError> {
 		let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
 
-		return launchGitTask([ "credential", "fill" ], standardInput: ColdSignal.single(data))
-			.mergeMap { $0.linesSignal }
-			.reduce(initial: [:]) { (var values: [String: String], line) in
+		return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
+			|> joinMap(.Concat) { string -> SignalProducer<String, CarthageError> in
+				return string.linesProducer |> promoteErrors(CarthageError.self)
+			}
+			|> reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
 				let parts = split(line, { $0 == "=" }, maxSplit: 1, allowEmptySlices: false)
 				if parts.count >= 2 {
 					let key = parts[0]
@@ -197,7 +200,7 @@ internal struct GitHubCredentials {
 
 				return values
 			}
-			.map { values -> GitHubCredentials? in
+			|> map { (values: [String: String]) -> GitHubCredentials? in
 				if let username = values["username"] {
 					if let password = values["password"] {
 						return self(username: username, password: password)
@@ -251,13 +254,13 @@ private func parseLinkHeader(linkValue: String) -> [(NSURL, [String])] {
 /// Fetches the given GitHub URL, automatically paginating to the end.
 ///
 /// Returns a signal that will send one `NSData` for each page fetched.
-private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdSignal<NSData> {
+private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> SignalProducer<NSData, CarthageError> {
 	let request = createGitHubRequest(URL, credentials)
 
-	return NSURLSession.sharedSession()
-		.rac_dataWithRequest(request)
-		.mergeMap { data, response -> ColdSignal<NSData> in
-			let thisData = ColdSignal.single(data)
+	return NSURLSession.sharedSession().rac_dataWithRequest(request)
+		|> catch { error in SignalProducer(error: .NetworkError(error)) }
+		|> joinMap(.Concat) { data, response in
+			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
 
 			if let HTTPResponse = response as? NSHTTPURLResponse {
 				if let linkHeader = HTTPResponse.allHeaderFields["Link"] as? String {
@@ -265,7 +268,7 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdS
 					for (URL, parameters) in links {
 						if contains(parameters, "rel=\"next\"") {
 							// Automatically fetch the next page too.
-							return thisData.concat(fetchAllPages(URL, credentials))
+							return thisData |> concat(fetchAllPages(URL, credentials))
 						}
 					}
 				}
@@ -278,17 +281,21 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdS
 /// Fetches the release corresponding to the given tag on the given repository,
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
-internal func releaseForTag(tag: String, repository: GitHubRepository, credentials: GitHubCredentials?) -> ColdSignal<GitHubRelease> {
+internal func releaseForTag(tag: String, repository: GitHubRepository, credentials: GitHubCredentials?) -> SignalProducer<GitHubRelease, NoError> {
 	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, credentials)
-		.tryMap { data, error -> AnyObject? in
-			return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error)
-		}
-		.catch { _ in .empty() }
-		.concatMap { releaseDictionary -> ColdSignal<GitHubRelease> in
-			if let release = GitHubRelease.decode(JSONValue.parse(releaseDictionary)) {
-				return .single(release)
+		|> tryMap { data -> Result<AnyObject, CarthageError> in
+			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
+				return success(object)
 			} else {
-				return .empty()
+				return failure(.ParseError(description: "Invalid JSON in releases for tag \(tag)"))
+			}
+		}
+		|> catch { _ in .empty }
+		|> joinMap(.Concat) { releaseDictionary -> SignalProducer<GitHubRelease, NoError> in
+			if let release = GitHubRelease.decode(JSONValue.parse(releaseDictionary)) {
+				return SignalProducer(value: release)
+			} else {
+				return .empty
 			}
 		}
 }
@@ -298,10 +305,10 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, credentia
 ///
 /// The downloaded file will be deleted after the URL has been sent upon the
 /// signal.
-internal func downloadAsset(asset: GitHubRelease.Asset, credentials: GitHubCredentials?) -> ColdSignal<NSURL> {
+internal func downloadAsset(asset: GitHubRelease.Asset, credentials: GitHubCredentials?) -> SignalProducer<NSURL, CarthageError> {
 	let request = createGitHubRequest(asset.downloadURL, credentials)
 
-	return NSURLSession.sharedSession()
-		.carthage_downloadWithRequest(request)
-		.map { URL, _ in URL }
+	return NSURLSession.sharedSession().carthage_downloadWithRequest(request)
+		|> catch { error in SignalProducer(error: .NetworkError(error)) }
+		|> map { URL, _ in URL }
 }

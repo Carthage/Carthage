@@ -56,6 +56,9 @@ public enum CarthageError {
 	
 	/// An error occurred while shelling out.
 	case TaskError(ReactiveTaskError)
+
+	/// An error occurred in a network operation.
+	case NetworkError(NSError)
 }
 
 extension CarthageError: Printable {
@@ -120,6 +123,9 @@ extension CarthageError: Printable {
 
 		case let .TaskError(taskError):
 			return taskError.description
+
+		case let .NetworkError(error):
+			return error.description
 		}
 	}
 }
@@ -141,6 +147,9 @@ extension CarthageError: ErrorType {
 
 		case let .WriteFailed(_, underlyingError):
 			return underlyingError ?? defaultError()
+
+		case let .NetworkError(underlyingError):
+			return underlyingError
 
 		default:
 			return defaultError()
