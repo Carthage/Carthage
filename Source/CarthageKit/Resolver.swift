@@ -44,7 +44,6 @@ public struct Resolver {
 			.dematerializeErrorsIfEmpty(identity)
 			.take(1)
 			.map { graph -> ColdSignal<Dependency<PinnedVersion>> in
-				graph.computeRootAncestors()
 				return ColdSignal.fromValues(graph.orderedNodes)
 					.map { node in node.dependencyVersion }
 			}
@@ -166,7 +165,6 @@ public struct Resolver {
 
 /// A poor person's Set.
 private typealias DependencyNodeSet = [DependencyNode: ()]
-private typealias ProjectIdentifierSet = [ProjectIdentifier: ()]
 
 /// Represents an acyclic dependency graph in which each project appears at most
 /// once.
@@ -341,35 +339,6 @@ private func mergeGraphs(lhs: DependencyGraph, rhs: DependencyGraph) -> Result<D
 	return result
 }
 
-extension DependencyGraph {
-	/// Given a directed acyclic graph, annotates root ancestors of each node.
-	private func computeRootAncestors() -> () {
-		let breadthFirstSearch: (DependencyNode) -> () = { sourceNode in
-			var shouldVisit: [DependencyNode] = [sourceNode]
-			var visited: DependencyNodeSet = [sourceNode: ()]
-			while !shouldVisit.isEmpty {
-				let node = shouldVisit.removeAtIndex(0)
-
-				if let successors = self.edges[node]?.keys {
-					for successor in successors {
-						if visited[successor] == nil {
-							shouldVisit.append(successor)
-							successor.rootAncestors[sourceNode.project] = ()
-							visited[successor] = ()
-						}
-					}
-				}
-			}
-		}
-
-		for rootNode in self.roots.keys {
-			breadthFirstSearch(rootNode)
-		}
-		
-		println(self)
-	}
-}
-
 /// A node in, or being considered for, an acyclic dependency graph.
 private class DependencyNode: Comparable {
 	/// The project that this node refers to.
@@ -389,11 +358,8 @@ private class DependencyNode: Comparable {
 
 	/// A Dependency equivalent to this node.
 	var dependencyVersion: Dependency<PinnedVersion> {
-		return Dependency(project: project, version: proposedVersion, rootProjects: self.rootAncestors.keys.array)
+		return Dependency(project: project, version: proposedVersion)
 	}
-
-	/// Root ancestors.
-	var rootAncestors: ProjectIdentifierSet = [:]
 
 	init(project: ProjectIdentifier, proposedVersion: PinnedVersion, versionSpecifier: VersionSpecifier) {
 		precondition(versionSpecifier.satisfiedBy(proposedVersion))
@@ -424,9 +390,6 @@ extension DependencyNode: Hashable {
 
 extension DependencyNode: Printable {
 	private var description: String {
-		let ancestors = self.rootAncestors.count == 0 ?
-			"" :
-			" (required by " + ", ".join(self.rootAncestors.keys.array.map { $0.name }) + ")"
-		return "\(project) @ \(proposedVersion) (restricted to \(versionSpecifier))\(ancestors)"
+		return "\(project) @ \(proposedVersion) (restricted to \(versionSpecifier))"
 	}
 }
