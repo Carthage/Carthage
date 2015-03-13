@@ -387,7 +387,7 @@ public final class Project {
 		return releaseForTag(revision, repository, credentials)
 			.filter(binaryFrameworksCanBeProvidedByRelease)
 			.on(next: { release in
-				self._projectEventsSink.put(.DownloadingBinaries(project, release.name))
+				self._projectEventsSink.put(.DownloadingBinaries(project, release.nameWithFallback))
 			})
 			.concatMap { release in
 				return ColdSignal
