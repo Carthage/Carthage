@@ -74,7 +74,7 @@ public struct Cartfile {
 	public static func fromFile(cartfileURL: NSURL) -> Result<Cartfile, CarthageError> {
 		var error: NSError?
 		if let cartfileContents = NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding, error: &error) {
-			return Cartfile.fromString(cartfileContents)
+			return Cartfile.fromString(cartfileContents as String)
 		} else {
 			return failure(CarthageError.ReadFailed(cartfileURL, error))
 		}
@@ -242,7 +242,7 @@ extension ProjectIdentifier: Scannable {
 		}
 
 		if let address = address {
-			return parser(address)
+			return parser(address as String)
 		} else {
 			return failure(CarthageError.ParseError(description: "empty string after dependency type in line: \(scanner.currentLine)"))
 		}

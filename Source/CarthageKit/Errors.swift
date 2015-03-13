@@ -48,7 +48,7 @@ public enum CarthageError {
 
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
-	case NoSharedSchemes(ProjectLocator)
+	case NoSharedSchemes(ProjectLocator, GitHubRepository?)
 
 	/// A cartfile contains duplicate dependencies, either in itself or across
 	/// other cartfiles.
@@ -59,6 +59,9 @@ public enum CarthageError {
 
 	/// An error occurred in a network operation.
 	case NetworkError(NSError)
+
+	/// The file or folder at the given URL is not an Xcode project.
+	case NotAProject(NSURL)
 }
 
 extension CarthageError: Printable {
@@ -115,8 +118,13 @@ extension CarthageError: Printable {
 		case let .MissingEnvironmentVariable(variable):
 			return "Environment variable not set: \(variable)"
 
-		case let .NoSharedSchemes(project):
-			return "Project \"\(project)\" has no shared schemes"
+		case let .NoSharedSchemes(project, repository):
+			var description = "Project \"\(project)\" has no shared schemes"
+			if let repository = repository {
+				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString!)"
+			}
+
+			return description
 
 		case let .DuplicateDependencies(duplicateDeps):
 			let deps = duplicateDeps
@@ -132,6 +140,9 @@ extension CarthageError: Printable {
 
 		case let .NetworkError(error):
 			return error.description
+
+		case let .NotAProject(URL):
+			return "\(URL.path!) does not refer to an Xcode project"
 		}
 	}
 }
