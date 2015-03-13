@@ -1,5 +1,5 @@
-github "Quick/Quick" ~> 0.2
-github "Quick/Nimble" ~> 0.3
+github "Quick/Quick" "master"
+github "Quick/Nimble" "master"
 github "jspahrsummers/xcconfigs" >= 0.6
-github "Carthage/Commandant" ~> 0.3
+github "Carthage/Commandant" "swift-1.2"
 github "jdhealy/PrettyColors" ~> 1.0.0

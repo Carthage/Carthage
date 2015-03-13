@@ -1,4 +1,4 @@
-github "ReactiveCocoa/ReactiveCocoa" "swift-development"
-github "LlamaKit/LlamaKit" == 0.5
-github "Carthage/ReactiveTask" ~> 0.3
-github "thoughtbot/Argo" ~> 0.3
+github "ReactiveCocoa/ReactiveCocoa" "v3.0-alpha.2"
+github "LlamaKit/LlamaKit" == 0.6
+github "Carthage/ReactiveTask" "swift-1.2"
+github "thoughtbot/Argo" ~> 0.4.3
