@@ -15,10 +15,21 @@ import Runes
 /// The User-Agent to use for GitHub requests.
 private let userAgent: String = {
 	let bundle = NSBundle.mainBundle() ?? NSBundle(identifier: CarthageKitBundleIdentifier)
-	let version: AnyObject = bundle?.objectForInfoDictionaryKey("CFBundleShortVersionString") ?? bundle?.objectForInfoDictionaryKey(kCFBundleVersionKey) ?? "unknown"
-	let identifier = bundle?.bundleIdentifier ?? "CarthageKit-unknown"
 
-	return "\(identifier)/\(version)"
+	var version: AnyObject?
+	if let bundle = bundle {
+		version = bundle.objectForInfoDictionaryKey("CFBundleShortVersionString")
+		if version == nil {
+			version = bundle.objectForInfoDictionaryKey(kCFBundleVersionKey as String)
+		}
+	}
+
+	if version == nil {
+		version = "unknown"
+	}
+
+	let identifier = bundle?.bundleIdentifier ?? "CarthageKit-unknown"
+	return "\(identifier)/\(version!)"
 }()
 
 /// The type of content to request from the GitHub API.
@@ -51,7 +62,7 @@ public struct GitHubRepository: Equatable {
 
 	/// Parses repository information out of a string of the form "owner/name".
 	public static func fromNWO(NWO: String) -> Result<GitHubRepository, CarthageError> {
-		let components = split(NWO, { $0 == "/" }, maxSplit: 1, allowEmptySlices: false)
+		let components = split(NWO, maxSplit: 1, allowEmptySlices: false) { $0 == "/" }
 		if components.count < 2 {
 			return failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\""))
 		}
@@ -195,7 +206,7 @@ internal struct GitHubCredentials {
 				return string.linesProducer |> promoteErrors(CarthageError.self)
 			}
 			|> reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
-				let parts = split(line, { $0 == "=" }, maxSplit: 1, allowEmptySlices: false)
+				let parts = split(line, maxSplit: 1, allowEmptySlices: false) { $0 == "=" }
 				if parts.count >= 2 {
 					let key = parts[0]
 					let value = parts[1]
@@ -234,10 +245,10 @@ internal func createGitHubRequest(URL: NSURL, credentials: GitHubCredentials?) -
 /// Parses the value of a `Link` header field into a list of URLs and their
 /// associated parameter lists.
 private func parseLinkHeader(linkValue: String) -> [(NSURL, [String])] {
-	let components = split(linkValue, { $0 == "," }, allowEmptySlices: false)
+	let components = split(linkValue, allowEmptySlices: false) { $0 == "," }
 
 	return reduce(components, []) { (var links, component) in
-		var pieces = split(component, { $0 == ";" }, allowEmptySlices: false)
+		var pieces = split(component, allowEmptySlices: false) { $0 == ";" }
 		if let URLPiece = pieces.first {
 			pieces.removeAtIndex(0)
 
@@ -245,7 +256,7 @@ private func parseLinkHeader(linkValue: String) -> [(NSURL, [String])] {
 
 			var URLString: NSString?
 			if scanner.scanString("<", intoString: nil) && scanner.scanUpToString(">", intoString: &URLString) {
-				if let URL = NSURL(string: URLString!) {
+				if let URL = NSURL(string: URLString! as String) {
 					let value: (NSURL, [String]) = (URL, pieces)
 					links.append(value)
 				}

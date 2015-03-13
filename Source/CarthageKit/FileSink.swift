@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import LlamaKit
 import ReactiveCocoa
 
 /// Represents anything that can be written directly to a file.
@@ -17,7 +18,7 @@ public protocol FileWriteable {
 
 extension NSData: FileWriteable {
 	public func writeToFile(filePointer: UnsafeMutablePointer<FILE>) {
-		fwrite(bytes, UInt(length), 1, filePointer)
+		fwrite(bytes, length, 1, filePointer)
 	}
 }
 
@@ -41,14 +42,14 @@ public final class FileSink<T: FileWriteable>: SinkType {
 	}
 
 	/// Creates a sink that will take over the given file descriptor.
-	private class func sinkWithDescriptor(fileDescriptor: Int32, closeWhenDone: Bool) -> ColdSignal<FileSink> {
-		return ColdSignal.lazy {
+	private class func sinkWithDescriptor(fileDescriptor: Int32, closeWhenDone: Bool) -> SignalProducer<FileSink, NSError> {
+		return SignalProducer.try {
 			let pointer = fdopen(fileDescriptor, "a")
 			
 			if pointer == nil {
-				return .error(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
+				return failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
 			} else {
-				return .single(self(filePointer: pointer, closeWhenDone: closeWhenDone))
+				return success(self(filePointer: pointer, closeWhenDone: closeWhenDone))
 			}
 		}
 	}
@@ -56,24 +57,27 @@ public final class FileSink<T: FileWriteable>: SinkType {
 	/// Creates a sink that will open and write to a temporary file.
 	/// 
 	/// Sends the created sink and the URL to the temporary file.
-	public class func openTemporaryFile() -> ColdSignal<(FileSink, NSURL)> {
-		return ColdSignal.lazy {
-			var temporaryDirectoryTemplate: ContiguousArray<CChar> = NSTemporaryDirectory().stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
-			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
-				return mkstemps(template.baseAddress, 4)
-			}
+	public class func openTemporaryFile() -> SignalProducer<(FileSink, NSURL), NSError> {
+		return SignalProducer.try {
+				var temporaryDirectoryTemplate: ContiguousArray<CChar> = NSTemporaryDirectory().stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
+				let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
+					return mkstemps(template.baseAddress, 4)
+				}
 
-			if logFD < 0 {
-				return .error(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
-			}
+				if logFD < 0 {
+					return failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
+				}
 
-			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
-				return String.fromCString(ptr.baseAddress)!
-			}
+				let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
+					return String.fromCString(ptr.baseAddress)!
+				}
 
-			return self.sinkWithDescriptor(logFD, closeWhenDone: true)
-				.map { ($0, NSURL.fileURLWithPath(temporaryPath, isDirectory: false)!) }
-		}
+				return success((logFD, temporaryPath))
+			}
+			|> joinMap(.Merge) { logFD, temporaryPath in
+				return self.sinkWithDescriptor(logFD, closeWhenDone: true)
+					|> map { ($0, NSURL.fileURLWithPath(temporaryPath, isDirectory: false)!) }
+			}
 	}
 
 	/// Creates a sink that will write to `stdout`.
@@ -100,13 +104,20 @@ public final class FileSink<T: FileWriteable>: SinkType {
 	}
 
 	/// Writes the event data to the file, or the error if one occurred.
-	public func put(value: T) {
+	///
+	/// Upon a terminating event, the file will be flushed, and closed if
+	/// appropriate.
+	public func put(event: Event<T, NoError>) {
 		if let filePointer = filePointer {
-			value.writeToFile(filePointer)
+			switch event {
+			case let .Next(value):
+				value.unbox.writeToFile(filePointer)
 
-			// TODO:
-			// Upon a terminating event, the file will be flushed, and closed if
-			// appropriate.
+			default:
+				if event.isTerminating {
+					done()
+				}
+			}
 		}
 	}
 

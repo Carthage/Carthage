@@ -79,7 +79,7 @@ extension SemanticVersion: Scannable {
 			return failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
 
-		let components = split(version! as String, { $0 == "." }, allowEmptySlices: false)
+		let components = split(version! as String, allowEmptySlices: false) { $0 == "." }
 		if components.count == 0 {
 			return failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
@@ -147,7 +147,7 @@ extension PinnedVersion: Scannable {
 			return failure(CarthageError.ParseError(description: "unterminated pinned version in line: \(scanner.currentLine)"))
 		}
 
-		return success(self(commitish!))
+		return success(self(commitish! as String))
 	}
 }
 
@@ -248,7 +248,7 @@ extension VersionSpecifier: Scannable {
 				return failure(CarthageError.ParseError(description: "unterminated Git reference name in line: \(scanner.currentLine)"))
 			}
 
-			return success(.GitReference(refName!))
+			return success(.GitReference(refName! as String))
 		} else {
 			return success(Any)
 		}

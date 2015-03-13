@@ -57,7 +57,7 @@ public struct GitURL: Equatable {
 
 	/// The name of the repository, if it can be inferred from the URL.
 	public var name: String? {
-		let components = split(URLString, { $0 == "/" }, allowEmptySlices: false)
+		let components = split(URLString, allowEmptySlices: false) { $0 == "/" }
 
 		return components.last.map { self.stripGitSuffix($0) }
 	}
@@ -139,7 +139,7 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 
 	return launchTask(taskDescription, standardOutput: standardOutput, standardError: standardError)
 		|> catch { error in SignalProducer(error: .TaskError(error)) }
-		|> map { NSString(data: $0, encoding: NSUTF8StringEncoding) as String }
+		|> map { NSString(data: $0, encoding: NSUTF8StringEncoding)! as String }
 }
 
 /// Returns a signal that completes when cloning completes successfully.
@@ -207,7 +207,7 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 				return failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory", underlyingError: error))
 			}
 
-			var environment = NSProcessInfo.processInfo().environment as [String: String]
+			var environment = NSProcessInfo.processInfo().environment as! [String: String]
 			environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
 			return success(environment)
 		}
@@ -291,7 +291,7 @@ private func checkoutSubmodule(submodule: Submodule, submoduleWorkingDirectoryUR
 /// Parses each key/value entry from the given config file contents, optionally
 /// stripping a known prefix/suffix off of each key.
 private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuffix: String = "") -> SignalProducer<(String, String), NoError> {
-	let entries = split(contents, { $0 == "\0" }, allowEmptySlices: false)
+	let entries = split(contents, allowEmptySlices: false) { $0 == "\0" }
 
 	return SignalProducer { observer, disposable in
 		for entry in entries {
@@ -299,7 +299,7 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 				break
 			}
 
-			let components = split(entry, { $0 == "\n" }, maxSplit: 1, allowEmptySlices: true)
+			let components = split(entry, maxSplit: 1, allowEmptySlices: true) { $0 == "\n" }
 			if components.count != 2 {
 				continue
 			}
@@ -332,7 +332,7 @@ public func submoduleSHAForPath(repositoryFileURL: NSURL, path: String, revision
 		|> tryMap { string in
 			// Example:
 			// 160000 commit 083fd81ecf00124cbdaa8f86ef10377737f6325a	External/ObjectiveGit
-			let components = split(string, { $0 == " " || $0 == "\t" }, maxSplit: 3, allowEmptySlices: false)
+			let components = split(string, maxSplit: 3, allowEmptySlices: false) { $0 == " " || $0 == "\t" }
 			if components.count >= 3 {
 				return success(components[2])
 			} else {
