@@ -83,6 +83,11 @@ public struct GitHubRelease: Equatable {
 	/// The name of this release.
 	public let name: String
 
+	/// The name of this release, with fallback to its tag when the name is an empty string.
+	public var nameWithFallback: String {
+		return name.isEmpty ? tag : name
+	}
+
 	/// The name of the tag upon which this release is based.
 	public let tag: String
 
