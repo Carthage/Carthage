@@ -76,7 +76,7 @@ private func frameworksFolder() -> Result<NSURL, CarthageError> {
 
 private func validArchitectures() -> Result<[String], CarthageError> {
 	return getEnvironmentVariable("VALID_ARCHS").map { architectures in
-		split(architectures, { $0 == " " })
+		split(architectures) { $0 == " " }
 	}
 }
 
