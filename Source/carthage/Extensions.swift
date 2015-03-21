@@ -151,7 +151,7 @@ extension Project {
 	///
 	/// If migration is necessary, sends one or more output lines describing the
 	/// process to the user.
-	internal func migrateIfNecessary(colorOptions: ColorOptions) -> ColdSignal<String> {
+	internal func migrateIfNecessary(colorOptions: ColorOptions) -> SignalProducer<String, CarthageError> {
 		let directoryPath = directoryURL.path!
 		let fileManager = NSFileManager.defaultManager()
 
@@ -162,15 +162,16 @@ extension Project {
 		let carthageCheckout = "Carthage.checkout"
 		
 		let formatting = colorOptions.formatting
-		
 		let migrationMessage = formatting.bulletinTitle("MIGRATION WARNING") + "\n\nThis project appears to be set up for an older (pre-0.4) version of Carthage. Unfortunately, the directory structure for Carthage projects has since changed, so this project will be migrated automatically.\n\nSpecifically, the following renames will occur:\n\n  \(cartfileLock) -> \(CarthageProjectResolvedCartfilePath)\n  \(carthageBuild) -> \(CarthageBinariesFolderPath)\n  \(carthageCheckout) -> \(CarthageProjectCheckoutsPath)\n\nFor more information, see " + formatting.URL(string: "https://github.com/Carthage/Carthage/pull/224") + ".\n"
-		let signals = ColdSignal<ColdSignal<String>> { sink, disposable in
+
+		let producers = SignalProducer<SignalProducer<String, CarthageError>, CarthageError> { observer, disposable in
 			let checkFile: (String, String) -> () = { oldName, newName in
 				if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(oldName)) {
-					let signal = ColdSignal<String>.single(migrationMessage)
-						.concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName).then(.empty()))
+					let producer = SignalProducer(value: migrationMessage)
+						|> concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName)
+							|> then(.empty))
 
-					sink.put(.Next(Box(signal)))
+					sendNext(observer, producer)
 				}
 			}
 
@@ -185,36 +186,40 @@ extension Project {
 
 				var error: NSError?
 				if let contents = fileManager.contentsOfDirectoryAtURL(oldCheckoutsURL, includingPropertiesForKeys: nil, options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsPackageDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, error: &error) {
-					let trashSignal = ColdSignal<()>.lazy {
+					let trashProducer = SignalProducer<(), CarthageError>.try {
 						var error: NSError?
 						if fileManager.trashItemAtURL(oldCheckoutsURL, resultingItemURL: nil, error: &error) {
-							return .empty()
+							return success(())
 						} else {
-							return .error(error ?? CarthageError.WriteFailed(oldCheckoutsURL).error)
+							return failure(CarthageError.WriteFailed(oldCheckoutsURL, error))
 						}
 					}
 
-					let moveSignals: ColdSignal<()> = ColdSignal.fromValues(contents)
-						.map { (object: AnyObject) in object as NSURL }
-						.concatMap { (URL: NSURL) -> ColdSignal<NSURL> in
+					let moveProducer: SignalProducer<(), CarthageError> = SignalProducer(values: contents)
+						|> map { (object: AnyObject) in object as! NSURL }
+						|> joinMap(.Concat) { (URL: NSURL) -> SignalProducer<NSURL, CarthageError> in
 							let lastPathComponent: String! = URL.lastPathComponent
 							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
 						}
-						.then(trashSignal)
+						|> then(trashProducer)
+						|> then(.empty)
 
-					let signal = ColdSignal<String>.single(migrationMessage)
-						.concat(moveSignals.then(.empty()))
+					let producer = SignalProducer<String, CarthageError>(value: migrationMessage)
+						|> concat(moveProducer
+							|> then(.empty))
 
-					sink.put(.Next(Box(signal)))
+					sendNext(observer, producer)
 				} else {
-					sink.put(.Error(error ?? CarthageError.ReadFailed(oldCheckoutsURL).error))
+					sendError(observer, CarthageError.ReadFailed(oldCheckoutsURL, error))
 					return
 				}
 			}
 
-			sink.put(.Completed)
+			sendCompleted(observer)
 		}
 
-		return signals.concat(identity).takeLast(1)
+		return producers
+			|> join(.Concat)
+			|> takeLast(1)
 	}
 }
