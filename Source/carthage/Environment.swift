@@ -24,7 +24,7 @@ internal func getEnvironmentVariable(variable: String) -> Result<String, Carthag
 internal struct Terminal {
 	/// Terminal type retrieved from `TERM` environment variable.
 	static var terminalType: String? {
-		return getEnvironmentVariable("TERM").value()
+		return getEnvironmentVariable("TERM").value
 	}
 	
 	/// Whether terminal type is `dumb`.

@@ -19,7 +19,7 @@ public struct VersionCommand: CommandType {
 		switch mode {
 		case let .Arguments:
 			let versionString = NSBundle(identifier: CarthageKitBundleIdentifier)?.objectForInfoDictionaryKey("CFBundleShortVersionString") as String?
-			if let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString!)).value() {
+			if let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString!)).value {
 				carthage.println(semVer)
 			} else {
 				return failure()
