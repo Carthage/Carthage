@@ -13,7 +13,7 @@ import LlamaKit
 internal func getEnvironmentVariable(variable: String) -> Result<String> {
 	let environment = NSProcessInfo.processInfo().environment
 
-	if let value = environment[variable] as String? {
+	if let value = environment[variable] as? String {
 		return success(value)
 	} else {
 		return failure(CarthageError.MissingEnvironmentVariable(variable: variable).error)
