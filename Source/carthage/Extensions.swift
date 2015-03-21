@@ -54,10 +54,6 @@ public struct CommandError {
 	public init(_ error: CommandantError<CarthageError>) {
 		self.error = error
 	}
-
-	public init(_ error: CarthageError) {
-		self.error = .CommandError(Box(error))
-	}
 }
 
 extension CommandError: Printable {
@@ -78,6 +74,40 @@ extension CommandError: ErrorType {
 			return commandError.unbox.nsError
 		}
 	}
+}
+
+/// Transforms the error type in a Result.
+internal func mapError<T, E, F>(result: Result<T, E>, transform: E -> F) -> Result<T, F> {
+	switch result {
+	case let .Success(value):
+		return .Success(value)
+
+	case let .Failure(error):
+		return .Failure(Box(transform(error.unbox)))
+	}
+}
+
+/// Promotes CarthageErrors into CommandErrors.
+internal func promoteErrors<T>(signal: Signal<T, CarthageError>) -> Signal<T, CommandError> {
+	return signal |> mapError { (error: CarthageError) -> CommandError in
+		let commandantError = CommandantError.CommandError(Box(error))
+		return CommandError(commandantError)
+	}
+}
+
+/// Lifts the Result of options parsing into a SignalProducer.
+internal func producerWithOptions<T>(result: Result<T, CommandantError<CarthageError>>) -> SignalProducer<T, CommandError> {
+	let mappedResult = mapError(result) { CommandError($0) }
+	return SignalProducer(result: mappedResult)
+}
+
+/// Waits on a SignalProducer that implements the behavior of a CommandType.
+internal func waitOnCommand<T>(producer: SignalProducer<T, CommandError>) -> Result<(), CommandantError<CarthageError>> {
+	let result = producer
+		|> then(SignalProducer<(), CommandError>.empty)
+		|> wait
+	
+	return mapError(result) { $0.error }
 }
 
 extension GitURL: ArgumentType {
