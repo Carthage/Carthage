@@ -16,7 +16,7 @@ internal func getEnvironmentVariable(variable: String) -> Result<String, Carthag
 	if let value = environment[variable] as? String {
 		return success(value)
 	} else {
-		return failure(CarthageError.MissingEnvironmentVariable(variable: variable).error)
+		return failure(CarthageError.MissingEnvironmentVariable(variable: variable))
 	}
 }
 
