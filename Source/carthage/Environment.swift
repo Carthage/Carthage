@@ -29,7 +29,7 @@ internal struct Terminal {
 	
 	/// Whether terminal type is `dumb`.
 	static var isDumb: Bool {
-		return terminalType?.caseInsensitiveCompare("dumb") == NSComparisonResult.OrderedSame ?? false
+		return (terminalType?.caseInsensitiveCompare("dumb") == .OrderedSame) ?? false
 	}
 	
 	/// Whether STDOUT is a TTY.
