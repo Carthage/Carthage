@@ -16,7 +16,7 @@ public struct ArchiveCommand: CommandType {
 	public let verb = "archive"
 	public let function = "Archives a built framework into a zip that Carthage can use"
 
-	public func run(mode: CommandMode) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<(), CommandantError> {
 		return ColdSignal.fromResult(ArchiveOptions.evaluate(mode))
 			.mergeMap { options -> ColdSignal<()> in
 				let formatting = options.colorOptions.formatting
@@ -54,7 +54,7 @@ private struct ArchiveOptions: OptionsType {
 		return self(frameworkName: frameworkName, outputPath: outputPath, colorOptions: colorOptions)
 	}
 
-	static func evaluate(m: CommandMode) -> Result<ArchiveOptions> {
+	static func evaluate(m: CommandMode) -> Result<ArchiveOptions, CommandantError> {
 		return create
 			<*> m <| Option(key: "output", defaultValue: "", usage: "the path at which to create the zip file (or blank to infer it from the framework name)")
 			<*> ColorOptions.evaluate(m)

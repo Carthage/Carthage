@@ -16,7 +16,7 @@ public struct FetchCommand: CommandType {
 	public let verb = "fetch"
 	public let function = "Clones or fetches a Git repository ahead of time"
 
-	public func run(mode: CommandMode) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<(), CommandantError> {
 		return ColdSignal.fromResult(FetchOptions.evaluate(mode))
 			.mergeMap { options -> ColdSignal<()> in
 				let project = ProjectIdentifier.Git(options.repositoryURL)
@@ -40,7 +40,7 @@ private struct FetchOptions: OptionsType {
 		return self(colorOptions: colorOptions, repositoryURL: repositoryURL)
 	}
 
-	static func evaluate(m: CommandMode) -> Result<FetchOptions> {
+	static func evaluate(m: CommandMode) -> Result<FetchOptions, CommandantError> {
 		return create
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(usage: "the Git repository that should be cloned or fetched")

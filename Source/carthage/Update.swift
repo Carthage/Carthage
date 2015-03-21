@@ -16,7 +16,7 @@ public struct UpdateCommand: CommandType {
 	public let verb = "update"
 	public let function = "Update and rebuild the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<(), CommandantError> {
 		return ColdSignal.fromResult(UpdateOptions.evaluate(mode))
 			.map { options -> ColdSignal<()> in
 				return options.loadProject()
@@ -57,7 +57,7 @@ public struct UpdateOptions: OptionsType {
 		return self(buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions)
 	}
 
-	public static func evaluate(m: CommandMode) -> Result<UpdateOptions> {
+	public static func evaluate(m: CommandMode) -> Result<UpdateOptions, CommandantError> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platform to build for (ignored if --no-build option is present)")

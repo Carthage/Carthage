@@ -16,7 +16,7 @@ public struct BuildCommand: CommandType {
 	public let verb = "build"
 	public let function = "Build the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<(), CommandantError> {
 		return ColdSignal.fromResult(BuildOptions.evaluate(mode))
 			.map { self.buildWithOptions($0) }
 			.merge(identity)
@@ -115,7 +115,7 @@ public struct BuildOptions: OptionsType {
 		return self(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 	}
 
-	public static func evaluate(m: CommandMode) -> Result<BuildOptions> {
+	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platform to build for (one of ‘all’, ‘Mac’, or ‘iOS’)")

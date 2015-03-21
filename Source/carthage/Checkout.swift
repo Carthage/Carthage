@@ -16,7 +16,7 @@ public struct CheckoutCommand: CommandType {
 	public let verb = "checkout"
 	public let function = "Check out the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<(), CommandantError> {
 		return ColdSignal.fromResult(CheckoutOptions.evaluate(mode))
 			.map { self.checkoutWithOptions($0) }
 			.merge(identity)
@@ -42,11 +42,11 @@ public struct CheckoutOptions: OptionsType {
 		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: useBinaries, colorOptions: colorOptions)
 	}
 
-	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions> {
+	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions, CarthageError> {
 		return evaluate(m, useBinariesAddendum: "")
 	}
 
-	public static func evaluate(m: CommandMode, useBinariesAddendum: String) -> Result<CheckoutOptions> {
+	public static func evaluate(m: CommandMode, useBinariesAddendum: String) -> Result<CheckoutOptions, CommandantError> {
 		return create
 			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 			<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")

@@ -15,7 +15,7 @@ public struct VersionCommand: CommandType {
 	public let verb = "version"
 	public let function = "Display the current version of Carthage"
 
-	public func run(mode: CommandMode) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<(), CommandantError> {
 		switch mode {
 		case let .Arguments:
 			let versionString = NSBundle(identifier: CarthageKitBundleIdentifier)?.objectForInfoDictionaryKey("CFBundleShortVersionString") as String?

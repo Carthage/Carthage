@@ -88,7 +88,7 @@ public struct ColorOptions: OptionsType {
 		return self(argument: argument, formatting: Formatting(argument.isColorful))
 	}
 	
-	public static func evaluate(m: CommandMode) -> Result<ColorOptions> {
+	public static func evaluate(m: CommandMode) -> Result<ColorOptions, CommandantError> {
 		return create
 			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "whether to apply color and terminal formatting (one of ‘auto’, ‘always’, or ‘never’)")
 	}

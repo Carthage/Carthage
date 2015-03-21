@@ -16,7 +16,7 @@ public struct BootstrapCommand: CommandType {
 	public let verb = "bootstrap"
 	public let function = "Check out and build the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<(), CommandantError> {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
 		// `update` flags.
 		return ColdSignal.fromResult(UpdateOptions.evaluate(mode))

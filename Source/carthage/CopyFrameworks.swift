@@ -17,7 +17,7 @@ public struct CopyFrameworksCommand: CommandType {
 	public let verb = "copy-frameworks"
 	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
 
-	public func run(mode: CommandMode) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<(), CommandantError> {
 		switch mode {
 		case .Arguments:
 			return inputFiles()
@@ -66,7 +66,7 @@ private func codeSigningAllowed() -> Bool {
 		.value() ?? false
 }
 
-private func frameworksFolder() -> Result<NSURL> {
+private func frameworksFolder() -> Result<NSURL, CarthageError> {
 	return getEnvironmentVariable("BUILT_PRODUCTS_DIR")
 		.map { NSURL(fileURLWithPath: $0, isDirectory: true)! }
 		.flatMap { url -> Result<NSURL> in
@@ -75,7 +75,7 @@ private func frameworksFolder() -> Result<NSURL> {
 		}
 }
 
-private func validArchitectures() -> Result<[String]> {
+private func validArchitectures() -> Result<[String], CarthageError> {
 	return getEnvironmentVariable("VALID_ARCHS").map { architectures in
 		split(architectures, { $0 == " " })
 	}
