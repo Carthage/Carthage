@@ -47,6 +47,39 @@ internal func print<T>(object: T) {
 	}
 }
 
+/// Wraps CommandantError and adds ErrorType conformance.
+public struct CommandError {
+	public let error: CommandantError<CarthageError>
+
+	public init(_ error: CommandantError<CarthageError>) {
+		self.error = error
+	}
+
+	public init(_ error: CarthageError) {
+		self.error = .CommandError(Box(error))
+	}
+}
+
+extension CommandError: Printable {
+	public var description: String {
+		return error.description
+	}
+}
+
+extension CommandError: ErrorType {
+	public var nsError: NSError {
+		switch error {
+		case let .UsageError(description):
+			return NSError(domain: "org.carthage.Carthage", code: 0, userInfo: [
+				NSLocalizedDescriptionKey: description
+			])
+
+		case let .CommandError(commandError):
+			return commandError.unbox.nsError
+		}
+	}
+}
+
 extension GitURL: ArgumentType {
 	public static let name = "URL"
 
