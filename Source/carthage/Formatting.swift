@@ -6,6 +6,7 @@
 //  Copyright (c) 2015 Carthage. All rights reserved.
 //
 
+import CarthageKit
 import Commandant
 import Foundation
 import LlamaKit
@@ -88,7 +89,7 @@ public struct ColorOptions: OptionsType {
 		return self(argument: argument, formatting: Formatting(argument.isColorful))
 	}
 	
-	public static func evaluate(m: CommandMode) -> Result<ColorOptions, CommandantError> {
+	public static func evaluate(m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "whether to apply color and terminal formatting (one of ‘auto’, ‘always’, or ‘never’)")
 	}
