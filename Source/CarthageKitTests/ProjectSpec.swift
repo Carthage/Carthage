@@ -10,28 +10,29 @@ import CarthageKit
 import Foundation
 import Nimble
 import Quick
+import ReactiveCocoa
 
 class ProjectSpec: QuickSpec {
 	override func spec() {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("CartfilePrivateOnly", withExtension: nil)!
 
 		it("should load a combined Cartfile when only a Cartfile.private is present") {
-			let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
+			let result = Project(directoryURL: directoryURL).loadCombinedCartfile() |> single
+			expect(result).notTo(beNil())
+			expect(result?.isSuccess).to(beTruthy())
 
-			expect(result.isSuccess()).to(beTruthy())
-
-			let dependencies = result.value()?.dependencies ?? []
-
-			expect(countElements(dependencies)).to(equal(1))
-			expect(dependencies.first?.project.name).to(equal("Carthage"))
+			let dependencies = result?.value?.dependencies
+			expect(dependencies?.count).to(equal(1))
+			expect(dependencies?.first?.project.name).to(equal("Carthage"))
 		}
 
         it("should detect duplicate dependencies across Cartfile and Cartfile.private") {
             let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependencies", withExtension: nil)!
-            let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
-			let resultError = result.error()
+            let result = Project(directoryURL: directoryURL).loadCombinedCartfile() |> single
+			expect(result).notTo(beNil())
 
-			expect(resultError).toNot(beNil())
+			let resultError = result?.error
+			expect(resultError).notTo(beNil())
 
 			let makeDependency: (String, String, [String]) -> DuplicateDependency = { (repoOwner, repoName, locations) in
 				let project = ProjectIdentifier.GitHub(GitHubRepository(owner: repoOwner, name: repoName))
@@ -49,7 +50,7 @@ class ProjectSpec: QuickSpec {
 				makeDependency("5", "5", bothLocations),
 			])
 
-			expect(resultError!).to(equal(expectedError.error))
+			expect(resultError).to(equal(expectedError))
         }
 	}
 }
