@@ -16,18 +16,19 @@ public struct CheckoutCommand: CommandType {
 	public let verb = "checkout"
 	public let function = "Check out the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<(), CommandantError> {
-		return ColdSignal.fromResult(CheckoutOptions.evaluate(mode))
-			.map { self.checkoutWithOptions($0) }
-			.merge(identity)
-			.wait()
+	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
+		return producerWithOptions(CheckoutOptions.evaluate(mode))
+			|> joinMap(.Merge) { options in
+				return self.checkoutWithOptions(options)
+					|> promoteErrors
+			}
+			|> waitOnCommand
 	}
 
 	/// Checks out dependencies with the given options.
-	public func checkoutWithOptions(options: CheckoutOptions) -> ColdSignal<()> {
+	public func checkoutWithOptions(options: CheckoutOptions) -> SignalProducer<(), CarthageError> {
 		return options.loadProject()
-			.map { $0.checkoutResolvedDependencies() }
-			.merge(identity)
+			|> joinMap(.Merge) { $0.checkoutResolvedDependencies() }
 	}
 }
 
@@ -42,11 +43,11 @@ public struct CheckoutOptions: OptionsType {
 		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: useBinaries, colorOptions: colorOptions)
 	}
 
-	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions, CarthageError> {
+	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions, CommandantError<CarthageError>> {
 		return evaluate(m, useBinariesAddendum: "")
 	}
 
-	public static func evaluate(m: CommandMode, useBinariesAddendum: String) -> Result<CheckoutOptions, CommandantError> {
+	public static func evaluate(m: CommandMode, useBinariesAddendum: String) -> Result<CheckoutOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 			<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
@@ -57,20 +58,21 @@ public struct CheckoutOptions: OptionsType {
 
 	/// Attempts to load the project referenced by the options, and configure it
 	/// accordingly.
-	public func loadProject() -> ColdSignal<Project> {
+	public func loadProject() -> SignalProducer<Project, CarthageError> {
 		if let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true) {
 			let project = Project(directoryURL: directoryURL)
 			project.preferHTTPS = !self.useSSH
 			project.useSubmodules = self.useSubmodules
 			project.useBinaries = self.useBinaries
-			project.projectEvents.observe(ProjectEventSink(colorOptions: colorOptions))
 
-			return project
-				.migrateIfNecessary(colorOptions)
-				.on(next: carthage.println)
-				.then(.single(project))
+			var eventSink = ProjectEventSink(colorOptions: colorOptions)
+			project.projectEvents.observe(next: { eventSink.put($0) })
+
+			return project.migrateIfNecessary(colorOptions)
+				|> on(next: carthage.println)
+				|> then(SignalProducer(value: project))
 		} else {
-			return .error(CarthageError.InvalidArgument(description: "Invalid project path: \(directoryPath)").error)
+			return SignalProducer(error: CarthageError.InvalidArgument(description: "Invalid project path: \(directoryPath)"))
 		}
 	}
 }
