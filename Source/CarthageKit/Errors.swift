@@ -11,7 +11,7 @@ import ReactiveCocoa
 import ReactiveTask
 
 /// Possible errors that can originate from Carthage.
-public enum CarthageError {
+public enum CarthageError: Equatable {
 	/// One or more arguments was invalid.
 	case InvalidArgument(description: String)
 
@@ -62,6 +62,63 @@ public enum CarthageError {
 
 	/// The file or folder at the given URL is not an Xcode project.
 	case NotAProject(NSURL)
+}
+
+public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
+	switch (lhs, rhs) {
+	case let (.InvalidArgument(left), .InvalidArgument(right)):
+		return left == right
+	
+	case let (.MissingBuildSetting(left), .MissingBuildSetting(right)):
+		return left == right
+	
+	case let (.IncompatibleRequirements(left, la, lb), .IncompatibleRequirements(right, ra, rb)):
+		let specifiersEqual = (la == ra && lb == rb) || (la == rb && rb == la)
+		return left == right && specifiersEqual
+	
+	case let (.TaggedVersionNotFound(left), .TaggedVersionNotFound(right)):
+		return left == right
+
+	case let (.RequiredVersionNotFound(left, leftVersion), .RequiredVersionNotFound(right, rightVersion)):
+		return left == right && leftVersion == rightVersion
+	
+	case let (.RepositoryCheckoutFailed(la, lb, lc), .RepositoryCheckoutFailed(ra, rb, rc)):
+		return la == ra && lb == rb && lc == rc
+	
+	case let (.ReadFailed(la, lb), .ReadFailed(ra, rb)):
+		return la == ra && lb == rb
+	
+	case let (.WriteFailed(la, lb), .WriteFailed(ra, rb)):
+		return la == ra && lb == rb
+	
+	case let (.ParseError(left), .ParseError(right)):
+		return left == right
+	
+	case let (.MissingEnvironmentVariable(left), .MissingEnvironmentVariable(right)):
+		return left == right
+	
+	case let (.InvalidArchitectures(left), .InvalidArchitectures(right)):
+		return left == right
+	
+	case let (.NoSharedSchemes(la, lb), .NoSharedSchemes(ra, rb)):
+		return la == ra && lb == rb
+	
+	case let (.DuplicateDependencies(left), .DuplicateDependencies(right)):
+		return left == right
+	
+	case let (.TaskError(left), .TaskError(right)):
+		// TODO: Implement Equatable in ReactiveTask.
+		return false
+	
+	case let (.NetworkError(left), .NetworkError(right)):
+		return left == right
+	
+	case let (.NotAProject(left), .NotAProject(right)):
+		return left == right
+	
+	default:
+		return false
+	}
 }
 
 extension CarthageError: Printable {
@@ -178,7 +235,7 @@ extension CarthageError: ErrorType {
 }
 
 /// A duplicate dependency, used in CarthageError.DuplicateDependencies.
-public struct DuplicateDependency {
+public struct DuplicateDependency: Comparable {
 	/// The duplicate dependency as a project.
 	public let project: ProjectIdentifier
 
@@ -211,7 +268,11 @@ extension DuplicateDependency: Printable {
 	}
 }
 
-private func <(lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
+public func == (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
+	return lhs.project == rhs.project && lhs.locations == rhs.locations
+}
+
+public func < (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
 	if lhs.description < rhs.description {
 		return true
 	}
