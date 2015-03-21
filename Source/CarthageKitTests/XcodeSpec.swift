@@ -40,26 +40,26 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for project in dependencies {
-				let (outputSignal, schemeSignals) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
-				let result = schemeSignals
-					.concat(identity)
-					.on(next: { (project, scheme) in
+				let (outputSignal, schemeProducers) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
+				let result = schemeProducers
+					|> join(.Concat)
+					|> on(next: { (project, scheme) in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 					})
-					.wait()
+					|> wait
 
-				expect(result.error()).to(beNil())
+				expect(result.error).to(beNil())
 			}
 
-			let (outputSignal, schemeSignals) = buildInDirectory(directoryURL, withConfiguration: "Debug")
-			let result = schemeSignals
-				.concat(identity)
-				.on(next: { (project, scheme) in
+			let (outputSignal, schemeProducers) = buildInDirectory(directoryURL, withConfiguration: "Debug")
+			let result = schemeProducers
+				|> join(.Concat)
+				|> on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
-				.wait()
+				|> wait
 
-			expect(result.error()).to(beNil())
+			expect(result.error).to(beNil())
 
 			// Verify that the build products exist at the top level.
 			var projectNames = dependencies.map { project in project.name }
@@ -81,13 +81,12 @@ class XcodeSpec: QuickSpec {
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
 			let architectures = architecturesInFramework(frameworkFolderURL)
-				.reduce(initial: []) { $0 + [ $1 ] }
-				.single()
-				.value()
+				|> reduce([]) { $0 + [ $1 ] }
+				|> single
 
-			expect(architectures).to(contain("i386"))
-			expect(architectures).to(contain("armv7"))
-			expect(architectures).to(contain("arm64"))
+			expect(architectures?.value).to(contain("i386"))
+			expect(architectures?.value).to(contain("armv7"))
+			expect(architectures?.value).to(contain("arm64"))
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
@@ -99,48 +98,47 @@ class XcodeSpec: QuickSpec {
 			// Copy ReactiveCocoaLayout.framework to the temporary folder.
 			let targetURL = targetFolderURL.URLByAppendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
 
-			let resultURL = copyFramework(frameworkFolderURL, targetURL).single().value()
+			let resultURL = copyFramework(frameworkFolderURL, targetURL) |> single
+			expect(resultURL?.value).to(equal(targetURL))
 
-			expect(resultURL).to(equal(targetURL))
 			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)).to(beTruthy())
 			expect(isDirectory).to(beTruthy())
 
-			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait().isSuccess()
-
-			expect(strippingResult).to(beTruthy())
+			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-") |> wait
+			expect(strippingResult.isSuccess).to(beTruthy())
 
 			let strippedArchitectures = architecturesInFramework(targetURL)
-				.reduce(initial: []) { $0 + [ $1 ] }
-				.single()
-				.value()
+				|> reduce([]) { $0 + [ $1 ] }
+				|> single
 
-			expect(strippedArchitectures).notTo(contain("i386"))
-			expect(strippedArchitectures).to(contain("armv7"))
-			expect(strippedArchitectures).to(contain("arm64"))
+			expect(strippedArchitectures?.value).notTo(contain("i386"))
+			expect(strippedArchitectures?.value).to(contain("armv7"))
+			expect(strippedArchitectures?.value).to(contain("arm64"))
 
 			var output: String = ""
 			let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
 
 			let codesignResult = launchTask(codeSign, standardError: SinkOf<NSData> { data -> () in
-				output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
-			}).wait().isSuccess()
+					output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
+				})
+				|> wait
 
-			expect(codesignResult).to(beTruthy())
+			expect(codesignResult.isSuccess).to(beTruthy())
 
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
 
 		it("should build for one platform") {
 			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
-			let (outputSignal, schemeSignals) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platform: .Mac)
-			let result = schemeSignals
-				.concat(identity)
-				.on(next: { (project, scheme) in
+			let (outputSignal, schemeProducers) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platform: .Mac)
+			let result = schemeProducers
+				|> join(.Concat)
+				|> on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
-				.wait()
+				|> wait
 
-			expect(result.error()).to(beNil())
+			expect(result.error).to(beNil())
 
 			// Verify that the build product exists at the top level.
 			let path = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
@@ -154,24 +152,26 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should locate the project") {
-			let result = locateProjectsInDirectory(directoryURL).first()
-			expect(result.error()).to(beNil())
+			let result = locateProjectsInDirectory(directoryURL) |> first
+			expect(result).notTo(beNil())
+			expect(result?.error).to(beNil())
 
-			let locator = result.value()!
+			let locator = result?.value!
 			expect(locator).to(equal(ProjectLocator.ProjectFile(projectURL)))
 		}
 
 		it("should locate the project from the parent directory") {
-			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!).first()
-			expect(result.error()).to(beNil())
+			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!) |> first
+			expect(result).notTo(beNil())
+			expect(result?.error).to(beNil())
 
-			let locator = result.value()!
+			let locator = result?.value!
 			expect(locator).to(equal(ProjectLocator.ProjectFile(projectURL)))
 		}
 
 		it("should not locate the project from a directory not containing it") {
-			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")).first()
-			expect(result.value()).to(beNil())
+			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")) |> first
+			expect(result).to(beNil())
 		}
 	}
 }
