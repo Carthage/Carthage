@@ -104,7 +104,7 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 		return la == ra && lb == rb
 	
 	case let (.DuplicateDependencies(left), .DuplicateDependencies(right)):
-		return left == right
+		return sorted(left) == sorted(right)
 	
 	case let (.TaskError(left), .TaskError(right)):
 		// TODO: Implement Equatable in ReactiveTask.
@@ -184,8 +184,7 @@ extension CarthageError: Printable {
 			return description
 
 		case let .DuplicateDependencies(duplicateDeps):
-			let deps = duplicateDeps
-				.sorted(<) // important to match expected order in test cases
+			let deps = sorted(duplicateDeps) // important to match expected order in test cases
 				.reduce("") { (acc, dep) in
 					"\(acc)\n\t\(dep)"
 				}
