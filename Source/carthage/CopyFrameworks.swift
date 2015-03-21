@@ -68,7 +68,7 @@ private func codeSigningAllowed() -> Bool {
 private func frameworksFolder() -> Result<NSURL, CarthageError> {
 	return getEnvironmentVariable("BUILT_PRODUCTS_DIR")
 		.map { NSURL(fileURLWithPath: $0, isDirectory: true)! }
-		.flatMap { url -> Result<NSURL> in
+		.flatMap { url -> Result<NSURL, CarthageError> in
 			getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH")
 				.map { url.URLByAppendingPathComponent($0, isDirectory: true) }
 		}
