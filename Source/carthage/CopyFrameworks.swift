@@ -62,8 +62,7 @@ private func codeSigningIdentity() -> ColdSignal<String?> {
 
 private func codeSigningAllowed() -> Bool {
 	return getEnvironmentVariable("CODE_SIGNING_ALLOWED")
-		.map { $0 == "YES" }
-		.value() ?? false
+		.map { $0 == "YES" }.value ?? false
 }
 
 private func frameworksFolder() -> Result<NSURL, CarthageError> {
