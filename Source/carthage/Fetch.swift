@@ -16,19 +16,20 @@ public struct FetchCommand: CommandType {
 	public let verb = "fetch"
 	public let function = "Clones or fetches a Git repository ahead of time"
 
-	public func run(mode: CommandMode) -> Result<(), CommandantError> {
-		return ColdSignal.fromResult(FetchOptions.evaluate(mode))
-			.mergeMap { options -> ColdSignal<()> in
+	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
+		return producerWithOptions(FetchOptions.evaluate(mode))
+			|> joinMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				let project = ProjectIdentifier.Git(options.repositoryURL)
 				var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
 				return cloneOrFetchProject(project, preferHTTPS: true)
-					.on(next: { event, _ in
+					|> on(next: { event, _ in
 						eventSink.put(event)
 					})
-					.then(.empty())
+					|> then(.empty)
+					|> promoteErrors
 			}
-			.wait()
+			|> waitOnCommand
 	}
 }
 
@@ -40,7 +41,7 @@ private struct FetchOptions: OptionsType {
 		return self(colorOptions: colorOptions, repositoryURL: repositoryURL)
 	}
 
-	static func evaluate(m: CommandMode) -> Result<FetchOptions, CommandantError> {
+	static func evaluate(m: CommandMode) -> Result<FetchOptions, CommandantError<CarthageError>> {
 		return create
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(usage: "the Git repository that should be cloned or fetched")
