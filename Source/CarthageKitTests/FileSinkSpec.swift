@@ -16,32 +16,34 @@ import ReactiveCocoa
 class FileSinkSpec: QuickSpec {
 	override func spec() {
 		it("should open and write to a temporary file") {
-			let result = FileSink<String>.openTemporaryFile().single()
-			expect(result.isSuccess()).to(beTruthy())
+			let result = FileSink<String>.openTemporaryFile() |> single
+			expect(result).notTo(beNil())
+			expect(result?.isSuccess).to(beTruthy())
 
-			let sink = result.value().map { $0.0 }
-			let URL = result.value().map { $0.1 } ?? NSURL.fileURLWithPath("URL-failed.txt")!
+			let sink = result?.value.map { $0.0 }
+			let URL = result?.value.map { $0.1 } ?? NSURL.fileURLWithPath("URL-failed.txt")!
 
-			sink?.put("foobar\n")
+			sink?.put(.Next(Box("foobar\n")))
 			expect(NSString(contentsOfURL: URL, encoding: NSUTF8StringEncoding, error: nil)).to(equal("foobar\n"))
 
 			// Verify line buffering.
-			sink?.put("fuzzbuzz")
+			sink?.put(.Next(Box("fuzzbuzz")))
 			expect(NSString(contentsOfURL: URL, encoding: NSUTF8StringEncoding, error: nil)).to(equal("foobar\n"))
 
-			// TODO: Verify output flushing.
-			//sink?.put(.Completed)
-			//expect(NSString(contentsOfURL: URL, encoding: NSUTF8StringEncoding, error: nil)).to(equal("foobar\nfuzzbuzz"))
+			sink?.put(.Completed)
+			expect(NSString(contentsOfURL: URL, encoding: NSUTF8StringEncoding, error: nil)).to(equal("foobar\nfuzzbuzz"))
 		}
 
 		it("should open stdout") {
 			let sink = FileSink<String>.standardOutputSink()
-			sink.put("foobar\n")
+			sink.put(.Next(Box("foobar\n")))
+			sink.put(.Completed)
 		}
 
 		it("should open stderr") {
 			let sink = FileSink<String>.standardErrorSink()
-			sink.put("foobar\n")
+			sink.put(.Next(Box("foobar\n")))
+			sink.put(.Completed)
 		}
 	}
 }
