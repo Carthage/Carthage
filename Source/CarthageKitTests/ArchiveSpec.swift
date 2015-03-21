@@ -18,10 +18,11 @@ class ArchiveSpec: QuickSpec {
 			let archiveURL = NSBundle(forClass: self.dynamicType).URLForResource("CartfilePrivateOnly", withExtension: "zip")!
 
 			it("should unzip archive to a temporary directory") {
-				let result = unzipArchiveToTemporaryDirectory(archiveURL).single()
-				expect(result.error()).to(beNil())
+				let result = unzipArchiveToTemporaryDirectory(archiveURL) |> single
+				expect(result).notTo(beNil())
+				expect(result?.error).to(beNil())
 
-				let directoryPath = result.value()?.path ?? NSFileManager.defaultManager().currentDirectoryPath
+				let directoryPath = result?.value?.path ?? NSFileManager.defaultManager().currentDirectoryPath
 				var isDirectory: ObjCBool = false
 				expect(NSFileManager.defaultManager().fileExistsAtPath(directoryPath, isDirectory: &isDirectory)).to(beTruthy())
 				expect(isDirectory).to(beTruthy())
@@ -64,21 +65,23 @@ class ArchiveSpec: QuickSpec {
 				let outerFilePath = "outer"
 				expect("foobar".writeToFile(outerFilePath, atomically: true, encoding: NSUTF8StringEncoding, error: nil)).to(beTruthy())
 
-				let result = zipIntoArchive(archiveURL, [ innerFilePath, outerFilePath ]).wait()
-				expect(result.error()).to(beNil())
+				let result = zipIntoArchive(archiveURL, [ innerFilePath, outerFilePath ]) |> wait
+				expect(result.error).to(beNil())
 
-				let unzipResult = unzipArchiveToTemporaryDirectory(archiveURL).single()
-				expect(unzipResult.error()).to(beNil())
+				let unzipResult = unzipArchiveToTemporaryDirectory(archiveURL) |> single
+				expect(unzipResult).notTo(beNil())
+				expect(unzipResult?.error).to(beNil())
 
-				let enumerationResult = NSFileManager.defaultManager().carthage_enumeratorAtURL(unzipResult.value() ?? temporaryURL, includingPropertiesForKeys: [], options: nil)
-					.map { enumerator, URL in URL }
-					.map { $0.lastPathComponent! }
-					.reduce(initial: []) { $0 + [ $1 ] }
-					.single()
+				let enumerationResult = NSFileManager.defaultManager().carthage_enumeratorAtURL(unzipResult?.value ?? temporaryURL, includingPropertiesForKeys: [], options: nil)
+					|> map { enumerator, URL in URL }
+					|> map { $0.lastPathComponent! }
+					|> reduce([]) { $0 + [ $1 ] }
+					|> single
 
-				expect(enumerationResult.error()).to(beNil())
+				expect(enumerationResult).notTo(beNil())
+				expect(enumerationResult?.error).to(beNil())
 
-				let fileNames = enumerationResult.value() ?? []
+				let fileNames = enumerationResult?.value
 				expect(fileNames).to(contain("inner"))
 				expect(fileNames).to(contain(subdirPath))
 				expect(fileNames).to(contain(outerFilePath))
@@ -92,13 +95,14 @@ class ArchiveSpec: QuickSpec {
 				expect(NSFileManager.defaultManager().createSymbolicLinkAtPath(symlinkPath, withDestinationPath: destinationPath, error: nil)).to(beTruthy())
 				expect(NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(symlinkPath, error: nil)).to(equal(destinationPath))
 
-				let result = zipIntoArchive(archiveURL, [ symlinkPath, destinationPath ]).wait()
-				expect(result.error()).to(beNil())
+				let result = zipIntoArchive(archiveURL, [ symlinkPath, destinationPath ]) |> wait
+				expect(result.error).to(beNil())
 
-				let unzipResult = unzipArchiveToTemporaryDirectory(archiveURL).single()
-				expect(unzipResult.error()).to(beNil())
+				let unzipResult = unzipArchiveToTemporaryDirectory(archiveURL) |> single
+				expect(unzipResult).notTo(beNil())
+				expect(unzipResult?.error).to(beNil())
 
-				let unzippedSymlinkURL = (unzipResult.value() ?? temporaryURL).URLByAppendingPathComponent(symlinkPath)
+				let unzippedSymlinkURL = (unzipResult?.value ?? temporaryURL).URLByAppendingPathComponent(symlinkPath)
 				expect(NSFileManager.defaultManager().fileExistsAtPath(unzippedSymlinkURL.path!)).to(beTruthy())
 				expect(NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(unzippedSymlinkURL.path!, error: nil)).to(equal(destinationPath))
 			}
