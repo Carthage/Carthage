@@ -260,7 +260,7 @@ extension VersionSpecifier: VersionType {}
 extension VersionSpecifier: Printable {
 	public var description: String {
 		switch (self) {
-		case let .Any:
+		case .Any:
 			return ""
 
 		case let .Exactly(version):

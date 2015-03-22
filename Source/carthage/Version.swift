@@ -17,7 +17,7 @@ public struct VersionCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		switch mode {
-		case let .Arguments:
+		case .Arguments:
 			let versionString = NSBundle(identifier: CarthageKitBundleIdentifier)?.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String
 			let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString!)).value
 			carthage.println(semVer!)
