@@ -345,7 +345,7 @@ public final class Project {
 				return success(self.useBinaries)
 			}
 			|> joinMap(.Merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
-				if useBinaries {
+				if !useBinaries {
 					return SignalProducer(value: false)
 				}
 
