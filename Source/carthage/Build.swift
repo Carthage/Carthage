@@ -11,6 +11,7 @@ import Commandant
 import Foundation
 import LlamaKit
 import ReactiveCocoa
+import ReactiveTask
 
 public struct BuildCommand: CommandType {
 	public let verb = "build"
@@ -30,6 +31,18 @@ public struct BuildCommand: CommandType {
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
 
 				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
+
+				// Redirect any error-looking messages from stdout, because
+				// Xcode doesn't always forward them.
+				var grepDisposable: Disposable?
+				if !options.verbose {
+					let coldOutput = stdoutSignal.replay(0)
+					let task = TaskDescription(launchPath: "/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ], standardInput: coldOutput)
+
+					let stderrSink: FileSink<NSData> = FileSink.standardErrorSink()
+					grepDisposable = launchTask(task, standardOutput: SinkOf(stderrSink)).start()
+				}
+
 				stdoutSignal.observe(stdoutSink)
 
 				let formatting = options.colorOptions.formatting
@@ -42,6 +55,9 @@ public struct BuildCommand: CommandType {
 						}
 					}, next: { (project, scheme) in
 						carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(string: project.description))
+					}, disposed: {
+						grepDisposable?.dispose()
+						return
 					})
 					.then(.empty())
 			}
