@@ -411,7 +411,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 		if isGitRepository(submoduleDirectoryURL) {
 			// If the submodule repository already exists, just check out and
 			// stage the correct revision.
-			return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL)
+			return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
 				.then(launchGitTask([ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.URL.URLString ], repositoryFileURL: repositoryFileURL))
 				.then(launchGitTask([ "submodule", "--quiet", "sync" ], repositoryFileURL: repositoryFileURL))
 				.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
