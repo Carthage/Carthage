@@ -879,8 +879,13 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 
 		return schemeSignals
 			.catch { error in
-				switch (dependency, error.code) {
-				case (.GitHub(let repo), CarthageErrorCode.NoSharedSchemes.rawValue):
+				let fileIssueCodes = [
+					CarthageErrorCode.NoSharedSchemes.rawValue,
+					CarthageErrorCode.XcodebuildListTimeout.rawValue,
+				]
+
+				switch dependency {
+				case let .GitHub(repo) where contains(fileIssueCodes, error.code):
 					return .error(addIssueFilingSuggestionToError(error, repo))
 				default:
 					return .error(error)
@@ -891,15 +896,16 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 	return (buildOutput, copyProducts)
 }
 
-/// Augments a no shared schemes error description to include a suggestion
-/// to file a GitHub issue in GitHub repositories.
+/// Augments an error localized description to include a suggestion to file a
+/// GitHub issue for repositories with potentially no shared schemes.
 ///
-/// Returns a no shared schemes error with an issue filing suggestion.
+/// Returns an error with an issue filing suggestion.
 private func addIssueFilingSuggestionToError(error: NSError, repo: GitHubRepository) -> NSError {
-	let msg = error.localizedDescription + "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repo.newIssueURL.absoluteString!)"
-	return CarthageErrorCode.NoSharedSchemes.error([
-		    NSLocalizedDescriptionKey: msg
-		])
+	var userInfo = error.userInfo!
+
+	userInfo[NSLocalizedDescriptionKey] = error.localizedDescription + "\n\nIf you believe this to be a project configuration error, please file an issue with the maintainers at \(repo.newIssueURL.absoluteString!)"
+
+	return NSError(domain: error.domain, code: error.code, userInfo: userInfo)
 }
 
 /// Builds the first project or workspace found within the given directory.
