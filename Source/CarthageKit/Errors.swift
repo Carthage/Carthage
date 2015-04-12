@@ -25,6 +25,7 @@ public enum CarthageErrorCode: Int {
 	case InvalidArchitectures
 	case MissingEnvironmentVariable
 	case NoSharedSchemes
+	case XcodebuildListTimeout
 	case DuplicateDependencies
 
 	func error(userInfo: [NSObject: AnyObject]?) -> NSError {
@@ -71,6 +72,9 @@ public enum CarthageError {
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
 	case NoSharedSchemes(ProjectLocator)
+
+	/// Timeout whilst running `xcodebuild list` to enumerate shared schemes.
+	case XcodebuildListTimeout(ProjectLocator)
 
 	/// A cartfile contains duplicate dependencies, either in itself or across
 	/// other cartfiles.
@@ -139,6 +143,11 @@ public enum CarthageError {
 				NSLocalizedDescriptionKey: "Project \"\(project)\" has no shared schemes"
 			])
 
+		case let .XcodebuildListTimeout(project):
+			return CarthageErrorCode.XcodebuildListTimeout.error([
+				NSLocalizedDescriptionKey: "Timeout whilst listing project \"\(project)\" schemes. This could mean that no shared schemes could be found or xcodebuild is just taking too long to execute"
+			])
+			
 		case let .DuplicateDependencies(duplicateDeps):
 			let deps = duplicateDeps
 				.sorted(<) // important to match expected order in test cases
