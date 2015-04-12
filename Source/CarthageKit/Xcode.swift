@@ -901,7 +901,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 ///
 /// Returns an error with an issue filing suggestion.
 private func addIssueFilingSuggestionToError(error: NSError, repo: GitHubRepository) -> NSError {
-	var userInfo = error.userInfo!
+	var userInfo = error.userInfo ?? NSMutableDictionary()
 
 	userInfo[NSLocalizedDescriptionKey] = error.localizedDescription + "\n\nIf you believe this to be a project configuration error, please file an issue with the maintainers at \(repo.newIssueURL.absoluteString!)"
 
