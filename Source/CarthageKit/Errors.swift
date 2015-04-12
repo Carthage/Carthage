@@ -145,7 +145,7 @@ public enum CarthageError {
 
 		case let .XcodebuildListTimeout(project):
 			return CarthageErrorCode.XcodebuildListTimeout.error([
-				NSLocalizedDescriptionKey: "Failed to discover shared schemes in project \"(project)\"—either the project does not have any shared schemes, or xcodebuild never returned"
+				NSLocalizedDescriptionKey: "Failed to discover shared schemes in project \(project)—either the project does not have any shared schemes, or xcodebuild never returned"
 			])
 			
 		case let .DuplicateDependencies(duplicateDeps):
