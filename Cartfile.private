@@ -1,5 +1,5 @@
-github "Quick/Quick" "master"
-github "Quick/Nimble" "master"
-github "jspahrsummers/xcconfigs" >= 0.6
+github "Quick/Quick"
+github "Quick/Nimble"
+github "jspahrsummers/xcconfigs" ~> 0.7
 github "Carthage/Commandant" "custom-client-error-type"
 github "jdhealy/PrettyColors" "swift-1.2"

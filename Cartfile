@@ -1,4 +1,4 @@
-github "ReactiveCocoa/ReactiveCocoa" "v3.0-alpha.3"
+github "ReactiveCocoa/ReactiveCocoa" "v3.0-alpha.4"
 github "LlamaKit/LlamaKit" == 0.6
 github "Carthage/ReactiveTask" ~> 0.4
 github "thoughtbot/Argo" ~> 0.4.3
