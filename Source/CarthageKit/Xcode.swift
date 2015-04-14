@@ -234,7 +234,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		// xcodebuild has a bug where xcodebuild -list can sometimes hang
 		// indefinitely on projects that don't share any schemes, so
 		// automatically bail out if it looks like that's happening.
-		|> timeoutWithError(.NoSharedSchemes(project, nil), afterInterval: 4, onScheduler: QueueScheduler())
+		|> timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 8, onScheduler: QueueScheduler())
 		|> map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
@@ -877,6 +877,9 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 					switch (dependency, error) {
 					case let (.GitHub(repo), .NoSharedSchemes(project, _)):
 						return SignalProducer(error: .NoSharedSchemes(project, repo))
+
+					case let (.GitHub(repo), .XcodebuildListTimeout(project, _)):
+						return SignalProducer(error: .XcodebuildListTimeout(project, repo))
 
 					default:
 						return SignalProducer(error: error)
