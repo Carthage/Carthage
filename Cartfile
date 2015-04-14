@@ -1,4 +1,6 @@
-github "ReactiveCocoa/ReactiveCocoa" "memory-corruption-workaround"
 github "LlamaKit/LlamaKit" == 0.6
 github "Carthage/ReactiveTask" ~> 0.4
 github "thoughtbot/Argo" ~> 0.4.3
+
+# memory-corruption-workaround branch, PR #1896
+github "ReactiveCocoa/ReactiveCocoa" "85be02a"

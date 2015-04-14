@@ -1,5 +1,5 @@
 github "Quick/Quick"
 github "Quick/Nimble"
 github "jspahrsummers/xcconfigs" ~> 0.7
-github "Carthage/Commandant" "custom-client-error-type"
+github "Carthage/Commandant" ~> 0.5
 github "jdhealy/PrettyColors" "swift-1.2"
