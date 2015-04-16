@@ -64,6 +64,10 @@ public let CarthageProjectBinaryAssetContentTypes = [
 
 /// Describes an event occurring to or with a project.
 public enum ProjectEvent {
+	
+	/// The project is being cleaned.
+	case Cleaning()
+	
 	/// The project is beginning to clone.
 	case Cloning(ProjectIdentifier)
 
@@ -540,6 +544,63 @@ public final class Project {
 
 		return (stdoutSignal, schemeSignals)
 	}
+	
+	/// Determines if carthage directory exists or not
+	private func carthageDirectoryExists() -> Bool {
+		var isDir = ObjCBool(true)
+		let carthageDirectoryURL = self.directoryURL.URLByAppendingPathComponent("Carthage", isDirectory: true)
+		return NSFileManager.defaultManager().fileExistsAtPath(carthageDirectoryURL.path!,isDirectory: &isDir)
+	}
+	
+	/// removes carthage directory if it exists
+	public func removeCarthageDirectory() -> SignalProducer<(), CarthageError> {
+		return SignalProducer.try { () -> Result<(), CarthageError> in
+			if self.carthageDirectoryExists() {
+				let carthageDirectoryURL = self.directoryURL.URLByAppendingPathComponent("Carthage", isDirectory: true)
+				var error: NSError?
+				if NSFileManager.defaultManager().removeItemAtURL(carthageDirectoryURL, error: &error) {
+					return success(())
+				} else {
+					return failure(.RemoveFailed(self.directoryURL, error))
+				}
+			}
+			return success(())
+		}
+	}
+
+	/// Determines if Cartfile.resolved exists or not
+	private func cartfileResolvedExists() -> Bool {
+		var isDir = ObjCBool(false)
+		return NSFileManager.defaultManager().fileExistsAtPath(self.resolvedCartfileURL.path!,isDirectory: &isDir)
+	}
+	
+	/// removes Cartfile.resolved if it exists
+	public func removeCartfileResolved() -> SignalProducer<(), CarthageError> {
+		return SignalProducer.try { () -> Result<(), CarthageError> in
+			if self.cartfileResolvedExists() {
+				var error: NSError?
+				if NSFileManager.defaultManager().removeItemAtURL(self.resolvedCartfileURL, error: &error) {
+					return success(())
+				} else {
+					return failure(.RemoveFailed(self.resolvedCartfileURL, error))
+				}
+			}
+			return success(())
+		}
+	}
+
+	/// //signals cleaning in progress
+	/// removes Cartfile.resolved, if it exists
+	/// removes carthage directory, if it exists
+	public func clean() -> SignalProducer<(), CarthageError> {
+
+		//return SignalProducer(value: (ProjectEvent.Cleaning()))
+		return self.removeCarthageDirectory()
+			|> joinMap(.Merge) {
+				return self.removeCartfileResolved()
+		}
+	}
+
 }
 
 /// Constructs a file URL to where the binary corresponding to the given
