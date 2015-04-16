@@ -130,6 +130,9 @@ internal struct ProjectEventSink: SinkType {
 		let formatting = colorOptions.formatting
 		
 		switch event {
+		case let .Cleaning():
+			carthage.println(formatting.bullets + "Cleaning " )
+			
 		case let .Cloning(project):
 			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(string: project.name))
 

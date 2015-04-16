@@ -16,6 +16,18 @@ class ProjectSpec: QuickSpec {
 	override func spec() {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("CartfilePrivateOnly", withExtension: nil)!
 
+		it("should remove the carthage directory") {
+			let result = Project(directoryURL: directoryURL).removeCarthageDirectory() |> single
+			expect(result).notTo(beNil())
+			expect(result?.isSuccess).to(beTruthy())
+		}
+
+		it("should remove the cartfile.resolved directory") {
+			let result = Project(directoryURL: directoryURL).removeCartfileResolved() |> single
+			expect(result).notTo(beNil())
+			expect(result?.isSuccess).to(beTruthy())
+		}
+		
 		it("should load a combined Cartfile when only a Cartfile.private is present") {
 			let result = Project(directoryURL: directoryURL).loadCombinedCartfile() |> single
 			expect(result).notTo(beNil())

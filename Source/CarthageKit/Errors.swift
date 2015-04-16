@@ -31,6 +31,9 @@ public enum CarthageError: Equatable {
 	/// Failed to check out a repository.
 	case RepositoryCheckoutFailed(workingDirectoryURL: NSURL, reason: String, underlyingError: NSError?)
 
+	/// Failed to remove a file or directory at the given URL.
+	case RemoveFailed(NSURL, NSError?)
+	
 	/// Failed to read a file or directory at the given URL.
 	case ReadFailed(NSURL, NSError?)
 
@@ -87,7 +90,10 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	
 	case let (.RepositoryCheckoutFailed(la, lb, lc), .RepositoryCheckoutFailed(ra, rb, rc)):
 		return la == ra && lb == rb && lc == rc
-	
+
+	case let (.RemoveFailed(la, lb), .RemoveFailed(ra, rb)):
+		return la == ra && lb == rb
+		
 	case let (.ReadFailed(la, lb), .ReadFailed(ra, rb)):
 		return la == ra && lb == rb
 	
@@ -133,6 +139,15 @@ extension CarthageError: Printable {
 		case let .MissingBuildSetting(setting):
 			return "xcodebuild did not return a value for build setting \(setting)"
 
+		case let .RemoveFailed(fileURL, underlyingError):
+			var description = "Failed to remove file or folder at \(fileURL.path!)"
+			
+			if let underlyingError = underlyingError {
+				description += ": \(underlyingError)"
+			}
+			
+			return description
+			
 		case let .ReadFailed(fileURL, underlyingError):
 			var description = "Failed to read file or folder at \(fileURL.path!)"
 
@@ -225,7 +240,10 @@ extension CarthageError: ErrorType {
 		switch self {
 		case let .TaskError(taskError):
 			return taskError.nsError
-
+		
+		case let .RemoveFailed(_, underlyingError):
+			return underlyingError ?? defaultError()
+			
 		case let .ReadFailed(_, underlyingError):
 			return underlyingError ?? defaultError()
 
