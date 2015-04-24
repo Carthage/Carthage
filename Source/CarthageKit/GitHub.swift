@@ -314,7 +314,9 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, credentia
 			if let release = GitHubRelease.decode(JSONValue.parse(releaseDictionary)) {
 				return .single(release)
 			} else {
-				return .error(CarthageError.GitHubAPIRequestFailed("Could not parse release for \(repository) at \(tag)").error)
+				// The response didn't error, but didn't return a release. That means it's either a
+				// tag (but not a release) or a SHA.
+				return .empty()
 			}
 		}
 }
