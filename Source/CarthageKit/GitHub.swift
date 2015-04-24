@@ -265,7 +265,7 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdS
 			let thisData = ColdSignal.single(data)
 
 			if let HTTPResponse = response as? NSHTTPURLResponse {
-				if HTTPResponse.statusCode != 200 {
+				if HTTPResponse.statusCode != 200 && HTTPResponse.statusCode != 404 {
 					return thisData
 						.tryMap { data, error -> AnyObject? in
 							return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error)
