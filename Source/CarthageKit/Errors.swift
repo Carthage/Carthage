@@ -27,6 +27,7 @@ public enum CarthageErrorCode: Int {
 	case NoSharedSchemes
 	case XcodebuildListTimeout
 	case DuplicateDependencies
+	case GitHubAPIRequestFailed
 
 	func error(userInfo: [NSObject: AnyObject]?) -> NSError {
 		return NSError(domain: CarthageErrorDomain, code: self.rawValue, userInfo: userInfo)
@@ -79,6 +80,9 @@ public enum CarthageError {
 	/// A cartfile contains duplicate dependencies, either in itself or across
 	/// other cartfiles.
 	case DuplicateDependencies([DuplicateDependency])
+	
+	/// A request to the GitHub API failed due to authentication or rate-limiting.
+	case GitHubAPIRequestFailed(String)
 
 	/// An `NSError` object corresponding to this error code.
 	public var error: NSError {
@@ -156,6 +160,11 @@ public enum CarthageError {
 				}
 			return CarthageErrorCode.DuplicateDependencies.error([
 				NSLocalizedDescriptionKey: "The following dependencies are duplicates:\(deps)"
+			])
+		
+		case let .GitHubAPIRequestFailed(message):
+			return CarthageErrorCode.GitHubAPIRequestFailed.error([
+				NSLocalizedDescriptionKey: "GitHub API request failed: \(message)"
 			])
 		}
 	}

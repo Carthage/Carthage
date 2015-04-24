@@ -265,6 +265,28 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdS
 			let thisData = ColdSignal.single(data)
 
 			if let HTTPResponse = response as? NSHTTPURLResponse {
+				if HTTPResponse.statusCode != 200 {
+					return thisData
+						.tryMap { data, error -> AnyObject? in
+							return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error)
+						}
+						.map { dictionary -> String in
+							let message = JSONValue.parse(dictionary)["message"]
+							switch message {
+							case let .Some(.JSONString(message)):
+								return message
+							default:
+								return NSString(data: data, encoding: NSUTF8StringEncoding) ?? "Unknown error requesting \(URL.description)"
+							}
+						}
+						.catch { error in
+							return .single(error.localizedDescription)
+						}
+						.mergeMap { message in
+							return ColdSignal<NSData>.error(CarthageError.GitHubAPIRequestFailed(message).error)
+						}
+				}
+				
 				if let linkHeader = HTTPResponse.allHeaderFields["Link"] as? String {
 					let links = parseLinkHeader(linkHeader)
 					for (URL, parameters) in links {
@@ -288,12 +310,11 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, credentia
 		.tryMap { data, error -> AnyObject? in
 			return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error)
 		}
-		.catch { _ in .empty() }
 		.concatMap { releaseDictionary -> ColdSignal<GitHubRelease> in
 			if let release = GitHubRelease.decode(JSONValue.parse(releaseDictionary)) {
 				return .single(release)
 			} else {
-				return .empty()
+				return .error(CarthageError.GitHubAPIRequestFailed("Could not parse release for \(repository) at \(tag)").error)
 			}
 		}
 }
