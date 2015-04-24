@@ -211,6 +211,9 @@ internal struct GitHubCredentials {
 
 				return nil
 			}
+			.catch { error in
+				return .single(nil)
+			}
 	}
 }
 

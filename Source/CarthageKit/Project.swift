@@ -337,16 +337,15 @@ public final class Project {
 
 			switch project {
 			case let .GitHub(repository):
-				return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: nil)
-					.catch { error in
-						// If we were unable to fetch releases, try loading credentials from Git.
-						return GitHubCredentials.loadFromGit()
-							.mergeMap { credentials in
-								if let credentials = credentials {
-									return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials)
-								} else {
+				return GitHubCredentials.loadFromGit()
+					.mergeMap { credentials in
+						return self
+							.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials)
+							.catch { error in
+								if credentials == nil {
 									return .error(error)
 								}
+								return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: nil)
 							}
 					}
 					.concatMap(unzipArchiveToTemporaryDirectory)
