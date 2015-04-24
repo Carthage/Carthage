@@ -276,7 +276,7 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdS
 							case let .Some(.JSONString(message)):
 								return message
 							default:
-								return NSString(data: data, encoding: NSUTF8StringEncoding) ?? "Unknown error requesting \(URL.description)"
+								return NSString(data: data, encoding: NSUTF8StringEncoding) ?? "Unknown error requesting \(URL)"
 							}
 						}
 						.catch { error in
