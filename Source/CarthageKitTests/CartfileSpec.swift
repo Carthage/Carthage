@@ -8,7 +8,7 @@
 
 import CarthageKit
 import Foundation
-import LlamaKit
+import Result
 import Nimble
 import Quick
 

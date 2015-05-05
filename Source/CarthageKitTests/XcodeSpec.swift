@@ -8,7 +8,7 @@
 
 import CarthageKit
 import Foundation
-import LlamaKit
+import Result
 import Nimble
 import Quick
 import ReactiveCocoa
@@ -42,7 +42,7 @@ class XcodeSpec: QuickSpec {
 			for project in dependencies {
 				let (outputSignal, schemeProducers) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
 				let result = schemeProducers
-					|> join(.Concat)
+					|> flatten(.Concat)
 					|> on(next: { (project, scheme) in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 					})
@@ -53,7 +53,7 @@ class XcodeSpec: QuickSpec {
 
 			let (outputSignal, schemeProducers) = buildInDirectory(directoryURL, withConfiguration: "Debug")
 			let result = schemeProducers
-				|> join(.Concat)
+				|> flatten(.Concat)
 				|> on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
@@ -105,7 +105,7 @@ class XcodeSpec: QuickSpec {
 			expect(isDirectory).to(beTruthy())
 
 			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-") |> wait
-			expect(strippingResult.isSuccess).to(beTruthy())
+			expect(strippingResult.value).notTo(beNil())
 
 			let strippedArchitectures = architecturesInFramework(targetURL)
 				|> reduce([]) { $0 + [ $1 ] }
@@ -123,7 +123,7 @@ class XcodeSpec: QuickSpec {
 				})
 				|> wait
 
-			expect(codesignResult.isSuccess).to(beTruthy())
+			expect(codesignResult.value).notTo(beNil())
 
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
@@ -132,7 +132,7 @@ class XcodeSpec: QuickSpec {
 			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
 			let (outputSignal, schemeProducers) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platform: .Mac)
 			let result = schemeProducers
-				|> join(.Concat)
+				|> flatten(.Concat)
 				|> on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})

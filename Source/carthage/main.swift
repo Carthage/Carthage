@@ -9,7 +9,7 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveTask
 
 let registry = CommandRegistry<CarthageError>()

@@ -9,7 +9,7 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 
 public struct UpdateCommand: CommandType {
@@ -18,9 +18,9 @@ public struct UpdateCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(UpdateOptions.evaluate(mode))
-			|> joinMap(.Merge) { options -> SignalProducer<(), CommandError> in
+			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				return options.loadProject()
-					|> joinMap(.Merge) { $0.updateDependencies() }
+					|> flatMap(.Merge) { $0.updateDependencies() }
 					|> then(options.buildProducer)
 					|> promoteErrors
 			}

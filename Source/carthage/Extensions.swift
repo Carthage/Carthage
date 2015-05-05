@@ -12,7 +12,7 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 
 private let outputQueue = { () -> dispatch_queue_t in
@@ -71,7 +71,7 @@ extension CommandError: ErrorType {
 			])
 
 		case let .CommandError(commandError):
-			return commandError.unbox.nsError
+			return commandError.value.nsError
 		}
 	}
 }
@@ -83,7 +83,7 @@ internal func mapError<T, E, F>(result: Result<T, E>, transform: E -> F) -> Resu
 		return .Success(value)
 
 	case let .Failure(error):
-		return .Failure(Box(transform(error.unbox)))
+		return .Failure(Box(transform(error.value)))
 	}
 }
 
@@ -189,15 +189,15 @@ extension Project {
 					let trashProducer = SignalProducer<(), CarthageError>.try {
 						var error: NSError?
 						if fileManager.trashItemAtURL(oldCheckoutsURL, resultingItemURL: nil, error: &error) {
-							return success(())
+							return .success(())
 						} else {
-							return failure(CarthageError.WriteFailed(oldCheckoutsURL, error))
+							return .failure(CarthageError.WriteFailed(oldCheckoutsURL, error))
 						}
 					}
 
 					let moveProducer: SignalProducer<(), CarthageError> = SignalProducer(values: contents)
 						|> map { (object: AnyObject) in object as! NSURL }
-						|> joinMap(.Concat) { (URL: NSURL) -> SignalProducer<NSURL, CarthageError> in
+						|> flatMap(.Concat) { (URL: NSURL) -> SignalProducer<NSURL, CarthageError> in
 							let lastPathComponent: String! = URL.lastPathComponent
 							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
 						}
@@ -219,7 +219,7 @@ extension Project {
 		}
 
 		return producers
-			|> join(.Concat)
+			|> flatten(.Concat)
 			|> takeLast(1)
 	}
 }

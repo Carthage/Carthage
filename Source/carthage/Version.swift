@@ -9,7 +9,7 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 
 public struct VersionCommand: CommandType {
 	public let verb = "version"
@@ -26,6 +26,6 @@ public struct VersionCommand: CommandType {
 			break
 		}
 
-		return success(())
+		return .success(())
 	}
 }

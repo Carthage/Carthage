@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 import ReactiveTask
 
@@ -45,17 +45,17 @@ public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<N
 			}
 
 			if result == nil {
-				return failure(.TaskError(.POSIXError(errno)))
+				return .failure(.TaskError(.POSIXError(errno)))
 			}
 
 			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
 				return String.fromCString(ptr.baseAddress)!
 			}
 
-			return success(temporaryPath)
+			return .success(temporaryPath)
 		}
 		|> map { NSURL.fileURLWithPath($0, isDirectory: true)! }
-		|> joinMap(.Merge) { directoryURL in
+		|> flatMap(.Merge) { directoryURL in
 			return unzipArchiveToDirectory(fileURL, directoryURL)
 				|> then(SignalProducer(value: directoryURL))
 		}

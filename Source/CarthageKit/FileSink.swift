@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 
 /// Represents anything that can be written directly to a file.
@@ -47,9 +47,9 @@ public final class FileSink<T: FileWriteable>: SinkType {
 			let pointer = fdopen(fileDescriptor, "a")
 			
 			if pointer == nil {
-				return failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
+				return .failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
 			} else {
-				return success(self(filePointer: pointer, closeWhenDone: closeWhenDone))
+				return .success(self(filePointer: pointer, closeWhenDone: closeWhenDone))
 			}
 		}
 	}
@@ -65,16 +65,16 @@ public final class FileSink<T: FileWriteable>: SinkType {
 				}
 
 				if logFD < 0 {
-					return failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
+					return .failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
 				}
 
 				let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
 					return String.fromCString(ptr.baseAddress)!
 				}
 
-				return success((logFD, temporaryPath))
+				return .success((logFD, temporaryPath))
 			}
-			|> joinMap(.Merge) { logFD, temporaryPath in
+			|> flatMap(.Merge) { logFD, temporaryPath in
 				return self.sinkWithDescriptor(logFD, closeWhenDone: true)
 					|> map { ($0, NSURL.fileURLWithPath(temporaryPath, isDirectory: false)!) }
 			}
@@ -111,7 +111,7 @@ public final class FileSink<T: FileWriteable>: SinkType {
 		if let filePointer = filePointer {
 			switch event {
 			case let .Next(value):
-				value.unbox.writeToFile(filePointer)
+				value.value.writeToFile(filePointer)
 
 			default:
 				if event.isTerminating {

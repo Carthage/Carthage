@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import LlamaKit
+import Result
 
 /// Anything that can be parsed from an NSScanner.
 public protocol Scannable {

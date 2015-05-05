@@ -8,7 +8,7 @@
 
 import Argo
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 import Runes
 
@@ -64,10 +64,10 @@ public struct GitHubRepository: Equatable {
 	public static func fromNWO(NWO: String) -> Result<GitHubRepository, CarthageError> {
 		let components = split(NWO, maxSplit: 1, allowEmptySlices: false) { $0 == "/" }
 		if components.count < 2 {
-			return failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\""))
+			return .failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\""))
 		}
 
-		return success(self(owner: components[0], name: components[1]))
+		return .success(self(owner: components[0], name: components[1]))
 	}
 }
 
@@ -113,7 +113,7 @@ public struct GitHubRelease: Equatable {
 	public let assets: [Asset]
 
 	/// An asset attached to a GitHub Release.
-	public struct Asset: Equatable, Hashable, Printable, JSONDecodable {
+	public struct Asset: Equatable, Hashable, Printable, Decodable {
 		/// The unique ID for this release asset.
 		public let ID: Int
 
@@ -138,7 +138,7 @@ public struct GitHubRelease: Equatable {
 			return self(ID: ID, name: name, contentType: contentType, downloadURL: downloadURL)
 		}
 
-		public static func decode(j: JSONValue) -> Asset? {
+		public static func decode(j: JSON) -> Decoded<Asset> {
 			return self.create
 				<^> j <| "id"
 				<*> j <| "name"
@@ -168,12 +168,12 @@ extension GitHubRelease: Printable {
 	}
 }
 
-extension GitHubRelease: JSONDecodable {
+extension GitHubRelease: Decodable {
 	public static func create(ID: Int)(name: String)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
 		return self(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
 	}
 
-	public static func decode(j: JSONValue) -> GitHubRelease? {
+	public static func decode(j: JSON) -> Decoded<GitHubRelease> {
 		return self.create
 			<^> j <| "id"
 			<*> j <| "name"
@@ -202,7 +202,7 @@ internal struct GitHubCredentials {
 		let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
 
 		return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
-			|> joinMap(.Concat) { string -> SignalProducer<String, CarthageError> in
+			|> flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
 				return string.linesProducer |> promoteErrors(CarthageError.self)
 			}
 			|> reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
@@ -275,7 +275,7 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> Signa
 
 	return NSURLSession.sharedSession().rac_dataWithRequest(request)
 		|> catch { error in SignalProducer(error: .NetworkError(error)) }
-		|> joinMap(.Concat) { data, response in
+		|> flatMap(.Concat) { data, response in
 			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
 
 			if let HTTPResponse = response as? NSHTTPURLResponse {
@@ -301,14 +301,14 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, credentia
 	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, credentials)
 		|> tryMap { data -> Result<AnyObject, CarthageError> in
 			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
-				return success(object)
+				return .success(object)
 			} else {
-				return failure(.ParseError(description: "Invalid JSON in releases for tag \(tag)"))
+				return .failure(.ParseError(description: "Invalid JSON in releases for tag \(tag)"))
 			}
 		}
 		|> catch { _ in .empty }
-		|> joinMap(.Concat) { releaseDictionary -> SignalProducer<GitHubRelease, NoError> in
-			if let release = GitHubRelease.decode(JSONValue.parse(releaseDictionary)) {
+		|> flatMap(.Concat) { releaseDictionary -> SignalProducer<GitHubRelease, NoError> in
+			if let release: GitHubRelease = decode(releaseDictionary) {
 				return SignalProducer(value: release)
 			} else {
 				return .empty

@@ -9,7 +9,7 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 
 
@@ -21,16 +21,16 @@ public struct CopyFrameworksCommand: CommandType {
 		switch mode {
 		case .Arguments:
 			return inputFiles()
-				|> joinMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
+				|> flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
 					let frameworkName = frameworkPath.lastPathComponent
 
 					let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
 					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
 					return combineLatest(SignalProducer(result: target), SignalProducer(result: validArchitectures()))
-						|> joinMap(.Merge) { (target, validArchitectures) -> SignalProducer<(), CarthageError> in
+						|> flatMap(.Merge) { (target, validArchitectures) -> SignalProducer<(), CarthageError> in
 							return combineLatest(copyFramework(source, target), codeSigningIdentity())
-								|> joinMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
+								|> flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
 									return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 								}
 						}
@@ -39,7 +39,7 @@ public struct CopyFrameworksCommand: CommandType {
 				|> waitOnCommand
 
 		case .Usage:
-			return success(())
+			return .success(())
 		}
 	}
 }
@@ -49,7 +49,7 @@ private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
 		if codeSigningAllowed() {
 			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY").map { $0 }
 		} else {
-			return success(nil)
+			return .success(nil)
 		}
 	}
 }
@@ -78,17 +78,17 @@ private func inputFiles() -> SignalProducer<String, CarthageError> {
 	return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT"))
 		|> tryMap { count -> Result<Int, CarthageError> in
 			if let i = count.toInt() {
-				return success(i)
+				return .success(i)
 			} else {
-				return failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
+				return .failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
 			}
 		}
-		|> joinMap(.Merge) { count -> SignalProducer<String, CarthageError> in
+		|> flatMap(.Merge) { count -> SignalProducer<String, CarthageError> in
 			let variables = (0..<count).map { index -> SignalProducer<String, CarthageError> in
 				return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
 			}
 
 			return SignalProducer(values: variables)
-				|> join(.Concat)
+				|> flatten(.Concat)
 		}
 }

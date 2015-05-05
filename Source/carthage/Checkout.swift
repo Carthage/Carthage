@@ -9,7 +9,7 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 
 public struct CheckoutCommand: CommandType {
@@ -18,7 +18,7 @@ public struct CheckoutCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(CheckoutOptions.evaluate(mode))
-			|> joinMap(.Merge) { options in
+			|> flatMap(.Merge) { options in
 				return self.checkoutWithOptions(options)
 					|> promoteErrors
 			}
@@ -28,7 +28,7 @@ public struct CheckoutCommand: CommandType {
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: CheckoutOptions) -> SignalProducer<(), CarthageError> {
 		return options.loadProject()
-			|> joinMap(.Merge) { $0.checkoutResolvedDependencies() }
+			|> flatMap(.Merge) { $0.checkoutResolvedDependencies() }
 	}
 }
 

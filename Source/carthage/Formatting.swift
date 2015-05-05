@@ -9,7 +9,7 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import PrettyColors
 
 /// Wraps a string with terminal colors and formatting or passes it through, depending on `colorful`.

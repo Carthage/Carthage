@@ -8,7 +8,7 @@
 
 import Argo
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 
 extension String {
@@ -123,10 +123,10 @@ internal func dematerializeErrorsIfEmpty<T, E>(signal: Signal<Event<T, E>, E>) -
 			switch event {
 			case let .Next(value):
 				receivedValue = true
-				sendNext(observer, value.unbox)
+				sendNext(observer, value.value)
 
 			case let .Error(error):
-				receivedError = error.unbox
+				receivedError = error.value
 
 			case .Completed:
 				sendCompleted(observer)
@@ -211,12 +211,10 @@ extension NSURLSession {
 	}
 }
 
-extension NSURL: JSONDecodable {
-	public class func decode(json: JSONValue) -> Self? {
-		if let URLString = String.decode(json) {
-			return self(string: URLString)
-		} else {
-			return nil
+extension NSURL: Decodable {
+	public class func decode(json: JSON) -> Decoded<NSURL> {
+		return String.decode(json).flatMap { URLString in
+			return .fromOptional(self(string: URLString))
 		}
 	}
 }

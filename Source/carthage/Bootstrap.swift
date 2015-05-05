@@ -9,7 +9,7 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 
 public struct BootstrapCommand: CommandType {
@@ -20,9 +20,9 @@ public struct BootstrapCommand: CommandType {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
 		// `update` flags.
 		return producerWithOptions(UpdateOptions.evaluate(mode))
-			|> joinMap(.Merge) { options -> SignalProducer<(), CommandError> in
+			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				return options.loadProject()
-					|> joinMap(.Merge) { project -> SignalProducer<(), CarthageError> in
+					|> flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
 						if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
 							return project.checkoutResolvedDependencies()
 						} else {

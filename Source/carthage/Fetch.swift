@@ -8,7 +8,7 @@
 
 import CarthageKit
 import Commandant
-import LlamaKit
+import Result
 import Foundation
 import ReactiveCocoa
 
@@ -18,7 +18,7 @@ public struct FetchCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(FetchOptions.evaluate(mode))
-			|> joinMap(.Merge) { options -> SignalProducer<(), CommandError> in
+			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				let project = ProjectIdentifier.Git(options.repositoryURL)
 				var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 

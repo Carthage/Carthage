@@ -6,9 +6,10 @@
 //  Copyright (c) 2015 Carthage. All rights reserved.
 //
 
+import Box
 import CarthageKit
 import Foundation
-import LlamaKit
+import Result
 import Nimble
 import Quick
 import ReactiveCocoa
@@ -18,7 +19,7 @@ class FileSinkSpec: QuickSpec {
 		it("should open and write to a temporary file") {
 			let result = FileSink<String>.openTemporaryFile() |> single
 			expect(result).notTo(beNil())
-			expect(result?.isSuccess).to(beTruthy())
+			expect(result?.value).notTo(beNil())
 
 			let sink = result?.value.map { $0.0 }
 			let URL = result?.value.map { $0.1 } ?? NSURL.fileURLWithPath("URL-failed.txt")!

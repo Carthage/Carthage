@@ -19,7 +19,7 @@ class ProjectSpec: QuickSpec {
 		it("should load a combined Cartfile when only a Cartfile.private is present") {
 			let result = Project(directoryURL: directoryURL).loadCombinedCartfile() |> single
 			expect(result).notTo(beNil())
-			expect(result?.isSuccess).to(beTruthy())
+			expect(result?.value).notTo(beNil())
 
 			let dependencies = result?.value?.dependencies
 			expect(dependencies?.count).to(equal(1))

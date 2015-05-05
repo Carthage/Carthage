@@ -8,15 +8,15 @@
 
 import CarthageKit
 import Foundation
-import LlamaKit
+import Result
 
 internal func getEnvironmentVariable(variable: String) -> Result<String, CarthageError> {
 	let environment = NSProcessInfo.processInfo().environment
 
 	if let value = environment[variable] as? String {
-		return success(value)
+		return .success(value)
 	} else {
-		return failure(CarthageError.MissingEnvironmentVariable(variable: variable))
+		return .failure(CarthageError.MissingEnvironmentVariable(variable: variable))
 	}
 }
 

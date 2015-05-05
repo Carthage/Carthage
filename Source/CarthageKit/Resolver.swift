@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 
 /// Responsible for resolving acyclic dependency graphs.
@@ -37,7 +37,7 @@ public struct Resolver {
 	/// that they should be built.
 	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return nodePermutationsForCartfile(cartfile)
-			|> joinMap(.Concat) { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
+			|> flatMap(.Concat) { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 				return self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph())
 					|> promoteErrors(CarthageError.self)
 			}
@@ -45,7 +45,7 @@ public struct Resolver {
 			// a valid graph.
 			|> dematerializeErrorsIfEmpty
 			|> take(1)
-			|> joinMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+			|> flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				return SignalProducer(values: graph.orderedNodes)
 					|> map { node in node.dependencyVersion }
 			}
@@ -69,7 +69,7 @@ public struct Resolver {
 				default:
 					return self.versionsForDependency(dependency.project)
 						|> reduce([]) { $0 + [ $1 ] }
-						|> joinMap(.Merge) { nodes -> SignalProducer<PinnedVersion, CarthageError> in
+						|> flatMap(.Merge) { nodes -> SignalProducer<PinnedVersion, CarthageError> in
 							if nodes.isEmpty {
 								return SignalProducer(error: CarthageError.TaggedVersionNotFound(dependency.project))
 							} else {
@@ -84,7 +84,7 @@ public struct Resolver {
 				|> map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
 				|> reduce([]) { $0 + [ $1 ] }
 				|> map(sorted)
-				|> joinMap(.Concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
+				|> flatMap(.Concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
 					if nodes.isEmpty {
 						return SignalProducer(error: CarthageError.RequiredVersionNotFound(dependency.project, dependency.version))
 					} else {
@@ -106,8 +106,8 @@ public struct Resolver {
 		return cartfileForDependency(node.dependencyVersion)
 			|> concat(SignalProducer(value: Cartfile(dependencies: [])))
 			|> take(1)
-			|> joinMap(.Merge) { self.nodePermutationsForCartfile($0) }
-			|> joinMap(.Concat) { dependencyNodes in
+			|> flatMap(.Merge) { self.nodePermutationsForCartfile($0) }
+			|> flatMap(.Concat) { dependencyNodes in
 				return self.graphPermutationsForEachNode(dependencyNodes, dependencyOf: node, basedOnGraph: inputGraph)
 					|> promoteErrors(CarthageError.self)
 			}
@@ -123,7 +123,7 @@ public struct Resolver {
 	/// This is a helper method, and not meant to be called from outside.
 	private func graphPermutationsForEachNode(nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> {
 		return SignalProducer<DependencyGraph, CarthageError>.try {
-				var result: Result<DependencyGraph, CarthageError> = success(inputGraph)
+				var result: Result<DependencyGraph, CarthageError> = .success(inputGraph)
 
 				for node in nodes {
 					result = result.flatMap { (var graph) in
@@ -134,13 +134,13 @@ public struct Resolver {
 
 				return result
 			}
-			|> joinMap(.Merge) { graph -> SignalProducer<DependencyGraph, CarthageError> in
+			|> flatMap(.Merge) { graph -> SignalProducer<DependencyGraph, CarthageError> in
 				// Each producer represents all evaluations of one subtree.
 				let graphProducers = nodes.map { node in self.graphPermutationsForDependenciesOfNode(node, basedOnGraph: graph) }
 
 				return permutations(graphProducers)
-					|> joinMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
-						let result: Result<DependencyGraph, CarthageError> = reduce(graphs, success(inputGraph)) { (result, graph) in
+					|> flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
+						let result: Result<DependencyGraph, CarthageError> = reduce(graphs, .success(inputGraph)) { (result, graph) in
 							return result.flatMap { mergeGraphs($0, graph) }
 						}
 
@@ -244,10 +244,10 @@ private struct DependencyGraph: Equatable {
 					node = existingNode
 					node.versionSpecifier = newSpecifier
 				} else {
-					return failure(CarthageError.RequiredVersionNotFound(node.project, newSpecifier))
+					return .failure(CarthageError.RequiredVersionNotFound(node.project, newSpecifier))
 				}
 			} else {
-				return failure(CarthageError.IncompatibleRequirements(node.project, existingNode.versionSpecifier, node.versionSpecifier))
+				return .failure(CarthageError.IncompatibleRequirements(node.project, existingNode.versionSpecifier, node.versionSpecifier))
 			}
 		} else {
 			allNodes[node] = ()
@@ -261,7 +261,7 @@ private struct DependencyGraph: Equatable {
 			roots[node] = ()
 		}
 
-		return success(node)
+		return .success(node)
 	}
 }
 
@@ -321,7 +321,7 @@ extension DependencyGraph: Printable {
 /// Returns the new graph, or an error if the graphs specify inconsistent
 /// versions for one or more dependencies.
 private func mergeGraphs(lhs: DependencyGraph, rhs: DependencyGraph) -> Result<DependencyGraph, CarthageError> {
-	var result: Result<DependencyGraph, CarthageError> = success(lhs)
+	var result: Result<DependencyGraph, CarthageError> = .success(lhs)
 
 	for (root, _) in rhs.roots {
 		result = result.flatMap { (var graph) in

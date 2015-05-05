@@ -525,7 +525,7 @@
 		D0D1211019E87861005E4BAA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 0630;
 				ORGANIZATIONNAME = Carthage;
 				TargetAttributes = {
 					D0D1216C19E87B05005E4BAA = {
@@ -710,7 +710,9 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212619E878CC005E4BAA /* Debug.xcconfig */;
 			buildSettings = {
+				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				ONLY_ACTIVE_ARCH = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -719,6 +721,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212819E878CC005E4BAA /* Release.xcconfig */;
 			buildSettings = {
+				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -766,6 +769,7 @@
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Debug;
 		};
@@ -779,6 +783,7 @@
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Release;
 		};
@@ -786,6 +791,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212719E878CC005E4BAA /* Profile.xcconfig */;
 			buildSettings = {
+				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -817,6 +823,7 @@
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Profile;
 		};
@@ -824,6 +831,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212919E878CC005E4BAA /* Test.xcconfig */;
 			buildSettings = {
+				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -855,6 +863,7 @@
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Test;
 		};

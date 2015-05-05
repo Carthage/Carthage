@@ -9,7 +9,7 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 import ReactiveTask
 
@@ -19,7 +19,7 @@ public struct BuildCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(BuildOptions.evaluate(mode))
-			|> joinMap(.Merge) { options in
+			|> flatMap(.Merge) { options in
 				return self.buildWithOptions(options)
 					|> promoteErrors
 			}
@@ -29,7 +29,7 @@ public struct BuildCommand: CommandType {
 	/// Builds a project with the given options.
 	public func buildWithOptions(options: BuildOptions) -> SignalProducer<(), CarthageError> {
 		return self.createLoggingSink(options)
-			|> joinMap(.Merge) { (stdoutSink, temporaryURL) -> SignalProducer<(), CarthageError> in
+			|> flatMap(.Merge) { (stdoutSink, temporaryURL) -> SignalProducer<(), CarthageError> in
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
 
 				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
@@ -61,7 +61,7 @@ public struct BuildCommand: CommandType {
 				let formatting = options.colorOptions.formatting
 
 				return schemeSignals
-					|> join(.Concat)
+					|> flatten(.Concat)
 					|> on(started: {
 						if let temporaryURL = temporaryURL {
 							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: temporaryURL.path!))
@@ -95,12 +95,12 @@ public struct BuildCommand: CommandType {
 					return .empty
 				}
 			}
-			|> joinMap(.Merge) { project in
+			|> flatMap(.Merge) { project in
 				return project.migrateIfNecessary(options.colorOptions)
 					|> on(next: carthage.println)
 					|> then(SignalProducer(value: project))
 			}
-			|> joinMap(.Merge) { (project: Project) -> SignalProducer<BuildSchemeProducer, CarthageError> in
+			|> flatMap(.Merge) { (project: Project) -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let (dependenciesOutput, dependencies) = project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform)
 				dependenciesOutput.observe(stdoutSink)
 
