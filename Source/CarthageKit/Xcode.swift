@@ -842,7 +842,8 @@ public typealias BuildSchemeSignal = ColdSignal<(ProjectLocator, String)>
 /// Returns signals in the same format as buildInDirectory().
 public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
-	let dependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
+	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
+	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
 	let (buildOutput, schemeSignals) = buildInDirectory(dependencyURL, withConfiguration: configuration, platform: platform)
 	let copyProducts = ColdSignal<BuildSchemeSignal>.lazy {
@@ -863,18 +864,31 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 			}
 		}
 
-		// The relative path to this dependency's Carthage/Build folder, from
-		// the root.
-		let dependencyBinariesRelativePath = dependency.relativePath.stringByAppendingPathComponent(CarthageBinariesFolderPath)
-		let componentsForGettingTheHellOutOfThisRelativePath = Array(count: dependencyBinariesRelativePath.pathComponents.count - 1, repeatedValue: "..")
-
-		// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
-		let linkDestinationPath = reduce(componentsForGettingTheHellOutOfThisRelativePath, CarthageBinariesFolderPath) { trailingPath, pathComponent in
-			return pathComponent.stringByAppendingPathComponent(trailingPath)
+		var isSymlink: AnyObject?
+		if !rawDependencyURL.getResourceValue(&isSymlink, forKey: NSURLIsSymbolicLinkKey, error: &error) {
+			return .error(error ?? CarthageError.ReadFailed(rawDependencyURL).error)
 		}
 
-		if !NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath, error: &error) {
-			return .error(error ?? CarthageError.WriteFailed(dependencyBinariesURL).error)
+		if isSymlink as? Bool == true {
+			// Since this dependency is itself a symlink, we'll create an
+			// absolute link back to the project's Build folder.
+			if !NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL, error: &error) {
+				return .error(error ?? CarthageError.WriteFailed(dependencyBinariesURL).error)
+			}
+		} else {
+			// The relative path to this dependency's Carthage/Build folder, from
+			// the root.
+			let dependencyBinariesRelativePath = dependency.relativePath.stringByAppendingPathComponent(CarthageBinariesFolderPath)
+			let componentsForGettingTheHellOutOfThisRelativePath = Array(count: dependencyBinariesRelativePath.pathComponents.count - 1, repeatedValue: "..")
+
+			// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
+			let linkDestinationPath = reduce(componentsForGettingTheHellOutOfThisRelativePath, CarthageBinariesFolderPath) { trailingPath, pathComponent in
+				return pathComponent.stringByAppendingPathComponent(trailingPath)
+			}
+
+			if !NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath, error: &error) {
+				return .error(error ?? CarthageError.WriteFailed(dependencyBinariesURL).error)
+			}
 		}
 
 		return schemeSignals
