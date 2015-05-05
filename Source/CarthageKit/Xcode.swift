@@ -179,7 +179,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<Project
 	let enumerationOptions = NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants
 
 	return NSFileManager.defaultManager()
-		.carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+		.carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
 		.reduce(initial: []) { (var matches: [ProjectEnumerationMatch], tuple) -> [ProjectEnumerationMatch] in
 			let (enumerator, URL) = tuple
 			if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value() {
@@ -644,7 +644,7 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 		.carthage_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, catchErrors: true)
 		.mergeMap { enumerator, URL in
 			let lastComponent: String? = URL.lastPathComponent
-			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
+			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!).URLByResolvingSymlinksInPath!
 
 			var error: NSError?
 			if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
@@ -717,7 +717,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 				.zipWith(ColdSignal.fromResult(firstProductSettings.executablePath)
 					.map(destinationFolderURL.URLByAppendingPathComponent))
 				.map { (executableURLs: [NSURL], outputURL: NSURL) -> ColdSignal<()> in
-					return mergeExecutables(executableURLs, outputURL)
+					return mergeExecutables(executableURLs, outputURL.URLByResolvingSymlinksInPath!)
 				}
 				.merge(identity)
 
@@ -779,7 +779,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	let buildSignal: ColdSignal<NSURL> = BuildSettings.SDKForScheme(scheme, inProject: project)
 		.map { $0.platform }
 		.map { (platform: Platform) in
-			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
+			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 
 			// TODO: Generalize this further?
 			switch platform.SDKs.count {
@@ -841,8 +841,8 @@ public typealias BuildSchemeSignal = ColdSignal<(ProjectLocator, String)>
 ///
 /// Returns signals in the same format as buildInDirectory().
 public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
-	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
-	let dependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
+	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+	let dependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 
 	let (buildOutput, schemeSignals) = buildInDirectory(dependencyURL, withConfiguration: configuration, platform: platform)
 	let copyProducts = ColdSignal<BuildSchemeSignal>.lazy {
@@ -854,7 +854,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		// Link this dependency's Carthage/Build folder to that of the root
 		// project, so it can see all products built already, and so we can
 		// automatically drop this dependency's product in the right place.
-		let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
+		let dependencyBinariesURL = dependencyURL.URLByResolvingSymlinksInPath!.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 
 		if !NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL, error: nil) {
 			let dependencyParentURL = dependencyBinariesURL.URLByDeletingLastPathComponent!
