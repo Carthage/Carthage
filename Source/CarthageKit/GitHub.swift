@@ -23,6 +23,38 @@ private let userAgent: String = {
 /// The type of content to request from the GitHub API.
 private let APIContentType = "application/vnd.github.v3+json"
 
+/// Represents an error returned from the GitHub API.
+public struct GitHubError: Equatable {
+	public let message: String
+}
+
+public func ==(lhs: GitHubError, rhs: GitHubError) -> Bool {
+	return lhs.message == rhs.message
+}
+
+extension GitHubError: Hashable {
+	public var hashValue: Int {
+		return message.hashValue
+	}
+}
+
+extension GitHubError: Printable {
+	public var description: String {
+		return message
+	}
+}
+
+extension GitHubError: JSONDecodable {
+	public static func create(message: String) -> GitHubError {
+		return self(message: message)
+	}
+	
+	public static func decode(j: JSONValue) -> GitHubError? {
+		return self.create
+			<^> j <| "message"
+	}
+}
+
 /// Describes a GitHub.com repository.
 public struct GitHubRepository: Equatable {
 	public let owner: String
@@ -275,11 +307,9 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdS
 							return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error)
 						}
 						.map { dictionary -> String in
-							let message = JSONValue.parse(dictionary)["message"]
-							switch message {
-							case let .Some(.JSONString(message)):
-								return message
-							default:
+							if let error = GitHubError.decode(JSONValue.parse(dictionary)) {
+								return error.message
+							} else {
 								return NSString(data: data, encoding: NSUTF8StringEncoding) ?? NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
 							}
 						}
