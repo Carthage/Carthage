@@ -855,7 +855,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		// Link this dependency's Carthage/Build folder to that of the root
 		// project, so it can see all products built already, and so we can
 		// automatically drop this dependency's product in the right place.
-		let dependencyBinariesURL = dependencyURL.URLByResolvingSymlinksInPath!.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
+		let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 
 		if !NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL, error: nil) {
 			let dependencyParentURL = dependencyBinariesURL.URLByDeletingLastPathComponent!
