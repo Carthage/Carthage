@@ -9,6 +9,7 @@
 // This file contains extensions to anything that's not appropriate for
 // CarthageKit.
 
+import Box
 import CarthageKit
 import Commandant
 import Foundation

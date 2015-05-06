@@ -6,6 +6,7 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import Box
 import CarthageKit
 import Commandant
 import Foundation
