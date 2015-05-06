@@ -875,14 +875,14 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 
 			var isSymlink: AnyObject?
 			if !rawDependencyURL.getResourceValue(&isSymlink, forKey: NSURLIsSymbolicLinkKey, error: &error) {
-				return .failure(.ReadFailed(rawDependencyURL))
+				return .failure(.ReadFailed(rawDependencyURL, error))
 			}
 
 			if isSymlink as? Bool == true {
 				// Since this dependency is itself a symlink, we'll create an
 				// absolute link back to the project's Build folder.
 				if !NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL, error: &error) {
-					return .failure(.WriteFailed(dependencyBinariesURL))
+					return .failure(.WriteFailed(dependencyBinariesURL, error))
 				}
 			} else {
 				// The relative path to this dependency's Carthage/Build folder, from
@@ -896,7 +896,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 				}
 
 				if !NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath, error: &error) {
-					return .failure(.WriteFailed(dependencyBinariesURL))
+					return .failure(.WriteFailed(dependencyBinariesURL, error))
 				}
 			}
 
