@@ -714,6 +714,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Debug;
 		};
@@ -724,6 +725,7 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Release;
 		};
@@ -769,7 +771,6 @@
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Debug;
 		};
@@ -783,7 +784,6 @@
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Release;
 		};
@@ -794,6 +794,7 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Profile;
 		};
@@ -823,7 +824,6 @@
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Profile;
 		};
@@ -834,6 +834,7 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Test;
 		};
@@ -863,7 +864,6 @@
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Test;
 		};
