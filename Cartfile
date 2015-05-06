@@ -1,3 +1,2 @@
-github "ReactiveCocoa/ReactiveCocoa" "swift-development"
-github "Carthage/ReactiveTask" "master"
+github "Carthage/ReactiveTask" ~> 0.5
 github "thoughtbot/Argo" ~> 1.0.1
