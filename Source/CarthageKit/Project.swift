@@ -421,7 +421,7 @@ public final class Project {
 			.map { sdk in sdk.platform }
 			.map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
 			.map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
-			.mergeMap { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL) }
+			.mergeMap { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL.URLByResolvingSymlinksInPath!) }
 	}
 
 	/// Checks out the given project into its intended working directory,
