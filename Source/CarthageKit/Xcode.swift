@@ -178,7 +178,7 @@ private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bo
 public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<ProjectLocator, CarthageError> {
 	let enumerationOptions = NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants
 
-	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
 		|> reduce([]) { (var matches: [ProjectEnumerationMatch], tuple) -> [ProjectEnumerationMatch] in
 			let (enumerator, URL) = tuple
 			if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value {
@@ -648,7 +648,7 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationM
 	return NSFileManager.defaultManager().carthage_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, catchErrors: true)
 		|> map { enumerator, URL in
 			let lastComponent: String? = URL.lastPathComponent
-			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!)
+			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!).URLByResolvingSymlinksInPath!
 
 			var error: NSError?
 			if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
@@ -723,7 +723,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 				|> zipWith(SignalProducer(result: firstProductSettings.executablePath)
 					|> map(destinationFolderURL.URLByAppendingPathComponent))
 				|> map { (executableURLs: [NSURL], outputURL: NSURL) -> SignalProducer<(), CarthageError> in
-					return mergeExecutables(executableURLs, outputURL)
+					return mergeExecutables(executableURLs, outputURL.URLByResolvingSymlinksInPath!)
 				}
 				|> flatten(.Merge)
 
@@ -788,7 +788,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	let buildSignal: SignalProducer<NSURL, CarthageError> = BuildSettings.SDKForScheme(scheme, inProject: project)
 		|> map { $0.platform }
 		|> map { (platform: Platform) in
-			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
+			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 
 			// TODO: Generalize this further?
 			switch platform.SDKs.count {
@@ -850,8 +850,9 @@ public typealias BuildSchemeProducer = SignalProducer<(ProjectLocator, String), 
 ///
 /// Returns signals in the same format as buildInDirectory().
 public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> (Signal<NSData, NoError>, SignalProducer<BuildSchemeProducer, CarthageError>) {
-	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
-	let dependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
+	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
+	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
 	let (buildOutput, schemeSignals) = buildInDirectory(dependencyURL, withConfiguration: configuration, platform: platform)
 	let copyProducts = SignalProducer.try { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
@@ -872,18 +873,31 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 				}
 			}
 
-			// The relative path to this dependency's Carthage/Build folder, from
-			// the root.
-			let dependencyBinariesRelativePath = dependency.relativePath.stringByAppendingPathComponent(CarthageBinariesFolderPath)
-			let componentsForGettingTheHellOutOfThisRelativePath = Array(count: dependencyBinariesRelativePath.pathComponents.count - 1, repeatedValue: "..")
-
-			// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
-			let linkDestinationPath = reduce(componentsForGettingTheHellOutOfThisRelativePath, CarthageBinariesFolderPath) { trailingPath, pathComponent in
-				return pathComponent.stringByAppendingPathComponent(trailingPath)
+			var isSymlink: AnyObject?
+			if !rawDependencyURL.getResourceValue(&isSymlink, forKey: NSURLIsSymbolicLinkKey, error: &error) {
+				return .failure(.ReadFailed(rawDependencyURL))
 			}
 
-			if !NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath, error: &error) {
-				return .failure(.WriteFailed(dependencyBinariesURL, error))
+			if isSymlink as? Bool == true {
+				// Since this dependency is itself a symlink, we'll create an
+				// absolute link back to the project's Build folder.
+				if !NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL, error: &error) {
+					return .failure(.WriteFailed(dependencyBinariesURL))
+				}
+			} else {
+				// The relative path to this dependency's Carthage/Build folder, from
+				// the root.
+				let dependencyBinariesRelativePath = dependency.relativePath.stringByAppendingPathComponent(CarthageBinariesFolderPath)
+				let componentsForGettingTheHellOutOfThisRelativePath = Array(count: dependencyBinariesRelativePath.pathComponents.count - 1, repeatedValue: "..")
+
+				// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
+				let linkDestinationPath = reduce(componentsForGettingTheHellOutOfThisRelativePath, CarthageBinariesFolderPath) { trailingPath, pathComponent in
+					return pathComponent.stringByAppendingPathComponent(trailingPath)
+				}
+
+				if !NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath, error: &error) {
+					return .failure(.WriteFailed(dependencyBinariesURL))
+				}
 			}
 
 			return .success(schemeSignals)

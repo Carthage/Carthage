@@ -453,7 +453,7 @@ public final class Project {
 			|> map { sdk in sdk.platform }
 			|> map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
 			|> map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
-			|> map { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL) }
+			|> map { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL.URLByResolvingSymlinksInPath!) }
 			|> flatten(.Merge)
 	}
 
