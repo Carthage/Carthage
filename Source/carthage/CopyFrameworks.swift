@@ -21,20 +21,23 @@ public struct CopyFrameworksCommand: CommandType {
 		switch mode {
 		case .Arguments:
 			return inputFiles()
-				|> flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
+				|> map { frameworkPath -> SignalProducer<(), CarthageError> in
 					let frameworkName = frameworkPath.lastPathComponent
 
 					let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
 					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
 					return combineLatest(SignalProducer(result: target), SignalProducer(result: validArchitectures()))
-						|> flatMap(.Merge) { (target, validArchitectures) -> SignalProducer<(), CarthageError> in
+						|> map { (target, validArchitectures) -> SignalProducer<(), CarthageError> in
 							return combineLatest(copyFramework(source, target), codeSigningIdentity())
-								|> flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
+								|> map { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
 									return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 								}
+								|> flatten(.Merge)
 						}
+						|> flatten(.Merge)
 				}
+				|> flatten(.Concat)
 				|> promoteErrors
 				|> waitOnCommand
 
@@ -83,7 +86,7 @@ private func inputFiles() -> SignalProducer<String, CarthageError> {
 				return .failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
 			}
 		}
-		|> flatMap(.Merge) { count -> SignalProducer<String, CarthageError> in
+		|> map { count -> SignalProducer<String, CarthageError> in
 			let variables = (0..<count).map { index -> SignalProducer<String, CarthageError> in
 				return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
 			}
@@ -91,4 +94,5 @@ private func inputFiles() -> SignalProducer<String, CarthageError> {
 			return SignalProducer(values: variables)
 				|> flatten(.Concat)
 		}
+		|> flatten(.Merge)
 }

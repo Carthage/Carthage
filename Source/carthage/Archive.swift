@@ -18,7 +18,7 @@ public struct ArchiveCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(ArchiveOptions.evaluate(mode))
-			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
+			|> map { options -> SignalProducer<(), CommandError> in
 				let formatting = options.colorOptions.formatting
 
 				return SignalProducer(values: Platform.supportedPlatforms)
@@ -28,7 +28,7 @@ public struct ArchiveCommand: CommandType {
 						carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
 					})
 					|> reduce([]) { $0 + [ $1 ] }
-					|> flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
+					|> map { paths -> SignalProducer<(), CarthageError> in
 						if paths.isEmpty {
 							return SignalProducer(error: CarthageError.InvalidArgument(description: "Could not find any copies of \(options.frameworkName).framework. Make sure you're in the project’s root and that the framework has already been built."))
 						}
@@ -40,8 +40,10 @@ public struct ArchiveCommand: CommandType {
 							carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
 						})
 					}
+					|> flatten(.Merge)
 					|> promoteErrors
 			}
+			|> flatten(.Merge)
 			|> waitOnCommand
 	}
 }

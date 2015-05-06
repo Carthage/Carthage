@@ -18,17 +18,19 @@ public struct CheckoutCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(CheckoutOptions.evaluate(mode))
-			|> flatMap(.Merge) { options in
+			|> map { options in
 				return self.checkoutWithOptions(options)
 					|> promoteErrors
 			}
+			|> flatten(.Merge)
 			|> waitOnCommand
 	}
 
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: CheckoutOptions) -> SignalProducer<(), CarthageError> {
 		return options.loadProject()
-			|> flatMap(.Merge) { $0.checkoutResolvedDependencies() }
+			|> map { $0.checkoutResolvedDependencies() }
+			|> flatten(.Merge)
 	}
 }
 

@@ -202,9 +202,10 @@ internal struct GitHubCredentials {
 		let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
 
 		return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
-			|> flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
+			|> map { string -> SignalProducer<String, CarthageError> in
 				return string.linesProducer |> promoteErrors(CarthageError.self)
 			}
+			|> flatten(.Concat)
 			|> reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
 				let parts = split(line, maxSplit: 1, allowEmptySlices: false) { $0 == "=" }
 				if parts.count >= 2 {
@@ -275,7 +276,7 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> Signa
 
 	return NSURLSession.sharedSession().rac_dataWithRequest(request)
 		|> catch { error in SignalProducer(error: .NetworkError(error)) }
-		|> flatMap(.Concat) { data, response in
+		|> map { data, response in
 			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
 
 			if let HTTPResponse = response as? NSHTTPURLResponse {
@@ -292,6 +293,7 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> Signa
 
 			return thisData
 		}
+		|> flatten(.Concat)
 }
 
 /// Fetches the release corresponding to the given tag on the given repository,
@@ -307,13 +309,14 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, credentia
 			}
 		}
 		|> catch { _ in .empty }
-		|> flatMap(.Concat) { releaseDictionary -> SignalProducer<GitHubRelease, NoError> in
+		|> map { releaseDictionary -> SignalProducer<GitHubRelease, NoError> in
 			if let release: GitHubRelease = decode(releaseDictionary) {
 				return SignalProducer(value: release)
 			} else {
 				return .empty
 			}
 		}
+		|> flatten(.Concat)
 }
 
 /// Downloads the indicated release asset to a temporary file, returning the
