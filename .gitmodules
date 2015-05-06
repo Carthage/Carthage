@@ -1,6 +1,3 @@
-[submodule "Carthage/Checkouts/LlamaKit"]
-	path = Carthage/Checkouts/LlamaKit
-	url = https://github.com/Carthage/LlamaKit.git
 [submodule "Carthage/Checkouts/Nimble"]
 	path = Carthage/Checkouts/Nimble
 	url = https://github.com/Quick/Nimble.git
@@ -25,3 +22,12 @@
 [submodule "Carthage/Checkouts/PrettyColors"]
 	path = Carthage/Checkouts/PrettyColors
 	url = https://github.com/jdhealy/PrettyColors.git
+[submodule "Carthage/Checkouts/runes"]
+    path = Carthage/Checkouts/runes
+	url = https://github.com/thoughtbot/runes.git
+[submodule "Carthage/Checkouts/Box"]
+	path = Carthage/Checkouts/Box
+	url = https://github.com/robrix/Box.git
+[submodule "Carthage/Checkouts/Result"]
+	path = Carthage/Checkouts/Result
+	url = https://github.com/antitypical/Result.git

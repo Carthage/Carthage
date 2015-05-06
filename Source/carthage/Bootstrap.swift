@@ -9,34 +9,33 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 
 public struct BootstrapCommand: CommandType {
 	public let verb = "bootstrap"
 	public let function = "Check out and build the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
 		// `update` flags.
-		return ColdSignal.fromResult(UpdateOptions.evaluate(mode))
-			.map { options -> ColdSignal<()> in
+		return producerWithOptions(UpdateOptions.evaluate(mode))
+			|> map { options -> SignalProducer<(), CommandError> in
 				return options.loadProject()
-					.map { project -> ColdSignal<()> in
-						return ColdSignal.lazy {
-							if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
-								return project.checkoutResolvedDependencies()
-							} else {
-								let formatting = options.checkoutOptions.colorOptions.formatting
-								carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
-								return project.updateDependencies()
-							}
+					|> map { project -> SignalProducer<(), CarthageError> in
+						if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
+							return project.checkoutResolvedDependencies()
+						} else {
+							let formatting = options.checkoutOptions.colorOptions.formatting
+							carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
+							return project.updateDependencies()
 						}
 					}
-					.merge(identity)
-					.then(options.buildSignal)
+					|> flatten(.Merge)
+					|> then(options.buildProducer)
+					|> promoteErrors
 			}
-			.merge(identity)
-			.wait()
+			|> flatten(.Merge)
+			|> waitOnCommand
 	}
 }

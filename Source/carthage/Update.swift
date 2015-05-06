@@ -9,23 +9,24 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 
 public struct UpdateCommand: CommandType {
 	public let verb = "update"
 	public let function = "Update and rebuild the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<()> {
-		return ColdSignal.fromResult(UpdateOptions.evaluate(mode))
-			.map { options -> ColdSignal<()> in
+	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
+		return producerWithOptions(UpdateOptions.evaluate(mode))
+			|> map { options -> SignalProducer<(), CommandError> in
 				return options.loadProject()
-					.map { $0.updateDependencies() }
-					.merge(identity)
-					.then(options.buildSignal)
+					|> map { $0.updateDependencies() }
+					|> flatten(.Merge)
+					|> then(options.buildProducer)
+					|> promoteErrors
 			}
-			.merge(identity)
-			.wait()
+			|> flatten(.Merge)
+			|> waitOnCommand
 	}
 }
 
@@ -41,15 +42,15 @@ public struct UpdateOptions: OptionsType {
 		return BuildOptions(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
 	}
 
-	/// If `buildAfterUpdate` is true, this will be a signal representing the
+	/// If `buildAfterUpdate` is true, this will be a producer representing the
 	/// work necessary to build the project.
 	///
-	/// Otherwise, this signal will be empty.
-	public var buildSignal: ColdSignal<()> {
+	/// Otherwise, this producer will be empty.
+	public var buildProducer: SignalProducer<(), CarthageError> {
 		if buildAfterUpdate {
 			return BuildCommand().buildWithOptions(buildOptions)
 		} else {
-			return .empty()
+			return .empty
 		}
 	}
 
@@ -57,7 +58,7 @@ public struct UpdateOptions: OptionsType {
 		return self(buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions)
 	}
 
-	public static func evaluate(m: CommandMode) -> Result<UpdateOptions> {
+	public static func evaluate(m: CommandMode) -> Result<UpdateOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platform to build for (ignored if --no-build option is present)")
@@ -68,13 +69,14 @@ public struct UpdateOptions: OptionsType {
 
 	/// Attempts to load the project referenced by the options, and configure it
 	/// accordingly.
-	public func loadProject() -> ColdSignal<Project> {
-		return checkoutOptions.loadProject().on(next: { project in
-			// Never check out binaries if we're skipping the build step,
-			// because that means users may need the repository checkout.
-			if !self.buildAfterUpdate {
-				project.useBinaries = false
-			}
-		})
+	public func loadProject() -> SignalProducer<Project, CarthageError> {
+		return checkoutOptions.loadProject()
+			|> on(next: { project in
+				// Never check out binaries if we're skipping the build step,
+				// because that means users may need the repository checkout.
+				if !self.buildAfterUpdate {
+					project.useBinaries = false
+				}
+			})
 	}
 }

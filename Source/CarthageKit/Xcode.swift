@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 import ReactiveTask
 
@@ -138,23 +138,23 @@ private struct ProjectEnumerationMatch: Comparable {
 
 	/// Checks whether a project exists at the given URL, returning a match if
 	/// so.
-	static func matchURL(URL: NSURL, fromEnumerator enumerator: NSDirectoryEnumerator) -> Result<ProjectEnumerationMatch> {
+	static func matchURL(URL: NSURL, fromEnumerator enumerator: NSDirectoryEnumerator) -> Result<ProjectEnumerationMatch, CarthageError> {
 		var typeIdentifier: AnyObject?
 		var error: NSError?
 
 		if !URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: &error) {
-			return failure(error ?? CarthageError.ReadFailed(URL).error)
+			return .failure(.ReadFailed(URL, error))
 		}
 
 		if let typeIdentifier = typeIdentifier as? String {
 			if (UTTypeConformsTo(typeIdentifier, "com.apple.dt.document.workspace") != 0) {
-				return success(ProjectEnumerationMatch(locator: .Workspace(URL), level: enumerator.level))
+				return .success(ProjectEnumerationMatch(locator: .Workspace(URL), level: enumerator.level))
 			} else if (UTTypeConformsTo(typeIdentifier, "com.apple.xcode.project") != 0) {
-				return success(ProjectEnumerationMatch(locator: .ProjectFile(URL), level: enumerator.level))
+				return .success(ProjectEnumerationMatch(locator: .ProjectFile(URL), level: enumerator.level))
 			}
 		}
 
-		return failure()
+		return .failure(.NotAProject(URL))
 	}
 }
 
@@ -175,27 +175,27 @@ private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bo
 /// Attempts to locate projects and workspaces within the given directory.
 ///
 /// Sends all matches in preferential order.
-public func locateProjectsInDirectory(directoryURL: NSURL) -> ColdSignal<ProjectLocator> {
+public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<ProjectLocator, CarthageError> {
 	let enumerationOptions = NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants
 
-	return NSFileManager.defaultManager()
-		.carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-		.reduce(initial: []) { (var matches: [ProjectEnumerationMatch], tuple) -> [ProjectEnumerationMatch] in
+	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+		|> reduce([]) { (var matches: [ProjectEnumerationMatch], tuple) -> [ProjectEnumerationMatch] in
 			let (enumerator, URL) = tuple
-			if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value() {
+			if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value {
 				matches.append(match)
 			}
 
 			return matches
 		}
-		.map { (var matches) -> [ProjectEnumerationMatch] in
+		|> map { (var matches) -> [ProjectEnumerationMatch] in
 			sort(&matches)
 			return matches
 		}
-		.mergeMap { matches -> ColdSignal<ProjectEnumerationMatch> in
-			return ColdSignal.fromValues(matches)
+		|> map { matches -> SignalProducer<ProjectEnumerationMatch, CarthageError> in
+			return SignalProducer(values: matches)
 		}
-		.map { (match: ProjectEnumerationMatch) -> ProjectLocator in
+		|> flatten(.Merge)
+		|> map { (match: ProjectEnumerationMatch) -> ProjectLocator in
 			return match.locator
 		}
 }
@@ -207,35 +207,38 @@ public func xcodebuildTask(task: String, buildArguments: BuildArguments) -> Task
 }
 
 /// Sends each scheme found in the given project.
-public func schemesInProject(project: ProjectLocator) -> ColdSignal<String> {
+public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, CarthageError> {
 	let task = xcodebuildTask("-list", BuildArguments(project: project))
 
 	return launchTask(task)
-		.map { (data: NSData) -> String in
-			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
+		|> catch { error in SignalProducer(error: .TaskError(error)) }
+		|> map { (data: NSData) -> String in
+			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
-		.mergeMap { (string: String) -> ColdSignal<String> in
-			return string.linesSignal
+		|> map { (string: String) -> SignalProducer<String, CarthageError> in
+			return string.linesProducer |> promoteErrors(CarthageError.self)
 		}
-		.mergeMap { line -> ColdSignal<String> in
+		|> flatten(.Merge)
+		|> map { line -> SignalProducer<String, CarthageError> in
 			// Matches one of these two possible messages:
 			//
 			// '    This project contains no schemes.'
 			// 'There are no schemes in workspace "Carthage".'
 			if line.hasSuffix("contains no schemes.") || line.hasPrefix("There are no schemes") {
-				return .error(CarthageError.NoSharedSchemes(project).error)
+				return SignalProducer(error: .NoSharedSchemes(project, nil))
 			} else {
-				return .single(line)
+				return SignalProducer(value: line)
 			}
 		}
-		.skipWhile { line in !line.hasSuffix("Schemes:") }
-		.skip(1)
-		.takeWhile { line in !line.isEmpty }
+		|> flatten(.Merge)
+		|> skipWhile { line in !line.hasSuffix("Schemes:") }
+		|> skip(1)
+		|> takeWhile { line in !line.isEmpty }
 		// xcodebuild has a bug where xcodebuild -list can sometimes hang
 		// indefinitely on projects that don't share any schemes, so
 		// automatically bail out if it looks like that's happening.
-		.timeoutWithError(CarthageError.XcodebuildListTimeout(project).error, afterInterval: 8, onScheduler: QueueScheduler())
-		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
+		|> timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 8, onScheduler: QueueScheduler())
+		|> map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
 /// Represents a platform to build for.
@@ -307,19 +310,19 @@ public enum SDK: Equatable {
 	case iPhoneSimulator
 
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
-	public static func fromString(string: String) -> Result<SDK> {
+	public static func fromString(string: String) -> Result<SDK, CarthageError> {
 		switch string {
 		case "macosx":
-			return success(.MacOSX)
+			return .success(.MacOSX)
 
 		case "iphoneos":
-			return success(.iPhoneOS)
+			return .success(.iPhoneOS)
 
 		case "iphonesimulator":
-			return success(.iPhoneSimulator)
+			return .success(.iPhoneSimulator)
 
 		default:
-			return failure(CarthageError.ParseError(description: "unexpected SDK key \"(string)\"").error)
+			return .failure(.ParseError(description: "unexpected SDK key \"(string)\""))
 		}
 	}
 
@@ -394,19 +397,19 @@ public enum ProductType: Equatable {
 
 	/// Attempts to parse a product type from a string returned from
 	/// `xcodebuild`.
-	public static func fromString(string: String) -> Result<ProductType> {
+	public static func fromString(string: String) -> Result<ProductType, CarthageError> {
 		switch string {
 		case "com.apple.product-type.framework":
-			return success(.Framework)
+			return .success(.Framework)
 
 		case "com.apple.product-type.library.static":
-			return success(.StaticLibrary)
+			return .success(.StaticLibrary)
 
 		case "com.apple.product-type.bundle.unit-test":
-			return success(.TestBundle)
+			return .success(.TestBundle)
 
 		default:
-			return failure(CarthageError.ParseError(description: "unexpected product type \"(string)\"").error)
+			return .failure(.ParseError(description: "unexpected product type \"(string)\""))
 		}
 	}
 }
@@ -449,24 +452,25 @@ public struct BuildSettings {
 	/// Invokes `xcodebuild` to retrieve build settings for the given build
 	/// arguments.
 	///
-	/// Upon success, sends one BuildSettings value for each target included in
+	/// Upon .success, sends one BuildSettings value for each target included in
 	/// the referenced scheme.
-	public static func loadWithArguments(arguments: BuildArguments) -> ColdSignal<BuildSettings> {
+	public static func loadWithArguments(arguments: BuildArguments) -> SignalProducer<BuildSettings, CarthageError> {
 		let task = xcodebuildTask("-showBuildSettings", arguments)
 
 		return launchTask(task)
-			.map { (data: NSData) -> String in
-				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
+			|> catch { error in SignalProducer(error: .TaskError(error)) }
+			|> map { (data: NSData) -> String in
+				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 			}
-			.map { (string: String) -> ColdSignal<BuildSettings> in
-				return ColdSignal { (sink, disposable) in
+			|> map { (string: String) -> SignalProducer<BuildSettings, CarthageError> in
+				return SignalProducer { observer, disposable in
 					var currentSettings: [String: String] = [:]
 					var currentTarget: String?
 
 					let flushTarget = { () -> () in
 						if let currentTarget = currentTarget {
 							let buildSettings = self(target: currentTarget, settings: currentSettings)
-							sink.put(.Next(Box(buildSettings)))
+							sendNext(observer, buildSettings)
 						}
 
 						currentTarget = nil
@@ -482,7 +486,7 @@ public struct BuildSettings {
 						let matches: NSArray? = self.targetSettingsRegex.matchesInString(line, options: nil, range: NSMakeRange(0, (line as NSString).length))
 						if let matches = matches {
 							if matches.count > 0 {
-								let result = matches.firstObject as NSTextCheckingResult
+								let result = matches.firstObject as! NSTextCheckingResult
 								let targetRange = result.rangeAtIndex(1)
 
 								flushTarget()
@@ -491,7 +495,7 @@ public struct BuildSettings {
 							}
 						}
 
-						let components = split(line, { $0 == "=" }, maxSplit: 1)
+						let components = split(line, maxSplit: 1) { $0 == "=" }
 						let trimSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
 
 						if components.count == 2 {
@@ -500,63 +504,63 @@ public struct BuildSettings {
 					}
 
 					flushTarget()
-					sink.put(.Completed)
+					sendCompleted(observer)
 				}
 			}
-			.merge(identity)
+			|> flatten(.Merge)
 	}
 
 	/// Determines which SDK the given scheme builds for, by default.
 	///
 	/// If the SDK is unrecognized or could not be determined, an error will be
 	/// sent on the returned signal.
-	public static func SDKForScheme(scheme: String, inProject project: ProjectLocator) -> ColdSignal<SDK> {
+	public static func SDKForScheme(scheme: String, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
 		return loadWithArguments(BuildArguments(project: project, scheme: scheme))
-			.take(1)
-			.tryMap { $0.buildSDK }
+			|> take(1)
+			|> tryMap { $0.buildSDK }
 	}
 
 	/// Returns the value for the given build setting, or an error if it could
 	/// not be determined.
-	public subscript(key: String) -> Result<String> {
+	public subscript(key: String) -> Result<String, CarthageError> {
 		if let value = settings[key] {
-			return success(value)
+			return .success(value)
 		} else {
-			return failure(CarthageError.MissingBuildSetting(key).error)
+			return .failure(.MissingBuildSetting(key))
 		}
 	}
 
 	/// Attempts to determine the SDK this scheme builds for.
-	public var buildSDK: Result<SDK> {
+	public var buildSDK: Result<SDK, CarthageError> {
 		return self["PLATFORM_NAME"].flatMap(SDK.fromString)
 	}
 
 	/// Attempts to determine the ProductType specified in these build settings.
-	public var productType: Result<ProductType> {
+	public var productType: Result<ProductType, CarthageError> {
 		return self["PRODUCT_TYPE"].flatMap { typeString in
 			return ProductType.fromString(typeString)
 		}
 	}
 
 	/// Attempts to determine the URL to the built products directory.
-	public var builtProductsDirectoryURL: Result<NSURL> {
+	public var builtProductsDirectoryURL: Result<NSURL, CarthageError> {
 		return self["BUILT_PRODUCTS_DIR"].flatMap { productsDir in
 			if let fileURL = NSURL.fileURLWithPath(productsDir, isDirectory: true) {
-				return success(fileURL)
+				return .success(fileURL)
 			} else {
-				return failure(CarthageError.ParseError(description: "expected file URL for built products directory, got \(productsDir)").error)
+				return .failure(.ParseError(description: "expected file URL for built products directory, got \(productsDir)"))
 			}
 		}
 	}
 
 	/// Attempts to determine the relative path (from the build folder) to the
 	/// built executable.
-	public var executablePath: Result<String> {
+	public var executablePath: Result<String, CarthageError> {
 		return self["EXECUTABLE_PATH"]
 	}
 
 	/// Attempts to determine the URL to the built executable.
-	public var executableURL: Result<NSURL> {
+	public var executableURL: Result<NSURL, CarthageError> {
 		return builtProductsDirectoryURL.flatMap { builtProductsURL in
 			return self.executablePath.map { executablePath in
 				return builtProductsURL.URLByAppendingPathComponent(executablePath)
@@ -565,12 +569,12 @@ public struct BuildSettings {
 	}
 
 	/// Attempts to determine the name of the built product's wrapper bundle.
-	public var wrapperName: Result<String> {
+	public var wrapperName: Result<String, CarthageError> {
 		return self["WRAPPER_NAME"]
 	}
 
 	/// Attempts to determine the URL to the built product's wrapper.
-	public var wrapperURL: Result<NSURL> {
+	public var wrapperURL: Result<NSURL, CarthageError> {
 		return builtProductsDirectoryURL.flatMap { builtProductsURL in
 			return self.wrapperName.map { wrapperName in
 				return builtProductsURL.URLByAppendingPathComponent(wrapperName)
@@ -582,13 +586,13 @@ public struct BuildSettings {
 	/// the Swift modules for the built product will exist.
 	///
 	/// If the product does not build any modules, `nil` will be returned.
-	private var relativeModulesPath: Result<String?> {
-		if let moduleName = self["PRODUCT_MODULE_NAME"].value() {
+	private var relativeModulesPath: Result<String?, CarthageError> {
+		if let moduleName = self["PRODUCT_MODULE_NAME"].value {
 			return self["CONTENTS_FOLDER_PATH"].map { contentsPath in
 				return contentsPath.stringByAppendingPathComponent("Modules").stringByAppendingPathComponent(moduleName).stringByAppendingPathExtension("swiftmodule")!
 			}
 		} else {
-			return success(nil)
+			return .success(nil)
 		}
 	}
 }
@@ -597,62 +601,63 @@ public struct BuildSettings {
 /// its name) into the given folder. The folder will be created if it does not
 /// already exist.
 ///
-/// Returns a signal that will send the URL after copying upon success.
-private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildSettings) -> ColdSignal<NSURL> {
-	return ColdSignal.fromResult(settings.wrapperName)
-		.map(directoryURL.URLByAppendingPathComponent)
-		.combineLatestWith(.fromResult(settings.wrapperURL))
-		.map { (target, source) in
+/// Returns a signal that will send the URL after copying upon .success.
+private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildSettings) -> SignalProducer<NSURL, CarthageError> {
+	return SignalProducer(result: settings.wrapperName)
+		|> map(directoryURL.URLByAppendingPathComponent)
+		|> combineLatestWith(SignalProducer(result: settings.wrapperURL))
+		|> map { (target, source) in
 			return copyFramework(source, target)
 		}
-		.merge(identity)
+		|> flatten(.Merge)
 }
 
 /// Attempts to merge the given executables into one fat binary, written to
 /// the specified URL.
-private func mergeExecutables(executableURLs: [NSURL], outputURL: NSURL) -> ColdSignal<()> {
+private func mergeExecutables(executableURLs: [NSURL], outputURL: NSURL) -> SignalProducer<(), CarthageError> {
 	precondition(outputURL.fileURL)
 
-	return ColdSignal.fromValues(executableURLs)
-		.tryMap { URL -> Result<String> in
+	return SignalProducer(values: executableURLs)
+		|> tryMap { URL -> Result<String, CarthageError> in
 			if let path = URL.path {
-				return success(path)
+				return .success(path)
 			} else {
-				return failure(CarthageError.ParseError(description: "expected file URL to built executable, got (URL)").error)
+				return .failure(.ParseError(description: "expected file URL to built executable, got (URL)"))
 			}
 		}
-		.reduce(initial: []) { $0 + [ $1 ] }
-		.map { executablePaths -> ColdSignal<NSData> in
+		|> reduce([]) { $0 + [ $1 ] }
+		|> map { executablePaths -> SignalProducer<NSData, CarthageError> in
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
 
 			// TODO: Redirect stdout.
 			return launchTask(lipoTask)
+				|> catch { error in SignalProducer(error: .TaskError(error)) }
 		}
-		.merge(identity)
-		.then(.empty())
+		|> flatten(.Merge)
+		|> then(.empty)
 }
 
 /// If the given source URL represents an LLVM module, copies its contents into
 /// the destination module.
 ///
 /// Sends the URL to each file after copying.
-private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationModuleDirectoryURL: NSURL) -> ColdSignal<NSURL> {
+private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, destinationModuleDirectoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	precondition(sourceModuleDirectoryURL.fileURL)
 	precondition(destinationModuleDirectoryURL.fileURL)
 
-	return NSFileManager.defaultManager()
-		.carthage_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, catchErrors: true)
-		.mergeMap { enumerator, URL in
+	return NSFileManager.defaultManager().carthage_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, catchErrors: true)
+		|> map { enumerator, URL in
 			let lastComponent: String? = URL.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!).URLByResolvingSymlinksInPath!
 
 			var error: NSError?
 			if NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL, error: &error) {
-				return .single(destinationURL)
+				return SignalProducer(value: destinationURL)
 			} else {
-				return .error(error ?? CarthageError.WriteFailed(destinationURL).error)
+				return SignalProducer(error: .WriteFailed(destinationURL, error))
 			}
 		}
+		|> flatten(.Merge)
 }
 
 /// Determines whether the specified product type should be built automatically.
@@ -661,31 +666,32 @@ private func shouldBuildProductType(productType: ProductType) -> Bool {
 }
 
 /// Determines whether the given scheme should be built automatically.
-private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Platform?) -> ColdSignal<Bool> {
+private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Platform?) -> SignalProducer<Bool, CarthageError> {
 	precondition(buildArguments.scheme != nil)
 
 	return BuildSettings.loadWithArguments(buildArguments)
-		.map { settings -> ColdSignal<ProductType> in
-			let productType = ColdSignal.fromResult(settings.productType)
+		|> map { settings -> SignalProducer<ProductType, CarthageError> in
+			let productType = SignalProducer(result: settings.productType)
 
 			if let forPlatform = forPlatform {
-				return ColdSignal.fromResult(settings.buildSDK)
-					.map { $0.platform }
-					.filter { $0 == forPlatform }
-					.map { _ in productType }
-					.merge(identity)
-					.catch { _ in .empty() }
+				return SignalProducer(result: settings.buildSDK)
+					|> map { $0.platform }
+					|> filter { $0 == forPlatform }
+					|> map { _ in productType }
+					|> flatten(.Merge)
+					|> catch { _ in .empty }
 			} else {
-				return productType.catch { _ in .empty() }
+				return productType
+					|> catch { _ in .empty }
 			}
 		}
-		.concat(identity)
-		.filter(shouldBuildProductType)
+		|> flatten(.Concat)
+		|> filter(shouldBuildProductType)
 		// If we find any framework target, we should indeed build this scheme.
-		.map { _ in true }
+		|> map { _ in true }
 		// Otherwise, nope.
-		.concat(.single(false))
-		.take(1)
+		|> concat(SignalProducer(value: false))
+		|> take(1)
 }
 
 /// Aggregates all of the build settings sent on the given signal, associating
@@ -693,10 +699,10 @@ private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Plat
 ///
 /// Returns a signal which will send the aggregated dictionary upon completion
 /// of the input signal, then itself complete.
-private func settingsByTarget(signal: ColdSignal<BuildSettings>) -> ColdSignal<[String: BuildSettings]> {
+private func settingsByTarget<Error>(signal: SignalProducer<BuildSettings, Error>) -> SignalProducer<[String: BuildSettings], Error> {
 	return signal
-		.map { settings in [ settings.target: settings ] }
-		.reduce(initial: [:], combineDictionaries)
+		|> map { settings in [ settings.target: settings ] }
+		|> reduce([:], combineDictionaries)
 }
 
 /// Combines the built products corresponding to the given settings, by creating
@@ -707,68 +713,71 @@ private func settingsByTarget(signal: ColdSignal<BuildSettings>) -> ColdSignal<[
 /// been created from the same target, and differ only in the SDK they were
 /// built for.
 ///
-/// Upon success, sends the URL to the merged product, then completes.
-private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings, secondProductSettings: BuildSettings, destinationFolderURL: NSURL) -> ColdSignal<NSURL> {
+/// Upon .success, sends the URL to the merged product, then completes.
+private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings, secondProductSettings: BuildSettings, destinationFolderURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return copyBuildProductIntoDirectory(destinationFolderURL, firstProductSettings)
-		.map { productURL in
-			let mergeProductBinaries = ColdSignal.fromResult(firstProductSettings.executableURL)
-				.concat(ColdSignal.fromResult(secondProductSettings.executableURL))
-				.reduce(initial: []) { $0 + [ $1 ] }
-				.zipWith(ColdSignal.fromResult(firstProductSettings.executablePath)
-					.map(destinationFolderURL.URLByAppendingPathComponent))
-				.map { (executableURLs: [NSURL], outputURL: NSURL) -> ColdSignal<()> in
+		|> map { productURL in
+			let mergeProductBinaries = SignalProducer(result: firstProductSettings.executableURL)
+				|> concat(SignalProducer(result: secondProductSettings.executableURL))
+				|> reduce([]) { $0 + [ $1 ] }
+				|> zipWith(SignalProducer(result: firstProductSettings.executablePath)
+					|> map(destinationFolderURL.URLByAppendingPathComponent))
+				|> map { (executableURLs: [NSURL], outputURL: NSURL) -> SignalProducer<(), CarthageError> in
 					return mergeExecutables(executableURLs, outputURL.URLByResolvingSymlinksInPath!)
 				}
-				.merge(identity)
+				|> flatten(.Merge)
 
-			let sourceModulesURL = ColdSignal.fromResult(secondProductSettings.relativeModulesPath)
-				.filter { $0 != nil }
-				.zipWith(ColdSignal.fromResult(secondProductSettings.builtProductsDirectoryURL))
-				.map { (modulesPath, productsURL) -> NSURL in
+			let sourceModulesURL = SignalProducer(result: secondProductSettings.relativeModulesPath)
+				|> filter { $0 != nil }
+				|> zipWith(SignalProducer(result: secondProductSettings.builtProductsDirectoryURL))
+				|> map { (modulesPath, productsURL) -> NSURL in
 					return productsURL.URLByAppendingPathComponent(modulesPath!)
 				}
 
-			let destinationModulesURL = ColdSignal.fromResult(firstProductSettings.relativeModulesPath)
-				.filter { $0 != nil }
-				.map { modulesPath -> NSURL in
+			let destinationModulesURL = SignalProducer(result: firstProductSettings.relativeModulesPath)
+				|> filter { $0 != nil }
+				|> map { modulesPath -> NSURL in
 					return destinationFolderURL.URLByAppendingPathComponent(modulesPath!)
 				}
 
 			let mergeProductModules = zip(sourceModulesURL, destinationModulesURL)
-				.map { (source: NSURL, destination: NSURL) -> ColdSignal<NSURL> in
+				|> map { (source: NSURL, destination: NSURL) -> SignalProducer<NSURL, CarthageError> in
 					return mergeModuleIntoModule(source, destination)
 				}
-				.merge(identity)
+				|> flatten(.Merge)
 
 			return mergeProductBinaries
-				.then(mergeProductModules)
-				.then(.single(productURL))
+				|> then(mergeProductModules)
+				|> then(SignalProducer(value: productURL))
 		}
-		.merge(identity)
+		|> flatten(.Merge)
 }
 
 /// Builds one scheme of the given project, for all supported SDKs.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> (HotSignal<NSData>, ColdSignal<NSURL>) {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> (Signal<NSData, NoError>, SignalProducer<NSURL, CarthageError>) {
 	precondition(workingDirectoryURL.fileURL)
 
-	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
+	let (stdoutSignal, stdoutSink) = Signal<NSData, NoError>.pipe()
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
-	let buildSDK = { (sdk: SDK) -> ColdSignal<BuildSettings> in
+	let buildSDK = { (sdk: SDK) -> SignalProducer<BuildSettings, CarthageError> in
 		var copiedArgs = buildArgs
 		copiedArgs.sdk = sdk
 
 		var buildScheme = xcodebuildTask("build", copiedArgs)
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
-		return launchTask(buildScheme, standardOutput: stdoutSink)
-			.then(BuildSettings.loadWithArguments(copiedArgs))
-			.filter { settings in
+		return launchTask(buildScheme, standardOutput: SinkOf { data in
+				sendNext(stdoutSink, data)
+			})
+			|> catch { error in SignalProducer(error: .TaskError(error)) }
+			|> then(BuildSettings.loadWithArguments(copiedArgs))
+			|> filter { settings in
 				// Only copy build products for the product types we care about.
-				if let productType = settings.productType.value() {
+				if let productType = settings.productType.value {
 					return shouldBuildProductType(productType)
 				} else {
 					return false
@@ -776,29 +785,29 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			}
 	}
 
-	let buildSignal: ColdSignal<NSURL> = BuildSettings.SDKForScheme(scheme, inProject: project)
-		.map { $0.platform }
-		.map { (platform: Platform) in
+	let buildSignal: SignalProducer<NSURL, CarthageError> = BuildSettings.SDKForScheme(scheme, inProject: project)
+		|> map { $0.platform }
+		|> map { (platform: Platform) in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 
 			// TODO: Generalize this further?
 			switch platform.SDKs.count {
 			case 1:
 				return buildSDK(platform.SDKs[0])
-					.map { settings in copyBuildProductIntoDirectory(folderURL, settings) }
-					.merge(identity)
+					|> map { settings in copyBuildProductIntoDirectory(folderURL, settings) }
+					|> flatten(.Merge)
 
 			case 2:
 				let firstSDK = platform.SDKs[0]
 				let secondSDK = platform.SDKs[1]
 
 				return settingsByTarget(buildSDK(firstSDK))
-					.map { firstSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
+					|> map { firstSettingsByTarget -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
 						return settingsByTarget(buildSDK(secondSDK))
-							.map { secondSettingsByTarget -> ColdSignal<(BuildSettings, BuildSettings)> in
+							|> map { secondSettingsByTarget -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
 								assert(firstSettingsByTarget.count == secondSettingsByTarget.count, "Number of targets built for \(firstSDK) (\(firstSettingsByTarget.count)) does not match number of targets built for \(secondSDK) (\(secondSettingsByTarget.count))")
 
-								return ColdSignal { (sink, disposable) in
+								return SignalProducer { observer, disposable in
 									for (target, firstSettings) in firstSettingsByTarget {
 										if disposable.disposed {
 											break
@@ -807,25 +816,25 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 										let secondSettings = secondSettingsByTarget[target]
 										assert(secondSettings != nil, "No \(secondSDK) build settings found for target \"\(target)\"")
 
-										sink.put(.Next(Box((firstSettings, secondSettings!))))
+										sendNext(observer, (firstSettings, secondSettings!))
 									}
 
-									sink.put(.Completed)
+									sendCompleted(observer)
 								}
 							}
-							.merge(identity)
+							|> flatten(.Merge)
 					}
-					.merge(identity)
-					.map { (firstSettings, secondSettings) -> ColdSignal<NSURL> in
+					|> flatten(.Merge)
+					|> map { (firstSettings, secondSettings) -> SignalProducer<NSURL, CarthageError> in
 						return mergeBuildProductsIntoDirectory(secondSettings, firstSettings, folderURL)
 					}
-					.concat(identity)
+					|> flatten(.Concat)
 
 			default:
 				assert(false, "SDK count \(platform.SDKs.count) for platform \(platform) is not supported")
 			}
 		}
-		.merge(identity)
+		|> flatten(.Merge)
 
 	return (stdoutSignal, buildSignal)
 }
@@ -834,106 +843,97 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 ///
 /// A signal of this type should send the project and scheme name when building
 /// begins, then complete or error when building terminates.
-public typealias BuildSchemeSignal = ColdSignal<(ProjectLocator, String)>
+public typealias BuildSchemeProducer = SignalProducer<(ProjectLocator, String), CarthageError>
 
 /// Attempts to build the dependency identified by the given project, then
 /// places its build product into the root directory given.
 ///
 /// Returns signals in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
+public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> (Signal<NSData, NoError>, SignalProducer<BuildSchemeProducer, CarthageError>) {
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
 	let (buildOutput, schemeSignals) = buildInDirectory(dependencyURL, withConfiguration: configuration, platform: platform)
-	let copyProducts = ColdSignal<BuildSchemeSignal>.lazy {
-		var error: NSError?
-		if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-			return .error(error ?? CarthageError.WriteFailed(rootBinariesURL).error)
-		}
-
-		// Link this dependency's Carthage/Build folder to that of the root
-		// project, so it can see all products built already, and so we can
-		// automatically drop this dependency's product in the right place.
-		let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
-
-		if !NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL, error: nil) {
-			let dependencyParentURL = dependencyBinariesURL.URLByDeletingLastPathComponent!
-			if !NSFileManager.defaultManager().createDirectoryAtURL(dependencyParentURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-				return .error(error ?? CarthageError.WriteFailed(dependencyParentURL).error)
-			}
-		}
-
-		var isSymlink: AnyObject?
-		if !rawDependencyURL.getResourceValue(&isSymlink, forKey: NSURLIsSymbolicLinkKey, error: &error) {
-			return .error(error ?? CarthageError.ReadFailed(rawDependencyURL).error)
-		}
-
-		if isSymlink as? Bool == true {
-			// Since this dependency is itself a symlink, we'll create an
-			// absolute link back to the project's Build folder.
-			if !NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL, error: &error) {
-				return .error(error ?? CarthageError.WriteFailed(dependencyBinariesURL).error)
-			}
-		} else {
-			// The relative path to this dependency's Carthage/Build folder, from
-			// the root.
-			let dependencyBinariesRelativePath = dependency.relativePath.stringByAppendingPathComponent(CarthageBinariesFolderPath)
-			let componentsForGettingTheHellOutOfThisRelativePath = Array(count: dependencyBinariesRelativePath.pathComponents.count - 1, repeatedValue: "..")
-
-			// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
-			let linkDestinationPath = reduce(componentsForGettingTheHellOutOfThisRelativePath, CarthageBinariesFolderPath) { trailingPath, pathComponent in
-				return pathComponent.stringByAppendingPathComponent(trailingPath)
+	let copyProducts = SignalProducer.try { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
+			var error: NSError?
+			if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+				return .failure(.WriteFailed(rootBinariesURL, error))
 			}
 
-			if !NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath, error: &error) {
-				return .error(error ?? CarthageError.WriteFailed(dependencyBinariesURL).error)
-			}
-		}
+			// Link this dependency's Carthage/Build folder to that of the root
+			// project, so it can see all products built already, and so we can
+			// automatically drop this dependency's product in the right place.
+			let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 
-		return schemeSignals
-			.catch { error in
-				let fileIssueCodes = [
-					CarthageErrorCode.NoSharedSchemes.rawValue,
-					CarthageErrorCode.XcodebuildListTimeout.rawValue,
-				]
-
-				switch dependency {
-				case let .GitHub(repo) where contains(fileIssueCodes, error.code):
-					return .error(addIssueFilingSuggestionToError(error, repo))
-				default:
-					return .error(error)
+			if !NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL, error: nil) {
+				let dependencyParentURL = dependencyBinariesURL.URLByDeletingLastPathComponent!
+				if !NSFileManager.defaultManager().createDirectoryAtURL(dependencyParentURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+					return .failure(.WriteFailed(dependencyParentURL, error))
 				}
 			}
-	}
+
+			var isSymlink: AnyObject?
+			if !rawDependencyURL.getResourceValue(&isSymlink, forKey: NSURLIsSymbolicLinkKey, error: &error) {
+				return .failure(.ReadFailed(rawDependencyURL, error))
+			}
+
+			if isSymlink as? Bool == true {
+				// Since this dependency is itself a symlink, we'll create an
+				// absolute link back to the project's Build folder.
+				if !NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL, error: &error) {
+					return .failure(.WriteFailed(dependencyBinariesURL, error))
+				}
+			} else {
+				// The relative path to this dependency's Carthage/Build folder, from
+				// the root.
+				let dependencyBinariesRelativePath = dependency.relativePath.stringByAppendingPathComponent(CarthageBinariesFolderPath)
+				let componentsForGettingTheHellOutOfThisRelativePath = Array(count: dependencyBinariesRelativePath.pathComponents.count - 1, repeatedValue: "..")
+
+				// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
+				let linkDestinationPath = reduce(componentsForGettingTheHellOutOfThisRelativePath, CarthageBinariesFolderPath) { trailingPath, pathComponent in
+					return pathComponent.stringByAppendingPathComponent(trailingPath)
+				}
+
+				if !NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath, error: &error) {
+					return .failure(.WriteFailed(dependencyBinariesURL, error))
+				}
+			}
+
+			return .success(schemeSignals)
+		}
+		|> map { schemeSignals in
+			return schemeSignals
+				|> catch { error in
+					switch (dependency, error) {
+					case let (.GitHub(repo), .NoSharedSchemes(project, _)):
+						return SignalProducer(error: .NoSharedSchemes(project, repo))
+
+					case let (.GitHub(repo), .XcodebuildListTimeout(project, _)):
+						return SignalProducer(error: .XcodebuildListTimeout(project, repo))
+
+					default:
+						return SignalProducer(error: error)
+					}
+				}
+		}
+		|> flatten(.Merge)
 
 	return (buildOutput, copyProducts)
-}
-
-/// Augments an error localized description to include a suggestion to file a
-/// GitHub issue for repositories with potentially no shared schemes.
-///
-/// Returns an error with an issue filing suggestion.
-private func addIssueFilingSuggestionToError(error: NSError, repo: GitHubRepository) -> NSError {
-	var userInfo = error.userInfo ?? NSMutableDictionary()
-
-	userInfo[NSLocalizedDescriptionKey] = error.localizedDescription + "\n\nIf you believe this to be a project configuration error, please file an issue with the maintainers at \(repo.newIssueURL.absoluteString!)"
-
-	return NSError(domain: error.domain, code: error.code, userInfo: userInfo)
 }
 
 /// Builds the first project or workspace found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> (Signal<NSData, NoError>, SignalProducer<BuildSchemeProducer, CarthageError>) {
 	precondition(directoryURL.fileURL)
 
-	let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
+	let (stdoutSignal, stdoutSink) = Signal<NSData, NoError>.pipe()
 	let locatorSignal = locateProjectsInDirectory(directoryURL)
 
 	let schemeSignals = locatorSignal
-		.filter { (project: ProjectLocator) in
+		|> filter { (project: ProjectLocator) in
 			switch project {
 			case .ProjectFile:
 				return true
@@ -942,25 +942,25 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				return false
 			}
 		}
-		.take(1)
-		.map { (project: ProjectLocator) -> ColdSignal<String> in
+		|> take(1)
+		|> map { (project: ProjectLocator) -> SignalProducer<String, CarthageError> in
 			return schemesInProject(project)
 		}
-		.merge(identity)
-		.combineLatestWith(locatorSignal.take(1))
-		.map { (scheme: String, project: ProjectLocator) -> ColdSignal<(ProjectLocator, String)> in
+		|> flatten(.Merge)
+		|> combineLatestWith(locatorSignal |> take(1))
+		|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
 			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
 			return shouldBuildScheme(buildArguments, platform)
-				.filter(identity)
-				.map { _ in
+				|> filter { $0 }
+				|> map { _ -> BuildSchemeProducer in
 					let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
 					buildOutput.observe(stdoutSink)
 
-					return ColdSignal.single((project, scheme))
-						.concat(productURLs.then(.empty()))
+					return SignalProducer(value: (project, scheme))
+						|> concat(productURLs |> then(.empty))
 				}
-				.merge(identity)
+				|> flatten(.Merge)
 		}
 
 	return (stdoutSignal, schemeSignals)
@@ -968,71 +968,72 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 
 /// Strips a framework from unexpected architectures, optionally codesigning the
 /// result.
-public func stripFramework(frameworkURL: NSURL, #keepingArchitectures: [String], codesigningIdentity: String? = nil) -> ColdSignal<()> {
+public func stripFramework(frameworkURL: NSURL, #keepingArchitectures: [String], codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
 	let strip = architecturesInFramework(frameworkURL)
-		.filter { !contains(keepingArchitectures, $0) }
-		.map { stripArchitecture(frameworkURL, $0) }
-		.concat(identity)
+		|> filter { !contains(keepingArchitectures, $0) }
+		|> map { stripArchitecture(frameworkURL, $0) }
+		|> flatten(.Concat)
 
-	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty()
-
-	return strip.concat(sign)
+	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty
+	return strip |> concat(sign)
 }
 
 /// Copies a framework into the given folder. The folder will be created if it
 /// does not already exist.
 ///
-/// Returns a signal that will send the URL after copying upon success.
-public func copyFramework(from: NSURL, to: NSURL) -> ColdSignal<NSURL> {
-	return ColdSignal.lazy {
+/// Returns a signal that will send the URL after copying upon .success.
+public func copyFramework(from: NSURL, to: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	return SignalProducer<NSURL, CarthageError>.try {
 		var error: NSError? = nil
 
 		let manager = NSFileManager.defaultManager()
 
 		if !manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error) {
-			return .error(error ?? CarthageError.WriteFailed(to.URLByDeletingLastPathComponent!).error)
+			return .failure(.WriteFailed(to.URLByDeletingLastPathComponent!, error))
 		}
 
 		if !manager.removeItemAtURL(to, error: &error) && error?.code != NSFileNoSuchFileError {
-			return .error(error ?? CarthageError.WriteFailed(to).error)
+			return .failure(.WriteFailed(to, error))
 		}
 
 		if manager.copyItemAtURL(from, toURL: to, error: &error) {
-			return .single(to)
+			return .success(to)
 		} else {
-			return .error(error ?? CarthageError.WriteFailed(to).error)
+			return .failure(.WriteFailed(to, error))
 		}
 	}
 }
 
 /// Strips the given architecture from a framework.
-private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> ColdSignal<()> {
-	return ColdSignal.lazy { () -> ColdSignal<NSURL> in
-			return .fromResult(binaryURL(frameworkURL))
+private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> SignalProducer<(), CarthageError> {
+	return SignalProducer.try { () -> Result<NSURL, CarthageError> in
+			return binaryURL(frameworkURL)
 		}
-		.mergeMap { binaryURL -> ColdSignal<NSData> in
+		|> map { binaryURL -> SignalProducer<NSData, CarthageError> in
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
-
 			return launchTask(lipoTask)
+				|> catch { error in SignalProducer(error: .TaskError(error)) }
 		}
-		.then(.empty())
+		|> flatten(.Merge)
+		|> then(.empty)
 }
 
 /// Returns a signal of all architectures present in a given framework.
-public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> {
-	return ColdSignal.lazy { () -> ColdSignal<NSURL> in
-			return .fromResult(binaryURL(frameworkURL))
+public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<String, CarthageError> {
+	return SignalProducer.try { () -> Result<NSURL, CarthageError> in
+			return binaryURL(frameworkURL)
 		}
-		.mergeMap { binaryURL -> ColdSignal<String> in
+		|> map { binaryURL -> SignalProducer<String, CarthageError> in
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
 
 			return launchTask(lipoTask)
-				.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
-				.mergeMap { output -> ColdSignal<String> in
+				|> catch { error in SignalProducer(error: .TaskError(error)) }
+				|> map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
+				|> map { output -> SignalProducer<String, CarthageError> in
 					let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
 					characterSet.addCharactersInString(" _-")
 
-					let scanner = NSScanner(string: output)
+					let scanner = NSScanner(string: output as String)
 
 					if scanner.scanString("Architectures in the fat file:", intoString: nil) {
 						// The output of "lipo -info PathToBinary" for fat files
@@ -1048,10 +1049,11 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> 
 
 						let components = architectures?
 							.componentsSeparatedByString(" ")
-							.filter { ($0 as NSString).length > 0 } as [String]?
+							.map { $0 as! String }
+							.filter { !$0.isEmpty }
 
 						if let components = components {
-							return ColdSignal.fromValues(components)
+							return SignalProducer(values: components)
 						}
 					}
 
@@ -1068,29 +1070,33 @@ public func architecturesInFramework(frameworkURL: NSURL) -> ColdSignal<String> 
 						scanner.scanCharactersFromSet(characterSet, intoString: &architecture)
 
 						if let architecture = architecture {
-							return ColdSignal.single(architecture)
+							return SignalProducer(value: architecture as String)
 						}
 					}
 
-					return ColdSignal.error(CarthageError.InvalidArchitectures(description: "Could not read architectures from \(frameworkURL.path!)").error)
+					return SignalProducer(error: .InvalidArchitectures(description: "Could not read architectures from \(frameworkURL.path!)"))
 				}
+				|> flatten(.Merge)
 		}
+		|> flatten(.Merge)
 }
 
 /// Returns the URL of a binary inside a given framework.
-private func binaryURL(frameworkURL: NSURL) -> Result<NSURL> {
+private func binaryURL(frameworkURL: NSURL) -> Result<NSURL, CarthageError> {
 	let bundle = NSBundle(path: frameworkURL.path!)
 
 	if let binaryName = bundle?.objectForInfoDictionaryKey("CFBundleExecutable") as? String {
-		return success(frameworkURL.URLByAppendingPathComponent(binaryName))
+		return .success(frameworkURL.URLByAppendingPathComponent(binaryName))
 	} else {
-		return failure(CarthageError.ReadFailed(frameworkURL).error)
+		return .failure(.ReadFailed(frameworkURL, nil))
 	}
 }
 
 /// Signs a framework with the given codesigning identity.
-private func codesign(frameworkURL: NSURL, expandedIdentity: String) -> ColdSignal<()> {
+private func codesign(frameworkURL: NSURL, expandedIdentity: String) -> SignalProducer<(), CarthageError> {
 	let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
 
-	return launchTask(codesignTask).then(.empty())
+	return launchTask(codesignTask)
+		|> catch { error in SignalProducer(error: .TaskError(error)) }
+		|> then(.empty)
 }

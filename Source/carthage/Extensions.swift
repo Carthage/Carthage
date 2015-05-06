@@ -9,10 +9,11 @@
 // This file contains extensions to anything that's not appropriate for
 // CarthageKit.
 
+import Box
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 
 private let outputQueue = { () -> dispatch_queue_t in
@@ -45,6 +46,69 @@ internal func print<T>(object: T) {
 	dispatch_async(outputQueue) {
 		Swift.print(object)
 	}
+}
+
+/// Wraps CommandantError and adds ErrorType conformance.
+public struct CommandError {
+	public let error: CommandantError<CarthageError>
+
+	public init(_ error: CommandantError<CarthageError>) {
+		self.error = error
+	}
+}
+
+extension CommandError: Printable {
+	public var description: String {
+		return error.description
+	}
+}
+
+extension CommandError: ErrorType {
+	public var nsError: NSError {
+		switch error {
+		case let .UsageError(description):
+			return NSError(domain: "org.carthage.Carthage", code: 0, userInfo: [
+				NSLocalizedDescriptionKey: description
+			])
+
+		case let .CommandError(commandError):
+			return commandError.value.nsError
+		}
+	}
+}
+
+/// Transforms the error type in a Result.
+internal func mapError<T, E, F>(result: Result<T, E>, transform: E -> F) -> Result<T, F> {
+	switch result {
+	case let .Success(value):
+		return .Success(value)
+
+	case let .Failure(error):
+		return .Failure(Box(transform(error.value)))
+	}
+}
+
+/// Promotes CarthageErrors into CommandErrors.
+internal func promoteErrors<T>(signal: Signal<T, CarthageError>) -> Signal<T, CommandError> {
+	return signal |> mapError { (error: CarthageError) -> CommandError in
+		let commandantError = CommandantError.CommandError(Box(error))
+		return CommandError(commandantError)
+	}
+}
+
+/// Lifts the Result of options parsing into a SignalProducer.
+internal func producerWithOptions<T>(result: Result<T, CommandantError<CarthageError>>) -> SignalProducer<T, CommandError> {
+	let mappedResult = mapError(result) { CommandError($0) }
+	return SignalProducer(result: mappedResult)
+}
+
+/// Waits on a SignalProducer that implements the behavior of a CommandType.
+internal func waitOnCommand<T>(producer: SignalProducer<T, CommandError>) -> Result<(), CommandantError<CarthageError>> {
+	let result = producer
+		|> then(SignalProducer<(), CommandError>.empty)
+		|> wait
+	
+	return mapError(result) { $0.error }
 }
 
 extension GitURL: ArgumentType {
@@ -88,7 +152,7 @@ extension Project {
 	///
 	/// If migration is necessary, sends one or more output lines describing the
 	/// process to the user.
-	internal func migrateIfNecessary(colorOptions: ColorOptions) -> ColdSignal<String> {
+	internal func migrateIfNecessary(colorOptions: ColorOptions) -> SignalProducer<String, CarthageError> {
 		let directoryPath = directoryURL.path!
 		let fileManager = NSFileManager.defaultManager()
 
@@ -99,15 +163,16 @@ extension Project {
 		let carthageCheckout = "Carthage.checkout"
 		
 		let formatting = colorOptions.formatting
-		
 		let migrationMessage = formatting.bulletinTitle("MIGRATION WARNING") + "\n\nThis project appears to be set up for an older (pre-0.4) version of Carthage. Unfortunately, the directory structure for Carthage projects has since changed, so this project will be migrated automatically.\n\nSpecifically, the following renames will occur:\n\n  \(cartfileLock) -> \(CarthageProjectResolvedCartfilePath)\n  \(carthageBuild) -> \(CarthageBinariesFolderPath)\n  \(carthageCheckout) -> \(CarthageProjectCheckoutsPath)\n\nFor more information, see " + formatting.URL(string: "https://github.com/Carthage/Carthage/pull/224") + ".\n"
-		let signals = ColdSignal<ColdSignal<String>> { sink, disposable in
+
+		let producers = SignalProducer<SignalProducer<String, CarthageError>, CarthageError> { observer, disposable in
 			let checkFile: (String, String) -> () = { oldName, newName in
 				if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(oldName)) {
-					let signal = ColdSignal<String>.single(migrationMessage)
-						.concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName).then(.empty()))
+					let producer = SignalProducer(value: migrationMessage)
+						|> concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName)
+							|> then(.empty))
 
-					sink.put(.Next(Box(signal)))
+					sendNext(observer, producer)
 				}
 			}
 
@@ -122,36 +187,41 @@ extension Project {
 
 				var error: NSError?
 				if let contents = fileManager.contentsOfDirectoryAtURL(oldCheckoutsURL, includingPropertiesForKeys: nil, options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsPackageDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, error: &error) {
-					let trashSignal = ColdSignal<()>.lazy {
+					let trashProducer = SignalProducer<(), CarthageError>.try {
 						var error: NSError?
 						if fileManager.trashItemAtURL(oldCheckoutsURL, resultingItemURL: nil, error: &error) {
-							return .empty()
+							return .success(())
 						} else {
-							return .error(error ?? CarthageError.WriteFailed(oldCheckoutsURL).error)
+							return .failure(CarthageError.WriteFailed(oldCheckoutsURL, error))
 						}
 					}
 
-					let moveSignals: ColdSignal<()> = ColdSignal.fromValues(contents)
-						.map { (object: AnyObject) in object as NSURL }
-						.concatMap { (URL: NSURL) -> ColdSignal<NSURL> in
+					let moveProducer: SignalProducer<(), CarthageError> = SignalProducer(values: contents)
+						|> map { (object: AnyObject) in object as! NSURL }
+						|> map { (URL: NSURL) -> SignalProducer<NSURL, CarthageError> in
 							let lastPathComponent: String! = URL.lastPathComponent
 							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
 						}
-						.then(trashSignal)
+						|> flatten(.Concat)
+						|> then(trashProducer)
+						|> then(.empty)
 
-					let signal = ColdSignal<String>.single(migrationMessage)
-						.concat(moveSignals.then(.empty()))
+					let producer = SignalProducer<String, CarthageError>(value: migrationMessage)
+						|> concat(moveProducer
+							|> then(.empty))
 
-					sink.put(.Next(Box(signal)))
+					sendNext(observer, producer)
 				} else {
-					sink.put(.Error(error ?? CarthageError.ReadFailed(oldCheckoutsURL).error))
+					sendError(observer, CarthageError.ReadFailed(oldCheckoutsURL, error))
 					return
 				}
 			}
 
-			sink.put(.Completed)
+			sendCompleted(observer)
 		}
 
-		return signals.concat(identity).takeLast(1)
+		return producers
+			|> flatten(.Concat)
+			|> takeLast(1)
 	}
 }
