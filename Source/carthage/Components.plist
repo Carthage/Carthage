@@ -25,7 +25,13 @@
 				<key>BundleOverwriteAction</key>
 				<string></string>
 				<key>RootRelativeBundlePath</key>
-				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/LlamaKit.framework</string>
+				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Result.framework</string>
+			</dict>
+			<dict>
+				<key>BundleOverwriteAction</key>
+				<string></string>
+				<key>RootRelativeBundlePath</key>
+				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Box.framework</string>
 			</dict>
 			<dict>
 				<key>BundleOverwriteAction</key>
@@ -38,6 +44,12 @@
 				<string></string>
 				<key>RootRelativeBundlePath</key>
 				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Argo.framework</string>
+			</dict>
+			<dict>
+				<key>BundleOverwriteAction</key>
+				<string></string>
+				<key>RootRelativeBundlePath</key>
+				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Runes.framework</string>
 			</dict>
 			<dict>
 				<key>BundleOverwriteAction</key>

@@ -9,10 +9,10 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveTask
 
-let registry = CommandRegistry()
+let registry = CommandRegistry<CarthageError>()
 registry.register(ArchiveCommand())
 registry.register(BootstrapCommand())
 registry.register(BuildCommand())
@@ -25,7 +25,6 @@ registry.register(VersionCommand())
 let helpCommand = HelpCommand(registry: registry)
 registry.register(helpCommand)
 
-registry.main(defaultCommand: helpCommand) { error in
-	let errorDescription = (error.domain == CarthageErrorDomain || error.domain == CommandantErrorDomain || error.domain == ReactiveTaskError.domain ? error.localizedDescription : error.description)
-	fputs("\(errorDescription)\n", stderr)
+registry.main(defaultVerb: helpCommand.verb) { error in
+	fputs(error.description + "\n", stderr)
 }

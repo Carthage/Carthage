@@ -9,26 +9,23 @@
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 
 public struct VersionCommand: CommandType {
 	public let verb = "version"
 	public let function = "Display the current version of Carthage"
 
-	public func run(mode: CommandMode) -> Result<()> {
+	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		switch mode {
-		case let .Arguments:
-			let versionString = NSBundle(identifier: CarthageKitBundleIdentifier)?.objectForInfoDictionaryKey("CFBundleShortVersionString") as String?
-			if let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString!)).value() {
-				carthage.println(semVer)
-			} else {
-				return failure()
-			}
+		case .Arguments:
+			let versionString = NSBundle(identifier: CarthageKitBundleIdentifier)?.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String
+			let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString!)).value
+			carthage.println(semVer!)
 
 		default:
 			break
 		}
 
-		return success(())
+		return .success(())
 	}
 }

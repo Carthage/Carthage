@@ -30,24 +30,24 @@ class SemanticVersionSpec: QuickSpec {
 		}
 
 		it("should parse semantic versions") {
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("1.4")).value()).to(equal(SemanticVersion(major: 1, minor: 4, patch: 0)))
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v1")).value()).to(equal(SemanticVersion(major: 1, minor: 0, patch: 0)))
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.9")).value()).to(equal(SemanticVersion(major: 2, minor: 8, patch: 9)))
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8-alpha")).value()).to(beNil())
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("1.4")).value).to(equal(SemanticVersion(major: 1, minor: 4, patch: 0)))
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v1")).value).to(equal(SemanticVersion(major: 1, minor: 0, patch: 0)))
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.9")).value).to(equal(SemanticVersion(major: 2, minor: 8, patch: 9)))
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8-alpha")).value).to(beNil())
 		}
 	}
 }
 
 class VersionSpecifierSpec: QuickSpec {
 	override func spec() {
-		let versionZeroOne = SemanticVersion.fromPinnedVersion(PinnedVersion("0.1.0")).value()!
-		let versionZeroOneOne = SemanticVersion.fromPinnedVersion(PinnedVersion("0.1.1")).value()!
-		let versionZeroTwo = SemanticVersion.fromPinnedVersion(PinnedVersion("0.2.0")).value()!
-		let versionOne = SemanticVersion.fromPinnedVersion(PinnedVersion("1.3.2")).value()!
-		let versionTwoZero = SemanticVersion.fromPinnedVersion(PinnedVersion("2.0.2")).value()!
-		let versionTwoOne = SemanticVersion.fromPinnedVersion(PinnedVersion("2.1.1")).value()!
-		let versionTwoTwo = SemanticVersion.fromPinnedVersion(PinnedVersion("2.2.0")).value()!
-		let versionThree = SemanticVersion.fromPinnedVersion(PinnedVersion("3.0.0")).value()!
+		let versionZeroOne = SemanticVersion.fromPinnedVersion(PinnedVersion("0.1.0")).value!
+		let versionZeroOneOne = SemanticVersion.fromPinnedVersion(PinnedVersion("0.1.1")).value!
+		let versionZeroTwo = SemanticVersion.fromPinnedVersion(PinnedVersion("0.2.0")).value!
+		let versionOne = SemanticVersion.fromPinnedVersion(PinnedVersion("1.3.2")).value!
+		let versionTwoZero = SemanticVersion.fromPinnedVersion(PinnedVersion("2.0.2")).value!
+		let versionTwoOne = SemanticVersion.fromPinnedVersion(PinnedVersion("2.1.1")).value!
+		let versionTwoTwo = SemanticVersion.fromPinnedVersion(PinnedVersion("2.2.0")).value!
+		let versionThree = SemanticVersion.fromPinnedVersion(PinnedVersion("3.0.0")).value!
 
 		func testIntersection(lhs: VersionSpecifier, rhs: VersionSpecifier, #expected: VersionSpecifier?) {
 			if let expected = expected {

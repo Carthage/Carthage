@@ -8,15 +8,15 @@
 
 import CarthageKit
 import Foundation
-import LlamaKit
+import Result
 
-internal func getEnvironmentVariable(variable: String) -> Result<String> {
+internal func getEnvironmentVariable(variable: String) -> Result<String, CarthageError> {
 	let environment = NSProcessInfo.processInfo().environment
 
-	if let value = environment[variable] as String? {
-		return success(value)
+	if let value = environment[variable] as? String {
+		return .success(value)
 	} else {
-		return failure(CarthageError.MissingEnvironmentVariable(variable: variable).error)
+		return .failure(CarthageError.MissingEnvironmentVariable(variable: variable))
 	}
 }
 
@@ -24,12 +24,12 @@ internal func getEnvironmentVariable(variable: String) -> Result<String> {
 internal struct Terminal {
 	/// Terminal type retrieved from `TERM` environment variable.
 	static var terminalType: String? {
-		return getEnvironmentVariable("TERM").value()
+		return getEnvironmentVariable("TERM").value
 	}
 	
 	/// Whether terminal type is `dumb`.
 	static var isDumb: Bool {
-		return terminalType?.caseInsensitiveCompare("dumb") == NSComparisonResult.OrderedSame ?? false
+		return (terminalType?.caseInsensitiveCompare("dumb") == .OrderedSame) ?? false
 	}
 	
 	/// Whether STDOUT is a TTY.

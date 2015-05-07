@@ -20,11 +20,13 @@
 		D00105061A8EA74E0059D0A0 /* Archive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00105051A8EA74E0059D0A0 /* Archive.swift */; };
 		D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00CCE311A20783A00109F8C /* Commandant.framework */; };
 		D00CCE331A20784800109F8C /* Commandant.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D00CCE311A20783A00109F8C /* Commandant.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D012AD0E1AF9843500EE91DA /* Box.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D012AD0D1AF9843500EE91DA /* Box.framework */; };
+		D012AD101AF9843700EE91DA /* Result.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D012AD0F1AF9843700EE91DA /* Result.framework */; };
+		D012AD111AF9844D00EE91DA /* Result.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D012AD0F1AF9843700EE91DA /* Result.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D012AD121AF9844D00EE91DA /* Box.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D012AD0D1AF9843500EE91DA /* Box.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82D61A10160700F0DD94 /* Resolver.swift */; };
 		D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */; };
 		D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; };
-		D01F8A4119EA28C600643E7C /* LlamaKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; };
-		D01F8A4419EA28E400643E7C /* LlamaKit.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4019EA28C600643E7C /* LlamaKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D01F8A4519EA28E600643E7C /* ReactiveCocoa.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D01F8A4A19EA28FE00643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
 		D01F8A4C19EA28FE00643E7C /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4B19EA28FE00643E7C /* Nimble.framework */; };
@@ -36,6 +38,8 @@
 		D05BD1991A26864F00A36A0E /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05BD1981A26864F00A36A0E /* Extensions.swift */; };
 		D069CA241A4E3B2700314A85 /* Archive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D069CA231A4E3B2700314A85 /* Archive.swift */; };
 		D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D074EDC41A049283001DE082 /* FrameworkExtensions.swift */; };
+		D08D00DF1AA3A9FB00623970 /* Runes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D00DE1AA3A9FB00623970 /* Runes.framework */; };
+		D08D00E01AA3AA0500623970 /* Runes.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D08D00DE1AA3A9FB00623970 /* Runes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D095BA3C1A187D40007F15D6 /* Bootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = D095BA3B1A187D40007F15D6 /* Bootstrap.swift */; };
 		D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAAB4919FAEDB4007B24B3 /* Errors.swift */; };
 		D0AAAB5019FB0960007B24B3 /* CarthageKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -101,12 +105,14 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				D01F8A4419EA28E400643E7C /* LlamaKit.framework in Copy Frameworks */,
 				D01F8A4519EA28E600643E7C /* ReactiveCocoa.framework in Copy Frameworks */,
 				D00CCE331A20784800109F8C /* Commandant.framework in Copy Frameworks */,
 				D0E0E1B11A2D28CB0097BE2B /* ReactiveTask.framework in Copy Frameworks */,
 				67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */,
 				D0F648831A4DD3EA00BCF808 /* Argo.framework in Copy Frameworks */,
+				D08D00E01AA3AA0500623970 /* Runes.framework in Copy Frameworks */,
+				D012AD111AF9844D00EE91DA /* Result.framework in Copy Frameworks */,
+				D012AD121AF9844D00EE91DA /* Box.framework in Copy Frameworks */,
 			);
 			name = "Copy Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -138,10 +144,11 @@
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
 		D00105051A8EA74E0059D0A0 /* Archive.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Archive.swift; sourceTree = "<group>"; };
 		D00CCE311A20783A00109F8C /* Commandant.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Commandant.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D012AD0D1AF9843500EE91DA /* Box.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Box.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D012AD0F1AF9843700EE91DA /* Result.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Result.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01D82D61A10160700F0DD94 /* Resolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Resolver.swift; sourceTree = "<group>"; };
 		D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResolverSpec.swift; sourceTree = "<group>"; };
 		D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveCocoa.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D01F8A4019EA28C600643E7C /* LlamaKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = LlamaKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4619EA28F600643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../Carthage/Checkouts/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
 		D01F8A4719EA28F600643E7C /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Quick.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4B19EA28FE00643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../Carthage/Checkouts/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
@@ -153,6 +160,7 @@
 		D05BD1981A26864F00A36A0E /* Extensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		D069CA231A4E3B2700314A85 /* Archive.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Archive.swift; sourceTree = "<group>"; };
 		D074EDC41A049283001DE082 /* FrameworkExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensions.swift; sourceTree = "<group>"; };
+		D08D00DE1AA3A9FB00623970 /* Runes.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Runes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D095BA3B1A187D40007F15D6 /* Bootstrap.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Bootstrap.swift; sourceTree = "<group>"; };
 		D0AAAB4919FAEDB4007B24B3 /* Errors.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
 		D0AAAB5419FB1062007B24B3 /* TestCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfile; sourceTree = "<group>"; };
@@ -208,10 +216,12 @@
 			files = (
 				D0E0E1B01A2D28AC0097BE2B /* ReactiveTask.framework in Frameworks */,
 				D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */,
-				D01F8A4119EA28C600643E7C /* LlamaKit.framework in Frameworks */,
 				D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */,
 				67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */,
 				D0F648821A4DD3D900BCF808 /* Argo.framework in Frameworks */,
+				D08D00DF1AA3A9FB00623970 /* Runes.framework in Frameworks */,
+				D012AD0E1AF9843500EE91DA /* Box.framework in Frameworks */,
+				D012AD101AF9843700EE91DA /* Result.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -389,12 +399,14 @@
 		D0D1216F19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				D012AD0F1AF9843700EE91DA /* Result.framework */,
+				D012AD0D1AF9843500EE91DA /* Box.framework */,
 				D0F648811A4DD3D900BCF808 /* Argo.framework */,
 				D00CCE311A20783A00109F8C /* Commandant.framework */,
-				D01F8A4019EA28C600643E7C /* LlamaKit.framework */,
 				67AFA9891A79430B00B7DA78 /* PrettyColors.framework */,
 				D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */,
 				D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */,
+				D08D00DE1AA3A9FB00623970 /* Runes.framework */,
 				D0D1217019E87B05005E4BAA /* Info.plist */,
 			);
 			name = "Supporting Files";
@@ -513,7 +525,7 @@
 		D0D1211019E87861005E4BAA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 0630;
 				ORGANIZATIONNAME = Carthage;
 				TargetAttributes = {
 					D0D1216C19E87B05005E4BAA = {
@@ -698,8 +710,11 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212619E878CC005E4BAA /* Debug.xcconfig */;
 			buildSettings = {
+				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				ONLY_ACTIVE_ARCH = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Debug;
 		};
@@ -707,8 +722,10 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212819E878CC005E4BAA /* Release.xcconfig */;
 			buildSettings = {
+				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Release;
 		};
@@ -774,8 +791,10 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212719E878CC005E4BAA /* Profile.xcconfig */;
 			buildSettings = {
+				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Profile;
 		};
@@ -812,8 +831,10 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212919E878CC005E4BAA /* Test.xcconfig */;
 			buildSettings = {
+				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Test;
 		};

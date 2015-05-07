@@ -6,10 +6,11 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
+import Box
 import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
 import ReactiveTask
 
@@ -17,17 +18,20 @@ public struct BuildCommand: CommandType {
 	public let verb = "build"
 	public let function = "Build the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<()> {
-		return ColdSignal.fromResult(BuildOptions.evaluate(mode))
-			.map { self.buildWithOptions($0) }
-			.merge(identity)
-			.wait()
+	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
+		return producerWithOptions(BuildOptions.evaluate(mode))
+			|> map { options in
+				return self.buildWithOptions(options)
+					|> promoteErrors
+			}
+			|> flatten(.Merge)
+			|> waitOnCommand
 	}
 
 	/// Builds a project with the given options.
-	public func buildWithOptions(options: BuildOptions) -> ColdSignal<()> {
+	public func buildWithOptions(options: BuildOptions) -> SignalProducer<(), CarthageError> {
 		return self.createLoggingSink(options)
-			.map { (stdoutSink, temporaryURL) -> ColdSignal<()> in
+			|> map { (stdoutSink, temporaryURL) -> SignalProducer<(), CarthageError> in
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
 
 				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
@@ -36,11 +40,22 @@ public struct BuildCommand: CommandType {
 				// Xcode doesn't always forward them.
 				var grepDisposable: Disposable?
 				if !options.verbose {
-					let coldOutput = stdoutSignal.replay(0)
-					let task = TaskDescription(launchPath: "/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ], standardInput: coldOutput)
+					let coldOutput = SignalProducer { observer, disposable in
+						disposable.addDisposable(stdoutSignal.observe(observer))
+					}
 
 					let stderrSink: FileSink<NSData> = FileSink.standardErrorSink()
-					grepDisposable = launchTask(task, standardOutput: SinkOf(stderrSink)).start()
+					stdoutSignal
+						|> filter { _ in false }
+						|> observe(stderrSink)
+
+					let stderrSinkWrapper: SinkOf<NSData> = SinkOf { data in
+						stderrSink.put(.Next(Box(data)))
+						return
+					}
+
+					let task = TaskDescription(launchPath: "/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ], standardInput: coldOutput)
+					grepDisposable = launchTask(task, standardOutput: stderrSinkWrapper).start()
 				}
 
 				stdoutSignal.observe(stdoutSink)
@@ -48,8 +63,8 @@ public struct BuildCommand: CommandType {
 				let formatting = options.colorOptions.formatting
 
 				return schemeSignals
-					.concat(identity)
-					.on(started: {
+					|> flatten(.Concat)
+					|> on(started: {
 						if let temporaryURL = temporaryURL {
 							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: temporaryURL.path!))
 						}
@@ -59,62 +74,67 @@ public struct BuildCommand: CommandType {
 						grepDisposable?.dispose()
 						return
 					})
-					.then(.empty())
+					|> then(.empty)
 			}
-			.merge(identity)
+			|> flatten(.Merge)
 	}
 
 	/// Builds the project in the given directory, using the given options.
 	///
 	/// Returns a hot signal of `stdout` from `xcodebuild`, and a cold signal of
 	/// cold signals representing each scheme being built.
-	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> (HotSignal<NSData>, ColdSignal<BuildSchemeSignal>) {
-		let (stdoutSignal, stdoutSink) = HotSignal<NSData>.pipe()
+	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> (Signal<NSData, NoError>, SignalProducer<BuildSchemeProducer, CarthageError>) {
+		let (stdoutSignal, stdoutSink) = Signal<NSData, NoError>.pipe()
 		let project = Project(directoryURL: directoryURL)
 
-		var buildSignal = project.loadCombinedCartfile()
-			.map { _ in project }
-			.catch { error in
+		var buildProducer = project.loadCombinedCartfile()
+			|> map { _ in project }
+			|> catch { error in
 				if options.skipCurrent {
-					return .error(error)
+					return SignalProducer(error: error)
 				} else {
 					// Ignore Cartfile loading failures. Assume the user just
 					// wants to build the enclosing project.
-					return .empty()
+					return .empty
 				}
 			}
-			.mergeMap { project in
-				return project
-					.migrateIfNecessary(options.colorOptions)
-					.on(next: carthage.println)
-					.then(.single(project))
+			|> map { project in
+				return project.migrateIfNecessary(options.colorOptions)
+					|> on(next: carthage.println)
+					|> then(SignalProducer(value: project))
 			}
-			.mergeMap { (project: Project) -> ColdSignal<BuildSchemeSignal> in
-				let (dependenciesOutput, dependenciesSignals) = project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform)
+			|> flatten(.Merge)
+			|> map { (project: Project) -> SignalProducer<BuildSchemeProducer, CarthageError> in
+				let (dependenciesOutput, dependencies) = project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform)
 				dependenciesOutput.observe(stdoutSink)
 
-				return dependenciesSignals
+				return dependencies
 			}
+			|> flatten(.Merge)
 
 		if !options.skipCurrent {
-			let (currentOutput, currentSignals) = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform)
+			let (currentOutput, currentProducers) = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform)
 			currentOutput.observe(stdoutSink)
 
-			buildSignal = buildSignal.concat(currentSignals)
+			buildProducer = buildProducer |> concat(currentProducers)
 		}
 
-		return (stdoutSignal, buildSignal)
+		return (stdoutSignal, buildProducer)
 	}
 
 	/// Creates a sink for logging, returning the sink and the URL to any
 	/// temporary file on disk.
-	private func createLoggingSink(options: BuildOptions) -> ColdSignal<(FileSink<NSData>, NSURL?)> {
+	private func createLoggingSink(options: BuildOptions) -> SignalProducer<(FileSink<NSData>, NSURL?), CarthageError> {
 		if options.verbose {
 			let out: (FileSink<NSData>, NSURL?) = (FileSink.standardOutputSink(), nil)
-			return .single(out)
+			return SignalProducer(value: out)
 		} else {
 			return FileSink.openTemporaryFile()
-				.map { sink, URL in (sink, .Some(URL)) }
+				|> map { sink, URL in (sink, .Some(URL)) }
+				|> mapError { error in
+					let temporaryDirectoryURL = NSURL.fileURLWithPath(NSTemporaryDirectory(), isDirectory: true)!
+					return .WriteFailed(temporaryDirectoryURL, error)
+				}
 		}
 	}
 }
@@ -131,7 +151,7 @@ public struct BuildOptions: OptionsType {
 		return self(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 	}
 
-	public static func evaluate(m: CommandMode) -> Result<BuildOptions> {
+	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platform to build for (one of ‘all’, ‘Mac’, or ‘iOS’)")

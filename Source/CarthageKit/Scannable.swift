@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import LlamaKit
+import Result
 
 /// Anything that can be parsed from an NSScanner.
 public protocol Scannable {
@@ -15,5 +15,5 @@ public protocol Scannable {
 	///
 	/// If parsing fails, the scanner will be left at the first invalid
 	/// character (with any partially valid input already consumed).
-	class func fromScanner(scanner: NSScanner) -> Result<Self>
+	static func fromScanner(scanner: NSScanner) -> Result<Self, CarthageError>
 }

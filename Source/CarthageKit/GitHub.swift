@@ -8,16 +8,28 @@
 
 import Argo
 import Foundation
-import LlamaKit
+import Result
 import ReactiveCocoa
+import Runes
 
 /// The User-Agent to use for GitHub requests.
 private let userAgent: String = {
 	let bundle = NSBundle.mainBundle() ?? NSBundle(identifier: CarthageKitBundleIdentifier)
-	let version: AnyObject = bundle?.objectForInfoDictionaryKey("CFBundleShortVersionString") ?? bundle?.objectForInfoDictionaryKey(kCFBundleVersionKey) ?? "unknown"
-	let identifier = bundle?.bundleIdentifier ?? "CarthageKit-unknown"
 
-	return "\(identifier)/\(version)"
+	var version: AnyObject?
+	if let bundle = bundle {
+		version = bundle.objectForInfoDictionaryKey("CFBundleShortVersionString")
+		if version == nil {
+			version = bundle.objectForInfoDictionaryKey(kCFBundleVersionKey as String)
+		}
+	}
+
+	if version == nil {
+		version = "unknown"
+	}
+
+	let identifier = bundle?.bundleIdentifier ?? "CarthageKit-unknown"
+	return "\(identifier)/\(version!)"
 }()
 
 /// The type of content to request from the GitHub API.
@@ -44,12 +56,12 @@ extension GitHubError: Printable {
 	}
 }
 
-extension GitHubError: JSONDecodable {
+extension GitHubError: Decodable {
 	public static func create(message: String) -> GitHubError {
 		return self(message: message)
 	}
 	
-	public static func decode(j: JSONValue) -> GitHubError? {
+	public static func decode(j: JSON) -> Decoded<GitHubError> {
 		return self.create
 			<^> j <| "message"
 	}
@@ -81,13 +93,13 @@ public struct GitHubRepository: Equatable {
 	}
 
 	/// Parses repository information out of a string of the form "owner/name".
-	public static func fromNWO(NWO: String) -> Result<GitHubRepository> {
-		let components = split(NWO, { $0 == "/" }, maxSplit: 1, allowEmptySlices: false)
+	public static func fromNWO(NWO: String) -> Result<GitHubRepository, CarthageError> {
+		let components = split(NWO, maxSplit: 1, allowEmptySlices: false) { $0 == "/" }
 		if components.count < 2 {
-			return failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\"").error)
+			return .failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\""))
 		}
 
-		return success(self(owner: components[0], name: components[1]))
+		return .success(self(owner: components[0], name: components[1]))
 	}
 }
 
@@ -133,7 +145,7 @@ public struct GitHubRelease: Equatable {
 	public let assets: [Asset]
 
 	/// An asset attached to a GitHub Release.
-	public struct Asset: Equatable, Hashable, Printable, JSONDecodable {
+	public struct Asset: Equatable, Hashable, Printable, Decodable {
 		/// The unique ID for this release asset.
 		public let ID: Int
 
@@ -158,7 +170,7 @@ public struct GitHubRelease: Equatable {
 			return self(ID: ID, name: name, contentType: contentType, downloadURL: downloadURL)
 		}
 
-		public static func decode(j: JSONValue) -> Asset? {
+		public static func decode(j: JSON) -> Decoded<Asset> {
 			return self.create
 				<^> j <| "id"
 				<*> j <| "name"
@@ -188,12 +200,12 @@ extension GitHubRelease: Printable {
 	}
 }
 
-extension GitHubRelease: JSONDecodable {
+extension GitHubRelease: Decodable {
 	public static func create(ID: Int)(name: String)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
 		return self(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
 	}
 
-	public static func decode(j: JSONValue) -> GitHubRelease? {
+	public static func decode(j: JSON) -> Decoded<GitHubRelease> {
 		return self.create
 			<^> j <| "id"
 			<*> j <| "name"
@@ -218,13 +230,16 @@ internal struct GitHubCredentials {
 	}
 
 	/// Attempts to load credentials from the Git credential store.
-	static func loadFromGit() -> ColdSignal<GitHubCredentials?> {
+	static func loadFromGit() -> SignalProducer<GitHubCredentials?, CarthageError> {
 		let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
 
-		return launchGitTask([ "credential", "fill" ], standardInput: ColdSignal.single(data))
-			.mergeMap { $0.linesSignal }
-			.reduce(initial: [:]) { (var values: [String: String], line) in
-				let parts = split(line, { $0 == "=" }, maxSplit: 1, allowEmptySlices: false)
+		return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
+			|> map { string -> SignalProducer<String, CarthageError> in
+				return string.linesProducer |> promoteErrors(CarthageError.self)
+			}
+			|> flatten(.Concat)
+			|> reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
+				let parts = split(line, maxSplit: 1, allowEmptySlices: false) { $0 == "=" }
 				if parts.count >= 2 {
 					let key = parts[0]
 					let value = parts[1]
@@ -234,7 +249,7 @@ internal struct GitHubCredentials {
 
 				return values
 			}
-			.map { values -> GitHubCredentials? in
+			|> map { (values: [String: String]) -> GitHubCredentials? in
 				if let username = values["username"] {
 					if let password = values["password"] {
 						return self(username: username, password: password)
@@ -243,8 +258,8 @@ internal struct GitHubCredentials {
 
 				return nil
 			}
-			.catch { error in
-				return .single(nil)
+			|> catch { error in
+				return SignalProducer(value: nil)
 			}
 	}
 }
@@ -266,10 +281,10 @@ internal func createGitHubRequest(URL: NSURL, credentials: GitHubCredentials?) -
 /// Parses the value of a `Link` header field into a list of URLs and their
 /// associated parameter lists.
 private func parseLinkHeader(linkValue: String) -> [(NSURL, [String])] {
-	let components = split(linkValue, { $0 == "," }, allowEmptySlices: false)
+	let components = split(linkValue, allowEmptySlices: false) { $0 == "," }
 
 	return reduce(components, []) { (var links, component) in
-		var pieces = split(component, { $0 == ";" }, allowEmptySlices: false)
+		var pieces = split(component, allowEmptySlices: false) { $0 == ";" }
 		if let URLPiece = pieces.first {
 			pieces.removeAtIndex(0)
 
@@ -277,7 +292,7 @@ private func parseLinkHeader(linkValue: String) -> [(NSURL, [String])] {
 
 			var URLString: NSString?
 			if scanner.scanString("<", intoString: nil) && scanner.scanUpToString(">", intoString: &URLString) {
-				if let URL = NSURL(string: URLString!) {
+				if let URL = NSURL(string: URLString! as String) {
 					let value: (NSURL, [String]) = (URL, pieces)
 					links.append(value)
 				}
@@ -291,33 +306,37 @@ private func parseLinkHeader(linkValue: String) -> [(NSURL, [String])] {
 /// Fetches the given GitHub URL, automatically paginating to the end.
 ///
 /// Returns a signal that will send one `NSData` for each page fetched.
-private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdSignal<NSData> {
+private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> SignalProducer<NSData, CarthageError> {
 	let request = createGitHubRequest(URL, credentials)
 
-	return NSURLSession.sharedSession()
-		.rac_dataWithRequest(request)
-		.mergeMap { data, response -> ColdSignal<NSData> in
-			let thisData = ColdSignal.single(data)
+	return NSURLSession.sharedSession().rac_dataWithRequest(request)
+		|> catch { error in SignalProducer(error: .NetworkError(error)) }
+		|> map { data, response in
+			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
 
 			if let HTTPResponse = response as? NSHTTPURLResponse {
 				let statusCode = HTTPResponse.statusCode
 				if statusCode > 400 && statusCode < 600 && statusCode != 404 {
 					return thisData
-						.tryMap { data, error -> AnyObject? in
-							return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error)
-						}
-						.map { dictionary -> String in
-							if let error = GitHubError.decode(JSONValue.parse(dictionary)) {
-								return error.message
+						|> tryMap { data -> Result<AnyObject, CarthageError> in
+							if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
+								return .success(object)
 							} else {
-								return NSString(data: data, encoding: NSUTF8StringEncoding) ?? NSHTTPURLResponse.localizedStringForStatusCode(statusCode)
+								return .failure(.ParseError(description: "Invalid JSON in API error response \(data)"))
 							}
 						}
-						.catch { error in
-							return .single(error.localizedDescription)
+						|> map { (dictionary: AnyObject) -> String in
+							if let error: GitHubError = decode(dictionary) {
+								return error.message
+							} else {
+								return (NSString(data: data, encoding: NSUTF8StringEncoding) ?? NSHTTPURLResponse.localizedStringForStatusCode(statusCode)) as String
+							}
 						}
-						.mergeMap { message in
-							return ColdSignal<NSData>.error(CarthageError.GitHubAPIRequestFailed(message).error)
+						|> catch { (error: CarthageError) in
+							return SignalProducer(value: error.description)
+						}
+						|> tryMap { message -> Result<NSData, CarthageError> in
+							return Result.failure(CarthageError.GitHubAPIRequestFailed(message))
 						}
 				}
 				
@@ -326,7 +345,7 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdS
 					for (URL, parameters) in links {
 						if contains(parameters, "rel=\"next\"") {
 							// Automatically fetch the next page too.
-							return thisData.concat(fetchAllPages(URL, credentials))
+							return thisData |> concat(fetchAllPages(URL, credentials))
 						}
 					}
 				}
@@ -334,25 +353,32 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> ColdS
 
 			return thisData
 		}
+		|> flatten(.Concat)
 }
 
 /// Fetches the release corresponding to the given tag on the given repository,
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
-internal func releaseForTag(tag: String, repository: GitHubRepository, credentials: GitHubCredentials?) -> ColdSignal<GitHubRelease> {
+internal func releaseForTag(tag: String, repository: GitHubRepository, credentials: GitHubCredentials?) -> SignalProducer<GitHubRelease, NoError> {
 	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, credentials)
-		.tryMap { data, error -> AnyObject? in
-			return NSJSONSerialization.JSONObjectWithData(data, options: nil, error: error)
+		|> tryMap { data -> Result<AnyObject, CarthageError> in
+			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
+				return .success(object)
+			} else {
+				return .failure(.ParseError(description: "Invalid JSON in releases for tag \(tag)"))
+			}
 		}
-		.concatMap { releaseDictionary -> ColdSignal<GitHubRelease> in
-			if let release = GitHubRelease.decode(JSONValue.parse(releaseDictionary)) {
-				return .single(release)
+		|> catch { _ in .empty }
+		|> map { releaseDictionary -> SignalProducer<GitHubRelease, NoError> in
+			if let release: GitHubRelease = decode(releaseDictionary) {
+				return SignalProducer(value: release)
 			} else {
 				// The response didn't error, but didn't return a release. That means it's either a
 				// tag (but not a release) or a SHA.
-				return .empty()
+				return .empty
 			}
 		}
+		|> flatten(.Concat)
 }
 
 /// Downloads the indicated release asset to a temporary file, returning the
@@ -360,10 +386,10 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, credentia
 ///
 /// The downloaded file will be deleted after the URL has been sent upon the
 /// signal.
-internal func downloadAsset(asset: GitHubRelease.Asset, credentials: GitHubCredentials?) -> ColdSignal<NSURL> {
+internal func downloadAsset(asset: GitHubRelease.Asset, credentials: GitHubCredentials?) -> SignalProducer<NSURL, CarthageError> {
 	let request = createGitHubRequest(asset.downloadURL, credentials)
 
-	return NSURLSession.sharedSession()
-		.carthage_downloadWithRequest(request)
-		.map { URL, _ in URL }
+	return NSURLSession.sharedSession().carthage_downloadWithRequest(request)
+		|> catch { error in SignalProducer(error: .NetworkError(error)) }
+		|> map { URL, _ in URL }
 }

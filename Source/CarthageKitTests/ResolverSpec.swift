@@ -15,22 +15,23 @@ import ReactiveCocoa
 class ResolverSpec: QuickSpec {
 	private func loadTestCartfile(name: String) -> Cartfile {
 		let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource(name, withExtension: "")!
-		let testCartfile = NSString(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
+		let testCartfile = String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
 
-		return Cartfile.fromString(testCartfile!).value()!
+		return Cartfile.fromString(testCartfile!).value!
 	}
 
 	private func orderedDependencies(resolver: Resolver, fromCartfile cartfile: Cartfile) -> [[String: PinnedVersion]] {
 		let result = resolver.resolveDependenciesInCartfile(cartfile)
-			.reduce(initial: []) { (var dependencies, dependency) -> [[String: PinnedVersion]] in
+			|> reduce([]) { (var dependencies, dependency) -> [[String: PinnedVersion]] in
 				dependencies.append([ dependency.project.name: dependency.version ])
 				return dependencies
 			}
-			.first()
+			|> first
 
-		expect(result.error()).to(beNil())
+		expect(result).notTo(beNil())
+		expect(result?.error).to(beNil())
 
-		return result.value()!
+		return result!.value!
 	}
 
 	override func spec() {
@@ -51,30 +52,32 @@ class ResolverSpec: QuickSpec {
 		}
 
 		it("should correctly order transitive dependencies") {
-			let resolver = Resolver(versionsForDependency: { project in
+			let resolver = Resolver(versionsForDependency: { project -> SignalProducer<PinnedVersion, CarthageError> in
 				switch project.name {
 				case "EmbeddedFrameworks":
-					return .single(PinnedVersion("1.0.0"))
+					return SignalProducer(value: PinnedVersion("1.0.0"))
 
 				case "Alamofire":
-					return .single(PinnedVersion("1.1.2"))
+					return SignalProducer(value: PinnedVersion("1.1.2"))
 
 				case "SwiftyJSON":
-					return .single(PinnedVersion("2.1.2"))
+					return SignalProducer(value: PinnedVersion("2.1.2"))
 
 				case "Swell":
-					return .single(PinnedVersion("1.0.0"))
+					return SignalProducer(value: PinnedVersion("1.0.0"))
 
 				default:
 					assert(false)
 				}
-			}, cartfileForDependency: { dependency in
+			}, cartfileForDependency: { dependency -> SignalProducer<Cartfile, CarthageError> in
 				if dependency.project.name == "EmbeddedFrameworks" {
-					return .single(self.loadTestCartfile("EmbeddedFrameworksCartfile"))
+					return SignalProducer(value: self.loadTestCartfile("EmbeddedFrameworksCartfile"))
 				} else {
-					return .single(Cartfile())
+					return SignalProducer(value: Cartfile())
 				}
-			}, resolvedGitReference: { _ in .error(RACError.Empty.error) })
+			}, resolvedGitReference: { _ -> SignalProducer<PinnedVersion, CarthageError> in
+				return SignalProducer(error: .InvalidArgument(description: "unexpected test error"))
+			})
 
 			let dependencies = self.orderedDependencies(resolver, fromCartfile: self.loadTestCartfile("EmbeddedFrameworksContainerCartfile"))
 			expect(dependencies.count).to(equal(4));
@@ -89,8 +92,8 @@ class ResolverSpec: QuickSpec {
 		}
 	}
 
-	private func versionsForDependency(project: ProjectIdentifier) -> ColdSignal<PinnedVersion> {
-		return .fromValues([
+	private func versionsForDependency(project: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
+		return SignalProducer(values: [
 			PinnedVersion("0.4.1"),
 			PinnedVersion("0.9.0"),
 			PinnedVersion("1.0.2"),
@@ -100,19 +103,19 @@ class ResolverSpec: QuickSpec {
 		])
 	}
 
-	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> ColdSignal<Cartfile> {
+	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
 		var cartfile = Cartfile()
 
 		if dependency.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {
-			cartfile = Cartfile.fromString("github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0").value()!
+			cartfile = Cartfile.fromString("github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0").value!
 		} else if dependency.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "objc-build-scripts")) {
-			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0").value()!
+			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0").value!
 		}
 
-		return .single(cartfile)
+		return SignalProducer(value: cartfile)
 	}
 
-	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> ColdSignal<PinnedVersion> {
-		return .single(PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"))
+	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
+		return SignalProducer(value: PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"))
 	}
 }

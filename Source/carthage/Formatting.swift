@@ -6,9 +6,10 @@
 //  Copyright (c) 2015 Carthage. All rights reserved.
 //
 
+import CarthageKit
 import Commandant
 import Foundation
-import LlamaKit
+import Result
 import PrettyColors
 
 /// Wraps a string with terminal colors and formatting or passes it through, depending on `colorful`.
@@ -88,7 +89,7 @@ public struct ColorOptions: OptionsType {
 		return self(argument: argument, formatting: Formatting(argument.isColorful))
 	}
 	
-	public static func evaluate(m: CommandMode) -> Result<ColorOptions> {
+	public static func evaluate(m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "whether to apply color and terminal formatting (one of ‘auto’, ‘always’, or ‘never’)")
 	}
