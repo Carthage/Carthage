@@ -405,7 +405,6 @@ public final class Project {
 	/// less temporary location.
 	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withCredentials credentials: GitHubCredentials?) -> SignalProducer<NSURL, CarthageError> {
 		return releaseForTag(revision, repository, credentials)
-			|> promoteErrors(CarthageError.self)
 			|> filter(binaryFrameworksCanBeProvidedByRelease)
 			|> on(next: { release in
 				sendNext(self._projectEventsObserver, ProjectEvent.DownloadingBinaries(project, release.nameWithFallback))

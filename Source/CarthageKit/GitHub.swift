@@ -359,7 +359,7 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> Signa
 /// Fetches the release corresponding to the given tag on the given repository,
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
-internal func releaseForTag(tag: String, repository: GitHubRepository, credentials: GitHubCredentials?) -> SignalProducer<GitHubRelease, NoError> {
+internal func releaseForTag(tag: String, repository: GitHubRepository, credentials: GitHubCredentials?) -> SignalProducer<GitHubRelease, CarthageError> {
 	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, credentials)
 		|> tryMap { data -> Result<AnyObject, CarthageError> in
 			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
@@ -368,8 +368,7 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, credentia
 				return .failure(.ParseError(description: "Invalid JSON in releases for tag \(tag)"))
 			}
 		}
-		|> catch { _ in .empty }
-		|> map { releaseDictionary -> SignalProducer<GitHubRelease, NoError> in
+		|> map { releaseDictionary -> SignalProducer<GitHubRelease, CarthageError> in
 			if let release: GitHubRelease = decode(releaseDictionary) {
 				return SignalProducer(value: release)
 			} else {
