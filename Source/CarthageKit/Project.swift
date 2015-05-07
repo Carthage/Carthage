@@ -356,29 +356,18 @@ public final class Project {
 
 				switch project {
 				case let .GitHub(repository):
-					return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: nil)
-						|> catch { error in
-							switch error {
-							case let .NetworkError(underlyingError):
-								// If we were unable to fetch releases, try loading credentials from Git.
-								if underlyingError.domain == NSURLErrorDomain {
-									return GitHubCredentials.loadFromGit()
-										|> map { credentials in
-											if let credentials = credentials {
-												return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials)
-											} else {
-												return SignalProducer(error: error)
-											}
-										}
-										|> flatten(.Merge)
+					return GitHubCredentials.loadFromGit()
+						|> map { credentials in
+							return self
+								.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials)
+								|> catch { error in
+									if credentials == nil {
+										return SignalProducer(error: error)
+									}
+									return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: nil)
 								}
-
-								fallthrough
-
-							default:
-								return SignalProducer(error: error)
-							}
 						}
+						|> flatten(.Concat)
 						|> map(unzipArchiveToTemporaryDirectory)
 						|> flatten(.Concat)
 						|> map { directoryURL in
@@ -416,7 +405,6 @@ public final class Project {
 	/// less temporary location.
 	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withCredentials credentials: GitHubCredentials?) -> SignalProducer<NSURL, CarthageError> {
 		return releaseForTag(revision, repository, credentials)
-			|> promoteErrors(CarthageError.self)
 			|> filter(binaryFrameworksCanBeProvidedByRelease)
 			|> on(next: { release in
 				sendNext(self._projectEventsObserver, ProjectEvent.DownloadingBinaries(project, release.nameWithFallback))

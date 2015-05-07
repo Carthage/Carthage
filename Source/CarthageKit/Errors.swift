@@ -57,6 +57,9 @@ public enum CarthageError: Equatable {
 	/// other cartfiles.
 	case DuplicateDependencies([DuplicateDependency])
 	
+	/// A request to the GitHub API failed due to authentication or rate-limiting.
+	case GitHubAPIRequestFailed(String)
+
 	/// An error occurred while shelling out.
 	case TaskError(ReactiveTaskError)
 
@@ -108,6 +111,9 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	
 	case let (.DuplicateDependencies(left), .DuplicateDependencies(right)):
 		return sorted(left) == sorted(right)
+	
+	case let (.GitHubAPIRequestFailed(left), .GitHubAPIRequestFailed(right)):
+		return left == right
 	
 	case let (.TaskError(left), .TaskError(right)):
 		// TODO: Implement Equatable in ReactiveTask.
@@ -201,6 +207,9 @@ extension CarthageError: Printable {
 				}
 
 			return "The following dependencies are duplicates:\(deps)"
+		
+		case let .GitHubAPIRequestFailed(message):
+			return "GitHub API request failed: \(message)"
 
 		case let .TaskError(taskError):
 			return taskError.description

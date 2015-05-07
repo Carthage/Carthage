@@ -35,6 +35,38 @@ private let userAgent: String = {
 /// The type of content to request from the GitHub API.
 private let APIContentType = "application/vnd.github.v3+json"
 
+/// Represents an error returned from the GitHub API.
+public struct GitHubError: Equatable {
+	public let message: String
+}
+
+public func ==(lhs: GitHubError, rhs: GitHubError) -> Bool {
+	return lhs.message == rhs.message
+}
+
+extension GitHubError: Hashable {
+	public var hashValue: Int {
+		return message.hashValue
+	}
+}
+
+extension GitHubError: Printable {
+	public var description: String {
+		return message
+	}
+}
+
+extension GitHubError: Decodable {
+	public static func create(message: String) -> GitHubError {
+		return self(message: message)
+	}
+	
+	public static func decode(j: JSON) -> Decoded<GitHubError> {
+		return self.create
+			<^> j <| "message"
+	}
+}
+
 /// Describes a GitHub.com repository.
 public struct GitHubRepository: Equatable {
 	public let owner: String
@@ -226,6 +258,9 @@ internal struct GitHubCredentials {
 
 				return nil
 			}
+			|> catch { error in
+				return SignalProducer(value: nil)
+			}
 	}
 }
 
@@ -280,6 +315,31 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> Signa
 			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
 
 			if let HTTPResponse = response as? NSHTTPURLResponse {
+				let statusCode = HTTPResponse.statusCode
+				if statusCode > 400 && statusCode < 600 && statusCode != 404 {
+					return thisData
+						|> tryMap { data -> Result<AnyObject, CarthageError> in
+							if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
+								return .success(object)
+							} else {
+								return .failure(.ParseError(description: "Invalid JSON in API error response \(data)"))
+							}
+						}
+						|> map { (dictionary: AnyObject) -> String in
+							if let error: GitHubError = decode(dictionary) {
+								return error.message
+							} else {
+								return (NSString(data: data, encoding: NSUTF8StringEncoding) ?? NSHTTPURLResponse.localizedStringForStatusCode(statusCode)) as String
+							}
+						}
+						|> catch { (error: CarthageError) in
+							return SignalProducer(value: error.description)
+						}
+						|> tryMap { message -> Result<NSData, CarthageError> in
+							return Result.failure(CarthageError.GitHubAPIRequestFailed(message))
+						}
+				}
+				
 				if let linkHeader = HTTPResponse.allHeaderFields["Link"] as? String {
 					let links = parseLinkHeader(linkHeader)
 					for (URL, parameters) in links {
@@ -299,7 +359,7 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> Signa
 /// Fetches the release corresponding to the given tag on the given repository,
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
-internal func releaseForTag(tag: String, repository: GitHubRepository, credentials: GitHubCredentials?) -> SignalProducer<GitHubRelease, NoError> {
+internal func releaseForTag(tag: String, repository: GitHubRepository, credentials: GitHubCredentials?) -> SignalProducer<GitHubRelease, CarthageError> {
 	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, credentials)
 		|> tryMap { data -> Result<AnyObject, CarthageError> in
 			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
@@ -308,11 +368,12 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, credentia
 				return .failure(.ParseError(description: "Invalid JSON in releases for tag \(tag)"))
 			}
 		}
-		|> catch { _ in .empty }
-		|> map { releaseDictionary -> SignalProducer<GitHubRelease, NoError> in
+		|> map { releaseDictionary -> SignalProducer<GitHubRelease, CarthageError> in
 			if let release: GitHubRelease = decode(releaseDictionary) {
 				return SignalProducer(value: release)
 			} else {
+				// The response didn't error, but didn't return a release. That means it's either a
+				// tag (but not a release) or a SHA.
 				return .empty
 			}
 		}
