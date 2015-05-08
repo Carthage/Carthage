@@ -596,6 +596,13 @@ private func frameworksInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL,
 
 			return false
 		}
+		|> filter { URL in
+			// Skip nested frameworks
+			let frameworksInURL = URL.pathComponents?.filter { pathComponent in
+				return (pathComponent as? String)?.pathExtension == "framework"
+			}
+			return frameworksInURL?.count == 1
+		}
 }
 
 /// Determines whether a Release is a suitable candidate for binary frameworks.
