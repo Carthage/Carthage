@@ -58,6 +58,9 @@ github "jspahrsummers/xcconfigs"
 
 # Use a project from GitHub Enterprise, or any arbitrary server, on the "development" branch
 git "https://enterprise.local/desktop/git-error-translations.git" "development"
+
+# Use a local project
+git "file:///directory/to/project" "branch"
 ```
 
 ## Cartfile.private
