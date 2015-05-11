@@ -233,7 +233,7 @@ internal struct GitHubCredentials {
 	static func loadFromGit() -> SignalProducer<GitHubCredentials?, CarthageError> {
 		let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
 
-		return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
+		return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data), environment: ["GIT_TERMINAL_PROMPT": "0"])
 			|> map { string -> SignalProducer<String, CarthageError> in
 				return string.linesProducer |> promoteErrors(CarthageError.self)
 			}
