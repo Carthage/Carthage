@@ -377,6 +377,7 @@ public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String 
 		var isDirectory: ObjCBool = false
 		if !NSFileManager.defaultManager().fileExistsAtPath(repositoryFileURL.path!, isDirectory: &isDirectory) || !isDirectory {
 			sendNext(observer, false)
+			sendCompleted(observer)
 			return
 		}
 
