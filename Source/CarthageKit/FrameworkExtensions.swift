@@ -48,8 +48,10 @@ internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>)(signal: Signal<T, 
 
 		var signalValues: [T] = []
 		var signalCompleted = false
+		var signalInterrupted = false
 		var otherValues: [U] = []
 		var otherCompleted = false
+		var otherInterrupted = false
 
 		let signalDisposable = signal.observe(next: { value in
 			lock.lock()
@@ -72,7 +74,14 @@ internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>)(signal: Signal<T, 
 
 			lock.unlock()
 		}, interrupted: {
-			sendInterrupted(observer)
+			lock.lock()
+
+			signalInterrupted = true
+			if otherInterrupted || otherCompleted {
+				sendInterrupted(observer)
+			}
+
+			lock.unlock()
 		})
 
 		let otherDisposable = otherSignal.observe(next: { value in
@@ -96,7 +105,14 @@ internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>)(signal: Signal<T, 
 
 			lock.unlock()
 		}, interrupted: {
-			sendInterrupted(observer)
+			lock.lock()
+
+			otherInterrupted = true
+			if signalInterrupted || signalCompleted {
+				sendInterrupted(observer)
+			}
+
+			lock.unlock()
 		})
 
 		let compositeDisposable = CompositeDisposable()
