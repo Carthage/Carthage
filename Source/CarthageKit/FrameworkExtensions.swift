@@ -68,7 +68,9 @@ internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>)(signal: Signal<T, 
 			lock.lock()
 
 			signalCompleted = true
-			if otherCompleted {
+			if otherInterrupted {
+				sendInterrupted(observer)
+			} else if otherCompleted {
 				sendCompleted(observer)
 			}
 
@@ -99,7 +101,9 @@ internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>)(signal: Signal<T, 
 			lock.lock()
 
 			otherCompleted = true
-			if signalCompleted {
+			if signalInterrupted {
+				sendInterrupted(observer)
+			} else if signalCompleted {
 				sendCompleted(observer)
 			}
 
