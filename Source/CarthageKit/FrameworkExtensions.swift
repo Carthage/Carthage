@@ -55,22 +55,28 @@ internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>)(signal: Signal<T, 
 			lock.lock()
 
 			signalValues.append(value)
-			for otherValue in otherValues {
+			let copy = otherValues
+
+			lock.unlock()
+
+			for otherValue in copy {
 				sendNext(observer, (value, otherValue))
 			}
 
-			lock.unlock()
 		}, error: { error in
 			sendError(observer, error)
 		}, completed: {
 			lock.lock()
 
 			signalCompleted = true
-			if otherCompleted {
+			let shouldSend = otherCompleted
+
+			lock.unlock()
+
+			if shouldSend {
 				sendCompleted(observer)
 			}
 
-			lock.unlock()
 		}, interrupted: {
 			sendInterrupted(observer)
 		})
@@ -79,22 +85,27 @@ internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>)(signal: Signal<T, 
 			lock.lock()
 
 			otherValues.append(value)
-			for signalValue in signalValues {
-				sendNext(observer, (signalValue, value))
-			}
+
+			let copy = signalValues
 
 			lock.unlock()
+
+			for signalValue in copy {
+				sendNext(observer, (signalValue, value))
+			}
 		}, error: { error in
 			sendError(observer, error)
 		}, completed: {
 			lock.lock()
 
 			otherCompleted = true
-			if signalCompleted {
-				sendCompleted(observer)
-			}
+			let shouldSend = signalCompleted
 
 			lock.unlock()
+
+			if shouldSend {
+				sendCompleted(observer)
+			}
 		}, interrupted: {
 			sendInterrupted(observer)
 		})
