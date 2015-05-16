@@ -1,2 +1,2 @@
-github "Carthage/ReactiveTask" ~> 0.5.1
+github "Carthage/ReactiveTask" "upgrade-rac"
 github "thoughtbot/Argo" ~> 1.0.1
