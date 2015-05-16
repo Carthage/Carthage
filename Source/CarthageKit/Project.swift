@@ -127,7 +127,7 @@ public final class Project {
 	/// Caches versions to avoid expensive lookups, and unnecessary
 	/// fetching/cloning.
 	private var cachedVersions: [ProjectIdentifier: [PinnedVersion]] = [:]
-	private let cachedVersionsScheduler = QueueScheduler()
+	private let cachedVersionsScheduler = QueueScheduler(name: "org.carthage.CarthageKit.Project.cachedVersionsScheduler")
 
 	/// Reads the current value of `cachedVersions` on the appropriate
 	/// scheduler.
@@ -136,7 +136,7 @@ public final class Project {
 				return .success(self.cachedVersions)
 			}
 			|> startOn(cachedVersionsScheduler)
-			|> observeOn(QueueScheduler())
+			|> observeOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.readCachedVersions"))
 	}
 
 	/// Sets up an entry in `cachedVersions` for the given project, on the
@@ -243,7 +243,7 @@ public final class Project {
 	}
 
 	/// A scheduler used to serialize all Git operations within this project.
-	private let gitOperationScheduler = QueueScheduler()
+	private let gitOperationScheduler = QueueScheduler(name: "org.carthage.CarthageKit.Project.gitOperationScheduler")
 
 	/// Runs the given Git operation, blocking the `gitOperationScheduler` until
 	/// it has completed.
@@ -273,7 +273,7 @@ public final class Project {
 
 				disposable.addDisposable(schedulerDisposable)
 			}
-			|> observeOn(QueueScheduler())
+			|> observeOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.runGitOperation"))
 	}
 
 	/// Clones the given dependency to the global repositories folder, or fetches
