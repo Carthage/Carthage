@@ -128,19 +128,28 @@ public struct Resolver {
 	///
 	/// This is a helper method, and not meant to be called from outside.
 	private func graphPermutationsForEachNode(nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> {
-		return SignalProducer<DependencyGraph, CarthageError>.try {
-				var result: Result<DependencyGraph, CarthageError> = .success(inputGraph)
+		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError>.try {
+				let initial: (DependencyGraph, [DependencyNode]) = (inputGraph, [])
+				var result: Result<(DependencyGraph, [DependencyNode]), CarthageError> = .success(initial)
 
 				for node in nodes {
-					result = result.flatMap { (var graph) in
-						return graph.addNode(node, dependencyOf: dependencyOf)
-							.map { _ in graph }
+					result = result.flatMap { (var graph, var newNodes) in
+						switch graph.addNode(node, dependencyOf: dependencyOf) {
+						case let .Success(newNode):
+							newNodes.append(newNode.value)
+
+							let updated = (graph, newNodes)
+							return .success(updated)
+
+						case let .Failure(error):
+							return .failure(error.value)
+						}
 					}
 				}
 
 				return result
 			}
-			|> map { graph -> SignalProducer<DependencyGraph, CarthageError> in
+			|> map { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
 				// Each producer represents all evaluations of one subtree.
 				let graphProducers = nodes.map { node in self.graphPermutationsForDependenciesOfNode(node, basedOnGraph: graph) }
 
