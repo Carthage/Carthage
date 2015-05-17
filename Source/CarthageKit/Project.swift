@@ -139,6 +139,16 @@ public final class Project {
 			|> observeOn(QueueScheduler())
 	}
 
+	/// Sets up an entry in `cachedVersions` for the given project, on the
+	/// appropriate scheduler.
+	private func initCachedVersionsForProject(project: ProjectIdentifier) {
+		self.cachedVersionsScheduler.schedule {
+			if self.cachedVersions[project] == nil {
+				self.cachedVersions[project] = []
+			}
+		}
+	}
+
 	/// Adds a given version to `cachedVersions` on the appropriate scheduler.
 	private func addCachedVersion(version: PinnedVersion, forProject project: ProjectIdentifier) {
 		self.cachedVersionsScheduler.schedule {
@@ -291,7 +301,11 @@ public final class Project {
 			|> map { repositoryURL in listTags(repositoryURL) }
 			|> flatten(.Merge)
 			|> map { PinnedVersion($0) }
-			|> on(next: { self.addCachedVersion($0, forProject: project) })
+			|> on(started: {
+				self.initCachedVersionsForProject(project)
+			}, next: { version in
+				self.addCachedVersion(version, forProject: project)
+			})
 
 		return readCachedVersions()
 			|> promoteErrors(CarthageError.self)
