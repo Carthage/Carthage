@@ -124,14 +124,16 @@ public final class Project {
 		sendCompleted(_projectEventsObserver)
 	}
 
+	private typealias CachedVersions = [ProjectIdentifier: [PinnedVersion]]
+
 	/// Caches versions to avoid expensive lookups, and unnecessary
 	/// fetching/cloning.
-	private var cachedVersions: [ProjectIdentifier: [PinnedVersion]] = [:]
+	private var cachedVersions: CachedVersions = [:]
 	private let cachedVersionsScheduler = QueueScheduler(name: "org.carthage.CarthageKit.Project.cachedVersionsScheduler")
 
 	/// Reads the current value of `cachedVersions` on the appropriate
 	/// scheduler.
-	private func readCachedVersions() -> SignalProducer<[ProjectIdentifier: [PinnedVersion]], NoError> {
+	private func readCachedVersions() -> SignalProducer<CachedVersions, NoError> {
 		return SignalProducer.try {
 				return .success(self.cachedVersions)
 			}
@@ -139,25 +141,10 @@ public final class Project {
 			|> observeOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.readCachedVersions"))
 	}
 
-	/// Sets up an entry in `cachedVersions` for the given project, on the
-	/// appropriate scheduler.
-	private func initCachedVersionsForProject(project: ProjectIdentifier) {
+	/// Modifies `cachedVersions` on the appropriate scheduler.
+	private func modifyCachedVersions(transform: CachedVersions -> CachedVersions) {
 		self.cachedVersionsScheduler.schedule {
-			if self.cachedVersions[project] == nil {
-				self.cachedVersions[project] = []
-			}
-		}
-	}
-
-	/// Adds a given version to `cachedVersions` on the appropriate scheduler.
-	private func addCachedVersion(version: PinnedVersion, forProject project: ProjectIdentifier) {
-		self.cachedVersionsScheduler.schedule {
-			if var versions = self.cachedVersions[project] {
-				versions.append(version)
-				self.cachedVersions[project] = versions
-			} else {
-				self.cachedVersions[project] = [ version ]
-			}
+			self.cachedVersions = transform(self.cachedVersions)
 		}
 	}
 
@@ -301,11 +288,14 @@ public final class Project {
 			|> map { repositoryURL in listTags(repositoryURL) }
 			|> flatten(.Merge)
 			|> map { PinnedVersion($0) }
-			|> on(started: {
-				self.initCachedVersionsForProject(project)
-			}, next: { version in
-				self.addCachedVersion(version, forProject: project)
+			|> collect
+			|> on(next: { newVersions in
+				self.modifyCachedVersions { (var cachedVersions) in
+					cachedVersions[project] = newVersions
+					return cachedVersions
+				}
 			})
+			|> flatMap(.Concat) { versions in SignalProducer(values: versions) }
 
 		return readCachedVersions()
 			|> promoteErrors(CarthageError.self)
