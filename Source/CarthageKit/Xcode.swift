@@ -770,7 +770,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		var buildScheme = xcodebuildTask("build", copiedArgs)
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
-		return launchTask(buildScheme, standardOutput: SinkOf { data in
+		return launchTask(buildScheme, standardOutput: SinkOfNSData { data in
 				sendNext(stdoutSink, data)
 			})
 			|> catch { error in SignalProducer(error: .TaskError(error)) }

@@ -118,7 +118,7 @@ class XcodeSpec: QuickSpec {
 			var output: String = ""
 			let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
 
-			let codesignResult = launchTask(codeSign, standardError: SinkOf<NSData> { data -> () in
+			let codesignResult = launchTask(codeSign, standardError: SinkOfNSData { data -> () in
 					output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 				})
 				|> wait
