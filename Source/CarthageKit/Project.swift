@@ -244,13 +244,17 @@ public final class Project {
 					// Prevent further operations from starting until we're
 					// done.
 					dispatch_suspend(self.gitOperationQueue)
-					disposable.addDisposable {
-						dispatch_resume(self.gitOperationQueue)
-					}
 
 					operation.startWithSignal { signal, signalDisposable in
-						signal.observe(observer)
 						disposable.addDisposable(signalDisposable)
+
+						signal.observe(Signal.Observer { event in
+							observer.put(event)
+
+							if event.isTerminating {
+								dispatch_resume(self.gitOperationQueue)
+							}
+						})
 					}
 				}
 			}
