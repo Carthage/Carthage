@@ -234,24 +234,24 @@ public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirect
 public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = workingDirectoryURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
 	let purgeGitDirectories = NSFileManager.defaultManager().carthage_enumeratorAtURL(submoduleDirectoryURL, includingPropertiesForKeys: [ NSURLIsDirectoryKey, NSURLNameKey ], options: nil, catchErrors: true)
-		|> flatMap(.Merge) { enumerator, URL -> SignalProducer<(), CarthageError> in
+		|> try { enumerator, URL -> Result<(), CarthageError> in
 			var name: AnyObject?
 			var error: NSError?
 			if !URL.getResourceValue(&name, forKey: NSURLNameKey, error: &error) {
-				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)", underlyingError: error))
+				return .failure(.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)", underlyingError: error))
 			}
 
 			if let name = name as? NSString {
 				if name != ".git" {
-					return .empty
+					return .success(())
 				}
 			} else {
-				return .empty
+				return .success(())
 			}
 
 			var isDirectory: AnyObject?
 			if !URL.getResourceValue(&isDirectory, forKey: NSURLIsDirectoryKey, error: &error) || isDirectory == nil {
-				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: error))
+				return .failure(.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: error))
 			}
 
 			if let directory = isDirectory?.boolValue {
@@ -261,11 +261,12 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 			}
 
 			if NSFileManager.defaultManager().removeItemAtURL(URL, error: &error) {
-				return .empty
+				return .success(())
 			} else {
-				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)", underlyingError: error))
+				return .failure(.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)", underlyingError: error))
 			}
 		}
+		|> then(SignalProducer<(), CarthageError>.empty)
 
 	return SignalProducer.try {
 			var error: NSError?
@@ -411,7 +412,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 			sendNext(observer, isGitRepository(submoduleDirectoryURL))
 			sendCompleted(observer)
 		}
-		|> flatMap(.Merge) { submoduleExists in
+		|> flatMap(.Concat) { submoduleExists in
 			if (submoduleExists) {
 				// Just check out and stage the correct revision.
 				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
@@ -454,7 +455,7 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: St
 
 			return .success(isGitRepository(repositoryFileURL))
 		}
-		|> flatMap(.Merge) { isRepository -> SignalProducer<NSURL, CarthageError> in
+		|> flatMap(.Concat) { isRepository -> SignalProducer<NSURL, CarthageError> in
 			if isRepository {
 				return launchGitTask([ "mv", "-k", fromPath, toPath ], repositoryFileURL: repositoryFileURL)
 					|> then(SignalProducer(value: toURL))

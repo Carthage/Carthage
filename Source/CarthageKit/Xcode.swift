@@ -191,7 +191,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 			sort(&matches)
 			return matches
 		}
-		|> flatMap(.Merge) { matches -> SignalProducer<ProjectEnumerationMatch, CarthageError> in
+		|> flatMap(.Concat) { matches -> SignalProducer<ProjectEnumerationMatch, CarthageError> in
 			return SignalProducer(values: matches)
 		}
 		|> map { (match: ProjectEnumerationMatch) -> ProjectLocator in
@@ -214,10 +214,10 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		|> map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
-		|> flatMap(.Merge) { (string: String) -> SignalProducer<String, CarthageError> in
+		|> flatMap(.Concat) { (string: String) -> SignalProducer<String, CarthageError> in
 			return string.linesProducer |> promoteErrors(CarthageError.self)
 		}
-		|> flatMap(.Merge) { line -> SignalProducer<String, CarthageError> in
+		|> flatMap(.Concat) { line -> SignalProducer<String, CarthageError> in
 			// Matches one of these two possible messages:
 			//
 			// '    This project contains no schemes.'
@@ -459,7 +459,7 @@ public struct BuildSettings {
 			|> map { (data: NSData) -> String in
 				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 			}
-			|> flatMap(.Merge) { (string: String) -> SignalProducer<BuildSettings, CarthageError> in
+			|> flatMap(.Concat) { (string: String) -> SignalProducer<BuildSettings, CarthageError> in
 				return SignalProducer { observer, disposable in
 					var currentSettings: [String: String] = [:]
 					var currentTarget: String?
@@ -602,7 +602,7 @@ private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildS
 	return SignalProducer(result: settings.wrapperName)
 		|> map(directoryURL.URLByAppendingPathComponent)
 		|> combineLatestWith(SignalProducer(result: settings.wrapperURL))
-		|> flatMap(.Merge) { (target, source) in
+		|> flatMap(.Concat) { (target, source) in
 			return copyFramework(source, target)
 		}
 }
@@ -621,7 +621,7 @@ private func mergeExecutables(executableURLs: [NSURL], outputURL: NSURL) -> Sign
 			}
 		}
 		|> reduce([]) { $0 + [ $1 ] }
-		|> flatMap(.Merge) { executablePaths -> SignalProducer<NSData, CarthageError> in
+		|> flatMap(.Concat) { executablePaths -> SignalProducer<NSData, CarthageError> in
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
 
 			// TODO: Redirect stdout.
@@ -731,7 +731,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 				}
 
 			let mergeProductModules = zip(sourceModulesURL, destinationModulesURL)
-				|> flatMap(.Merge) { (source: NSURL, destination: NSURL) -> SignalProducer<NSURL, CarthageError> in
+				|> flatMap(.Concat) { (source: NSURL, destination: NSURL) -> SignalProducer<NSURL, CarthageError> in
 					return mergeModuleIntoModule(source, destination)
 				}
 
@@ -789,9 +789,9 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				let secondSDK = platform.SDKs[1]
 
 				return settingsByTarget(buildSDK(firstSDK))
-					|> flatMap(.Merge) { firstSettingsByTarget -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
+					|> flatMap(.Concat) { firstSettingsByTarget -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
 						return settingsByTarget(buildSDK(secondSDK))
-							|> flatMap(.Merge) { secondSettingsByTarget -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
+							|> flatMap(.Concat) { secondSettingsByTarget -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
 								assert(firstSettingsByTarget.count == secondSettingsByTarget.count, "Number of targets built for \(firstSDK) (\(firstSettingsByTarget.count)) does not match number of targets built for \(secondSDK) (\(secondSettingsByTarget.count))")
 
 								return SignalProducer { observer, disposable in
@@ -925,7 +925,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			}
 		}
 		|> take(1)
-		|> flatMap(.Merge) { (project: ProjectLocator) -> SignalProducer<String, CarthageError> in
+		|> flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<String, CarthageError> in
 			return schemesInProject(project)
 		}
 		|> combineLatestWith(locatorSignal |> take(1))
@@ -934,7 +934,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 
 			return shouldBuildScheme(buildArguments, platform)
 				|> filter { $0 }
-				|> flatMap(.Merge) { _ -> BuildSchemeProducer in
+				|> flatMap(.Concat) { _ -> BuildSchemeProducer in
 					let (buildOutput, productURLs) = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
 					buildOutput.observe(stdoutSink)
 
@@ -988,7 +988,7 @@ private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> Sig
 	return SignalProducer.try { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
-		|> flatMap(.Merge) { binaryURL -> SignalProducer<NSData, CarthageError> in
+		|> flatMap(.Concat) { binaryURL -> SignalProducer<NSData, CarthageError> in
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
 			return launchTask(lipoTask)
 				|> catch { error in SignalProducer(error: .TaskError(error)) }
@@ -1001,13 +1001,13 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 	return SignalProducer.try { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
-		|> flatMap(.Merge) { binaryURL -> SignalProducer<String, CarthageError> in
+		|> flatMap(.Concat) { binaryURL -> SignalProducer<String, CarthageError> in
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
 
 			return launchTask(lipoTask)
 				|> catch { error in SignalProducer(error: .TaskError(error)) }
 				|> map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
-				|> flatMap(.Merge) { output -> SignalProducer<String, CarthageError> in
+				|> flatMap(.Concat) { output -> SignalProducer<String, CarthageError> in
 					let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
 					characterSet.addCharactersInString(" _-")
 
