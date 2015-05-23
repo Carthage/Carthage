@@ -37,20 +37,18 @@ public struct Resolver {
 	/// that they should be built.
 	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return nodePermutationsForCartfile(cartfile)
-			|> map { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
+			|> flatMap(.Concat) { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 				return self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph())
 					|> promoteErrors(CarthageError.self)
 			}
-			|> flatten(.Concat)
 			// Pass through resolution errors only if we never got
 			// a valid graph.
 			|> dematerializeErrorsIfEmpty
 			|> take(1)
-			|> map { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+			|> flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				return SignalProducer(values: graph.orderedNodes)
 					|> map { node in node.dependencyVersion }
 			}
-			|> flatten(.Merge)
 	}
 
 	/// Sends all permutations of valid DependencyNodes, corresponding to the
@@ -71,14 +69,13 @@ public struct Resolver {
 				default:
 					return self.versionsForDependency(dependency.project)
 						|> reduce([]) { $0 + [ $1 ] }
-						|> map { nodes -> SignalProducer<PinnedVersion, CarthageError> in
+						|> flatMap(.Merge) { nodes -> SignalProducer<PinnedVersion, CarthageError> in
 							if nodes.isEmpty {
 								return SignalProducer(error: CarthageError.TaggedVersionNotFound(dependency.project))
 							} else {
 								return SignalProducer(values: nodes)
 							}
 						}
-						|> flatten(.Merge)
 						|> filter { dependency.version.satisfiedBy($0) }
 				}
 			}()
@@ -87,14 +84,13 @@ public struct Resolver {
 				|> map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
 				|> reduce([]) { $0 + [ $1 ] }
 				|> map(sorted)
-				|> map { nodes -> SignalProducer<DependencyNode, CarthageError> in
+				|> flatMap(.Concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
 					if nodes.isEmpty {
 						return SignalProducer(error: CarthageError.RequiredVersionNotFound(dependency.project, dependency.version))
 					} else {
 						return SignalProducer(values: nodes)
 					}
 				}
-				|> flatten(.Concat)
 		}
 
 		return permutations(nodeProducers)
@@ -110,13 +106,11 @@ public struct Resolver {
 		return cartfileForDependency(node.dependencyVersion)
 			|> concat(SignalProducer(value: Cartfile(dependencies: [])))
 			|> take(1)
-			|> map { self.nodePermutationsForCartfile($0) }
-			|> flatten(.Merge)
-			|> map { dependencyNodes in
+			|> flatMap(.Merge) { self.nodePermutationsForCartfile($0) }
+			|> flatMap(.Concat) { dependencyNodes in
 				return self.graphPermutationsForEachNode(dependencyNodes, dependencyOf: node, basedOnGraph: inputGraph)
 					|> promoteErrors(CarthageError.self)
 			}
-			|> flatten(.Concat)
 			// Pass through resolution errors only if we never got
 			// a valid graph.
 			|> dematerializeErrorsIfEmpty
@@ -149,12 +143,12 @@ public struct Resolver {
 
 				return result
 			}
-			|> map { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
+			|> flatMap(.Concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
 				// Each producer represents all evaluations of one subtree.
 				let graphProducers = nodes.map { node in self.graphPermutationsForDependenciesOfNode(node, basedOnGraph: graph) }
 
 				return permutations(graphProducers)
-					|> map { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
+					|> flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 						let result: Result<DependencyGraph, CarthageError> = reduce(graphs, .success(inputGraph)) { (result, graph) in
 							return result.flatMap { mergeGraphs($0, graph) }
 						}
@@ -171,12 +165,10 @@ public struct Resolver {
 							return SignalProducer(value: .Error(error))
 						}
 					}
-					|> flatten(.Concat)
 					// Pass through resolution errors only if we never got
 					// a valid graph.
 					|> dematerializeErrorsIfEmpty
 			}
-			|> flatten(.Merge)
 			|> materialize
 	}
 }

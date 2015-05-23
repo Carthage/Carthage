@@ -18,14 +18,12 @@ public struct UpdateCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(UpdateOptions.evaluate(mode))
-			|> map { options -> SignalProducer<(), CommandError> in
+			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				return options.loadProject()
-					|> map { $0.updateDependencies() }
-					|> flatten(.Merge)
+					|> flatMap(.Merge) { $0.updateDependencies() }
 					|> then(options.buildProducer)
 					|> promoteErrors
 			}
-			|> flatten(.Merge)
 			|> waitOnCommand
 	}
 }

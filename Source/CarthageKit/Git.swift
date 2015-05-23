@@ -173,7 +173,7 @@ public func fetchRepository(repositoryFileURL: NSURL, remoteURL: GitURL? = nil, 
 /// Sends each tag found in the given Git repository.
 public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, CarthageError> {
 	return launchGitTask([ "tag" ], repositoryFileURL: repositoryFileURL)
-		|> map { (allTags: String) -> SignalProducer<String, CarthageError> in
+		|> flatMap(.Concat) { (allTags: String) -> SignalProducer<String, CarthageError> in
 			return SignalProducer { observer, disposable in
 				let string = allTags as NSString
 
@@ -188,7 +188,6 @@ public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, Carthag
 				sendCompleted(observer)
 			}
 		}
-		|> flatten(.Concat)
 }
 
 /// Returns the text contents of the path at the given revision, or an error if
@@ -212,8 +211,7 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 			environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
 			return .success(environment)
 		}
-		|> map { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
-		|> flatten(.Concat)
+		|> flatMap(.Concat) { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
 		|> then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision, shouldCloneSubmodule: shouldCloneSubmodule))
 }
 
@@ -221,14 +219,13 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirec
 /// revision, into the given working directory.
 public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
 	return submodulesInRepository(repositoryFileURL, revision: revision)
-		|> map { submodule -> SignalProducer<(), CarthageError> in
+		|> flatMap(.Concat) { submodule -> SignalProducer<(), CarthageError> in
 			if shouldCloneSubmodule(submodule) {
 				return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
 			} else {
 				return .empty
 			}
 		}
-		|> flatten(.Concat)
 		|> filter { _ in false }
 }
 
@@ -237,7 +234,7 @@ public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, workingDirect
 public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = workingDirectoryURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
 	let purgeGitDirectories = NSFileManager.defaultManager().carthage_enumeratorAtURL(submoduleDirectoryURL, includingPropertiesForKeys: [ NSURLIsDirectoryKey, NSURLNameKey ], options: nil, catchErrors: true)
-		|> map { enumerator, URL -> SignalProducer<(), CarthageError> in
+		|> flatMap(.Merge) { enumerator, URL -> SignalProducer<(), CarthageError> in
 			var name: AnyObject?
 			var error: NSError?
 			if !URL.getResourceValue(&name, forKey: NSURLNameKey, error: &error) {
@@ -269,7 +266,6 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)", underlyingError: error))
 			}
 		}
-		|> flatten(.Merge)
 
 	return SignalProducer.try {
 			var error: NSError?
@@ -279,8 +275,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 
 			return .success(workingDirectoryURL.URLByAppendingPathComponent(submodule.path))
 		}
-		|> map { submoduleDirectoryURL in cloneRepository(submodule.URL, submoduleDirectoryURL, bare: false) }
-		|> flatten(.Concat)
+		|> flatMap(.Concat) { submoduleDirectoryURL in cloneRepository(submodule.URL, submoduleDirectoryURL, bare: false) }
 		|> then(checkoutSubmodule(submodule, submoduleDirectoryURL))
 		|> then(purgeGitDirectories)
 }
@@ -354,16 +349,14 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = 
 
 	return launchGitTask(baseArguments + [ "--get-regexp", "submodule\\..*\\.path" ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
 		|> catch { _ in SignalProducer<String, NoError>.empty }
-		|> map { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
-		|> flatten(.Concat)
+		|> flatMap(.Concat) { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
 		|> promoteErrors(CarthageError.self)
-		|> map { name, path -> SignalProducer<Submodule, CarthageError> in
+		|> flatMap(.Concat) { name, path -> SignalProducer<Submodule, CarthageError> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
 				|> map { GitURL($0) }
 				|> zipWith(submoduleSHAForPath(repositoryFileURL, path, revision: revision))
 				|> map { URL, SHA in Submodule(name: name, path: path, URL: URL, SHA: SHA) }
 		}
-		|> flatten(.Concat)
 }
 
 /// Determines whether the specified revision identifies a valid commit.
@@ -418,7 +411,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 			sendNext(observer, isGitRepository(submoduleDirectoryURL))
 			sendCompleted(observer)
 		}
-		|> map { submoduleExists in
+		|> flatMap(.Merge) { submoduleExists in
 			if (submoduleExists) {
 				// Just check out and stage the correct revision.
 				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
@@ -443,7 +436,6 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 					|> then(.empty)
 			}
 		}
-		|> flatten(.Merge)
 }
 
 /// Moves an item within a Git repository, or within a simple directory if a Git
@@ -462,7 +454,7 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: St
 
 			return .success(isGitRepository(repositoryFileURL))
 		}
-		|> map { isRepository -> SignalProducer<NSURL, CarthageError> in
+		|> flatMap(.Merge) { isRepository -> SignalProducer<NSURL, CarthageError> in
 			if isRepository {
 				return launchGitTask([ "mv", "-k", fromPath, toPath ], repositoryFileURL: repositoryFileURL)
 					|> then(SignalProducer(value: toURL))
@@ -477,5 +469,4 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: St
 				}
 			}
 		}
-		|> flatten(.Merge)
 }

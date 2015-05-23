@@ -74,11 +74,10 @@ public final class FileSink<T: FileWriteable>: SinkType {
 
 				return .success((logFD, temporaryPath))
 			}
-			|> map { logFD, temporaryPath in
+			|> flatMap(.Merge) { logFD, temporaryPath in
 				return self.sinkWithDescriptor(logFD, closeWhenDone: true)
 					|> map { ($0, NSURL.fileURLWithPath(temporaryPath, isDirectory: false)!) }
 			}
-			|> flatten(.Merge)
 	}
 
 	/// Creates a sink that will write to `stdout`.

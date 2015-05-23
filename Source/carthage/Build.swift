@@ -20,18 +20,17 @@ public struct BuildCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(BuildOptions.evaluate(mode))
-			|> map { options in
+			|> flatMap(.Merge) { options in
 				return self.buildWithOptions(options)
 					|> promoteErrors
 			}
-			|> flatten(.Merge)
 			|> waitOnCommand
 	}
 
 	/// Builds a project with the given options.
 	public func buildWithOptions(options: BuildOptions) -> SignalProducer<(), CarthageError> {
 		return self.createLoggingSink(options)
-			|> map { (stdoutSink, temporaryURL) -> SignalProducer<(), CarthageError> in
+			|> flatMap(.Merge) { (stdoutSink, temporaryURL) -> SignalProducer<(), CarthageError> in
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
 
 				let (stdoutSignal, schemeSignals) = self.buildProjectInDirectoryURL(directoryURL, options: options)
@@ -76,7 +75,6 @@ public struct BuildCommand: CommandType {
 					})
 					|> then(.empty)
 			}
-			|> flatten(.Merge)
 	}
 
 	/// Builds the project in the given directory, using the given options.
@@ -98,19 +96,17 @@ public struct BuildCommand: CommandType {
 					return .empty
 				}
 			}
-			|> map { project in
+			|> flatMap(.Merge) { project in
 				return project.migrateIfNecessary(options.colorOptions)
 					|> on(next: carthage.println)
 					|> then(SignalProducer(value: project))
 			}
-			|> flatten(.Merge)
-			|> map { (project: Project) -> SignalProducer<BuildSchemeProducer, CarthageError> in
+			|> flatMap(.Merge) { (project: Project) -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let (dependenciesOutput, dependencies) = project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform)
 				dependenciesOutput.observe(stdoutSink)
 
 				return dependencies
 			}
-			|> flatten(.Merge)
 
 		if !options.skipCurrent {
 			let (currentOutput, currentProducers) = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform)

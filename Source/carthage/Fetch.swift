@@ -18,7 +18,7 @@ public struct FetchCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(FetchOptions.evaluate(mode))
-			|> map { options -> SignalProducer<(), CommandError> in
+			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				let project = ProjectIdentifier.Git(options.repositoryURL)
 				var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
@@ -29,7 +29,6 @@ public struct FetchCommand: CommandType {
 					|> then(.empty)
 					|> promoteErrors
 			}
-			|> flatten(.Merge)
 			|> waitOnCommand
 	}
 }

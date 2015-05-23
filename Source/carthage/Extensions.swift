@@ -198,11 +198,10 @@ extension Project {
 
 					let moveProducer: SignalProducer<(), CarthageError> = SignalProducer(values: contents)
 						|> map { (object: AnyObject) in object as! NSURL }
-						|> map { (URL: NSURL) -> SignalProducer<NSURL, CarthageError> in
+						|> flatMap(.Concat) { (URL: NSURL) -> SignalProducer<NSURL, CarthageError> in
 							let lastPathComponent: String! = URL.lastPathComponent
 							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
 						}
-						|> flatten(.Concat)
 						|> then(trashProducer)
 						|> then(.empty)
 
