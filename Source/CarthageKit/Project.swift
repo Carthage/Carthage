@@ -229,36 +229,30 @@ public final class Project {
 		}
 	}
 
-	/// A scheduler used to serialize all Git operations within this project.
-	private let gitOperationScheduler = QueueScheduler(name: "org.carthage.CarthageKit.Project.gitOperationScheduler")
+	/// Together, these are used to serialize all Git operations within this project.
+	private let gitOperationQueue = dispatch_queue_create("org.carthage.CarthageKit.Project.gitOperationQueue", DISPATCH_QUEUE_SERIAL)
 
-	/// Runs the given Git operation, blocking the `gitOperationScheduler` until
-	/// it has completed.
+	/// Runs the given Git operation serially with respect to all other Git
+	/// operations.
 	private func runGitOperation<T, Error>(operation: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
 		return SignalProducer { observer, disposable in
-				let schedulerDisposable = self.gitOperationScheduler.schedule {
-					let results = operation
-						|> reduce([]) { $0 + [ $1 ] }
-						|> single
-					
+				dispatch_async(self.gitOperationQueue) {
 					if disposable.disposed {
 						return
 					}
 
-					switch results! {
-					case let .Success(values):
-						for value in values.value {
-							sendNext(observer, value)
-						}
-						
-						sendCompleted(observer)
+					// Prevent further operations from starting until we're
+					// done.
+					dispatch_suspend(self.gitOperationQueue)
+					disposable.addDisposable {
+						dispatch_resume(self.gitOperationQueue)
+					}
 
-					case let .Failure(error):
-						sendError(observer, error.value)
+					operation.startWithSignal { signal, signalDisposable in
+						signal.observe(observer)
+						disposable.addDisposable(signalDisposable)
 					}
 				}
-
-				disposable.addDisposable(schedulerDisposable)
 			}
 			|> observeOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.runGitOperation"))
 	}
