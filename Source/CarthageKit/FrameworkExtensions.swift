@@ -43,7 +43,7 @@ internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 /// occurs on `otherSignal` (repeats included).
 internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>)(signal: Signal<T, E>) -> Signal<(T, U), E> {
 	return Signal { observer in
-		let lock = NSRecursiveLock()
+		let lock = NSLock()
 		lock.name = "org.carthage.CarthageKit.permuteWith"
 
 		var signalValues: [T] = []
