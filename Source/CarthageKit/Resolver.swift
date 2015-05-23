@@ -45,7 +45,7 @@ public struct Resolver {
 			// a valid graph.
 			|> dematerializeErrorsIfEmpty
 			|> take(1)
-			|> flatMap(.Concat) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+			|> flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				return SignalProducer(values: graph.orderedNodes)
 					|> map { node in node.dependencyVersion }
 			}
@@ -106,7 +106,7 @@ public struct Resolver {
 		return cartfileForDependency(node.dependencyVersion)
 			|> concat(SignalProducer(value: Cartfile(dependencies: [])))
 			|> take(1)
-			|> flatMap(.Concat) { self.nodePermutationsForCartfile($0) }
+			|> flatMap(.Merge) { self.nodePermutationsForCartfile($0) }
 			|> flatMap(.Concat) { dependencyNodes in
 				return self.graphPermutationsForEachNode(dependencyNodes, dependencyOf: node, basedOnGraph: inputGraph)
 					|> promoteErrors(CarthageError.self)
