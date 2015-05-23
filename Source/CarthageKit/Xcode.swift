@@ -815,7 +815,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					}
 
 			default:
-				assert(false, "SDK count \(platform.SDKs.count) for platform \(platform) is not supported")
+				fatalError("SDK count \(platform.SDKs.count) for platform \(platform) is not supported")
 			}
 		}
 
