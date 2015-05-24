@@ -60,40 +60,48 @@ public struct Resolver {
 	/// of those dependencies (chosen from among the versions that actually
 	/// exist for each).
 	private func nodePermutationsForCartfile(cartfile: Cartfile) -> SignalProducer<[DependencyNode], CarthageError> {
-		let nodeProducers = cartfile.dependencies.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
-			let allowedVersions: SignalProducer<PinnedVersion, CarthageError> = {
-				switch dependency.version {
-				case let .GitReference(refName):
-					return self.resolvedGitReference(dependency.project, refName)
+		return SignalProducer(values: cartfile.dependencies)
+			|> map { dependency -> SignalProducer<DependencyNode, CarthageError> in
+				let allowedVersions = SignalProducer<String?, CarthageError>.try {
+						switch dependency.version {
+						case let .GitReference(refName):
+							return .success(refName)
 
-				default:
-					return self.versionsForDependency(dependency.project)
-						|> reduce([]) { $0 + [ $1 ] }
-						|> flatMap(.Merge) { nodes -> SignalProducer<PinnedVersion, CarthageError> in
-							if nodes.isEmpty {
-								return SignalProducer(error: CarthageError.TaggedVersionNotFound(dependency.project))
-							} else {
-								return SignalProducer(values: nodes)
-							}
+						default:
+							return .success(nil)
 						}
-						|> filter { dependency.version.satisfiedBy($0) }
-				}
-			}()
-
-			return allowedVersions
-				|> map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
-				|> reduce([]) { $0 + [ $1 ] }
-				|> map(sorted)
-				|> flatMap(.Concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
-					if nodes.isEmpty {
-						return SignalProducer(error: CarthageError.RequiredVersionNotFound(dependency.project, dependency.version))
-					} else {
-						return SignalProducer(values: nodes)
 					}
-				}
-		}
+					|> flatMap(.Concat) { refName -> SignalProducer<PinnedVersion, CarthageError> in
+						if let refName = refName {
+							return self.resolvedGitReference(dependency.project, refName)
+						}
 
-		return permutations(nodeProducers)
+						return self.versionsForDependency(dependency.project)
+							|> reduce([]) { $0 + [ $1 ] }
+							|> flatMap(.Merge) { nodes -> SignalProducer<PinnedVersion, CarthageError> in
+								if nodes.isEmpty {
+									return SignalProducer(error: CarthageError.TaggedVersionNotFound(dependency.project))
+								} else {
+									return SignalProducer(values: nodes)
+								}
+							}
+							|> filter { dependency.version.satisfiedBy($0) }
+					}
+
+				return allowedVersions
+					|> map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
+					|> reduce([]) { $0 + [ $1 ] }
+					|> map(sorted)
+					|> flatMap(.Concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
+						if nodes.isEmpty {
+							return SignalProducer(error: CarthageError.RequiredVersionNotFound(dependency.project, dependency.version))
+						} else {
+							return SignalProducer(values: nodes)
+						}
+					}
+			}
+			|> collect
+			|> flatMap(.Concat) { nodeProducers in permutations(nodeProducers) }
 	}
 
 	/// Sends all possible permutations of `inputGraph` oriented around the
@@ -122,48 +130,46 @@ public struct Resolver {
 	///
 	/// This is a helper method, and not meant to be called from outside.
 	private func graphPermutationsForEachNode(nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> {
-		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError>.try {
-				let initial: (DependencyGraph, [DependencyNode]) = (inputGraph, [])
-				var result: Result<(DependencyGraph, [DependencyNode]), CarthageError> = .success(initial)
+		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError> { observer, disposable in
+				var graph = inputGraph
+				var newNodes: [DependencyNode] = []
 
 				for node in nodes {
-					result = result.flatMap { (var graph, var newNodes) in
-						switch graph.addNode(node, dependencyOf: dependencyOf) {
-						case let .Success(newNode):
-							newNodes.append(newNode.value)
+					if disposable.disposed {
+						return
+					}
 
-							let updated = (graph, newNodes)
-							return .success(updated)
+					switch graph.addNode(node, dependencyOf: dependencyOf) {
+					case let .Success(newNode):
+						newNodes.append(newNode.value)
 
-						case let .Failure(error):
-							return .failure(error.value)
-						}
+					case let .Failure(error):
+						sendError(observer, error.value)
+						return
 					}
 				}
 
-				return result
+				sendNext(observer, (graph, newNodes))
+				sendCompleted(observer)
 			}
 			|> flatMap(.Concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
-				// Each producer represents all evaluations of one subtree.
-				let graphProducers = nodes.map { node in self.graphPermutationsForDependenciesOfNode(node, basedOnGraph: graph) }
-
-				return permutations(graphProducers)
+				return SignalProducer(values: nodes)
+					// Each producer represents all evaluations of one subtree.
+					|> map { node in self.graphPermutationsForDependenciesOfNode(node, basedOnGraph: graph) }
+					|> collect
+					|> flatMap(.Concat) { graphProducers in permutations(graphProducers) }
 					|> flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
-						let result: Result<DependencyGraph, CarthageError> = reduce(graphs, .success(inputGraph)) { (result, graph) in
-							return result.flatMap { mergeGraphs($0, graph) }
-						}
+						let mergedGraphs = SignalProducer(values: graphs)
+							|> scan(Result<DependencyGraph, CarthageError>.success(inputGraph)) { result, nextGraph in
+								return result.flatMap { previousGraph in mergeGraphs(previousGraph, nextGraph) }
+							}
+							|> tryMap { $0 }
 
-						switch result {
-						case let .Success(graph):
-							return SignalProducer(values: [
-								Event.Next(graph),
-								Event.Completed
-							])
-
-						case let .Failure(error):
-							// Discard impossible graphs.
-							return SignalProducer(value: .Error(error))
-						}
+						return SignalProducer(value: inputGraph)
+							|> concat(mergedGraphs)
+							|> takeLast(1)
+							|> materialize
+							|> promoteErrors(CarthageError.self)
 					}
 					// Pass through resolution errors only if we never got
 					// a valid graph.
