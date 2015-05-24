@@ -41,68 +41,67 @@ internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 
 /// Sends each value that occurs on `signal` combined with each value that
 /// occurs on `otherSignal` (repeats included).
-internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>)(signal: Signal<T, E>) -> Signal<(T, U), E> {
-	return Signal { observer in
-		let lock = NSLock()
-		lock.name = "org.carthage.CarthageKit.permuteWith"
+internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>) -> Signal<T, E> -> Signal<(T, U), E> {
+	return { signal in
+		return Signal { observer in
+			let lock = NSLock()
+			lock.name = "org.carthage.CarthageKit.permuteWith"
 
-		var signalValues: [T] = []
-		var signalCompleted = false
-		var otherValues: [U] = []
-		var otherCompleted = false
+			var signalValues: [T] = []
+			var signalCompleted = false
+			var otherValues: [U] = []
+			var otherCompleted = false
 
-		let signalDisposable = signal.observe(next: { value in
-			lock.lock()
+			let signalDisposable = signal.observe(next: { value in
+				lock.lock()
 
-			signalValues.append(value)
-			for otherValue in otherValues {
-				sendNext(observer, (value, otherValue))
-			}
+				signalValues.append(value)
+				for otherValue in otherValues {
+					sendNext(observer, (value, otherValue))
+				}
 
-			lock.unlock()
-		}, error: { error in
-			sendError(observer, error)
-		}, completed: {
-			lock.lock()
+				lock.unlock()
+			}, error: { error in
+				sendError(observer, error)
+			}, completed: {
+				lock.lock()
 
-			signalCompleted = true
-			if otherCompleted {
-				sendCompleted(observer)
-			}
+				signalCompleted = true
+				if otherCompleted {
+					sendCompleted(observer)
+				}
 
-			lock.unlock()
-		}, interrupted: {
-			sendInterrupted(observer)
-		})
+				lock.unlock()
+			}, interrupted: {
+				sendInterrupted(observer)
+			})
 
-		let otherDisposable = otherSignal.observe(next: { value in
-			lock.lock()
+			let otherDisposable = otherSignal.observe(next: { value in
+				lock.lock()
 
-			otherValues.append(value)
-			for signalValue in signalValues {
-				sendNext(observer, (signalValue, value))
-			}
+				otherValues.append(value)
+				for signalValue in signalValues {
+					sendNext(observer, (signalValue, value))
+				}
 
-			lock.unlock()
-		}, error: { error in
-			sendError(observer, error)
-		}, completed: {
-			lock.lock()
+				lock.unlock()
+			}, error: { error in
+				sendError(observer, error)
+			}, completed: {
+				lock.lock()
 
-			otherCompleted = true
-			if signalCompleted {
-				sendCompleted(observer)
-			}
+				otherCompleted = true
+				if signalCompleted {
+					sendCompleted(observer)
+				}
 
-			lock.unlock()
-		}, interrupted: {
-			sendInterrupted(observer)
-		})
+				lock.unlock()
+			}, interrupted: {
+				sendInterrupted(observer)
+			})
 
-		let compositeDisposable = CompositeDisposable()
-		compositeDisposable.addDisposable(signalDisposable)
-		compositeDisposable.addDisposable(otherDisposable)
-		return compositeDisposable
+			return CompositeDisposable(ignoreNil([ signalDisposable, otherDisposable ]))
+		}
 	}
 }
 
