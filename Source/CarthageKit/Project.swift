@@ -129,24 +129,7 @@ public final class Project {
 	/// Caches versions to avoid expensive lookups, and unnecessary
 	/// fetching/cloning.
 	private var cachedVersions: CachedVersions = [:]
-	private let cachedVersionsScheduler = QueueScheduler(name: "org.carthage.CarthageKit.Project.cachedVersionsScheduler")
-
-	/// Reads the current value of `cachedVersions` on the appropriate
-	/// scheduler.
-	private func readCachedVersions() -> SignalProducer<CachedVersions, NoError> {
-		return SignalProducer.try {
-				return .success(self.cachedVersions)
-			}
-			|> startOn(cachedVersionsScheduler)
-			|> observeOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.readCachedVersions"))
-	}
-
-	/// Modifies `cachedVersions` on the appropriate scheduler.
-	private func modifyCachedVersions(transform: CachedVersions -> CachedVersions) {
-		self.cachedVersionsScheduler.schedule {
-			self.cachedVersions = transform(self.cachedVersions)
-		}
-	}
+	private let cachedVersionsQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cachedVersionsQueue")
 
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.
@@ -256,14 +239,13 @@ public final class Project {
 			|> map { PinnedVersion($0) }
 			|> collect
 			|> on(next: { newVersions in
-				self.modifyCachedVersions { (var cachedVersions) in
-					cachedVersions[project] = newVersions
-					return cachedVersions
-				}
+				self.cachedVersions[project] = newVersions
 			})
 			|> flatMap(.Concat) { versions in SignalProducer(values: versions) }
 
-		return readCachedVersions()
+		return SignalProducer.try {
+				return .success(self.cachedVersions)
+			}
 			|> promoteErrors(CarthageError.self)
 			|> flatMap(.Merge) { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
 				if let versions = versionsByProject[project] {
@@ -272,6 +254,7 @@ public final class Project {
 					return fetchVersions
 				}
 			}
+			|> startOnQueue(cachedVersionsQueue)
 	}
 
 	/// Attempts to resolve a Git reference to a version.
