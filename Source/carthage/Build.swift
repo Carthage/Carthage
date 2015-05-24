@@ -49,7 +49,7 @@ public struct BuildCommand: CommandType {
 						|> filter { _ in false }
 						|> observe(stderrSink)
 
-					let stderrSinkWrapper: SinkOfNSData = SinkOfNSData { data in
+					let stderrSinkWrapper: DataSink = DataSink { data in
 						stderrSink.put(.Next(Box(data)))
 						return
 					}
