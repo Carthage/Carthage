@@ -229,37 +229,7 @@ public final class Project {
 		}
 	}
 
-	/// Together, these are used to serialize all Git operations within this project.
-	private let gitOperationQueue = dispatch_queue_create("org.carthage.CarthageKit.Project.gitOperationQueue", DISPATCH_QUEUE_SERIAL)
-
-	/// Runs the given Git operation serially with respect to all other Git
-	/// operations.
-	private func runGitOperation<T, Error>(operation: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
-		return SignalProducer { observer, disposable in
-				dispatch_async(self.gitOperationQueue) {
-					if disposable.disposed {
-						return
-					}
-
-					// Prevent further operations from starting until we're
-					// done.
-					dispatch_suspend(self.gitOperationQueue)
-
-					operation.startWithSignal { signal, signalDisposable in
-						disposable.addDisposable(signalDisposable)
-
-						signal.observe(Signal.Observer { event in
-							observer.put(event)
-
-							if event.isTerminating {
-								dispatch_resume(self.gitOperationQueue)
-							}
-						})
-					}
-				}
-			}
-			|> observeOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.runGitOperation"))
-	}
+	private let gitOperationQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.gitOperationQueue")
 
 	/// Clones the given dependency to the global repositories folder, or fetches
 	/// inside it if it has already been cloned.
@@ -267,14 +237,13 @@ public final class Project {
 	/// Returns a signal which will send the URL to the repository's folder on
 	/// disk once cloning or fetching has completed.
 	private func cloneOrFetchDependency(project: ProjectIdentifier) -> SignalProducer<NSURL, CarthageError> {
-		let operation = cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS)
+		return cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS)
 			|> on(next: { event, _ in
 				sendNext(self._projectEventsObserver, event)
 			})
 			|> map { _, URL in URL }
 			|> takeLast(1)
-
-		return runGitOperation(operation)
+			|> startOnQueue(gitOperationQueue)
 	}
 
 	/// Sends all versions available for the given project.
@@ -455,7 +424,8 @@ public final class Project {
 			}
 			|> flatMap(.Merge) { submodule -> SignalProducer<(), CarthageError> in
 				if let submodule = submodule {
-					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!)))
+					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!))
+						|> startOnQueue(self.gitOperationQueue)
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 				}
