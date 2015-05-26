@@ -193,8 +193,46 @@ public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, Carthag
 /// Returns the text contents of the path at the given revision, or an error if
 /// the path could not be loaded.
 public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
+	/// Caching results of contentsOfFileInRepository.
+	/// This reduce launching `git show` operations.
+	/// Maybe higher level caching will be appropriate.
+	struct ContentsOfFileCache {
+		static var cache = ContentsOfFileCache()
+		var repositories = [String: [String: Result<String, CarthageError>]]()
+		let lock = NSLock()
+		
+		func get(showObject: String, _ repository: String) -> Result<String, CarthageError>? {
+			lock.lock()
+			let result = repositories[repository]?[showObject]
+			lock.unlock()
+			return result
+		}
+		
+		mutating func set(result: Result<String, CarthageError>, forShowObject showObject: String, ofRepository repository: String) {
+			lock.lock()
+			if repositories[repository] == nil {
+				repositories[repository] = [:]
+			}
+			repositories[repository]?[showObject] = result
+			lock.unlock()
+		}
+	}
+
 	let showObject = "\(revision):\(path)"
-	return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
+	if let repositoryFilePath = repositoryFileURL.path {
+		if let signal = ContentsOfFileCache.cache.get(showObject, repositoryFilePath) {
+			return SignalProducer(result: signal)
+		} else {
+			return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
+				|> on(error: {e in
+					ContentsOfFileCache.cache.set(Result(error:e), forShowObject: showObject, ofRepository: repositoryFilePath)
+				}, next: {v in
+					ContentsOfFileCache.cache.set(Result(value: v), forShowObject: showObject, ofRepository: repositoryFilePath)
+				})
+		}
+	} else {
+		return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
+	}
 }
 
 /// Checks out the working tree of the given (ideally bare) repository, at the
