@@ -10,6 +10,10 @@ import ReactiveCocoa
 
 /// Serializes the execution of SignalProducers, like flatten(.Concat), but
 /// without all needing to be enqueued in the same context.
+///
+/// This allows you to manually enqueue producers from any code that has access
+/// to the queue object, instead of being required to funnel all producers
+/// through a single producer-of-producers.
 internal final class ProducerQueue {
 	private let queue: dispatch_queue_t
 
