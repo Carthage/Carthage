@@ -31,6 +31,7 @@
 		D01F8A4A19EA28FE00643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
 		D01F8A4C19EA28FE00643E7C /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4B19EA28FE00643E7C /* Nimble.framework */; };
 		D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F8A5319EA2F1700643E7C /* Xcode.swift */; };
+		D026578C1B143BA000E833B5 /* swift-is-crashy.c in Sources */ = {isa = PBXBuildFile; fileRef = D026578B1B143BA000E833B5 /* swift-is-crashy.c */; };
 		D02DB8E01A4BC9B600097CDE /* Fetch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02DB8DF1A4BC9B600097CDE /* Fetch.swift */; };
 		D03B32BF19EA49D8007788BE /* Build.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B32BE19EA49D8007788BE /* Build.swift */; };
 		D04A39801A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile in Resources */ = {isa = PBXBuildFile; fileRef = D04A397F1A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile */; };
@@ -154,6 +155,7 @@
 		D01F8A4719EA28F600643E7C /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Quick.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4B19EA28FE00643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../Carthage/Checkouts/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
 		D01F8A5319EA2F1700643E7C /* Xcode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Xcode.swift; sourceTree = "<group>"; };
+		D026578B1B143BA000E833B5 /* swift-is-crashy.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "swift-is-crashy.c"; sourceTree = "<group>"; };
 		D02DB8DF1A4BC9B600097CDE /* Fetch.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Fetch.swift; sourceTree = "<group>"; };
 		D03B32BE19EA49D8007788BE /* Build.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Build.swift; sourceTree = "<group>"; };
 		D04A397F1A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = EmbeddedFrameworksContainerCartfile; sourceTree = "<group>"; };
@@ -304,6 +306,7 @@
 				D0D1211B19E87861005E4BAA /* main.swift */,
 				D0AAC23F1A14933100060F2E /* Update.swift */,
 				54911EF21A1D34EC00FFAE5F /* Version.swift */,
+				D026578B1B143BA000E833B5 /* swift-is-crashy.c */,
 				5499CA981A2394BD00783309 /* Supporting Files */,
 			);
 			name = carthage;
@@ -690,6 +693,7 @@
 				D03B32BF19EA49D8007788BE /* Build.swift in Sources */,
 				D0E7B65619E9C76900EDBA4D /* main.swift in Sources */,
 				D00105061A8EA74E0059D0A0 /* Archive.swift in Sources */,
+				D026578C1B143BA000E833B5 /* swift-is-crashy.c in Sources */,
 				F689C33619EA14D4006D1EFA /* Checkout.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
