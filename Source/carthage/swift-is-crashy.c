@@ -14,8 +14,6 @@
 #include <string.h>
 #include <unistd.h>
 
-static const int BACKTRACE_FRAME_COUNT = 128;
-
 static const char * const exceptionMessage = "\n"
 	"Caught signal triggered by the Swift runtime!\n"
 	"%s\n"
