@@ -18,10 +18,14 @@ static const char * const exceptionMessage = "\n"
 	"Caught signal triggered by the Swift runtime!\n"
 	"%s\n"
 	"\n"
-	"Unfortunately, this is probably a bug in Swift and not Carthage.\n"
-	"If this is preventing you from doing work, please file an issue and\n"
-	"we'll do our best to work around it:\n"
-	"\033[4mhttps://github.com/Carthage/Carthage/issues/new\033[0m\n\n";
+	"Unfortunately, this is probably a bug in Swift and not Carthage. If\n"
+	"this is preventing you from doing work, please file an issue and we'll\n"
+	"do our best to work around it:\n"
+	"\033[4mhttps://github.com/Carthage/Carthage/issues/new\033[0m\n"
+	"\n"
+	"Please also consider filing a radar with Apple, containing the version\n"
+	"of Carthage and any crash report found in Console.app.\n"
+	"\n";
 
 static void uncaughtSignal(int zig, siginfo_t *info, void *context) {
 	const char *signalName = strsignal(zig);
