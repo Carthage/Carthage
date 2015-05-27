@@ -139,22 +139,26 @@ private struct ProjectEnumerationMatch: Comparable {
 	/// Checks whether a project exists at the given URL, returning a match if
 	/// so.
 	static func matchURL(URL: NSURL, fromEnumerator enumerator: NSDirectoryEnumerator) -> Result<ProjectEnumerationMatch, CarthageError> {
-		var typeIdentifier: AnyObject?
-		var error: NSError?
+		if let URL = URL.URLByResolvingSymlinksInPath {
+			var typeIdentifier: AnyObject?
+			var error: NSError?
 
-		if !URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: &error) {
-			return .failure(.ReadFailed(URL, error))
-		}
-
-		if let typeIdentifier = typeIdentifier as? String {
-			if (UTTypeConformsTo(typeIdentifier, "com.apple.dt.document.workspace") != 0) {
-				return .success(ProjectEnumerationMatch(locator: .Workspace(URL), level: enumerator.level))
-			} else if (UTTypeConformsTo(typeIdentifier, "com.apple.xcode.project") != 0) {
-				return .success(ProjectEnumerationMatch(locator: .ProjectFile(URL), level: enumerator.level))
+			if !URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: &error) {
+				return .failure(.ReadFailed(URL, error))
 			}
+
+			if let typeIdentifier = typeIdentifier as? String {
+				if (UTTypeConformsTo(typeIdentifier, "com.apple.dt.document.workspace") != 0) {
+					return .success(ProjectEnumerationMatch(locator: .Workspace(URL), level: enumerator.level))
+				} else if (UTTypeConformsTo(typeIdentifier, "com.apple.xcode.project") != 0) {
+					return .success(ProjectEnumerationMatch(locator: .ProjectFile(URL), level: enumerator.level))
+				}
+			}
+
+			return .failure(.NotAProject(URL))
 		}
 
-		return .failure(.NotAProject(URL))
+		return .failure(.ReadFailed(URL, nil))
 	}
 }
 
