@@ -15,6 +15,7 @@ import Commandant
 import Foundation
 import Result
 import ReactiveCocoa
+import ReactiveTask
 
 private let outputQueue = { () -> dispatch_queue_t in
 	let queue = dispatch_queue_create("org.carthage.carthage.outputQueue", DISPATCH_QUEUE_SERIAL)
@@ -108,6 +109,7 @@ internal func waitOnCommand<T>(producer: SignalProducer<T, CommandError>) -> Res
 		|> then(SignalProducer<(), CommandError>.empty)
 		|> wait
 	
+	TaskDescription.waitForAllTaskTermination()
 	return mapError(result) { $0.error }
 }
 
