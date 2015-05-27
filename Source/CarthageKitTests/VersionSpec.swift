@@ -11,6 +11,21 @@ import Foundation
 import Nimble
 import Quick
 
+class StageSpec: QuickSpec {
+	override func spec() {
+		it("should order versions correctly") {
+			expect(Stage.fromAppendix("0-Alpha").patch).to(equal(0))
+			expect(Stage.fromAppendix("0-Alpha").stage).to(equal(Stage.Alpha))
+
+			expect(Stage.fromAppendix("1-Beta").patch).to(equal(1))
+			expect(Stage.fromAppendix("1-Beta").stage).to(equal(Stage.Beta))
+
+			expect(Stage.fromAppendix("1-Pre").patch).to(equal(1))
+			expect(Stage.fromAppendix("1-Pre").stage).to(equal(Stage.PreRelease))
+		}
+	}
+}
+
 class SemanticVersionSpec: QuickSpec {
 	override func spec() {
 		it("should order versions correctly") {
@@ -34,6 +49,7 @@ class SemanticVersionSpec: QuickSpec {
 			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v1")).value).to(equal(SemanticVersion(major: 1, minor: 0, patch: 0)))
 			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.9")).value).to(equal(SemanticVersion(major: 2, minor: 8, patch: 9)))
 			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8-alpha")).value).to(beNil())
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.0-Alpha")).value).to(equal(SemanticVersion(major: 2, minor: 8, patch: 0, stage: .Alpha)))
 		}
 	}
 }
