@@ -239,6 +239,12 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		// automatically bail out if it looks like that's happening.
 		|> timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 8, onScheduler: QueueScheduler())
 		|> map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
+		|> filter { (line: String) -> Bool in
+			if let schemePath = project.fileURL.URLByAppendingPathComponent("xcshareddata/xcschemes/\(line).xcscheme").path {
+				return NSFileManager.defaultManager().fileExistsAtPath(schemePath)
+			}
+			return false
+		}
 }
 
 /// Represents a platform to build for.
