@@ -70,10 +70,7 @@ public struct BuildCommand: CommandType {
 					}, next: { (project, scheme) in
 						carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(string: project.description))
 					}, disposed: {
-						// FIXME: There's a consistent
-						// swift_getTupleTypeMetadata() crash when this call is
-						// performed.
-						//grepDisposable?.dispose()
+						grepDisposable?.dispose()
 						return
 					})
 					|> then(.empty)
