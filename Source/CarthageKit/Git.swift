@@ -134,12 +134,17 @@ extension Submodule: Printable {
 
 /// Shells out to `git` with the given arguments, optionally in the directory
 /// of an existing repository.
-public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, standardInput: SignalProducer<NSData, NoError>? = nil, standardOutput: SinkOf<NSData>? = nil, standardError: SinkOf<NSData>? = nil, environment: [String: String]? = nil) -> SignalProducer<String, CarthageError> {
+public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, standardInput: SignalProducer<NSData, NoError>? = nil, environment: [String: String]? = nil) -> SignalProducer<String, CarthageError> {
 	let taskDescription = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: environment, standardInput: standardInput)
 
-	return launchTask(taskDescription, standardOutput: standardOutput, standardError: standardError)
+	return launchTask(taskDescription)
 		|> catch { error in SignalProducer(error: .TaskError(error)) }
-		|> map { NSString(data: $0, encoding: NSUTF8StringEncoding)! as String }
+		|> map { taskEvent in
+			return taskEvent.value.map { data in
+				return NSString(data: data, encoding: NSUTF8StringEncoding)! as String
+			}
+		}
+		|> ignoreNil
 }
 
 /// Returns a signal that completes when cloning completes successfully.
@@ -194,7 +199,7 @@ public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, Carthag
 /// the path could not be loaded.
 public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
 	let showObject = "\(revision):\(path)"
-	return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
+	return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryFileURL)
 }
 
 /// Checks out the working tree of the given (ideally bare) repository, at the
@@ -347,7 +352,7 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = 
 	let modulesObject = "\(revision):.gitmodules"
 	let baseArguments = [ "config", "--blob", modulesObject, "-z" ]
 
-	return launchGitTask(baseArguments + [ "--get-regexp", "submodule\\..*\\.path" ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
+	return launchGitTask(baseArguments + [ "--get-regexp", "submodule\\..*\\.path" ], repositoryFileURL: repositoryFileURL)
 		|> catch { _ in SignalProducer<String, NoError>.empty }
 		|> flatMap(.Concat) { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
 		|> promoteErrors(CarthageError.self)
@@ -374,7 +379,7 @@ public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String 
 			return
 		}
 
-		launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL, standardOutput: SinkOf<NSData> { _ in () }, standardError: SinkOf<NSData> { _ in () })
+		launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL)
 			|> then(SignalProducer<Bool, CarthageError>(value: true))
 			|> catch { _ in SignalProducer<Bool, NoError>(value: false) }
 			|> startWithSignal { signal, signalDisposable in
@@ -386,7 +391,7 @@ public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String 
 
 /// Attempts to resolve the given reference into an object SHA.
 public func resolveReferenceInRepository(repositoryFileURL: NSURL, reference: String) -> SignalProducer<String, CarthageError> {
-	return launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL, standardError: SinkOf<NSData> { _ in () })
+	return launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL)
 		|> map { string in string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
 		|> catch { _ in SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists", underlyingError: nil)) }
 }
