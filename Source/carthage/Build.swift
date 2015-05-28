@@ -56,8 +56,7 @@ public struct BuildCommand: CommandType {
 						|> then(.empty)
 						|> promoteErrors(CarthageError.self)
 
-					buildProgress = SignalProducer(values: [ grepTask, buildProgress ])
-						|> flatten(.Merge)
+					buildProgress = buildProgress
 						|> on(next: { taskEvent in
 							switch taskEvent {
 							case let .StandardOutput(data):
@@ -71,6 +70,9 @@ public struct BuildCommand: CommandType {
 						}, interrupted: {
 							sendInterrupted(stdoutSink)
 						})
+
+					buildProgress = SignalProducer(values: [ grepTask, buildProgress ])
+						|> flatten(.Merge)
 				}
 
 				let formatting = options.colorOptions.formatting
