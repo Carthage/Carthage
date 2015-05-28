@@ -23,7 +23,7 @@
       location = "group:Carthage/Checkouts/Argo/Argo.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:Carthage/Checkouts/runes/Runes.xcodeproj">
+      location = "group:Carthage/Checkouts/Runes/Runes.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:Carthage/Checkouts/PrettyColors/PrettyColors.xcodeproj">
