@@ -462,11 +462,9 @@ public final class Project {
 
 	/// Attempts to build each Carthage dependency that has been checked out.
 	///
-	/// Returns a signal of all standard output from `xcodebuild`, and a
-	/// signal-of-signals representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatform platform: Platform?) -> (Signal<NSData, NoError>, SignalProducer<BuildSchemeProducer, CarthageError>) {
-		let (stdoutSignal, stdoutSink) = Signal<NSData, NoError>.pipe()
-		let schemeSignals = loadResolvedCartfile()
+	/// Returns a producer-of-producers representing each scheme being built.
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatform platform: Platform?) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+		return loadResolvedCartfile()
 			|> flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
 			|> flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
@@ -474,13 +472,8 @@ public final class Project {
 					return .empty
 				}
 
-				let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platform: platform)
-				buildOutput.observe(stdoutSink)
-
-				return schemeSignals
+				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platform: platform)
 			}
-
-		return (stdoutSignal, schemeSignals)
 	}
 }
 
