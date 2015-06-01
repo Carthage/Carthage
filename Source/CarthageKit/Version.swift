@@ -89,7 +89,11 @@ extension SemanticVersion: Scannable {
 			return .failure(CarthageError.ParseError(description: "expected major version number in \"\(version!)\""))
 		}
 
-		let minor = (components.count > 1 ? components[1].toInt() : 0)
+		let minor = (components.count > 1 ? components[1].toInt() : nil)
+		if minor == nil {
+			return .failure(CarthageError.ParseError(description: "expected minor version number in \"\(version!)\""))
+		}
+
 		let patch = (components.count > 2 ? components[2].toInt() : 0)
 
 		return .success(self(major: major!, minor: minor ?? 0, patch: patch ?? 0))

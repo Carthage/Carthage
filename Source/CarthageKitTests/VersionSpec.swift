@@ -31,9 +31,13 @@ class SemanticVersionSpec: QuickSpec {
 
 		it("should parse semantic versions") {
 			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("1.4")).value).to(equal(SemanticVersion(major: 1, minor: 4, patch: 0)))
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v1")).value).to(equal(SemanticVersion(major: 1, minor: 0, patch: 0)))
 			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.9")).value).to(equal(SemanticVersion(major: 2, minor: 8, patch: 9)))
+		}
+
+		it("should fail on invalid semantic versions") {
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v1")).value).to(beNil())
 			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8-alpha")).value).to(beNil())
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("null-string-beta-2")).value).to(beNil())
 		}
 	}
 }
