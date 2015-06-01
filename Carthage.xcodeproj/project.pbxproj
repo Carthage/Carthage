@@ -31,6 +31,7 @@
 		D01F8A4A19EA28FE00643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
 		D01F8A4C19EA28FE00643E7C /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4B19EA28FE00643E7C /* Nimble.framework */; };
 		D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F8A5319EA2F1700643E7C /* Xcode.swift */; };
+		D026578C1B143BA000E833B5 /* swift-is-crashy.c in Sources */ = {isa = PBXBuildFile; fileRef = D026578B1B143BA000E833B5 /* swift-is-crashy.c */; };
 		D02DB8E01A4BC9B600097CDE /* Fetch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02DB8DF1A4BC9B600097CDE /* Fetch.swift */; };
 		D03B32BF19EA49D8007788BE /* Build.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B32BE19EA49D8007788BE /* Build.swift */; };
 		D04A39801A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile in Resources */ = {isa = PBXBuildFile; fileRef = D04A397F1A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile */; };
@@ -41,12 +42,11 @@
 		D08D00DF1AA3A9FB00623970 /* Runes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D00DE1AA3A9FB00623970 /* Runes.framework */; };
 		D08D00E01AA3AA0500623970 /* Runes.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D08D00DE1AA3A9FB00623970 /* Runes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D095BA3C1A187D40007F15D6 /* Bootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = D095BA3B1A187D40007F15D6 /* Bootstrap.swift */; };
+		D0A2025E1B114D1000C71375 /* ProducerQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A2025D1B114D1000C71375 /* ProducerQueue.swift */; };
 		D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAAB4919FAEDB4007B24B3 /* Errors.swift */; };
 		D0AAAB5019FB0960007B24B3 /* CarthageKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */ = {isa = PBXBuildFile; fileRef = D0AAAB5419FB1062007B24B3 /* TestCartfile */; };
 		D0AAC2401A14933100060F2E /* Update.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AAC23F1A14933100060F2E /* Update.swift */; };
-		D0C6CF8C1AAAD13A00180D68 /* FileSink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C6CF8B1AAAD13A00180D68 /* FileSink.swift */; };
-		D0C6CF8F1AAAD9F900180D68 /* FileSinkSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C6CF8E1AAAD9F900180D68 /* FileSinkSpec.swift */; };
 		D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C6E5731A57040B00A5E3E7 /* ArchiveSpec.swift */; };
 		D0C6E5761A57042100A5E3E7 /* CartfilePrivateOnly.zip in Resources */ = {isa = PBXBuildFile; fileRef = D0C6E5751A57042100A5E3E7 /* CartfilePrivateOnly.zip */; };
 		D0D1217219E87B05005E4BAA /* CarthageKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1217119E87B05005E4BAA /* CarthageKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -153,6 +153,7 @@
 		D01F8A4719EA28F600643E7C /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Quick.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4B19EA28FE00643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Nimble.framework; path = ../Carthage/Checkouts/Nimble/build/Debug/Nimble.framework; sourceTree = "<group>"; };
 		D01F8A5319EA2F1700643E7C /* Xcode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Xcode.swift; sourceTree = "<group>"; };
+		D026578B1B143BA000E833B5 /* swift-is-crashy.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "swift-is-crashy.c"; sourceTree = "<group>"; };
 		D02DB8DF1A4BC9B600097CDE /* Fetch.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Fetch.swift; sourceTree = "<group>"; };
 		D03B32BE19EA49D8007788BE /* Build.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Build.swift; sourceTree = "<group>"; };
 		D04A397F1A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = EmbeddedFrameworksContainerCartfile; sourceTree = "<group>"; };
@@ -162,11 +163,10 @@
 		D074EDC41A049283001DE082 /* FrameworkExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensions.swift; sourceTree = "<group>"; };
 		D08D00DE1AA3A9FB00623970 /* Runes.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Runes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D095BA3B1A187D40007F15D6 /* Bootstrap.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Bootstrap.swift; sourceTree = "<group>"; };
+		D0A2025D1B114D1000C71375 /* ProducerQueue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProducerQueue.swift; sourceTree = "<group>"; };
 		D0AAAB4919FAEDB4007B24B3 /* Errors.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
 		D0AAAB5419FB1062007B24B3 /* TestCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfile; sourceTree = "<group>"; };
 		D0AAC23F1A14933100060F2E /* Update.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Update.swift; sourceTree = "<group>"; };
-		D0C6CF8B1AAAD13A00180D68 /* FileSink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FileSink.swift; sourceTree = "<group>"; };
-		D0C6CF8E1AAAD9F900180D68 /* FileSinkSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FileSinkSpec.swift; sourceTree = "<group>"; };
 		D0C6E5731A57040B00A5E3E7 /* ArchiveSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchiveSpec.swift; sourceTree = "<group>"; };
 		D0C6E5751A57042100A5E3E7 /* CartfilePrivateOnly.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; name = CartfilePrivateOnly.zip; path = fixtures/CartfilePrivateOnly.zip; sourceTree = "<group>"; };
 		D0D1211B19E87861005E4BAA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -302,6 +302,7 @@
 				D0D1211B19E87861005E4BAA /* main.swift */,
 				D0AAC23F1A14933100060F2E /* Update.swift */,
 				54911EF21A1D34EC00FFAE5F /* Version.swift */,
+				D026578B1B143BA000E833B5 /* swift-is-crashy.c */,
 				5499CA981A2394BD00783309 /* Supporting Files */,
 			);
 			name = carthage;
@@ -381,10 +382,10 @@
 				D069CA231A4E3B2700314A85 /* Archive.swift */,
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
 				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
-				D0C6CF8B1AAAD13A00180D68 /* FileSink.swift */,
 				D074EDC41A049283001DE082 /* FrameworkExtensions.swift */,
 				88ED56D519ECE34900CBF5C4 /* Git.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
+				D0A2025D1B114D1000C71375 /* ProducerQueue.swift */,
 				F603929819EA29F80050A6AF /* Project.swift */,
 				D01D82D61A10160700F0DD94 /* Resolver.swift */,
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
@@ -417,7 +418,6 @@
 			children = (
 				D0C6E5731A57040B00A5E3E7 /* ArchiveSpec.swift */,
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
-				D0C6CF8E1AAAD9F900180D68 /* FileSinkSpec.swift */,
 				549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */,
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
 				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
@@ -644,13 +644,13 @@
 			files = (
 				D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */,
 				D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */,
-				D0C6CF8C1AAAD13A00180D68 /* FileSink.swift in Sources */,
 				D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */,
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */,
 				D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */,
+				D0A2025E1B114D1000C71375 /* ProducerQueue.swift in Sources */,
 				D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */,
 				F603929919EA29F80050A6AF /* Project.swift in Sources */,
 				D069CA241A4E3B2700314A85 /* Archive.swift in Sources */,
@@ -666,7 +666,6 @@
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,
 				549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */,
-				D0C6CF8F1AAAD9F900180D68 /* FileSinkSpec.swift in Sources */,
 				D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -686,6 +685,7 @@
 				D03B32BF19EA49D8007788BE /* Build.swift in Sources */,
 				D0E7B65619E9C76900EDBA4D /* main.swift in Sources */,
 				D00105061A8EA74E0059D0A0 /* Archive.swift in Sources */,
+				D026578C1B143BA000E833B5 /* swift-is-crashy.c in Sources */,
 				F689C33619EA14D4006D1EFA /* Checkout.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -724,7 +724,7 @@
 			buildSettings = {
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Release;
@@ -793,7 +793,7 @@
 			buildSettings = {
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
 			};
 			name = Profile;
@@ -872,7 +872,7 @@
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks $(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -882,7 +882,7 @@
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks $(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Test;
@@ -892,7 +892,7 @@
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks $(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -902,7 +902,7 @@
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks $(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Profile;

@@ -40,9 +40,9 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for project in dependencies {
-				let (outputSignal, schemeProducers) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
-				let result = schemeProducers
+				let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
 					|> flatten(.Concat)
+					|> ignoreTaskData
 					|> on(next: { (project, scheme) in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 					})
@@ -51,9 +51,9 @@ class XcodeSpec: QuickSpec {
 				expect(result.error).to(beNil())
 			}
 
-			let (outputSignal, schemeProducers) = buildInDirectory(directoryURL, withConfiguration: "Debug")
-			let result = schemeProducers
+			let result = buildInDirectory(directoryURL, withConfiguration: "Debug")
 				|> flatten(.Concat)
+				|> ignoreTaskData
 				|> on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
@@ -118,21 +118,27 @@ class XcodeSpec: QuickSpec {
 			var output: String = ""
 			let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
 
-			let codesignResult = launchTask(codeSign, standardError: SinkOf<NSData> { data -> () in
-					output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
+			let codesignResult = launchTask(codeSign)
+				|> on(next: { taskEvent in
+					switch taskEvent {
+					case let .StandardError(data):
+						output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
+					
+					default:
+						break
+					}
 				})
 				|> wait
 
 			expect(codesignResult.value).notTo(beNil())
-
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
 
 		it("should build for one platform") {
 			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
-			let (outputSignal, schemeProducers) = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platform: .Mac)
-			let result = schemeProducers
+			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platform: .Mac)
 				|> flatten(.Concat)
+				|> ignoreTaskData
 				|> on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})

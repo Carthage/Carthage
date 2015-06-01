@@ -20,9 +20,9 @@ public struct BootstrapCommand: CommandType {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
 		// `update` flags.
 		return producerWithOptions(UpdateOptions.evaluate(mode))
-			|> map { options -> SignalProducer<(), CommandError> in
+			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				return options.loadProject()
-					|> map { project -> SignalProducer<(), CarthageError> in
+					|> flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
 						if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
 							return project.checkoutResolvedDependencies()
 						} else {
@@ -31,11 +31,9 @@ public struct BootstrapCommand: CommandType {
 							return project.updateDependencies()
 						}
 					}
-					|> flatten(.Merge)
 					|> then(options.buildProducer)
 					|> promoteErrors
 			}
-			|> flatten(.Merge)
 			|> waitOnCommand
 	}
 }

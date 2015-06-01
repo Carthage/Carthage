@@ -124,42 +124,12 @@ public final class Project {
 		sendCompleted(_projectEventsObserver)
 	}
 
+	private typealias CachedVersions = [ProjectIdentifier: [PinnedVersion]]
+
 	/// Caches versions to avoid expensive lookups, and unnecessary
 	/// fetching/cloning.
-	private var cachedVersions: [ProjectIdentifier: [PinnedVersion]] = [:]
-	private let cachedVersionsScheduler = QueueScheduler()
-
-	/// Reads the current value of `cachedVersions` on the appropriate
-	/// scheduler.
-	private func readCachedVersions() -> SignalProducer<[ProjectIdentifier: [PinnedVersion]], NoError> {
-		return SignalProducer.try {
-				return .success(self.cachedVersions)
-			}
-			|> startOn(cachedVersionsScheduler)
-			|> observeOn(QueueScheduler())
-	}
-
-	/// Sets up an entry in `cachedVersions` for the given project, on the
-	/// appropriate scheduler.
-	private func initCachedVersionsForProject(project: ProjectIdentifier) {
-		self.cachedVersionsScheduler.schedule {
-			if self.cachedVersions[project] == nil {
-				self.cachedVersions[project] = []
-			}
-		}
-	}
-
-	/// Adds a given version to `cachedVersions` on the appropriate scheduler.
-	private func addCachedVersion(version: PinnedVersion, forProject project: ProjectIdentifier) {
-		self.cachedVersionsScheduler.schedule {
-			if var versions = self.cachedVersions[project] {
-				versions.append(version)
-				self.cachedVersions[project] = versions
-			} else {
-				self.cachedVersions[project] = [ version ]
-			}
-		}
-	}
+	private var cachedVersions: CachedVersions = [:]
+	private let cachedVersionsQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cachedVersionsQueue")
 
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.
@@ -242,39 +212,7 @@ public final class Project {
 		}
 	}
 
-	/// A scheduler used to serialize all Git operations within this project.
-	private let gitOperationScheduler = QueueScheduler()
-
-	/// Runs the given Git operation, blocking the `gitOperationScheduler` until
-	/// it has completed.
-	private func runGitOperation<T, Error>(operation: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
-		return SignalProducer { observer, disposable in
-				let schedulerDisposable = self.gitOperationScheduler.schedule {
-					let results = operation
-						|> reduce([]) { $0 + [ $1 ] }
-						|> single
-					
-					if disposable.disposed {
-						return
-					}
-
-					switch results! {
-					case let .Success(values):
-						for value in values.value {
-							sendNext(observer, value)
-						}
-						
-						sendCompleted(observer)
-
-					case let .Failure(error):
-						sendError(observer, error.value)
-					}
-				}
-
-				disposable.addDisposable(schedulerDisposable)
-			}
-			|> observeOn(QueueScheduler())
-	}
+	private let gitOperationQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.gitOperationQueue")
 
 	/// Clones the given dependency to the global repositories folder, or fetches
 	/// inside it if it has already been cloned.
@@ -282,14 +220,13 @@ public final class Project {
 	/// Returns a signal which will send the URL to the repository's folder on
 	/// disk once cloning or fetching has completed.
 	private func cloneOrFetchDependency(project: ProjectIdentifier) -> SignalProducer<NSURL, CarthageError> {
-		let operation = cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS)
+		return cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS)
 			|> on(next: { event, _ in
 				sendNext(self._projectEventsObserver, event)
 			})
 			|> map { _, URL in URL }
 			|> takeLast(1)
-
-		return runGitOperation(operation)
+			|> startOnQueue(gitOperationQueue)
 	}
 
 	/// Sends all versions available for the given project.
@@ -298,25 +235,26 @@ public final class Project {
 	/// necessary.
 	private func versionsForProject(project: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
 		let fetchVersions = cloneOrFetchDependency(project)
-			|> map { repositoryURL in listTags(repositoryURL) }
-			|> flatten(.Merge)
+			|> flatMap(.Merge) { repositoryURL in listTags(repositoryURL) }
 			|> map { PinnedVersion($0) }
-			|> on(started: {
-				self.initCachedVersionsForProject(project)
-			}, next: { version in
-				self.addCachedVersion(version, forProject: project)
+			|> collect
+			|> on(next: { newVersions in
+				self.cachedVersions[project] = newVersions
 			})
+			|> flatMap(.Concat) { versions in SignalProducer(values: versions) }
 
-		return readCachedVersions()
+		return SignalProducer.try {
+				return .success(self.cachedVersions)
+			}
 			|> promoteErrors(CarthageError.self)
-			|> map { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
+			|> flatMap(.Merge) { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
 				if let versions = versionsByProject[project] {
 					return SignalProducer(values: versions)
 				} else {
 					return fetchVersions
 				}
 			}
-			|> flatten(.Merge)
+			|> startOnQueue(cachedVersionsQueue)
 	}
 
 	/// Attempts to resolve a Git reference to a version.
@@ -337,8 +275,7 @@ public final class Project {
 		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
 
 		return loadCombinedCartfile()
-			|> map { cartfile in resolver.resolveDependenciesInCartfile(cartfile) }
-			|> flatten(.Merge)
+			|> flatMap(.Merge) { cartfile in resolver.resolveDependenciesInCartfile(cartfile) }
 			|> reduce([]) { $0 + [ $1 ] }
 			|> map { ResolvedCartfile(dependencies: $0) }
 	}
@@ -361,7 +298,7 @@ public final class Project {
 		return SignalProducer.try {
 				return .success(self.useBinaries)
 			}
-			|> map { useBinaries -> SignalProducer<Bool, CarthageError> in
+			|> flatMap(.Merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
 				if !useBinaries {
 					return SignalProducer(value: false)
 				}
@@ -371,9 +308,8 @@ public final class Project {
 				switch project {
 				case let .GitHub(repository):
 					return GitHubCredentials.loadFromGit()
-						|> map { credentials in
-							return self
-								.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials)
+						|> flatMap(.Concat) { credentials in
+							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials)
 								|> catch { error in
 									if credentials == nil {
 										return SignalProducer(error: error)
@@ -381,19 +317,15 @@ public final class Project {
 									return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: nil)
 								}
 						}
-						|> flatten(.Concat)
-						|> map(unzipArchiveToTemporaryDirectory)
-						|> flatten(.Concat)
-						|> map { directoryURL in
+						|> flatMap(.Concat, unzipArchiveToTemporaryDirectory)
+						|> flatMap(.Concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
-								|> map(self.copyFrameworkToBuildFolder)
-								|> flatten(.Merge)
+								|> flatMap(.Merge, self.copyFrameworkToBuildFolder)
 								|> on(completed: {
 									_ = NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
 								})
 								|> then(SignalProducer(value: directoryURL))
 						}
-						|> flatten(.Concat)
 						|> tryMap { (temporaryDirectoryURL: NSURL) -> Result<Bool, CarthageError> in
 							var error: NSError?
 							if NSFileManager.defaultManager().removeItemAtURL(temporaryDirectoryURL, error: &error) {
@@ -409,7 +341,6 @@ public final class Project {
 					return SignalProducer(value: false)
 				}
 			}
-			|> flatten(.Merge)
 	}
 
 	/// Downloads any binaries that may be able to be used instead of a
@@ -423,23 +354,20 @@ public final class Project {
 			|> on(next: { release in
 				sendNext(self._projectEventsObserver, ProjectEvent.DownloadingBinaries(project, release.nameWithFallback))
 			})
-			|> map { release -> SignalProducer<NSURL, CarthageError> in
+			|> flatMap(.Concat) { release -> SignalProducer<NSURL, CarthageError> in
 				return SignalProducer(values: release.assets)
 					|> filter(binaryFrameworksCanBeProvidedByAsset)
-					|> map { asset -> SignalProducer<NSURL, CarthageError> in
+					|> flatMap(.Concat) { asset -> SignalProducer<NSURL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(project, release, asset)
 
 						if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!) {
 							return SignalProducer(value: fileURL)
 						} else {
 							return downloadAsset(asset, credentials)
-								|> map { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
-								|> flatten(.Concat)
+								|> flatMap(.Concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
 						}
 					}
-					|> flatten(.Concat)
 			}
-			|> flatten(.Concat)
 	}
 
 	/// Copies the framework at the given URL into the current project's build
@@ -455,8 +383,7 @@ public final class Project {
 			|> map { sdk in sdk.platform }
 			|> map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
 			|> map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
-			|> map { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL.URLByResolvingSymlinksInPath!) }
-			|> flatten(.Merge)
+			|> flatMap(.Merge) { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL.URLByResolvingSymlinksInPath!) }
 	}
 
 	/// Checks out the given project into its intended working directory,
@@ -478,28 +405,27 @@ public final class Project {
 
 				return .success(submodule)
 			}
-			|> map { submodule -> SignalProducer<(), CarthageError> in
+			|> flatMap(.Merge) { submodule -> SignalProducer<(), CarthageError> in
 				if let submodule = submodule {
-					return self.runGitOperation(addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!)))
+					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!))
+						|> startOnQueue(self.gitOperationQueue)
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 				}
 			}
-			|> flatten(.Merge)
 			|> on(started: {
 				sendNext(self._projectEventsObserver, .CheckingOut(project, revision))
 			})
 
 		return commitExistsInRepository(repositoryURL, revision: revision)
 			|> promoteErrors(CarthageError.self)
-			|> map { exists -> SignalProducer<NSURL, CarthageError> in
+			|> flatMap(.Merge) { exists -> SignalProducer<NSURL, CarthageError> in
 				if exists {
 					return .empty
 				} else {
 					return self.cloneOrFetchDependency(project)
 				}
 			}
-			|> flatten(.Merge)
 			|> then(checkoutSignal)
 	}
 
@@ -515,51 +441,39 @@ public final class Project {
 
 		return loadResolvedCartfile()
 			|> zipWith(submodulesSignal)
-			|> map { resolvedCartfile, submodulesByPath -> SignalProducer<(), CarthageError> in
+			|> flatMap(.Merge) { resolvedCartfile, submodulesByPath -> SignalProducer<(), CarthageError> in
 				return SignalProducer(values: resolvedCartfile.dependencies)
-					|> map { dependency in
+					|> flatMap(.Merge) { dependency in
 						let project = dependency.project
 						let revision = dependency.version.commitish
 
 						return self.installBinariesForProject(project, atRevision: revision)
-							|> map { installed in
+							|> flatMap(.Merge) { installed in
 								if installed {
 									return .empty
 								} else {
 									return self.checkoutOrCloneProject(project, atRevision: revision, submodulesByPath: submodulesByPath)
 								}
 							}
-							|> flatten(.Merge)
 					}
-					|> flatten(.Merge)
 			}
-			|> flatten(.Merge)
 			|> then(.empty)
 	}
 
 	/// Attempts to build each Carthage dependency that has been checked out.
 	///
-	/// Returns a signal of all standard output from `xcodebuild`, and a
-	/// signal-of-signals representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatform platform: Platform?) -> (Signal<NSData, NoError>, SignalProducer<BuildSchemeProducer, CarthageError>) {
-		let (stdoutSignal, stdoutSink) = Signal<NSData, NoError>.pipe()
-		let schemeSignals = loadResolvedCartfile()
-			|> map { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
-			|> flatten(.Merge)
-			|> map { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
+	/// Returns a producer-of-producers representing each scheme being built.
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatform platform: Platform?) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+		return loadResolvedCartfile()
+			|> flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
+			|> flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
 				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
 					return .empty
 				}
 
-				let (buildOutput, schemeSignals) = buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platform: platform)
-				buildOutput.observe(stdoutSink)
-
-				return schemeSignals
+				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platform: platform)
 			}
-			|> flatten(.Concat)
-
-		return (stdoutSignal, schemeSignals)
 	}
 }
 
@@ -682,7 +596,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) 
 
 			return .success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
 		}
-		|> map { remoteURL in
+		|> flatMap(.Merge) { remoteURL in
 			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
 				// If we created the directory, we're now responsible for
 				// cloning it.
@@ -697,5 +611,4 @@ public func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) 
 					|> concat(fetchSignal |> then(.empty))
 			}
 		}
-		|> flatten(.Merge)
 }
