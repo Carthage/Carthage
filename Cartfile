@@ -1,2 +1,2 @@
-github "Carthage/ReactiveTask" "combine-incremental-and-aggregate-results"
+github "Carthage/ReactiveTask" "master"
 github "thoughtbot/Argo" ~> 1.0.1
