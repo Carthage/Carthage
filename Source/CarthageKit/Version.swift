@@ -13,6 +13,51 @@ import ReactiveCocoa
 /// An abstract type representing a way to specify versions.
 public protocol VersionType: Scannable, Equatable {}
 
+/// A development stage on a version
+public enum Stage: Int, Equatable {
+	/// No stage specified
+	///
+	/// This is only here to specify the default
+	case None
+
+	/// The alpha stage
+	///
+	/// This is usually represented as "-Alpha"
+	case Alpha
+
+	/// The beta stage
+	///
+	/// This is usually represented as "-Beta"
+	case Beta
+
+	/// The Pre stage
+	///
+	/// This is usually represented as "-pre"
+	case PreRelease
+
+	public static func fromAppendix(appendix: String) -> (patch: Int, stage: Stage) {
+		let components = appendix.componentsSeparatedByString("-")
+		if components.count == 1 {
+			return (components[0].toInt() ?? 0, .None)
+		} else if components.count == 2 {
+			return (components[0].toInt() ?? 0, fromString(components[1]))
+		}
+		return (0, .None)
+	}
+
+	private static func fromString(string: String) -> Stage {
+		if string.lowercaseString == "alpha" {
+			return .Alpha
+		} else if string.lowercaseString == "beta" {
+			return .Beta
+		} else if string.lowercaseString == "pre" {
+			return .PreRelease
+		}
+
+		return .None
+	}
+}
+
 /// A semantic version.
 public struct SemanticVersion: Comparable {
 	/// The major version.
@@ -31,6 +76,8 @@ public struct SemanticVersion: Comparable {
 	/// Increments to this component represent backwards-compatible bug fixes.
 	public let patch: Int
 
+	public let stage: Stage
+
 	/// The pin from which this semantic version was derived.
 	public var pinnedVersion: PinnedVersion?
 
@@ -40,10 +87,11 @@ public struct SemanticVersion: Comparable {
 		return [ major, minor, patch ]
 	}
 
-	public init(major: Int, minor: Int, patch: Int) {
+	public init(major: Int, minor: Int, patch: Int, stage: Stage = .None) {
 		self.major = major
 		self.minor = minor
 		self.patch = patch
+		self.stage = stage
 	}
 
 	/// The set of all characters present in valid semantic versions.
@@ -90,9 +138,20 @@ extension SemanticVersion: Scannable {
 		}
 
 		let minor = (components.count > 1 ? components[1].toInt() : 0)
-		let patch = (components.count > 2 ? components[2].toInt() : 0)
 
-		return .success(self(major: major!, minor: minor ?? 0, patch: patch ?? 0))
+		var patch: Int?
+		var stage: Stage?
+		if components.count > 2 {
+			if let number = components[2].toInt() {
+				patch = number
+			} else {
+				let result = Stage.fromAppendix(components[2])
+				patch = result.patch
+				stage = result.stage
+			}
+		}
+
+		return .success(self(major: major!, minor: minor ?? 0, patch: patch ?? 0, stage: stage ?? .None))
 	}
 }
 
