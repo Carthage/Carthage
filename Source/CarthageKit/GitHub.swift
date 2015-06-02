@@ -15,21 +15,14 @@ import Runes
 /// The User-Agent to use for GitHub requests.
 private let userAgent: String = {
 	let bundle = NSBundle.mainBundle() ?? NSBundle(identifier: CarthageKitBundleIdentifier)
-
-	var version: AnyObject?
-	if let bundle = bundle {
-		version = bundle.objectForInfoDictionaryKey("CFBundleShortVersionString")
-		if version == nil {
-			version = bundle.objectForInfoDictionaryKey(kCFBundleVersionKey as String)
-		}
-	}
-
-	if version == nil {
-		version = "unknown"
-	}
+	
+	let version = bundle.flatMap {
+		($0.objectForInfoDictionaryKey("CFBundleShortVersionString") ??
+		 $0.objectForInfoDictionaryKey(kCFBundleVersionKey as String)) as? String
+	} ?? "unknown"
 
 	let identifier = bundle?.bundleIdentifier ?? "CarthageKit-unknown"
-	return "\(identifier)/\(version!)"
+	return "\(identifier)/\(version)"
 }()
 
 /// The type of content to request from the GitHub API.
