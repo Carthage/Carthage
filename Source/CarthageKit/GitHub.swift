@@ -17,7 +17,8 @@ private let userAgent: String = {
 	let bundle = NSBundle.mainBundle() ?? NSBundle(identifier: CarthageKitBundleIdentifier)
 	
 	let version = bundle.flatMap {
-		$0.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String
+		($0.objectForInfoDictionaryKey("CFBundleShortVersionString") ??
+		 $0.objectForInfoDictionaryKey(kCFBundleVersionKey as String)) as? String
 	} ?? "unknown"
 
 	let identifier = bundle?.bundleIdentifier ?? "CarthageKit-unknown"
