@@ -102,7 +102,7 @@ extension Cartfile {
 	}
 
 	/// Returns the dependencies in a cartfile as a counted set containing the
-    /// corresponding projects, represented as a dictionary.
+	/// corresponding projects, represented as a dictionary.
 	private var dependencyCountedSet: [ProjectIdentifier: Int] {
 		return buildCountedSet(self.dependencies.map { $0.project })
 	}
