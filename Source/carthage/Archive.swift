@@ -30,7 +30,7 @@ public struct ArchiveCommand: CommandType {
 					|> reduce([]) { $0 + [ $1 ] }
 					|> flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
 						if paths.isEmpty {
-							return SignalProducer(error: CarthageError.InvalidArgument(description: "Could not find any copies of \(options.frameworkName).framework. Make sure you're in the project’s root and that the framework has already been built."))
+							return SignalProducer(error: CarthageError.InvalidArgument(description: "Could not find any copies of \(options.frameworkName).framework. Make sure you're in the project’s root and that the framework has already been built using 'carthage build --no-skip-current'."))
 						}
 
 						let outputPath = (options.outputPath.isEmpty ? "\(options.frameworkName).framework.zip" : options.outputPath)
