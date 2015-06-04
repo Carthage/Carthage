@@ -24,11 +24,11 @@ public struct CopyFrameworksCommand: CommandType {
 				|> flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
 					let frameworkName = frameworkPath.lastPathComponent
 
-					let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
+					let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.InvalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is approriately entered. Ensure that your \"Input Files\" have been entered correctly."))
 					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
-					return SignalProducer(result: target &&& validArchitectures())
-						|> flatMap(.Merge) { (target, validArchitectures) -> SignalProducer<(), CarthageError> in
+					return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
+						|> flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
 							return combineLatest(copyFramework(source, target), codeSigningIdentity())
 								|> flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
 									return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
