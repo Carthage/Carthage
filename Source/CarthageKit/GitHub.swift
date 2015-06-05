@@ -28,6 +28,10 @@ private let userAgent: String = {
 /// The type of content to request from the GitHub API.
 private let APIContentType = "application/vnd.github.v3+json"
 
+/// The type of content to request from the GitHub API when downloading assets
+/// from releases.
+private let APIAssetDownloadContentType = "application/octet-stream"
+
 /// Represents an error returned from the GitHub API.
 public struct GitHubError: Equatable {
 	public let message: String
@@ -149,18 +153,18 @@ public struct GitHubRelease: Equatable {
 		public let contentType: String
 
 		/// The URL at which the asset can be downloaded directly.
-		public let downloadURL: NSURL
+		public let URL: NSURL
 
 		public var hashValue: Int {
 			return ID.hashValue
 		}
 
 		public var description: String {
-			return "Asset { name = \(name), contentType = \(contentType), downloadURL = \(downloadURL) }"
+			return "Asset { name = \(name), contentType = \(contentType), URL = \(URL) }"
 		}
 
-		public static func create(ID: Int)(name: String)(contentType: String)(downloadURL: NSURL) -> Asset {
-			return self(ID: ID, name: name, contentType: contentType, downloadURL: downloadURL)
+		public static func create(ID: Int)(name: String)(contentType: String)(URL: NSURL) -> Asset {
+			return self(ID: ID, name: name, contentType: contentType, URL: URL)
 		}
 
 		public static func decode(j: JSON) -> Decoded<Asset> {
@@ -168,7 +172,7 @@ public struct GitHubRelease: Equatable {
 				<^> j <| "id"
 				<*> j <| "name"
 				<*> j <| "content_type"
-				<*> j <| "browser_download_url"
+				<*> j <| "url"
 		}
 	}
 }
@@ -257,10 +261,10 @@ internal struct GitHubCredentials {
 }
 
 /// Creates a request to fetch the given GitHub URL, optionally authenticating
-/// with the given credentials.
-internal func createGitHubRequest(URL: NSURL, credentials: GitHubCredentials?) -> NSURLRequest {
+/// with the given credentials and content type.
+internal func createGitHubRequest(URL: NSURL, credentials: GitHubCredentials?, contentType: String = APIContentType) -> NSURLRequest {
 	let request = NSMutableURLRequest(URL: URL)
-	request.setValue(APIContentType, forHTTPHeaderField: "Accept")
+	request.setValue(contentType, forHTTPHeaderField: "Accept")
 	request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
 
 	if let credentials = credentials {
@@ -376,7 +380,7 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, credentia
 /// The downloaded file will be deleted after the URL has been sent upon the
 /// signal.
 internal func downloadAsset(asset: GitHubRelease.Asset, credentials: GitHubCredentials?) -> SignalProducer<NSURL, CarthageError> {
-	let request = createGitHubRequest(asset.downloadURL, credentials)
+	let request = createGitHubRequest(asset.URL, credentials, contentType: APIAssetDownloadContentType)
 
 	return NSURLSession.sharedSession().carthage_downloadWithRequest(request)
 		|> catch { error in SignalProducer(error: .NetworkError(error)) }
