@@ -97,7 +97,7 @@ public struct GitHubRepository: Equatable {
 }
 
 public func ==(lhs: GitHubRepository, rhs: GitHubRepository) -> Bool {
-	return lhs.owner == rhs.owner && lhs.name == rhs.name
+	return lhs.owner.caseInsensitiveCompare(rhs.owner) == .OrderedSame && lhs.name.caseInsensitiveCompare(rhs.name) == .OrderedSame
 }
 
 extension GitHubRepository: Hashable {
