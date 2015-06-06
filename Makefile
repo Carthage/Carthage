@@ -51,7 +51,6 @@ prefix_install: installables
 	mkdir -p "$(PREFIX)/Frameworks" "$(PREFIX)/bin"
 	cp -rf "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/CarthageKit.framework" "$(PREFIX)/Frameworks/"
 	cp -f "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage" "$(PREFIX)/bin/"
-	install_name_tool -add_rpath "@executable_path/../Frameworks" "$(PREFIX)/bin/carthage"
 	install_name_tool -add_rpath "@executable_path/../Frameworks/CarthageKit.framework/Versions/Current/Frameworks/"  "$(PREFIX)/bin/carthage"
 
 package: installables
