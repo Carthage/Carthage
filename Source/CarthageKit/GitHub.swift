@@ -122,11 +122,14 @@ public struct GitHubRelease: Equatable {
 	public let ID: Int
 
 	/// The name of this release.
-	public let name: String
+	public let name: String?
 
-	/// The name of this release, with fallback to its tag when the name is an empty string.
+	/// The name of this release, with fallback to its tag when the name is an empty string or nil.
 	public var nameWithFallback: String {
-		return name.isEmpty ? tag : name
+		if let name = name where !name.isEmpty {
+			return name
+		}
+		return tag
 	}
 
 	/// The name of the tag upon which this release is based.
@@ -198,14 +201,14 @@ extension GitHubRelease: Printable {
 }
 
 extension GitHubRelease: Decodable {
-	public static func create(ID: Int)(name: String)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
+	public static func create(ID: Int)(name: String?)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
 		return self(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
 	}
 
 	public static func decode(j: JSON) -> Decoded<GitHubRelease> {
 		return self.create
 			<^> j <| "id"
-			<*> j <| "name"
+			<*> j <|? "name"
 			<*> j <| "tag_name"
 			<*> j <| "draft"
 			<*> j <| "prerelease"
