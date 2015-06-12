@@ -618,9 +618,8 @@ extension BuildSettings: Printable {
 ///
 /// Returns a signal that will send the URL after copying upon .success.
 private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildSettings) -> SignalProducer<NSURL, CarthageError> {
-	return SignalProducer(result: settings.wrapperName)
-		|> map(directoryURL.URLByAppendingPathComponent)
-		|> combineLatestWith(SignalProducer(result: settings.wrapperURL))
+	let target = settings.wrapperName.map(directoryURL.URLByAppendingPathComponent)
+	return SignalProducer(result: target &&& settings.wrapperURL)
 		|> flatMap(.Merge) { (target, source) in
 			return copyFramework(source, target)
 		}
@@ -747,18 +746,16 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings, secondProductSettings: BuildSettings, destinationFolderURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return copyBuildProductIntoDirectory(destinationFolderURL, firstProductSettings)
 		|> flatMap(.Merge) { productURL in
-			let mergeProductBinaries = SignalProducer(result: firstProductSettings.executableURL)
-				|> concat(SignalProducer(result: secondProductSettings.executableURL))
-				|> reduce([]) { $0 + [ $1 ] }
-				|> zipWith(SignalProducer(result: firstProductSettings.executablePath)
-					|> map(destinationFolderURL.URLByAppendingPathComponent))
+			let executableURLs = (firstProductSettings.executableURL &&& secondProductSettings.executableURL).map { [ $0, $1 ] }
+			let outputURL = firstProductSettings.executablePath.map(destinationFolderURL.URLByAppendingPathComponent)
+
+			let mergeProductBinaries = SignalProducer(result: executableURLs &&& outputURL)
 				|> flatMap(.Concat) { (executableURLs: [NSURL], outputURL: NSURL) -> SignalProducer<(), CarthageError> in
 					return mergeExecutables(executableURLs, outputURL.URLByResolvingSymlinksInPath!)
 				}
 
-			let sourceModulesURL = SignalProducer(result: secondProductSettings.relativeModulesPath)
-				|> filter { $0 != nil }
-				|> zipWith(SignalProducer(result: secondProductSettings.builtProductsDirectoryURL))
+			let sourceModulesURL = SignalProducer(result: secondProductSettings.relativeModulesPath &&& secondProductSettings.builtProductsDirectoryURL)
+				|> filter { $0.0 != nil }
 				|> map { (modulesPath, productsURL) -> NSURL in
 					return productsURL.URLByAppendingPathComponent(modulesPath!)
 				}

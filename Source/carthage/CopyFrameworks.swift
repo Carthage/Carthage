@@ -27,7 +27,7 @@ public struct CopyFrameworksCommand: CommandType {
 					let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
 					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
-					return combineLatest(SignalProducer(result: target), SignalProducer(result: validArchitectures()))
+					return SignalProducer(result: target &&& validArchitectures())
 						|> flatMap(.Merge) { (target, validArchitectures) -> SignalProducer<(), CarthageError> in
 							return combineLatest(copyFramework(source, target), codeSigningIdentity())
 								|> flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
