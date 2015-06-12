@@ -75,14 +75,15 @@ private func validArchitectures() -> Result<[String], CarthageError> {
 }
 
 private func inputFiles() -> SignalProducer<String, CarthageError> {
-	return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT"))
-		|> tryMap { count -> Result<Int, CarthageError> in
-			if let i = count.toInt() {
-				return .success(i)
-			} else {
-				return .failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
-			}
+	let count: Result<Int, CarthageError> = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT").flatMap { count in
+		if let i = count.toInt() {
+			return .success(i)
+		} else {
+			return .failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
 		}
+	}
+
+	return SignalProducer(result: count)
 		|> flatMap(.Merge) { count -> SignalProducer<String, CarthageError> in
 			let variables = (0..<count).map { index -> SignalProducer<String, CarthageError> in
 				return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
