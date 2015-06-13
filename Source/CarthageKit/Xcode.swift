@@ -258,8 +258,11 @@ public enum Platform: Equatable {
 	/// iOS for device and simulator.
 	case iOS
 
+	/// Apple Watch device and simulator.
+	case watchOS
+
 	/// All supported build platforms.
-	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS ]
+	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS ]
 
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
@@ -270,6 +273,9 @@ public enum Platform: Equatable {
 
 		case .iOS:
 			return CarthageBinariesFolderPath.stringByAppendingPathComponent("iOS")
+
+		case .watchOS:
+			return CarthageBinariesFolderPath.stringByAppendingPathComponent("watchOS")
 		}
 	}
 
@@ -281,6 +287,9 @@ public enum Platform: Equatable {
 
 		case .iOS:
 			return [ .iPhoneSimulator, .iPhoneOS ]
+
+		case .watchOS:
+			return [ ]
 		}
 	}
 }
@@ -303,6 +312,9 @@ extension Platform: Printable {
 
 		case .iOS:
 			return "iOS"
+
+		case .watchOS:
+			return "watchOS"
 		}
 	}
 }
@@ -318,6 +330,12 @@ public enum SDK: Equatable {
 	/// iOS, for the simulator.
 	case iPhoneSimulator
 
+	/// watchOS, for the Apple Watch device.
+	case watchOS
+
+	/// watchSimulator, for the Apple Watch simulator.
+	case watchSimulator
+
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
 		switch string {
@@ -330,6 +348,12 @@ public enum SDK: Equatable {
 		case "iphonesimulator":
 			return .success(.iPhoneSimulator)
 
+		case "watchos":
+			return .success(.watchOS)
+
+		case "watchsimulator":
+			return .success(watchSimulator)
+
 		default:
 			return .failure(.ParseError(description: "unexpected SDK key \"(string)\""))
 		}
@@ -340,6 +364,9 @@ public enum SDK: Equatable {
 		switch self {
 		case .iPhoneOS, .iPhoneSimulator:
 			return .iOS
+
+		case .watchOS, .watchSimulator:
+			return .watchOS
 
 		case .MacOSX:
 			return .Mac
@@ -364,13 +391,19 @@ public enum SDK: Equatable {
 
 		case .iPhoneSimulator:
 			return [ "-sdk", "iphonesimulator" ]
+
+		case .watchOS:
+			return [ "-sdk", "watchos" ]
+
+		case .watchSimulator:
+			return [ "-sdk", "watchSimulator" ]
 		}
 	}
 }
 
 public func == (lhs: SDK, rhs: SDK) -> Bool {
 	switch (lhs, rhs) {
-	case (.MacOSX, .MacOSX), (.iPhoneSimulator, .iPhoneSimulator), (.iPhoneOS, .iPhoneOS):
+	case (.MacOSX, .MacOSX), (.iPhoneSimulator, .iPhoneSimulator), (.iPhoneOS, .iPhoneOS), (.watchOS, .watchOS), (.watchSimulator, .watchSimulator):
 		return true
 
 	default:
@@ -389,6 +422,12 @@ extension SDK: Printable {
 
 		case .MacOSX:
 			return "Mac OS X"
+
+		case .watchOS:
+			return "watchOS"
+
+		case .watchSimulator:
+			return "watchOS Simulator"
 		}
 	}
 }
