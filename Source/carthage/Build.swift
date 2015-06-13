@@ -270,7 +270,7 @@ extension BuildPlatform: ArgumentType {
 	private static let acceptedStrings: [String: BuildPlatform] = [
 		"Mac": .Mac, "macosx": .Mac,
 		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
-		"watchOS": .watchOS, "watchos": .watchOS, "whatchsimulator": .iOS,
+		"watchOS": .watchOS, "watchos": .watchOS, "whatchsimulator": .watchOS,
 		"all": .All
 	]
 
