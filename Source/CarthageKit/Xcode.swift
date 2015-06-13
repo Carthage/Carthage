@@ -267,16 +267,20 @@ public enum Platform: Equatable {
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
 	public var relativePath: String {
+		let subfolderName: String
+
 		switch self {
 		case .Mac:
-			return CarthageBinariesFolderPath.stringByAppendingPathComponent("Mac")
+			subfolderName = "Mac"
 
 		case .iOS:
-			return CarthageBinariesFolderPath.stringByAppendingPathComponent("iOS")
+			subfolderName = "iOS"
 
 		case .watchOS:
-			return CarthageBinariesFolderPath.stringByAppendingPathComponent("watchOS")
+			subfolderName = "watchOS"
 		}
+
+		return CarthageBinariesFolderPath.stringByAppendingPathComponent(subfolderName)
 	}
 
 	/// The SDKs that need to be built for this platform.
