@@ -206,6 +206,9 @@ public enum BuildPlatform: Equatable {
 	/// Build only for OS X.
 	case Mac
 
+	/// Build only for watchOS.
+	case watchOS
+
 	/// The `Platform` corresponding to this setting.
 	public var platform: Platform? {
 		switch self {
@@ -217,6 +220,9 @@ public enum BuildPlatform: Equatable {
 
 		case .Mac:
 			return .Mac
+
+		case .watchOS:
+			return .watchOS
 		}
 	}
 }
@@ -230,6 +236,9 @@ public func == (lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
 		return true
 
 	case (.Mac, .Mac):
+		return true
+
+	case (.watchOS, .watchOS):
 		return true
 
 	default:
@@ -248,6 +257,9 @@ extension BuildPlatform: Printable {
 
 		case .Mac:
 			return "Mac"
+
+		case .watchOS:
+			return "watchOS"
 		}
 	}
 }
@@ -258,6 +270,7 @@ extension BuildPlatform: ArgumentType {
 	private static let acceptedStrings: [String: BuildPlatform] = [
 		"Mac": .Mac, "macosx": .Mac,
 		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
+		"watchOS": .watchOS, "watchos": .watchOS, "watchsimulator": .watchOS,
 		"all": .All
 	]
 
