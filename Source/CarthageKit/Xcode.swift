@@ -289,7 +289,7 @@ public enum Platform: Equatable {
 			return [ .iPhoneSimulator, .iPhoneOS ]
 
 		case .watchOS:
-			return [ ]
+			return [ .watchOS, .watchSimulator ]
 		}
 	}
 }
