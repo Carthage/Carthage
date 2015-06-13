@@ -396,7 +396,7 @@ public enum SDK: Equatable {
 			return [ "-sdk", "watchos" ]
 
 		case .watchSimulator:
-			return [ "-sdk", "watchSimulator" ]
+			return [ "-sdk", "watchsimulator" ]
 		}
 	}
 }
