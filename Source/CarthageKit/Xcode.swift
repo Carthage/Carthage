@@ -356,7 +356,7 @@ public enum SDK: Equatable {
 			return .success(.watchOS)
 
 		case "watchsimulator":
-			return .success(watchSimulator)
+			return .success(.watchSimulator)
 
 		default:
 			return .failure(.ParseError(description: "unexpected SDK key \"(string)\""))
