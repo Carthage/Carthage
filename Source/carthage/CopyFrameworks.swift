@@ -27,7 +27,7 @@ public struct CopyFrameworksCommand: CommandType {
 					let source = NSURL(fileURLWithPath: frameworkPath, isDirectory: true)!
 					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
-					return combineLatest(SignalProducer(result: target), SignalProducer(result: validArchitectures()))
+					return SignalProducer(result: target &&& validArchitectures())
 						|> flatMap(.Merge) { (target, validArchitectures) -> SignalProducer<(), CarthageError> in
 							return combineLatest(copyFramework(source, target), codeSigningIdentity())
 								|> flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
@@ -75,14 +75,15 @@ private func validArchitectures() -> Result<[String], CarthageError> {
 }
 
 private func inputFiles() -> SignalProducer<String, CarthageError> {
-	return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT"))
-		|> tryMap { count -> Result<Int, CarthageError> in
-			if let i = count.toInt() {
-				return .success(i)
-			} else {
-				return .failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
-			}
+	let count: Result<Int, CarthageError> = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT").flatMap { count in
+		if let i = count.toInt() {
+			return .success(i)
+		} else {
+			return .failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
 		}
+	}
+
+	return SignalProducer(result: count)
 		|> flatMap(.Merge) { count -> SignalProducer<String, CarthageError> in
 			let variables = (0..<count).map { index -> SignalProducer<String, CarthageError> in
 				return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
