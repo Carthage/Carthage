@@ -1,4 +1,6 @@
-# <img src="https://cloud.githubusercontent.com/assets/432536/5252404/443d64f4-7952-11e4-9d26-fc5cc664cb61.png" width="36" height="36"> Carthage
+<img src="https://raw.githubusercontent.com/carthage/carthage/master/Logo/PNG/header.png">
+
+# Carthage [![GitHub license](https://img.shields.io/github/license/carthage/carthage.svg)](https://raw.githubusercontent.com/Carthage/Carthage/master/LICENSE.md) [![GitHub release](https://img.shields.io/github/release/carthage/carthage.svg)](https://github.com/Carthage/Carthage/releases)
 
 Carthage is intended to be the simplest way to add frameworks to your Cocoa application.
 
