@@ -227,25 +227,6 @@ public enum BuildPlatform: Equatable {
 	}
 }
 
-public func == (lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
-	switch (lhs, rhs) {
-	case (.All, .All):
-		return true
-
-	case (.iOS, .iOS):
-		return true
-
-	case (.Mac, .Mac):
-		return true
-
-	case (.watchOS, .watchOS):
-		return true
-
-	default:
-		return false
-	}
-}
-
 extension BuildPlatform: Printable {
 	public var description: String {
 		switch self {

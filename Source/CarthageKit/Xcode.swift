@@ -298,16 +298,6 @@ public enum Platform: Equatable {
 	}
 }
 
-public func == (lhs: Platform, rhs: Platform) -> Bool {
-	switch (lhs, rhs) {
-	case (.Mac, .Mac), (.iOS, .iOS):
-		return true
-
-	default:
-		return false
-	}
-}
-
 extension Platform: Printable {
 	public var description: String {
 		switch self {
@@ -405,16 +395,6 @@ public enum SDK: Equatable {
 	}
 }
 
-public func == (lhs: SDK, rhs: SDK) -> Bool {
-	switch (lhs, rhs) {
-	case (.MacOSX, .MacOSX), (.iPhoneSimulator, .iPhoneSimulator), (.iPhoneOS, .iPhoneOS), (.watchOS, .watchOS), (.watchSimulator, .watchSimulator):
-		return true
-
-	default:
-		return false
-	}
-}
-
 extension SDK: Printable {
 	public var description: String {
 		switch self {
@@ -463,22 +443,6 @@ public enum ProductType: Equatable {
 		default:
 			return .failure(.ParseError(description: "unexpected product type \"(string)\""))
 		}
-	}
-}
-
-public func ==(lhs: ProductType, rhs: ProductType) -> Bool {
-	switch (lhs, rhs) {
-	case (.Framework, .Framework):
-		return true
-
-	case (.StaticLibrary, .StaticLibrary):
-		return true
-
-	case (.TestBundle, .TestBundle):
-		return true
-
-	default:
-		return false
 	}
 }
 
