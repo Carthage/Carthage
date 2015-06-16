@@ -251,7 +251,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 }
 
 /// Represents a platform to build for.
-public enum Platform: Equatable {
+public enum Platform {
 	/// Mac OS X.
 	case Mac
 
@@ -298,16 +298,6 @@ public enum Platform: Equatable {
 	}
 }
 
-public func == (lhs: Platform, rhs: Platform) -> Bool {
-	switch (lhs, rhs) {
-	case (.Mac, .Mac), (.iOS, .iOS):
-		return true
-
-	default:
-		return false
-	}
-}
-
 extension Platform: Printable {
 	public var description: String {
 		switch self {
@@ -324,7 +314,7 @@ extension Platform: Printable {
 }
 
 /// Represents an SDK buildable by Xcode.
-public enum SDK: Equatable {
+public enum SDK {
 	/// Mac OS X.
 	case MacOSX
 
@@ -405,16 +395,6 @@ public enum SDK: Equatable {
 	}
 }
 
-public func == (lhs: SDK, rhs: SDK) -> Bool {
-	switch (lhs, rhs) {
-	case (.MacOSX, .MacOSX), (.iPhoneSimulator, .iPhoneSimulator), (.iPhoneOS, .iPhoneOS), (.watchOS, .watchOS), (.watchSimulator, .watchSimulator):
-		return true
-
-	default:
-		return false
-	}
-}
-
 extension SDK: Printable {
 	public var description: String {
 		switch self {
@@ -437,7 +417,7 @@ extension SDK: Printable {
 }
 
 /// Describes the type of product built by an Xcode target.
-public enum ProductType: Equatable {
+public enum ProductType {
 	/// A framework bundle.
 	case Framework
 
@@ -463,22 +443,6 @@ public enum ProductType: Equatable {
 		default:
 			return .failure(.ParseError(description: "unexpected product type \"(string)\""))
 		}
-	}
-}
-
-public func ==(lhs: ProductType, rhs: ProductType) -> Bool {
-	switch (lhs, rhs) {
-	case (.Framework, .Framework):
-		return true
-
-	case (.StaticLibrary, .StaticLibrary):
-		return true
-
-	case (.TestBundle, .TestBundle):
-		return true
-
-	default:
-		return false
 	}
 }
 
