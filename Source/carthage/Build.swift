@@ -196,7 +196,7 @@ public struct BuildOptions: OptionsType {
 }
 
 /// Represents the user’s chosen platform to build for.
-public enum BuildPlatform: Equatable {
+public enum BuildPlatform {
 	/// Build for all available platforms.
 	case All
 

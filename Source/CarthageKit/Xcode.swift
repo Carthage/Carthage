@@ -251,7 +251,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 }
 
 /// Represents a platform to build for.
-public enum Platform: Equatable {
+public enum Platform {
 	/// Mac OS X.
 	case Mac
 
@@ -314,7 +314,7 @@ extension Platform: Printable {
 }
 
 /// Represents an SDK buildable by Xcode.
-public enum SDK: Equatable {
+public enum SDK {
 	/// Mac OS X.
 	case MacOSX
 
@@ -417,7 +417,7 @@ extension SDK: Printable {
 }
 
 /// Describes the type of product built by an Xcode target.
-public enum ProductType: Equatable {
+public enum ProductType {
 	/// A framework bundle.
 	case Framework
 
