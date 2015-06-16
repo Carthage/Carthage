@@ -194,12 +194,11 @@ extension NSURLSession {
 				// Avoid invoking cancel(), or the download may be deleted.
 				handle.remove()
 
-				if URL == nil || response == nil {
-					sendError(observer, error)
-				} else {
-					let value = (URL!, response!)
-					sendNext(observer, value)
+				if let URL = URL, response = response {
+					sendNext(observer, (URL, response))
 					sendCompleted(observer)
+				} else {
+					sendError(observer, error)
 				}
 			}
 
