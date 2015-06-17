@@ -971,10 +971,19 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				return false
 			}
 		}
-		|> take(1)
-		|> flatMap(.Merge) { (project: ProjectLocator) -> SignalProducer<String, CarthageError> in
+		|> flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<[String], CarthageError> in
 			return schemesInProject(project)
+				|> collect
+				|> flatMap(.Concat) { schemes in
+					if schemes.isEmpty {
+						return .empty
+					} else {
+						return SignalProducer(value: schemes)
+					}
+				}
 		}
+		|> take(1)
+		|> flatMap(.Merge) { schemes in SignalProducer(values: schemes) }
 		|> combineLatestWith(locatorProducer |> take(1))
 		|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
 			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
