@@ -6,8 +6,8 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
-import Argo
 import Foundation
+import Himotoki
 import Result
 import ReactiveCocoa
 
@@ -212,9 +212,9 @@ extension NSURLSession {
 }
 
 extension NSURL: Decodable {
-	public class func decode(json: JSON) -> Decoded<NSURL> {
-		return String.decode(json).flatMap { URLString in
-			return .fromOptional(self(string: URLString))
+	public class func decode(e: Extractor) -> NSURL? {
+		return String.decode(e).flatMap { URLString in
+			return self(string: URLString)
 		}
 	}
 }
