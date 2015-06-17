@@ -14,6 +14,12 @@ If you can’t make the change yourself, please open an issue after making sure 
 
 Unless you’re specifically improving something about the command-line experience of Carthage, please make code changes to [CarthageKit](README.md#carthagekit). This framework increases modularity, and allows other tools to integrate with Carthage more easily.
 
+## Get started
+
+After checkout, you can run the following command, and then open the workspace in Xcode:
+
+    carthage bootstrap --platform mac --no-use-binaries
+
 ## Code style
 
 If you’re interested in contributing code, please have a look at our [style guide](https://github.com/github/swift-style-guide), which we try to match fairly closely.
