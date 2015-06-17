@@ -134,6 +134,34 @@ class XcodeSpec: QuickSpec {
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
 
+		it("should skip projects without shared schems") {
+			let dependency = "SwiftyJSON"
+			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("\(dependency)-2.2.0", withExtension: nil)!
+			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+
+			NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL, error: nil)
+
+			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
+				|> flatten(.Concat)
+				|> ignoreTaskData
+				|> on(next: { (project, scheme) in
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				|> wait
+
+			expect(result.error).to(beNil())
+
+			let macPath = _buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
+			let iOSPath = _buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
+
+			var isDirectory: ObjCBool = false
+			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beTruthy())
+
+			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beTruthy())
+		}
+
 		it("should build for one platform") {
 			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platform: .Mac)

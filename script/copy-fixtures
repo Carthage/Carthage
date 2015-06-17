@@ -6,7 +6,7 @@
 
 destination="${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}"
 
-for fixture in "ReactiveCocoaLayout" "CartfilePrivateOnly"
+for fixture in "ReactiveCocoaLayout" "CartfilePrivateOnly" "SwiftyJSON-2.2.0"
 do
 	rm -Rf "$destination/$fixture"
 	unzip -q -d "$destination" "Source/CarthageKitTests/fixtures/$fixture.zip"
