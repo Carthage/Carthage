@@ -18,8 +18,9 @@ deploy:
   provider: releases
   api-key:
     secure: c1fMI4p8oUVGi7SkDLqXpZDhrVVnLWU8J6+rWc3pTMmeNmEGopZpCiiQupHoHXx+Fq3+8R4M2iG0IgfcVTb6q5HD2RH0+q57/p9vcYIlCS8E/1o2BPUHUfH1Poc1vs7VdFpjWFmbm6Twnnffbz3AsELjv3mJyRxR6fUAliwfnWk=
-  file: Carthage.pkg
-  file: CarthageKit.framework.zip
+  file:
+    - Carthage.pkg
+    - CarthageKit.framework.zip
   skip_cleanup: true
   on:
     tags: true
