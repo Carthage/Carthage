@@ -195,12 +195,12 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should locate the project from the parent directory") {
-			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!) |> first
+			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!) |> collect |> first
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
 
-			let locator = result?.value!
-			expect(locator).to(equal(ProjectLocator.ProjectFile(projectURL)))
+			let locators = result?.value!
+			expect(locators).to(contain(ProjectLocator.ProjectFile(projectURL)))
 		}
 
 		it("should not locate the project from a directory not containing it") {
