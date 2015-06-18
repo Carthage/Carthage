@@ -190,9 +190,6 @@ public struct Resolver {
 	}
 }
 
-/// A poor person's Set.
-private typealias DependencyNodeSet = [DependencyNode: ()]
-
 /// Represents an acyclic dependency graph in which each project appears at most
 /// once.
 ///
@@ -201,19 +198,19 @@ private typealias DependencyNodeSet = [DependencyNode: ()]
 /// current graph).
 private struct DependencyGraph: Equatable {
 	/// A full list of all nodes included in the graph.
-	var allNodes: DependencyNodeSet = [:]
+	var allNodes: Set<DependencyNode> = []
 
 	/// All nodes that have dependencies, associated with those lists of
 	/// dependencies themselves.
-	var edges: [DependencyNode: DependencyNodeSet] = [:]
+	var edges: [DependencyNode: Set<DependencyNode>] = [:]
 
 	/// The root nodes of the graph (i.e., those dependencies that are listed
 	/// by the top-level project).
-	var roots: DependencyNodeSet = [:]
+	var roots: Set<DependencyNode> = []
 
 	/// Returns all of the graph nodes, in the order that they should be built.
 	var orderedNodes: [DependencyNode] {
-		return sorted(allNodes.keys) { (lhs, rhs) in
+		return sorted(allNodes) { lhs, rhs in
 			let lhsDependencies = self.edges[lhs]
 			let rhsDependencies = self.edges[rhs]
 
@@ -221,7 +218,7 @@ private struct DependencyGraph: Equatable {
 				// If the right node has a dependency on the left node, the
 				// left node needs to be built first (and is thus ordered
 				// first).
-				if contains(rhsDependencies.keys, lhs) {
+				if rhsDependencies.contains(lhs) {
 					return true
 				}
 			}
@@ -229,7 +226,7 @@ private struct DependencyGraph: Equatable {
 			if let lhsDependencies = lhsDependencies {
 				// If the left node has a dependency on the right node, the
 				// right node needs to be built first.
-				if contains(lhsDependencies.keys, rhs) {
+				if lhsDependencies.contains(rhs) {
 					return false
 				}
 			}
@@ -262,8 +259,8 @@ private struct DependencyGraph: Equatable {
 	/// different from the node passed in), or an error if this addition would
 	/// make the graph inconsistent.
 	mutating func addNode(var node: DependencyNode, dependencyOf: DependencyNode?) -> Result<DependencyNode, CarthageError> {
-		if let index = allNodes.indexForKey(node) {
-			let existingNode = allNodes[index].0
+		if let index = allNodes.indexOf(node) {
+			let existingNode = allNodes[index]
 
 			if let newSpecifier = intersection(existingNode.versionSpecifier, node.versionSpecifier) {
 				if newSpecifier.satisfiedBy(existingNode.proposedVersion) {
@@ -276,15 +273,15 @@ private struct DependencyGraph: Equatable {
 				return .failure(CarthageError.IncompatibleRequirements(node.project, existingNode.versionSpecifier, node.versionSpecifier))
 			}
 		} else {
-			allNodes[node] = ()
+			allNodes.insert(node)
 		}
 
 		if let dependencyOf = dependencyOf {
-			var nodeSet = edges[dependencyOf] ?? DependencyNodeSet()
-			nodeSet[node] = ()
+			var nodeSet = edges[dependencyOf] ?? Set()
+			nodeSet.insert(node)
 			edges[dependencyOf] = nodeSet
 		} else {
-			roots[node] = ()
+			roots.insert(node)
 		}
 
 		return .success(node)
@@ -302,8 +299,8 @@ private func ==(lhs: DependencyGraph, rhs: DependencyGraph) -> Bool {
 				return false
 			}
 
-			for (dep, _) in leftDeps {
-				if rightDeps[dep] == nil {
+			for dep in leftDeps {
+				if !rightDeps.contains(dep) {
 					return false
 				}
 			}
@@ -312,8 +309,8 @@ private func ==(lhs: DependencyGraph, rhs: DependencyGraph) -> Bool {
 		}
 	}
 
-	for (root, _) in lhs.roots {
-		if rhs.roots[root] == nil {
+	for root in lhs.roots {
+		if !rhs.roots.contains(root) {
 			return false
 		}
 	}
@@ -325,7 +322,7 @@ extension DependencyGraph: Printable {
 	private var description: String {
 		var str = "Roots:"
 
-		for (root, _) in roots {
+		for root in roots {
 			str += "\n\t\(root)"
 		}
 
@@ -333,7 +330,7 @@ extension DependencyGraph: Printable {
 
 		for (node, dependencies) in edges {
 			str += "\n\t\(node.project) ->"
-			for (dep, _) in dependencies {
+			for dep in dependencies {
 				str += "\n\t\t\(dep)"
 			}
 		}
@@ -349,14 +346,14 @@ extension DependencyGraph: Printable {
 private func mergeGraphs(lhs: DependencyGraph, rhs: DependencyGraph) -> Result<DependencyGraph, CarthageError> {
 	var result: Result<DependencyGraph, CarthageError> = .success(lhs)
 
-	for (root, _) in rhs.roots {
+	for root in rhs.roots {
 		result = result.flatMap { (var graph) in
 			return graph.addNode(root, dependencyOf: nil).map { _ in graph }
 		}
 	}
 
 	for (node, dependencies) in rhs.edges {
-		for (dependency, _) in dependencies {
+		for dependency in dependencies {
 			result = result.flatMap { (var graph) in
 				return graph.addNode(dependency, dependencyOf: node).map { _ in graph }
 			}
