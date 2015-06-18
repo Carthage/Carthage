@@ -216,7 +216,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 
 	return launchTask(task)
 		|> ignoreTaskData
-		|> catch { error in SignalProducer(error: .TaskError(error)) }
+		|> mapError { .TaskError($0) }
 		|> map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
@@ -475,7 +475,7 @@ public struct BuildSettings {
 
 		return launchTask(task)
 			|> ignoreTaskData
-			|> catch { error in SignalProducer(error: .TaskError(error)) }
+			|> mapError { .TaskError($0) }
 			|> map { (data: NSData) -> String in
 				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 			}
@@ -650,7 +650,7 @@ private func mergeExecutables(executableURLs: [NSURL], outputURL: NSURL) -> Sign
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
 
 			return launchTask(lipoTask)
-				|> catch { error in SignalProducer(error: .TaskError(error)) }
+				|> mapError { .TaskError($0) }
 		}
 		|> then(.empty)
 }
@@ -800,7 +800,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 		return launchTask(buildScheme)
-			|> catch { error in SignalProducer(error: .TaskError(error)) }
+			|> mapError { .TaskError($0) }
 			|> flatMapTaskEvents(.Concat) { _ in
 				return BuildSettings.loadWithArguments(copiedArgs)
 					|> filter { settings in
@@ -937,16 +937,16 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		}
 		|> flatMap(.Merge) { schemeProducers in
 			return schemeProducers
-				|> catch { error in
+				|> mapError { error in
 					switch (dependency, error) {
 					case let (.GitHub(repo), .NoSharedSchemes(project, _)):
-						return SignalProducer(error: .NoSharedSchemes(project, repo))
+						return .NoSharedSchemes(project, repo)
 
 					case let (.GitHub(repo), .XcodebuildListTimeout(project, _)):
-						return SignalProducer(error: .XcodebuildListTimeout(project, repo))
+						return .XcodebuildListTimeout(project, repo)
 
 					default:
-						return SignalProducer(error: error)
+						return error
 					}
 				}
 		}
@@ -1044,7 +1044,7 @@ private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> Sig
 		|> flatMap(.Merge) { binaryURL -> SignalProducer<TaskEvent<NSData>, CarthageError> in
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
 			return launchTask(lipoTask)
-				|> catch { error in SignalProducer(error: .TaskError(error)) }
+				|> mapError { .TaskError($0) }
 		}
 		|> then(.empty)
 }
@@ -1059,7 +1059,7 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 
 			return launchTask(lipoTask)
 				|> ignoreTaskData
-				|> catch { error in SignalProducer(error: .TaskError(error)) }
+				|> mapError { .TaskError($0) }
 				|> map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
 				|> flatMap(.Merge) { output -> SignalProducer<String, CarthageError> in
 					let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
@@ -1127,6 +1127,6 @@ private func codesign(frameworkURL: NSURL, expandedIdentity: String) -> SignalPr
 	let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
 
 	return launchTask(codesignTask)
-		|> catch { error in SignalProducer(error: .TaskError(error)) }
+		|> mapError { .TaskError($0) }
 		|> then(.empty)
 }
