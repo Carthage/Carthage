@@ -134,7 +134,7 @@ class XcodeSpec: QuickSpec {
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
 
-		it("should skip projects without shared schems") {
+		it("should skip projects without shared dynamic framework schems") {
 			let dependency = "SwiftyJSON"
 			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("\(dependency)-2.2.0", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
