@@ -314,43 +314,25 @@ extension Platform: Printable {
 }
 
 /// Represents an SDK buildable by Xcode.
-public enum SDK {
+public enum SDK: String {
 	/// Mac OS X.
-	case MacOSX
+	case MacOSX = "macosx"
 
 	/// iOS, for device.
-	case iPhoneOS
+	case iPhoneOS = "iphoneos"
 
 	/// iOS, for the simulator.
-	case iPhoneSimulator
+	case iPhoneSimulator = "iphonesimulator"
 
 	/// watchOS, for the Apple Watch device.
-	case watchOS
+	case watchOS = "watchos"
 
 	/// watchSimulator, for the Apple Watch simulator.
-	case watchSimulator
+	case watchSimulator = "watchsimulator"
 
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
-		switch string {
-		case "macosx":
-			return .success(.MacOSX)
-
-		case "iphoneos":
-			return .success(.iPhoneOS)
-
-		case "iphonesimulator":
-			return .success(.iPhoneSimulator)
-
-		case "watchos":
-			return .success(.watchOS)
-
-		case "watchsimulator":
-			return .success(.watchSimulator)
-
-		default:
-			return .failure(.ParseError(description: "unexpected SDK key \"(string)\""))
-		}
+		return Result(self(rawValue: string), failWith: .ParseError(description: "unexpected SDK key \"(string)\""))
 	}
 
 	/// The platform that this SDK targets.
@@ -380,17 +362,8 @@ public enum SDK {
 			// own.
 			return []
 
-		case .iPhoneOS:
-			return [ "-sdk", "iphoneos" ]
-
-		case .iPhoneSimulator:
-			return [ "-sdk", "iphonesimulator" ]
-
-		case .watchOS:
-			return [ "-sdk", "watchos" ]
-
-		case .watchSimulator:
-			return [ "-sdk", "watchsimulator" ]
+		case .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator:
+			return [ "-sdk", rawValue ]
 		}
 	}
 }
@@ -417,32 +390,20 @@ extension SDK: Printable {
 }
 
 /// Describes the type of product built by an Xcode target.
-public enum ProductType {
+public enum ProductType: String {
 	/// A framework bundle.
-	case Framework
+	case Framework = "com.apple.product-type.framework"
 
 	/// A static library.
-	case StaticLibrary
+	case StaticLibrary = "com.apple.product-type.library.static"
 
 	/// A unit test bundle.
-	case TestBundle
+	case TestBundle = "com.apple.product-type.bundle.unit-test"
 
 	/// Attempts to parse a product type from a string returned from
 	/// `xcodebuild`.
 	public static func fromString(string: String) -> Result<ProductType, CarthageError> {
-		switch string {
-		case "com.apple.product-type.framework":
-			return .success(.Framework)
-
-		case "com.apple.product-type.library.static":
-			return .success(.StaticLibrary)
-
-		case "com.apple.product-type.bundle.unit-test":
-			return .success(.TestBundle)
-
-		default:
-			return .failure(.ParseError(description: "unexpected product type \"(string)\""))
-		}
+		return Result(self(rawValue: string), failWith: .ParseError(description: "unexpected product type \"(string)\""))
 	}
 }
 
