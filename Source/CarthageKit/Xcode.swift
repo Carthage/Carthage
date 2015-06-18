@@ -219,7 +219,7 @@ public struct SharedScheme {
 
 extension SharedScheme: Printable {
 	public var description: String {
-		return "\(schemeName) in \(project)"
+		return "\"\(schemeName)\" in \(project)"
 	}
 }
 
