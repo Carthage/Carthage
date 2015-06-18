@@ -22,10 +22,8 @@ class ResolverSpec: QuickSpec {
 
 	private func orderedDependencies(resolver: Resolver, fromCartfile cartfile: Cartfile) -> [[String: PinnedVersion]] {
 		let result = resolver.resolveDependenciesInCartfile(cartfile)
-			|> reduce([]) { (var dependencies, dependency) -> [[String: PinnedVersion]] in
-				dependencies.append([ dependency.project.name: dependency.version ])
-				return dependencies
-			}
+			|> map { [ $0.project.name: $0.version ] }
+			|> collect
 			|> first
 
 		expect(result).notTo(beNil())

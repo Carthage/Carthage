@@ -81,7 +81,7 @@ class XcodeSpec: QuickSpec {
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
 			let architectures = architecturesInFramework(frameworkFolderURL)
-				|> reduce([]) { $0 + [ $1 ] }
+				|> collect
 				|> single
 
 			expect(architectures?.value).to(contain("i386"))
@@ -108,7 +108,7 @@ class XcodeSpec: QuickSpec {
 			expect(strippingResult.value).notTo(beNil())
 
 			let strippedArchitectures = architecturesInFramework(targetURL)
-				|> reduce([]) { $0 + [ $1 ] }
+				|> collect
 				|> single
 
 			expect(strippedArchitectures?.value).notTo(contain("i386"))

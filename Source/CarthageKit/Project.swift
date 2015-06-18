@@ -276,7 +276,7 @@ public final class Project {
 
 		return loadCombinedCartfile()
 			|> flatMap(.Merge) { cartfile in resolver.resolveDependenciesInCartfile(cartfile) }
-			|> reduce([]) { $0 + [ $1 ] }
+			|> collect
 			|> map { ResolvedCartfile(dependencies: $0) }
 	}
 
