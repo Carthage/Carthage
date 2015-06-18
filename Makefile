@@ -31,6 +31,7 @@ test: clean bootstrap
 
 clean:
 	rm -f "$(OUTPUT_PACKAGE)"
+	rm -f "$(OUTPUT_FRAMEWORK_ZIP)"
 	rm -rf "$(TEMPORARY_FOLDER)"
 	$(BUILD_TOOL) $(XCODEFLAGS) clean
 
