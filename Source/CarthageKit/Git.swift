@@ -138,7 +138,7 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 	let taskDescription = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: environment, standardInput: standardInput)
 
 	return launchTask(taskDescription)
-		|> catch { error in SignalProducer(error: .TaskError(error)) }
+		|> mapError { .TaskError($0) }
 		|> map { taskEvent in
 			return taskEvent.value.map { data in
 				return NSString(data: data, encoding: NSUTF8StringEncoding)! as String
@@ -393,7 +393,7 @@ public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String 
 public func resolveReferenceInRepository(repositoryFileURL: NSURL, reference: String) -> SignalProducer<String, CarthageError> {
 	return launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL)
 		|> map { string in string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
-		|> catch { _ in SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists", underlyingError: nil)) }
+		|> mapError { _ in CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists", underlyingError: nil) }
 }
 
 /// Returns the location of the .git folder within the given repository.

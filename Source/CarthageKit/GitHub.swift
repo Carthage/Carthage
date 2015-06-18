@@ -309,7 +309,7 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> Signa
 	let request = createGitHubRequest(URL, credentials)
 
 	return NSURLSession.sharedSession().rac_dataWithRequest(request)
-		|> catch { error in SignalProducer(error: .NetworkError(error)) }
+		|> mapError { .NetworkError($0) }
 		|> flatMap(.Concat) { data, response in
 			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
 
@@ -386,6 +386,6 @@ internal func downloadAsset(asset: GitHubRelease.Asset, credentials: GitHubCrede
 	let request = createGitHubRequest(asset.URL, credentials, contentType: APIAssetDownloadContentType)
 
 	return NSURLSession.sharedSession().carthage_downloadWithRequest(request)
-		|> catch { error in SignalProducer(error: .NetworkError(error)) }
+		|> mapError { .NetworkError($0) }
 		|> map { URL, _ in URL }
 }
