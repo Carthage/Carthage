@@ -27,7 +27,7 @@ public struct ArchiveCommand: CommandType {
 					|> on(next: { path in
 						carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
 					})
-					|> reduce([]) { $0 + [ $1 ] }
+					|> collect
 					|> flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
 						if paths.isEmpty {
 							return SignalProducer(error: CarthageError.InvalidArgument(description: "Could not find any copies of \(options.frameworkName).framework. Make sure you're in the project’s root and that the framework has already been built using 'carthage build --no-skip-current'."))

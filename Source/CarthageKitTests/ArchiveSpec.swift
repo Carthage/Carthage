@@ -75,7 +75,7 @@ class ArchiveSpec: QuickSpec {
 				let enumerationResult = NSFileManager.defaultManager().carthage_enumeratorAtURL(unzipResult?.value ?? temporaryURL, includingPropertiesForKeys: [], options: nil)
 					|> map { enumerator, URL in URL }
 					|> map { $0.lastPathComponent! }
-					|> reduce([]) { $0 + [ $1 ] }
+					|> collect
 					|> single
 
 				expect(enumerationResult).notTo(beNil())

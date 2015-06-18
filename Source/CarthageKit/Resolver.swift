@@ -80,7 +80,7 @@ public struct Resolver {
 						}
 
 						return self.versionsForDependency(dependency.project)
-							|> reduce([]) { $0 + [ $1 ] }
+							|> collect
 							|> flatMap(.Merge) { nodes -> SignalProducer<PinnedVersion, CarthageError> in
 								if nodes.isEmpty {
 									return SignalProducer(error: CarthageError.TaggedVersionNotFound(dependency.project))
@@ -95,7 +95,7 @@ public struct Resolver {
 					|> startOn(scheduler)
 					|> observeOn(scheduler)
 					|> map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
-					|> reduce([]) { $0 + [ $1 ] }
+					|> collect
 					|> map(sorted)
 					|> flatMap(.Concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
 						if nodes.isEmpty {

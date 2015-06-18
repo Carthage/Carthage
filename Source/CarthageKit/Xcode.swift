@@ -645,7 +645,7 @@ private func mergeExecutables(executableURLs: [NSURL], outputURL: NSURL) -> Sign
 				return .failure(.ParseError(description: "expected file URL to built executable, got (URL)"))
 			}
 		}
-		|> reduce([]) { $0 + [ $1 ] }
+		|> collect
 		|> flatMap(.Merge) { executablePaths -> SignalProducer<TaskEvent<NSData>, CarthageError> in
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
 
