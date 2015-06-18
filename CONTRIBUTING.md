@@ -16,9 +16,9 @@ Unless you’re specifically improving something about the command-line experien
 
 ## Get started
 
-After checkout, you can run the following command, and then open the workspace in Xcode:
+After checkout, you can run the following command from the cloned directory, and then open the workspace in Xcode:
 
-    carthage bootstrap --platform mac --no-use-binaries
+    ./script/carthage bootstrap --platform mac --no-use-binaries
 
 ## Code style
 
