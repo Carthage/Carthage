@@ -16,9 +16,6 @@
 [submodule "Carthage/Checkouts/ReactiveTask"]
 	path = Carthage/Checkouts/ReactiveTask
 	url = https://github.com/Carthage/ReactiveTask.git
-[submodule "Carthage/Checkouts/Argo"]
-	path = Carthage/Checkouts/Argo
-	url = https://github.com/thoughtbot/Argo.git
 [submodule "Carthage/Checkouts/PrettyColors"]
 	path = Carthage/Checkouts/PrettyColors
 	url = https://github.com/jdhealy/PrettyColors.git
@@ -28,6 +25,6 @@
 [submodule "Carthage/Checkouts/Result"]
 	path = Carthage/Checkouts/Result
 	url = https://github.com/antitypical/Result.git
-[submodule "Carthage/Checkouts/Runes"]
-	path = Carthage/Checkouts/Runes
-	url = https://github.com/thoughtbot/Runes.git
+[submodule "Carthage/Checkouts/Himotoki"]
+	path = Carthage/Checkouts/Himotoki
+	url = https://github.com/ikesyo/Himotoki.git

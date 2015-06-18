@@ -6,11 +6,10 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
-import Argo
 import Foundation
+import Himotoki
 import Result
 import ReactiveCocoa
-import Runes
 
 /// The User-Agent to use for GitHub requests.
 private let userAgent: String = {
@@ -54,13 +53,9 @@ extension GitHubError: Printable {
 }
 
 extension GitHubError: Decodable {
-	public static func create(message: String) -> GitHubError {
-		return self(message: message)
-	}
-	
-	public static func decode(j: JSON) -> Decoded<GitHubError> {
-		return self.create
-			<^> j <| "message"
+	public static func decode(e: Extractor) -> GitHubError? {
+		let create = { GitHubError(message: $0) }
+		return build(e <| "message").map(create)
 	}
 }
 
@@ -166,16 +161,14 @@ public struct GitHubRelease: Equatable {
 			return "Asset { name = \(name), contentType = \(contentType), URL = \(URL) }"
 		}
 
-		public static func create(ID: Int)(name: String)(contentType: String)(URL: NSURL) -> Asset {
-			return self(ID: ID, name: name, contentType: contentType, URL: URL)
-		}
-
-		public static func decode(j: JSON) -> Decoded<Asset> {
-			return self.create
-				<^> j <| "id"
-				<*> j <| "name"
-				<*> j <| "content_type"
-				<*> j <| "url"
+		public static func decode(e: Extractor) -> Asset? {
+			let create = { Asset($0) }
+			return build(
+				e <| "id",
+				e <| "name",
+				e <| "content_type",
+				e <| "url"
+			).map(create)
 		}
 	}
 }
@@ -201,18 +194,16 @@ extension GitHubRelease: Printable {
 }
 
 extension GitHubRelease: Decodable {
-	public static func create(ID: Int)(name: String?)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
-		return self(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
-	}
-
-	public static func decode(j: JSON) -> Decoded<GitHubRelease> {
-		return self.create
-			<^> j <| "id"
-			<*> j <|? "name"
-			<*> j <| "tag_name"
-			<*> j <| "draft"
-			<*> j <| "prerelease"
-			<*> j <|| "assets"
+	public static func decode(e: Extractor) -> GitHubRelease? {
+		let create = { GitHubRelease($0) }
+		return build(
+			e <| "id",
+			e <|? "name",
+			e <| "tag_name",
+			e <| "draft",
+			e <| "prerelease",
+			e <|| "assets"
+		).map(create)
 	}
 }
 
