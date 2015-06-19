@@ -18,7 +18,7 @@ Unless you’re specifically improving something about the command-line experien
 
 After checkout, you can run the following command from the cloned directory, and then open the workspace in Xcode:
 
-    ./script/carthage bootstrap --platform mac --no-use-binaries
+    ./script/bootstrap
 
 ## Code style
 
