@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/carthage/carthage/master/Logo/PNG/header.png">
+![](Logo/PNG/header.png)
 
 # Carthage [![GitHub license](https://img.shields.io/github/license/carthage/carthage.svg)](https://raw.githubusercontent.com/Carthage/Carthage/master/LICENSE.md) [![GitHub release](https://img.shields.io/github/release/carthage/carthage.svg)](https://github.com/Carthage/Carthage/releases)
 
@@ -162,6 +162,8 @@ If you’re interested in using Carthage as part of another tool, or perhaps ext
 ## License
 
 Carthage is released under the [MIT License](LICENSE.md).
+
+Header backdrop photo is released under the [CC BY-NC-SA 2.0](https://creativecommons.org/licenses/by-nc-sa/2.0/) license. Original photo by [Richard Mortel](https://www.flickr.com/photos/prof_richard/).
 
 [Artifacts]: Documentation/Artifacts.md
 [Cartfile]: Documentation/Artifacts.md#cartfile
