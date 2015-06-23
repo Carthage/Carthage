@@ -207,7 +207,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
 public func xcodebuildTask(task: String, buildArguments: BuildArguments) -> TaskDescription {
-	return TaskDescription(launchPath: "/usr/bin/xcrun", arguments: buildArguments.arguments + [ task ])
+	return TaskDescription(launchPath: "/usr/bin/xcrun", arguments: buildArguments.arguments + [ task, "ONLY_ACTIVE_ARCH=NO" ])
 }
 
 /// Sends each scheme found in the given project.
