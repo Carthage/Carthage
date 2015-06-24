@@ -121,13 +121,13 @@ public struct BuildCommand: CommandType {
 					|> then(SignalProducer(value: project))
 			}
 			|> flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, simulatorOnly: options.simulatorOnly, forPlatform: options.buildPlatform.platform)
 			}
 
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform)
+			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, simulatorOnly: options.simulatorOnly, platform: options.buildPlatform.platform)
 			return buildProducer |> concat(currentProducers)
 		}
 	}
@@ -175,19 +175,33 @@ public struct BuildCommand: CommandType {
 public struct BuildOptions: OptionsType {
 	public let configuration: String
 	public let buildPlatform: BuildPlatform
+	public let simulatorOnly: Bool
 	public let skipCurrent: Bool
 	public let colorOptions: ColorOptions
 	public let verbose: Bool
 	public let directoryPath: String
 
-	public static func create(configuration: String)(buildPlatform: BuildPlatform)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
-		return self(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+	public static func create(configuration: String)(buildPlatform: BuildPlatform)(buildSimulatorOnly: Bool)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
+		let platform: BuildPlatform
+		switch (buildPlatform) {
+		case let .iOS(simOnly):
+			platform = .iOS(simOnly ?? buildSimulatorOnly)
+			
+		case let .watchOS(simOnly):
+			platform = .watchOS(simOnly ?? buildSimulatorOnly)
+
+		default:
+			platform = buildPlatform
+		}
+		
+		return self(configuration: configuration, buildPlatform: platform, simulatorOnly: buildSimulatorOnly, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platform to build for (one of ‘all’, ‘Mac’, or ‘iOS’)")
+			<*> m <| Option(key: "simulator-only", defaultValue: false, usage: "skip building an iOS target for a device (ignored if --no-build option is present or when building Mac targets)")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
@@ -196,18 +210,18 @@ public struct BuildOptions: OptionsType {
 }
 
 /// Represents the user’s chosen platform to build for.
-public enum BuildPlatform {
+public enum BuildPlatform : Equatable {
 	/// Build for all available platforms.
 	case All
 
-	/// Build only for iOS.
-	case iOS
+	/// Build only for iOS. Use true in the associated value to specify simulator-only
+	case iOS(Bool?)
 
 	/// Build only for OS X.
 	case Mac
 
-	/// Build only for watchOS.
-	case watchOS
+	/// Build only for watchOS. Use true in the associated value to specify simulator-only
+	case watchOS(Bool?)
 
 	/// The `Platform` corresponding to this setting.
 	public var platform: Platform? {
@@ -215,15 +229,34 @@ public enum BuildPlatform {
 		case .All:
 			return nil
 
-		case .iOS:
-			return .iOS
+		case let .iOS(simulatorOnly):
+			return .iOS(simulatorOnly ?? false)
 
 		case .Mac:
 			return .Mac
 
-		case .watchOS:
-			return .watchOS
+		case let .watchOS(simulatorOnly):
+			return .watchOS(simulatorOnly ?? false)
 		}
+	}
+}
+
+public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
+	switch (lhs, rhs) {
+	case (.All, .All):
+		return true
+		
+	case (.Mac, .Mac):
+		return true
+		
+	case (.iOS(let a), .iOS(let b)):
+		return a == b
+		
+	case (.watchOS(let a), .watchOS(let b)):
+		return a == b
+		
+	default:
+		return false
 	}
 }
 
@@ -233,14 +266,16 @@ extension BuildPlatform: Printable {
 		case .All:
 			return "all"
 
-		case .iOS:
-			return "iOS"
-
+		case let .iOS(simulatorOnly):
+			let detail = (simulatorOnly ?? false) ? "simulator-only" : "device+simulator"
+			return "iOS (\(detail))"
+			
 		case .Mac:
 			return "Mac"
 
-		case .watchOS:
-			return "watchOS"
+		case let .watchOS(simulatorOnly):
+			let detail = (simulatorOnly ?? false) ? "simulator-only" : "device+simulator"
+			return "watchOS (\(detail))"
 		}
 	}
 }
@@ -250,8 +285,8 @@ extension BuildPlatform: ArgumentType {
 
 	private static let acceptedStrings: [String: BuildPlatform] = [
 		"Mac": .Mac, "macosx": .Mac,
-		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
-		"watchOS": .watchOS, "watchsimulator": .watchOS,
+		"iOS": .iOS(false), "iphoneos": .iOS(false), "iphonesimulator": .iOS(true),
+		"watchOS": .watchOS(false), "watchsimulator": .watchOS(true),
 		"all": .All
 	]
 

@@ -251,18 +251,18 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 }
 
 /// Represents a platform to build for.
-public enum Platform {
+public enum Platform: Equatable {
 	/// Mac OS X.
 	case Mac
 
-	/// iOS for device and simulator.
-	case iOS
+	/// iOS for device and simulator. Use true in the associated value to specify simulator-only
+	case iOS(Bool)
 
-	/// Apple Watch device and simulator.
-	case watchOS
+	/// Apple Watch device and simulator. Use true in the associated value to specify simulator-only
+	case watchOS(Bool)
 
 	/// All supported build platforms.
-	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS ]
+	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS(false), .watchOS(false) ]
 
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
@@ -289,12 +289,28 @@ public enum Platform {
 		case .Mac:
 			return [ .MacOSX ]
 
-		case .iOS:
-			return [ .iPhoneSimulator, .iPhoneOS ]
+		case let .iOS(simulatorOnly):
+			return filter([ .iPhoneSimulator, .iPhoneOS ]) { !simulatorOnly || $0 == .iPhoneSimulator }
 
-		case .watchOS:
-			return [ .watchOS, .watchSimulator ]
+		case let .watchOS(simulatorOnly):
+			return filter([ .watchOS, .watchSimulator ]) { !simulatorOnly || $0 == .watchSimulator }
 		}
+	}
+}
+
+public func ==(lhs: Platform, rhs: Platform) -> Bool {
+	switch (lhs, rhs) {
+	case (.Mac, .Mac):
+		return true
+		
+	case (.iOS, .iOS):
+		return true
+		
+	case (.watchOS, .watchOS):
+		return true
+		
+	default:
+		return false
 	}
 }
 
@@ -304,11 +320,13 @@ extension Platform: Printable {
 		case .Mac:
 			return "Mac"
 
-		case .iOS:
-			return "iOS"
+		case let .iOS(simulatorOnly):
+			let detail = simulatorOnly ? "simulator-only" : "device+simulator"
+			return "iOS (\(detail))"
 
-		case .watchOS:
-			return "watchOS"
+		case let .watchOS(simulatorOnly):
+			let detail = simulatorOnly ? "simulator-only" : "device+simulator"
+			return "watchOS (\(detail))"
 		}
 	}
 }
@@ -339,10 +357,10 @@ public enum SDK: String {
 	public var platform: Platform {
 		switch self {
 		case .iPhoneOS, .iPhoneSimulator:
-			return .iOS
+			return .iOS(false)
 
 		case .watchOS, .watchSimulator:
-			return .watchOS
+			return .watchOS(false)
 
 		case .MacOSX:
 			return .Mac
@@ -749,7 +767,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, #simulatorOnly: Bool) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
@@ -779,18 +797,22 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		|> map { $0.platform }
 		|> flatMap(.Concat) { (platform: Platform) in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
-
+			
+			var sdks = filter(platform.SDKs) { sdk in
+				return !simulatorOnly || !contains([.iPhoneOS, .watchOS], sdk)
+			}
+			
 			// TODO: Generalize this further?
-			switch platform.SDKs.count {
+			switch sdks.count {
 			case 1:
-				return buildSDK(platform.SDKs[0])
+				return buildSDK(sdks[0])
 					|> flatMapTaskEvents(.Merge) { settings in
 						return copyBuildProductIntoDirectory(folderURL, settings)
 					}
 
 			case 2:
-				let firstSDK = platform.SDKs[0]
-				let secondSDK = platform.SDKs[1]
+				let firstSDK = sdks[0]
+				let secondSDK = sdks[1]
 
 				return settingsByTarget(buildSDK(firstSDK))
 					|> flatMap(.Concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
@@ -828,7 +850,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					}
 
 			default:
-				fatalError("SDK count \(platform.SDKs.count) for platform \(platform) is not supported")
+				fatalError("SDK count \(sdks.count) for platform \(platform) is not supported")
 			}
 		}
 }
@@ -843,12 +865,12 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, #simulatorOnly: Bool, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
-	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platform: platform)
+	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, simulatorOnly: simulatorOnly, platform: platform)
 	return SignalProducer.try { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			var error: NSError?
 			if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -917,7 +939,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, #simulatorOnly: Bool, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
 	let locatorProducer = locateProjectsInDirectory(directoryURL)
@@ -945,7 +967,22 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				|> flatMap(.Merge) { _ in
 					let initialValue = (project, scheme)
 
-					let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+					let simOnly: Bool
+					
+					if let platform = platform {
+						switch platform {
+						case .iOS(true):
+							simOnly = true
+						case .watchOS(true):
+							simOnly = true
+						default:
+							simOnly = false
+						}
+					} else {
+						simOnly = simulatorOnly
+					}
+					
+					let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, simulatorOnly: simOnly)
 						// Discard any existing Success values, since we want to
 						// use our initial value instead of waiting for
 						// completion.
