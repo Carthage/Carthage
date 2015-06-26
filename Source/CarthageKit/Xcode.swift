@@ -177,48 +177,14 @@ private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bo
 	return lhs.locator < rhs.locator
 }
 
-/// Represents a shared scheme defined in a project or workspace
-public struct SharedScheme {
-	/// The scheme to build in the project.
-	public let schemeName: String
-
-	/// The project in which the scheme is defined.
-	public let project: ProjectLocator
-
-	/// The `xcscheme` file path of its scheme.
-	public var schemePath: String? {
-		return project.fileURL.URLByAppendingPathComponent("xcshareddata/xcschemes/\(schemeName).xcscheme").path
-	}
-
-	/// Determines whether the scheme should be built automatically.
-	private func shouldBeBuilt(#configuration: String, forPlatform: Platform?) -> SignalProducer<Bool, CarthageError> {
-		let buildArguments = BuildArguments(project: project, scheme: schemeName, configuration: configuration)
-		return BuildSettings.loadWithArguments(buildArguments)
-			|> flatMap(.Concat) { settings -> SignalProducer<ProductType, CarthageError> in
-				let productType = SignalProducer(result: settings.productType)
-
-				if let forPlatform = forPlatform {
-					return SignalProducer(result: settings.buildSDK)
-						|> map { $0.platform }
-						|> filter { $0 == forPlatform }
-						|> flatMap(.Merge) { _ in productType }
-						|> catch { _ in .empty }
-				} else {
-					return productType
-						|> catch { _ in .empty }
-				}
-			}
-			|> filter(shouldBuildProductType)
-			// If we find any framework target, we should indeed build this scheme.
-			|> map { _ in true }
-			// Otherwise, nope.
-			|> concat(SignalProducer(value: false))
-			|> take(1)
-	}
+/// A shared scheme defined in a project or workspace
+private struct SharedScheme {
+	let schemeName: String
+	let project: ProjectLocator
 }
 
 extension SharedScheme: Printable {
-	public var description: String {
+	private var description: String {
 		return "\"\(schemeName)\" in \(project)"
 	}
 }
@@ -257,7 +223,7 @@ public func xcodebuildTask(task: String, buildArguments: BuildArguments) -> Task
 }
 
 /// Sends each scheme found in the given project.
-public func schemesInProject(project: ProjectLocator) -> SignalProducer<SharedScheme, CarthageError> {
+public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, CarthageError> {
 	let task = xcodebuildTask("-list", BuildArguments(project: project))
 
 	return launchTask(task)
@@ -287,11 +253,9 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<SharedSc
 		// indefinitely on projects that don't share any schemes, so
 		// automatically bail out if it looks like that's happening.
 		|> timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 8, onScheduler: QueueScheduler())
-		|> map { (line: String) -> SharedScheme in
-			return SharedScheme(schemeName: line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()), project: project)
-		}
-		|> filter { scheme in
-			if let schemePath = scheme.schemePath {
+		|> map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
+		|> filter { (line: String) -> Bool in
+			if let schemePath = project.fileURL.URLByAppendingPathComponent("xcshareddata/xcschemes/\(line).xcscheme").path {
 				return NSFileManager.defaultManager().fileExistsAtPath(schemePath)
 			}
 			return false
@@ -730,6 +694,33 @@ private func shouldBuildProductType(productType: ProductType) -> Bool {
 	return productType == .Framework
 }
 
+/// Determines whether the given scheme should be built automatically.
+private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Platform?) -> SignalProducer<Bool, CarthageError> {
+	precondition(buildArguments.scheme != nil)
+
+	return BuildSettings.loadWithArguments(buildArguments)
+		|> flatMap(.Concat) { settings -> SignalProducer<ProductType, CarthageError> in
+			let productType = SignalProducer(result: settings.productType)
+
+			if let forPlatform = forPlatform {
+				return SignalProducer(result: settings.buildSDK)
+					|> map { $0.platform }
+					|> filter { $0 == forPlatform }
+					|> flatMap(.Merge) { _ in productType }
+					|> catch { _ in .empty }
+			} else {
+				return productType
+					|> catch { _ in .empty }
+			}
+		}
+		|> filter(shouldBuildProductType)
+		// If we find any framework target, we should indeed build this scheme.
+		|> map { _ in true }
+		// Otherwise, nope.
+		|> concat(SignalProducer(value: false))
+		|> take(1)
+}
+
 /// Aggregates all of the build settings sent on the given signal, associating
 /// each with the name of its target.
 ///
@@ -995,9 +986,11 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 		|> flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<[SharedScheme], CarthageError> in
 			return schemesInProject(project)
 				|> flatMap(.Merge) { scheme -> SignalProducer<SharedScheme, CarthageError> in
-					return scheme.shouldBeBuilt(configuration: configuration, forPlatform: platform)
+					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+
+					return shouldBuildScheme(buildArguments, platform)
 						|> filter { $0 }
-						|> map { _ in scheme }
+						|> map { _ in SharedScheme(schemeName: scheme, project: project) }
 				}
 				|> collect
 				|> flatMap(.Concat) { schemes in
