@@ -279,6 +279,45 @@ public final class Project {
 			|> collect
 			|> map { ResolvedCartfile(dependencies: $0) }
 	}
+	
+	/// Attempts to determine which of the project's Carthage
+	/// dependencies are out of date.
+	///
+	/// This will fetch dependency repositories as necessary, but will not check
+	/// them out into the project's working directory.
+	public func outdatedDependencies(includeTransientDependencies: Bool) -> SignalProducer<[Dependency<OutdatedVersion>], CarthageError> {
+		let currentDependenciesProducer = loadResolvedCartfile()
+			|> map { $0.dependencies }
+		let updatedDependenciesProducer = updatedResolvedCartfile()
+			|> map { $0.dependencies }
+		let outdatedDependenciesProducer = combineLatest(currentDependenciesProducer, updatedDependenciesProducer)
+			|> map { (currentDependencies, updatedDependencies) -> [Dependency<OutdatedVersion>] in
+				var outdatedDependencies: [Dependency<OutdatedVersion>] = []
+
+				for updatedDependency in updatedDependencies {
+					if let resolvedDependency = currentDependencies.filter({ $0.project == updatedDependency.project }).first where resolvedDependency.version != updatedDependency.version {
+						let version = OutdatedVersion(currentVersion: resolvedDependency.version, proposedVersion: updatedDependency.version)
+						let outdatedDependency = Dependency(project: updatedDependency.project, version: version)
+						outdatedDependencies.append(outdatedDependency)
+					}
+				}
+
+				return outdatedDependencies
+			}
+
+		if !includeTransientDependencies {
+			let explicitDependencyIdentifiersProducer = loadCombinedCartfile()
+				|> map { $0.dependencies.map { $0.project } }
+
+			return outdatedDependenciesProducer
+				|> combineLatestWith(explicitDependencyIdentifiersProducer)
+				|> map { (oudatedDependencies: [Dependency<OutdatedVersion>], explicitDependencyIdentifiers: [ProjectIdentifier]) -> [Dependency<OutdatedVersion>] in
+					return oudatedDependencies.filter{ contains(explicitDependencyIdentifiers, $0.project) }
+				}
+		}
+
+		return outdatedDependenciesProducer
+	}
 
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in the working directory checkouts and

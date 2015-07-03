@@ -163,6 +163,39 @@ extension PinnedVersion: Printable {
 	}
 }
 
+/// A compound version constiting of a project's current version,
+/// and a proposed version to update to.
+public struct OutdatedVersion: Equatable {
+	/// The current checked out version.
+	public let currentVersion: PinnedVersion
+
+	/// The proposed update version.
+	public let proposedVersion: PinnedVersion
+
+	public init(currentVersion: PinnedVersion, proposedVersion: PinnedVersion) {
+		self.currentVersion = currentVersion
+		self.proposedVersion = proposedVersion
+	}
+}
+
+public func ==(lhs: OutdatedVersion, rhs: OutdatedVersion) -> Bool {
+	return lhs.currentVersion == rhs.currentVersion && lhs.proposedVersion == rhs.proposedVersion
+}
+
+extension OutdatedVersion: Scannable {
+	public static func fromScanner(scanner: NSScanner) -> Result<OutdatedVersion, CarthageError> {
+		return .failure(CarthageError.ParseError(description: "OutdatedVersion is not Scannable"))
+	}
+}
+
+extension OutdatedVersion: VersionType {}
+
+extension OutdatedVersion: Printable {
+	public var description: String {
+		return "\(currentVersion) -> \(proposedVersion)"
+	}
+}
+
 /// Describes which versions are acceptable for satisfying a dependency
 /// requirement.
 public enum VersionSpecifier: Equatable {

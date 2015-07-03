@@ -19,6 +19,7 @@ registry.register(BuildCommand())
 registry.register(CheckoutCommand())
 registry.register(CopyFrameworksCommand())
 registry.register(FetchCommand())
+registry.register(OutdatedCommand())
 registry.register(UpdateCommand())
 registry.register(VersionCommand())
 
