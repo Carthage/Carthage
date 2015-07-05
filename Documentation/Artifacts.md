@@ -56,6 +56,9 @@ github "jspahrsummers/libextobjc" == 0.4.1
 # Use the latest version
 github "jspahrsummers/xcconfigs"
 
+# Use the branch
+github "jspahrsummers/xcconfigs" "branch"
+
 # Use a project from GitHub Enterprise, or any arbitrary server, on the "development" branch
 git "https://enterprise.local/desktop/git-error-translations.git" "development"
 
