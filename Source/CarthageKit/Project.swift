@@ -283,18 +283,18 @@ public final class Project {
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in the working directory checkouts and
 	/// Cartfile.resolved.
-	public func updateDependencies() -> SignalProducer<(), CarthageError> {
+	public func updateDependencies(githubAccessToken: String? = Optional.None) -> SignalProducer<(), CarthageError> {
 		return updatedResolvedCartfile()
 			|> tryMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}
-			|> then(checkoutResolvedDependencies())
+			|> then(checkoutResolvedDependencies(githubAccessToken))
 	}
 
 	/// Installs binaries for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> SignalProducer<Bool, CarthageError> {
+	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String, usingGithubAccessToken githubAccessToken: String? = Optional.None) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer.try {
 				return .success(self.useBinaries)
 			}
@@ -307,7 +307,7 @@ public final class Project {
 
 				switch project {
 				case let .GitHub(repository):
-					return GitHubCredentials.loadFromGit()
+					return self.loadGithubCredentials(githubAccessToken)
 						|> flatMap(.Concat) { credentials in
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials)
 								|> catch { error in
@@ -341,6 +341,17 @@ public final class Project {
 					return SignalProducer(value: false)
 				}
 			}
+	}
+	
+	/// Creates a GithuCredential instance. If an access token
+	/// is not provided it tries to load the credentials from
+	/// the git repository.
+	private func loadGithubCredentials(accessToken: String?) -> SignalProducer<GitHubCredentials?, CarthageError> {
+		if let accessToken = accessToken {
+			return SignalProducer(value: AccessTokenGithubCredentials(accessToken: accessToken))
+		} else {
+			return BasicGitHubCredentials.loadFromGit()
+		}
 	}
 
 	/// Downloads any binaries that may be able to be used instead of a
@@ -430,7 +441,7 @@ public final class Project {
 	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved.
-	public func checkoutResolvedDependencies() -> SignalProducer<(), CarthageError> {
+	public func checkoutResolvedDependencies(githubAccessToken: String?) -> SignalProducer<(), CarthageError> {
 		/// Determine whether the repository currently holds any submodules (if
 		/// it even is a repository).
 		let submodulesSignal = submodulesInRepository(self.directoryURL)
@@ -447,7 +458,7 @@ public final class Project {
 						let project = dependency.project
 						let revision = dependency.version.commitish
 
-						return self.installBinariesForProject(project, atRevision: revision)
+						return self.installBinariesForProject(project, atRevision: revision, usingGithubAccessToken: githubAccessToken)
 							|> flatMap(.Merge) { installed in
 								if installed {
 									return .empty

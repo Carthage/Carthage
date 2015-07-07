@@ -216,8 +216,24 @@ extension GitHubRelease: Decodable {
 	}
 }
 
+internal protocol GitHubCredentials {
+	
+	var authorizationHeaderValue: String { get }
+	
+}
+
+internal struct AccessTokenGithubCredentials: GitHubCredentials {
+	
+	let accessToken: String
+	
+	var authorizationHeaderValue: String {
+		return "token \(accessToken)"
+	}
+	
+}
+
 /// Represents credentials suitable for logging in to GitHub.com.
-internal struct GitHubCredentials {
+internal struct BasicGitHubCredentials: GitHubCredentials {
 	let username: String
 	let password: String
 
