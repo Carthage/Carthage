@@ -866,6 +866,25 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				fatalError("SDK count \(platform.SDKs.count) for platform \(platform) is not supported")
 			}
 		}
+		|> flatMapTaskEvents(.Concat) { builtProductURL in
+			return createDebugInformation(builtProductURL)
+				|> then(SignalProducer(value: builtProductURL))
+		}
+}
+
+public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+	let dSYMURL = builtProductURL.URLByAppendingPathExtension("dSYM")
+
+	if let builtProduct = builtProductURL.path, dSYM = dSYMURL.path {
+		let executable = builtProduct.stringByAppendingPathComponent(builtProduct.lastPathComponent.stringByDeletingPathExtension)
+		let dsymutilTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
+
+		return launchTask(dsymutilTask)
+			|> mapError { .TaskError($0) }
+			|> flatMapTaskEvents(.Concat) { _ in SignalProducer(value: dSYMURL) }
+	} else {
+		return .empty
+	}
 }
 
 /// A producer representing a scheme to be built.
