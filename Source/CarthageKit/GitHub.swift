@@ -216,15 +216,17 @@ extension GitHubRelease: Decodable {
 	}
 }
 
+public typealias GitHubAccessToken = String
+
 internal protocol GitHubCredentials {
 	
 	var authorizationHeaderValue: String { get }
 	
 }
 
-internal struct AccessTokenGithubCredentials: GitHubCredentials {
+internal struct AccessTokenGitHubCredentials: GitHubCredentials {
 	
-	let accessToken: String
+	let accessToken: GitHubAccessToken
 	
 	var authorizationHeaderValue: String {
 		return "token \(accessToken)"
@@ -279,6 +281,14 @@ internal struct BasicGitHubCredentials: GitHubCredentials {
 			|> catch { error in
 				return SignalProducer(value: nil)
 			}
+	}
+}
+
+internal func loadGitHubCredentials(accessToken: GitHubAccessToken?) -> SignalProducer<GitHubCredentials?, CarthageError> {
+	if let accessToken = accessToken {
+		return SignalProducer(value: AccessTokenGitHubCredentials(accessToken: accessToken))
+	} else {
+		return BasicGitHubCredentials.loadFromGit()
 	}
 }
 
