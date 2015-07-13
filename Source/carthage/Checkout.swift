@@ -64,7 +64,6 @@ public struct CheckoutOptions: OptionsType {
 			project.preferHTTPS = !self.useSSH
 			project.useSubmodules = self.useSubmodules
 			project.useBinaries = self.useBinaries
-			project.accessToken = getEnvironmentVariable("GITHUB_ACCESS_TOKEN").value
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
 			project.projectEvents.observe(next: { eventSink.put($0) })

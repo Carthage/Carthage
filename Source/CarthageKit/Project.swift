@@ -104,8 +104,6 @@ public final class Project {
 	/// Whether to download binaries for dependencies, or just check out their
 	/// repositories.
 	public var useBinaries = false
-
-	public var accessToken: GitHubAccessToken? = .None
 	
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
@@ -309,7 +307,7 @@ public final class Project {
 
 				switch project {
 				case let .GitHub(repository):
-					return loadGitHubCredentials(self.accessToken)
+					return loadGitHubCredentials()
 						|> flatMap(.Concat) { credentials in
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials)
 								|> catch { error in

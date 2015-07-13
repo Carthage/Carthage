@@ -284,8 +284,9 @@ internal struct BasicGitHubCredentials: GitHubCredentials {
 	}
 }
 
-internal func loadGitHubCredentials(accessToken: GitHubAccessToken?) -> SignalProducer<GitHubCredentials?, CarthageError> {
-	if let accessToken = accessToken {
+internal func loadGitHubCredentials() -> SignalProducer<GitHubCredentials?, CarthageError> {
+	let environment = NSProcessInfo.processInfo().environment
+	if let accessToken = environment["GITHUB_ACCESS_TOKEN"] as? String {
 		return SignalProducer(value: AccessTokenGitHubCredentials(accessToken: accessToken))
 	} else {
 		return BasicGitHubCredentials.loadFromGit()
