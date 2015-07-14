@@ -240,10 +240,8 @@ private func loadCredentialsFromGit() -> SignalProducer<BasicGitHubCredentials?,
 			return values
 		}
 		|> map { (values: [String: String]) -> BasicGitHubCredentials? in
-			if let username = values["username"] {
-				if let password = values["password"] {
-					return (username, password)
-				}
+			if let username = values["username"], password = values["password"] {
+				return (username, password)
 			}
 			
 			return nil
