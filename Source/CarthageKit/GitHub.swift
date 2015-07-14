@@ -11,7 +11,6 @@ import Foundation
 import Result
 import ReactiveCocoa
 import Runes
-import Box
 
 /// The User-Agent to use for GitHub requests.
 private let userAgent: String = {
