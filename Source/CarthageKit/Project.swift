@@ -314,7 +314,7 @@ public final class Project {
 									if authorizationHeaderValue == nil {
 										return SignalProducer(error: error)
 									}
-									return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository)
+									return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withAuthorizationHeaderValue: nil)
 								}
 						}
 						|> flatMap(.Concat, unzipArchiveToTemporaryDirectory)
@@ -348,7 +348,7 @@ public final class Project {
 	///
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
-	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withAuthorizationHeaderValue authorizationHeaderValue: String? = .None) -> SignalProducer<NSURL, CarthageError> {
+	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withAuthorizationHeaderValue authorizationHeaderValue: String?) -> SignalProducer<NSURL, CarthageError> {
 		return releaseForTag(revision, repository, authorizationHeaderValue)
 			|> filter(binaryFrameworksCanBeProvidedByRelease)
 			|> on(next: { release in
