@@ -11,6 +11,7 @@ import Foundation
 import Result
 import ReactiveCocoa
 import Runes
+import Box
 
 /// The User-Agent to use for GitHub requests.
 private let userAgent: String = {
@@ -216,92 +217,68 @@ extension GitHubRelease: Decodable {
 	}
 }
 
-public typealias GitHubAccessToken = String
+private typealias BasicGitHubCredentials = (String, String)
 
-internal protocol GitHubCredentials {
+private func loadCredentialsFromGit() -> SignalProducer<BasicGitHubCredentials?, CarthageError> {
+	let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
 	
-	var authorizationHeaderValue: String { get }
+	var environment = NSProcessInfo.processInfo().environment as! [String: String]
+	environment["GIT_TERMINAL_PROMPT"] = "0"
 	
-}
-
-internal struct AccessTokenGitHubCredentials: GitHubCredentials {
-	
-	let accessToken: GitHubAccessToken
-	
-	var authorizationHeaderValue: String {
-		return "token \(accessToken)"
-	}
-	
-}
-
-/// Represents credentials suitable for logging in to GitHub.com.
-internal struct BasicGitHubCredentials: GitHubCredentials {
-	let username: String
-	let password: String
-
-	/// Returns the credentials encoded into a value suitable for the
-	/// `Authorization` HTTP header.
-	var authorizationHeaderValue: String {
-		let data = "\(username):\(password)".dataUsingEncoding(NSUTF8StringEncoding)!
-		let encodedString = data.base64EncodedStringWithOptions(nil)
-		return "Basic \(encodedString)"
-	}
-
-	/// Attempts to load credentials from the Git credential store.
-	static func loadFromGit() -> SignalProducer<GitHubCredentials?, CarthageError> {
-		let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
-		
-		var environment = NSProcessInfo.processInfo().environment as! [String: String]
-		environment["GIT_TERMINAL_PROMPT"] = "0"
-		
-		return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data), environment: environment)
-			|> flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
-				return string.linesProducer |> promoteErrors(CarthageError.self)
+	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data), environment: environment)
+		|> flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
+			return string.linesProducer |> promoteErrors(CarthageError.self)
+		}
+		|> reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
+			let parts = split(line, maxSplit: 1, allowEmptySlices: false) { $0 == "=" }
+			if parts.count >= 2 {
+				let key = parts[0]
+				let value = parts[1]
+				
+				values[key] = value
 			}
-			|> reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
-				let parts = split(line, maxSplit: 1, allowEmptySlices: false) { $0 == "=" }
-				if parts.count >= 2 {
-					let key = parts[0]
-					let value = parts[1]
-
-					values[key] = value
+			
+			return values
+		}
+		|> map { (values: [String: String]) -> BasicGitHubCredentials? in
+			if let username = values["username"] {
+				if let password = values["password"] {
+					return (username, password)
 				}
-
-				return values
 			}
-			|> map { (values: [String: String]) -> GitHubCredentials? in
-				if let username = values["username"] {
-					if let password = values["password"] {
-						return self(username: username, password: password)
-					}
-				}
-
-				return nil
-			}
-			|> catch { error in
-				return SignalProducer(value: nil)
-			}
+			
+			return nil
+		}
+		|> catch { error in
+			return SignalProducer(value: nil)
 	}
 }
 
-internal func loadGitHubCredentials() -> SignalProducer<GitHubCredentials?, CarthageError> {
+
+internal func loadGitHubAuthorization() -> SignalProducer<String?, CarthageError> {
 	let environment = NSProcessInfo.processInfo().environment
 	if let accessToken = environment["GITHUB_ACCESS_TOKEN"] as? String {
-		return SignalProducer(value: AccessTokenGitHubCredentials(accessToken: accessToken))
+		return SignalProducer(value: "token \(accessToken)")
 	} else {
-		return BasicGitHubCredentials.loadFromGit()
+		return loadCredentialsFromGit() |> map { maybeCredentials in
+			maybeCredentials.map { (username, password) in
+				let data = "\(username):\(password)".dataUsingEncoding(NSUTF8StringEncoding)!
+				let encodedString = data.base64EncodedStringWithOptions(nil)
+				return "Basic \(encodedString)"
+			}
+		}
 	}
 }
 
 /// Creates a request to fetch the given GitHub URL, optionally authenticating
 /// with the given credentials and content type.
-internal func createGitHubRequest(URL: NSURL, credentials: GitHubCredentials?, contentType: String = APIContentType) -> NSURLRequest {
+internal func createGitHubRequest(URL: NSURL, authorizationHeaderValue: String?, contentType: String = APIContentType) -> NSURLRequest {
 	let request = NSMutableURLRequest(URL: URL)
 	request.setValue(contentType, forHTTPHeaderField: "Accept")
 	request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
 
-	if let credentials = credentials {
-		request.setValue(credentials.authorizationHeaderValue, forHTTPHeaderField: "Authorization")
+	if let authorizationHeaderValue = authorizationHeaderValue {
+		request.setValue(authorizationHeaderValue, forHTTPHeaderField: "Authorization")
 	}
 
 	return request
@@ -335,8 +312,8 @@ private func parseLinkHeader(linkValue: String) -> [(NSURL, [String])] {
 /// Fetches the given GitHub URL, automatically paginating to the end.
 ///
 /// Returns a signal that will send one `NSData` for each page fetched.
-private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> SignalProducer<NSData, CarthageError> {
-	let request = createGitHubRequest(URL, credentials)
+private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> SignalProducer<NSData, CarthageError> {
+	let request = createGitHubRequest(URL, authorizationHeaderValue)
 
 	return NSURLSession.sharedSession().rac_dataWithRequest(request)
 		|> mapError { .NetworkError($0) }
@@ -374,7 +351,7 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> Signa
 					for (URL, parameters) in links {
 						if contains(parameters, "rel=\"next\"") {
 							// Automatically fetch the next page too.
-							return thisData |> concat(fetchAllPages(URL, credentials))
+							return thisData |> concat(fetchAllPages(URL, authorizationHeaderValue))
 						}
 					}
 				}
@@ -387,8 +364,8 @@ private func fetchAllPages(URL: NSURL, credentials: GitHubCredentials?) -> Signa
 /// Fetches the release corresponding to the given tag on the given repository,
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
-internal func releaseForTag(tag: String, repository: GitHubRepository, credentials: GitHubCredentials?) -> SignalProducer<GitHubRelease, CarthageError> {
-	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, credentials)
+internal func releaseForTag(tag: String, repository: GitHubRepository, authorizationHeaderValue: String?) -> SignalProducer<GitHubRelease, CarthageError> {
+	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
 		|> tryMap { data -> Result<AnyObject, CarthageError> in
 			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
 				return .success(object)
@@ -412,8 +389,8 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, credentia
 ///
 /// The downloaded file will be deleted after the URL has been sent upon the
 /// signal.
-internal func downloadAsset(asset: GitHubRelease.Asset, credentials: GitHubCredentials?) -> SignalProducer<NSURL, CarthageError> {
-	let request = createGitHubRequest(asset.URL, credentials, contentType: APIAssetDownloadContentType)
+internal func downloadAsset(asset: GitHubRelease.Asset, authorizationHeaderValue: String?) -> SignalProducer<NSURL, CarthageError> {
+	let request = createGitHubRequest(asset.URL, authorizationHeaderValue, contentType: APIAssetDownloadContentType)
 
 	return NSURLSession.sharedSession().carthage_downloadWithRequest(request)
 		|> mapError { .NetworkError($0) }
