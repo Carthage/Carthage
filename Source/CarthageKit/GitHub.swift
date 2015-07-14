@@ -248,7 +248,7 @@ private func loadCredentialsFromGit() -> SignalProducer<BasicGitHubCredentials?,
 		}
 		|> catch { error in
 			return SignalProducer(value: nil)
-	}
+		}
 }
 
 
