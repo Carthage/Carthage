@@ -964,7 +964,8 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		}
 }
 
-/// Builds the first project or workspace found within the given directory.
+/// Builds the first project or workspace found within the given directory which
+/// has at least one shared framework scheme.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
