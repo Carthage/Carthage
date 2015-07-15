@@ -460,12 +460,33 @@ public final class Project {
 			|> then(.empty)
 	}
 
+	/// Attempts to build the Carthage dependency with the given name.
+	///
+	/// Returns a producer-of-producers representing the scheme being built.
+	public func buildDependencyWithName(dependencyName: String, withConfiguration configuration: String, forPlatform platform: Platform?) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+		return buildDependencies(
+			loadResolvedCartfile()
+				|> flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
+				|> filter { dependency in dependency.project.name == dependencyName },
+			withConfiguration: configuration,
+			forPlatform: platform
+		)
+	}
+
 	/// Attempts to build each Carthage dependency that has been checked out.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
 	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatform platform: Platform?) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-		return loadResolvedCartfile()
-			|> flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
+		return buildDependencies(
+			loadResolvedCartfile()
+				|> flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) },
+			withConfiguration: configuration,
+			forPlatform: platform
+		)
+	}
+
+	private func buildDependencies(dependencies: SignalProducer<Dependency<PinnedVersion>, CarthageError>, withConfiguration configuration: String, forPlatform platform: Platform?) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+		return dependencies
 			|> flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
 				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
@@ -473,7 +494,7 @@ public final class Project {
 				}
 
 				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platform: platform)
-			}
+		}
 	}
 }
 
