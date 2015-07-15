@@ -494,7 +494,8 @@ public struct BuildSettings {
 	public static func SDKForScheme(scheme: String, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
 		return loadWithArguments(BuildArguments(project: project, scheme: scheme))
 			|> take(1)
-			|> tryMap { $0.buildSDK }
+			|> map { $0.buildSDK }
+			|> flatten(.Merge)
 	}
 
 	/// Returns the value for the given build setting, or an error if it could
@@ -508,8 +509,21 @@ public struct BuildSettings {
 	}
 
 	/// Attempts to determine the SDK this scheme builds for.
-	public var buildSDK: Result<SDK, CarthageError> {
+	public var firstBuildSDK: Result<SDK, CarthageError> {
 		return self["PLATFORM_NAME"].flatMap(SDK.fromString)
+	}
+
+	public var buildSDK: SignalProducer<SDK, CarthageError> {
+		let supportedPlatforms = self["SUPPORTED_PLATFORMS"]
+
+		if let supportedPlatforms = supportedPlatforms.value {
+			let platforms = split(supportedPlatforms) { $0 == " " }
+			return SignalProducer<String, CarthageError>(values: platforms)
+				|> map { platform in SignalProducer(result: SDK.fromString(platform)) }
+				|> flatten(.Merge)
+		}
+
+		return SignalProducer(result: firstBuildSDK)
 	}
 
 	/// Attempts to determine the ProductType specified in these build settings.
@@ -652,7 +666,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Plat
 			let productType = SignalProducer(result: settings.productType)
 
 			if let forPlatform = forPlatform {
-				return SignalProducer(result: settings.buildSDK)
+				return SignalProducer(result: settings.firstBuildSDK)
 					|> filter { $0.platform == forPlatform }
 					|> flatMap(.Merge) { _ in productType }
 					|> catch { _ in .empty }
