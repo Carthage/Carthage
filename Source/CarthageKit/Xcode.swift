@@ -653,8 +653,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Plat
 
 			if let forPlatform = forPlatform {
 				return SignalProducer(result: settings.buildSDK)
-					|> map { $0.platform }
-					|> filter { $0 == forPlatform }
+					|> filter { $0.platform == forPlatform }
 					|> flatMap(.Merge) { _ in productType }
 					|> catch { _ in .empty }
 			} else {
