@@ -18,7 +18,22 @@ Unless you’re specifically improving something about the command-line experien
 
 After checkout, you can run the following command from the cloned directory, and then open the workspace in Xcode:
 
-    ./script/bootstrap
+```bash
+./script/bootstrap
+```
+
+Then, to install your development copy of Carthage (and any local changes you've made) on your system, and test with your own repos:
+
+```bash
+make install
+```
+
+If you want to go back to the mainline Brew build, just uninstall the dev copy first:
+
+```bash
+sudo make uninstall
+brew install carthage
+```
 
 ## Code style
 
