@@ -985,13 +985,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 						|> map { _ in SchemeInProject(scheme: scheme, project: project) }
 				}
 				|> collect
-				|> flatMap(.Concat) { schemes in
-					if schemes.isEmpty {
-						return .empty
-					} else {
-						return SignalProducer(value: schemes)
-					}
-				}
+				|> filter { !$0.isEmpty }
 		}
 		|> take(1)
 		|> flatMap(.Merge) { schemes in SignalProducer(values: schemes) }
