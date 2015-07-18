@@ -989,22 +989,28 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 		}
 		|> take(1)
 		|> flatMap(.Merge) { schemes in SignalProducer(values: schemes) }
-		|> combineLatestWith(locatorProducer |> take(1))
-		|> map { (schemeInProject: SchemeInProject, project: ProjectLocator) -> BuildSchemeProducer in
-			/// We should consider a case that the project locator passed in is
-			/// not a workspace, nor the project in which the scheme is defined.
-			let projectToUse: ProjectLocator
-			switch project {
-			case .Workspace:
-				projectToUse = project
+		|> flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
+			return locatorProducer
+				// Pick up the first workspace for building the scheme.
+				|> filter { project in
+					switch project {
+					case .Workspace:
+						return true
 
-			case .ProjectFile:
-				projectToUse = schemeInProject.project
-			}
+					default:
+						return false
+					}
+				}
+				// If there is no workspace, use the project in which the scheme
+				// is defined instead.
+				|> concat(SignalProducer(value: project))
+				|> take(1)
+				|> map { (scheme, $0) }
+		}
+		|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
+			let initialValue = (project, scheme)
 
-			let initialValue = (projectToUse, schemeInProject.scheme)
-
-			let buildProgress = buildScheme(schemeInProject.scheme, withConfiguration: configuration, inProject: projectToUse, workingDirectoryURL: directoryURL)
+			let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
 				// Discard any existing Success values, since we want to
 				// use our initial value instead of waiting for
 				// completion.
