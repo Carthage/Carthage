@@ -177,18 +177,6 @@ private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bo
 	return lhs.locator < rhs.locator
 }
 
-/// A shared scheme defined in a project or workspace
-private struct SharedScheme {
-	let schemeName: String
-	let project: ProjectLocator
-}
-
-extension SharedScheme: Printable {
-	private var description: String {
-		return "\"\(schemeName)\" in \(project)"
-	}
-}
-
 /// Attempts to locate projects and workspaces within the given directory.
 ///
 /// Sends all matches in preferential order.
@@ -964,6 +952,9 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		}
 }
 
+/// A shared scheme defined in a project or workspace
+private typealias SchemeInProject = (scheme: String, project: ProjectLocator)
+
 /// Builds the first project or workspace found within the given directory which
 /// has at least one shared framework scheme.
 ///
@@ -984,14 +975,14 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				return false
 			}
 		}
-		|> flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<[SharedScheme], CarthageError> in
+		|> flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<[SchemeInProject], CarthageError> in
 			return schemesInProject(project)
-				|> flatMap(.Merge) { scheme -> SignalProducer<SharedScheme, CarthageError> in
+				|> flatMap(.Merge) { scheme -> SignalProducer<SchemeInProject, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
 					return shouldBuildScheme(buildArguments, platform)
 						|> filter { $0 }
-						|> map { _ in SharedScheme(schemeName: scheme, project: project) }
+						|> map { _ in SchemeInProject(scheme: scheme, project: project) }
 				}
 				|> collect
 				|> flatMap(.Concat) { schemes in
@@ -1005,7 +996,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 		|> take(1)
 		|> flatMap(.Merge) { schemes in SignalProducer(values: schemes) }
 		|> combineLatestWith(locatorProducer |> take(1))
-		|> map { (scheme: SharedScheme, project: ProjectLocator) -> BuildSchemeProducer in
+		|> map { (schemeInProject: SchemeInProject, project: ProjectLocator) -> BuildSchemeProducer in
 			/// We should consider a case that the project locator passed in is
 			/// not a workspace, nor the project in which the scheme is defined.
 			let projectToUse: ProjectLocator
@@ -1014,12 +1005,12 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				projectToUse = project
 
 			case .ProjectFile:
-				projectToUse = scheme.project
+				projectToUse = schemeInProject.project
 			}
 
-			let initialValue = (projectToUse, scheme.schemeName)
+			let initialValue = (projectToUse, schemeInProject.scheme)
 
-			let buildProgress = buildScheme(scheme.schemeName, withConfiguration: configuration, inProject: projectToUse, workingDirectoryURL: directoryURL)
+			let buildProgress = buildScheme(schemeInProject.scheme, withConfiguration: configuration, inProject: projectToUse, workingDirectoryURL: directoryURL)
 				// Discard any existing Success values, since we want to
 				// use our initial value instead of waiting for
 				// completion.
