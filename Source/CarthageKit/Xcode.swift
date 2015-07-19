@@ -963,65 +963,78 @@ private typealias SchemeInProject = (scheme: String, project: ProjectLocator)
 public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
-	let locatorProducer = locateProjectsInDirectory(directoryURL)
+	return SignalProducer { observer, disposable in
+		// Use SignalProducer.buffer() to avoid enumerating the given directory
+		// multiple times.
+		let (locatorBuffer, locatorObserver) = SignalProducer<ProjectLocator, CarthageError>.buffer()
 
-	return locatorProducer
-		|> filter { (project: ProjectLocator) in
-			switch project {
-			case .ProjectFile:
-				return true
+		locateProjectsInDirectory(directoryURL).startWithSignal { signal, signalDisposable in
+			disposable += signalDisposable
+			signal.observe(locatorObserver)
+		}
 
-			default:
-				return false
+		locatorBuffer
+			|> filter { (project: ProjectLocator) in
+				switch project {
+				case .ProjectFile:
+					return true
+
+				default:
+					return false
+				}
 			}
-		}
-		|> flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<[SchemeInProject], CarthageError> in
-			return schemesInProject(project)
-				|> flatMap(.Merge) { scheme -> SignalProducer<SchemeInProject, CarthageError> in
-					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+			|> flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<[SchemeInProject], CarthageError> in
+				return schemesInProject(project)
+					|> flatMap(.Merge) { scheme -> SignalProducer<SchemeInProject, CarthageError> in
+						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
-					return shouldBuildScheme(buildArguments, platform)
-						|> filter { $0 }
-						|> map { _ in SchemeInProject(scheme: scheme, project: project) }
-				}
-				|> collect
-				|> filter { !$0.isEmpty }
-		}
-		|> take(1)
-		|> flatMap(.Merge) { schemes in SignalProducer(values: schemes) }
-		|> flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
-			return locatorProducer
-				// Pick up the first workspace for building the scheme.
-				|> filter { project in
-					switch project {
-					case .Workspace:
-						return true
-
-					default:
-						return false
+						return shouldBuildScheme(buildArguments, platform)
+							|> filter { $0 }
+							|> map { _ in SchemeInProject(scheme: scheme, project: project) }
 					}
-				}
-				// If there is no workspace, use the project in which the scheme
-				// is defined instead.
-				|> concat(SignalProducer(value: project))
-				|> take(1)
-				|> map { (scheme, $0) }
-		}
-		|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
-			let initialValue = (project, scheme)
+					|> collect
+					|> filter { !$0.isEmpty }
+			}
+			|> take(1)
+			|> flatMap(.Merge) { schemes in SignalProducer(values: schemes) }
+			|> flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
+				return locatorBuffer
+					// Pick up the first workspace for building the scheme.
+					|> filter { project in
+						switch project {
+						case .Workspace:
+							return true
 
-			let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
-				// Discard any existing Success values, since we want to
-				// use our initial value instead of waiting for
-				// completion.
-				|> map { taskEvent in
-					return taskEvent.map { _ in initialValue }
-				}
-				|> filter { taskEvent in taskEvent.value == nil }
+						default:
+							return false
+						}
+					}
+					// If there is no workspace, use the project in which the scheme
+					// is defined instead.
+					|> concat(SignalProducer(value: project))
+					|> take(1)
+					|> map { (scheme, $0) }
+			}
+			|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
+				let initialValue = (project, scheme)
 
-			return BuildSchemeProducer(value: .Success(Box(initialValue)))
-				|> concat(buildProgress)
-		}
+				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+					// Discard any existing Success values, since we want to
+					// use our initial value instead of waiting for
+					// completion.
+					|> map { taskEvent in
+						return taskEvent.map { _ in initialValue }
+					}
+					|> filter { taskEvent in taskEvent.value == nil }
+
+				return BuildSchemeProducer(value: .Success(Box(initialValue)))
+					|> concat(buildProgress)
+			}
+			|> startWithSignal { signal, signalDisposable in
+				disposable += signalDisposable
+				signal.observe(observer)
+			}
+	}
 }
 
 /// Strips a framework from unexpected architectures, optionally codesigning the
