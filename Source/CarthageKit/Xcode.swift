@@ -251,18 +251,18 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 }
 
 /// Represents a platform to build for.
-public enum Platform: Equatable {
+public enum Platform {
 	/// Mac OS X.
 	case Mac
 
-	/// iOS for device and simulator. Use true in the associated value to specify simulator-only
-	case iOS(Bool)
+	/// iOS for device and simulator.
+	case iOS
 
-	/// Apple Watch device and simulator. Use true in the associated value to specify simulator-only
-	case watchOS(Bool)
+	/// Apple Watch device and simulator.
+	case watchOS
 
 	/// All supported build platforms.
-	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS(false), .watchOS(false) ]
+	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS ]
 
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
@@ -289,28 +289,12 @@ public enum Platform: Equatable {
 		case .Mac:
 			return [ .MacOSX ]
 
-		case let .iOS(simulatorOnly):
-			return filter([ .iPhoneSimulator, .iPhoneOS ]) { !simulatorOnly || $0 == .iPhoneSimulator }
+		case .iOS:
+			return [ .iPhoneSimulator, .iPhoneOS ]
 
-		case let .watchOS(simulatorOnly):
-			return filter([ .watchOS, .watchSimulator ]) { !simulatorOnly || $0 == .watchSimulator }
+		case .watchOS:
+			return [ .watchOS, .watchSimulator ]
 		}
-	}
-}
-
-public func ==(lhs: Platform, rhs: Platform) -> Bool {
-	switch (lhs, rhs) {
-	case (.Mac, .Mac):
-		return true
-		
-	case (.iOS, .iOS):
-		return true
-		
-	case (.watchOS, .watchOS):
-		return true
-		
-	default:
-		return false
 	}
 }
 
@@ -320,13 +304,11 @@ extension Platform: Printable {
 		case .Mac:
 			return "Mac"
 
-		case let .iOS(simulatorOnly):
-			let detail = simulatorOnly ? "simulator-only" : "device+simulator"
-			return "iOS (\(detail))"
+		case .iOS:
+			return "iOS"
 
-		case let .watchOS(simulatorOnly):
-			let detail = simulatorOnly ? "simulator-only" : "device+simulator"
-			return "watchOS (\(detail))"
+		case .watchOS:
+			return "watchOS"
 		}
 	}
 }
@@ -357,10 +339,10 @@ public enum SDK: String {
 	public var platform: Platform {
 		switch self {
 		case .iPhoneOS, .iPhoneSimulator:
-			return .iOS(false)
+			return .iOS
 
 		case .watchOS, .watchSimulator:
-			return .watchOS(false)
+			return .watchOS
 
 		case .MacOSX:
 			return .Mac
@@ -865,12 +847,12 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, #simulatorOnly: Bool, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
-	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, simulatorOnly: simulatorOnly, platform: platform)
+	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platform: platform)
 	return SignalProducer.try { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			var error: NSError?
 			if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -935,11 +917,52 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		}
 }
 
+public func signingIdentities() -> SignalProducer<String, CarthageError> {
+	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: ["find-identity", "-v", "-p", "codesigning"])
+	
+	return launchTask(securityTask)
+		|> ignoreTaskData
+		|> mapError { CarthageError.TaskError($0) }
+		|> map { (data: NSData) -> String in
+			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
+		}
+		|> flatMap(.Merge) { (string: String) -> SignalProducer<String, CarthageError> in
+			return string.linesProducer |> promoteErrors(CarthageError.self)
+		}
+		|> map { (identityLine: String) -> String? in
+			var error: NSError? = nil
+			let regex = NSRegularExpression(pattern: "\".+\"", options: nil, error: &error)
+			if let match = regex?.firstMatchInString(identityLine, options: nil, range: NSRange(location: 0, length: count(identityLine))) as NSTextCheckingResult? {
+				let quotedIdentityName = (identityLine as NSString).substringWithRange(match.range)
+				let identityName = quotedIdentityName.stringByTrimmingCharactersInSet(NSCharacterSet(charactersInString: "\""))
+				return identityName
+			} else {
+				return nil
+			}
+		}
+		|> ignoreNil
+}
+
+/// Returns true if the current user has any iOS signing identities configured
+public func iOSSigningIdentitiesConfigured(identities: SignalProducer<String, CarthageError> = signingIdentities()) -> Bool {
+	let iOSIdentities = identities
+		|> filter { (identity) in
+			let id = identity as NSString
+			return id.containsString("iOS") || id.containsString("iPhone")
+		}
+		|> map { (identity) -> Bool in
+			return true
+		}
+		|> last
+	
+	return iOSIdentities != nil
+}
+
 /// Builds the first project or workspace found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, #simulatorOnly: Bool, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
 	let locatorProducer = locateProjectsInDirectory(directoryURL)
@@ -967,20 +990,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				|> flatMap(.Merge) { _ in
 					let initialValue = (project, scheme)
 
-					let simOnly: Bool
-					
-					if let platform = platform {
-						switch platform {
-						case .iOS(true):
-							simOnly = true
-						case .watchOS(true):
-							simOnly = true
-						default:
-							simOnly = false
-						}
-					} else {
-						simOnly = simulatorOnly
-					}
+					let simOnly = !iOSSigningIdentitiesConfigured()
 					
 					let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, simulatorOnly: simOnly)
 						// Discard any existing Success values, since we want to

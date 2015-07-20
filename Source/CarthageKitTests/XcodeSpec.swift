@@ -179,5 +179,43 @@ class XcodeSpec: QuickSpec {
 			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")) |> first
 			expect(result).to(beNil())
 		}
+		
+		it("should detect iOS signing identities when present") {
+			
+			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<String, CarthageError>(values: [
+				"3rd Party Mac Developer Application: App Developer (DUCNFCN445)",
+				"Mac Developer: App Developer (DUCNFCN445)",
+				"iOS Developer: App Developer (DUCNFCN445)",
+				"Developer ID Application: App Developer (DUCNFCN445)",
+				]))
+			NSLog("result: \(result)")
+			
+			expect(result).to(equal(true))
+		}
+		
+		it("should detect iPhone signing identities when present") {
+			
+			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<String, CarthageError>(values: [
+				"3rd Party Mac Developer Application: App Developer (DUCNFCN445)",
+				"Mac Developer: App Developer (DUCNFCN445)",
+				"iPhone Developer: App Developer (DUCNFCN445)",
+				"Developer ID Application: App Developer (DUCNFCN445)",
+				]))
+			NSLog("result: \(result)")
+			
+			expect(result).to(equal(true))
+		}
+		
+		it("should detect when no iPhone or iOS signing identities when present") {
+			
+			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<String, CarthageError>(values: [
+				"3rd Party Mac Developer Application: App Developer (DUCNFCN445)",
+				"Mac Developer: App Developer (DUCNFCN445)",
+				"Developer ID Application: App Developer (DUCNFCN445)",
+				]))
+			NSLog("result: \(result)")
+			
+			expect(result).to(equal(false))
+		}
 	}
 }
