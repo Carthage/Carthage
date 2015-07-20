@@ -34,6 +34,9 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for all platforms") {
+			let machineHasiOSIdentity = iOSSigningIdentitiesConfigured()
+			expect(machineHasiOSIdentity).to(equal(true))
+
 			let dependencies = [
 				ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes")),
 				ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
@@ -85,8 +88,10 @@ class XcodeSpec: QuickSpec {
 				|> single
 
 			expect(architectures?.value).to(contain("i386"))
-			expect(architectures?.value).to(contain("armv7"))
-			expect(architectures?.value).to(contain("arm64"))
+			if machineHasiOSIdentity {
+				expect(architectures?.value).to(contain("armv7"))
+				expect(architectures?.value).to(contain("arm64"))
+			}
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
@@ -104,34 +109,36 @@ class XcodeSpec: QuickSpec {
 			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)).to(beTruthy())
 			expect(isDirectory).to(beTruthy())
 
-			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-") |> wait
-			expect(strippingResult.value).notTo(beNil())
-
-			let strippedArchitectures = architecturesInFramework(targetURL)
-				|> collect
-				|> single
-
-			expect(strippedArchitectures?.value).notTo(contain("i386"))
-			expect(strippedArchitectures?.value).to(contain("armv7"))
-			expect(strippedArchitectures?.value).to(contain("arm64"))
-
-			var output: String = ""
-			let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
-
-			let codesignResult = launchTask(codeSign)
-				|> on(next: { taskEvent in
-					switch taskEvent {
-					case let .StandardError(data):
-						output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
-					
-					default:
-						break
-					}
-				})
-				|> wait
-
-			expect(codesignResult.value).notTo(beNil())
-			expect(output).to(contain("satisfies its Designated Requirement"))
+			if machineHasiOSIdentity {
+				let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-") |> wait
+				expect(strippingResult.value).notTo(beNil())
+				
+				let strippedArchitectures = architecturesInFramework(targetURL)
+					|> collect
+					|> single
+				
+				expect(strippedArchitectures?.value).notTo(contain("i386"))
+				expect(strippedArchitectures?.value).to(contain("armv7"))
+				expect(strippedArchitectures?.value).to(contain("arm64"))
+				
+				var output: String = ""
+				let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
+				
+				let codesignResult = launchTask(codeSign)
+					|> on(next: { taskEvent in
+						switch taskEvent {
+						case let .StandardError(data):
+							output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
+							
+						default:
+							break
+						}
+					})
+					|> wait
+				
+				expect(codesignResult.value).notTo(beNil())
+				expect(output).to(contain("satisfies its Designated Requirement"))
+			}
 		}
 
 		it("should build for one platform") {
