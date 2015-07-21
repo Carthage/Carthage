@@ -99,6 +99,10 @@ public struct BuildArguments {
 	/// The platform SDK to build for.
 	public var sdk: SDK?
 
+	/// The build setting whether the product includes only object code for
+	/// the native architecture.
+	public var onlyActiveArchitecture: OnlyActiveArchitecture = .NotSpecified
+
 	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, sdk: SDK? = nil) {
 		self.project = project
 		self.scheme = scheme
@@ -121,6 +125,8 @@ public struct BuildArguments {
 		if let sdk = sdk {
 			args += sdk.arguments
 		}
+
+		args += onlyActiveArchitecture.arguments
 
 		return args
 	}
@@ -389,6 +395,34 @@ extension SDK: Printable {
 	}
 }
 
+/// Represents a build setting whether the product includes only object code
+/// for the native architecture.
+public enum OnlyActiveArchitecture {
+	/// Not specified.
+	case NotSpecified
+
+	/// The product includes only code for the native architecture.
+	case Yes
+
+	/// The product includes code for its target's valid architectures.
+	case No
+
+	/// The arguments that should be passed to `xcodebuild` to specify the
+	/// setting for this case.
+	private var arguments: [String] {
+		switch self {
+		case .NotSpecified:
+			return []
+
+		case .Yes:
+			return [ "ONLY_ACTIVE_ARCH=YES" ]
+
+		case .No:
+			return [ "ONLY_ACTIVE_ARCH=NO" ]
+		}
+	}
+}
+
 /// Describes the type of product built by an Xcode target.
 public enum ProductType: String {
 	/// A framework bundle.
@@ -653,8 +687,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Plat
 
 			if let forPlatform = forPlatform {
 				return SignalProducer(result: settings.buildSDK)
-					|> map { $0.platform }
-					|> filter { $0 == forPlatform }
+					|> filter { $0.platform == forPlatform }
 					|> flatMap(.Merge) { _ in productType }
 					|> catch { _ in .empty }
 			} else {
@@ -754,16 +787,19 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 	let buildSDK = { (sdk: SDK) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
-		var copiedArgs = buildArgs
-		copiedArgs.sdk = sdk
+		var argsForLoading = buildArgs
+		argsForLoading.sdk = sdk
 
-		var buildScheme = xcodebuildTask("build", copiedArgs)
+		var argsForBuilding = argsForLoading
+		argsForBuilding.onlyActiveArchitecture = .No
+
+		var buildScheme = xcodebuildTask("build", argsForBuilding)
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 		return launchTask(buildScheme)
 			|> mapError { .TaskError($0) }
 			|> flatMapTaskEvents(.Concat) { _ in
-				return BuildSettings.loadWithArguments(copiedArgs)
+				return BuildSettings.loadWithArguments(argsForLoading)
 					|> filter { settings in
 						// Only copy build products for the product types we care about.
 						if let productType = settings.productType.value {
@@ -831,6 +867,25 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				fatalError("SDK count \(platform.SDKs.count) for platform \(platform) is not supported")
 			}
 		}
+		|> flatMapTaskEvents(.Concat) { builtProductURL in
+			return createDebugInformation(builtProductURL)
+				|> then(SignalProducer(value: builtProductURL))
+		}
+}
+
+public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+	let dSYMURL = builtProductURL.URLByAppendingPathExtension("dSYM")
+
+	if let builtProduct = builtProductURL.path, dSYM = dSYMURL.path {
+		let executable = builtProduct.stringByAppendingPathComponent(builtProduct.lastPathComponent.stringByDeletingPathExtension)
+		let dsymutilTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
+
+		return launchTask(dsymutilTask)
+			|> mapError { .TaskError($0) }
+			|> flatMapTaskEvents(.Concat) { _ in SignalProducer(value: dSYMURL) }
+	} else {
+		return .empty
+	}
 }
 
 /// A producer representing a scheme to be built.

@@ -104,7 +104,7 @@ public final class Project {
 	/// Whether to download binaries for dependencies, or just check out their
 	/// repositories.
 	public var useBinaries = false
-
+	
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
 	public let projectEvents: Signal<ProjectEvent, NoError>
@@ -307,14 +307,14 @@ public final class Project {
 
 				switch project {
 				case let .GitHub(repository):
-					return GitHubCredentials.loadFromGit(verbose)
-						|> flatMap(.Concat) { credentials in
-							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: credentials)
+					return loadGitHubAuthorization(verbose)
+						|> flatMap(.Concat) { authorizationHeaderValue in
+							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withAuthorizationHeaderValue: authorizationHeaderValue)
 								|> catch { error in
-									if credentials == nil {
+									if authorizationHeaderValue == nil {
 										return SignalProducer(error: error)
 									}
-									return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withCredentials: nil)
+									return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withAuthorizationHeaderValue: nil)
 								}
 						}
 						|> flatMap(.Concat, unzipArchiveToTemporaryDirectory)
@@ -348,8 +348,8 @@ public final class Project {
 	///
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
-	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withCredentials credentials: GitHubCredentials?) -> SignalProducer<NSURL, CarthageError> {
-		return releaseForTag(revision, repository, credentials)
+	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withAuthorizationHeaderValue authorizationHeaderValue: String?) -> SignalProducer<NSURL, CarthageError> {
+		return releaseForTag(revision, repository, authorizationHeaderValue)
 			|> filter(binaryFrameworksCanBeProvidedByRelease)
 			|> on(next: { release in
 				sendNext(self._projectEventsObserver, ProjectEvent.DownloadingBinaries(project, release.nameWithFallback))
@@ -363,7 +363,7 @@ public final class Project {
 						if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!) {
 							return SignalProducer(value: fileURL)
 						} else {
-							return downloadAsset(asset, credentials)
+							return downloadAsset(asset, authorizationHeaderValue)
 								|> flatMap(.Concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
 						}
 					}
