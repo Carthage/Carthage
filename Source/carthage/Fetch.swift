@@ -22,7 +22,7 @@ public struct FetchCommand: CommandType {
 				let project = ProjectIdentifier.Git(options.repositoryURL)
 				var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
-				return cloneOrFetchProject(project, preferHTTPS: true)
+				return cloneOrFetchProject(project, options.verbose, preferHTTPS: true)
 					|> on(next: { event, _ in
 						eventSink.put(event)
 					})
@@ -36,14 +36,16 @@ public struct FetchCommand: CommandType {
 private struct FetchOptions: OptionsType {
 	let colorOptions: ColorOptions
 	let repositoryURL: GitURL
+	let verbose: Bool
 
-	static func create(colorOptions: ColorOptions)(repositoryURL: GitURL) -> FetchOptions {
-		return self(colorOptions: colorOptions, repositoryURL: repositoryURL)
+	static func create(colorOptions: ColorOptions)(repositoryURL: GitURL)(verbose: Bool) -> FetchOptions {
+		return self(colorOptions: colorOptions, repositoryURL: repositoryURL, verbose: verbose)
 	}
 
 	static func evaluate(m: CommandMode) -> Result<FetchOptions, CommandantError<CarthageError>> {
 		return create
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(usage: "the Git repository that should be cloned or fetched")
+			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 	}
 }

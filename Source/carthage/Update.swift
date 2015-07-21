@@ -20,7 +20,7 @@ public struct UpdateCommand: CommandType {
 		return producerWithOptions(UpdateOptions.evaluate(mode))
 			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				return options.loadProject()
-					|> flatMap(.Merge) { $0.updateDependencies() }
+					|> flatMap(.Merge) { $0.updateDependencies(options.verbose) }
 					|> then(options.buildProducer)
 					|> promoteErrors
 			}

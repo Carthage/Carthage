@@ -24,11 +24,11 @@ public struct BootstrapCommand: CommandType {
 				return options.loadProject()
 					|> flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
 						if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
-							return project.checkoutResolvedDependencies()
+							return project.checkoutResolvedDependencies(options.verbose)
 						} else {
 							let formatting = options.checkoutOptions.colorOptions.formatting
 							carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
-							return project.updateDependencies()
+							return project.updateDependencies(options.verbose)
 						}
 					}
 					|> then(options.buildProducer)

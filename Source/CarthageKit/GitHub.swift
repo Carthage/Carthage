@@ -230,10 +230,10 @@ internal struct GitHubCredentials {
 	}
 
 	/// Attempts to load credentials from the Git credential store.
-	static func loadFromGit() -> SignalProducer<GitHubCredentials?, CarthageError> {
+	static func loadFromGit(verbose: Bool) -> SignalProducer<GitHubCredentials?, CarthageError> {
 		let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
 
-		return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data), environment: ["GIT_TERMINAL_PROMPT": "0"])
+		return launchGitTask([ "credential", "fill" ], verbose, standardInput: SignalProducer(value: data), environment: ["GIT_TERMINAL_PROMPT": "0"])
 			|> flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
 				return string.linesProducer |> promoteErrors(CarthageError.self)
 			}

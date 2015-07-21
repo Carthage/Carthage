@@ -116,7 +116,7 @@ public struct BuildCommand: CommandType {
 				}
 			}
 			|> flatMap(.Merge) { project in
-				return project.migrateIfNecessary(options.colorOptions)
+				return project.migrateIfNecessary(options)
 					|> on(next: carthage.println)
 					|> then(SignalProducer(value: project))
 			}

@@ -28,7 +28,7 @@ public struct CheckoutCommand: CommandType {
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: CheckoutOptions) -> SignalProducer<(), CarthageError> {
 		return options.loadProject()
-			|> flatMap(.Merge) { $0.checkoutResolvedDependencies() }
+			|> flatMap(.Merge) { $0.checkoutResolvedDependencies(options.verbose) }
 	}
 }
 
@@ -37,10 +37,11 @@ public struct CheckoutOptions: OptionsType {
 	public let useSSH: Bool
 	public let useSubmodules: Bool
 	public let useBinaries: Bool
+	public let verbose: Bool
 	public let colorOptions: ColorOptions
 
-	public static func create(useSSH: Bool)(useSubmodules: Bool)(useBinaries: Bool)(colorOptions: ColorOptions)(directoryPath: String) -> CheckoutOptions {
-		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: useBinaries, colorOptions: colorOptions)
+	public static func create(useSSH: Bool)(useSubmodules: Bool)(useBinaries: Bool)(verbose: Bool)(colorOptions: ColorOptions)(directoryPath: String) -> CheckoutOptions {
+		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: useBinaries, verbose: verbose, colorOptions: colorOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions, CommandantError<CarthageError>> {
@@ -52,6 +53,7 @@ public struct CheckoutOptions: OptionsType {
 			<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 			<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 			<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist" + useBinariesAddendum)
+			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print out more details")
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
@@ -68,7 +70,7 @@ public struct CheckoutOptions: OptionsType {
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
 			project.projectEvents.observe(next: { eventSink.put($0) })
 
-			return project.migrateIfNecessary(colorOptions)
+			return project.migrateIfNecessary(self)
 				|> on(next: carthage.println)
 				|> then(SignalProducer(value: project))
 		} else {
