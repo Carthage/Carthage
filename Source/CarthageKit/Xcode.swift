@@ -951,8 +951,9 @@ public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<St
 	return securityIdentities
 		|> map { (identityLine: String) -> String? in
 			var error: NSError? = nil
+			let fullRange = NSMakeRange(0, count(identityLine))
 			
-			if let matches = signingIdentitiesRegex.matchesInString(identityLine, options: nil, range: NSMakeRange(0, count(identityLine))) as? [NSTextCheckingResult] {
+			if let matches = signingIdentitiesRegex.matchesInString(identityLine, options: nil, range: fullRange) as? [NSTextCheckingResult] {
 				if matches.count > 0 {
 					return (identityLine as NSString).substringWithRange(matches[0].rangeAtIndex(1))
 				}
