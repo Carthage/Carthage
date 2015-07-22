@@ -187,6 +187,31 @@ class XcodeSpec: QuickSpec {
 			expect(result).to(beNil())
 		}
 		
+		it("should parse signing identities correctly") {
+			
+			let result = parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError>(values: [
+				"1) 4E8D512C8480AAC679947D6E50190AE97AB3E825 \"3rd Party Mac Developer Application: Developer Name (DUCNFCN445)\"",
+				"2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D \"Mac Developer: Developer Name (DUCNFCN445)\"",
+				"3) 4E8D512C8480AAC67995D69CA09B769663BC844D \"iOS Developer: App Developer (DUCNFCN445)\"",
+				"4) 65E24CDAF5B3E1E1480818CA4656210871214337 \"Developer ID Application: App Developer (DUCNFCN445)\"",
+				]))
+			
+			var expected = [
+				"3rd Party Mac Developer Application: Developer Name (DUCNFCN445)",
+				"Mac Developer: Developer Name (DUCNFCN445)",
+				"iOS Developer: App Developer (DUCNFCN445)",
+				"Developer ID Application: App Developer (DUCNFCN445)"
+			]
+			
+			expect(result).notTo(beNil())
+
+			var i = 0
+
+			result.start(next: { returnedValue in
+				expect(returnedValue).to(equal(expected[i++]))
+			})
+		}
+		
 		it("should detect iOS signing identities when present") {
 			
 			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<String, CarthageError>(values: [

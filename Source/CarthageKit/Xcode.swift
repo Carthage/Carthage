@@ -922,9 +922,9 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 ///
 /// 1) 4E8D512C8480AAC679947D6E50190AE97AB3E825 "3rd Party Mac Developer Application: Developer Name (DUCNFCN445)"
 /// 2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D "Mac Developer: Developer Name (DUCNFCN445)"
-private let signingIdentitiesRegex = NSRegularExpression(pattern: "\".+\"", options: nil, error: nil)!
+private let signingIdentitiesRegex = NSRegularExpression(pattern: "\"(.+)\"", options: nil, error: nil)!
 
-public func signingIdentities() -> SignalProducer<String, CarthageError> {
+public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageError> {
 	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: ["find-identity", "-v", "-p", "codesigning"])
 	
 	return launchTask(securityTask)
@@ -935,22 +935,29 @@ public func signingIdentities() -> SignalProducer<String, CarthageError> {
 		}
 		|> flatMap(.Merge) { (string: String) -> SignalProducer<String, CarthageError> in
 			return string.linesProducer |> promoteErrors(CarthageError.self)
-		}
+	}
+}
+
+public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError> = getSecuritySigningIdentities()) -> SignalProducer<String, CarthageError> {
+	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: ["find-identity", "-v", "-p", "codesigning"])
+	
+	return securityIdentities
 		|> map { (identityLine: String) -> String? in
 			var error: NSError? = nil
-			if let match = signingIdentitiesRegex.firstMatchInString(identityLine, options: nil, range: NSRange(location: 0, length: count(identityLine))) as NSTextCheckingResult? {
-				let quotedIdentityName = (identityLine as NSString).substringWithRange(match.range)
-				let identityName = quotedIdentityName.stringByTrimmingCharactersInSet(NSCharacterSet(charactersInString: "\""))
-				return identityName
-			} else {
-				return nil
+			
+			if let matches = signingIdentitiesRegex.matchesInString(identityLine, options: nil, range: NSMakeRange(0, count(identityLine))) as? [NSTextCheckingResult] {
+				if matches.count > 0 {
+					return (identityLine as NSString).substringWithRange(matches[0].rangeAtIndex(1))
+				}
 			}
+			
+			return nil
 		}
 		|> ignoreNil
 }
 
 /// Returns true if the current user has any iOS signing identities configured
-public func iOSSigningIdentitiesConfigured(identities: SignalProducer<String, CarthageError> = signingIdentities()) -> Bool {
+public func iOSSigningIdentitiesConfigured(identities: SignalProducer<String, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
 	let iOSIdentities = identities
 		|> filter { (identity) in
 			let id = identity as NSString
