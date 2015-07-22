@@ -918,12 +918,6 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 }
 
 
-/// Matches lines of the forms:
-///
-/// 1) 4E8D512C8480AAC679947D6E50190AE97AB3E825 "3rd Party Mac Developer Application: Developer Name (DUCNFCN445)"
-/// 2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D "Mac Developer: Developer Name (DUCNFCN445)"
-private let signingIdentitiesRegex = NSRegularExpression(pattern: "\"(.+)\"", options: nil, error: nil)!
-
 public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageError> {
 	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: ["find-identity", "-v", "-p", "codesigning"])
 	
@@ -937,6 +931,19 @@ public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageErr
 			return string.linesProducer |> promoteErrors(CarthageError.self)
 	}
 }
+
+/// Matches lines of the forms:
+///
+/// '  1) 4E8D512C8480AAC679947D6E50190AE97AB3E825 "3rd Party Mac Developer Application: Developer Name (DUCNFCN445)"'
+/// '  2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D "Mac Developer: Developer Name (DUCNFCN445)"'
+private let signingIdentitiesRegex = NSRegularExpression(pattern:
+	(
+		"\\s*"          + // Leading spaces
+		"\\d+\\)"       + // Number of identity
+		"[A-F0-9]+\\s+" + // GUID
+		"\"(.+)\""        // The identifier of the identity
+	),
+ options: nil, error: nil)!
 
 public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError> = getSecuritySigningIdentities()) -> SignalProducer<String, CarthageError> {
 	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: ["find-identity", "-v", "-p", "codesigning"])
