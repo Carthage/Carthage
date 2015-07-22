@@ -952,9 +952,6 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		}
 }
 
-/// A shared scheme defined in a project or workspace
-private typealias SchemeInProject = (scheme: String, project: ProjectLocator)
-
 /// Builds the first project or workspace found within the given directory which
 /// has at least one shared framework scheme.
 ///
@@ -966,15 +963,29 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 	return SignalProducer { observer, disposable in
 		// Use SignalProducer.buffer() to avoid enumerating the given directory
 		// multiple times.
-		let (locatorBuffer, locatorObserver) = SignalProducer<ProjectLocator, CarthageError>.buffer()
+		let (locatorBuffer, locatorObserver) = SignalProducer<(ProjectLocator, [String]), CarthageError>.buffer()
 
-		locateProjectsInDirectory(directoryURL).startWithSignal { signal, signalDisposable in
-			disposable += signalDisposable
-			signal.observe(locatorObserver)
-		}
+		locateProjectsInDirectory(directoryURL)
+			|> flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<(ProjectLocator, [String]), CarthageError> in
+				return schemesInProject(project)
+					|> flatMap(.Merge) { scheme -> SignalProducer<String, CarthageError> in
+						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+
+						return shouldBuildScheme(buildArguments, platform)
+							|> filter { $0 }
+							|> map { _ in scheme }
+					}
+					|> collect
+					|> filter { !$0.isEmpty }
+					|> map { (project, $0) }
+			}
+			|> startWithSignal { signal, signalDisposable in
+				disposable += signalDisposable
+				signal.observe(locatorObserver)
+			}
 
 		locatorBuffer
-			|> filter { (project: ProjectLocator) in
+			|> filter { (project: ProjectLocator, schemes: [String]) in
 				switch project {
 				case .ProjectFile:
 					return true
@@ -983,37 +994,28 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 					return false
 				}
 			}
-			|> flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<[SchemeInProject], CarthageError> in
-				return schemesInProject(project)
-					|> flatMap(.Merge) { scheme -> SignalProducer<SchemeInProject, CarthageError> in
-						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-
-						return shouldBuildScheme(buildArguments, platform)
-							|> filter { $0 }
-							|> map { _ in SchemeInProject(scheme: scheme, project: project) }
-					}
-					|> collect
-					|> filter { !$0.isEmpty }
-			}
 			|> take(1)
-			|> flatMap(.Merge) { schemes in SignalProducer(values: schemes) }
+			|> flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
 			|> flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
 				return locatorBuffer
-					// Pick up the first workspace for building the scheme.
-					|> filter { project in
+					// This scheduler hop is required to avoid disallowed recursive signals.
+					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
+					|> startOn(QueueScheduler(name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
+					// Pick up the first workspace which can build the scheme.
+					|> filter { project, schemes in
 						switch project {
-						case .Workspace:
+						case .Workspace where contains(schemes, scheme):
 							return true
 
 						default:
 							return false
 						}
 					}
-					// If there is no workspace, use the project in which the scheme
-					// is defined instead.
-					|> concat(SignalProducer(value: project))
+					// If there is no appropriate workspace, use the project in
+					// which the scheme is defined instead.
+					|> concat(SignalProducer(value: (project, [])))
 					|> take(1)
-					|> map { (scheme, $0) }
+					|> map { project, _ in (scheme, project) }
 			}
 			|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
 				let initialValue = (project, scheme)
