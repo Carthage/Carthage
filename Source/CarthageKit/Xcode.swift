@@ -917,6 +917,13 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		}
 }
 
+
+/// Matches lines of the forms:
+///
+/// 1) 4E8D512C8480AAC679947D6E50190AE97AB3E825 "3rd Party Mac Developer Application: Developer Name (DUCNFCN445)"
+/// 2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D "Mac Developer: Developer Name (DUCNFCN445)"
+private let signingIdentitiesRegex = NSRegularExpression(pattern: "\".+\"", options: nil, error: nil)!
+
 public func signingIdentities() -> SignalProducer<String, CarthageError> {
 	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: ["find-identity", "-v", "-p", "codesigning"])
 	
@@ -931,8 +938,7 @@ public func signingIdentities() -> SignalProducer<String, CarthageError> {
 		}
 		|> map { (identityLine: String) -> String? in
 			var error: NSError? = nil
-			let regex = NSRegularExpression(pattern: "\".+\"", options: nil, error: &error)
-			if let match = regex?.firstMatchInString(identityLine, options: nil, range: NSRange(location: 0, length: count(identityLine))) as NSTextCheckingResult? {
+			if let match = signingIdentitiesRegex.firstMatchInString(identityLine, options: nil, range: NSRange(location: 0, length: count(identityLine))) as NSTextCheckingResult? {
 				let quotedIdentityName = (identityLine as NSString).substringWithRange(match.range)
 				let identityName = quotedIdentityName.stringByTrimmingCharactersInSet(NSCharacterSet(charactersInString: "\""))
 				return identityName
