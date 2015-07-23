@@ -1,2 +1,2 @@
-github "Carthage/ReactiveTask" "0.7-beta.2"
+github "Carthage/ReactiveTask" "0.7-beta.3"
 github "thoughtbot/Argo" ~> 1.0.1
