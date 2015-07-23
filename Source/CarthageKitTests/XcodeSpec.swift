@@ -142,6 +142,34 @@ class XcodeSpec: QuickSpec {
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
 
+		it("should skip projects without shared dynamic framework schems") {
+			let dependency = "SwiftyJSON"
+			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("\(dependency)-2.2.0", withExtension: nil)!
+			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+
+			NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL, error: nil)
+
+			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
+				|> flatten(.Concat)
+				|> ignoreTaskData
+				|> on(next: { (project, scheme) in
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				|> wait
+
+			expect(result.error).to(beNil())
+
+			let macPath = _buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
+			let iOSPath = _buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
+
+			var isDirectory: ObjCBool = false
+			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beTruthy())
+
+			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beTruthy())
+		}
+
 		it("should build for one platform") {
 			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platform: .Mac)
@@ -175,12 +203,12 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should locate the project from the parent directory") {
-			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!) |> first
+			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!) |> collect |> first
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
 
-			let locator = result?.value!
-			expect(locator).to(equal(ProjectLocator.ProjectFile(projectURL)))
+			let locators = result?.value!
+			expect(locators).to(contain(ProjectLocator.ProjectFile(projectURL)))
 		}
 
 		it("should not locate the project from a directory not containing it") {

@@ -968,51 +968,91 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		}
 }
 
-/// Builds the first project or workspace found within the given directory.
+/// Builds the first project or workspace found within the given directory which
+/// has at least one shared framework scheme.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
 public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
-	let locatorProducer = locateProjectsInDirectory(directoryURL)
+	return SignalProducer { observer, disposable in
+		// Use SignalProducer.buffer() to avoid enumerating the given directory
+		// multiple times.
+		let (locatorBuffer, locatorObserver) = SignalProducer<(ProjectLocator, [String]), CarthageError>.buffer()
 
-	return locatorProducer
-		|> filter { (project: ProjectLocator) in
-			switch project {
-			case .ProjectFile:
-				return true
+		locateProjectsInDirectory(directoryURL)
+			|> flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<(ProjectLocator, [String]), CarthageError> in
+				return schemesInProject(project)
+					|> flatMap(.Merge) { scheme -> SignalProducer<String, CarthageError> in
+						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
-			default:
-				return false
+						return shouldBuildScheme(buildArguments, platform)
+							|> filter { $0 }
+							|> map { _ in scheme }
+					}
+					|> collect
+					|> filter { !$0.isEmpty }
+					|> map { (project, $0) }
 			}
-		}
-		|> take(1)
-		|> flatMap(.Merge) { (project: ProjectLocator) -> SignalProducer<String, CarthageError> in
-			return schemesInProject(project)
-		}
-		|> combineLatestWith(locatorProducer |> take(1))
-		|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
-			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+			|> startWithSignal { signal, signalDisposable in
+				disposable += signalDisposable
+				signal.observe(locatorObserver)
+			}
 
-			return shouldBuildScheme(buildArguments, platform)
-				|> filter { $0 }
-				|> flatMap(.Merge) { _ in
-					let initialValue = (project, scheme)
+		locatorBuffer
+			|> filter { (project: ProjectLocator, schemes: [String]) in
+				switch project {
+				case .ProjectFile:
+					return true
 
-					let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
-						// Discard any existing Success values, since we want to
-						// use our initial value instead of waiting for
-						// completion.
-						|> map { taskEvent in
-							return taskEvent.map { _ in initialValue }
-						}
-						|> filter { taskEvent in taskEvent.value == nil }
-
-					return BuildSchemeProducer(value: .Success(Box(initialValue)))
-						|> concat(buildProgress)
+				default:
+					return false
 				}
-		}
+			}
+			|> take(1)
+			|> flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
+			|> flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
+				return locatorBuffer
+					// This scheduler hop is required to avoid disallowed recursive signals.
+					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
+					|> startOn(QueueScheduler(name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
+					// Pick up the first workspace which can build the scheme.
+					|> filter { project, schemes in
+						switch project {
+						case .Workspace where contains(schemes, scheme):
+							return true
+
+						default:
+							return false
+						}
+					}
+					// If there is no appropriate workspace, use the project in
+					// which the scheme is defined instead.
+					|> concat(SignalProducer(value: (project, [])))
+					|> take(1)
+					|> map { project, _ in (scheme, project) }
+			}
+			|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
+				let initialValue = (project, scheme)
+
+				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+					// Discard any existing Success values, since we want to
+					// use our initial value instead of waiting for
+					// completion.
+					|> map { taskEvent in
+						return taskEvent.map { _ in initialValue }
+					}
+					|> filter { taskEvent in taskEvent.value == nil }
+
+				return BuildSchemeProducer(value: .Success(Box(initialValue)))
+					|> concat(buildProgress)
+			}
+			|> startWithSignal { signal, signalDisposable in
+				disposable += signalDisposable
+				signal.observe(observer)
+			}
+	}
 }
 
 /// Strips a framework from unexpected architectures, optionally codesigning the
