@@ -955,6 +955,9 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 			return schemeProducers
 				|> mapError { error in
 					switch (dependency, error) {
+					case let (_, .NoSharedFrameworkSchemes(_)):
+						return .NoSharedFrameworkSchemes(dependency)
+
 					case let (.GitHub(repo), .NoSharedSchemes(project, _)):
 						return .NoSharedSchemes(project, repo)
 
@@ -992,6 +995,15 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 							|> map { _ in scheme }
 					}
 					|> collect
+					|> catch { error in
+						switch error {
+						case .NoSharedSchemes:
+							return SignalProducer(value: [])
+
+						default:
+							return SignalProducer(error: error)
+						}
+					}
 					|> filter { !$0.isEmpty }
 					|> map { (project, $0) }
 			}
@@ -1010,6 +1022,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 					return false
 				}
 			}
+			|> concat(SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)))))
 			|> take(1)
 			|> flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
 			|> flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in

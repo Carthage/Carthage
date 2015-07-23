@@ -170,6 +170,34 @@ class XcodeSpec: QuickSpec {
 			expect(isDirectory).to(beTruthy())
 		}
 
+		it("should error out with .NoSharedFrameworkSchemes if there is no shared framework schemes") {
+			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("Swell-0.5.0", withExtension: nil)!
+			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+
+			NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL, error: nil)
+
+			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
+				|> flatten(.Concat)
+				|> ignoreTaskData
+				|> on(next: { (project, scheme) in
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				|> wait
+
+			expect(result.error).notTo(beNil())
+
+			var expectedError: Bool
+			switch result.error {
+			case .Some(.NoSharedFrameworkSchemes):
+				expectedError = true
+
+			default:
+				expectedError = false
+			}
+
+			expect(expectedError).to(beTruthy())
+		}
+
 		it("should build for one platform") {
 			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platform: .Mac)
