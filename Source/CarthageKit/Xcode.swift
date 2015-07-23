@@ -998,7 +998,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 					|> catch { error in
 						switch error {
 						case .NoSharedSchemes:
-							return SignalProducer(value: [])
+							return .empty
 
 						default:
 							return SignalProducer(error: error)
