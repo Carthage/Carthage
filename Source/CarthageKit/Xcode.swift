@@ -929,25 +929,23 @@ public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageErr
 		}
 		|> flatMap(.Merge) { (string: String) -> SignalProducer<String, CarthageError> in
 			return string.linesProducer |> promoteErrors(CarthageError.self)
-	}
+		}
 }
 
-/// Matches lines of the forms:
+/// Matches lines of the form:
 ///
 /// '  1) 4E8D512C8480AAC679947D6E50190AE97AB3E825 "3rd Party Mac Developer Application: Developer Name (DUCNFCN445)"'
 /// '  2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D "Mac Developer: Developer Name (DUCNFCN445)"'
 private let signingIdentitiesRegex = NSRegularExpression(pattern:
 	(
 		"\\s*"          + // Leading spaces
-		"\\d+\\)"       + // Number of identity
+		"\\d+\\)\\s+"   + // Number of identity
 		"[A-F0-9]+\\s+" + // GUID
-		"\"(.+)\""        // The identifier of the identity
+		"\"(.+)\"\\s*"    // The identifier of the identity
 	),
  options: nil, error: nil)!
 
 public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError> = getSecuritySigningIdentities()) -> SignalProducer<String, CarthageError> {
-	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: ["find-identity", "-v", "-p", "codesigning"])
-	
 	return securityIdentities
 		|> map { (identityLine: String) -> String? in
 			var error: NSError? = nil
