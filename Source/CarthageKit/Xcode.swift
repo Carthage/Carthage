@@ -1033,7 +1033,6 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			}
 			|> flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
 				return locatorBuffer
-					|> filter { project, schemes in !schemes.isEmpty }
 					// This scheduler hop is required to avoid disallowed recursive signals.
 					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
 					|> startOn(QueueScheduler(name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
