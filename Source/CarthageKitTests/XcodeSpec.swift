@@ -186,7 +186,7 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).notTo(beNil())
 
-			var expectedError: Bool
+			let expectedError: Bool
 			switch result.error {
 			case .Some(.NoSharedFrameworkSchemes):
 				expectedError = true
