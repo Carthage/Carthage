@@ -998,13 +998,12 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 					|> catch { error in
 						switch error {
 						case .NoSharedSchemes:
-							return .empty
+							return SignalProducer(value: [])
 
 						default:
 							return SignalProducer(error: error)
 						}
 					}
-					|> filter { !$0.isEmpty }
 					|> map { (project, $0) }
 			}
 			|> startWithSignal { signal, signalDisposable in
@@ -1013,20 +1012,28 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			}
 
 		locatorBuffer
-			|> filter { (project: ProjectLocator, schemes: [String]) in
-				switch project {
-				case .ProjectFile:
-					return true
+			|> collect
+			// Allow dependencies which have no projects, not to error out with
+			// `.NoSharedFrameworkSchemes`.
+			|> filter { projects in !projects.isEmpty }
+			|> flatMap(.Merge) { (projects: [(ProjectLocator, [String])]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+				return SignalProducer(values: projects)
+					|> filter { (project: ProjectLocator, schemes: [String]) in
+						switch project {
+						case .ProjectFile where !schemes.isEmpty:
+							return true
 
-				default:
-					return false
-				}
+						default:
+							return false
+						}
+					}
+					|> concat(SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)))))
+					|> take(1)
+					|> flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
 			}
-			|> concat(SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)))))
-			|> take(1)
-			|> flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
 			|> flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
 				return locatorBuffer
+					|> filter { project, schemes in !schemes.isEmpty }
 					// This scheduler hop is required to avoid disallowed recursive signals.
 					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
 					|> startOn(QueueScheduler(name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
