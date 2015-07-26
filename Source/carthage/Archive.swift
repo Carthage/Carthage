@@ -23,6 +23,9 @@ public struct ArchiveCommand: CommandType {
 
 				return SignalProducer(values: Platform.supportedPlatforms)
 					|> map { platform in platform.relativePath.stringByAppendingPathComponent(options.frameworkName).stringByAppendingPathExtension("framework")! }
+					|> flatMap(.Concat) { relativePath in
+						return SignalProducer(values: [relativePath, relativePath.stringByAppendingPathExtension("dSYM")!])
+					}
 					|> filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
 					|> on(next: { path in
 						carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
