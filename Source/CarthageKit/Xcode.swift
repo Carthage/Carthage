@@ -814,9 +814,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		|> flatMap(.Concat) { (platform: Platform) in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 			
-			var sdks = filter(platform.SDKs) { sdk in
-				return canBuildSDK(sdk)
-			}
+			var sdks = filter(platform.SDKs) { canBuildSDK($0) }
 			
 			// TODO: Generalize this further?
 			switch sdks.count {
