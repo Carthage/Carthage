@@ -99,6 +99,10 @@ public struct BuildArguments {
 	/// The platform SDK to build for.
 	public var sdk: SDK?
 
+	/// The build setting whether the product includes only object code for
+	/// the native architecture.
+	public var onlyActiveArchitecture: OnlyActiveArchitecture = .NotSpecified
+
 	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, sdk: SDK? = nil) {
 		self.project = project
 		self.scheme = scheme
@@ -121,6 +125,8 @@ public struct BuildArguments {
 		if let sdk = sdk {
 			args += sdk.arguments
 		}
+
+		args += onlyActiveArchitecture.arguments
 
 		return args
 	}
@@ -192,10 +198,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 
 			return matches
 		}
-		|> map { (var matches) -> [ProjectEnumerationMatch] in
-			sort(&matches)
-			return matches
-		}
+		|> map(sorted)
 		|> flatMap(.Merge) { matches -> SignalProducer<ProjectEnumerationMatch, CarthageError> in
 			return SignalProducer(values: matches)
 		}
@@ -385,6 +388,34 @@ extension SDK: Printable {
 
 		case .watchSimulator:
 			return "watchOS Simulator"
+		}
+	}
+}
+
+/// Represents a build setting whether the product includes only object code
+/// for the native architecture.
+public enum OnlyActiveArchitecture {
+	/// Not specified.
+	case NotSpecified
+
+	/// The product includes only code for the native architecture.
+	case Yes
+
+	/// The product includes code for its target's valid architectures.
+	case No
+
+	/// The arguments that should be passed to `xcodebuild` to specify the
+	/// setting for this case.
+	private var arguments: [String] {
+		switch self {
+		case .NotSpecified:
+			return []
+
+		case .Yes:
+			return [ "ONLY_ACTIVE_ARCH=YES" ]
+
+		case .No:
+			return [ "ONLY_ACTIVE_ARCH=NO" ]
 		}
 	}
 }
@@ -653,8 +684,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Plat
 
 			if let forPlatform = forPlatform {
 				return SignalProducer(result: settings.buildSDK)
-					|> map { $0.platform }
-					|> filter { $0 == forPlatform }
+					|> filter { $0.platform == forPlatform }
 					|> flatMap(.Merge) { _ in productType }
 					|> catch { _ in .empty }
 			} else {
@@ -755,12 +785,12 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
 	let canBuildSDK = { (sdk: SDK) -> Bool in
-		var copiedArgs = buildArgs
-		copiedArgs.sdk = sdk
+		var argsForLoading = buildArgs
+		argsForLoading.sdk = sdk
 		
 		var signingAllowed = true
 		
-		BuildSettings.loadWithArguments(copiedArgs)
+		BuildSettings.loadWithArguments(argsForLoading)
 			|> on(next: { settings in
 				let identityResult = settings["CODE_SIGN_IDENTITY"]
 				
@@ -788,16 +818,19 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 	
 	let buildSDK = { (sdk: SDK) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
-		var copiedArgs = buildArgs
-		copiedArgs.sdk = sdk
+		var argsForLoading = buildArgs
+		argsForLoading.sdk = sdk
 
-		var buildScheme = xcodebuildTask("build", copiedArgs)
+		var argsForBuilding = argsForLoading
+		argsForBuilding.onlyActiveArchitecture = .No
+
+		var buildScheme = xcodebuildTask("build", argsForBuilding)
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 		return launchTask(buildScheme)
 			|> mapError { .TaskError($0) }
 			|> flatMapTaskEvents(.Concat) { _ in
-				return BuildSettings.loadWithArguments(copiedArgs)
+				return BuildSettings.loadWithArguments(argsForLoading)
 					|> filter { settings in
 						// Only copy build products for the product types we care about.
 						if let productType = settings.productType.value {
@@ -867,6 +900,25 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				fatalError("SDK count \(sdks.count) for platform \(platform) is not supported")
 			}
 		}
+		|> flatMapTaskEvents(.Concat) { builtProductURL in
+			return createDebugInformation(builtProductURL)
+				|> then(SignalProducer(value: builtProductURL))
+		}
+}
+
+public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+	let dSYMURL = builtProductURL.URLByAppendingPathExtension("dSYM")
+
+	if let builtProduct = builtProductURL.path, dSYM = dSYMURL.path {
+		let executable = builtProduct.stringByAppendingPathComponent(builtProduct.lastPathComponent.stringByDeletingPathExtension)
+		let dsymutilTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
+
+		return launchTask(dsymutilTask)
+			|> mapError { .TaskError($0) }
+			|> flatMapTaskEvents(.Concat) { _ in SignalProducer(value: dSYMURL) }
+	} else {
+		return .empty
+	}
 }
 
 /// A producer representing a scheme to be built.
@@ -936,6 +988,9 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 			return schemeProducers
 				|> mapError { error in
 					switch (dependency, error) {
+					case let (_, .NoSharedFrameworkSchemes(_)):
+						return .NoSharedFrameworkSchemes(dependency)
+
 					case let (.GitHub(repo), .NoSharedSchemes(project, _)):
 						return .NoSharedSchemes(project, repo)
 
@@ -1046,51 +1101,107 @@ public func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSignin
 	return iOSIdentities != nil
 }
 
-/// Builds the first project or workspace found within the given directory.
+/// Builds the first project or workspace found within the given directory which
+/// has at least one shared framework scheme.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
 public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
-	let locatorProducer = locateProjectsInDirectory(directoryURL)
+	return SignalProducer { observer, disposable in
+		// Use SignalProducer.buffer() to avoid enumerating the given directory
+		// multiple times.
+		let (locatorBuffer, locatorObserver) = SignalProducer<(ProjectLocator, [String]), CarthageError>.buffer()
 
-	return locatorProducer
-		|> filter { (project: ProjectLocator) in
-			switch project {
-			case .ProjectFile:
-				return true
+		locateProjectsInDirectory(directoryURL)
+			|> flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<(ProjectLocator, [String]), CarthageError> in
+				return schemesInProject(project)
+					|> flatMap(.Merge) { scheme -> SignalProducer<String, CarthageError> in
+						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
-			default:
-				return false
-			}
-		}
-		|> take(1)
-		|> flatMap(.Merge) { (project: ProjectLocator) -> SignalProducer<String, CarthageError> in
-			return schemesInProject(project)
-		}
-		|> combineLatestWith(locatorProducer |> take(1))
-		|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
-			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+						return shouldBuildScheme(buildArguments, platform)
+							|> filter { $0 }
+							|> map { _ in scheme }
+					}
+					|> collect
+					|> catch { error in
+						switch error {
+						case .NoSharedSchemes:
+							return SignalProducer(value: [])
 
-			return shouldBuildScheme(buildArguments, platform)
-				|> filter { $0 }
-				|> flatMap(.Merge) { _ in
-					let initialValue = (project, scheme)
-
-					let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
-						// Discard any existing Success values, since we want to
-						// use our initial value instead of waiting for
-						// completion.
-						|> map { taskEvent in
-							return taskEvent.map { _ in initialValue }
+						default:
+							return SignalProducer(error: error)
 						}
-						|> filter { taskEvent in taskEvent.value == nil }
+					}
+					|> map { (project, $0) }
+			}
+			|> startWithSignal { signal, signalDisposable in
+				disposable += signalDisposable
+				signal.observe(locatorObserver)
+			}
 
-					return BuildSchemeProducer(value: .Success(Box(initialValue)))
-						|> concat(buildProgress)
-				}
-		}
+		locatorBuffer
+			|> collect
+			// Allow dependencies which have no projects, not to error out with
+			// `.NoSharedFrameworkSchemes`.
+			|> filter { projects in !projects.isEmpty }
+			|> flatMap(.Merge) { (projects: [(ProjectLocator, [String])]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+				return SignalProducer(values: projects)
+					|> filter { (project: ProjectLocator, schemes: [String]) in
+						switch project {
+						case .ProjectFile where !schemes.isEmpty:
+							return true
+
+						default:
+							return false
+						}
+					}
+					|> concat(SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)))))
+					|> take(1)
+					|> flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
+			}
+			|> flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
+				return locatorBuffer
+					// This scheduler hop is required to avoid disallowed recursive signals.
+					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
+					|> startOn(QueueScheduler(name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
+					// Pick up the first workspace which can build the scheme.
+					|> filter { project, schemes in
+						switch project {
+						case .Workspace where contains(schemes, scheme):
+							return true
+
+						default:
+							return false
+						}
+					}
+					// If there is no appropriate workspace, use the project in
+					// which the scheme is defined instead.
+					|> concat(SignalProducer(value: (project, [])))
+					|> take(1)
+					|> map { project, _ in (scheme, project) }
+			}
+			|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
+				let initialValue = (project, scheme)
+
+				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+					// Discard any existing Success values, since we want to
+					// use our initial value instead of waiting for
+					// completion.
+					|> map { taskEvent in
+						return taskEvent.map { _ in initialValue }
+					}
+					|> filter { taskEvent in taskEvent.value == nil }
+
+				return BuildSchemeProducer(value: .Success(Box(initialValue)))
+					|> concat(buildProgress)
+			}
+			|> startWithSignal { signal, signalDisposable in
+				disposable += signalDisposable
+				signal.observe(observer)
+			}
+	}
 }
 
 /// Strips a framework from unexpected architectures, optionally codesigning the
