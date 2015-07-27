@@ -1080,8 +1080,6 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				|> flatMap(.Merge) { _ in
 					let initialValue = (project, scheme)
 
-					let simOnly = !iOSSigningIdentitiesConfigured()
-					
 					let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
 						// Discard any existing Success values, since we want to
 						// use our initial value instead of waiting for
