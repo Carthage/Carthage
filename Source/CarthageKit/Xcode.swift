@@ -749,10 +749,44 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, #simulatorOnly: Bool) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+
+	let canBuildSDK = { (sdk: SDK) -> Bool in
+		var copiedArgs = buildArgs
+		copiedArgs.sdk = sdk
+		
+		var signingAllowed = true
+		
+		BuildSettings.loadWithArguments(copiedArgs)
+			|> on(next: { settings in
+				let identityResult = settings["CODE_SIGN_IDENTITY"]
+				
+				switch identityResult {
+				case .Success(let configuredSigningIdentity):
+					let matchingidentity = parseSecuritySigningIdentities()
+						|> filter{ identity in
+							return identity.IdentityType == configuredSigningIdentity.value
+						}
+						|> first
+					signingAllowed = matchingidentity != nil
+					
+					if matchingidentity == nil {
+						let warningMessage = "Skipping build for \(sdk) SDK, because the necessary signing identity (\(configuredSigningIdentity.value)) is not installed"
+						// TODO: Pass on this warning message
+					}
+					
+				default:
+					signingAllowed = true
+				}
+			})
+			|> wait
+		
+		return signingAllowed
+	}
+	
 	let buildSDK = { (sdk: SDK) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 		var copiedArgs = buildArgs
 		copiedArgs.sdk = sdk
@@ -781,7 +815,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 			
 			var sdks = filter(platform.SDKs) { sdk in
-				return !simulatorOnly || !contains([.iPhoneOS, .watchOS], sdk)
+				return canBuildSDK(sdk)
 			}
 			
 			// TODO: Generalize this further?
@@ -932,29 +966,69 @@ public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageErr
 		}
 }
 
+public struct CodeSigningIdentity {
+	public let IDHash: String
+	public let IdentityType: String
+	public let DeveloperName: String
+	public let DeveloperID: String
+	
+	// Not sure why, but the default initializer can't be accessed from the unit tests
+	public init(IDHash: String, IdentityType: String, DeveloperName: String, DeveloperID: String) {
+		self.IDHash = IDHash
+		self.IdentityType = IdentityType
+		self.DeveloperName = DeveloperName
+		self.DeveloperID = DeveloperID
+	}
+}
+
+extension CodeSigningIdentity: Equatable {}
+public func ==(lhs: CodeSigningIdentity, rhs: CodeSigningIdentity) -> Bool {
+	return lhs.IDHash == rhs.IDHash
+		&& lhs.IdentityType == rhs.IdentityType
+		&& lhs.DeveloperName == rhs.DeveloperName
+		&& lhs.DeveloperID == rhs.DeveloperID
+}
+
+extension CodeSigningIdentity: NilLiteralConvertible {
+	public init(nilLiteral: ()) {
+		IDHash = ""
+		IdentityType = ""
+		DeveloperName = ""
+		DeveloperID = ""
+	}
+}
+
 /// Matches lines of the form:
 ///
 /// '  1) 4E8D512C8480AAC679947D6E50190AE97AB3E825 "3rd Party Mac Developer Application: Developer Name (DUCNFCN445)"'
 /// '  2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D "Mac Developer: Developer Name (DUCNFCN445)"'
 private let signingIdentitiesRegex = NSRegularExpression(pattern:
 	(
-		"\\s*"          + // Leading spaces
-		"\\d+\\)\\s+"   + // Number of identity
-		"[A-F0-9]+\\s+" + // GUID
-		"\"(.+)\"\\s*"    // The identifier of the identity
+		"\\s*"               + // Leading spaces
+		"\\d+\\)\\s+"        + // Number of identity
+		"([A-F0-9]+)\\s+"    + // Hash (e.g. 4E8D512C8480AAC67995D69CA09B769663BC844D)
+		"\"(.+):\\s"         + // Identity type (e.g. Mac Developer, iPhone Developer)
+		"(.+)\\s\\("         + // Developer Name
+		"([A-Z0-9]+)\\)\"\\s*" // Developer ID (e.g. DUCNFCN445)
 	),
  options: nil, error: nil)!
 
-public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError> = getSecuritySigningIdentities()) -> SignalProducer<String, CarthageError> {
+public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError> = getSecuritySigningIdentities()) -> SignalProducer<CodeSigningIdentity, CarthageError> {
 	return securityIdentities
-		|> map { (identityLine: String) -> String? in
+		|> map { (identityLine: String) -> CodeSigningIdentity? in
 			var error: NSError? = nil
 			let fullRange = NSMakeRange(0, count(identityLine))
 			
-			if let matches = signingIdentitiesRegex.matchesInString(identityLine, options: nil, range: fullRange) as? [NSTextCheckingResult] {
-				if matches.count > 0 {
-					return (identityLine as NSString).substringWithRange(matches[0].rangeAtIndex(1))
-				}
+			if let matches = signingIdentitiesRegex.matchesInString(identityLine, options: nil, range: fullRange) as? [NSTextCheckingResult],
+				let match = matches.first {
+					let id = identityLine as NSString
+					
+					return CodeSigningIdentity(
+						IDHash: id.substringWithRange(match.rangeAtIndex(1)),
+						IdentityType: id.substringWithRange(match.rangeAtIndex(2)),
+						DeveloperName: id.substringWithRange(match.rangeAtIndex(3)),
+						DeveloperID: id.substringWithRange(match.rangeAtIndex(4))
+					)
 			}
 			
 			return nil
@@ -963,14 +1037,11 @@ public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<St
 }
 
 /// Returns true if the current user has any iOS signing identities configured
-public func iOSSigningIdentitiesConfigured(identities: SignalProducer<String, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
+public func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
 	let iOSIdentities = identities
-		|> filter { (identity) in
-			let id = identity as NSString
-			return id.containsString("iOS") || id.containsString("iPhone")
-		}
-		|> map { (identity) -> Bool in
-			return true
+		|> filter { identity in
+			let id = identity.IdentityType as NSString
+			return id.containsString("iPhone") || id.containsString("iOS")
 		}
 		|> last
 	
@@ -1011,7 +1082,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 
 					let simOnly = !iOSSigningIdentitiesConfigured()
 					
-					let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, simulatorOnly: simOnly)
+					let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
 						// Discard any existing Success values, since we want to
 						// use our initial value instead of waiting for
 						// completion.
