@@ -1024,9 +1024,13 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 							return false
 						}
 					}
-					|> concat(SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)))))
-					|> take(1)
-					|> flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
+					|> collect
+					|> flatMap(.Merge) { items in
+						return items.isEmpty ?
+							SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)))) :
+							SignalProducer(values: items)
+								|> flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
+				}
 			}
 			|> flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
 				return locatorBuffer
