@@ -66,53 +66,108 @@ extension GitHubError: Decodable {
 
 /// Describes a GitHub.com repository.
 public struct GitHubRepository: Equatable {
+
+	public enum URL: Equatable, Hashable {
+		case GitHub
+		case Enterprise(scheme: String, host: String)
+
+		public var scheme: String {
+			switch self {
+			case .GitHub:
+				return "https"
+
+			case let .Enterprise(scheme, _):
+				return scheme
+			}
+		}
+
+		public var host: String {
+			switch self {
+			case .GitHub:
+				return "github.com"
+
+			case let .Enterprise(_, host):
+				return host
+			}
+		}
+
+		public var hashValue: Int {
+			return scheme.hashValue ^ host.hashValue
+		}
+	}
+
+	public let baseURL: URL
 	public let owner: String
 	public let name: String
 
 	/// The URL that should be used for cloning this repository over HTTPS.
 	public var HTTPSURL: GitURL {
-		return GitURL("https://github.com/\(owner)/\(name).git")
+		return GitURL("\(baseURL.scheme)://\(baseURL.host)/\(owner)/\(name).git")
 	}
 
 	/// The URL that should be used for cloning this repository over SSH.
 	public var SSHURL: GitURL {
-		return GitURL("ssh://git@github.com/\(owner)/\(name).git")
+		return GitURL("ssh://git@\(baseURL.host)/\(owner)/\(name).git")
 	}
 
 	/// The URL for filing a new GitHub issue for this repository.
 	public var newIssueURL: NSURL {
-		return NSURL(string: "https://github.com/\(owner)/\(name)/issues/new")!
+		return NSURL(string: "\(baseURL.scheme)://\(baseURL.host)/\(owner)/\(name)/issues/new")!
 	}
 
-	public init(owner: String, name: String) {
+	public init(baseURL: URL = .GitHub, owner: String, name: String) {
+		self.baseURL = baseURL
 		self.owner = owner
 		self.name = name
 	}
 
 	/// Parses repository information out of a string of the form "owner/name".
 	public static func fromNWO(NWO: String) -> Result<GitHubRepository, CarthageError> {
-		let components = split(NWO, maxSplit: 1, allowEmptySlices: false) { $0 == "/" }
-		if components.count < 2 {
-			return .failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\""))
+		// GitHub.com
+		let components = split(NWO, maxSplit: 2, allowEmptySlices: false) { $0 == "/" }
+		if components.count == 2 {
+			return .success(self(owner: components[0], name: components[1]))
 		}
 
-		return .success(self(owner: components[0], name: components[1]))
+		// GitHub Enterprise
+		if let
+			URL = NSURL(string: NWO),
+			scheme = URL.scheme,
+			host = URL.host,
+			pathComponents = URL.pathComponents as? [String]
+			where pathComponents.count == 3
+		{
+			return .success(self(baseURL: .Enterprise(scheme: scheme, host: host), owner: pathComponents[1], name: pathComponents[2]))
+		}
+
+		return .failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\""))
 	}
 }
 
 public func ==(lhs: GitHubRepository, rhs: GitHubRepository) -> Bool {
-	return lhs.owner.caseInsensitiveCompare(rhs.owner) == .OrderedSame && lhs.name.caseInsensitiveCompare(rhs.name) == .OrderedSame
+	return lhs.baseURL == rhs.baseURL && lhs.owner.caseInsensitiveCompare(rhs.owner) == .OrderedSame && lhs.name.caseInsensitiveCompare(rhs.name) == .OrderedSame
+}
+
+public func ==(lhs: GitHubRepository.URL, rhs: GitHubRepository.URL) -> Bool {
+	return lhs.scheme == rhs.scheme && lhs.host == rhs.host
 }
 
 extension GitHubRepository: Hashable {
 	public var hashValue: Int {
-		return owner.hashValue ^ name.hashValue
+		return baseURL.hashValue ^ owner.hashValue ^ name.hashValue
 	}
 }
 
 extension GitHubRepository: Printable {
 	public var description: String {
-		return "\(owner)/\(name)"
+		let repository = "\(owner)/\(name)"
+		switch baseURL {
+		case .GitHub:
+			return repository
+
+		case let .Enterprise(scheme, host):
+			return "\(scheme)://\(host)/\(repository)"
+		}
 	}
 }
 
