@@ -487,15 +487,14 @@ public struct BuildSettings {
 			}
 	}
 
-	/// Determines which SDK the given scheme builds for, by default.
+	/// Determines which SDKs the given scheme builds for, by default.
 	///
-	/// If the SDK is unrecognized or could not be determined, an error will be
+	/// If an SDK is unrecognized or could not be determined, an error will be
 	/// sent on the returned signal.
-	public static func SDKForScheme(scheme: String, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
+	public static func SDKsForScheme(scheme: String, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
 		return loadWithArguments(BuildArguments(project: project, scheme: scheme))
 			|> take(1)
-			|> map { $0.buildSDK }
-			|> flatten(.Merge)
+			|> flatMap(.Merge) { $0.buildSDKs }
 	}
 
 	/// Returns the value for the given build setting, or an error if it could
@@ -508,12 +507,8 @@ public struct BuildSettings {
 		}
 	}
 
-	/// Attempts to determine the SDK this scheme builds for.
-	public var firstBuildSDK: Result<SDK, CarthageError> {
-		return self["PLATFORM_NAME"].flatMap(SDK.fromString)
-	}
-
-	public var buildSDK: SignalProducer<SDK, CarthageError> {
+	/// Attempts to determine the SDKs this scheme builds for.
+	public var buildSDKs: SignalProducer<SDK, CarthageError> {
 		let supportedPlatforms = self["SUPPORTED_PLATFORMS"]
 
 		if let supportedPlatforms = supportedPlatforms.value {
@@ -523,6 +518,7 @@ public struct BuildSettings {
 				|> flatten(.Merge)
 		}
 
+		let firstBuildSDK = self["PLATFORM_NAME"].flatMap(SDK.fromString)
 		return SignalProducer(result: firstBuildSDK)
 	}
 
@@ -666,7 +662,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Plat
 			let productType = SignalProducer(result: settings.productType)
 
 			if let forPlatform = forPlatform {
-				return SignalProducer(result: settings.firstBuildSDK)
+				return settings.buildSDKs
 					|> filter { $0.platform == forPlatform }
 					|> flatMap(.Merge) { _ in productType }
 					|> catch { _ in .empty }
@@ -788,7 +784,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			}
 	}
 
-	return BuildSettings.SDKForScheme(scheme, inProject: project)
+	return BuildSettings.SDKsForScheme(scheme, inProject: project)
 		|> map { $0.platform }
 		|> flatMap(.Concat) { (platform: Platform) in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
