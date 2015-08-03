@@ -134,7 +134,7 @@ extension Submodule: Printable {
 
 /// Shells out to `git` with the given arguments, optionally in the directory
 /// of an existing repository.
-public func launchGitTask(var arguments: [String], fileHandle: NSFileHandle, repositoryFileURL: NSURL? = nil, standardInput: SignalProducer<NSData, NoError>? = nil, environment: [String: String]? = nil) -> SignalProducer<String, CarthageError> {
+public func launchGitTask(arguments: [String], fileHandle: NSFileHandle, repositoryFileURL: NSURL? = nil, standardInput: SignalProducer<NSData, NoError>? = nil, environment: [String: String]? = nil) -> SignalProducer<String, CarthageError> {
 	// See https://github.com/Carthage/Carthage/issues/219.
 	var updatedEnvironment = environment ?? NSProcessInfo.processInfo().environment as! [String: String]
 	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
