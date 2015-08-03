@@ -853,8 +853,8 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			switch sdks.count {
 			case 0:
 				let isMissingSigningIdentities = platform.SDKs.count > 0
-				let identityAddendum = isMissingSigningIdentities ? " (you're probably missing one or more signing identities)" : ""
-				fatalError("No valid SDKs found to build \(identityAddendum)")
+				let identityAddendum = isMissingSigningIdentities ? " (you're missing one or more signing identities)" : ""
+				fatalError("No valid SDKs found to build\(identityAddendum)")
 			case 1:
 				return buildSDK(sdks[0])
 					|> flatMapTaskEvents(.Merge) { settings in
