@@ -135,6 +135,10 @@ extension Submodule: Printable {
 /// Shells out to `git` with the given arguments, optionally in the directory
 /// of an existing repository.
 public func launchGitTask(var arguments: [String], fileHandle: NSFileHandle, repositoryFileURL: NSURL? = nil, standardInput: SignalProducer<NSData, NoError>? = nil, environment: [String: String]? = nil) -> SignalProducer<String, CarthageError> {
+	// See https://github.com/Carthage/Carthage/issues/219.
+	var updatedEnvironment = environment ?? NSProcessInfo.processInfo().environment as! [String: String]
+	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
+
 	let escapedArgs = map(arguments) {
 		return ($0 as NSString).containsString(" ") ? "\"\($0)\"" : $0
 	}
@@ -147,7 +151,7 @@ public func launchGitTask(var arguments: [String], fileHandle: NSFileHandle, rep
 	
 	fileHandle.writeData(gitCallStr.dataUsingEncoding(NSUTF8StringEncoding)!)
 	
-	let taskDescription = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: environment, standardInput: standardInput)
+	let taskDescription = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment, standardInput: standardInput)
 
 	return launchTask(taskDescription)
 		|> mapError { .TaskError($0) }
