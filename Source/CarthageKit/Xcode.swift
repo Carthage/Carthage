@@ -847,10 +847,14 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		|> flatMap(.Concat) { (platform: Platform) in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 			
-			var sdks = filter(platform.SDKs) { canBuildSDK($0) }
+			let sdks = filter(platform.SDKs) { canBuildSDK($0) }
 			
 			// TODO: Generalize this further?
 			switch sdks.count {
+			case 0:
+				let isMissingSigningIdentities = platform.SDKs.count > 0
+				let identityAddendum = isMissingSigningIdentities ? " (you're probably missing one or more signing identities)" : ""
+				fatalError("No valid SDKs found to build \(identityAddendum)")
 			case 1:
 				return buildSDK(sdks[0])
 					|> flatMapTaskEvents(.Merge) { settings in
