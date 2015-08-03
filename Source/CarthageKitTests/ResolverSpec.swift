@@ -21,7 +21,9 @@ class ResolverSpec: QuickSpec {
 	}
 
 	private func orderedDependencies(resolver: Resolver, fromCartfile cartfile: Cartfile) -> [[String: PinnedVersion]] {
-		let result = resolver.resolveDependenciesInCartfile(cartfile, verbose: true)
+		let fileHandle = NSFileHandle.fileHandleWithStandardOutput()
+		
+		let result = resolver.resolveDependenciesInCartfile(cartfile, fileHandle: fileHandle)
 			|> map { [ $0.project.name: $0.version ] }
 			|> collect
 			|> first
@@ -34,6 +36,7 @@ class ResolverSpec: QuickSpec {
 
 	override func spec() {
 		it("should resolve a Cartfile") {
+			let fileHandle = NSFileHandle.fileHandleWithStandardOutput()
 			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency, resolvedGitReference: self.resolvedGitReference)
 			let dependencies = self.orderedDependencies(resolver, fromCartfile: self.loadTestCartfile("TestCartfile"))
 			expect(dependencies.count).to(equal(6));
@@ -90,7 +93,7 @@ class ResolverSpec: QuickSpec {
 		}
 	}
 
-	private func versionsForDependency(project: ProjectIdentifier, verbose: Bool) -> SignalProducer<PinnedVersion, CarthageError> {
+	private func versionsForDependency(project: ProjectIdentifier, fileHandle: NSFileHandle) -> SignalProducer<PinnedVersion, CarthageError> {
 		return SignalProducer(values: [
 			PinnedVersion("0.4.1"),
 			PinnedVersion("0.9.0"),
@@ -101,7 +104,7 @@ class ResolverSpec: QuickSpec {
 		])
 	}
 
-	private func cartfileForDependency(dependency: (Dependency<PinnedVersion>, Bool)) -> SignalProducer<Cartfile, CarthageError> {
+	private func cartfileForDependency(dependency: (Dependency<PinnedVersion>, NSFileHandle)) -> SignalProducer<Cartfile, CarthageError> {
 		var cartfile = Cartfile()
 
 		if dependency.0.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {
@@ -113,7 +116,7 @@ class ResolverSpec: QuickSpec {
 		return SignalProducer(value: cartfile)
 	}
 
-	private func resolvedGitReference(project: ProjectIdentifier, reference: String, verbose: Bool) -> SignalProducer<PinnedVersion, CarthageError> {
+	private func resolvedGitReference(project: ProjectIdentifier, reference: String, fileHandle: NSFileHandle) -> SignalProducer<PinnedVersion, CarthageError> {
 		return SignalProducer(value: PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"))
 	}
 }

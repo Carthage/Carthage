@@ -21,19 +21,32 @@ public struct BootstrapCommand: CommandType {
 		// `update` flags.
 		return producerWithOptions(UpdateOptions.evaluate(mode))
 			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
-				return options.loadProject()
-					|> flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
-						if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
-							return project.checkoutResolvedDependencies(options.verbose)
-						} else {
-							let formatting = options.checkoutOptions.colorOptions.formatting
-							carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
-							return project.updateDependencies(options.verbose)
-						}
-					}
-					|> then(options.buildProducer)
+				return self.bootstrapWithOptions(options)
 					|> promoteErrors
 			}
 			|> waitOnCommand
+	}
+	
+	private func bootstrapWithOptions(options: UpdateOptions) -> SignalProducer<(), CarthageError> {
+		return openLoggingHandle(options.verbose, "git")
+			|> flatMap(.Merge) { (gitFileHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
+				let formatting = options.checkoutOptions.colorOptions.formatting
+
+				return options.loadProject(gitFileHandle)
+					|> on(started: {
+						if let temporaryURL = temporaryURL {
+							carthage.println(formatting.bullets + "git output can be found in " + formatting.path(string: temporaryURL.path!))
+						}
+					})
+					|> flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
+						if NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
+							return project.checkoutResolvedDependencies(gitFileHandle)
+						} else {
+							carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
+							return project.updateDependencies(gitFileHandle)
+						}
+					}
+					|> then(options.buildProducer)
+		}
 	}
 }

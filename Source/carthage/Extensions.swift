@@ -148,13 +148,12 @@ internal struct ProjectEventSink: SinkType {
 	}
 }
 
-protocol ColorOptionsWithVerbosity
+protocol OptionsWithColor
 {
-	var verbose: Bool { get }
 	var colorOptions: ColorOptions { get }
 }
-extension BuildOptions: ColorOptionsWithVerbosity {}
-extension CheckoutOptions: ColorOptionsWithVerbosity {}
+extension BuildOptions: OptionsWithColor {}
+extension CheckoutOptions: OptionsWithColor {}
 
 extension Project {
 	/// Determines whether the project needs to be migrated from an older
@@ -162,7 +161,7 @@ extension Project {
 	///
 	/// If migration is necessary, sends one or more output lines describing the
 	/// process to the user.
-	internal func migrateIfNecessary(options: ColorOptionsWithVerbosity) -> SignalProducer<String, CarthageError> {
+	internal func migrateIfNecessary(options: OptionsWithColor, gitFileHandle: NSFileHandle) -> SignalProducer<String, CarthageError> {
 		let directoryPath = directoryURL.path!
 		let fileManager = NSFileManager.defaultManager()
 
@@ -179,7 +178,7 @@ extension Project {
 			let checkFile: (String, String) -> () = { oldName, newName in
 				if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(oldName)) {
 					let producer = SignalProducer(value: migrationMessage)
-						|> concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName, verbose: options.verbose)
+						|> concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName, fileHandle: gitFileHandle)
 							|> then(.empty))
 
 					sendNext(observer, producer)
@@ -210,7 +209,7 @@ extension Project {
 						|> map { (object: AnyObject) in object as! NSURL }
 						|> flatMap(.Concat) { (URL: NSURL) -> SignalProducer<NSURL, CarthageError> in
 							let lastPathComponent: String! = URL.lastPathComponent
-							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent), verbose: options.verbose)
+							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent), fileHandle: gitFileHandle)
 						}
 						|> then(trashProducer)
 						|> then(.empty)

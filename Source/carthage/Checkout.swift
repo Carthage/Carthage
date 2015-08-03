@@ -27,8 +27,18 @@ public struct CheckoutCommand: CommandType {
 
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: CheckoutOptions) -> SignalProducer<(), CarthageError> {
-		return options.loadProject()
-			|> flatMap(.Merge) { $0.checkoutResolvedDependencies(options.verbose) }
+		return openLoggingHandle(options.verbose, "git")
+			|> flatMap(.Merge) { (fileHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
+				let formatting = options.colorOptions.formatting
+				
+				return options.loadProject(fileHandle)
+					|> on(started: {
+						if let temporaryURL = temporaryURL {
+							carthage.println(formatting.bullets + "git output can be found in " + formatting.path(string: temporaryURL.path!))
+						}
+					})
+					|> flatMap(.Merge) { $0.checkoutResolvedDependencies(fileHandle) }
+		}
 	}
 }
 
@@ -60,7 +70,7 @@ public struct CheckoutOptions: OptionsType {
 
 	/// Attempts to load the project referenced by the options, and configure it
 	/// accordingly.
-	public func loadProject() -> SignalProducer<Project, CarthageError> {
+	public func loadProject(gitFileHandle: NSFileHandle) -> SignalProducer<Project, CarthageError> {
 		if let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true) {
 			let project = Project(directoryURL: directoryURL)
 			project.preferHTTPS = !self.useSSH
@@ -70,7 +80,7 @@ public struct CheckoutOptions: OptionsType {
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
 			project.projectEvents.observe(next: { eventSink.put($0) })
 
-			return project.migrateIfNecessary(self)
+			return project.migrateIfNecessary(self, gitFileHandle: gitFileHandle)
 				|> on(next: carthage.println)
 				|> then(SignalProducer(value: project))
 		} else {

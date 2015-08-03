@@ -219,8 +219,8 @@ public final class Project {
 	///
 	/// Returns a signal which will send the URL to the repository's folder on
 	/// disk once cloning or fetching has completed.
-	private func cloneOrFetchDependency(project: ProjectIdentifier, verbose: Bool) -> SignalProducer<NSURL, CarthageError> {
-		return cloneOrFetchProject(project, verbose, preferHTTPS: self.preferHTTPS)
+	private func cloneOrFetchDependency(project: ProjectIdentifier, fileHandle: NSFileHandle) -> SignalProducer<NSURL, CarthageError> {
+		return cloneOrFetchProject(project, fileHandle, preferHTTPS: self.preferHTTPS)
 			|> on(next: { event, _ in
 				sendNext(self._projectEventsObserver, event)
 			})
@@ -233,9 +233,9 @@ public final class Project {
 	///
 	/// This will automatically clone or fetch the project's repository as
 	/// necessary.
-	private func versionsForProject(project: ProjectIdentifier, verbose: Bool) -> SignalProducer<PinnedVersion, CarthageError> {
-		let fetchVersions = cloneOrFetchDependency(project, verbose: verbose)
-			|> flatMap(.Merge) { repositoryURL in listTags(repositoryURL, verbose) }
+	private func versionsForProject(project: ProjectIdentifier, fileHandle: NSFileHandle) -> SignalProducer<PinnedVersion, CarthageError> {
+		let fetchVersions = cloneOrFetchDependency(project, fileHandle: fileHandle)
+			|> flatMap(.Merge) { repositoryURL in listTags(repositoryURL, fileHandle) }
 			|> map { PinnedVersion($0) }
 			|> collect
 			|> on(next: { newVersions in
@@ -258,11 +258,11 @@ public final class Project {
 	}
 
 	/// Attempts to resolve a Git reference to a version.
-	private func resolvedGitReference(project: ProjectIdentifier, reference: String, verbose: Bool) -> SignalProducer<PinnedVersion, CarthageError> {
+	private func resolvedGitReference(project: ProjectIdentifier, reference: String, fileHandle: NSFileHandle) -> SignalProducer<PinnedVersion, CarthageError> {
 		// We don't need the version list, but this takes care of
 		// cloning/fetching for us, while avoiding duplication.
-		return versionsForProject(project, verbose: verbose)
-			|> then(resolveReferenceInRepository(repositoryFileURLForProject(project), verbose, reference))
+		return versionsForProject(project, fileHandle: fileHandle)
+			|> then(resolveReferenceInRepository(repositoryFileURLForProject(project), fileHandle, reference))
 			|> map { PinnedVersion($0) }
 	}
 
@@ -271,11 +271,11 @@ public final class Project {
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func updatedResolvedCartfile(verbose: Bool) -> SignalProducer<ResolvedCartfile, CarthageError> {
+	public func updatedResolvedCartfile(fileHandle: NSFileHandle) -> SignalProducer<ResolvedCartfile, CarthageError> {
 		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
 
 		return loadCombinedCartfile()
-			|> flatMap(.Merge) { cartfile in resolver.resolveDependenciesInCartfile(cartfile, verbose: verbose) }
+			|> flatMap(.Merge) { cartfile in resolver.resolveDependenciesInCartfile(cartfile, fileHandle: fileHandle) }
 			|> collect
 			|> map { ResolvedCartfile(dependencies: $0) }
 	}
@@ -283,18 +283,18 @@ public final class Project {
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in the working directory checkouts and
 	/// Cartfile.resolved.
-	public func updateDependencies(verbose: Bool) -> SignalProducer<(), CarthageError> {
-		return updatedResolvedCartfile(verbose)
+	public func updateDependencies(fileHandle: NSFileHandle) -> SignalProducer<(), CarthageError> {
+		return updatedResolvedCartfile(fileHandle)
 			|> tryMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}
-			|> then(checkoutResolvedDependencies(verbose))
+			|> then(checkoutResolvedDependencies(fileHandle))
 	}
 
 	/// Installs binaries for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String, verbose: Bool) -> SignalProducer<Bool, CarthageError> {
+	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fileHandle: NSFileHandle) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer.try {
 				return .success(self.useBinaries)
 			}
@@ -307,7 +307,7 @@ public final class Project {
 
 				switch project {
 				case let .GitHub(repository):
-					return loadGitHubAuthorization(verbose)
+					return loadGitHubAuthorization(fileHandle)
 						|> flatMap(.Concat) { authorizationHeaderValue in
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withAuthorizationHeaderValue: authorizationHeaderValue)
 								|> catch { error in
@@ -388,7 +388,7 @@ public final class Project {
 
 	/// Checks out the given project into its intended working directory,
 	/// cloning it first if need be.
-	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule], verbose: Bool) -> SignalProducer<(), CarthageError> {
+	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule], fileHandle: NSFileHandle) -> SignalProducer<(), CarthageError> {
 		let repositoryURL = repositoryFileURLForProject(project)
 		let workingDirectoryURL = directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
@@ -407,33 +407,33 @@ public final class Project {
 			}
 			|> flatMap(.Merge) { submodule -> SignalProducer<(), CarthageError> in
 				if let submodule = submodule {
-					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!), verbose)
+					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!), fileHandle)
 						|> startOnQueue(self.gitOperationQueue)
 				} else {
-					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, verbose, revision: revision)
+					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, fileHandle, revision: revision)
 				}
 			}
 			|> on(started: {
 				sendNext(self._projectEventsObserver, .CheckingOut(project, revision))
 			})
 
-		return commitExistsInRepository(repositoryURL, verbose, revision: revision)
+		return commitExistsInRepository(repositoryURL, fileHandle, revision: revision)
 			|> promoteErrors(CarthageError.self)
 			|> flatMap(.Merge) { exists -> SignalProducer<NSURL, CarthageError> in
 				if exists {
 					return .empty
 				} else {
-					return self.cloneOrFetchDependency(project, verbose: verbose)
+					return self.cloneOrFetchDependency(project, fileHandle: fileHandle)
 				}
 			}
 			|> then(checkoutSignal)
 	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved.
-	public func checkoutResolvedDependencies(verbose: Bool) -> SignalProducer<(), CarthageError> {
+	public func checkoutResolvedDependencies(fileHandle: NSFileHandle) -> SignalProducer<(), CarthageError> {
 		/// Determine whether the repository currently holds any submodules (if
 		/// it even is a repository).
-		let submodulesSignal = submodulesInRepository(self.directoryURL, verbose)
+		let submodulesSignal = submodulesInRepository(self.directoryURL, fileHandle)
 			|> reduce([:]) { (var submodulesByPath: [String: Submodule], submodule) in
 				submodulesByPath[submodule.path] = submodule
 				return submodulesByPath
@@ -447,12 +447,12 @@ public final class Project {
 						let project = dependency.project
 						let revision = dependency.version.commitish
 
-						return self.installBinariesForProject(project, atRevision: revision, verbose: verbose)
+						return self.installBinariesForProject(project, atRevision: revision, fileHandle: fileHandle)
 							|> flatMap(.Merge) { installed in
 								if installed {
 									return .empty
 								} else {
-									return self.checkoutOrCloneProject(project, atRevision: revision, submodulesByPath: submodulesByPath, verbose: verbose)
+									return self.checkoutOrCloneProject(project, atRevision: revision, submodulesByPath: submodulesByPath, fileHandle: fileHandle)
 								}
 							}
 					}
@@ -556,10 +556,10 @@ private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
 }
 
 /// Loads the Cartfile for the given dependency, at the given version.
-private func cartfileForDependency(dependency: Dependency<PinnedVersion>, verbose: Bool) -> SignalProducer<Cartfile, CarthageError> {
+private func cartfileForDependency(dependency: Dependency<PinnedVersion>, fileHandle: NSFileHandle) -> SignalProducer<Cartfile, CarthageError> {
 	let repositoryURL = repositoryFileURLForProject(dependency.project)
 
-	return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, verbose, revision: dependency.version.commitish)
+	return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, fileHandle, revision: dependency.version.commitish)
 		|> catch { _ in .empty }
 		|> tryMap { Cartfile.fromString($0) }
 }
@@ -585,7 +585,7 @@ private func repositoryURLForProject(project: ProjectIdentifier, #preferHTTPS: B
 /// Returns a signal which will send the operation type once started, and
 /// the URL to where the repository's folder will exist on disk, then complete
 /// when the operation completes.
-public func cloneOrFetchProject(project: ProjectIdentifier, verbose: Bool, #preferHTTPS: Bool) -> SignalProducer<(ProjectEvent, NSURL), CarthageError> {
+public func cloneOrFetchProject(project: ProjectIdentifier, fileHandle: NSFileHandle, #preferHTTPS: Bool) -> SignalProducer<(ProjectEvent, NSURL), CarthageError> {
 	let repositoryURL = repositoryFileURLForProject(project)
 
 	return SignalProducer.try { () -> Result<GitURL, CarthageError> in
@@ -600,12 +600,12 @@ public func cloneOrFetchProject(project: ProjectIdentifier, verbose: Bool, #pref
 			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
 				// If we created the directory, we're now responsible for
 				// cloning it.
-				let cloneSignal = cloneRepository(remoteURL, repositoryURL, verbose)
+				let cloneSignal = cloneRepository(remoteURL, repositoryURL, fileHandle)
 
 				return SignalProducer(value: (ProjectEvent.Cloning(project), repositoryURL))
 					|> concat(cloneSignal |> then(.empty))
 			} else {
-				let fetchSignal = fetchRepository(repositoryURL, verbose, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
+				let fetchSignal = fetchRepository(repositoryURL, fileHandle, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
 
 				return SignalProducer(value: (ProjectEvent.Fetching(project), repositoryURL))
 					|> concat(fetchSignal |> then(.empty))

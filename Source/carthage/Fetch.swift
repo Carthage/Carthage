@@ -18,18 +18,31 @@ public struct FetchCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(FetchOptions.evaluate(mode))
-			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
-				let project = ProjectIdentifier.Git(options.repositoryURL)
-				var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
-
-				return cloneOrFetchProject(project, options.verbose, preferHTTPS: true)
-					|> on(next: { event, _ in
-						eventSink.put(event)
-					})
-					|> then(.empty)
-					|> promoteErrors
+			|> flatMap(.Merge) { options in
+				return self.fetchWithOptions(options)
+				|> promoteErrors
 			}
 			|> waitOnCommand
+	}
+	
+	private func fetchWithOptions(options: FetchOptions) -> SignalProducer<(), CarthageError> {
+		return openLoggingHandle(options.verbose, "git")
+			|> flatMap(.Merge) { (fileHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
+				let formatting = options.colorOptions.formatting
+				
+				let project = ProjectIdentifier.Git(options.repositoryURL)
+				var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
+				
+				return cloneOrFetchProject(project, fileHandle, preferHTTPS: true)
+					|> on(started: {
+						if let temporaryURL = temporaryURL {
+							carthage.println(formatting.bullets + "git output can be found in " + formatting.path(string: temporaryURL.path!))
+						}
+						}, next: { event, _ in
+							eventSink.put(event)
+					})
+					|> then(.empty)
+		}
 	}
 }
 
