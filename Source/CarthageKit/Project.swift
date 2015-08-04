@@ -544,7 +544,7 @@ private func frameworksInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL,
 
 /// Determines whether a Release is a suitable candidate for binary frameworks.
 private func binaryFrameworksCanBeProvidedByRelease(release: GitHubRelease) -> Bool {
-	return !release.draft && !release.prerelease && !release.assets.isEmpty
+	return !release.draft && !release.assets.isEmpty
 }
 
 /// Determines whether a release asset is a suitable candidate for binary
