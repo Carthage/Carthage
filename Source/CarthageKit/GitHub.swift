@@ -64,11 +64,15 @@ extension GitHubError: Decodable {
 	}
 }
 
-/// Describes a GitHub.com repository.
+/// Describes a GitHub.com or GitHub Enterprise repository.
 public struct GitHubRepository: Equatable {
 
+	/// Represents a URL for a GitHub website.
 	public enum URL: Equatable, Hashable, Printable {
+		/// The GitHub.com domain.
 		case GitHub
+
+		/// A GitHub Enterprise instance with its hostname.
 		case Enterprise(scheme: String, host: String)
 
 		public var scheme: String {
