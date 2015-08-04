@@ -36,13 +36,14 @@ class ResolverSpec: QuickSpec {
 		it("should resolve a Cartfile") {
 			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency, resolvedGitReference: self.resolvedGitReference)
 			let dependencies = self.orderedDependencies(resolver, fromCartfile: self.loadTestCartfile("TestCartfile"))
-			expect(dependencies.count).to(equal(6));
+			expect(dependencies.count).to(equal(7));
 
 			var generator = dependencies.generate()
 
 			// Dependencies should be listed in build order.
 			expect(generator.next()).to(equal([ "Mantle": PinnedVersion("1.3.0") ]))
 			expect(generator.next()).to(equal([ "git-error-translations": PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9") ]))
+			expect(generator.next()).to(equal([ "git-error-translations2": PinnedVersion("3.0.0") ]))
 			expect(generator.next()).to(equal([ "libextobjc": PinnedVersion("0.4.1") ]))
 			expect(generator.next()).to(equal([ "xcconfigs": PinnedVersion("1.3.0") ]))
 			expect(generator.next()).to(equal([ "objc-build-scripts": PinnedVersion("3.0.0") ]))
