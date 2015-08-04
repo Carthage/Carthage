@@ -91,6 +91,16 @@ public struct GitHubRepository: Equatable {
 			}
 		}
 
+		public var APIEndpoint: String {
+			switch self {
+			case .GitHub:
+				return "\(scheme)://api.\(host)"
+
+			case let .Enterprise(scheme, host):
+				return "\(scheme)://\(host)/api/v3"
+			}
+		}
+
 		public var hashValue: Int {
 			return scheme.hashValue ^ host.hashValue
 		}
@@ -414,7 +424,7 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
 internal func releaseForTag(tag: String, repository: GitHubRepository, authorizationHeaderValue: String?) -> SignalProducer<GitHubRelease, CarthageError> {
-	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
+	return fetchAllPages(NSURL(string: "\(repository.baseURL.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
 		|> tryMap { data -> Result<AnyObject, CarthageError> in
 			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
 				return .success(object)
