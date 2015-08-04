@@ -1009,17 +1009,15 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			|> filter { projects in !projects.isEmpty }
 			|> flatMap(.Merge) { (projects: [(ProjectLocator, [String])]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 				return SignalProducer(values: projects)
-					|> flatMap(.Concat) { (project: ProjectLocator, schemes: [String]) in
+					|> map { (project: ProjectLocator, schemes: [String]) in
 						// Only look for schemes that actually reside in the project
-						return SignalProducer(values: schemes)
-							|> filter { (scheme: String) -> Bool in
-								if let schemePath = project.fileURL.URLByAppendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").path {
-									return NSFileManager.defaultManager().fileExistsAtPath(schemePath)
-								}
-								return false
+						let containedSchemes = schemes.filter { (scheme: String) -> Bool in
+							if let schemePath = project.fileURL.URLByAppendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").path {
+								return NSFileManager.defaultManager().fileExistsAtPath(schemePath)
 							}
-							|> collect
-							|> map { (project, $0) }
+							return false
+						}
+						return (project, containedSchemes)
 					}
 					|> filter { (project: ProjectLocator, schemes: [String]) in
 						switch project {
