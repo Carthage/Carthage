@@ -221,10 +221,7 @@ private typealias BasicGitHubCredentials = (String, String)
 private func loadCredentialsFromGit() -> SignalProducer<BasicGitHubCredentials?, CarthageError> {
 	let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
 	
-	var environment = NSProcessInfo.processInfo().environment as! [String: String]
-	environment["GIT_TERMINAL_PROMPT"] = "0"
-	
-	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data), environment: environment)
+	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
 		|> flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
 			return string.linesProducer |> promoteErrors(CarthageError.self)
 		}

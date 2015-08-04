@@ -3,7 +3,7 @@
 # Check the minimum required Xcode version. Meant to be run
 # as part of an Xcode Run Script build phase.
 
-required_xcode_version=6.1.1
+required_xcode_version=6.4
 
 if [ ${XCODE_VERSION_ACTUAL} -lt ${required_xcode_version//.} ]
 then
