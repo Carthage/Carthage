@@ -67,7 +67,7 @@ extension GitHubError: Decodable {
 /// Describes a GitHub.com repository.
 public struct GitHubRepository: Equatable {
 
-	public enum URL: Equatable, Hashable {
+	public enum URL: Equatable, Hashable, Printable {
 		case GitHub
 		case Enterprise(scheme: String, host: String)
 
@@ -96,13 +96,17 @@ public struct GitHubRepository: Equatable {
 			case .GitHub:
 				return "\(scheme)://api.\(host)"
 
-			case let .Enterprise(scheme, host):
-				return "\(scheme)://\(host)/api/v3"
+			case .Enterprise:
+				return "\(description)/api/v3"
 			}
 		}
 
 		public var hashValue: Int {
 			return scheme.hashValue ^ host.hashValue
+		}
+
+		public var description: String {
+			return "\(scheme)://\(host)"
 		}
 	}
 
@@ -112,7 +116,7 @@ public struct GitHubRepository: Equatable {
 
 	/// The URL that should be used for cloning this repository over HTTPS.
 	public var HTTPSURL: GitURL {
-		return GitURL("\(baseURL.scheme)://\(baseURL.host)/\(owner)/\(name).git")
+		return GitURL("\(baseURL.description)/\(owner)/\(name).git")
 	}
 
 	/// The URL that should be used for cloning this repository over SSH.
@@ -122,7 +126,7 @@ public struct GitHubRepository: Equatable {
 
 	/// The URL for filing a new GitHub issue for this repository.
 	public var newIssueURL: NSURL {
-		return NSURL(string: "\(baseURL.scheme)://\(baseURL.host)/\(owner)/\(name)/issues/new")!
+		return NSURL(string: "\(baseURL.description)/\(owner)/\(name)/issues/new")!
 	}
 
 	public init(baseURL: URL = .GitHub, owner: String, name: String) {
@@ -175,8 +179,8 @@ extension GitHubRepository: Printable {
 		case .GitHub:
 			return repository
 
-		case let .Enterprise(scheme, host):
-			return "\(scheme)://\(host)/\(repository)"
+		case .Enterprise:
+			return "\(baseURL.description)/\(repository)"
 		}
 	}
 }
