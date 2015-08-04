@@ -85,6 +85,33 @@ extension ProjectLocator: Printable {
 	}
 }
 
+/// Configures a build's destination.
+public enum BuildDestination {
+	/// OSX with optional architecture parameter. Can be x86_64 (the default) or i386.
+	case OSX(arch: String?)
+	/// iOS with a device identifier as shown in the Devices tab of the Xcode Organizer.
+	case iOS(id: String)
+	/// iOS Simulator with the full name of the device to simulate (as presented in Xcode) and OS version (eg. '8.1') or 'latest' (the default).
+	case iOSSimulator(name: String, OS: String?)
+}
+
+extension BuildDestination: Printable {
+	public var description: String {
+		switch self {
+		case .OSX(arch: .Some(let arch)):
+			return "platform=OSX,arch=\(arch)"
+		case .OSX(arch: _):
+			return "platform=OSX"
+		case .iOS(id: let id):
+			return "platform=iOS,id=\(id)"
+		case .iOSSimulator(name: let name, OS: .Some(let os)):
+			return "platform=iOS Simulator,name=\(name),OS=\(os)"
+		case .iOSSimulator(name: let name, OS: _):
+			return "platform=iOS Simulator,name=\(name)"
+		}
+	}
+}
+
 /// Configures a build with Xcode.
 public struct BuildArguments {
 	/// The project to build.
@@ -97,7 +124,21 @@ public struct BuildArguments {
 	public var configuration: String?
 
 	/// The platform SDK to build for.
-	public var sdk: SDK?
+	public var sdk: SDK? {
+		didSet {
+			// If SDK is the iOS simulator, then also set the destination.
+			// This fixes problems when the project deployment version is lower than the target's
+			// and includes simulators unsupported by the target.
+			// Example: Target is at 8.0, project at 7.0, xcodebuild chooses the first
+			// simulator on the list, iPad 2 7.1, which is invalid for the target.
+			if sdk == .iPhoneSimulator {
+				self.destination = BuildDestination.iOSSimulator(name: "iPhone 6", OS: "latest")
+			}
+		}
+	}
+
+	/// The run destination to try building for.
+	private var destination: BuildDestination?
 
 	/// The build setting whether the product includes only object code for
 	/// the native architecture.
@@ -124,6 +165,10 @@ public struct BuildArguments {
 
 		if let sdk = sdk {
 			args += sdk.arguments
+		}
+
+		if let destination = destination {
+			args += [ "-destination", destination.description]
 		}
 
 		args += onlyActiveArchitecture.arguments
