@@ -316,7 +316,7 @@ public final class Project {
 
 				switch project {
 				case let .GitHub(repository):
-					return loadGitHubAuthorization()
+					return loadGitHubAuthorization(forURL: repository.baseURL)
 						|> flatMap(.Concat) { authorizationHeaderValue in
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withAuthorizationHeaderValue: authorizationHeaderValue)
 								|> catch { error in
