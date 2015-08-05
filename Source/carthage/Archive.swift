@@ -22,9 +22,10 @@ public struct ArchiveCommand: CommandType {
 				let formatting = options.colorOptions.formatting
 
 				return SignalProducer(values: Platform.supportedPlatforms)
-					|> map { platform in platform.relativePath.stringByAppendingPathComponent(options.frameworkName).stringByAppendingPathExtension("framework")! }
-					|> flatMap(.Concat) { relativePath in
-						return SignalProducer(values: [relativePath, relativePath.stringByAppendingPathExtension("dSYM")!])
+					|> flatMap(.Concat) { platform in
+						let framework = platform.relativePath.stringByAppendingPathComponent(options.frameworkName).stringByAppendingPathExtension("framework")!
+						let dSYM = framework.stringByAppendingPathExtension("dSYM")!
+						return SignalProducer(values: [framework, dSYM])
 					}
 					|> filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
 					|> on(next: { path in
