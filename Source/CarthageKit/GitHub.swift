@@ -120,7 +120,7 @@ public struct GitHubRepository: Equatable {
 
 	/// The URL that should be used for cloning this repository over HTTPS.
 	public var HTTPSURL: GitURL {
-		return GitURL("\(baseURL.description)/\(owner)/\(name).git")
+		return GitURL("\(baseURL)/\(owner)/\(name).git")
 	}
 
 	/// The URL that should be used for cloning this repository over SSH.
@@ -130,7 +130,7 @@ public struct GitHubRepository: Equatable {
 
 	/// The URL for filing a new GitHub issue for this repository.
 	public var newIssueURL: NSURL {
-		return NSURL(string: "\(baseURL.description)/\(owner)/\(name)/issues/new")!
+		return NSURL(string: "\(baseURL)/\(owner)/\(name)/issues/new")!
 	}
 
 	public init(baseURL: URL = .GitHub, owner: String, name: String) {
@@ -184,7 +184,7 @@ extension GitHubRepository: Printable {
 			return repository
 
 		case .Enterprise:
-			return "\(baseURL.description)/\(repository)"
+			return "\(baseURL)/\(repository)"
 		}
 	}
 }
@@ -292,7 +292,7 @@ extension GitHubRelease: Decodable {
 private typealias BasicGitHubCredentials = (String, String)
 
 private func loadCredentialsFromGit(forURL URL: GitHubRepository.URL) -> SignalProducer<BasicGitHubCredentials?, CarthageError> {
-	let data = "url=\(URL.description)".dataUsingEncoding(NSUTF8StringEncoding)!
+	let data = "url=\(URL)".dataUsingEncoding(NSUTF8StringEncoding)!
 	
 	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
 		|> flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
