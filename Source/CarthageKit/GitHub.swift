@@ -167,7 +167,16 @@ public func ==(lhs: GitHubRepository, rhs: GitHubRepository) -> Bool {
 }
 
 public func ==(lhs: GitHubRepository.URL, rhs: GitHubRepository.URL) -> Bool {
-	return lhs.scheme == rhs.scheme && lhs.host == rhs.host
+	switch (lhs, rhs) {
+	case (.GitHub, .GitHub):
+		return true
+
+	case let (.Enterprise(la, lb), .Enterprise(ra, rb)):
+		return la == ra && lb == rb
+
+	case (_, _):
+		return false
+	}
 }
 
 extension GitHubRepository: Hashable {
