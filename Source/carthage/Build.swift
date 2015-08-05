@@ -104,6 +104,8 @@ public struct BuildCommand: CommandType {
 	/// Returns a producer of producers, representing each scheme being built.
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
+		let formatting = options.colorOptions.formatting
+
 		let buildProducer = project.loadCombinedCartfile()
 			|> map { _ in project }
 			|> catch { error in
@@ -121,13 +123,13 @@ public struct BuildCommand: CommandType {
 					|> then(SignalProducer(value: project))
 			}
 			|> flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform, sendWarning: printBuildWarningMessage(formatting))
 			}
 
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform)
+			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform, sendWarning: printBuildWarningMessage(formatting))
 			return buildProducer |> concat(currentProducers)
 		}
 	}
@@ -169,6 +171,48 @@ public struct BuildCommand: CommandType {
 					return .WriteFailed(temporaryDirectoryURL, error)
 				}
 		}
+	}
+}
+
+/**
+Returns a function that formats and prints a warning returned from building
+code (for instance, __this phrase__ becomes "this phrase")
+
+:param: formatting An instance of formatting options
+*/
+public func printBuildWarningMessage(formatting: ColorOptions.Formatting) -> (String -> Void) {
+	return { (message: String) in
+		var messageParts = [String]()
+		let quotedRegEx = NSRegularExpression(pattern: "__(.+?)__", options: nil, error: nil)
+		
+		let fullRange = NSMakeRange(0, count(message))
+		if let matches = quotedRegEx?.matchesInString(message, options: nil, range: fullRange) {
+			let m = message as NSString
+			var lastEndingIndex = 0
+
+			for (index, match) in enumerate(matches) {
+				let sectionRange = match.rangeAtIndex(0)
+				let phraseRange = match.rangeAtIndex(1)
+				let rangeToKeep = NSMakeRange(lastEndingIndex, sectionRange.location - lastEndingIndex)
+
+				let precedingText = m.substringWithRange(rangeToKeep)
+				let quotedPhrase = formatting.quote(m.substringWithRange(phraseRange))
+				
+				messageParts.append(precedingText)
+				messageParts.append(quotedPhrase)
+				
+				lastEndingIndex = sectionRange.location + sectionRange.length
+
+				if index == matches.count - 1 {
+					let finalRange = NSMakeRange(lastEndingIndex, fullRange.length - lastEndingIndex)
+					let finalText = m.substringWithRange(finalRange)
+					messageParts.append(finalText)
+				}
+			}
+		}
+		
+		let concatenatedMessage = "".join(messageParts)
+		carthage.println("\(formatting.bullets)WARNING: \(concatenatedMessage)")
 	}
 }
 

@@ -472,7 +472,7 @@ public final class Project {
 	/// Attempts to build each Carthage dependency that has been checked out.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatform platform: Platform?) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatform platform: Platform?, sendWarning: (String -> Void)? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			|> flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
 			|> flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
@@ -481,7 +481,7 @@ public final class Project {
 					return .empty
 				}
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platform: platform)
+				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platform: platform, sendWarning: sendWarning)
 			}
 	}
 }

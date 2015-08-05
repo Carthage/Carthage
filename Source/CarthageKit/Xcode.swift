@@ -773,7 +773,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, sendWarning: (String -> Void)? = nil) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
@@ -798,8 +798,9 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					signingAllowed = matchingidentity != nil
 					
 					if matchingidentity == nil {
-						let warningMessage = "Skipping build for \(sdk) SDK, because the necessary signing identity (\(configuredSigningIdentity.value)) is not installed"
-						// TODO: Pass on this warning message
+						if let sendWarning = sendWarning {
+							sendWarning("Skipping build for __\(sdk)__ SDK, because the necessary signing identity __\(configuredSigningIdentity.value)__ is not installed")
+						}
 					}
 					
 				default:
@@ -929,12 +930,12 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil, sendWarning: (String -> Void)? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
-	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platform: platform)
+	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platform: platform, sendWarning: sendWarning)
 	return SignalProducer.try { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			var error: NSError?
 			if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -1104,7 +1105,7 @@ public func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSignin
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil, sendWarning: (String -> Void)? = nil) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
 	return SignalProducer { observer, disposable in
@@ -1193,7 +1194,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
 				let initialValue = (project, scheme)
 
-				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, sendWarning: sendWarning)
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for
 					// completion.
