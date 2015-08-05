@@ -82,7 +82,7 @@ Although the `Cartfile.resolved` file is meant to be human-readable and diffable
 
 ## Carthage/Build
 
-This folder is created by `carthage build` in the project’s working directory, and contains the binary frameworks for each dependency (whether built from scratch or downloaded).
+This folder is created by `carthage build` in the project’s working directory, and contains the binary frameworks and debug information for each dependency (whether built from scratch or downloaded).
 
 You are not required to commit this folder to your repository, but you may wish to, if you want to guarantee that the built versions of each dependency will _always_ be accessible at a later date.
 
