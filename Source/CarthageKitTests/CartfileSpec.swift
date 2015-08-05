@@ -45,7 +45,7 @@ class CartfileSpec: QuickSpec {
 			expect(depErrorTranslations.version).to(equal(VersionSpecifier.GitReference("development")))
 
 			let depErrorTranslations2 = cartfile.dependencies[5]
-			expect(depErrorTranslations2.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(baseURL: .Enterprise(scheme: "https", host: "enterprise.local"), owner: "desktop", name: "git-error-translations2"))))
+			expect(depErrorTranslations2.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(baseURL: .Enterprise(scheme: "https", hostname: "enterprise.local/ghe"), owner: "desktop", name: "git-error-translations2"))))
 			expect(depErrorTranslations2.version).to(equal(VersionSpecifier.Any))
 		}
 

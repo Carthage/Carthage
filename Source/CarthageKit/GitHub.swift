@@ -73,7 +73,7 @@ public struct GitHubRepository: Equatable {
 		case GitHub
 
 		/// A GitHub Enterprise instance with its hostname.
-		case Enterprise(scheme: String, host: String)
+		case Enterprise(scheme: String, hostname: String)
 
 		public var scheme: String {
 			switch self {
@@ -85,20 +85,20 @@ public struct GitHubRepository: Equatable {
 			}
 		}
 
-		public var host: String {
+		public var hostname: String {
 			switch self {
 			case .GitHub:
 				return "github.com"
 
-			case let .Enterprise(_, host):
-				return host
+			case let .Enterprise(_, hostname):
+				return hostname
 			}
 		}
 
 		public var APIEndpoint: String {
 			switch self {
 			case .GitHub:
-				return "\(scheme)://api.\(host)"
+				return "\(scheme)://api.\(hostname)"
 
 			case .Enterprise:
 				return "\(description)/api/v3"
@@ -106,11 +106,11 @@ public struct GitHubRepository: Equatable {
 		}
 
 		public var hashValue: Int {
-			return scheme.hashValue ^ host.hashValue
+			return scheme.hashValue ^ hostname.hashValue
 		}
 
 		public var description: String {
-			return "\(scheme)://\(host)"
+			return "\(scheme)://\(hostname)"
 		}
 	}
 
@@ -125,7 +125,7 @@ public struct GitHubRepository: Equatable {
 
 	/// The URL that should be used for cloning this repository over SSH.
 	public var SSHURL: GitURL {
-		return GitURL("ssh://git@\(baseURL.host)/\(owner)/\(name).git")
+		return GitURL("ssh://git@\(baseURL.hostname)/\(owner)/\(name).git")
 	}
 
 	/// The URL for filing a new GitHub issue for this repository.
@@ -152,10 +152,15 @@ public struct GitHubRepository: Equatable {
 			URL = NSURL(string: NWO),
 			scheme = URL.scheme,
 			host = URL.host,
-			pathComponents = URL.pathComponents as? [String]
-			where pathComponents.count == 3
+			var pathComponents = URL.pathComponents as? [String]
+			// The trailing slash of the host is included in the components.
+			where pathComponents.count >= 3
 		{
-			return .success(self(baseURL: .Enterprise(scheme: scheme, host: host), owner: pathComponents[1], name: pathComponents[2]))
+			// Consider that the instance might be in subdirectories.
+			let name = pathComponents.removeLast()
+			let owner = pathComponents.removeLast()
+			let hostnameWithSubdirectories = host.stringByAppendingPathComponent(join("/", pathComponents))
+			return .success(self(baseURL: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: name))
 		}
 
 		return .failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\""))

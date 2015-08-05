@@ -8,4 +8,4 @@ github "jspahrsummers/xcconfigs" # here is an intra-line comment
 git "https://enterprise.local/desktop/git-error-translations.git" "development"
 
 # GitHub Enterprise
-github "https://enterprise.local/desktop/git-error-translations2"
+github "https://enterprise.local/ghe/desktop/git-error-translations2"
