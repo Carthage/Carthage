@@ -168,7 +168,7 @@ public struct BuildArguments {
 		}
 
 		if let destination = destination {
-			args += [ "-destination", destination.description]
+			args += [ "-destination", destination.description ]
 		}
 
 		args += onlyActiveArchitecture.arguments
