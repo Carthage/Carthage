@@ -124,21 +124,10 @@ public struct BuildArguments {
 	public var configuration: String?
 
 	/// The platform SDK to build for.
-	public var sdk: SDK? {
-		didSet {
-			// If SDK is the iOS simulator, then also set the destination.
-			// This fixes problems when the project deployment version is lower than the target's
-			// and includes simulators unsupported by the target.
-			// Example: Target is at 8.0, project at 7.0, xcodebuild chooses the first
-			// simulator on the list, iPad 2 7.1, which is invalid for the target.
-			if sdk == .iPhoneSimulator {
-				self.destination = BuildDestination.iOSSimulator(name: "iPhone 6", OS: "latest")
-			}
-		}
-	}
+	public var sdk: SDK?
 
 	/// The run destination to try building for.
-	private var destination: BuildDestination?
+	public var destination: BuildDestination?
 
 	/// The build setting whether the product includes only object code for
 	/// the native architecture.
@@ -834,6 +823,15 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 		var argsForBuilding = argsForLoading
 		argsForBuilding.onlyActiveArchitecture = .No
+
+		if sdk == .iPhoneSimulator {
+			// If SDK is the iOS simulator, then also set the destination.
+			// This fixes problems when the project deployment version is lower than the target's
+			// and includes simulators unsupported by the target.
+			// Example: Target is at 8.0, project at 7.0, xcodebuild chooses the first
+			// simulator on the list, iPad 2 7.1, which is invalid for the target.
+			argsForBuilding.destination = BuildDestination.iOSSimulator(name: "iPhone 6", OS: "latest")
+		}
 
 		var buildScheme = xcodebuildTask("build", argsForBuilding)
 		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
