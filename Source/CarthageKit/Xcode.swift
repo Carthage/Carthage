@@ -129,6 +129,9 @@ public struct BuildArguments {
 	/// The run destination to try building for.
 	public var destination: BuildDestination?
 
+	/// The amount of time xcodebuild spends looking for the destination (in seconds).
+	public var destinationTimeout: UInt?
+
 	/// The build setting whether the product includes only object code for
 	/// the native architecture.
 	public var onlyActiveArchitecture: OnlyActiveArchitecture = .NotSpecified
@@ -158,6 +161,10 @@ public struct BuildArguments {
 
 		if let destination = destination {
 			args += [ "-destination", destination.description ]
+		}
+
+		if let destinationTimeout = destinationTimeout {
+			args += [ "-destination-timeout", String(destinationTimeout) ]
 		}
 
 		args += onlyActiveArchitecture.arguments
@@ -831,6 +838,9 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			// Example: Target is at 8.0, project at 7.0, xcodebuild chooses the first
 			// simulator on the list, iPad 2 7.1, which is invalid for the target.
 			argsForBuilding.destination = BuildDestination.iOSSimulator(name: "iPhone 6", OS: "latest")
+			// Also set the destonation lookup timeout. Since we're building for the simulator the lookup
+			// shouldn't take more than a fraction of a second.
+			argsForBuilding.destinationTimeout = 3 // Set to 3 just to be safe.
 		}
 
 		var buildScheme = xcodebuildTask("build", argsForBuilding)
