@@ -67,12 +67,12 @@ extension GitHubError: Decodable {
 /// Describes a GitHub.com or GitHub Enterprise repository.
 public struct GitHubRepository: Equatable {
 
-	/// Represents a URL for a GitHub website.
-	public enum URL: Equatable, Hashable, Printable {
-		/// The GitHub.com domain.
+	/// Represents a GitHub server instance.
+	public enum Server: Equatable, Hashable, Printable {
+		/// The github.com server instance.
 		case GitHub
 
-		/// A GitHub Enterprise instance with its hostname.
+		/// An Enterprise instance with its hostname.
 		case Enterprise(scheme: String, hostname: String)
 
 		public var scheme: String {
@@ -114,27 +114,27 @@ public struct GitHubRepository: Equatable {
 		}
 	}
 
-	public let baseURL: URL
+	public let server: Server
 	public let owner: String
 	public let name: String
 
 	/// The URL that should be used for cloning this repository over HTTPS.
 	public var HTTPSURL: GitURL {
-		return GitURL("\(baseURL)/\(owner)/\(name).git")
+		return GitURL("\(server)/\(owner)/\(name).git")
 	}
 
 	/// The URL that should be used for cloning this repository over SSH.
 	public var SSHURL: GitURL {
-		return GitURL("ssh://git@\(baseURL.hostname)/\(owner)/\(name).git")
+		return GitURL("ssh://git@\(server.hostname)/\(owner)/\(name).git")
 	}
 
 	/// The URL for filing a new GitHub issue for this repository.
 	public var newIssueURL: NSURL {
-		return NSURL(string: "\(baseURL)/\(owner)/\(name)/issues/new")!
+		return NSURL(string: "\(server)/\(owner)/\(name)/issues/new")!
 	}
 
-	public init(baseURL: URL = .GitHub, owner: String, name: String) {
-		self.baseURL = baseURL
+	public init(server: Server = .GitHub, owner: String, name: String) {
+		self.server = server
 		self.owner = owner
 		self.name = name
 	}
@@ -160,7 +160,7 @@ public struct GitHubRepository: Equatable {
 			let name = pathComponents.removeLast()
 			let owner = pathComponents.removeLast()
 			let hostnameWithSubdirectories = host.stringByAppendingPathComponent(join("/", pathComponents))
-			return .success(self(baseURL: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: name))
+			return .success(self(server: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: name))
 		}
 
 		return .failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\""))
@@ -168,10 +168,10 @@ public struct GitHubRepository: Equatable {
 }
 
 public func ==(lhs: GitHubRepository, rhs: GitHubRepository) -> Bool {
-	return lhs.baseURL == rhs.baseURL && lhs.owner.caseInsensitiveCompare(rhs.owner) == .OrderedSame && lhs.name.caseInsensitiveCompare(rhs.name) == .OrderedSame
+	return lhs.server == rhs.server && lhs.owner.caseInsensitiveCompare(rhs.owner) == .OrderedSame && lhs.name.caseInsensitiveCompare(rhs.name) == .OrderedSame
 }
 
-public func ==(lhs: GitHubRepository.URL, rhs: GitHubRepository.URL) -> Bool {
+public func ==(lhs: GitHubRepository.Server, rhs: GitHubRepository.Server) -> Bool {
 	switch (lhs, rhs) {
 	case (.GitHub, .GitHub):
 		return true
@@ -186,19 +186,19 @@ public func ==(lhs: GitHubRepository.URL, rhs: GitHubRepository.URL) -> Bool {
 
 extension GitHubRepository: Hashable {
 	public var hashValue: Int {
-		return baseURL.hashValue ^ owner.hashValue ^ name.hashValue
+		return server.hashValue ^ owner.hashValue ^ name.hashValue
 	}
 }
 
 extension GitHubRepository: Printable {
 	public var description: String {
 		let repository = "\(owner)/\(name)"
-		switch baseURL {
+		switch server {
 		case .GitHub:
 			return repository
 
 		case .Enterprise:
-			return "\(baseURL)/\(repository)"
+			return "\(server)/\(repository)"
 		}
 	}
 }
@@ -305,8 +305,8 @@ extension GitHubRelease: Decodable {
 
 private typealias BasicGitHubCredentials = (String, String)
 
-private func loadCredentialsFromGit(forURL URL: GitHubRepository.URL) -> SignalProducer<BasicGitHubCredentials?, CarthageError> {
-	let data = "url=\(URL)".dataUsingEncoding(NSUTF8StringEncoding)!
+private func loadCredentialsFromGit(forServer server: GitHubRepository.Server) -> SignalProducer<BasicGitHubCredentials?, CarthageError> {
+	let data = "url=\(server)".dataUsingEncoding(NSUTF8StringEncoding)!
 	
 	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
 		|> flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
@@ -336,12 +336,12 @@ private func loadCredentialsFromGit(forURL URL: GitHubRepository.URL) -> SignalP
 }
 
 
-internal func loadGitHubAuthorization(forURL URL: GitHubRepository.URL) -> SignalProducer<String?, CarthageError> {
+internal func loadGitHubAuthorization(forServer server: GitHubRepository.Server) -> SignalProducer<String?, CarthageError> {
 	let environment = NSProcessInfo.processInfo().environment
 	if let accessToken = environment["GITHUB_ACCESS_TOKEN"] as? String {
 		return SignalProducer(value: "token \(accessToken)")
 	} else {
-		return loadCredentialsFromGit(forURL: URL) |> map { maybeCredentials in
+		return loadCredentialsFromGit(forServer: server) |> map { maybeCredentials in
 			maybeCredentials.map { (username, password) in
 				let data = "\(username):\(password)".dataUsingEncoding(NSUTF8StringEncoding)!
 				let encodedString = data.base64EncodedStringWithOptions(nil)
@@ -446,7 +446,7 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
 internal func releaseForTag(tag: String, repository: GitHubRepository, authorizationHeaderValue: String?) -> SignalProducer<GitHubRelease, CarthageError> {
-	return fetchAllPages(NSURL(string: "\(repository.baseURL.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
+	return fetchAllPages(NSURL(string: "\(repository.server.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
 		|> tryMap { data -> Result<AnyObject, CarthageError> in
 			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
 				return .success(object)
