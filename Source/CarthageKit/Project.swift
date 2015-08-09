@@ -259,11 +259,20 @@ public final class Project {
 
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
-		// We don't need the version list, but this takes care of
-		// cloning/fetching for us, while avoiding duplication.
 		return versionsForProject(project)
-			|> then(resolveReferenceInRepository(repositoryFileURLForProject(project), reference))
-			|> map { PinnedVersion($0) }
+			|> collect
+			|> flatMap(.Concat) { (versions: [PinnedVersion]) in
+				let referencedVersion = PinnedVersion(reference)
+
+				if contains(versions, referencedVersion) {
+					// If the reference is an exact tag, resolves it to the tag.
+					return SignalProducer(value: referencedVersion)
+				} else {
+					// Otherwise, it is resolved to an object SHA.
+					return resolveReferenceInRepository(repositoryFileURLForProject(project), reference)
+						|> map { PinnedVersion($0) }
+				}
+			}
 	}
 
 	/// Attempts to determine the latest satisfiable version of the project's
@@ -574,7 +583,7 @@ private func frameworksInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL,
 
 /// Determines whether a Release is a suitable candidate for binary frameworks.
 private func binaryFrameworksCanBeProvidedByRelease(release: GitHubRelease) -> Bool {
-	return !release.draft && !release.prerelease && !release.assets.isEmpty
+	return !release.draft && !release.assets.isEmpty
 }
 
 /// Determines whether a release asset is a suitable candidate for binary

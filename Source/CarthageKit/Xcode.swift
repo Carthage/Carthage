@@ -245,12 +245,6 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		// automatically bail out if it looks like that's happening.
 		|> timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 8, onScheduler: QueueScheduler())
 		|> map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
-		|> filter { (line: String) -> Bool in
-			if let schemePath = project.fileURL.URLByAppendingPathComponent("xcshareddata/xcschemes/\(line).xcscheme").path {
-				return NSFileManager.defaultManager().fileExistsAtPath(schemePath)
-			}
-			return false
-		}
 }
 
 /// Represents a platform to build for.
@@ -335,7 +329,7 @@ public enum SDK: String {
 
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
-		return Result(self(rawValue: string), failWith: .ParseError(description: "unexpected SDK key \"(string)\""))
+		return Result(self(rawValue: string), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
 	}
 
 	/// The platform that this SDK targets.
@@ -434,7 +428,7 @@ public enum ProductType: String {
 	/// Attempts to parse a product type from a string returned from
 	/// `xcodebuild`.
 	public static func fromString(string: String) -> Result<ProductType, CarthageError> {
-		return Result(self(rawValue: string), failWith: .ParseError(description: "unexpected product type \"(string)\""))
+		return Result(self(rawValue: string), failWith: .ParseError(description: "unexpected product type \"\(string)\""))
 	}
 }
 
@@ -1015,6 +1009,16 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			|> filter { projects in !projects.isEmpty }
 			|> flatMap(.Merge) { (projects: [(ProjectLocator, [String])]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 				return SignalProducer(values: projects)
+					|> map { (project: ProjectLocator, schemes: [String]) in
+						// Only look for schemes that actually reside in the project
+						let containedSchemes = schemes.filter { (scheme: String) -> Bool in
+							if let schemePath = project.fileURL.URLByAppendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").path {
+								return NSFileManager.defaultManager().fileExistsAtPath(schemePath)
+							}
+							return false
+						}
+						return (project, containedSchemes)
+					}
 					|> filter { (project: ProjectLocator, schemes: [String]) in
 						switch project {
 						case .ProjectFile where !schemes.isEmpty:
