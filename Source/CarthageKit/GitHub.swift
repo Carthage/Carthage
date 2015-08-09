@@ -144,8 +144,8 @@ public struct GitHubRepository: Equatable {
 	/// Enterprise instances.
 	public static func fromIdentifier(identifier: String) -> Result<GitHubRepository, CarthageError> {
 		// GitHub.com
-		let components = split(identifier, maxSplit: 2, allowEmptySlices: false) { $0 == "/" }
-		if components.count == 2 {
+		let components = split(identifier, maxSplit: 1, allowEmptySlices: false) { $0 == "/" }
+		if components.count == 2 && !components[0].hasPrefix("http") {
 			return .success(self(owner: components[0], name: components[1]))
 		}
 
