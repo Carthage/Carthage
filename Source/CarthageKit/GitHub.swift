@@ -154,9 +154,9 @@ public struct GitHubRepository: Equatable {
 			URL = NSURL(string: identifier),
 			scheme = URL.scheme,
 			host = URL.host,
-			var pathComponents = URL.pathComponents as? [String]
 			// The trailing slash of the host is included in the components.
-			where pathComponents.count >= 3
+			var pathComponents = (URL.pathComponents as? [String])?.filter({ $0 != "/" })
+			where pathComponents.count >= 2
 		{
 			// Consider that the instance might be in subdirectories.
 			let name = pathComponents.removeLast()
