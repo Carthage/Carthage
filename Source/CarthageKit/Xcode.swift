@@ -85,33 +85,6 @@ extension ProjectLocator: Printable {
 	}
 }
 
-/// Configures a build's destination.
-public enum BuildDestination {
-	/// OSX with optional architecture parameter. Can be x86_64 (the default) or i386.
-	case OSX(arch: String?)
-	/// iOS with a device identifier as shown in the Devices tab of the Xcode Organizer.
-	case iOS(id: String)
-	/// iOS Simulator with the full name of the device to simulate (as presented in Xcode) and OS version (eg. '8.1') or 'latest' (the default).
-	case iOSSimulator(name: String, OS: String?)
-}
-
-extension BuildDestination: Printable {
-	public var description: String {
-		switch self {
-		case .OSX(arch: .Some(let arch)):
-			return "platform=OSX,arch=\(arch)"
-		case .OSX(arch: _):
-			return "platform=OSX"
-		case .iOS(id: let id):
-			return "platform=iOS,id=\(id)"
-		case .iOSSimulator(name: let name, OS: .Some(let os)):
-			return "platform=iOS Simulator,name=\(name),OS=\(os)"
-		case .iOSSimulator(name: let name, OS: _):
-			return "platform=iOS Simulator,name=\(name)"
-		}
-	}
-}
-
 /// Configures a build with Xcode.
 public struct BuildArguments {
 	/// The project to build.
@@ -127,7 +100,7 @@ public struct BuildArguments {
 	public var sdk: SDK?
 
 	/// The run destination to try building for.
-	public var destination: BuildDestination?
+	public var destination: String?
 
 	/// The amount of time xcodebuild spends looking for the destination (in seconds).
 	public var destinationTimeout: UInt?
@@ -160,7 +133,7 @@ public struct BuildArguments {
 		}
 
 		if let destination = destination {
-			args += [ "-destination", destination.description ]
+			args += [ "-destination", destination ]
 		}
 
 		if let destinationTimeout = destinationTimeout {
@@ -831,22 +804,31 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		var argsForBuilding = argsForLoading
 		argsForBuilding.onlyActiveArchitecture = .No
 
-		if sdk == .iPhoneSimulator {
-			// If SDK is the iOS simulator, then also set the destination.
-			// This fixes problems when the project deployment version is lower than the target's
-			// and includes simulators unsupported by the target.
-			// Example: Target is at 8.0, project at 7.0, xcodebuild chooses the first
-			// simulator on the list, iPad 2 7.1, which is invalid for the target.
-			argsForBuilding.destination = BuildDestination.iOSSimulator(name: "iPhone 6", OS: "latest")
-			// Also set the destonation lookup timeout. Since we're building for the simulator the lookup
-			// shouldn't take more than a fraction of a second.
-			argsForBuilding.destinationTimeout = 3 // Set to 3 just to be safe.
+		let fetchDestination = { (var arguments: BuildArguments) -> SignalProducer<BuildArguments, ReactiveTaskError> in
+			if sdk == .iPhoneSimulator {
+				let destinationLookup = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: ["simctl", "list", "devices"])
+				return launchTask(destinationLookup)
+					|> ignoreTaskData
+					|> map { (data: NSData) -> BuildArguments in
+						let string = NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
+						let regex = NSRegularExpression(pattern: "-- iOS [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: nil, error: nil)!
+						if let lastDevice = regex.matchesInString(string as String, options: nil, range: NSRange(location: 0, length: (string as NSString).length)).last as? NSTextCheckingResult {
+							let deviceID = string.substringWithRange(lastDevice.rangeAtIndex(1))
+							arguments.destination = "platform=iOS Simulator,id=\(deviceID)"
+						}
+						arguments.destinationTimeout = 3
+						return arguments
+				}
+			}
+			return SignalProducer(value: arguments)
 		}
 
-		var buildScheme = xcodebuildTask("build", argsForBuilding)
-		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
-
-		return launchTask(buildScheme)
+		return fetchDestination(argsForBuilding)
+			|> flatMap(.Concat) { (buildArguments: BuildArguments) -> SignalProducer<TaskEvent<NSData>, ReactiveTaskError> in
+				var buildScheme = xcodebuildTask("build", buildArguments)
+				buildScheme.workingDirectoryPath = workingDirectoryURL.path!
+				return launchTask(buildScheme)
+			}
 			|> mapError { .TaskError($0) }
 			|> flatMapTaskEvents(.Concat) { _ in
 				return BuildSettings.loadWithArguments(argsForLoading)
