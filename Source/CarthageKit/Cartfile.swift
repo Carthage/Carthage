@@ -221,8 +221,8 @@ extension ProjectIdentifier: Scannable {
 		var parser: (String -> Result<ProjectIdentifier, CarthageError>)!
 
 		if scanner.scanString("github", intoString: nil) {
-			parser = { repoNWO in
-				return GitHubRepository.fromNWO(repoNWO).map { self.GitHub($0) }
+			parser = { repoIdentifier in
+				return GitHubRepository.fromIdentifier(repoIdentifier).map { self.GitHub($0) }
 			}
 		} else if scanner.scanString("git", intoString: nil) {
 			parser = { URLString in

@@ -139,17 +139,19 @@ public struct GitHubRepository: Equatable {
 		self.name = name
 	}
 
-	/// Parses repository information out of a string of the form "owner/name".
-	public static func fromNWO(NWO: String) -> Result<GitHubRepository, CarthageError> {
+	/// Parses repository information out of a string of the form "owner/name"
+	/// for the github.com, or the form "http(s)://hostname/owner/name" for
+	/// Enterprise instances.
+	public static func fromIdentifier(identifier: String) -> Result<GitHubRepository, CarthageError> {
 		// GitHub.com
-		let components = split(NWO, maxSplit: 2, allowEmptySlices: false) { $0 == "/" }
+		let components = split(identifier, maxSplit: 2, allowEmptySlices: false) { $0 == "/" }
 		if components.count == 2 {
 			return .success(self(owner: components[0], name: components[1]))
 		}
 
 		// GitHub Enterprise
 		if let
-			URL = NSURL(string: NWO),
+			URL = NSURL(string: identifier),
 			scheme = URL.scheme,
 			host = URL.host,
 			var pathComponents = URL.pathComponents as? [String]
@@ -163,7 +165,7 @@ public struct GitHubRepository: Equatable {
 			return .success(self(server: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: name))
 		}
 
-		return .failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\""))
+		return .failure(CarthageError.ParseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
 	}
 }
 
@@ -192,13 +194,13 @@ extension GitHubRepository: Hashable {
 
 extension GitHubRepository: Printable {
 	public var description: String {
-		let repository = "\(owner)/\(name)"
+		let nameWithOwner = "\(owner)/\(name)"
 		switch server {
 		case .GitHub:
-			return repository
+			return nameWithOwner
 
 		case .Enterprise:
-			return "\(server)/\(repository)"
+			return "\(server)/\(nameWithOwner)"
 		}
 	}
 }
