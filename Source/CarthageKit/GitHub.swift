@@ -177,7 +177,7 @@ public func ==(lhs: GitHubRepository.Server, rhs: GitHubRepository.Server) -> Bo
 		return true
 
 	case let (.Enterprise(la, lb), .Enterprise(ra, rb)):
-		return la == ra && lb == rb
+		return la.caseInsensitiveCompare(ra) == .OrderedSame && lb.caseInsensitiveCompare(rb) == .OrderedSame
 
 	case (_, _):
 		return false
