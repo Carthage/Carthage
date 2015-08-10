@@ -139,7 +139,7 @@ public struct GitHubRepository: Equatable {
 		self.name = name
 	}
 
-	/// Matches identifier of the form "owner/name".
+	/// Matches an identifier of the form "owner/name".
 	private static let NWORegex = NSRegularExpression(pattern: "^(\\w+)/(\\w+)$", options: nil, error: nil)!
 
 	/// Parses repository information out of a string of the form "owner/name"
@@ -148,9 +148,10 @@ public struct GitHubRepository: Equatable {
 	public static func fromIdentifier(identifier: String) -> Result<GitHubRepository, CarthageError> {
 		// GitHub.com
 		let range = NSRange(location: 0, length: (identifier as NSString).length)
-		let components = split(identifier, maxSplit: 1, allowEmptySlices: false) { $0 == "/" }
-		if components.count == 2 && NWORegex.numberOfMatchesInString(identifier, options: nil, range: range) > 0 {
-			return .success(self(owner: components[0], name: components[1]))
+		if let match = NWORegex.firstMatchInString(identifier, options: nil, range: range) {
+			let owner = (identifier as NSString).substringWithRange(match.rangeAtIndex(1))
+			let name = (identifier as NSString).substringWithRange(match.rangeAtIndex(2))
+			return .success(self(owner: owner, name: name))
 		}
 
 		// GitHub Enterprise
