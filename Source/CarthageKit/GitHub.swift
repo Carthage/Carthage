@@ -337,11 +337,40 @@ private func loadCredentialsFromGit(forServer server: GitHubRepository.Server) -
 		}
 }
 
+private func parseGitHubAccessTokenFromEnvironment() -> [String: String] {
+	let environment = NSProcessInfo.processInfo().environment
+
+	if let accessTokenInput = environment["GITHUB_ACCESS_TOKEN"] as? String {
+		// Treat the input as comma-separated series of domains and tokens.
+		// (e.g., `GITHUB_ACCESS_TOKEN="github.com=XXXXXXXXXXXXX,enterprise.local/ghe=YYYYYYYYY"`)
+		let records = split(accessTokenInput, allowEmptySlices: false) { $0 == "," }
+
+		return records.reduce([:]) { (var values: [String: String], record) in
+			let parts = split(record, maxSplit: 1, allowEmptySlices: false) { $0 == "=" }
+			switch parts.count {
+			case 1:
+				// If the input is provided as an access token itself, use the
+				// token for Github.com.
+				values[GitHubRepository.Server.GitHub.hostname] = parts[0]
+
+			case 2:
+				let (key, value) = (parts[0], parts[1])
+				values[key] = value
+
+			default:
+				break
+			}
+
+			return values
+		}
+	}
+	
+	return [:]
+}
 
 internal func loadGitHubAuthorization(forServer server: GitHubRepository.Server) -> SignalProducer<String?, CarthageError> {
-	let environment = NSProcessInfo.processInfo().environment
-	if let accessToken = environment["GITHUB_ACCESS_TOKEN"] as? String {
-		return SignalProducer(value: "token \(accessToken)")
+	if let accessTokenForServer = parseGitHubAccessTokenFromEnvironment()[server.hostname] {
+		return SignalProducer(value: "token \(accessTokenForServer)")
 	} else {
 		return loadCredentialsFromGit(forServer: server) |> map { maybeCredentials in
 			maybeCredentials.map { (username, password) in
