@@ -140,7 +140,7 @@ public struct GitHubRepository: Equatable {
 	}
 
 	/// Matches an identifier of the form "owner/name".
-	private static let NWORegex = NSRegularExpression(pattern: "^(\\w+)/(\\w+)$", options: nil, error: nil)!
+	private static let NWORegex = NSRegularExpression(pattern: "^([\\-\\.\\w]+)/([\\-\\.\\w]+)$", options: nil, error: nil)!
 
 	/// Parses repository information out of a string of the form "owner/name"
 	/// for the github.com, or the form "http(s)://hostname/owner/name" for
