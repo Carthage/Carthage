@@ -486,16 +486,12 @@ public struct BuildSettings {
 							return
 						}
 
-						let matches: NSArray? = self.targetSettingsRegex.matchesInString(line, options: nil, range: NSMakeRange(0, (line as NSString).length))
-						if let matches = matches {
-							if matches.count > 0 {
-								let result = matches.firstObject as! NSTextCheckingResult
-								let targetRange = result.rangeAtIndex(1)
+						if let result = self.targetSettingsRegex.firstMatchInString(line, options: nil, range: NSMakeRange(0, (line as NSString).length)) {
+							let targetRange = result.rangeAtIndex(1)
 
-								flushTarget()
-								currentTarget = (line as NSString).substringWithRange(targetRange)
-								return
-							}
+							flushTarget()
+							currentTarget = (line as NSString).substringWithRange(targetRange)
+							return
 						}
 
 						let components = split(line, maxSplit: 1) { $0 == "=" }
