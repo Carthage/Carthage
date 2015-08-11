@@ -102,7 +102,7 @@ public struct BuildArguments {
 	/// The run destination to try building for.
 	public var destination: String?
 
-	/// The amount of time xcodebuild spends looking for the destination (in seconds).
+	/// The amount of time xcodebuild spends searching for the destination (in seconds).
 	public var destinationTimeout: UInt?
 
 	/// The build setting whether the product includes only object code for
@@ -804,29 +804,34 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		var argsForBuilding = argsForLoading
 		argsForBuilding.onlyActiveArchitecture = .No
 
-		let fetchDestination = { (var arguments: BuildArguments) -> SignalProducer<BuildArguments, ReactiveTaskError> in
+		func fetchDestination() -> SignalProducer<String?, ReactiveTaskError> {
 			if sdk == .iPhoneSimulator {
-				let destinationLookup = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: ["simctl", "list", "devices"])
+				let destinationLookup = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
 				return launchTask(destinationLookup)
 					|> ignoreTaskData
-					|> map { (data: NSData) -> BuildArguments in
+					|> map { data in
 						let string = NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
 						let regex = NSRegularExpression(pattern: "-- iOS [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: nil, error: nil)!
-						if let lastDevice = regex.matchesInString(string as String, options: nil, range: NSRange(location: 0, length: (string as NSString).length)).last as? NSTextCheckingResult {
-							let deviceID = string.substringWithRange(lastDevice.rangeAtIndex(1))
-							arguments.destination = "platform=iOS Simulator,id=\(deviceID)"
+						let lastDeviceResult = regex.matchesInString(string as String, options: nil, range: NSRange(location: 0, length: (string as NSString).length)).last as? NSTextCheckingResult
+						return lastDeviceResult.map { result in
+							let deviceID = string.substringWithRange(result.rangeAtIndex(1))
+							return "platform=iOS Simulator,id=\(deviceID)"
 						}
-						arguments.destinationTimeout = 3
-						return arguments
 				}
 			}
-			return SignalProducer(value: arguments)
+			return SignalProducer(value: nil)
 		}
 
-		return fetchDestination(argsForBuilding)
-			|> flatMap(.Concat) { (buildArguments: BuildArguments) -> SignalProducer<TaskEvent<NSData>, ReactiveTaskError> in
-				var buildScheme = xcodebuildTask("build", buildArguments)
+		return fetchDestination()
+			|> flatMap(.Concat) { destination -> SignalProducer<TaskEvent<NSData>, ReactiveTaskError> in
+				if let destination = destination {
+					argsForBuilding.destination = destination
+					argsForBuilding.destinationTimeout = 3
+				}
+
+				var buildScheme = xcodebuildTask("build", argsForBuilding)
 				buildScheme.workingDirectoryPath = workingDirectoryURL.path!
+
 				return launchTask(buildScheme)
 			}
 			|> mapError { .TaskError($0) }
