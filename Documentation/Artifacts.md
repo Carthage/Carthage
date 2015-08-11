@@ -10,16 +10,17 @@ Dependency specifications consist of two main parts: the [origin](#origin), and 
 
 #### Origin
 
-The only supported origins right now are GitHub.com repositories, specified with the `github` keyword:
+The only supported origins right now are GitHub repositories (both GitHub.com and GitHub Enterprise), specified with the `github` keyword:
 
 ```
-github "ReactiveCocoa/ReactiveCocoa"
+github "ReactiveCocoa/ReactiveCocoa" # GitHub.com
+github "https://enterprise.local/ghe/desktop/git-error-translations" # GitHub Enterprise
 ```
 
 … or other Git repositories, specified with the `git` keyword:
 
 ```
-git "https://enterprise.local/desktop/git-error-translations.git"
+git "https://enterprise.local/desktop/git-error-translations2.git"
 ```
 
 Other possible origins may be added in the future. If there’s something specific you’d like to see, please [file an issue](https://github.com/Carthage/Carthage/issues/new).
@@ -59,8 +60,11 @@ github "jspahrsummers/xcconfigs"
 # Use the branch
 github "jspahrsummers/xcconfigs" "branch"
 
-# Use a project from GitHub Enterprise, or any arbitrary server, on the "development" branch
-git "https://enterprise.local/desktop/git-error-translations.git" "development"
+# Use a project from GitHub Enterprise
+github "https://enterprise.local/ghe/desktop/git-error-translations"
+
+# Use a project from any arbitrary server, on the "development" branch
+git "https://enterprise.local/desktop/git-error-translations2.git" "development"
 
 # Use a local project
 git "file:///directory/to/project" "branch"
