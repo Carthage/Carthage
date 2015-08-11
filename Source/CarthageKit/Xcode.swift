@@ -812,7 +812,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					|> map { data in
 						let string = NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
 						let regex = NSRegularExpression(pattern: "-- iOS [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: nil, error: nil)!
-						let lastDeviceResult = regex.matchesInString(string as String, options: nil, range: NSRange(location: 0, length: (string as NSString).length)).last as? NSTextCheckingResult
+						let lastDeviceResult = regex.matchesInString(string as String, options: nil, range: NSRange(location: 0, length: string.length)).last as? NSTextCheckingResult
 						return lastDeviceResult.map { result in
 							let deviceID = string.substringWithRange(result.rangeAtIndex(1))
 							return "platform=iOS Simulator,id=\(deviceID)"
