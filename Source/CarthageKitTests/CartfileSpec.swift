@@ -40,13 +40,13 @@ class CartfileSpec: QuickSpec {
 			expect(depConfigs.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "xcconfigs"))))
 			expect(depConfigs.version).to(equal(VersionSpecifier.Any))
 
-			let depErrorTranslations = cartfile.dependencies[4]
-			expect(depErrorTranslations.project).to(equal(ProjectIdentifier.Git(GitURL("https://enterprise.local/desktop/git-error-translations.git"))))
-			expect(depErrorTranslations.version).to(equal(VersionSpecifier.GitReference("development")))
-
-			let depErrorTranslations2 = cartfile.dependencies[5]
-			expect(depErrorTranslations2.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(server: .Enterprise(scheme: "https", hostname: "enterprise.local/ghe"), owner: "desktop", name: "git-error-translations2"))))
+			let depErrorTranslations2 = cartfile.dependencies[4]
+			expect(depErrorTranslations2.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(server: .Enterprise(scheme: "https", hostname: "enterprise.local/ghe"), owner: "desktop", name: "git-error-translations"))))
 			expect(depErrorTranslations2.version).to(equal(VersionSpecifier.Any))
+
+			let depErrorTranslations = cartfile.dependencies[5]
+			expect(depErrorTranslations.project).to(equal(ProjectIdentifier.Git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))))
+			expect(depErrorTranslations.version).to(equal(VersionSpecifier.GitReference("development")))
 		}
 
 		it("should parse a Cartfile.resolved") {
