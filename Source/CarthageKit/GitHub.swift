@@ -218,10 +218,10 @@ extension GitHubRelease: Decodable {
 
 private typealias BasicGitHubCredentials = (String, String)
 
-private func loadCredentialsFromGit() -> SignalProducer<BasicGitHubCredentials?, CarthageError> {
+private func loadCredentialsFromGit(fileHandle: NSFileHandle) -> SignalProducer<BasicGitHubCredentials?, CarthageError> {
 	let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
 	
-	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
+	return launchGitTask([ "credential", "fill" ], fileHandle, standardInput: SignalProducer(value: data))
 		|> flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
 			return string.linesProducer |> promoteErrors(CarthageError.self)
 		}
@@ -249,12 +249,12 @@ private func loadCredentialsFromGit() -> SignalProducer<BasicGitHubCredentials?,
 }
 
 
-internal func loadGitHubAuthorization() -> SignalProducer<String?, CarthageError> {
+internal func loadGitHubAuthorization(fileHandle: NSFileHandle) -> SignalProducer<String?, CarthageError> {
 	let environment = NSProcessInfo.processInfo().environment
 	if let accessToken = environment["GITHUB_ACCESS_TOKEN"] as? String {
 		return SignalProducer(value: "token \(accessToken)")
 	} else {
-		return loadCredentialsFromGit() |> map { maybeCredentials in
+		return loadCredentialsFromGit(fileHandle) |> map { maybeCredentials in
 			maybeCredentials.map { (username, password) in
 				let data = "\(username):\(password)".dataUsingEncoding(NSUTF8StringEncoding)!
 				let encodedString = data.base64EncodedStringWithOptions(nil)

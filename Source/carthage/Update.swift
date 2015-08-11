@@ -19,12 +19,26 @@ public struct UpdateCommand: CommandType {
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(UpdateOptions.evaluate(mode))
 			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
-				return options.loadProject()
-					|> flatMap(.Merge) { $0.updateDependencies() }
-					|> then(options.buildProducer)
+				return self.updateWithOptions(options)
 					|> promoteErrors
 			}
 			|> waitOnCommand
+	}
+	
+	private func updateWithOptions(options: UpdateOptions) -> SignalProducer<(), CarthageError> {
+		return openLoggingHandle(options.verbose, "git")
+			|> flatMap(.Merge) { (gitFileHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
+				let formatting = options.checkoutOptions.colorOptions.formatting
+				
+				return options.loadProject(gitFileHandle)
+					|> on(started: {
+						if let temporaryURL = temporaryURL {
+							carthage.println(formatting.bullets + "git output can be found in " + formatting.path(string: temporaryURL.path!))
+						}
+					})
+					|> flatMap(.Merge) { $0.updateDependencies(gitFileHandle) }
+					|> then(options.buildProducer)
+		}
 	}
 }
 
@@ -67,8 +81,8 @@ public struct UpdateOptions: OptionsType {
 
 	/// Attempts to load the project referenced by the options, and configure it
 	/// accordingly.
-	public func loadProject() -> SignalProducer<Project, CarthageError> {
-		return checkoutOptions.loadProject()
+	public func loadProject(gitFileHandle: NSFileHandle) -> SignalProducer<Project, CarthageError> {
+		return checkoutOptions.loadProject(gitFileHandle)
 			|> on(next: { project in
 				// Never check out binaries if we're skipping the build step,
 				// because that means users may need the repository checkout.

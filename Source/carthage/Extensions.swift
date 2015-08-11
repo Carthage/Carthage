@@ -148,13 +148,20 @@ internal struct ProjectEventSink: SinkType {
 	}
 }
 
+protocol OptionsWithColor
+{
+	var colorOptions: ColorOptions { get }
+}
+extension BuildOptions: OptionsWithColor {}
+extension CheckoutOptions: OptionsWithColor {}
+
 extension Project {
 	/// Determines whether the project needs to be migrated from an older
 	/// Carthage version, then performs the work if so.
 	///
 	/// If migration is necessary, sends one or more output lines describing the
 	/// process to the user.
-	internal func migrateIfNecessary(colorOptions: ColorOptions) -> SignalProducer<String, CarthageError> {
+	internal func migrateIfNecessary(options: OptionsWithColor, gitFileHandle: NSFileHandle) -> SignalProducer<String, CarthageError> {
 		let directoryPath = directoryURL.path!
 		let fileManager = NSFileManager.defaultManager()
 
@@ -164,14 +171,14 @@ extension Project {
 		let carthageBuild = "Carthage.build"
 		let carthageCheckout = "Carthage.checkout"
 		
-		let formatting = colorOptions.formatting
+		let formatting = options.colorOptions.formatting
 		let migrationMessage = formatting.bulletinTitle("MIGRATION WARNING") + "\n\nThis project appears to be set up for an older (pre-0.4) version of Carthage. Unfortunately, the directory structure for Carthage projects has since changed, so this project will be migrated automatically.\n\nSpecifically, the following renames will occur:\n\n  \(cartfileLock) -> \(CarthageProjectResolvedCartfilePath)\n  \(carthageBuild) -> \(CarthageBinariesFolderPath)\n  \(carthageCheckout) -> \(CarthageProjectCheckoutsPath)\n\nFor more information, see " + formatting.URL(string: "https://github.com/Carthage/Carthage/pull/224") + ".\n"
 
 		let producers = SignalProducer<SignalProducer<String, CarthageError>, CarthageError> { observer, disposable in
 			let checkFile: (String, String) -> () = { oldName, newName in
 				if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(oldName)) {
 					let producer = SignalProducer(value: migrationMessage)
-						|> concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName)
+						|> concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName, fileHandle: gitFileHandle)
 							|> then(.empty))
 
 					sendNext(observer, producer)
@@ -202,7 +209,7 @@ extension Project {
 						|> map { (object: AnyObject) in object as! NSURL }
 						|> flatMap(.Concat) { (URL: NSURL) -> SignalProducer<NSURL, CarthageError> in
 							let lastPathComponent: String! = URL.lastPathComponent
-							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
+							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent), fileHandle: gitFileHandle)
 						}
 						|> then(trashProducer)
 						|> then(.empty)

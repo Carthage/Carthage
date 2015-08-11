@@ -21,7 +21,9 @@ class ResolverSpec: QuickSpec {
 	}
 
 	private func orderedDependencies(resolver: Resolver, fromCartfile cartfile: Cartfile) -> [[String: PinnedVersion]] {
-		let result = resolver.resolveDependenciesInCartfile(cartfile)
+		let fileHandle = NSFileHandle.fileHandleWithStandardOutput()
+		
+		let result = resolver.resolveDependenciesInCartfile(cartfile, fileHandle: fileHandle)
 			|> map { [ $0.project.name: $0.version ] }
 			|> collect
 			|> first
@@ -34,6 +36,7 @@ class ResolverSpec: QuickSpec {
 
 	override func spec() {
 		it("should resolve a Cartfile") {
+			let fileHandle = NSFileHandle.fileHandleWithStandardOutput()
 			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency, resolvedGitReference: self.resolvedGitReference)
 			let dependencies = self.orderedDependencies(resolver, fromCartfile: self.loadTestCartfile("TestCartfile"))
 			expect(dependencies.count).to(equal(6));
@@ -51,7 +54,7 @@ class ResolverSpec: QuickSpec {
 
 		it("should correctly order transitive dependencies") {
 			let resolver = Resolver(versionsForDependency: { project -> SignalProducer<PinnedVersion, CarthageError> in
-				switch project.name {
+				switch project.0.name {
 				case "EmbeddedFrameworks":
 					return SignalProducer(value: PinnedVersion("1.0.0"))
 
@@ -68,7 +71,7 @@ class ResolverSpec: QuickSpec {
 					assert(false)
 				}
 			}, cartfileForDependency: { dependency -> SignalProducer<Cartfile, CarthageError> in
-				if dependency.project.name == "EmbeddedFrameworks" {
+				if dependency.0.project.name == "EmbeddedFrameworks" {
 					return SignalProducer(value: self.loadTestCartfile("EmbeddedFrameworksCartfile"))
 				} else {
 					return SignalProducer(value: Cartfile())
@@ -90,7 +93,7 @@ class ResolverSpec: QuickSpec {
 		}
 	}
 
-	private func versionsForDependency(project: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
+	private func versionsForDependency(project: ProjectIdentifier, fileHandle: NSFileHandle) -> SignalProducer<PinnedVersion, CarthageError> {
 		return SignalProducer(values: [
 			PinnedVersion("0.4.1"),
 			PinnedVersion("0.9.0"),
@@ -101,19 +104,19 @@ class ResolverSpec: QuickSpec {
 		])
 	}
 
-	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
+	private func cartfileForDependency(dependency: (Dependency<PinnedVersion>, NSFileHandle)) -> SignalProducer<Cartfile, CarthageError> {
 		var cartfile = Cartfile()
 
-		if dependency.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {
+		if dependency.0.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {
 			cartfile = Cartfile.fromString("github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0").value!
-		} else if dependency.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "objc-build-scripts")) {
+		} else if dependency.0.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "objc-build-scripts")) {
 			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0").value!
 		}
 
 		return SignalProducer(value: cartfile)
 	}
 
-	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
+	private func resolvedGitReference(project: ProjectIdentifier, reference: String, fileHandle: NSFileHandle) -> SignalProducer<PinnedVersion, CarthageError> {
 		return SignalProducer(value: PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"))
 	}
 }
