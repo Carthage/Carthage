@@ -78,8 +78,10 @@ public enum ProjectEvent {
 	/// there weren't any viable binaries after all.
 	case DownloadingBinaries(ProjectIdentifier, String)
 
-	/// A request to the GitHub API failed due to authentication or rate-limiting.
-	case GitHubAPIRequestFailed(ProjectIdentifier, String)
+	/// Downloading any available binaries of the project is being skipped,
+	/// because of a GitHub API request failure which is due to authentication
+	/// or rate-limiting.
+	case SkippedDownloadingBinaries(ProjectIdentifier, String)
 }
 
 /// Represents a project that is using Carthage.
@@ -368,7 +370,7 @@ public final class Project {
 				case .GitHubAPIRequestFailed:
 					// Log the GitHub API request failure, not to error out,
 					// because that should not be fatal error.
-					sendNext(self._projectEventsObserver, .GitHubAPIRequestFailed(project, error.description))
+					sendNext(self._projectEventsObserver, .SkippedDownloadingBinaries(project, error.description))
 					return .empty
 
 				default:

@@ -145,7 +145,7 @@ internal struct ProjectEventSink: SinkType {
 		case let .DownloadingBinaries(project, release):
 			carthage.println(formatting.bullets + "Downloading " + formatting.projectName(string: project.name) + " at " + formatting.quote(release))
 
-		case let .GitHubAPIRequestFailed(project, message):
+		case let .SkippedDownloadingBinaries(project, message):
 			carthage.println(formatting.bullets + "Skipped downloading " + formatting.projectName(string: project.name) + " due to the error:\n\t" + formatting.quote(message))
 		}
 	}
