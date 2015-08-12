@@ -99,6 +99,12 @@ public struct BuildArguments {
 	/// The platform SDK to build for.
 	public var sdk: SDK?
 
+	/// The run destination to try building for.
+	public var destination: String?
+
+	/// The amount of time xcodebuild spends searching for the destination (in seconds).
+	public var destinationTimeout: UInt?
+
 	/// The build setting whether the product includes only object code for
 	/// the native architecture.
 	public var onlyActiveArchitecture: OnlyActiveArchitecture = .NotSpecified
@@ -124,6 +130,14 @@ public struct BuildArguments {
 
 		if let sdk = sdk {
 			args += sdk.arguments
+		}
+
+		if let destination = destination {
+			args += [ "-destination", destination ]
+		}
+
+		if let destinationTimeout = destinationTimeout {
+			args += [ "-destination-timeout", String(destinationTimeout) ]
 		}
 
 		args += onlyActiveArchitecture.arguments
@@ -790,10 +804,53 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		var argsForBuilding = argsForLoading
 		argsForBuilding.onlyActiveArchitecture = .No
 
-		var buildScheme = xcodebuildTask("build", argsForBuilding)
-		buildScheme.workingDirectoryPath = workingDirectoryURL.path!
+		// If SDK is the iOS simulator, then also find and set a valid destination.
+		// This fixes problems when the project deployment version is lower than
+		// the target's one and includes simulators unsupported by the target.
+		//
+		// Example: Target is at 8.0, project at 7.0, xcodebuild chooses the first
+		// simulator on the list, iPad 2 7.1, which is invalid for the target.
+		//
+		// See https://github.com/Carthage/Carthage/issues/417.
+		func fetchDestination() -> SignalProducer<String?, ReactiveTaskError> {
+			if sdk == .iPhoneSimulator {
+				let destinationLookup = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
+				return launchTask(destinationLookup)
+					|> ignoreTaskData
+					|> map { data in
+						let string = NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
+						// The output as of Xcode 6.4 is structured text so we
+						// parse it using regex. The destination will be omitted
+						// altogether if parsing fails. Xcode 7.0 beta 4 added a
+						// JSON output option as `xcrun simctl list devices --json`
+						// so this can be switched once 7.0 becomes a requirement.
+						let regex = NSRegularExpression(pattern: "-- iOS [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: nil, error: nil)!
+						let lastDeviceResult = regex.matchesInString(string as String, options: nil, range: NSRange(location: 0, length: string.length)).last as? NSTextCheckingResult
+						return lastDeviceResult.map { result in
+							// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
+							let deviceID = string.substringWithRange(result.rangeAtIndex(1))
+							return "platform=iOS Simulator,id=\(deviceID)"
+						}
+				}
+			}
+			return SignalProducer(value: nil)
+		}
 
-		return launchTask(buildScheme)
+		return fetchDestination()
+			|> flatMap(.Concat) { destination -> SignalProducer<TaskEvent<NSData>, ReactiveTaskError> in
+				if let destination = destination {
+					argsForBuilding.destination = destination
+					// Also set the destination lookup timeout. Since we're building
+					// for the simulator the lookup shouldn't take more than a
+					// fraction of a second, but we set to 3 just to be safe.
+					argsForBuilding.destinationTimeout = 3
+				}
+
+				var buildScheme = xcodebuildTask("build", argsForBuilding)
+				buildScheme.workingDirectoryPath = workingDirectoryURL.path!
+
+				return launchTask(buildScheme)
+			}
 			|> mapError { .TaskError($0) }
 			|> flatMapTaskEvents(.Concat) { _ in
 				return BuildSettings.loadWithArguments(argsForLoading)
