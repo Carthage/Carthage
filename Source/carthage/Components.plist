@@ -19,12 +19,6 @@
 				<key>BundleOverwriteAction</key>
 				<string></string>
 				<key>RootRelativeBundlePath</key>
-				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Commandant.framework</string>
-			</dict>
-			<dict>
-				<key>BundleOverwriteAction</key>
-				<string></string>
-				<key>RootRelativeBundlePath</key>
 				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Result.framework</string>
 			</dict>
 			<dict>
@@ -51,15 +45,25 @@
 				<key>RootRelativeBundlePath</key>
 				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Runes.framework</string>
 			</dict>
-			<dict>
-				<key>BundleOverwriteAction</key>
-				<string></string>
-				<key>RootRelativeBundlePath</key>
-				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/PrettyColors.framework</string>
-			</dict>
 		</array>
 		<key>RootRelativeBundlePath</key>
 		<string>Library/Frameworks/CarthageKit.framework</string>
+	</dict>
+	<dict>
+		<key>BundleIsVersionChecked</key>
+		<false/>
+		<key>BundleOverwriteAction</key>
+		<string>upgrade</string>
+		<key>RootRelativeBundlePath</key>
+		<string>Library/Frameworks/Commandant.framework</string>
+	</dict>
+	<dict>
+		<key>BundleIsVersionChecked</key>
+		<false/>
+		<key>BundleOverwriteAction</key>
+		<string>upgrade</string>
+		<key>RootRelativeBundlePath</key>
+		<string>Library/Frameworks/PrettyColors.framework</string>
 	</dict>
 </array>
 </plist>
