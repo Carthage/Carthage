@@ -77,6 +77,11 @@ public enum ProjectEvent {
 	/// being downloaded. This may still be followed by `CheckingOut` event if
 	/// there weren't any viable binaries after all.
 	case DownloadingBinaries(ProjectIdentifier, String)
+
+	/// Downloading any available binaries of the project is being skipped,
+	/// because of a GitHub API request failure which is due to authentication
+	/// or rate-limiting.
+	case SkippedDownloadingBinaries(ProjectIdentifier, String)
 }
 
 /// Represents a project that is using Carthage.
@@ -360,6 +365,18 @@ public final class Project {
 	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withAuthorizationHeaderValue authorizationHeaderValue: String?) -> SignalProducer<NSURL, CarthageError> {
 		return releaseForTag(revision, repository, authorizationHeaderValue)
 			|> filter(binaryFrameworksCanBeProvidedByRelease)
+			|> catch { error in
+				switch error {
+				case .GitHubAPIRequestFailed:
+					// Log the GitHub API request failure, not to error out,
+					// because that should not be fatal error.
+					sendNext(self._projectEventsObserver, .SkippedDownloadingBinaries(project, error.description))
+					return .empty
+
+				default:
+					return SignalProducer(error: error)
+				}
+			}
 			|> on(next: { release in
 				sendNext(self._projectEventsObserver, ProjectEvent.DownloadingBinaries(project, release.nameWithFallback))
 			})
