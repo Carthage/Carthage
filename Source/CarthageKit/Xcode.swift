@@ -1007,21 +1007,20 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		}
 		|> flatMap(.Merge) { schemeProducers in
 			return schemeProducers
-				|> mapError { error in
+				|> catch { error in
 					switch (dependency, error) {
 					case let (_, .NoSharedFrameworkSchemes(_)):
-						return .NoSharedFrameworkSchemes(dependency)
-
+						// Suppress `.NosharedFrameworkSchemes` error in order to continue building dependencies
+						return .empty
 					case let (.GitHub(repo), .NoSharedSchemes(project, _)):
-						return .NoSharedSchemes(project, repo)
-
+						return SignalProducer<BuildSchemeProducer, CarthageError>(error: .NoSharedSchemes(project, repo))
 					case let (.GitHub(repo), .XcodebuildListTimeout(project, _)):
-						return .XcodebuildListTimeout(project, repo)
-
+						return SignalProducer<BuildSchemeProducer, CarthageError>(error: .XcodebuildListTimeout(project, repo))
 					default:
-						return error
+						return SignalProducer<BuildSchemeProducer, CarthageError>(error: error)
 					}
 				}
+
 		}
 }
 
