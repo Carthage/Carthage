@@ -62,7 +62,8 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
   and add the paths to the frameworks you want to use under “Input Files”, e.g.:
 
   ```
-  $(SRCROOT)/Carthage/Build/iOS/LlamaKit.framework
+  $(SRCROOT)/Carthage/Build/iOS/Box.framework
+  $(SRCROOT)/Carthage/Build/iOS/Result.framework
   $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
   ```
 
