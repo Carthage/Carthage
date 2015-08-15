@@ -82,6 +82,10 @@ public enum ProjectEvent {
 	/// because of a GitHub API request failure which is due to authentication
 	/// or rate-limiting.
 	case SkippedDownloadingBinaries(ProjectIdentifier, String)
+
+	/// Building the project is being skipped, since the project is not sharing
+	/// any framework schemes.
+	case SkippedBuilding(ProjectIdentifier, String)
 }
 
 /// Represents a project that is using Carthage.
@@ -499,6 +503,19 @@ public final class Project {
 				}
 
 				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platform: platform)
+					|> catch { error in
+						switch error {
+						case .NoSharedFrameworkSchemes:
+							// Log that building the dependency is being skipped,
+							// not to error out with `.NoSharedFrameworkSchemes`
+							// to continue building other dependencies.
+							sendNext(self._projectEventsObserver, .SkippedBuilding(dependency.project, error.description))
+							return .empty
+
+						default:
+							return SignalProducer(error: error)
+						}
+					}
 			}
 	}
 }

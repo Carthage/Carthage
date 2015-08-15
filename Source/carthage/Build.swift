@@ -104,6 +104,10 @@ public struct BuildCommand: CommandType {
 	/// Returns a producer of producers, representing each scheme being built.
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
+
+		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
+		project.projectEvents.observe(next: { eventSink.put($0) })
+
 		let buildProducer = project.loadCombinedCartfile()
 			|> map { _ in project }
 			|> catch { error in
@@ -128,6 +132,17 @@ public struct BuildCommand: CommandType {
 			return buildProducer
 		} else {
 			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform)
+				|> catch { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
+					switch error {
+					case let .NoSharedFrameworkSchemes(project, _):
+						// Log that building the current project is being skipped.
+						eventSink.put(.SkippedBuilding(project, error.description))
+						return .empty
+
+					default:
+						return SignalProducer(error: error)
+					}
+				}
 			return buildProducer |> concat(currentProducers)
 		}
 	}
