@@ -335,9 +335,7 @@ public final class Project {
 						|> flatMap(.Concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
 								|> flatMap(.Merge, self.copyFrameworkToBuildFolder)
-								|> on(completed: {
-									_ = NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
-								})
+								|> then(removeSubmoduleFromRepository(self.directoryURL, checkoutDirectoryURL))
 								|> then(SignalProducer(value: directoryURL))
 						}
 						|> tryMap { (temporaryDirectoryURL: NSURL) -> Result<Bool, CarthageError> in
