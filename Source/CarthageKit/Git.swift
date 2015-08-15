@@ -447,6 +447,23 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 		}
 }
 
+/// Removes a submodule which is in the given URL from the given repository.
+public func removeSubmoduleFromRepository(repositoryFileURL: NSURL, submoduleURL: NSURL) -> SignalProducer<(), CarthageError> {
+	return SignalProducer { observer, disposable in
+		if NSFileManager.defaultManager().trashItemAtURL(submoduleURL, resultingItemURL: nil, error: nil) {
+			launchGitTask([ "submodule", "deinit", submoduleURL.path! ], repositoryFileURL: repositoryFileURL)
+				|> then(launchGitTask([ "rm", submoduleURL.path! ], repositoryFileURL: repositoryFileURL))
+				|> then(SignalProducer<(), CarthageError>.empty)
+				|> startWithSignal { signal, signalDisposable in
+					disposable += signalDisposable
+					signal.observe(observer)
+				}
+		} else {
+			sendCompleted(observer)
+		}
+	}
+}
+
 /// Moves an item within a Git repository, or within a simple directory if a Git
 /// repository is not found.
 ///
