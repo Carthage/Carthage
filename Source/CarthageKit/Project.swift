@@ -305,7 +305,7 @@ public final class Project {
 			|> then(checkoutResolvedDependencies())
 	}
 
-	/// Installs binaries for the given project, if available.
+	/// Installs binaries and symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> SignalProducer<Bool, CarthageError> {
@@ -335,6 +335,9 @@ public final class Project {
 						|> flatMap(.Concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
 								|> flatMap(.Merge, self.copyFrameworkToBuildFolder)
+								|> flatMap(.Merge) { frameworkURL in
+									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
+								}
 								|> on(completed: {
 									_ = NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
 								})
@@ -357,8 +360,8 @@ public final class Project {
 			}
 	}
 
-	/// Downloads any binaries that may be able to be used instead of a
-	/// repository checkout.
+	/// Downloads any binaries and symbols that may be able to be used instead 
+	/// of a repository checkout.
 	///
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
@@ -409,7 +412,26 @@ public final class Project {
 			|> map { sdk in sdk.platform }
 			|> map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
 			|> map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
-			|> flatMap(.Merge) { destinationFrameworkURL in copyFramework(frameworkURL, destinationFrameworkURL.URLByResolvingSymlinksInPath!) }
+			|> flatMap(.Merge) { destinationFrameworkURL in copyProduct(frameworkURL, destinationFrameworkURL.URLByResolvingSymlinksInPath!) }
+	}
+
+	/// Copies the DSYM matching the given framework and contained within the
+	/// given directory URL to the directory that the framework resides within.
+	///
+	/// If no dSYM is found for the given framework, completes with no values.
+	///
+	/// Sends the URL of the dSYM after copying.
+	public func copyDSYMToBuildFolderForFramework(frameworkURL: NSURL, fromDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+		return dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
+			|> map { dSYMURL in
+				let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
+				let fileName = dSYMURL.lastPathComponent!
+				let destinationURL = destinationDirectoryURL.URLByAppendingPathComponent(fileName)
+				let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
+
+				return (dSYMURL, resolvedDestinationURL)
+			}
+			|> flatMap(.Merge) { (from, to) in copyProduct(from, to) }
 	}
 
 	/// Checks out the given project into its intended working directory,
@@ -534,22 +556,39 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 		}
 }
 
-/// Sends the URL to each framework bundle found in the given directory.
-private func frameworksInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+extension NSURL {
+	// The type identifier of the receiver, or an error if it was unable to be
+	// determined.
+	internal func typeIdentifier() -> Result<String, NSError> {
+		return try({ (error: NSErrorPointer) -> String? in
+			var typeIdentifier: AnyObject?
+			if !self.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: error) {
+				return nil
+			}
+
+			return typeIdentifier as? String
+		})
+	}
+}
+
+/// Sends the URL to each file found in the given directory conforming to the 
+/// given type identifier.
+private func filesInDirectory(directoryURL: NSURL, typeIdentifier: String) -> SignalProducer<NSURL, CarthageError> {
 	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants, catchErrors: true)
 		|> map { enumerator, URL in URL }
 		|> filter { URL in
-			var typeIdentifier: AnyObject?
-			if URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: nil) {
-				if let typeIdentifier: AnyObject = typeIdentifier {
-					if UTTypeConformsTo(typeIdentifier as! String, kUTTypeFramework) != 0 {
-						return true
-					}
-				}
+			switch URL.typeIdentifier() {
+			case let .Success(box):
+				return UTTypeConformsTo(box.value, typeIdentifier) != 0
+			case .Failure:
+				return false
 			}
-
-			return false
 		}
+}
+
+/// Sends the URL to each framework bundle found in the given directory.
+private func frameworksInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	return filesInDirectory(directoryURL, kUTTypeFramework as! String)
 		|> filter { URL in
 			// Skip nested frameworks
 			let frameworksInURL = URL.pathComponents?.filter { pathComponent in
@@ -557,6 +596,25 @@ private func frameworksInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL,
 			}
 			return frameworksInURL?.count == 1
 		}
+}
+
+/// Sends the URL to each dSYM found in the given directory
+private func dSYMsInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	return filesInDirectory(directoryURL, "com.apple.xcode.dsym")
+}
+
+/// Sends the URL of the dSYM whose UUIDs match those of the given framework, or
+/// errors if there was an error parsing a dSYM contained within the directory.
+private func dSYMForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	return combineLatest(UUIDsForFramework(frameworkURL), dSYMsInDirectory(directoryURL))
+		|> flatMap(.Merge) { (frameworkUUIDs, dSYMURL) in
+			return UUIDsForDSYM(dSYMURL)
+				|> filter { dSYMUUIDs in
+					return dSYMUUIDs == frameworkUUIDs
+				}
+				|> map { _ in dSYMURL }
+		}
+		|> take(1)
 }
 
 /// Determines whether a Release is a suitable candidate for binary frameworks.

@@ -634,7 +634,7 @@ private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildS
 	let target = settings.wrapperName.map(directoryURL.URLByAppendingPathComponent)
 	return SignalProducer(result: target &&& settings.wrapperURL)
 		|> flatMap(.Merge) { (target, source) in
-			return copyFramework(source, target)
+			return copyProduct(source, target)
 		}
 }
 
@@ -1149,11 +1149,11 @@ public func stripFramework(frameworkURL: NSURL, #keepingArchitectures: [String],
 	return strip |> concat(sign)
 }
 
-/// Copies a framework into the given folder. The folder will be created if it
+/// Copies a product into the given folder. The folder will be created if it
 /// does not already exist.
 ///
 /// Returns a signal that will send the URL after copying upon .success.
-public func copyFramework(from: NSURL, to: NSURL) -> SignalProducer<NSURL, CarthageError> {
+public func copyProduct(from: NSURL, to: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return SignalProducer<NSURL, CarthageError>.try {
 		var error: NSError? = nil
 
@@ -1247,6 +1247,64 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 
 					return SignalProducer(error: .InvalidArchitectures(description: "Could not read architectures from \(frameworkURL.path!)"))
 				}
+		}
+}
+
+/// Sends a set of UUIDs for each architecture present in the given framework.
+public func UUIDsForFramework(frameworkURL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
+	return SignalProducer.try { () -> Result<NSURL, CarthageError> in
+			return binaryURL(frameworkURL)
+		}
+		|> flatMap(.Merge) { URL in UUIDsFromDwarfdump(URL) }
+}
+
+/// Sends a set of UUIDs for each architecture present in the given dSYM.
+public func UUIDsForDSYM(dSYMURL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
+	return UUIDsFromDwarfdump(dSYMURL)
+}
+
+/// Sends a set of UUIDs for each architecture present in the given URL.
+private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
+	let dwarfdumpTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", URL.path!])
+
+	return launchTask(dwarfdumpTask)
+		|> ignoreTaskData
+		|> mapError { .TaskError($0) }
+		|> map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
+		|> flatMap(.Merge) { output -> SignalProducer<Set<NSUUID>, CarthageError> in
+			// UUIDs are letters, decimals, or hyphens.
+			let UUIDCharacterSet = NSMutableCharacterSet()
+			UUIDCharacterSet.formUnionWithCharacterSet(NSCharacterSet.letterCharacterSet())
+			UUIDCharacterSet.formUnionWithCharacterSet(NSCharacterSet.decimalDigitCharacterSet())
+			UUIDCharacterSet.formUnionWithCharacterSet(NSCharacterSet(charactersInString: "-"))
+
+			let scanner = NSScanner(string: output as String)
+			var UUIDs = Set<NSUUID>()
+
+			// The output of dwarfdump is a series of lines formatted as follows
+			// for each architecture:
+			//
+			//     UUID: <UUID> (<Architecture>) <PathToBinary>
+			//
+			while !scanner.atEnd {
+				scanner.scanString("UUID: ", intoString: nil)
+
+				var UUIDString: NSString?
+				scanner.scanCharactersFromSet(UUIDCharacterSet, intoString: &UUIDString)
+
+				if let UUIDString = UUIDString as? String, let UUID = NSUUID(UUIDString: UUIDString) {
+					UUIDs.insert(UUID)
+				}
+
+				// Scan until a newline or end of file.
+				scanner.scanUpToCharactersFromSet(NSCharacterSet.newlineCharacterSet(), intoString: nil)
+			}
+
+			if UUIDs.count > 0 {
+				return SignalProducer(value: UUIDs)
+			}
+
+			return SignalProducer(error: .InvalidUUIDs(description: "Could not read UUIDs from \(URL.path!)"))
 		}
 }
 
