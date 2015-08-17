@@ -498,12 +498,21 @@ public final class Project {
 						let project = dependency.project
 						let revision = dependency.version.commitish
 
+						let submoduleFound = submodulesByPath[project.relativePath] != nil
+						let checkoutOrCloneProject = self.checkoutOrCloneProject(project, atRevision: revision, submodulesByPath: submodulesByPath)
+
+						// Disable binary downloads for the dependency if that
+						// is already checked out as a submodule.
+						if submoduleFound {
+							return checkoutOrCloneProject
+						}
+
 						return self.installBinariesForProject(project, atRevision: revision)
 							|> flatMap(.Merge) { installed in
 								if installed {
 									return .empty
 								} else {
-									return self.checkoutOrCloneProject(project, atRevision: revision, submodulesByPath: submodulesByPath)
+									return checkoutOrCloneProject
 								}
 							}
 					}
