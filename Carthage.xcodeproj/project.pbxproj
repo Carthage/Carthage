@@ -13,13 +13,13 @@
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */; };
 		6724C86A1A850A4600E47F00 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6724C8691A850A4600E47F00 /* Environment.swift */; };
+		67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; };
+		67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		67C870081A7A04E100F6647C /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C870071A7A04E100F6647C /* Formatting.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
-		CD90DEAC1B7B0C4B0021D843 /* Commandant.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00CCE311A20783A00109F8C /* Commandant.framework */; };
-		CD90DEAD1B7B0C4B0021D843 /* Commandant.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D00CCE311A20783A00109F8C /* Commandant.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		CD90DEAE1B7B0C540021D843 /* PrettyColors.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; };
-		CD90DEAF1B7B0C540021D843 /* PrettyColors.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D00105061A8EA74E0059D0A0 /* Archive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00105051A8EA74E0059D0A0 /* Archive.swift */; };
+		D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00CCE311A20783A00109F8C /* Commandant.framework */; };
+		D00CCE331A20784800109F8C /* Commandant.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D00CCE311A20783A00109F8C /* Commandant.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D012AD0E1AF9843500EE91DA /* Box.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D012AD0D1AF9843500EE91DA /* Box.framework */; };
 		D012AD101AF9843700EE91DA /* Result.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D012AD0F1AF9843700EE91DA /* Result.framework */; };
 		D012AD111AF9844D00EE91DA /* Result.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D012AD0F1AF9843700EE91DA /* Result.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -106,7 +106,9 @@
 			dstSubfolderSpec = 10;
 			files = (
 				D01F8A4519EA28E600643E7C /* ReactiveCocoa.framework in Copy Frameworks */,
+				D00CCE331A20784800109F8C /* Commandant.framework in Copy Frameworks */,
 				D0E0E1B11A2D28CB0097BE2B /* ReactiveTask.framework in Copy Frameworks */,
+				67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */,
 				D0F648831A4DD3EA00BCF808 /* Argo.framework in Copy Frameworks */,
 				D08D00E01AA3AA0500623970 /* Runes.framework in Copy Frameworks */,
 				D012AD111AF9844D00EE91DA /* Result.framework in Copy Frameworks */,
@@ -121,8 +123,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				CD90DEAD1B7B0C4B0021D843 /* Commandant.framework in Embed Frameworks */,
-				CD90DEAF1B7B0C540021D843 /* PrettyColors.framework in Embed Frameworks */,
 				D0AAAB5019FB0960007B24B3 /* CarthageKit.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
@@ -215,7 +215,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0E0E1B01A2D28AC0097BE2B /* ReactiveTask.framework in Frameworks */,
+				D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */,
 				D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */,
+				67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */,
 				D0F648821A4DD3D900BCF808 /* Argo.framework in Frameworks */,
 				D08D00DF1AA3A9FB00623970 /* Runes.framework in Frameworks */,
 				D012AD0E1AF9843500EE91DA /* Box.framework in Frameworks */,
@@ -237,8 +239,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CD90DEAC1B7B0C4B0021D843 /* Commandant.framework in Frameworks */,
-				CD90DEAE1B7B0C540021D843 /* PrettyColors.framework in Frameworks */,
 				D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -258,8 +258,6 @@
 		5499CA981A2394BD00783309 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				D00CCE311A20783A00109F8C /* Commandant.framework */,
-				67AFA9891A79430B00B7DA78 /* PrettyColors.framework */,
 				5499CA961A2394B700783309 /* Components.plist */,
 				5499CA971A2394B700783309 /* Info.plist */,
 			);
@@ -405,6 +403,8 @@
 				D012AD0F1AF9843700EE91DA /* Result.framework */,
 				D012AD0D1AF9843500EE91DA /* Box.framework */,
 				D0F648811A4DD3D900BCF808 /* Argo.framework */,
+				D00CCE311A20783A00109F8C /* Commandant.framework */,
+				67AFA9891A79430B00B7DA78 /* PrettyColors.framework */,
 				D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */,
 				D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */,
 				D08D00DE1AA3A9FB00623970 /* Runes.framework */,

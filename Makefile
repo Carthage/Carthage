@@ -5,12 +5,11 @@ BUILD_TOOL?=xcodebuild
 XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage' DSTROOT=$(TEMPORARY_FOLDER)
 
 OUTPUT_PACKAGE=Carthage.pkg
-OUTPUT_FRAMEWORKS=$(CARTHAGEKIT_FRAMEWORK) Commandant.framework PrettyColors.framework
-CARTHAGEKIT_FRAMEWORK=CarthageKit.framework
-CARTHAGEKIT_FRAMEWORK_ZIP=$(CARTHAGEKIT_FRAMEWORK).zip
+OUTPUT_FRAMEWORK=CarthageKit.framework
+OUTPUT_FRAMEWORK_ZIP=CarthageKit.framework.zip
 
 BUILT_BUNDLE=$(TEMPORARY_FOLDER)/Applications/carthage.app
-CARTHAGE_FRAMEWORKS=$(OUTPUT_FRAMEWORKS:%="$(BUILT_BUNDLE)/Contents/Frameworks/%")
+CARTHAGEKIT_BUNDLE=$(BUILT_BUNDLE)/Contents/Frameworks/$(OUTPUT_FRAMEWORK)
 CARTHAGE_EXECUTABLE=$(BUILT_BUNDLE)/Contents/MacOS/carthage
 
 FRAMEWORKS_FOLDER=/Library/Frameworks
@@ -32,7 +31,7 @@ test: clean bootstrap
 
 clean:
 	rm -f "$(OUTPUT_PACKAGE)"
-	rm -f "$(CARTHAGEKIT_FRAMEWORK_ZIP)"
+	rm -f "$(OUTPUT_FRAMEWORK_ZIP)"
 	rm -rf "$(TEMPORARY_FOLDER)"
 	$(BUILD_TOOL) $(XCODEFLAGS) clean
 
@@ -40,22 +39,22 @@ install: package
 	sudo installer -pkg Carthage.pkg -target /
 
 uninstall:
-	rm -rf $(OUTPUT_FRAMEWORKS:%="$(FRAMEWORKS_FOLDER)/%")
+	rm -rf "$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)"
 	rm -f "$(BINARIES_FOLDER)/carthage"
 
 installables: clean bootstrap
 	$(BUILD_TOOL) $(XCODEFLAGS) install
 
 	mkdir -p "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)"
-	mv -f $(CARTHAGE_FRAMEWORKS) "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/"
+	mv -f "$(CARTHAGEKIT_BUNDLE)" "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)"
 	mv -f "$(CARTHAGE_EXECUTABLE)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage"
 	rm -rf "$(BUILT_BUNDLE)"
 
 prefix_install: installables
 	mkdir -p "$(PREFIX)/Frameworks" "$(PREFIX)/bin"
-	cp -rf $(OUTPUT_FRAMEWORKS:%="$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/%") "$(PREFIX)/Frameworks/"
+	cp -rf "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)" "$(PREFIX)/Frameworks/"
 	cp -f "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage" "$(PREFIX)/bin/"
-	$(foreach framework,$(OUTPUT_FRAMEWORKS),install_name_tool -add_rpath "@executable_path/../Frameworks/$(framework)/Versions/Current/Frameworks/" "$(PREFIX)/bin/carthage")
+	install_name_tool -add_rpath "@executable_path/../Frameworks/$(OUTPUT_FRAMEWORK)/Versions/Current/Frameworks/"  "$(PREFIX)/bin/carthage"
 
 package: installables
 	pkgbuild \
@@ -66,4 +65,4 @@ package: installables
 		--version "$(VERSION_STRING)" \
 		"$(OUTPUT_PACKAGE)"
 	
-	(cd "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" && zip -q -r --symlinks - "$(CARTHAGEKIT_FRAMEWORK)") > "$(CARTHAGEKIT_FRAMEWORK_ZIP)"
+	(cd "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" && zip -q -r --symlinks - "$(OUTPUT_FRAMEWORK)") > "$(OUTPUT_FRAMEWORK_ZIP)"
