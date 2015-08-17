@@ -192,7 +192,7 @@ extension CarthageError: Printable {
 			return "Invalid architecture: \(description)"
 
 		case let .InvalidUUIDs(description):
-			return "Invalid UUIDs: \(description)"
+			return "Invalid architecture UUIDs: \(description)"
 
 		case let .MissingEnvironmentVariable(variable):
 			return "Environment variable not set: \(variable)"

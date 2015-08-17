@@ -1304,7 +1304,7 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, Carth
 				return SignalProducer(value: UUIDs)
 			}
 
-			return SignalProducer(error: .InvalidUUIDs(description: "Could not read UUIDs from \(URL.path!)"))
+			return SignalProducer(error: .InvalidUUIDs(description: "Could not parse UUIDs using dwarfdump from \(URL.path!)"))
 		}
 }
 
