@@ -1255,7 +1255,7 @@ public func UUIDsForFramework(frameworkURL: NSURL) -> SignalProducer<Set<NSUUID>
 	return SignalProducer.try { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
-		|> flatMap(.Merge) { URL in UUIDsFromDwarfdump(URL) }
+		|> flatMap(.Merge, UUIDsFromDwarfdump)
 }
 
 /// Sends a set of UUIDs for each architecture present in the given dSYM.
@@ -1265,7 +1265,7 @@ public func UUIDsForDSYM(dSYMURL: NSURL) -> SignalProducer<Set<NSUUID>, Carthage
 
 /// Sends a set of UUIDs for each architecture present in the given URL.
 private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
-	let dwarfdumpTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", URL.path!])
+	let dwarfdumpTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", URL.path! ])
 
 	return launchTask(dwarfdumpTask)
 		|> ignoreTaskData
@@ -1300,11 +1300,11 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, Carth
 				scanner.scanUpToCharactersFromSet(NSCharacterSet.newlineCharacterSet(), intoString: nil)
 			}
 
-			if UUIDs.count > 0 {
+			if UUIDs.isEmpty {
 				return SignalProducer(value: UUIDs)
+			} else {
+				return SignalProducer(error: .InvalidUUIDs(description: "Could not parse UUIDs using dwarfdump from \(URL.path!)"))
 			}
-
-			return SignalProducer(error: .InvalidUUIDs(description: "Could not parse UUIDs using dwarfdump from \(URL.path!)"))
 		}
 }
 

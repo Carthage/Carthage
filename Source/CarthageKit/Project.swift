@@ -305,7 +305,7 @@ public final class Project {
 			|> then(checkoutResolvedDependencies())
 	}
 
-	/// Installs binaries and symbols for the given project, if available.
+	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> SignalProducer<Bool, CarthageError> {
@@ -360,8 +360,8 @@ public final class Project {
 			}
 	}
 
-	/// Downloads any binaries and symbols that may be able to be used instead 
-	/// of a repository checkout.
+	/// Downloads any binaries and debug symbols that may be able to be used 
+	/// instead of a repository checkout.
 	///
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
@@ -423,15 +423,14 @@ public final class Project {
 	/// Sends the URL of the dSYM after copying.
 	public func copyDSYMToBuildFolderForFramework(frameworkURL: NSURL, fromDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 		return dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
-			|> map { dSYMURL in
+			|> flatMap(.Merge) { dSYMURL in
 				let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
 				let fileName = dSYMURL.lastPathComponent!
 				let destinationURL = destinationDirectoryURL.URLByAppendingPathComponent(fileName)
 				let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
 
-				return (dSYMURL, resolvedDestinationURL)
+				return copyProduct(dSYMURL, resolvedDestinationURL)
 			}
-			|> flatMap(.Merge) { (from, to) in copyProduct(from, to) }
 	}
 
 	/// Checks out the given project into its intended working directory,
@@ -559,15 +558,15 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 extension NSURL {
 	// The type identifier of the receiver, or an error if it was unable to be
 	// determined.
-	internal func typeIdentifier() -> Result<String, NSError> {
-		return try({ (error: NSErrorPointer) -> String? in
+	private var typeIdentifier: Result<String, NSError> {
+		return try { error in
 			var typeIdentifier: AnyObject?
 			if !self.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: error) {
 				return nil
 			}
 
 			return typeIdentifier as? String
-		})
+		}
 	}
 }
 
@@ -577,9 +576,10 @@ private func filesInDirectory(directoryURL: NSURL, typeIdentifier: String) -> Si
 	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants, catchErrors: true)
 		|> map { enumerator, URL in URL }
 		|> filter { URL in
-			switch URL.typeIdentifier() {
+			switch URL.typeIdentifier {
 			case let .Success(box):
 				return UTTypeConformsTo(box.value, typeIdentifier) != 0
+
 			case .Failure:
 				return false
 			}
@@ -607,7 +607,7 @@ private func dSYMsInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, Cart
 /// errors if there was an error parsing a dSYM contained within the directory.
 private func dSYMForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return combineLatest(UUIDsForFramework(frameworkURL), dSYMsInDirectory(directoryURL))
-		|> flatMap(.Merge) { (frameworkUUIDs, dSYMURL) in
+		|> flatMap(.Merge) { frameworkUUIDs, dSYMURL in
 			return UUIDsForDSYM(dSYMURL)
 				|> filter { dSYMUUIDs in
 					return dSYMUUIDs == frameworkUUIDs
