@@ -606,13 +606,16 @@ private func dSYMsInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, Cart
 /// Sends the URL of the dSYM whose UUIDs match those of the given framework, or
 /// errors if there was an error parsing a dSYM contained within the directory.
 private func dSYMForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	return combineLatest(UUIDsForFramework(frameworkURL), dSYMsInDirectory(directoryURL))
-		|> flatMap(.Merge) { frameworkUUIDs, dSYMURL in
-			return UUIDsForDSYM(dSYMURL)
-				|> filter { dSYMUUIDs in
-					return dSYMUUIDs == frameworkUUIDs
+	return UUIDsForFramework(frameworkURL)
+		|> flatMap(.Concat) { frameworkUUIDs in
+			return dSYMsInDirectory(directoryURL)
+				|> flatMap(.Merge) { dSYMURL in
+					return UUIDsForDSYM(dSYMURL)
+						|> filter { dSYMUUIDs in
+							return dSYMUUIDs == frameworkUUIDs
+						}
+						|> map { _ in dSYMURL }
 				}
-				|> map { _ in dSYMURL }
 		}
 		|> take(1)
 }
