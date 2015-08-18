@@ -295,14 +295,14 @@ public final class Project {
 	}
 
 	/// Updates the dependencies of the project to the latest version. The
-	/// changes will be reflected in the working directory checkouts and
-	/// Cartfile.resolved.
-	public func updateDependencies() -> SignalProducer<(), CarthageError> {
+	/// changes will be reflected in Cartfile.resolved, and also in the working
+	/// directory checkouts if the given parameter is true.
+	public func updateDependencies(shouldCheckout: Bool = true) -> SignalProducer<(), CarthageError> {
 		return updatedResolvedCartfile()
 			|> tryMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}
-			|> then(checkoutResolvedDependencies())
+			|> then(shouldCheckout ? checkoutResolvedDependencies() : .empty)
 	}
 
 	/// Installs binaries for the given project, if available.
