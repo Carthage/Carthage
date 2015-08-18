@@ -1300,7 +1300,7 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, Carth
 				scanner.scanUpToCharactersFromSet(NSCharacterSet.newlineCharacterSet(), intoString: nil)
 			}
 
-			if UUIDs.isEmpty {
+			if !UUIDs.isEmpty {
 				return SignalProducer(value: UUIDs)
 			} else {
 				return SignalProducer(error: .InvalidUUIDs(description: "Could not parse UUIDs using dwarfdump from \(URL.path!)"))
