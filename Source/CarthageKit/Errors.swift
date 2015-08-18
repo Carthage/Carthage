@@ -48,7 +48,7 @@ public enum CarthageError: Equatable {
 
 	/// The project is not sharing any framework schemes, so Carthage cannot
 	/// discover them.
-	case NoSharedFrameworkSchemes(ProjectIdentifier)
+	case NoSharedFrameworkSchemes(ProjectIdentifier, Platform?)
 
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
@@ -110,8 +110,8 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	case let (.InvalidArchitectures(left), .InvalidArchitectures(right)):
 		return left == right
 
-	case let (.NoSharedFrameworkSchemes(left), .NoSharedFrameworkSchemes(right)):
-		return left == right
+	case let (.NoSharedFrameworkSchemes(la, lb), .NoSharedFrameworkSchemes(ra, rb)):
+		return la == ra && lb == rb
 
 	case let (.NoSharedSchemes(la, lb), .NoSharedSchemes(ra, rb)):
 		return la == ra && lb == rb
@@ -191,8 +191,11 @@ extension CarthageError: Printable {
 		case let .MissingEnvironmentVariable(variable):
 			return "Environment variable not set: \(variable)"
 
-		case let .NoSharedFrameworkSchemes(projectIdentifier):
+		case let .NoSharedFrameworkSchemes(projectIdentifier, platform):
 			var description = "Dependency \"\(projectIdentifier.name)\" has no shared framework schemes"
+			if let platform = platform {
+				description += " for platform \(platform)"
+			}
 
 			switch projectIdentifier {
 			case let .GitHub(repository):
