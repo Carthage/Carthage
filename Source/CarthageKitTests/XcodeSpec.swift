@@ -106,7 +106,7 @@ class XcodeSpec: QuickSpec {
 			// Copy ReactiveCocoaLayout.framework to the temporary folder.
 			let targetURL = targetFolderURL.URLByAppendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
 
-			let resultURL = copyFramework(frameworkFolderURL, targetURL) |> single
+			let resultURL = copyProduct(frameworkFolderURL, targetURL) |> single
 			expect(resultURL?.value).to(equal(targetURL))
 
 			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)).to(beTruthy())

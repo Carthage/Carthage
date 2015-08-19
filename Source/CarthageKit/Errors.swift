@@ -46,6 +46,9 @@ public enum CarthageError: Equatable {
 	// An error occurred reading a framework's architectures.
 	case InvalidArchitectures(description: String)
 
+	// An error occurred reading a dSYM or framework's UUIDs.
+	case InvalidUUIDs(description: String)
+
 	/// The project is not sharing any framework schemes, so Carthage cannot
 	/// discover them.
 	case NoSharedFrameworkSchemes(ProjectIdentifier, Platform?)
@@ -187,6 +190,9 @@ extension CarthageError: Printable {
 
 		case let .InvalidArchitectures(description):
 			return "Invalid architecture: \(description)"
+
+		case let .InvalidUUIDs(description):
+			return "Invalid architecture UUIDs: \(description)"
 
 		case let .MissingEnvironmentVariable(variable):
 			return "Environment variable not set: \(variable)"
