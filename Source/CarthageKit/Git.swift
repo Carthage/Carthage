@@ -142,13 +142,11 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 	let taskDescription = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment, standardInput: standardInput)
 
 	return launchTask(taskDescription)
+		|> ignoreTaskData
 		|> mapError { .TaskError($0) }
-		|> map { taskEvent in
-			return taskEvent.value.map { data in
-				return NSString(data: data, encoding: NSUTF8StringEncoding)! as String
-			}
+		|> map { data in
+			return NSString(data: data, encoding: NSUTF8StringEncoding)! as String
 		}
-		|> ignoreNil
 }
 
 /// Returns a signal that completes when cloning completes successfully.
