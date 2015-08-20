@@ -714,20 +714,17 @@ public func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) 
 				// cloning it.
 				return cloneProducer()
 			} else {
-				let isValidRepository = launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: repositoryURL)
-					|> map { _ in true }
-					|> catch { _ in SignalProducer<Bool, CarthageError>(value: false) }
-
-				return isValidRepository
-					|> flatMap(.Concat) { isValid in
-						if isValid {
+				return isGitRepository(repositoryURL)
+					|> promoteErrors(CarthageError.self)
+					|> flatMap(.Concat) { isRepository in
+						if isRepository {
 							let fetchProducer = fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
 
 							return SignalProducer(value: (ProjectEvent.Fetching(project), repositoryURL))
 								|> concat(fetchProducer |> then(.empty))
 						} else {
-							// If the directory isn't a valid repository (that
-							// might happen if the process is quitted right after
+							// If the directory isn't a repository (that might
+							// happen if the process is quitted right after
 							// creating the directory), remove the directory then
 							// clone it.
 							fileManager.removeItemAtURL(repositoryURL, error: nil)
