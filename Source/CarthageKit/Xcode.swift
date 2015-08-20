@@ -1159,7 +1159,15 @@ public func copyProduct(from: NSURL, to: NSURL) -> SignalProducer<NSURL, Carthag
 
 		let manager = NSFileManager.defaultManager()
 
-		if !manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error) {
+		if !manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil, error: &error)
+			// Although the method's documentation says: “YES if createIntermediates
+			// is set and the directory already exists)”, it seems to rarely
+			// returns NO and NSFileWriteFileExistsError error. So we should
+			// ignore that specific error.
+			//
+			// See https://github.com/Carthage/Carthage/issues/591.
+			&& error?.code != NSFileWriteFileExistsError
+		{
 			return .failure(.WriteFailed(to.URLByDeletingLastPathComponent!, error))
 		}
 
