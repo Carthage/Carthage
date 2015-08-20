@@ -458,10 +458,8 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: St
 
 			return .success(())
 		}
-		|> flatMap(.Merge) { _ in
-			return isGitRepository(repositoryFileURL)
-				|> promoteErrors(CarthageError.self)
-		}
+		|> then(isGitRepository(repositoryFileURL)
+			|> promoteErrors(CarthageError.self))
 		|> flatMap(.Merge) { isRepository -> SignalProducer<NSURL, CarthageError> in
 			if isRepository {
 				return launchGitTask([ "mv", "-k", fromPath, toPath ], repositoryFileURL: repositoryFileURL)
