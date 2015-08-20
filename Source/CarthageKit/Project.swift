@@ -690,29 +690,50 @@ private func repositoryURLForProject(project: ProjectIdentifier, #preferHTTPS: B
 /// the URL to where the repository's folder will exist on disk, then complete
 /// when the operation completes.
 public func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) -> SignalProducer<(ProjectEvent, NSURL), CarthageError> {
+	let fileManager = NSFileManager.defaultManager()
 	let repositoryURL = repositoryFileURLForProject(project)
 
 	return SignalProducer.try { () -> Result<GitURL, CarthageError> in
 			var error: NSError?
-			if !NSFileManager.defaultManager().createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
+			if !fileManager.createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
 				return .failure(.WriteFailed(CarthageDependencyRepositoriesURL, error))
 			}
 
 			return .success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
 		}
 		|> flatMap(.Merge) { remoteURL in
-			if NSFileManager.defaultManager().createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
-				// If we created the directory, we're now responsible for
-				// cloning it.
-				let cloneSignal = cloneRepository(remoteURL, repositoryURL)
+			let cloneProducer: () -> SignalProducer<(ProjectEvent, NSURL), CarthageError> = {
+				let cloneProducer = cloneRepository(remoteURL, repositoryURL)
 
 				return SignalProducer(value: (ProjectEvent.Cloning(project), repositoryURL))
-					|> concat(cloneSignal |> then(.empty))
-			} else {
-				let fetchSignal = fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
+					|> concat(cloneProducer |> then(.empty))
+			}
 
-				return SignalProducer(value: (ProjectEvent.Fetching(project), repositoryURL))
-					|> concat(fetchSignal |> then(.empty))
+			if fileManager.createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil, error: nil) {
+				// If we created the directory, we're now responsible for
+				// cloning it.
+				return cloneProducer()
+			} else {
+				let isValidRepository = launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: repositoryURL)
+					|> map { _ in true }
+					|> catch { _ in SignalProducer<Bool, CarthageError>(value: false) }
+
+				return isValidRepository
+					|> flatMap(.Concat) { isValid in
+						if isValid {
+							let fetchProducer = fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
+
+							return SignalProducer(value: (ProjectEvent.Fetching(project), repositoryURL))
+								|> concat(fetchProducer |> then(.empty))
+						} else {
+							// If the directory isn't a valid repository (that
+							// might happen if the process is quitted right after
+							// creating the directory), remove the directory then
+							// clone it.
+							fileManager.removeItemAtURL(repositoryURL, error: nil)
+							return cloneProducer()
+						}
+					}
 			}
 		}
 }
