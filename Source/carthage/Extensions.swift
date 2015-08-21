@@ -146,7 +146,7 @@ internal struct ProjectEventSink: SinkType {
 			carthage.println(formatting.bullets + "Downloading " + formatting.projectName(string: project.name) + ".framework binary at " + formatting.quote(release))
 
 		case let .SkippedDownloadingBinaries(project, message):
-			carthage.println(formatting.bullets + "Skipped downloading " + formatting.projectName(string: project.name) + " due to the error:\n\t" + formatting.quote(message))
+			carthage.println(formatting.bullets + "Skipped downloading " + formatting.projectName(string: project.name) + ".framework binary due to the error:\n\t" + formatting.quote(message))
 
 		case let .SkippedBuilding(project, message):
 			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(string: project.name) + " due to the error:\n" + message)
