@@ -11,6 +11,7 @@ import Commandant
 import Result
 import Foundation
 import ReactiveCocoa
+import ReactiveTask
 
 public struct FetchCommand: CommandType {
 	public let verb = "fetch"
@@ -29,16 +30,26 @@ public struct FetchCommand: CommandType {
 		return openLoggingHandle(options.verbose, "git")
 			|> flatMap(.Merge) { (fileHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
 				let formatting = options.colorOptions.formatting
-				
+				let stderrHandle = NSFileHandle.fileHandleWithStandardError()
+
 				let project = ProjectIdentifier.Git(options.repositoryURL)
 				var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 				
-				return cloneOrFetchProject(project, fileHandle, preferHTTPS: true)
+				return cloneOrFetchProject(project, preferHTTPS: true)
 					|> on(started: {
 						if let temporaryURL = temporaryURL {
 							carthage.println(formatting.bullets + "git output can be found in " + formatting.path(string: temporaryURL.path!))
 						}
 						}, next: { event, _ in
+							switch event {
+							case let .StandardOutput(data):
+								fileHandle.writeData(data)
+								
+							case let .StandardError(data):
+								fileHandle.writeData(data)
+								stderrHandle.writeData(data)
+							}
+
 							eventSink.put(event)
 					})
 					|> then(.empty)
