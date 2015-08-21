@@ -52,7 +52,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one.
-1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
+1. On your application targets’ “General” settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script with the following contents:
 
   ```sh
