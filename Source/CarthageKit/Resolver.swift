@@ -214,17 +214,21 @@ private struct DependencyGraph: Equatable {
 			let lhsDependencies = self.edges[lhs]
 			let rhsDependencies = self.edges[rhs]
 
-			// If the right node or its nested dependencies have a dependency on
-			// the left node, the left node needs to be built first (and is thus
-			// ordered first).
-			if let rhsDependencies = rhsDependencies where self.edgeDependsOn(rhsDependencies, dependsOn: lhs) {
-				return true
+			if let rhsDependencies = rhsDependencies {
+				// If the right node has a dependency on the left node, the
+				// left node needs to be built first (and is thus ordered
+				// first).
+				if rhsDependencies.contains(lhs) {
+					return true
+				}
 			}
 
-			// If the left node or its nested dependencies have a dependency on
-			// the right node, the right node needs to be built first.
-			if let lhsDependencies = lhsDependencies where self.edgeDependsOn(lhsDependencies, dependsOn: rhs) {
-				return false
+			if let lhsDependencies = lhsDependencies {
+				// If the left node has a dependency on the right node, the
+				// right node needs to be built first.
+				if lhsDependencies.contains(rhs) {
+					return false
+				}
 			}
 
 			// If neither node depends on each other, sort the one with the
@@ -244,22 +248,6 @@ private struct DependencyGraph: Equatable {
 	}
 
 	init() {}
-
-	/// Determines whether the set of nodes or the dependencies of them have a
-	/// dependency on the given node.
-	func edgeDependsOn(edge: Set<DependencyNode>, dependsOn: DependencyNode) -> Bool {
-		if edge.contains(dependsOn) {
-			return true
-		}
-
-		for node in edge {
-			if let nodeDependencies = self.edges[node] where edgeDependsOn(nodeDependencies, dependsOn: dependsOn) {
-				return true
-			}
-		}
-
-		return false
-	}
 
 	/// Attempts to add the given node to the graph, optionally as a dependency
 	/// of another.
