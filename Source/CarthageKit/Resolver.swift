@@ -201,7 +201,7 @@ private struct DependencyGraph: Equatable {
 	var allNodes: Set<DependencyNode> = []
 
 	/// All nodes that have dependencies, associated with those lists of
-	/// dependencies themselves.
+	/// dependencies themselves including the intermediates.
 	var edges: [DependencyNode: Set<DependencyNode>] = [:]
 
 	/// The root nodes of the graph (i.e., those dependencies that are listed
@@ -280,6 +280,15 @@ private struct DependencyGraph: Equatable {
 			var nodeSet = edges[dependencyOf] ?? Set()
 			nodeSet.insert(node)
 			edges[dependencyOf] = nodeSet
+
+			// Add a nested dependency to the list of its ancestor.
+			let edgesCopy = edges
+			for (ancestor, var itsDependencies) in edgesCopy {
+				if itsDependencies.contains(dependencyOf) {
+					itsDependencies.insert(node)
+					edges[ancestor] = itsDependencies
+				}
+			}
 		} else {
 			roots.insert(node)
 		}
