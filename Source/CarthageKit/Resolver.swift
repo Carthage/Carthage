@@ -279,6 +279,12 @@ private struct DependencyGraph: Equatable {
 		if let dependencyOf = dependencyOf {
 			var nodeSet = edges[dependencyOf] ?? Set()
 			nodeSet.insert(node)
+
+			// If the given node has its dependencies, add thme also to the list.
+			if let dependenciesOfNode = edges[node] {
+				nodeSet.unionInPlace(dependenciesOfNode)
+			}
+
 			edges[dependencyOf] = nodeSet
 
 			// Add a nested dependency to the list of its ancestor.
