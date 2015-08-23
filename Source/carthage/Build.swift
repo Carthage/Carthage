@@ -79,8 +79,8 @@ public struct BuildCommand: CommandType {
 
 				return buildProgress
 					|> on(started: {
-						if let temporaryURL = temporaryURL {
-							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: temporaryURL.path!))
+						if let path = temporaryURL?.path {
+							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: path))
 						}
 					}, next: { taskEvent in
 						switch taskEvent {
