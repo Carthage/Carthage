@@ -64,55 +64,149 @@ extension GitHubError: Decodable {
 	}
 }
 
-/// Describes a GitHub.com repository.
+/// Describes a GitHub.com or GitHub Enterprise repository.
 public struct GitHubRepository: Equatable {
+
+	/// Represents a GitHub server instance.
+	public enum Server: Equatable, Hashable, Printable {
+		/// The github.com server instance.
+		case GitHub
+
+		/// An Enterprise instance with its hostname.
+		case Enterprise(scheme: String, hostname: String)
+
+		public var scheme: String {
+			switch self {
+			case .GitHub:
+				return "https"
+
+			case let .Enterprise(scheme, _):
+				return scheme
+			}
+		}
+
+		public var hostname: String {
+			switch self {
+			case .GitHub:
+				return "github.com"
+
+			case let .Enterprise(_, hostname):
+				return hostname
+			}
+		}
+
+		public var APIEndpoint: String {
+			switch self {
+			case .GitHub:
+				return "\(scheme)://api.\(hostname)"
+
+			case .Enterprise:
+				return "\(description)/api/v3"
+			}
+		}
+
+		public var hashValue: Int {
+			return scheme.hashValue ^ hostname.hashValue
+		}
+
+		public var description: String {
+			return "\(scheme)://\(hostname)"
+		}
+	}
+
+	public let server: Server
 	public let owner: String
 	public let name: String
 
 	/// The URL that should be used for cloning this repository over HTTPS.
 	public var HTTPSURL: GitURL {
-		return GitURL("https://github.com/\(owner)/\(name).git")
+		return GitURL("\(server)/\(owner)/\(name).git")
 	}
 
 	/// The URL that should be used for cloning this repository over SSH.
 	public var SSHURL: GitURL {
-		return GitURL("ssh://git@github.com/\(owner)/\(name).git")
+		return GitURL("ssh://git@\(server.hostname)/\(owner)/\(name).git")
 	}
 
 	/// The URL for filing a new GitHub issue for this repository.
 	public var newIssueURL: NSURL {
-		return NSURL(string: "https://github.com/\(owner)/\(name)/issues/new")!
+		return NSURL(string: "\(server)/\(owner)/\(name)/issues/new")!
 	}
 
-	public init(owner: String, name: String) {
+	public init(server: Server = .GitHub, owner: String, name: String) {
+		self.server = server
 		self.owner = owner
 		self.name = name
 	}
 
-	/// Parses repository information out of a string of the form "owner/name".
-	public static func fromNWO(NWO: String) -> Result<GitHubRepository, CarthageError> {
-		let components = split(NWO, maxSplit: 1, allowEmptySlices: false) { $0 == "/" }
-		if components.count < 2 {
-			return .failure(CarthageError.ParseError(description: "invalid GitHub repository name \"\(NWO)\""))
+	/// Matches an identifier of the form "owner/name".
+	private static let NWORegex = NSRegularExpression(pattern: "^([\\-\\.\\w]+)/([\\-\\.\\w]+)$", options: nil, error: nil)!
+
+	/// Parses repository information out of a string of the form "owner/name"
+	/// for the github.com, or the form "http(s)://hostname/owner/name" for
+	/// Enterprise instances.
+	public static func fromIdentifier(identifier: String) -> Result<GitHubRepository, CarthageError> {
+		// GitHub.com
+		let range = NSRange(location: 0, length: (identifier as NSString).length)
+		if let match = NWORegex.firstMatchInString(identifier, options: nil, range: range) {
+			let owner = (identifier as NSString).substringWithRange(match.rangeAtIndex(1))
+			let name = (identifier as NSString).substringWithRange(match.rangeAtIndex(2))
+			return .success(self(owner: owner, name: name))
 		}
 
-		return .success(self(owner: components[0], name: components[1]))
+		// GitHub Enterprise
+		if let
+			URL = NSURL(string: identifier),
+			scheme = URL.scheme,
+			host = URL.host,
+			// The trailing slash of the host is included in the components.
+			var pathComponents = (URL.pathComponents as? [String])?.filter({ $0 != "/" })
+			where pathComponents.count >= 2
+		{
+			// Consider that the instance might be in subdirectories.
+			let name = pathComponents.removeLast()
+			let owner = pathComponents.removeLast()
+			let hostnameWithSubdirectories = host.stringByAppendingPathComponent(join("/", pathComponents))
+			return .success(self(server: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: name))
+		}
+
+		return .failure(CarthageError.ParseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
 	}
 }
 
 public func ==(lhs: GitHubRepository, rhs: GitHubRepository) -> Bool {
-	return lhs.owner.caseInsensitiveCompare(rhs.owner) == .OrderedSame && lhs.name.caseInsensitiveCompare(rhs.name) == .OrderedSame
+	return lhs.server == rhs.server && lhs.owner.caseInsensitiveCompare(rhs.owner) == .OrderedSame && lhs.name.caseInsensitiveCompare(rhs.name) == .OrderedSame
+}
+
+public func ==(lhs: GitHubRepository.Server, rhs: GitHubRepository.Server) -> Bool {
+	switch (lhs, rhs) {
+	case (.GitHub, .GitHub):
+		return true
+
+	case let (.Enterprise(la, lb), .Enterprise(ra, rb)):
+		return la.caseInsensitiveCompare(ra) == .OrderedSame && lb.caseInsensitiveCompare(rb) == .OrderedSame
+
+	case (_, _):
+		return false
+	}
 }
 
 extension GitHubRepository: Hashable {
 	public var hashValue: Int {
-		return owner.hashValue ^ name.hashValue
+		return server.hashValue ^ owner.hashValue ^ name.hashValue
 	}
 }
 
 extension GitHubRepository: Printable {
 	public var description: String {
-		return "\(owner)/\(name)"
+		let nameWithOwner = "\(owner)/\(name)"
+		switch server {
+		case .GitHub:
+			return nameWithOwner
+
+		case .Enterprise:
+			return "\(server)/\(nameWithOwner)"
+		}
 	}
 }
 
@@ -218,8 +312,8 @@ extension GitHubRelease: Decodable {
 
 private typealias BasicGitHubCredentials = (String, String)
 
-private func loadCredentialsFromGit() -> SignalProducer<BasicGitHubCredentials?, CarthageError> {
-	let data = "url=https://github.com".dataUsingEncoding(NSUTF8StringEncoding)!
+private func loadCredentialsFromGit(forServer server: GitHubRepository.Server) -> SignalProducer<BasicGitHubCredentials?, CarthageError> {
+	let data = "url=\(server)".dataUsingEncoding(NSUTF8StringEncoding)!
 	
 	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
 		|> flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
@@ -248,13 +342,42 @@ private func loadCredentialsFromGit() -> SignalProducer<BasicGitHubCredentials?,
 		}
 }
 
-
-internal func loadGitHubAuthorization() -> SignalProducer<String?, CarthageError> {
+private func parseGitHubAccessTokenFromEnvironment() -> [String: String] {
 	let environment = NSProcessInfo.processInfo().environment
-	if let accessToken = environment["GITHUB_ACCESS_TOKEN"] as? String {
-		return SignalProducer(value: "token \(accessToken)")
+
+	if let accessTokenInput = environment["GITHUB_ACCESS_TOKEN"] as? String {
+		// Treat the input as comma-separated series of domains and tokens.
+		// (e.g., `GITHUB_ACCESS_TOKEN="github.com=XXXXXXXXXXXXX,enterprise.local/ghe=YYYYYYYYY"`)
+		let records = split(accessTokenInput, allowEmptySlices: false) { $0 == "," }
+
+		return records.reduce([:]) { (var values: [String: String], record) in
+			let parts = split(record, maxSplit: 1, allowEmptySlices: false) { $0 == "=" }
+			switch parts.count {
+			case 1:
+				// If the input is provided as an access token itself, use the
+				// token for Github.com.
+				values[GitHubRepository.Server.GitHub.hostname] = parts[0]
+
+			case 2:
+				let (key, value) = (parts[0], parts[1])
+				values[key] = value
+
+			default:
+				break
+			}
+
+			return values
+		}
+	}
+	
+	return [:]
+}
+
+internal func loadGitHubAuthorization(forServer server: GitHubRepository.Server) -> SignalProducer<String?, CarthageError> {
+	if let accessTokenForServer = parseGitHubAccessTokenFromEnvironment()[server.hostname] {
+		return SignalProducer(value: "token \(accessTokenForServer)")
 	} else {
-		return loadCredentialsFromGit() |> map { maybeCredentials in
+		return loadCredentialsFromGit(forServer: server) |> map { maybeCredentials in
 			maybeCredentials.map { (username, password) in
 				let data = "\(username):\(password)".dataUsingEncoding(NSUTF8StringEncoding)!
 				let encodedString = data.base64EncodedStringWithOptions(nil)
@@ -359,7 +482,7 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
 internal func releaseForTag(tag: String, repository: GitHubRepository, authorizationHeaderValue: String?) -> SignalProducer<GitHubRelease, CarthageError> {
-	return fetchAllPages(NSURL(string: "https://api.github.com/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
+	return fetchAllPages(NSURL(string: "\(repository.server.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
 		|> tryMap { data -> Result<AnyObject, CarthageError> in
 			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
 				return .success(object)

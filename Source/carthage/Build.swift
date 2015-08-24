@@ -79,8 +79,8 @@ public struct BuildCommand: CommandType {
 
 				return buildProgress
 					|> on(started: {
-						if let temporaryURL = temporaryURL {
-							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: temporaryURL.path!))
+						if let path = temporaryURL?.path {
+							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: path))
 						}
 					}, next: { taskEvent in
 						switch taskEvent {
@@ -109,6 +109,10 @@ public struct BuildCommand: CommandType {
 			return buildableSDKs(sdks, scheme, configuration, project, formatting)
 		}
 
+
+		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
+		project.projectEvents.observe(next: { eventSink.put($0) })
+
 		let buildProducer = project.loadCombinedCartfile()
 			|> map { _ in project }
 			|> catch { error in
@@ -133,6 +137,17 @@ public struct BuildCommand: CommandType {
 			return buildProducer
 		} else {
 			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform, canBuildSDK: sdkFilter)
+				|> catch { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
+					switch error {
+					case let .NoSharedFrameworkSchemes(project, _):
+						// Log that building the current project is being skipped.
+						eventSink.put(.SkippedBuilding(project, error.description))
+						return .empty
+
+					default:
+						return SignalProducer(error: error)
+					}
+				}
 			return buildProducer |> concat(currentProducers)
 		}
 	}

@@ -62,11 +62,22 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
   and add the paths to the frameworks you want to use under “Input Files”, e.g.:
 
   ```
-  $(SRCROOT)/Carthage/Build/iOS/LlamaKit.framework
+  $(SRCROOT)/Carthage/Build/iOS/Box.framework
+  $(SRCROOT)/Carthage/Build/iOS/Result.framework
   $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
   ```
 
   This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries.
+
+##### Copying debug symbols for debugging and crash reporting
+
+1. On your application target’s “Build Phases” settings tab, click the “+” icon and choose “New Copy Files Phase”.
+1. Click the “Destination” drop-down menu and select “Products Directory”.
+1. For each framework you’re using, drag and drop its corresponding dSYM file.
+
+With the debug information copied into the built products directory, Xcode will be able to symbolicate the stack trace whenever you stop at a breakpoint. This will also enable you to step through third-party code in the debugger.
+
+When archiving your application for submission to the App Store or TestFlight, Xcode will also copy these files into the dSYMs subdirectory of your application’s `.xcarchive` bundle.
 
 ##### For both platforms
 
@@ -141,7 +152,7 @@ Carthage can automatically use prebuilt frameworks, instead of building from scr
 
 To offer prebuilt frameworks for a specific tag, the binaries for _all_ supported platforms should be zipped up together into _one_ archive, and that archive should be attached to a published Release corresponding to that tag. The attachment should include `.framework` in its name (e.g., `ReactiveCocoa.framework.zip`), to indicate to Carthage that it contains binaries.
 
-Prerelease or draft Releases will be automatically ignored, even if they correspond to the desired tag.
+Draft Releases will be automatically ignored, even if they correspond to the desired tag.
 
 ### Declare your compatibility
 

@@ -69,8 +69,7 @@ public struct GitURL: Equatable {
 	/// Strips any trailing .git in the given name, if one exists.
 	private func stripGitSuffix(string: String) -> String {
 		if string.hasSuffix(".git") {
-			let nsString = string as NSString
-			return nsString.substringToIndex(nsString.length - 4) as String
+			return string.substringToIndex(advance(string.endIndex, -4))
 		} else {
 			return string
 		}
@@ -142,13 +141,11 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 	let taskDescription = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment, standardInput: standardInput)
 
 	return launchTask(taskDescription)
+		|> ignoreTaskData
 		|> mapError { .TaskError($0) }
-		|> map { taskEvent in
-			return taskEvent.value.map { data in
-				return NSString(data: data, encoding: NSUTF8StringEncoding)! as String
-			}
+		|> map { data in
+			return NSString(data: data, encoding: NSUTF8StringEncoding)! as String
 		}
-		|> ignoreNil
 }
 
 /// Returns a signal that completes when cloning completes successfully.
@@ -400,15 +397,12 @@ public func resolveReferenceInRepository(repositoryFileURL: NSURL, reference: St
 		|> mapError { _ in CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists", underlyingError: nil) }
 }
 
-/// Returns the location of the .git folder within the given repository.
-private func gitDirectoryURLInRepository(repositoryFileURL: NSURL) -> NSURL {
-	return repositoryFileURL.URLByAppendingPathComponent(".git")
-}
-
 /// Attempts to determine whether the given directory represents a Git
 /// repository.
-private func isGitRepository(directoryURL: NSURL) -> Bool {
-	return NSFileManager.defaultManager().fileExistsAtPath(gitDirectoryURLInRepository(directoryURL).path!)
+public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError> {
+	return launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: directoryURL)
+		|> map { _ in true }
+		|> catch { _ in SignalProducer(value: false) }
 }
 
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if
@@ -416,16 +410,14 @@ private func isGitRepository(directoryURL: NSURL) -> Bool {
 public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submodule, fetchURL: GitURL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = repositoryFileURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
 
-	return SignalProducer<Bool, CarthageError> { observer, disposable in
-			sendNext(observer, isGitRepository(submoduleDirectoryURL))
-			sendCompleted(observer)
-		}
+	return isGitRepository(submoduleDirectoryURL)
+		|> promoteErrors(CarthageError.self)
 		|> flatMap(.Merge) { submoduleExists in
 			if (submoduleExists) {
 				// Just check out and stage the correct revision.
 				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
 					|> then(launchGitTask([ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.URL.URLString ], repositoryFileURL: repositoryFileURL))
-					|> then(launchGitTask([ "submodule", "--quiet", "sync" ], repositoryFileURL: repositoryFileURL))
+					|> then(launchGitTask([ "submodule", "--quiet", "sync", "--recursive" ], repositoryFileURL: repositoryFileURL))
 					|> then(checkoutSubmodule(submodule, submoduleDirectoryURL))
 					|> then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
 					|> then(.empty)
@@ -455,14 +447,16 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: St
 	let toURL = repositoryFileURL.URLByAppendingPathComponent(toPath)
 	let parentDirectoryURL = toURL.URLByDeletingLastPathComponent!
 
-	return SignalProducer<Bool, CarthageError>.try {
+	return SignalProducer<(), CarthageError>.try {
 			var error: NSError?
 			if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
 				return .failure(CarthageError.WriteFailed(parentDirectoryURL, error))
 			}
 
-			return .success(isGitRepository(repositoryFileURL))
+			return .success(())
 		}
+		|> then(isGitRepository(repositoryFileURL)
+			|> promoteErrors(CarthageError.self))
 		|> flatMap(.Merge) { isRepository -> SignalProducer<NSURL, CarthageError> in
 			if isRepository {
 				return launchGitTask([ "mv", "-k", fromPath, toPath ], repositoryFileURL: repositoryFileURL)

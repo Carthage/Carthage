@@ -1,5 +1,3 @@
 github "Quick/Quick" ~> 0.3
 github "Quick/Nimble" ~> 0.4
 github "jspahrsummers/xcconfigs" ~> 0.8
-github "Carthage/Commandant" ~> 0.6
-github "jdhealy/PrettyColors" ~> 2.0
