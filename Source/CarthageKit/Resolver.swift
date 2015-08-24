@@ -280,7 +280,7 @@ private struct DependencyGraph: Equatable {
 			var nodeSet = edges[dependencyOf] ?? Set()
 			nodeSet.insert(node)
 
-			// If the given node has its dependencies, add thme also to the list.
+			// If the given node has its dependencies, add them also to the list.
 			if let dependenciesOfNode = edges[node] {
 				nodeSet.unionInPlace(dependenciesOfNode)
 			}
