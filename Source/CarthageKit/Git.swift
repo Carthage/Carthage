@@ -69,8 +69,7 @@ public struct GitURL: Equatable {
 	/// Strips any trailing .git in the given name, if one exists.
 	private func stripGitSuffix(string: String) -> String {
 		if string.hasSuffix(".git") {
-			let nsString = string as NSString
-			return nsString.substringToIndex(nsString.length - 4) as String
+			return string.substringToIndex(advance(string.endIndex, -4))
 		} else {
 			return string
 		}
