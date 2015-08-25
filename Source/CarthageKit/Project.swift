@@ -573,10 +573,11 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			}
 		}
 		|> try { newDownloadURL in
-			if rename(downloadURL.fileSystemRepresentation, newDownloadURL.fileSystemRepresentation) == 0 {
+			var error: NSError?
+			if NSFileManager.defaultManager().moveItemAtURL(downloadURL, toURL: newDownloadURL, error: &error) {
 				return .success(())
 			} else {
-				return .failure(.TaskError(.POSIXError(errno)))
+				return .failure(.WriteFailed(newDownloadURL, error))
 			}
 		}
 }
