@@ -264,30 +264,10 @@ class XcodeSpec: QuickSpec {
 			]
 			
 			let expectedOutput = [
-				CodeSigningIdentity(
-					IDHash: "4E8D512C8480FAC679947D6E50190AE9BAB3E825",
-					IdentityType: "3rd Party Mac Developer Application",
-					DeveloperName: "Some Developer",
-					DeveloperID: "DUCNFCN445"
-				),
-				CodeSigningIdentity(
-					IDHash: "8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D",
-					IdentityType: "Mac Developer",
-					DeveloperName: "Developer Name",
-					DeveloperID: "AUCNACN346"
-				),
-				CodeSigningIdentity(
-					IDHash: "4E8D512C8480AAC67995D69CA09B769663BC844D",
-					IdentityType: "iPhone Developer",
-					DeveloperName: "App Developer",
-					DeveloperID: "VZAPFCN445"
-				),
-				CodeSigningIdentity(
-					IDHash: "65E24CDAF5B3E1E1480818CA4656210871214337",
-					IdentityType: "Developer ID Application",
-					DeveloperName: "Development, Inc.",
-					DeveloperID: "DSVNEZN954"
-				)
+				"3rd Party Mac Developer Application",
+				"Mac Developer",
+				"iPhone Developer",
+				"Developer ID Application",
 			]
 			
 			let result = parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError>(values: inputLines))
@@ -305,30 +285,10 @@ class XcodeSpec: QuickSpec {
 		it("should detect iPhone signing identities when present") {
 			
 			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
-				CodeSigningIdentity(
-					IDHash: "4E8D512C8480FAC679947D6E50190AE9BAB3E825",
-					IdentityType: "3rd Party Mac Developer Application",
-					DeveloperName: "Some Developer",
-					DeveloperID: "DUCNFCN445"
-				),
-				CodeSigningIdentity(
-					IDHash: "8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D",
-					IdentityType: "Mac Developer",
-					DeveloperName: "Developer Name",
-					DeveloperID: "AUCNACN346"
-				),
-				CodeSigningIdentity(
-					IDHash: "4E8D512C8480AAC67995D69CA09B769663BC844D",
-					IdentityType: "iPhone Developer",
-					DeveloperName: "App Developer",
-					DeveloperID: "VZAPFCN445"
-				),
-				CodeSigningIdentity(
-					IDHash: "65E24CDAF5B3E1E1480818CA4656210871214337",
-					IdentityType: "Developer ID Application",
-					DeveloperName: "Development, Inc.",
-					DeveloperID: "DSVNEZN954"
-				)
+				"3rd Party Mac Developer Application",
+				"Mac Developer",
+				"iPhone Developer",
+				"Developer ID Application",
 				]))
 			
 			expect(result).to(equal(true))
@@ -337,30 +297,10 @@ class XcodeSpec: QuickSpec {
 		it("should detect iOS signing identities when present (future compatibility)") {
 			
 			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
-				CodeSigningIdentity(
-					IDHash: "4E8D512C8480FAC679947D6E50190AE9BAB3E825",
-					IdentityType: "3rd Party Mac Developer Application",
-					DeveloperName: "Some Developer",
-					DeveloperID: "DUCNFCN445"
-				),
-				CodeSigningIdentity(
-					IDHash: "8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D",
-					IdentityType: "Mac Developer",
-					DeveloperName: "Developer Name",
-					DeveloperID: "AUCNACN346"
-				),
-				CodeSigningIdentity(
-					IDHash: "4E8D512C8480AAC67995D69CA09B769663BC844D",
-					IdentityType: "iOS Developer",
-					DeveloperName: "App Developer",
-					DeveloperID: "VZAPFCN445"
-				),
-				CodeSigningIdentity(
-					IDHash: "65E24CDAF5B3E1E1480818CA4656210871214337",
-					IdentityType: "Developer ID Application",
-					DeveloperName: "Development, Inc.",
-					DeveloperID: "DSVNEZN954"
-				)
+				"3rd Party Mac Developer Application",
+				"Mac Developer",
+				"iOS Developer",
+				"Developer ID Application",
 				]))
 			
 			expect(result).to(equal(true))
@@ -369,24 +309,9 @@ class XcodeSpec: QuickSpec {
 		it("should detect when no iPhone or iOS signing identities when present") {
 			
 			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
-				CodeSigningIdentity(
-					IDHash: "4E8D512C8480FAC679947D6E50190AE9BAB3E825",
-					IdentityType: "3rd Party Mac Developer Application",
-					DeveloperName: "Some Developer",
-					DeveloperID: "DUCNFCN445"
-				),
-				CodeSigningIdentity(
-					IDHash: "8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D",
-					IdentityType: "Mac Developer",
-					DeveloperName: "Developer Name",
-					DeveloperID: "AUCNACN346"
-				),
-				CodeSigningIdentity(
-					IDHash: "65E24CDAF5B3E1E1480818CA4656210871214337",
-					IdentityType: "Developer ID Application",
-					DeveloperName: "Development, Inc.",
-					DeveloperID: "DSVNEZN954"
-				)
+				"3rd Party Mac Developer Application",
+				"Mac Developer",
+				"Developer ID Application",
 				]))
 			
 			expect(result).to(equal(false))
@@ -396,19 +321,11 @@ class XcodeSpec: QuickSpec {
 
 // MARK: - Helper functions
 
-extension CodeSigningIdentity: Equatable {}
-public func ==(lhs: CodeSigningIdentity, rhs: CodeSigningIdentity) -> Bool {
-	return lhs.IDHash == rhs.IDHash
-		&& lhs.IdentityType == rhs.IdentityType
-		&& lhs.DeveloperName == rhs.DeveloperName
-		&& lhs.DeveloperID == rhs.DeveloperID
-}
-
 /// Returns true if the current user has any iOS signing identities configured
 public func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
 	let iOSIdentities = identities
 		|> filter { identity in
-			let id = identity.IdentityType as NSString
+			let id = identity as NSString
 			return id.containsString("iPhone") || id.containsString("iOS")
 		}
 		|> last

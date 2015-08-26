@@ -223,7 +223,7 @@ public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, pr
 					case .Success(let configuredSigningIdentity):
 						let matchingidentity = parseSecuritySigningIdentities()
 							|> filter{ identity in
-								return identity.IdentityType == configuredSigningIdentity.value
+								return identity == configuredSigningIdentity.value
 							}
 							|> first
 						signingAllowed = matchingidentity != nil

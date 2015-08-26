@@ -1051,20 +1051,7 @@ public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageErr
 		}
 }
 
-public struct CodeSigningIdentity {
-	public let IDHash: String
-	public let IdentityType: String
-	public let DeveloperName: String
-	public let DeveloperID: String
-	
-	// Not sure why, but the default initializer can't be accessed from the unit tests
-	public init(IDHash: String, IdentityType: String, DeveloperName: String, DeveloperID: String) {
-		self.IDHash = IDHash
-		self.IdentityType = IdentityType
-		self.DeveloperName = DeveloperName
-		self.DeveloperID = DeveloperID
-	}
-}
+public typealias CodeSigningIdentity = String
 
 /// Matches lines of the form:
 ///
@@ -1091,12 +1078,7 @@ public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<St
 				let match = matches.first {
 					let id = identityLine as NSString
 					
-					return CodeSigningIdentity(
-						IDHash: id.substringWithRange(match.rangeAtIndex(1)),
-						IdentityType: id.substringWithRange(match.rangeAtIndex(2)),
-						DeveloperName: id.substringWithRange(match.rangeAtIndex(3)),
-						DeveloperID: id.substringWithRange(match.rangeAtIndex(4))
-					)
+					return id.substringWithRange(match.rangeAtIndex(2))
 			}
 			
 			return nil
