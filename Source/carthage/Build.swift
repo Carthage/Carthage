@@ -207,8 +207,15 @@ the signing identities available
 public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator, formatting: ColorOptions.Formatting) -> [SDK] {
 	var identityCheckArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 	
+	var availableIdentities = Set<CodeSigningIdentity>()
 	var result = Set<SDK>()
 	
+	parseSecuritySigningIdentities()
+		|> on(next: {identity in
+			availableIdentities.insert(identity)
+		})
+		|> wait
+
 	SignalProducer<SDK, CarthageError>(values: sdks)
 		|> on (next: { sdk in
 			identityCheckArgs.sdk = sdk
@@ -221,12 +228,7 @@ public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, pr
 					
 					switch identityResult {
 					case .Success(let configuredSigningIdentity):
-						let matchingidentity = parseSecuritySigningIdentities()
-							|> filter{ identity in
-								return identity == configuredSigningIdentity.value
-							}
-							|> first
-						signingAllowed = matchingidentity != nil
+						signingAllowed = availableIdentities.contains(configuredSigningIdentity.value)
 						
 						if !signingAllowed {
 							let quotedSDK = formatting.quote(sdk.rawValue)
