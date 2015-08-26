@@ -1066,23 +1066,6 @@ public struct CodeSigningIdentity {
 	}
 }
 
-extension CodeSigningIdentity: Equatable {}
-public func ==(lhs: CodeSigningIdentity, rhs: CodeSigningIdentity) -> Bool {
-	return lhs.IDHash == rhs.IDHash
-		&& lhs.IdentityType == rhs.IdentityType
-		&& lhs.DeveloperName == rhs.DeveloperName
-		&& lhs.DeveloperID == rhs.DeveloperID
-}
-
-extension CodeSigningIdentity: NilLiteralConvertible {
-	public init(nilLiteral: ()) {
-		IDHash = ""
-		IdentityType = ""
-		DeveloperName = ""
-		DeveloperID = ""
-	}
-}
-
 /// Matches lines of the form:
 ///
 /// '  1) 4E8D512C8480AAC679947D6E50190AE97AB3E825 "3rd Party Mac Developer Application: Developer Name (DUCNFCN445)"'
@@ -1119,18 +1102,6 @@ public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<St
 			return nil
 		}
 		|> ignoreNil
-}
-
-/// Returns true if the current user has any iOS signing identities configured
-public func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
-	let iOSIdentities = identities
-		|> filter { identity in
-			let id = identity.IdentityType as NSString
-			return id.containsString("iPhone") || id.containsString("iOS")
-		}
-		|> last
-	
-	return iOSIdentities != nil
 }
 
 /// Builds the first project or workspace found within the given directory which

@@ -393,3 +393,25 @@ class XcodeSpec: QuickSpec {
 		}
 	}
 }
+
+// MARK: - Helper functions
+
+extension CodeSigningIdentity: Equatable {}
+public func ==(lhs: CodeSigningIdentity, rhs: CodeSigningIdentity) -> Bool {
+	return lhs.IDHash == rhs.IDHash
+		&& lhs.IdentityType == rhs.IdentityType
+		&& lhs.DeveloperName == rhs.DeveloperName
+		&& lhs.DeveloperID == rhs.DeveloperID
+}
+
+/// Returns true if the current user has any iOS signing identities configured
+public func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
+	let iOSIdentities = identities
+		|> filter { identity in
+			let id = identity.IdentityType as NSString
+			return id.containsString("iPhone") || id.containsString("iOS")
+		}
+		|> last
+	
+	return iOSIdentities != nil
+}
