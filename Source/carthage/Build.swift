@@ -130,13 +130,13 @@ public struct BuildCommand: CommandType {
 					|> then(SignalProducer(value: project))
 			}
 			|> flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform, canBuildSDK: sdkFilter)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform, sdkFilter: sdkFilter)
 			}
 
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform, canBuildSDK: sdkFilter)
+			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform, sdkFilter: sdkFilter)
 				|> catch { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
 					switch error {
 					case let .NoSharedFrameworkSchemes(project, _):
