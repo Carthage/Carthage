@@ -80,8 +80,7 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 
 extension ProjectLocator: Printable {
 	public var description: String {
-		let lastComponent: String? = fileURL.lastPathComponent
-		return lastComponent!
+		return fileURL.lastPathComponent!
 	}
 }
 
