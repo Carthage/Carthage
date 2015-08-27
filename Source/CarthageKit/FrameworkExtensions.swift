@@ -138,12 +138,11 @@ internal func dematerializeErrorsIfEmpty<T, E>(signal: Signal<Event<T, E>, E>) -
 		}, error: { error in
 			sendError(observer, error)
 		}, completed: {
-			if !receivedValue {
-				if let receivedError = receivedError {
-					sendError(observer, receivedError)
-				}
+			
+			if let receivedError = receivedError where !receivedValue {
+				sendError(observer, receivedError)
 			}
-
+		
 			sendCompleted(observer)
 		}, interrupted: {
 			sendInterrupted(observer)
