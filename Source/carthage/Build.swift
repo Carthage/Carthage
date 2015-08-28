@@ -207,14 +207,26 @@ the signing identities available
 public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator, formatting: ColorOptions.Formatting) -> [SDK] {
 	var identityCheckArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 	
-	var availableIdentities = Set<CodeSigningIdentity>()
-	var result = Set<SDK>()
+	let identitiesResult: Result<[CodeSigningIdentity], CarthageError>? = parseSecuritySigningIdentities()
+		|> collect
+		|> first
 	
-	parseSecuritySigningIdentities()
-		|> on(next: {identity in
-			availableIdentities.insert(identity)
-		})
-		|> wait
+	let availableIdentities: Set<CodeSigningIdentity>
+
+	if let identitiesResult = identitiesResult {
+		switch(identitiesResult) {
+		case .Success(let identities):
+			availableIdentities = Set(identities.value)
+			break
+		case .Failure(let error):
+			carthage.println("\(formatting.bullets)ERROR reading signing identities: \(error.value)")
+			return []
+		}
+	} else {
+		availableIdentities = Set<CodeSigningIdentity>()
+	}
+	
+	var result = Set<SDK>()
 
 	SignalProducer<SDK, CarthageError>(values: sdks)
 		|> on (next: { sdk in
