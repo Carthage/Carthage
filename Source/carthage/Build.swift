@@ -207,57 +207,43 @@ the signing identities available
 public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator, formatting: ColorOptions.Formatting) -> [SDK] {
 	var identityCheckArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 	
-	let identitiesResult: Result<[CodeSigningIdentity], CarthageError>? = parseSecuritySigningIdentities()
-		|> collect
-		|> first
-	
-	let availableIdentities: Set<CodeSigningIdentity>
-
-	if let identitiesResult = identitiesResult {
-		switch(identitiesResult) {
-		case .Success(let identities):
-			availableIdentities = Set(identities.value)
-			break
-		case .Failure(let error):
-			carthage.println("\(formatting.bullets)ERROR reading signing identities: \(error.value)")
-			return []
-		}
-	} else {
-		availableIdentities = Set<CodeSigningIdentity>()
-	}
-	
 	var result = Set<SDK>()
 
-	SignalProducer<SDK, CarthageError>(values: sdks)
-		|> on (next: { sdk in
-			identityCheckArgs.sdk = sdk
+	let identitiesResult = parseSecuritySigningIdentities()
+		|> collect
+		|> on (next: { signingIdentities in
+			let availableIdentities = Set(signingIdentities)
 			
-			BuildSettings.loadWithArguments(identityCheckArgs)
-				|> on(next: { settings in
-					let identityResult = settings["CODE_SIGN_IDENTITY"]
+			SignalProducer<SDK, CarthageError>(values: sdks)
+				|> on (next: { sdk in
+					identityCheckArgs.sdk = sdk
 					
-					var signingAllowed = true
-					
-					switch identityResult {
-					case .Success(let configuredSigningIdentity):
-						signingAllowed = availableIdentities.contains(configuredSigningIdentity.value)
-						
-						if !signingAllowed {
-							let quotedSDK = formatting.quote(sdk.rawValue)
-							let quotedIdentity = formatting.quote(configuredSigningIdentity.value)
-							let message = "Skipping build for \(quotedSDK) SDK, because the necessary signing identity \(quotedIdentity) is not installed"
-							carthage.println("\(formatting.bullets)WARNING: \(message)")
-						}
-						
-					default:
-						signingAllowed = true
-					}
-					
-					if signingAllowed {
-						result.insert(sdk)
-					}
+					BuildSettings.loadWithArguments(identityCheckArgs)
+						|> on(next: { settings in
+							let identityResult = settings["CODE_SIGN_IDENTITY"]
+							
+							var signingAllowed = true
+							
+							switch identityResult {
+							case .Success(let configuredSigningIdentity):
+								signingAllowed = availableIdentities.contains(configuredSigningIdentity.value)
+								
+								if !signingAllowed {
+									let quotedSDK = formatting.quote(sdk.rawValue)
+									let quotedIdentity = formatting.quote(configuredSigningIdentity.value)
+									let message = "Skipping build for \(quotedSDK) SDK, because the necessary signing identity \(quotedIdentity) is not installed"
+									carthage.println("\(formatting.bullets)WARNING: \(message)")
+								}
+								
+							default:
+								signingAllowed = true
+							}
+							
+							if signingAllowed {
+								result.insert(sdk)
+							}
+						})
 				})
-				|> wait
 		})
 		|> wait
 	
