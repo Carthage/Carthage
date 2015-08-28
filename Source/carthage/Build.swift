@@ -207,11 +207,9 @@ the signing identities available
 public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator, formatting: ColorOptions.Formatting) -> [SDK] {
 	var identityCheckArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 	
-	var result = Set<SDK>()
-
 	let identitiesResult = parseSecuritySigningIdentities()
 		|> collect
-		|> on (next: { signingIdentities in
+		|> map { (signingIdentities: [CodeSigningIdentity]) -> [SDK] in
 			let availableIdentities = Set(signingIdentities)
 			
 			let buildableSDKs = SignalProducer<SDK, CarthageError>(values: sdks)
@@ -220,43 +218,33 @@ public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, pr
 					
 					let sdkIsBuildable = BuildSettings.loadWithArguments(identityCheckArgs)
 						|> map { settings -> Bool in
-							let identityResult = settings["CODE_SIGN_IDENTITY"]
-							
-							switch identityResult {
-							case .Success(let configuredSigningIdentity):
-								var signingAllowed = availableIdentities.contains(configuredSigningIdentity.value)
+							if let configuredSigningIdentity = settings["CODE_SIGN_IDENTITY"].value {
+								var signingAllowed = availableIdentities.contains(configuredSigningIdentity)
 								
 								if !signingAllowed {
 									let quotedSDK = formatting.quote(sdk.rawValue)
-									let quotedIdentity = formatting.quote(configuredSigningIdentity.value)
+									let quotedIdentity = formatting.quote(configuredSigningIdentity)
 									let message = "Skipping build for \(quotedSDK) SDK, because the necessary signing identity \(quotedIdentity) is not installed"
 									carthage.println("\(formatting.bullets)WARNING: \(message)")
 								}
 								
 								return signingAllowed
-								
-							default:
-								return false
 							}
+
+							return true
 					}
 					|> first
 					
-					if let sdkIsBuildable = sdkIsBuildable?.value where sdkIsBuildable {
-						return true
-					}
-					
-					return false
+					return sdkIsBuildable?.value ?? false
 				}
 				|> collect
 				|> first
 			
-			if let buildableSDKs = buildableSDKs?.value {
-				result = Set(buildableSDKs)
-			}
-		})
-		|> wait
+			return buildableSDKs?.value ?? []
+		}
+		|> first
 	
-	return [SDK](result)
+	return identitiesResult!.value!
 }
 
 public struct BuildOptions: OptionsType {
