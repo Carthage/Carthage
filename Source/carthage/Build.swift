@@ -214,19 +214,17 @@ public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, pr
 		|> on (next: { signingIdentities in
 			let availableIdentities = Set(signingIdentities)
 			
-			SignalProducer<SDK, CarthageError>(values: sdks)
-				|> on (next: { sdk in
+			let buildableSDKs = SignalProducer<SDK, CarthageError>(values: sdks)
+				|> filter { sdk in
 					identityCheckArgs.sdk = sdk
 					
-					BuildSettings.loadWithArguments(identityCheckArgs)
-						|> on(next: { settings in
+					let sdkIsBuildable = BuildSettings.loadWithArguments(identityCheckArgs)
+						|> map { settings -> Bool in
 							let identityResult = settings["CODE_SIGN_IDENTITY"]
-							
-							var signingAllowed = true
 							
 							switch identityResult {
 							case .Success(let configuredSigningIdentity):
-								signingAllowed = availableIdentities.contains(configuredSigningIdentity.value)
+								var signingAllowed = availableIdentities.contains(configuredSigningIdentity.value)
 								
 								if !signingAllowed {
 									let quotedSDK = formatting.quote(sdk.rawValue)
@@ -235,15 +233,26 @@ public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, pr
 									carthage.println("\(formatting.bullets)WARNING: \(message)")
 								}
 								
+								return signingAllowed
+								
 							default:
-								signingAllowed = true
+								return false
 							}
-							
-							if signingAllowed {
-								result.insert(sdk)
-							}
-						})
-				})
+					}
+					|> first
+					
+					if let sdkIsBuildable = sdkIsBuildable?.value where sdkIsBuildable {
+						return true
+					}
+					
+					return false
+				}
+				|> collect
+				|> first
+			
+			if let buildableSDKs = buildableSDKs?.value {
+				result = Set(buildableSDKs)
+			}
 		})
 		|> wait
 	
