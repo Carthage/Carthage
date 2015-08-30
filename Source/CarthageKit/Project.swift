@@ -581,34 +581,16 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 		}
 }
 
-extension NSURL {
-	// The type identifier of the receiver, or an error if it was unable to be
-	// determined.
-	private var typeIdentifier: Result<String, NSError> {
-		return try { error in
-			var typeIdentifier: AnyObject?
-			if !self.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: error) {
-				return nil
-			}
-
-			return typeIdentifier as? String
-		}
-	}
-}
-
-/// Sends the URL to each file found in the given directory conforming to the 
+/// Sends the URL to each file found in the given directory conforming to the
 /// given type identifier.
 private func filesInDirectory(directoryURL: NSURL, typeIdentifier: String) -> SignalProducer<NSURL, CarthageError> {
 	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants, catchErrors: true)
 		|> map { enumerator, URL in URL }
 		|> filter { URL in
-			switch URL.typeIdentifier {
-			case let .Success(box):
-				return UTTypeConformsTo(box.value, typeIdentifier) != 0
-
-			case .Failure:
-				return false
-			}
+			return URL.typeIdentifier
+				.analysis(ifSuccess: { identifier in
+					return UTTypeConformsTo(identifier, typeIdentifier) != 0
+				}, ifFailure: { _ in false })
 		}
 }
 
