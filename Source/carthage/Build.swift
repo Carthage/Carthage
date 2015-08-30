@@ -219,16 +219,15 @@ public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, pr
 					let sdkIsBuildable = BuildSettings.loadWithArguments(identityCheckArgs)
 						|> map { settings -> Bool in
 							if let configuredSigningIdentity = settings["CODE_SIGN_IDENTITY"].value {
-								var signingAllowed = availableIdentities.contains(configuredSigningIdentity)
-								
-								if !signingAllowed {
+								if !availableIdentities.contains(configuredSigningIdentity) {
 									let quotedSDK = formatting.quote(sdk.rawValue)
 									let quotedIdentity = formatting.quote(configuredSigningIdentity)
 									let message = "Skipping build for \(quotedSDK) SDK, because the necessary signing identity \(quotedIdentity) is not installed"
 									carthage.println("\(formatting.bullets)WARNING: \(message)")
+									return false
 								}
 								
-								return signingAllowed
+								return true
 							}
 
 							return true
