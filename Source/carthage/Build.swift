@@ -229,10 +229,10 @@ public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, pr
 								
 								return true
 							}
-
+							
 							return true
-					}
-					|> first
+						}
+						|> first
 					
 					return sdkIsBuildable?.value ?? false
 				}
