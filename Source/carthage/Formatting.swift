@@ -54,31 +54,30 @@ public struct ColorOptions: OptionsType {
 	
 	public struct Formatting {
 		let colorful: Bool
+		let bullets: String
+		let bulletin: Wrap
+		let URL: Wrap
+		let projectName: Wrap
+		let path: Wrap
+		
 		
 		/// Wraps a string with terminal colors and formatting or passes it through.
 		typealias Wrap = (string: String) -> String
 		
 		init(_ colorful: Bool) {
 			self.colorful = colorful
-			bulletin    = wrap(colorful)(wrap: Color.Wrap(foreground: .Blue, style: .Bold))
-			bullets     = self.bulletin(string: "***") + " "
-			URL         = wrap(colorful)(wrap: Color.Wrap(styles: .Underlined))
-			projectName = wrap(colorful)(wrap: Color.Wrap(styles: .Bold))
-			path        = wrap(colorful)(wrap: Color.Wrap(foreground: .Yellow))
+			bulletin      = wrap(colorful)(wrap: Color.Wrap(foreground: .Blue, style: .Bold))
+			bullets       = bulletin(string: "***") + " "
+			URL           = wrap(colorful)(wrap: Color.Wrap(styles: .Underlined))
+			projectName   = wrap(colorful)(wrap: Color.Wrap(styles: .Bold))
+			path          = wrap(colorful)(wrap: Color.Wrap(foreground: .Yellow))
 		}
-		
-		let bulletin: Wrap
-		let bullets: String
 
 		/// Wraps a string in bullets, one space of padding, and formatting.
 		func bulletinTitle(string: String) -> String {
 			return bulletin(string: "*** " + string + " ***")
 		}
-		
-		let URL: Wrap
-		let projectName: Wrap
-		let path: Wrap
-		
+
 		/// Wraps a string in quotation marks and formatting.
 		func quote(string: String, quotationMark: String = "\"") -> String {
 			return wrap(colorful)(wrap: Color.Wrap(foreground: .Green))(string: quotationMark + string + quotationMark)
