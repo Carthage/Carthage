@@ -210,6 +210,21 @@ extension NSURLSession {
 	}
 }
 
+extension NSURL {
+	/// The type identifier of the receiver, or an error if it was unable to be
+	/// determined.
+	internal var typeIdentifier: Result<String, CarthageError> {
+		var typeIdentifier: AnyObject?
+		var error: NSError?
+
+		if self.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: &error), let identifier = typeIdentifier as? String {
+			return .success(identifier)
+		}
+
+		return .failure(.ReadFailed(self, error))
+	}
+}
+
 extension NSURL: Decodable {
 	public class func decode(json: JSON) -> Decoded<NSURL> {
 		return String.decode(json).flatMap { URLString in
