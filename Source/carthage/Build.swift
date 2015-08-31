@@ -315,7 +315,7 @@ extension BuildPlatform: ArgumentType {
 		default:
 			var buildPlatforms = [BuildPlatform]()
 			for string in commaSeparated {
-				if let found = findBuildPlatform(string) {
+				if let found = findBuildPlatform(string) where found != .All {
 					buildPlatforms.append(found)
 				} else {
 					// Reject if an invalid value is included in the comma-
