@@ -211,7 +211,7 @@ public struct BuildOptions: OptionsType {
 }
 
 /// Represents the user’s chosen platform to build for.
-public enum BuildPlatform {
+public enum BuildPlatform: Equatable {
 	/// Build for all available platforms.
 	case All
 
@@ -246,6 +246,19 @@ public enum BuildPlatform {
 				return set.union(platform.platforms)
 			}
 		}
+	}
+}
+
+public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
+	switch (lhs, rhs) {
+	case let (.Multiple(left), .Multiple(right)):
+		return left == right
+
+	case (.All, .All), (.iOS, .iOS), (.Mac, .Mac), (.watchOS, .watchOS):
+		return true
+
+	case _:
+		return false
 	}
 }
 
