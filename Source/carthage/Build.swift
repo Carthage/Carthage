@@ -241,9 +241,9 @@ public enum BuildPlatform: Equatable {
 		case .watchOS:
 			return [ .watchOS ]
 
-		case let .Multiple(platforms):
-			return reduce(platforms, []) { (set, platform) in
-				return set.union(platform.platforms)
+		case let .Multiple(buildPlatforms):
+			return reduce(buildPlatforms, []) { (set, buildPlatform) in
+				return set.union(buildPlatform.platforms)
 			}
 		}
 	}
@@ -277,8 +277,8 @@ extension BuildPlatform: Printable {
 		case .watchOS:
 			return "watchOS"
 
-		case let .Multiple(platforms):
-			return ", ".join(platforms.map { $0.description })
+		case let .Multiple(buildPlatforms):
+			return ", ".join(buildPlatforms.map { $0.description })
 		}
 	}
 }
