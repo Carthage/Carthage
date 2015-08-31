@@ -221,6 +221,31 @@ class XcodeSpec: QuickSpec {
 			expect(NSFileManager.defaultManager().fileExistsAtPath(incorrectPath, isDirectory: nil)).to(beFalsy())
 		}
 
+		it("should build for multiple platforms") {
+			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
+			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac, .iOS ])
+				|> flatten(.Concat)
+				|> ignoreTaskData
+				|> on(next: { (project, scheme) in
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				|> wait
+
+			expect(result.error).to(beNil())
+
+			var isDirectory: ObjCBool = false
+
+			// Verify that the one build product exists at the top level.
+			let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
+			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beTruthy())
+
+			// Verify that the other build product exists at the top level.
+			let iosPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
+			expect(NSFileManager.defaultManager().fileExistsAtPath(iosPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beTruthy())
+		}
+
 		it("should locate the project") {
 			let result = locateProjectsInDirectory(directoryURL) |> first
 			expect(result).notTo(beNil())
