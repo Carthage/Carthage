@@ -125,13 +125,13 @@ public struct BuildCommand: CommandType {
 					|> then(SignalProducer(value: project))
 			}
 			|> flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms)
 			}
 
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform)
+			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms)
 				|> catch { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
 					switch error {
 					case let .NoSharedFrameworkSchemes(project, _):
@@ -224,20 +224,27 @@ public enum BuildPlatform {
 	/// Build only for watchOS.
 	case watchOS
 
-	/// The `Platform` corresponding to this setting.
-	public var platform: Platform? {
+	case Multiple([BuildPlatform])
+
+	/// The set of `Platform` corresponding to this setting.
+	public var platforms: Set<Platform> {
 		switch self {
 		case .All:
-			return nil
+			return []
 
 		case .iOS:
-			return .iOS
+			return [ .iOS ]
 
 		case .Mac:
-			return .Mac
+			return [ .Mac ]
 
 		case .watchOS:
-			return .watchOS
+			return [ .watchOS ]
+
+		case let .Multiple(platforms):
+			return reduce(platforms, []) { (set, platform) in
+				return set.union(platform.platforms)
+			}
 		}
 	}
 }
@@ -256,6 +263,9 @@ extension BuildPlatform: Printable {
 
 		case .watchOS:
 			return "watchOS"
+
+		case let .Multiple(platforms):
+			return ", ".join(platforms.map { $0.description })
 		}
 	}
 }
@@ -271,12 +281,36 @@ extension BuildPlatform: ArgumentType {
 	]
 
 	public static func fromString(string: String) -> BuildPlatform? {
-		for (key, platform) in acceptedStrings {
-			if string.caseInsensitiveCompare(key) == NSComparisonResult.OrderedSame {
-				return platform
+		let commaSeparated = split(string, allowEmptySlices: false) { $0 == "," }
+
+		let findBuildPlatform: String -> BuildPlatform? = { string in
+			for (key, platform) in self.acceptedStrings {
+				if string.caseInsensitiveCompare(key) == NSComparisonResult.OrderedSame {
+					return platform
+				}
 			}
+			return nil
 		}
-		
-		return nil
+
+		switch commaSeparated.count {
+		case 0:
+			return nil
+
+		case 1:
+			return findBuildPlatform(commaSeparated[0])
+
+		default:
+			var buildPlatforms = [BuildPlatform]()
+			for string in commaSeparated {
+				if let found = findBuildPlatform(string) {
+					buildPlatforms.append(found)
+				} else {
+					// Reject if an invalid value is included in the comma-
+					// separated string.
+					return nil
+				}
+			}
+			return .Multiple(buildPlatforms)
+		}
 	}
 }
