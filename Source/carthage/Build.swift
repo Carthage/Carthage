@@ -106,7 +106,10 @@ public struct BuildCommand: CommandType {
 		let project = Project(directoryURL: directoryURL)
 		let formatting = options.colorOptions.formatting
 		let sdkFilter: SDKFilterCallback = {(sdks, scheme, configuration, project) in
-			return buildableSDKs(sdks, scheme, configuration, project, formatting)
+			let sdks = buildableSDKs(sdks, scheme, configuration, project, formatting)
+				|> first
+			
+			return sdks!.value!
 		}
 
 
@@ -204,10 +207,10 @@ the signing identities available
 
 :returns: A list of SDKs that can be built with the configured signing identities
 */
-public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator, formatting: ColorOptions.Formatting) -> [SDK] {
+public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator, formatting: ColorOptions.Formatting) -> SignalProducer<[SDK], CarthageError> {
 	var identityCheckArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 	
-	let identitiesResult = parseSecuritySigningIdentities()
+	return parseSecuritySigningIdentities()
 		|> collect
 		|> map { (signingIdentities: [CodeSigningIdentity]) -> [SDK] in
 			let availableIdentities = Set(signingIdentities)
@@ -241,9 +244,6 @@ public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, pr
 			
 			return buildableSDKs?.value ?? []
 		}
-		|> first
-	
-	return identitiesResult!.value!
 }
 
 public struct BuildOptions: OptionsType {
