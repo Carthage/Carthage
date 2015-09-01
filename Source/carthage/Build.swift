@@ -224,6 +224,7 @@ public enum BuildPlatform: Equatable {
 	/// Build only for watchOS.
 	case watchOS
 
+	/// Build for multiple platforms within the list.
 	case Multiple([BuildPlatform])
 
 	/// The set of `Platform` corresponding to this setting.
