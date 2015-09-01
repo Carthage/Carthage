@@ -125,13 +125,13 @@ public struct BuildCommand: CommandType {
 					|> then(SignalProducer(value: project))
 			}
 			|> flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatformList.platforms)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms)
 			}
 
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatformList.platforms)
+			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms)
 				|> catch { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
 					switch error {
 					case let .NoSharedFrameworkSchemes(project, _):
@@ -189,20 +189,20 @@ public struct BuildCommand: CommandType {
 
 public struct BuildOptions: OptionsType {
 	public let configuration: String
-	public let buildPlatformList: BuildPlatformList
+	public let buildPlatform: BuildPlatform
 	public let skipCurrent: Bool
 	public let colorOptions: ColorOptions
 	public let verbose: Bool
 	public let directoryPath: String
 
-	public static func create(configuration: String)(buildPlatformList: BuildPlatformList)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
-		return self(configuration: configuration, buildPlatformList: buildPlatformList, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+	public static func create(configuration: String)(buildPlatform: BuildPlatform)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
+		return self(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
-			<*> m <| Option(key: "platform", defaultValue: BuildPlatformList(), usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’ or comma-separated values of the formers except for ‘all’)")
+			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’ or comma-separated values of the formers except for ‘all’)")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
@@ -211,7 +211,7 @@ public struct BuildOptions: OptionsType {
 }
 
 /// Represents the user’s chosen platform to build for.
-public enum BuildPlatform {
+public enum BuildPlatform: Equatable {
 	/// Build for all available platforms.
 	case All
 
@@ -224,29 +224,42 @@ public enum BuildPlatform {
 	/// Build only for watchOS.
 	case watchOS
 
-	/// The `Platform` corresponding to this setting.
-	public var platform: Platform? {
+	case Multiple([BuildPlatform])
+
+	/// The set of `Platform` corresponding to this setting.
+	public var platforms: Set<Platform> {
 		switch self {
 		case .All:
-			return nil
+			return []
 
 		case .iOS:
-			return .iOS
+			return [ .iOS ]
 
 		case .Mac:
-			return .Mac
+			return [ .Mac ]
 
 		case .watchOS:
-			return .watchOS
+			return [ .watchOS ]
+
+		case let .Multiple(buildPlatforms):
+			return reduce(buildPlatforms, []) { (set, buildPlatform) in
+				return set.union(buildPlatform.platforms)
+			}
 		}
 	}
+}
 
-	private static let acceptedStrings: [String: BuildPlatform] = [
-		"Mac": .Mac, "macosx": .Mac,
-		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
-		"watchOS": .watchOS, "watchsimulator": .watchOS,
-		"all": .All
-	]
+public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
+	switch (lhs, rhs) {
+	case let (.Multiple(left), .Multiple(right)):
+		return left == right
+
+	case (.All, .All), (.iOS, .iOS), (.Mac, .Mac), (.watchOS, .watchOS):
+		return true
+
+	case _:
+		return false
+	}
 }
 
 extension BuildPlatform: Printable {
@@ -263,37 +276,28 @@ extension BuildPlatform: Printable {
 
 		case .watchOS:
 			return "watchOS"
+
+		case let .Multiple(buildPlatforms):
+			return ", ".join(buildPlatforms.map { $0.description })
 		}
 	}
 }
 
-/// A wrapper type for a list of `BuildPlatform` which can be used as `ArgumentType`.
-public struct BuildPlatformList {
-	let buildPlatforms: [BuildPlatform]
-
-	public init(_ buildPlatforms: [BuildPlatform] = []) {
-		self.buildPlatforms = buildPlatforms
-	}
-
-	/// The set of `Platform` corresponding to this setting.
-	public var platforms: Set<Platform> {
-		return buildPlatforms.reduce([]) { (var set, buildPlatform) in
-			if let platform = buildPlatform.platform {
-				set.insert(platform)
-			}
-			return set
-		}
-	}
-}
-
-extension BuildPlatformList: ArgumentType {
+extension BuildPlatform: ArgumentType {
 	public static let name = "platform"
 
-	public static func fromString(string: String) -> BuildPlatformList? {
+	private static let acceptedStrings: [String: BuildPlatform] = [
+		"Mac": .Mac, "macosx": .Mac,
+		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
+		"watchOS": .watchOS, "watchsimulator": .watchOS,
+		"all": .All
+	]
+
+	public static func fromString(string: String) -> BuildPlatform? {
 		let commaSeparated = split(string, allowEmptySlices: false) { $0 == "," }
 
 		let findBuildPlatform: String -> BuildPlatform? = { string in
-			for (key, platform) in BuildPlatform.acceptedStrings {
+			for (key, platform) in self.acceptedStrings {
 				if string.caseInsensitiveCompare(key) == NSComparisonResult.OrderedSame {
 					return platform
 				}
@@ -306,7 +310,7 @@ extension BuildPlatformList: ArgumentType {
 			return nil
 
 		case 1:
-			return findBuildPlatform(commaSeparated[0]).map { BuildPlatformList([ $0 ]) }
+			return findBuildPlatform(commaSeparated[0])
 
 		default:
 			var buildPlatforms = [BuildPlatform]()
@@ -319,7 +323,7 @@ extension BuildPlatformList: ArgumentType {
 					return nil
 				}
 			}
-			return BuildPlatformList(buildPlatforms)
+			return .Multiple(buildPlatforms)
 		}
 	}
 }
