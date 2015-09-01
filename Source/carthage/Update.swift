@@ -32,13 +32,13 @@ public struct UpdateOptions: OptionsType {
 	public let checkoutAfterUpdate: Bool
 	public let buildAfterUpdate: Bool
 	public let configuration: String
-	public let buildPlatform: BuildPlatform
+	public let buildPlatformList: BuildPlatformList
 	public let verbose: Bool
 	public let checkoutOptions: CheckoutOptions
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
-		return BuildOptions(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
+		return BuildOptions(configuration: configuration, buildPlatformList: buildPlatformList, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
 	}
 
 	/// If `checkoutAfterUpdate` and `buildAfterUpdate` are both true, this will
@@ -53,14 +53,14 @@ public struct UpdateOptions: OptionsType {
 		}
 	}
 
-	public static func create(configuration: String)(buildPlatform: BuildPlatform)(verbose: Bool)(checkoutAfterUpdate: Bool)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
-		return self(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions)
+	public static func create(configuration: String)(buildPlatformList: BuildPlatformList)(verbose: Bool)(checkoutAfterUpdate: Bool)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
+		return self(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatformList: buildPlatformList, verbose: verbose, checkoutOptions: checkoutOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<UpdateOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
-			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platform to build for (ignored if --no-build option is present)")
+			<*> m <| Option(key: "platform", defaultValue: BuildPlatformList(), usage: "the platforms to build for (ignored if --no-build option is present)")
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 			<*> m <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 			<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating (ignored if --no-checkout option is present)")
