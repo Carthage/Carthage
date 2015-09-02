@@ -299,7 +299,7 @@ extension BuildPlatform: ArgumentType {
 
 		let findBuildPlatform: String -> BuildPlatform? = { string in
 			for (key, platform) in self.acceptedStrings {
-				if string.caseInsensitiveCompare(key) == NSComparisonResult.OrderedSame {
+				if string.caseInsensitiveCompare(key) == .OrderedSame {
 					return platform
 				}
 			}
