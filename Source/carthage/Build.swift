@@ -212,38 +212,31 @@ public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, pr
 	
 	return parseSecuritySigningIdentities()
 		|> collect
-		|> map { (signingIdentities: [CodeSigningIdentity]) -> [SDK] in
+		|> flatMap(.Concat) { identities in
+			return SignalProducer(values: sdks) |> map { ($0, identities) }
+		}
+		|> flatMap(.Concat) { (sdk: SDK, signingIdentities: [CodeSigningIdentity]) -> SignalProducer<SDK, CarthageError> in
 			let availableIdentities = Set(signingIdentities)
 			
-			let buildableSDKs = SignalProducer<SDK, CarthageError>(values: sdks)
-				|> filter { sdk in
-					identityCheckArgs.sdk = sdk
-					
-					let sdkIsBuildable = BuildSettings.loadWithArguments(identityCheckArgs)
-						|> map { settings -> Bool in
-							if let configuredSigningIdentity = settings["CODE_SIGN_IDENTITY"].value {
-								if !availableIdentities.contains(configuredSigningIdentity) {
-									let quotedSDK = formatting.quote(sdk.rawValue)
-									let quotedIdentity = formatting.quote(configuredSigningIdentity)
-									let message = "Skipping build for \(quotedSDK) SDK, because the necessary signing identity \(quotedIdentity) is not installed"
-									carthage.println("\(formatting.bullets)WARNING: \(message)")
-									return false
-								}
-								
-								return true
-							}
-							
-							return true
-						}
-						|> first
-					
-					return sdkIsBuildable?.value ?? false
-				}
-				|> collect
-				|> first
+			identityCheckArgs.sdk = sdk
 			
-			return buildableSDKs?.value ?? []
+			return BuildSettings.loadWithArguments(identityCheckArgs)
+				|> filter { settings -> Bool in
+					if let configuredSigningIdentity = settings["CODE_SIGN_IDENTITY"].value
+						where !availableIdentities.contains(configuredSigningIdentity) {
+							let quotedSDK = formatting.quote(sdk.rawValue)
+							let quotedIdentity = formatting.quote(configuredSigningIdentity)
+							let message = "Skipping build for \(quotedSDK) SDK, because the necessary signing identity \(quotedIdentity) is not installed"
+							carthage.println("\(formatting.bullets)WARNING: \(message)")
+							
+							return false
+					}
+					return true
+				}
+				|> map { _ in sdk }
+				|> take(1)
 		}
+		|> collect
 }
 
 public struct BuildOptions: OptionsType {
