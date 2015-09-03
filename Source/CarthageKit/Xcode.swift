@@ -80,8 +80,7 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 
 extension ProjectLocator: Printable {
 	public var description: String {
-		let lastComponent: String? = fileURL.lastPathComponent
-		return lastComponent!
+		return fileURL.lastPathComponent!
 	}
 }
 
@@ -161,22 +160,15 @@ private struct ProjectEnumerationMatch: Comparable {
 	/// so.
 	static func matchURL(URL: NSURL, fromEnumerator enumerator: NSDirectoryEnumerator) -> Result<ProjectEnumerationMatch, CarthageError> {
 		if let URL = URL.URLByResolvingSymlinksInPath {
-			var typeIdentifier: AnyObject?
-			var error: NSError?
-
-			if !URL.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: &error) {
-				return .failure(.ReadFailed(URL, error))
-			}
-
-			if let typeIdentifier = typeIdentifier as? String {
+			return URL.typeIdentifier.flatMap { typeIdentifier in
 				if (UTTypeConformsTo(typeIdentifier, "com.apple.dt.document.workspace") != 0) {
 					return .success(ProjectEnumerationMatch(locator: .Workspace(URL), level: enumerator.level))
 				} else if (UTTypeConformsTo(typeIdentifier, "com.apple.xcode.project") != 0) {
 					return .success(ProjectEnumerationMatch(locator: .ProjectFile(URL), level: enumerator.level))
 				}
-			}
 
-			return .failure(.NotAProject(URL))
+				return .failure(.NotAProject(URL))
+			}
 		}
 
 		return .failure(.ReadFailed(URL, nil))
@@ -689,20 +681,20 @@ private func shouldBuildProductType(productType: ProductType) -> Bool {
 }
 
 /// Determines whether the given scheme should be built automatically.
-private func shouldBuildScheme(buildArguments: BuildArguments, forPlatform: Platform?) -> SignalProducer<Bool, CarthageError> {
+private func shouldBuildScheme(buildArguments: BuildArguments, forPlatforms: Set<Platform>) -> SignalProducer<Bool, CarthageError> {
 	precondition(buildArguments.scheme != nil)
 
 	return BuildSettings.loadWithArguments(buildArguments)
 		|> flatMap(.Concat) { settings -> SignalProducer<ProductType, CarthageError> in
 			let productType = SignalProducer(result: settings.productType)
 
-			if let forPlatform = forPlatform {
-				return settings.buildSDKs
-					|> filter { $0.platform == forPlatform }
-					|> flatMap(.Merge) { _ in productType }
+			if forPlatforms.isEmpty {
+				return productType
 					|> catch { _ in .empty }
 			} else {
-				return productType
+				return settings.buildSDKs
+					|> filter { forPlatforms.contains($0.platform) }
+					|> flatMap(.Merge) { _ in productType }
 					|> catch { _ in .empty }
 			}
 		}
@@ -969,12 +961,12 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil, sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
-	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platform: platform, sdkFilter: sdkFilter)
+	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platforms: platforms, sdkFilter: sdkFilter)
 	return SignalProducer.try { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			var error: NSError?
 			if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -1026,8 +1018,8 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 			return schemeProducers
 				|> mapError { error in
 					switch (dependency, error) {
-					case let (_, .NoSharedFrameworkSchemes(_, platform)):
-						return .NoSharedFrameworkSchemes(dependency, platform)
+					case let (_, .NoSharedFrameworkSchemes(_, platforms)):
+						return .NoSharedFrameworkSchemes(dependency, platforms)
 
 					case let (.GitHub(repo), .NoSharedSchemes(project, _)):
 						return .NoSharedSchemes(project, repo)
@@ -1097,7 +1089,7 @@ public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<St
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platform: Platform? = nil, sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
 	return SignalProducer { observer, disposable in
@@ -1111,7 +1103,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 					|> flatMap(.Merge) { scheme -> SignalProducer<String, CarthageError> in
 						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
-						return shouldBuildScheme(buildArguments, platform)
+						return shouldBuildScheme(buildArguments, platforms)
 							|> filter { $0 }
 							|> map { _ in scheme }
 					}
@@ -1158,7 +1150,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 							return false
 						}
 					}
-					|> concat(SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), platform)))
+					|> concat(SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), platforms)))
 					|> take(1)
 					|> flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
 			}
