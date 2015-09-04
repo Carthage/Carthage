@@ -46,9 +46,12 @@ public enum CarthageError: Equatable {
 	// An error occurred reading a framework's architectures.
 	case InvalidArchitectures(description: String)
 
+	// An error occurred reading a dSYM or framework's UUIDs.
+	case InvalidUUIDs(description: String)
+
 	/// The project is not sharing any framework schemes, so Carthage cannot
 	/// discover them.
-	case NoSharedFrameworkSchemes(ProjectIdentifier)
+	case NoSharedFrameworkSchemes(ProjectIdentifier, Set<Platform>)
 
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
@@ -110,8 +113,8 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	case let (.InvalidArchitectures(left), .InvalidArchitectures(right)):
 		return left == right
 
-	case let (.NoSharedFrameworkSchemes(left), .NoSharedFrameworkSchemes(right)):
-		return left == right
+	case let (.NoSharedFrameworkSchemes(la, lb), .NoSharedFrameworkSchemes(ra, rb)):
+		return la == ra && lb == rb
 
 	case let (.NoSharedSchemes(la, lb), .NoSharedSchemes(ra, rb)):
 		return la == ra && lb == rb
@@ -188,11 +191,18 @@ extension CarthageError: Printable {
 		case let .InvalidArchitectures(description):
 			return "Invalid architecture: \(description)"
 
+		case let .InvalidUUIDs(description):
+			return "Invalid architecture UUIDs: \(description)"
+
 		case let .MissingEnvironmentVariable(variable):
 			return "Environment variable not set: \(variable)"
 
-		case let .NoSharedFrameworkSchemes(projectIdentifier):
+		case let .NoSharedFrameworkSchemes(projectIdentifier, platforms):
 			var description = "Dependency \"\(projectIdentifier.name)\" has no shared framework schemes"
+			if !platforms.isEmpty {
+				let platformsString = ", ".join(map(platforms) { $0.description })
+				description += " for any of the platforms: \(platformsString)"
+			}
 
 			switch projectIdentifier {
 			case let .GitHub(repository):

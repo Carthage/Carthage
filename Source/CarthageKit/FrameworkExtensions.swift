@@ -138,12 +138,11 @@ internal func dematerializeErrorsIfEmpty<T, E>(signal: Signal<Event<T, E>, E>) -
 		}, error: { error in
 			sendError(observer, error)
 		}, completed: {
-			if !receivedValue {
-				if let receivedError = receivedError {
-					sendError(observer, receivedError)
-				}
+			
+			if let receivedError = receivedError where !receivedValue {
+				sendError(observer, receivedError)
 			}
-
+		
 			sendCompleted(observer)
 		}, interrupted: {
 			sendInterrupted(observer)
@@ -208,6 +207,21 @@ extension NSURLSession {
 
 			task.resume()
 		}
+	}
+}
+
+extension NSURL {
+	/// The type identifier of the receiver, or an error if it was unable to be
+	/// determined.
+	internal var typeIdentifier: Result<String, CarthageError> {
+		var typeIdentifier: AnyObject?
+		var error: NSError?
+
+		if self.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: &error), let identifier = typeIdentifier as? String {
+			return .success(identifier)
+		}
+
+		return .failure(.ReadFailed(self, error))
 	}
 }
 

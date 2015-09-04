@@ -79,8 +79,8 @@ public struct BuildCommand: CommandType {
 
 				return buildProgress
 					|> on(started: {
-						if let temporaryURL = temporaryURL {
-							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: temporaryURL.path!))
+						if let path = temporaryURL?.path {
+							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: path))
 						}
 					}, next: { taskEvent in
 						switch taskEvent {
@@ -104,6 +104,10 @@ public struct BuildCommand: CommandType {
 	/// Returns a producer of producers, representing each scheme being built.
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
+
+		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
+		project.projectEvents.observe(next: { eventSink.put($0) })
+
 		let buildProducer = project.loadCombinedCartfile()
 			|> map { _ in project }
 			|> catch { error in
@@ -121,13 +125,24 @@ public struct BuildCommand: CommandType {
 					|> then(SignalProducer(value: project))
 			}
 			|> flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatform: options.buildPlatform.platform)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms)
 			}
 
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platform: options.buildPlatform.platform)
+			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms)
+				|> catch { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
+					switch error {
+					case let .NoSharedFrameworkSchemes(project, _):
+						// Log that building the current project is being skipped.
+						eventSink.put(.SkippedBuilding(project, error.description))
+						return .empty
+
+					default:
+						return SignalProducer(error: error)
+					}
+				}
 			return buildProducer |> concat(currentProducers)
 		}
 	}
@@ -187,7 +202,7 @@ public struct BuildOptions: OptionsType {
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
-			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platform to build for (one of ‘all’, ‘Mac’, or ‘iOS’)")
+			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’ or comma-separated values of the formers except for ‘all’)")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
@@ -196,7 +211,7 @@ public struct BuildOptions: OptionsType {
 }
 
 /// Represents the user’s chosen platform to build for.
-public enum BuildPlatform {
+public enum BuildPlatform: Equatable {
 	/// Build for all available platforms.
 	case All
 
@@ -209,21 +224,42 @@ public enum BuildPlatform {
 	/// Build only for watchOS.
 	case watchOS
 
-	/// The `Platform` corresponding to this setting.
-	public var platform: Platform? {
+	/// Build for multiple platforms within the list.
+	case Multiple([BuildPlatform])
+
+	/// The set of `Platform` corresponding to this setting.
+	public var platforms: Set<Platform> {
 		switch self {
 		case .All:
-			return nil
+			return []
 
 		case .iOS:
-			return .iOS
+			return [ .iOS ]
 
 		case .Mac:
-			return .Mac
+			return [ .Mac ]
 
 		case .watchOS:
-			return .watchOS
+			return [ .watchOS ]
+
+		case let .Multiple(buildPlatforms):
+			return reduce(buildPlatforms, []) { (set, buildPlatform) in
+				return set.union(buildPlatform.platforms)
+			}
 		}
+	}
+}
+
+public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
+	switch (lhs, rhs) {
+	case let (.Multiple(left), .Multiple(right)):
+		return left == right
+
+	case (.All, .All), (.iOS, .iOS), (.Mac, .Mac), (.watchOS, .watchOS):
+		return true
+
+	case _:
+		return false
 	}
 }
 
@@ -241,6 +277,9 @@ extension BuildPlatform: Printable {
 
 		case .watchOS:
 			return "watchOS"
+
+		case let .Multiple(buildPlatforms):
+			return ", ".join(buildPlatforms.map { $0.description })
 		}
 	}
 }
@@ -256,12 +295,36 @@ extension BuildPlatform: ArgumentType {
 	]
 
 	public static func fromString(string: String) -> BuildPlatform? {
-		for (key, platform) in acceptedStrings {
-			if string.caseInsensitiveCompare(key) == NSComparisonResult.OrderedSame {
-				return platform
+		let commaSeparated = split(string, allowEmptySlices: false) { $0 == "," }
+
+		let findBuildPlatform: String -> BuildPlatform? = { string in
+			for (key, platform) in self.acceptedStrings {
+				if string.caseInsensitiveCompare(key) == .OrderedSame {
+					return platform
+				}
 			}
+			return nil
 		}
-		
-		return nil
+
+		switch commaSeparated.count {
+		case 0:
+			return nil
+
+		case 1:
+			return findBuildPlatform(commaSeparated[0])
+
+		default:
+			var buildPlatforms = [BuildPlatform]()
+			for string in commaSeparated {
+				if let found = findBuildPlatform(string) where found != .All {
+					buildPlatforms.append(found)
+				} else {
+					// Reject if an invalid value is included in the comma-
+					// separated string.
+					return nil
+				}
+			}
+			return .Multiple(buildPlatforms)
+		}
 	}
 }

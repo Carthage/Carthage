@@ -29,7 +29,7 @@ public struct CopyFrameworksCommand: CommandType {
 
 					return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
 						|> flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
-							return combineLatest(copyFramework(source, target), codeSigningIdentity())
+							return combineLatest(copyProduct(source, target), codeSigningIdentity())
 								|> flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
 									return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 								}
