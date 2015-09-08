@@ -878,7 +878,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			// TODO: Generalize this further?
 			switch sdksToBuild.count {
 			case 0:
-				let isMissingSigningIdentities = schemeSDKList.count > 0
+				let isMissingSigningIdentities = !schemeSDKList.isEmpty
 				let identityAddendum = isMissingSigningIdentities ? " (you're missing one or more signing identities)" : ""
 				fatalError("No valid SDKs found to build\(identityAddendum)")
 			case 1:
