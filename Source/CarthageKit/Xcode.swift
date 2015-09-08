@@ -1071,11 +1071,10 @@ public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<St
 		|> map { (identityLine: String) -> CodeSigningIdentity? in
 			let fullRange = NSMakeRange(0, count(identityLine))
 			
-			if let matches = signingIdentitiesRegex.matchesInString(identityLine, options: nil, range: fullRange) as? [NSTextCheckingResult],
-				let match = matches.first {
-					let id = identityLine as NSString
-					
-					return id.substringWithRange(match.rangeAtIndex(2))
+			if let match = signingIdentitiesRegex.matchesInString(identityLine, options: nil, range: fullRange).first as? NSTextCheckingResult {
+				let id = identityLine as NSString
+				
+				return id.substringWithRange(match.rangeAtIndex(2))
 			}
 			
 			return nil
