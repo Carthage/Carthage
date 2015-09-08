@@ -1036,7 +1036,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 
 
 public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageError> {
-	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: ["find-identity", "-v", "-p", "codesigning"])
+	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: [ "find-identity", "-v", "-p", "codesigning" ])
 	
 	return launchTask(securityTask)
 		|> ignoreTaskData
