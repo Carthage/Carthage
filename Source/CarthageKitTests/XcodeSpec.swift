@@ -277,7 +277,6 @@ class XcodeSpec: QuickSpec {
 		}
 		
 		it("should parse signing identities correctly") {
-			
 			var i = 0
 			
 			let inputLines = [
@@ -308,7 +307,6 @@ class XcodeSpec: QuickSpec {
 		}
 		
 		it("should detect iPhone signing identities when present") {
-			
 			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
 				"3rd Party Mac Developer Application",
 				"Mac Developer",
@@ -320,7 +318,6 @@ class XcodeSpec: QuickSpec {
 		}
 		
 		it("should detect iOS signing identities when present (future compatibility)") {
-			
 			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
 				"3rd Party Mac Developer Application",
 				"Mac Developer",
@@ -331,8 +328,7 @@ class XcodeSpec: QuickSpec {
 			expect(result).to(equal(true))
 		}
 		
-		it("should detect when no iPhone or iOS signing identities when present") {
-			
+		it("should detect when no iPhone or iOS signing identities when present") {			
 			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
 				"3rd Party Mac Developer Application",
 				"Mac Developer",
