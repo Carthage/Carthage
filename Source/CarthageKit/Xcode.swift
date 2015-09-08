@@ -1069,7 +1069,6 @@ private let signingIdentitiesRegex = NSRegularExpression(pattern:
 public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError> = getSecuritySigningIdentities()) -> SignalProducer<CodeSigningIdentity, CarthageError> {
 	return securityIdentities
 		|> map { (identityLine: String) -> CodeSigningIdentity? in
-			var error: NSError? = nil
 			let fullRange = NSMakeRange(0, count(identityLine))
 			
 			if let matches = signingIdentitiesRegex.matchesInString(identityLine, options: nil, range: fullRange) as? [NSTextCheckingResult],
