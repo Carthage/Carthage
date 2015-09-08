@@ -1040,7 +1040,7 @@ public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageErr
 	
 	return launchTask(securityTask)
 		|> ignoreTaskData
-		|> mapError { CarthageError.TaskError($0) }
+		|> mapError { .TaskError($0) }
 		|> map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
