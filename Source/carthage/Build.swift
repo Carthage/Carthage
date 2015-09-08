@@ -226,7 +226,7 @@ public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, pr
 						where !availableIdentities.contains(configuredSigningIdentity) {
 							let quotedSDK = formatting.quote(sdk.rawValue)
 							let quotedIdentity = formatting.quote(configuredSigningIdentity)
-							let message = "Skipping build for \(quotedSDK) SDK, because the necessary signing identity \(quotedIdentity) is not installed"
+							let message = "Skipping build for \(quotedSDK) SDK because the necessary signing identity \(quotedIdentity) is not installed"
 							carthage.println("\(formatting.bullets)WARNING: \(message)")
 							
 							return false
