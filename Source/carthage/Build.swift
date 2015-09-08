@@ -105,7 +105,7 @@ public struct BuildCommand: CommandType {
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
 		let formatting = options.colorOptions.formatting
-		let sdkFilter: SDKFilterCallback = {(sdks, scheme, configuration, project) in
+		let sdkFilter: SDKFilterCallback = {sdks, scheme, configuration, project in
 			let sdks = buildableSDKs(sdks, scheme, configuration, project, formatting)
 				|> first
 			
