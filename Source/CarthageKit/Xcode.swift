@@ -865,7 +865,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
 		|> collect
 		|> flatMap(.Concat) { (schemeSDKList: [SDK]) in
-			let platform: Platform! = schemeSDKList.first!.platform
+			let platform: Platform! = schemeSDKList.first?.platform
 			
 			if platform == nil {
 				fatalError("No SDKs found for scheme \(scheme)")
