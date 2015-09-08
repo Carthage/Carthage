@@ -783,7 +783,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 
 
 /// A callback function used to determine whether or not an SDK should be built
-public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator) -> [SDK];
+public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator) -> [SDK]
 
 /// Builds one scheme of the given project, for all supported SDKs.
 ///
