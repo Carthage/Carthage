@@ -312,7 +312,7 @@ class XcodeSpec: QuickSpec {
 				"Mac Developer",
 				"iPhone Developer",
 				"Developer ID Application",
-				]))
+			]))
 			
 			expect(result).to(beTruthy())
 		}
@@ -323,7 +323,7 @@ class XcodeSpec: QuickSpec {
 				"Mac Developer",
 				"iOS Developer",
 				"Developer ID Application",
-				]))
+			]))
 			
 			expect(result).to(beTruthy())
 		}
@@ -333,7 +333,7 @@ class XcodeSpec: QuickSpec {
 				"3rd Party Mac Developer Application",
 				"Mac Developer",
 				"Developer ID Application",
-				]))
+			]))
 			
 			expect(result).to(beFalsy())
 		}
