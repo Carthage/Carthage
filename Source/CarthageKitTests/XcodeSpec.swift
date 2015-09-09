@@ -343,7 +343,7 @@ class XcodeSpec: QuickSpec {
 // MARK: - Helper functions
 
 /// Returns true if the current user has any iOS signing identities configured
-public func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
+private func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
 	let iOSIdentities = identities
 		|> filter { identity in
 			let id = identity as NSString
