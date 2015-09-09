@@ -104,14 +104,13 @@ public struct BuildCommand: CommandType {
 	/// Returns a producer of producers, representing each scheme being built.
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
-		let formatting = options.colorOptions.formatting
+
 		let sdkFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
-			let sdks = buildableSDKs(sdks, scheme, configuration, project, formatting)
+			let sdks = buildableSDKs(sdks, scheme, configuration, project, options.colorOptions.formatting)
 				|> first
 			
 			return sdks!.value!
 		}
-
 
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observe(next: { eventSink.put($0) })
