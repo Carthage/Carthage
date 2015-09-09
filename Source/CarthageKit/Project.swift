@@ -573,10 +573,25 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			}
 		}
 		|> try { newDownloadURL in
+			// Tries `rename()` system call at first.
 			if rename(downloadURL.fileSystemRepresentation, newDownloadURL.fileSystemRepresentation) == 0 {
 				return .success(())
-			} else {
+			}
+
+			if errno != EXDEV {
 				return .failure(.TaskError(.POSIXError(errno)))
+			}
+
+			// If the “Cross-device link” error occurred, then falls back to
+			// `NSFileManager.moveItemAtURL()`.
+			//
+			// See https://github.com/Carthage/Carthage/issues/706 and
+			// https://github.com/Carthage/Carthage/issues/711.
+			var error: NSError?
+			if NSFileManager.defaultManager().moveItemAtURL(downloadURL, toURL: newDownloadURL, error: &error) {
+				return .success(())
+			} else {
+				return .failure(.WriteFailed(newDownloadURL, error))
 			}
 		}
 }
