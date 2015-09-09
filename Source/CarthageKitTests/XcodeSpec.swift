@@ -277,8 +277,6 @@ class XcodeSpec: QuickSpec {
 		}
 		
 		it("should parse signing identities correctly") {
-			var i = 0
-			
 			let inputLines = [
 				"  1) 4E8D512C8480FAC679947D6E50190AE9BAB3E825 \"3rd Party Mac Developer Application: Some Developer (DUCNFCN445)\"",
 				"  2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D \"Mac Developer: Developer Name (AUCNACN346)\"",
@@ -295,15 +293,10 @@ class XcodeSpec: QuickSpec {
 			]
 			
 			let result = parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError>(values: inputLines))
-				|> on(next: { returnedValue in
-					expect(returnedValue).to(equal(expectedOutput[i++]))
-				})
-				|> wait
+				|> collect
+				|> single
 
-			expect(result).notTo(beNil())
-			
-			// Verify that the checks above have run
-			expect(i) > 0
+			expect(result?.value).to(equal(expectedOutput))
 		}
 		
 		it("should detect iPhone signing identities when present") {
@@ -312,9 +305,9 @@ class XcodeSpec: QuickSpec {
 				"Mac Developer",
 				"iPhone Developer",
 				"Developer ID Application",
-				]))
+			]))
 			
-			expect(result).to(equal(true))
+			expect(result).to(beTruthy())
 		}
 		
 		it("should detect iOS signing identities when present (future compatibility)") {
@@ -323,9 +316,9 @@ class XcodeSpec: QuickSpec {
 				"Mac Developer",
 				"iOS Developer",
 				"Developer ID Application",
-				]))
+			]))
 			
-			expect(result).to(equal(true))
+			expect(result).to(beTruthy())
 		}
 		
 		it("should detect when no iPhone or iOS signing identities when present") {			
@@ -333,9 +326,9 @@ class XcodeSpec: QuickSpec {
 				"3rd Party Mac Developer Application",
 				"Mac Developer",
 				"Developer ID Application",
-				]))
+			]))
 			
-			expect(result).to(equal(false))
+			expect(result).to(beFalsy())
 		}
 	}
 }
@@ -343,7 +336,7 @@ class XcodeSpec: QuickSpec {
 // MARK: - Helper functions
 
 /// Returns true if the current user has any iOS signing identities configured
-public func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
+private func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
 	let iOSIdentities = identities
 		|> filter { identity in
 			let id = identity as NSString
