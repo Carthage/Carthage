@@ -523,7 +523,7 @@ public final class Project {
 	/// Attempts to build each Carthage dependency that has been checked out.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatforms platforms: Set<Platform>) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			|> flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
 			|> flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
@@ -532,7 +532,7 @@ public final class Project {
 					return .empty
 				}
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms)
+				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, sdkFilter: sdkFilter)
 					|> catch { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:

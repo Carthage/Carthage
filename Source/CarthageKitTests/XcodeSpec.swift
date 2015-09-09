@@ -34,6 +34,9 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for all platforms") {
+			let machineHasiOSIdentity = iOSSigningIdentitiesConfigured()
+			expect(machineHasiOSIdentity).to(equal(true))
+
 			let dependencies = [
 				ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes")),
 				ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
@@ -93,8 +96,10 @@ class XcodeSpec: QuickSpec {
 				|> single
 
 			expect(architectures?.value).to(contain("i386"))
-			expect(architectures?.value).to(contain("armv7"))
-			expect(architectures?.value).to(contain("arm64"))
+			if machineHasiOSIdentity {
+				expect(architectures?.value).to(contain("armv7"))
+				expect(architectures?.value).to(contain("arm64"))
+			}
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
@@ -112,34 +117,36 @@ class XcodeSpec: QuickSpec {
 			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)).to(beTruthy())
 			expect(isDirectory).to(beTruthy())
 
-			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-") |> wait
-			expect(strippingResult.value).notTo(beNil())
-
-			let strippedArchitectures = architecturesInFramework(targetURL)
-				|> collect
-				|> single
-
-			expect(strippedArchitectures?.value).notTo(contain("i386"))
-			expect(strippedArchitectures?.value).to(contain("armv7"))
-			expect(strippedArchitectures?.value).to(contain("arm64"))
-
-			var output: String = ""
-			let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
-
-			let codesignResult = launchTask(codeSign)
-				|> on(next: { taskEvent in
-					switch taskEvent {
-					case let .StandardError(data):
-						output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
-					
-					default:
-						break
-					}
-				})
-				|> wait
-
-			expect(codesignResult.value).notTo(beNil())
-			expect(output).to(contain("satisfies its Designated Requirement"))
+			if machineHasiOSIdentity {
+				let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-") |> wait
+				expect(strippingResult.value).notTo(beNil())
+				
+				let strippedArchitectures = architecturesInFramework(targetURL)
+					|> collect
+					|> single
+				
+				expect(strippedArchitectures?.value).notTo(contain("i386"))
+				expect(strippedArchitectures?.value).to(contain("armv7"))
+				expect(strippedArchitectures?.value).to(contain("arm64"))
+				
+				var output: String = ""
+				let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
+				
+				let codesignResult = launchTask(codeSign)
+					|> on(next: { taskEvent in
+						switch taskEvent {
+						case let .StandardError(data):
+							output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
+							
+						default:
+							break
+						}
+					})
+					|> wait
+				
+				expect(codesignResult.value).notTo(beNil())
+				expect(output).to(contain("satisfies its Designated Requirement"))
+			}
 		}
 
 		it("should skip projects without shared dynamic framework schems") {
@@ -268,5 +275,81 @@ class XcodeSpec: QuickSpec {
 			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")) |> first
 			expect(result).to(beNil())
 		}
+		
+		it("should parse signing identities correctly") {
+			var i = 0
+			
+			let inputLines = [
+				"  1) 4E8D512C8480FAC679947D6E50190AE9BAB3E825 \"3rd Party Mac Developer Application: Some Developer (DUCNFCN445)\"",
+				"  2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D \"Mac Developer: Developer Name (AUCNACN346)\"",
+				"  3) 4E8D512C8480AAC67995D69CA09B769663BC844D \"iPhone Developer: App Developer (VZAPFCN445)\"",
+				"  4) 65E24CDAF5B3E1E1480818CA4656210871214337 \"Developer ID Application: Development, Inc. (DSVNEZN954)\"",
+				"     4 valid identities found"
+			]
+			
+			let expectedOutput = [
+				"3rd Party Mac Developer Application",
+				"Mac Developer",
+				"iPhone Developer",
+				"Developer ID Application",
+			]
+			
+			let result = parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError>(values: inputLines))
+				|> on(next: { returnedValue in
+					expect(returnedValue).to(equal(expectedOutput[i++]))
+				})
+				|> wait
+
+			expect(result).notTo(beNil())
+			
+			// Verify that the checks above have run
+			expect(i) > 0
+		}
+		
+		it("should detect iPhone signing identities when present") {
+			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
+				"3rd Party Mac Developer Application",
+				"Mac Developer",
+				"iPhone Developer",
+				"Developer ID Application",
+				]))
+			
+			expect(result).to(equal(true))
+		}
+		
+		it("should detect iOS signing identities when present (future compatibility)") {
+			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
+				"3rd Party Mac Developer Application",
+				"Mac Developer",
+				"iOS Developer",
+				"Developer ID Application",
+				]))
+			
+			expect(result).to(equal(true))
+		}
+		
+		it("should detect when no iPhone or iOS signing identities when present") {			
+			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
+				"3rd Party Mac Developer Application",
+				"Mac Developer",
+				"Developer ID Application",
+				]))
+			
+			expect(result).to(equal(false))
+		}
 	}
+}
+
+// MARK: - Helper functions
+
+/// Returns true if the current user has any iOS signing identities configured
+public func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
+	let iOSIdentities = identities
+		|> filter { identity in
+			let id = identity as NSString
+			return id.containsString("iPhone") || id.containsString("iOS")
+		}
+		|> last
+	
+	return iOSIdentities != nil
 }
