@@ -314,7 +314,7 @@ class XcodeSpec: QuickSpec {
 				"Developer ID Application",
 				]))
 			
-			expect(result).to(equal(true))
+			expect(result).to(beTruthy())
 		}
 		
 		it("should detect iOS signing identities when present (future compatibility)") {
@@ -325,7 +325,7 @@ class XcodeSpec: QuickSpec {
 				"Developer ID Application",
 				]))
 			
-			expect(result).to(equal(true))
+			expect(result).to(beTruthy())
 		}
 		
 		it("should detect when no iPhone or iOS signing identities when present") {			
@@ -335,7 +335,7 @@ class XcodeSpec: QuickSpec {
 				"Developer ID Application",
 				]))
 			
-			expect(result).to(equal(false))
+			expect(result).to(beFalsy())
 		}
 	}
 }
