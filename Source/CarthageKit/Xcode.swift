@@ -310,6 +310,7 @@ public enum Platform {
 	}
 }
 
+// TODO: this won't be necessary anymore with Swift 2.
 extension Platform: Printable {
 	public var description: String {
 		switch self {
@@ -392,6 +393,7 @@ public enum SDK: String {
 	}
 }
 
+// TODO: this won't be necessary anymore in Swift 2.
 extension SDK: Printable {
 	public var description: String {
 		switch self {
