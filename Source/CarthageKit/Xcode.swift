@@ -350,7 +350,7 @@ public enum SDK: String {
 	case tvOS = "appletvos"
 
 	/// tvSimulator, for the Apple TV simulator.
-	case tvSimulator = "tvsimulator"
+	case tvSimulator = "appletvsimulator"
 
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
