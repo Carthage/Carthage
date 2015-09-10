@@ -247,23 +247,17 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)", underlyingError: error))
 			}
 
-			if let name = name as? NSString {
-				if name != ".git" {
-					return .empty
-				}
-			} else {
+			if (name as? String) != ".git" {
 				return .empty
 			}
-
+		
 			var isDirectory: AnyObject?
 			if !URL.getResourceValue(&isDirectory, forKey: NSURLIsDirectoryKey, error: &error) || isDirectory == nil {
 				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: error))
 			}
 
-			if let directory = isDirectory?.boolValue {
-				if directory {
-					enumerator.skipDescendants()
-				}
+			if let directory = isDirectory?.boolValue where directory {
+				enumerator.skipDescendants()
 			}
 
 			if NSFileManager.defaultManager().removeItemAtURL(URL, error: &error) {
