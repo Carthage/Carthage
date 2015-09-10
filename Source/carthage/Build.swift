@@ -275,6 +275,9 @@ public enum BuildPlatform: Equatable {
 	/// Build only for watchOS.
 	case watchOS
 
+	/// Build only for tvOS.
+	case tvOS
+
 	/// Build for multiple platforms within the list.
 	case Multiple([BuildPlatform])
 
@@ -293,6 +296,9 @@ public enum BuildPlatform: Equatable {
 		case .watchOS:
 			return [ .watchOS ]
 
+		case .tvOS:
+			return [ .tvOS ]
+
 		case let .Multiple(buildPlatforms):
 			return reduce(buildPlatforms, []) { (set, buildPlatform) in
 				return set.union(buildPlatform.platforms)
@@ -306,7 +312,7 @@ public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
 	case let (.Multiple(left), .Multiple(right)):
 		return left == right
 
-	case (.All, .All), (.iOS, .iOS), (.Mac, .Mac), (.watchOS, .watchOS):
+	case (.All, .All), (.iOS, .iOS), (.Mac, .Mac), (.watchOS, .watchOS), (.tvOS, .tvOS):
 		return true
 
 	case _:
@@ -329,6 +335,9 @@ extension BuildPlatform: Printable {
 		case .watchOS:
 			return "watchOS"
 
+		case .tvOS:
+			return "tvOS"
+
 		case let .Multiple(buildPlatforms):
 			return ", ".join(buildPlatforms.map { $0.description })
 		}
@@ -342,6 +351,7 @@ extension BuildPlatform: ArgumentType {
 		"Mac": .Mac, "macosx": .Mac,
 		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
 		"watchOS": .watchOS, "watchsimulator": .watchOS,
+		"tvOS": .tvOS, "tvsimulator": .tvOS,
 		"all": .All
 	]
 
