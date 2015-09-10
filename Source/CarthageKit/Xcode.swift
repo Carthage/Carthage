@@ -347,7 +347,7 @@ public enum SDK: String {
 	case watchSimulator = "watchsimulator"
 
 	/// tvOS, for the Apple TV device.
-	case tvOS = "tvos"
+	case tvOS = "appletvos"
 
 	/// tvSimulator, for the Apple TV simulator.
 	case tvSimulator = "tvsimulator"
