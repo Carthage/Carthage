@@ -167,7 +167,14 @@ public struct GitHubRepository: Equatable {
 			let name = pathComponents.removeLast()
 			let owner = pathComponents.removeLast()
 			let hostnameWithSubdirectories = host.stringByAppendingPathComponent(join("/", pathComponents))
-			return .success(self(server: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: name))
+
+			// If the host name starts with “github.com”, that is not an enterprise
+			// one.
+			if hostnameWithSubdirectories.hasPrefix(Server.GitHub.hostname) {
+				return .success(self(owner: owner, name: name))
+			} else {
+				return .success(self(server: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: name))
+			}
 		}
 
 		return .failure(CarthageError.ParseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
