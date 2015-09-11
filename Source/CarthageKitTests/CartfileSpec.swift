@@ -40,9 +40,9 @@ class CartfileSpec: QuickSpec {
 			expect(depConfigs.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "xcconfigs"))))
 			expect(depConfigs.version).to(equal(VersionSpecifier.Any))
 
-			let depiOSCharts = cartfile.dependencies[4]
-			expect(depiOSCharts.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "danielgindi", name: "ios-charts"))))
-			expect(depiOSCharts.version).to(equal(VersionSpecifier.Any))
+			let depCharts = cartfile.dependencies[4]
+			expect(depCharts.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "danielgindi", name: "ios-charts"))))
+			expect(depCharts.version).to(equal(VersionSpecifier.Any))
 
 			let depErrorTranslations2 = cartfile.dependencies[5]
 			expect(depErrorTranslations2.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(server: .Enterprise(scheme: "https", hostname: "enterprise.local/ghe"), owner: "desktop", name: "git-error-translations"))))
