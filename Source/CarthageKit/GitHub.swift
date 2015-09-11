@@ -136,7 +136,7 @@ public struct GitHubRepository: Equatable {
 	public init(server: Server = .GitHub, owner: String, name: String) {
 		self.server = server
 		self.owner = owner
-		self.name = name
+		self.name = stripGitSuffix(name)
 	}
 
 	/// Matches an identifier of the form "owner/name".
