@@ -59,20 +59,20 @@ public struct GitURL: Equatable {
 	public var name: String? {
 		let components = split(URLString, allowEmptySlices: false) { $0 == "/" }
 
-		return components.last.map { self.stripGitSuffix($0) }
+		return components.last.map { stripGitSuffix($0) }
 	}
 
 	public init(_ URLString: String) {
 		self.URLString = URLString
 	}
+}
 
-	/// Strips any trailing .git in the given name, if one exists.
-	private func stripGitSuffix(string: String) -> String {
-		if string.hasSuffix(".git") {
-			return string.substringToIndex(advance(string.endIndex, -4))
-		} else {
-			return string
-		}
+/// Strips any trailing .git in the given name, if one exists.
+public func stripGitSuffix(string: String) -> String {
+	if string.hasSuffix(".git") {
+		return string.substringToIndex(advance(string.endIndex, -4))
+	} else {
+		return string
 	}
 }
 
