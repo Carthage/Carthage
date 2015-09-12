@@ -136,7 +136,7 @@ public struct GitHubRepository: Equatable {
 	public init(server: Server = .GitHub, owner: String, name: String) {
 		self.server = server
 		self.owner = owner
-		self.name = stripGitSuffix(name)
+		self.name = name
 	}
 
 	/// Matches an identifier of the form "owner/name".
@@ -151,7 +151,7 @@ public struct GitHubRepository: Equatable {
 		if let match = NWORegex.firstMatchInString(identifier, options: nil, range: range) {
 			let owner = (identifier as NSString).substringWithRange(match.rangeAtIndex(1))
 			let name = (identifier as NSString).substringWithRange(match.rangeAtIndex(2))
-			return .success(self(owner: owner, name: name))
+			return .success(self(owner: owner, name: stripGitSuffix(name)))
 		}
 
 		// GitHub Enterprise
@@ -171,9 +171,9 @@ public struct GitHubRepository: Equatable {
 			// If the host name starts with “github.com”, that is not an enterprise
 			// one.
 			if hostnameWithSubdirectories.hasPrefix(Server.GitHub.hostname) {
-				return .success(self(owner: owner, name: name))
+				return .success(self(owner: owner, name: stripGitSuffix(name)))
 			} else {
-				return .success(self(server: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: name))
+				return .success(self(server: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: stripGitSuffix(name)))
 			}
 		}
 
