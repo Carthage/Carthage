@@ -397,7 +397,7 @@ public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError
 	if !NSFileManager.defaultManager().fileExistsAtPath(directoryURL.path!) {
 		return SignalProducer(value: false)
 	}
-	
+
 	return launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: directoryURL)
 		|> map { _ in true }
 		|> catch { _ in SignalProducer(value: false) }
