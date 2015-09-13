@@ -264,8 +264,11 @@ public enum Platform {
 	/// Apple Watch device and simulator.
 	case watchOS
 
+	/// Apple TV device and simulator.
+	case tvOS
+
 	/// All supported build platforms.
-	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS ]
+	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS, .tvOS ]
 
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
@@ -281,6 +284,9 @@ public enum Platform {
 
 		case .watchOS:
 			subfolderName = "watchOS"
+
+		case .tvOS:
+			subfolderName = "tvOS"
 		}
 
 		return CarthageBinariesFolderPath.stringByAppendingPathComponent(subfolderName)
@@ -297,10 +303,14 @@ public enum Platform {
 
 		case .watchOS:
 			return [ .watchOS, .watchSimulator ]
+
+		case .tvOS:
+			return [ .tvOS, .tvSimulator ]
 		}
 	}
 }
 
+// TODO: this won't be necessary anymore with Swift 2.
 extension Platform: Printable {
 	public var description: String {
 		switch self {
@@ -312,6 +322,9 @@ extension Platform: Printable {
 
 		case .watchOS:
 			return "watchOS"
+
+		case .tvOS:
+			return "tvOS"
 		}
 	}
 }
@@ -333,6 +346,12 @@ public enum SDK: String {
 	/// watchSimulator, for the Apple Watch simulator.
 	case watchSimulator = "watchsimulator"
 
+	/// tvOS, for the Apple TV device.
+	case tvOS = "appletvos"
+
+	/// tvSimulator, for the Apple TV simulator.
+	case tvSimulator = "appletvsimulator"
+
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
 		return Result(self(rawValue: string), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
@@ -346,6 +365,9 @@ public enum SDK: String {
 
 		case .watchOS, .watchSimulator:
 			return .watchOS
+
+		case .tvOS, .tvSimulator:
+			return .tvOS
 
 		case .MacOSX:
 			return .Mac
@@ -365,12 +387,13 @@ public enum SDK: String {
 			// own.
 			return []
 
-		case .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator:
+		case .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator:
 			return [ "-sdk", rawValue ]
 		}
 	}
 }
 
+// TODO: this won't be necessary anymore in Swift 2.
 extension SDK: Printable {
 	public var description: String {
 		switch self {
@@ -388,6 +411,12 @@ extension SDK: Printable {
 
 		case .watchSimulator:
 			return "watchOS Simulator"
+
+		case .tvOS:
+			return "tvOS"
+
+		case .tvSimulator:
+			return "tvOS Simulator"
 		}
 	}
 }
