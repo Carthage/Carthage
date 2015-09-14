@@ -385,7 +385,7 @@ public final class Project {
 				}
 			}
 			|> on(next: { release in
-				sendNext(self._projectEventsObserver, ProjectEvent.DownloadingBinaries(project, release.nameWithFallback))
+				sendNext(self._projectEventsObserver, .DownloadingBinaries(project, release.nameWithFallback))
 			})
 			|> flatMap(.Concat) { release -> SignalProducer<NSURL, CarthageError> in
 				return SignalProducer(values: release.assets)
@@ -711,7 +711,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) 
 			let cloneProducer: () -> SignalProducer<(ProjectEvent, NSURL), CarthageError> = {
 				let cloneProducer = cloneRepository(remoteURL, repositoryURL)
 
-				return SignalProducer(value: (ProjectEvent.Cloning(project), repositoryURL))
+				return SignalProducer(value: (.Cloning(project), repositoryURL))
 					|> concat(cloneProducer |> then(.empty))
 			}
 
@@ -726,7 +726,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) 
 						if isRepository {
 							let fetchProducer = fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
 
-							return SignalProducer(value: (ProjectEvent.Fetching(project), repositoryURL))
+							return SignalProducer(value: (.Fetching(project), repositoryURL))
 								|> concat(fetchProducer |> then(.empty))
 						} else {
 							// If the directory isn't a repository (that might
