@@ -424,7 +424,7 @@ public final class Project {
 				}
 			}
 			|> on(next: { release in
-				sendNext(self._projectEventsObserver, ProjectEvent.DownloadingBinaries(project, release.nameWithFallback))
+				sendNext(self._projectEventsObserver, .DownloadingBinaries(project, release.nameWithFallback))
 			})
 			|> flatMap(.Concat) { release -> SignalProducer<NSURL, CarthageError> in
 				return SignalProducer(values: release.assets)
@@ -562,7 +562,7 @@ public final class Project {
 	/// Attempts to build each Carthage dependency that has been checked out.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatforms platforms: Set<Platform>) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			|> flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
 			|> flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
@@ -571,7 +571,7 @@ public final class Project {
 					return .empty
 				}
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms)
+				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, sdkFilter: sdkFilter)
 					|> catch { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:
@@ -612,10 +612,25 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			}
 		}
 		|> try { newDownloadURL in
+			// Tries `rename()` system call at first.
 			if rename(downloadURL.fileSystemRepresentation, newDownloadURL.fileSystemRepresentation) == 0 {
 				return .success(())
-			} else {
+			}
+
+			if errno != EXDEV {
 				return .failure(.TaskError(.POSIXError(errno)))
+			}
+
+			// If the “Cross-device link” error occurred, then falls back to
+			// `NSFileManager.moveItemAtURL()`.
+			//
+			// See https://github.com/Carthage/Carthage/issues/706 and
+			// https://github.com/Carthage/Carthage/issues/711.
+			var error: NSError?
+			if NSFileManager.defaultManager().moveItemAtURL(downloadURL, toURL: newDownloadURL, error: &error) {
+				return .success(())
+			} else {
+				return .failure(.WriteFailed(newDownloadURL, error))
 			}
 		}
 }
@@ -735,7 +750,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) 
 			let cloneProducer: () -> SignalProducer<(ProjectEvent, NSURL), CarthageError> = {
 				let cloneProducer = cloneRepository(remoteURL, repositoryURL)
 
-				return SignalProducer(value: (ProjectEvent.Cloning(project), repositoryURL))
+				return SignalProducer(value: (.Cloning(project), repositoryURL))
 					|> concat(cloneProducer |> then(.empty))
 			}
 
@@ -750,7 +765,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) 
 						if isRepository {
 							let fetchProducer = fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
 
-							return SignalProducer(value: (ProjectEvent.Fetching(project), repositoryURL))
+							return SignalProducer(value: (.Fetching(project), repositoryURL))
 								|> concat(fetchProducer |> then(.empty))
 						} else {
 							// If the directory isn't a repository (that might

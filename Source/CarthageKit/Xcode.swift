@@ -264,8 +264,11 @@ public enum Platform {
 	/// Apple Watch device and simulator.
 	case watchOS
 
+	/// Apple TV device and simulator.
+	case tvOS
+
 	/// All supported build platforms.
-	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS ]
+	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS, .tvOS ]
 
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
@@ -281,6 +284,9 @@ public enum Platform {
 
 		case .watchOS:
 			subfolderName = "watchOS"
+
+		case .tvOS:
+			subfolderName = "tvOS"
 		}
 
 		return CarthageBinariesFolderPath.stringByAppendingPathComponent(subfolderName)
@@ -297,10 +303,14 @@ public enum Platform {
 
 		case .watchOS:
 			return [ .watchOS, .watchSimulator ]
+
+		case .tvOS:
+			return [ .tvOS, .tvSimulator ]
 		}
 	}
 }
 
+// TODO: this won't be necessary anymore with Swift 2.
 extension Platform: Printable {
 	public var description: String {
 		switch self {
@@ -312,6 +322,9 @@ extension Platform: Printable {
 
 		case .watchOS:
 			return "watchOS"
+
+		case .tvOS:
+			return "tvOS"
 		}
 	}
 }
@@ -333,6 +346,12 @@ public enum SDK: String {
 	/// watchSimulator, for the Apple Watch simulator.
 	case watchSimulator = "watchsimulator"
 
+	/// tvOS, for the Apple TV device.
+	case tvOS = "appletvos"
+
+	/// tvSimulator, for the Apple TV simulator.
+	case tvSimulator = "appletvsimulator"
+
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
 		return Result(self(rawValue: string), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
@@ -346,6 +365,9 @@ public enum SDK: String {
 
 		case .watchOS, .watchSimulator:
 			return .watchOS
+
+		case .tvOS, .tvSimulator:
+			return .tvOS
 
 		case .MacOSX:
 			return .Mac
@@ -365,12 +387,13 @@ public enum SDK: String {
 			// own.
 			return []
 
-		case .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator:
+		case .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator:
 			return [ "-sdk", rawValue ]
 		}
 	}
 }
 
+// TODO: this won't be necessary anymore in Swift 2.
 extension SDK: Printable {
 	public var description: String {
 		switch self {
@@ -388,6 +411,12 @@ extension SDK: Printable {
 
 		case .watchSimulator:
 			return "watchOS Simulator"
+
+		case .tvOS:
+			return "tvOS"
+
+		case .tvSimulator:
+			return "tvOS Simulator"
 		}
 	}
 }
@@ -781,14 +810,19 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 		}
 }
 
+
+/// A callback function used to determine whether or not an SDK should be built
+public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator) -> [SDK]
+
 /// Builds one scheme of the given project, for all supported SDKs.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+
 	let buildSDK = { (sdk: SDK) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 		var argsForLoading = buildArgs
 		argsForLoading.sdk = sdk
@@ -858,21 +892,33 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		|> map { $0.platform }
-		|> flatMap(.Concat) { (platform: Platform) in
+		|> collect
+		|> flatMap(.Concat) { (schemeSDKList: [SDK]) in
+			let platform: Platform! = schemeSDKList.first?.platform
+			
+			if platform == nil {
+				fatalError("No SDKs found for scheme \(scheme)")
+			}
+			
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
-
+			
+			let sdksToBuild = sdkFilter(sdks: schemeSDKList, scheme: scheme, configuration: configuration, project: project)
+			
 			// TODO: Generalize this further?
-			switch platform.SDKs.count {
+			switch sdksToBuild.count {
+			case 0:
+				let isMissingSigningIdentities = !schemeSDKList.isEmpty
+				let identityAddendum = isMissingSigningIdentities ? " (you're missing one or more signing identities)" : ""
+				fatalError("No valid SDKs found to build\(identityAddendum)")
 			case 1:
-				return buildSDK(platform.SDKs[0])
+				return buildSDK(sdksToBuild[0])
 					|> flatMapTaskEvents(.Merge) { settings in
 						return copyBuildProductIntoDirectory(folderURL, settings)
 					}
 
 			case 2:
-				let firstSDK = platform.SDKs[0]
-				let secondSDK = platform.SDKs[1]
+				let firstSDK = sdksToBuild[0]
+				let secondSDK = sdksToBuild[1]
 
 				return settingsByTarget(buildSDK(firstSDK))
 					|> flatMap(.Concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
@@ -910,7 +956,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					}
 
 			default:
-				fatalError("SDK count \(platform.SDKs.count) for platform \(platform) is not supported")
+				fatalError("SDK count \(sdksToBuild.count) in scheme \(scheme) is not supported")
 			}
 		}
 		|> flatMapTaskEvents(.Concat) { builtProductURL in
@@ -944,12 +990,12 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = []) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
-	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platforms: platforms)
+	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platforms: platforms, sdkFilter: sdkFilter)
 	return SignalProducer.try { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			var error: NSError?
 			if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -1017,12 +1063,60 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 		}
 }
 
+
+public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageError> {
+	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: [ "find-identity", "-v", "-p", "codesigning" ])
+	
+	return launchTask(securityTask)
+		|> ignoreTaskData
+		|> mapError { .TaskError($0) }
+		|> map { (data: NSData) -> String in
+			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
+		}
+		|> flatMap(.Merge) { (string: String) -> SignalProducer<String, CarthageError> in
+			return string.linesProducer |> promoteErrors(CarthageError.self)
+		}
+}
+
+public typealias CodeSigningIdentity = String
+
+/// Matches lines of the form:
+///
+/// '  1) 4E8D512C8480AAC679947D6E50190AE97AB3E825 "3rd Party Mac Developer Application: Developer Name (DUCNFCN445)"'
+/// '  2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D "Mac Developer: Developer Name (DUCNFCN445)"'
+private let signingIdentitiesRegex = NSRegularExpression(pattern:
+	(
+		"\\s*"               + // Leading spaces
+		"\\d+\\)\\s+"        + // Number of identity
+		"([A-F0-9]+)\\s+"    + // Hash (e.g. 4E8D512C8480AAC67995D69CA09B769663BC844D)
+		"\"(.+):\\s"         + // Identity type (e.g. Mac Developer, iPhone Developer)
+		"(.+)\\s\\("         + // Developer Name
+		"([A-Z0-9]+)\\)\"\\s*" // Developer ID (e.g. DUCNFCN445)
+	),
+ options: nil, error: nil)!
+
+public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError> = getSecuritySigningIdentities()) -> SignalProducer<CodeSigningIdentity, CarthageError> {
+	return securityIdentities
+		|> map { (identityLine: String) -> CodeSigningIdentity? in
+			let fullRange = NSMakeRange(0, count(identityLine))
+			
+			if let match = signingIdentitiesRegex.matchesInString(identityLine, options: nil, range: fullRange).first as? NSTextCheckingResult {
+				let id = identityLine as NSString
+				
+				return id.substringWithRange(match.rangeAtIndex(2))
+			}
+			
+			return nil
+		}
+		|> ignoreNil
+}
+
 /// Builds the first project or workspace found within the given directory which
 /// has at least one shared framework scheme.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = []) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
 	return SignalProducer { observer, disposable in
@@ -1111,7 +1205,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
 				let initialValue = (project, scheme)
 
-				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL)
+				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: sdkFilter)
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for
 					// completion.

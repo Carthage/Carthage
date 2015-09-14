@@ -151,7 +151,7 @@ public struct GitHubRepository: Equatable {
 		if let match = NWORegex.firstMatchInString(identifier, options: nil, range: range) {
 			let owner = (identifier as NSString).substringWithRange(match.rangeAtIndex(1))
 			let name = (identifier as NSString).substringWithRange(match.rangeAtIndex(2))
-			return .success(self(owner: owner, name: name))
+			return .success(self(owner: owner, name: stripGitSuffix(name)))
 		}
 
 		// GitHub Enterprise
@@ -167,7 +167,14 @@ public struct GitHubRepository: Equatable {
 			let name = pathComponents.removeLast()
 			let owner = pathComponents.removeLast()
 			let hostnameWithSubdirectories = host.stringByAppendingPathComponent(join("/", pathComponents))
-			return .success(self(server: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: name))
+
+			// If the host name starts with “github.com”, that is not an enterprise
+			// one.
+			if hostnameWithSubdirectories.hasPrefix(Server.GitHub.hostname) {
+				return .success(self(owner: owner, name: stripGitSuffix(name)))
+			} else {
+				return .success(self(server: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: stripGitSuffix(name)))
+			}
 		}
 
 		return .failure(CarthageError.ParseError(description: "invalid GitHub repository identifier \"\(identifier)\""))

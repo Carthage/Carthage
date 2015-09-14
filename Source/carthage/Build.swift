@@ -105,6 +105,13 @@ public struct BuildCommand: CommandType {
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
 
+		let sdkFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
+			let sdks = buildableSDKs(sdks, scheme, configuration, project, options.colorOptions.formatting)
+				|> first
+			
+			return sdks!.value!
+		}
+
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observe(next: { eventSink.put($0) })
 
@@ -125,13 +132,13 @@ public struct BuildCommand: CommandType {
 					|> then(SignalProducer(value: project))
 			}
 			|> flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms, sdkFilter: sdkFilter)
 			}
 
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms)
+			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms, sdkFilter: sdkFilter)
 				|> catch { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
 					switch error {
 					case let .NoSharedFrameworkSchemes(project, _):
@@ -187,6 +194,50 @@ public struct BuildCommand: CommandType {
 	}
 }
 
+/**
+Returns the SDKs that the given scheme, configuration, and project are capable of building, given
+the signing identities available
+
+:param: sdk           The list of SDKs to filter
+:param: scheme        The scheme name to be built
+:param: configuration The Xcode configuration to be built
+:param: project       The project being built
+:param: formatting    An instance of formatting options
+
+:returns: A list of SDKs that can be built with the configured signing identities
+*/
+public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator, formatting: ColorOptions.Formatting) -> SignalProducer<[SDK], CarthageError> {
+	var identityCheckArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+	
+	return parseSecuritySigningIdentities()
+		|> collect
+		|> flatMap(.Concat) { identities in
+			return SignalProducer(values: sdks) |> map { ($0, identities) }
+		}
+		|> flatMap(.Concat) { (sdk: SDK, signingIdentities: [CodeSigningIdentity]) -> SignalProducer<SDK, CarthageError> in
+			let availableIdentities = Set(signingIdentities)
+			
+			identityCheckArgs.sdk = sdk
+			
+			return BuildSettings.loadWithArguments(identityCheckArgs)
+				|> filter { settings -> Bool in
+					if let configuredSigningIdentity = settings["CODE_SIGN_IDENTITY"].value
+						where !availableIdentities.contains(configuredSigningIdentity) {
+							let quotedSDK = formatting.quote(sdk.rawValue)
+							let quotedIdentity = formatting.quote(configuredSigningIdentity)
+							let message = "Skipping build for \(quotedSDK) SDK because the necessary signing identity \(quotedIdentity) is not installed"
+							carthage.println(formatting.bullets + "WARNING: \(message)")
+							
+							return false
+					}
+					return true
+				}
+				|> map { _ in sdk }
+				|> take(1)
+		}
+		|> collect
+}
+
 public struct BuildOptions: OptionsType {
 	public let configuration: String
 	public let buildPlatform: BuildPlatform
@@ -202,7 +253,7 @@ public struct BuildOptions: OptionsType {
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
-			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’ or comma-separated values of the formers except for ‘all’)")
+			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
@@ -224,6 +275,9 @@ public enum BuildPlatform: Equatable {
 	/// Build only for watchOS.
 	case watchOS
 
+	/// Build only for tvOS.
+	case tvOS
+
 	/// Build for multiple platforms within the list.
 	case Multiple([BuildPlatform])
 
@@ -242,6 +296,9 @@ public enum BuildPlatform: Equatable {
 		case .watchOS:
 			return [ .watchOS ]
 
+		case .tvOS:
+			return [ .tvOS ]
+
 		case let .Multiple(buildPlatforms):
 			return reduce(buildPlatforms, []) { (set, buildPlatform) in
 				return set.union(buildPlatform.platforms)
@@ -255,7 +312,7 @@ public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
 	case let (.Multiple(left), .Multiple(right)):
 		return left == right
 
-	case (.All, .All), (.iOS, .iOS), (.Mac, .Mac), (.watchOS, .watchOS):
+	case (.All, .All), (.iOS, .iOS), (.Mac, .Mac), (.watchOS, .watchOS), (.tvOS, .tvOS):
 		return true
 
 	case _:
@@ -278,6 +335,9 @@ extension BuildPlatform: Printable {
 		case .watchOS:
 			return "watchOS"
 
+		case .tvOS:
+			return "tvOS"
+
 		case let .Multiple(buildPlatforms):
 			return ", ".join(buildPlatforms.map { $0.description })
 		}
@@ -291,6 +351,7 @@ extension BuildPlatform: ArgumentType {
 		"Mac": .Mac, "macosx": .Mac,
 		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
 		"watchOS": .watchOS, "watchsimulator": .watchOS,
+		"tvOS": .tvOS, "tvsimulator": .tvOS,
 		"all": .All
 	]
 

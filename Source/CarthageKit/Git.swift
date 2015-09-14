@@ -59,20 +59,20 @@ public struct GitURL: Equatable {
 	public var name: String? {
 		let components = split(URLString, allowEmptySlices: false) { $0 == "/" }
 
-		return components.last.map { self.stripGitSuffix($0) }
+		return components.last.map { stripGitSuffix($0) }
 	}
 
 	public init(_ URLString: String) {
 		self.URLString = URLString
 	}
+}
 
-	/// Strips any trailing .git in the given name, if one exists.
-	private func stripGitSuffix(string: String) -> String {
-		if string.hasSuffix(".git") {
-			return string.substringToIndex(advance(string.endIndex, -4))
-		} else {
-			return string
-		}
+/// Strips any trailing .git in the given name, if one exists.
+public func stripGitSuffix(string: String) -> String {
+	if string.hasSuffix(".git") {
+		return string.substringToIndex(advance(string.endIndex, -4))
+	} else {
+		return string
 	}
 }
 
@@ -247,23 +247,17 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)", underlyingError: error))
 			}
 
-			if let name = name as? NSString {
-				if name != ".git" {
-					return .empty
-				}
-			} else {
+			if (name as? String) != ".git" {
 				return .empty
 			}
-
+		
 			var isDirectory: AnyObject?
 			if !URL.getResourceValue(&isDirectory, forKey: NSURLIsDirectoryKey, error: &error) || isDirectory == nil {
 				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: error))
 			}
 
-			if let directory = isDirectory?.boolValue {
-				if directory {
-					enumerator.skipDescendants()
-				}
+			if let directory = isDirectory?.boolValue where directory {
+				enumerator.skipDescendants()
 			}
 
 			if NSFileManager.defaultManager().removeItemAtURL(URL, error: &error) {
@@ -400,6 +394,10 @@ public func resolveReferenceInRepository(repositoryFileURL: NSURL, reference: St
 /// Attempts to determine whether the given directory represents a Git
 /// repository.
 public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError> {
+	if !NSFileManager.defaultManager().fileExistsAtPath(directoryURL.path!) {
+		return SignalProducer(value: false)
+	}
+
 	return launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: directoryURL)
 		|> map { _ in true }
 		|> catch { _ in SignalProducer(value: false) }

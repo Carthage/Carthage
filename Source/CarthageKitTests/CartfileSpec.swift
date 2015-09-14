@@ -22,7 +22,7 @@ class CartfileSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			let cartfile = result.value!
-			expect(cartfile.dependencies.count).to(equal(6))
+			expect(cartfile.dependencies.count).to(equal(7))
 
 			let depReactiveCocoa = cartfile.dependencies[0]
 			expect(depReactiveCocoa.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))))
@@ -40,11 +40,15 @@ class CartfileSpec: QuickSpec {
 			expect(depConfigs.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "xcconfigs"))))
 			expect(depConfigs.version).to(equal(VersionSpecifier.Any))
 
-			let depErrorTranslations2 = cartfile.dependencies[4]
+			let depCharts = cartfile.dependencies[4]
+			expect(depCharts.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(owner: "danielgindi", name: "ios-charts"))))
+			expect(depCharts.version).to(equal(VersionSpecifier.Any))
+
+			let depErrorTranslations2 = cartfile.dependencies[5]
 			expect(depErrorTranslations2.project).to(equal(ProjectIdentifier.GitHub(GitHubRepository(server: .Enterprise(scheme: "https", hostname: "enterprise.local/ghe"), owner: "desktop", name: "git-error-translations"))))
 			expect(depErrorTranslations2.version).to(equal(VersionSpecifier.Any))
 
-			let depErrorTranslations = cartfile.dependencies[5]
+			let depErrorTranslations = cartfile.dependencies[6]
 			expect(depErrorTranslations.project).to(equal(ProjectIdentifier.Git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))))
 			expect(depErrorTranslations.version).to(equal(VersionSpecifier.GitReference("development")))
 		}
