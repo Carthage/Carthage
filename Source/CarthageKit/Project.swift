@@ -408,12 +408,9 @@ public final class Project {
 	///
 	/// Sends the URL to the framework after copying.
 	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-		return architecturesInFramework(frameworkURL)
-			|> filter { arch in arch.hasPrefix("arm") }
-			|> map { _ in SDK.iPhoneOS }
-			|> concat(SignalProducer(value: SDK.MacOSX))
+		return infoPlistForFramework(frameworkURL)
+			|> flatMap(.Merge) { infoPlistURL in platformsForInfoPlist(infoPlistURL) }
 			|> take(1)
-			|> map { sdk in sdk.platform }
 			|> map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
 			|> map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
 			|> flatMap(.Merge) { destinationFrameworkURL in copyProduct(frameworkURL, destinationFrameworkURL.URLByResolvingSymlinksInPath!) }
@@ -607,6 +604,55 @@ private func filesInDirectory(directoryURL: NSURL, typeIdentifier: String) -> Si
 					return UTTypeConformsTo(identifier, typeIdentifier) != 0
 				}, ifFailure: { _ in false })
 		}
+}
+
+/// Sends the URL for the Info.plist of the specified Framework.
+private func infoPlistForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	return filesInDirectory(frameworkURL, "com.apple.property-list")
+		|> filter { $0.lastPathComponent == "Info.plist" }
+		|> take(1)
+}
+
+/// Sends the platforms specified in the given Info.plist for the
+/// CFBundleSupportedPlatforms key.
+private func platformsForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, CarthageError> {
+	return SignalProducer(value: plistURL)
+		|> startOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.platformForInfoPlist"))
+		|> tryMap { URL in
+			var error: NSError?
+			if let data = NSData(contentsOfURL: URL, options: nil, error: &error) {
+				return .success(data)
+			}
+			return .failure(CarthageError.ReadFailed(URL, error))
+		}
+		|> tryMap { (data: NSData) -> Result<AnyObject, CarthageError> in
+			var error: NSError?
+			let options = NSPropertyListReadOptions(NSPropertyListMutabilityOptions.Immutable.rawValue)
+			let plist: AnyObject? = NSPropertyListSerialization.propertyListWithData(data, options: options, format: nil, error: &error)
+			if let pist: AnyObject = plist {
+				return .success(pist)
+			}
+			return .failure(CarthageError.ReadFailed(plistURL, error))
+		}
+		|> tryMap { plist -> Result<Dictionary<String, AnyObject>, CarthageError> in
+			if let plist = plist as? Dictionary<String, AnyObject> {
+				return .success(plist)
+			}
+			return .failure(CarthageError.InfoPlistParseFailed(plistURL: plistURL, reason: "the root plist object is not a dictionary of values by strings"))
+		}
+		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used 
+        // because Xcode 6 and below do not include either in Mac OSX frameworks.
+		|> tryMap { propertyList -> Result<String, CarthageError> in
+			if let sdkName = propertyList["DTSDKName"] as? String {
+				return .success(sdkName)
+			}
+			return .failure(CarthageError.InfoPlistParseFailed(plistURL: plistURL, reason: "the value for the DTSDKName key is not a string"))
+		}
+		// Thus, the SDK name must be trimmed to match the platform name, e.g.
+		// macosx10.10 -> macosx
+		|> map { sdkName in sdkName.stringByTrimmingCharactersInSet(NSCharacterSet.letterCharacterSet().invertedSet) }
+		|> tryMap { platform in SDK.fromString(platform) }
+		|> map { sdk in sdk.platform }
 }
 
 /// Sends the URL to each framework bundle found in the given directory.

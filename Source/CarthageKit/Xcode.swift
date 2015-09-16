@@ -354,7 +354,7 @@ public enum SDK: String {
 
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
-		return Result(self(rawValue: string), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
+		return Result(self(rawValue: string.lowercaseString), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
 	}
 
 	/// The platform that this SDK targets.
@@ -1283,7 +1283,7 @@ private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> Sig
 }
 
 /// Returns a signal of all architectures present in a given framework.
-public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<String, CarthageError> {
+private func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<String, CarthageError> {
 	return SignalProducer.try { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
