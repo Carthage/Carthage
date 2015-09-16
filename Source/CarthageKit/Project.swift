@@ -631,8 +631,8 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 			}
 			return .failure(.ReadFailed(plistURL, error))
 		}
-		|> tryMap { plist -> Result<Dictionary<String, AnyObject>, CarthageError> in
-			if let plist = plist as? Dictionary<String, AnyObject> {
+		|> tryMap { plist -> Result<[String: AnyObject], CarthageError> in
+			if let plist = plist as? [String: AnyObject] {
 				return .success(plist)
 			}
 			return .failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the root plist object is not a dictionary of values by strings"))
