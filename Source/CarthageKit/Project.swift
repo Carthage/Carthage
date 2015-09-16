@@ -13,13 +13,33 @@ import ReactiveCocoa
 /// Carthage’s bundle identifier.
 public let CarthageKitBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
 
+/// The fallback dependencies URL to be used in case
+/// the intended ~/Library/Caches/org.carthage.CarthageKit cannot
+/// be found or created.
+private let fallbackDependenciesURL: NSURL = {
+	let homePath: String
+	if let homeEnvValue = NSProcessInfo.processInfo().environment["HOME"] as? NSString {
+		homePath = homeEnvValue.stringByAppendingPathComponent(".carthage")
+	} else {
+		homePath = "~/.carthage".stringByExpandingTildeInPath
+	}
+	return NSURL.fileURLWithPath(homePath, isDirectory:true)!
+}()
+
 /// ~/Library/Caches/org.carthage.CarthageKit/
 private let CarthageUserCachesURL: NSURL = {
+	let fileManager = NSFileManager.defaultManager()
+	
 	let URL: Result<NSURL, NSError> = try({ (error: NSErrorPointer) -> NSURL? in
-		NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: error)
-	})
-
-	let fallbackDependenciesURL = NSURL.fileURLWithPath("~/.carthage".stringByExpandingTildeInPath, isDirectory:true)!
+		fileManager.URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: error)
+	}).flatMap { cachesURL in
+		if fileManager.isWritableFileAtPath(cachesURL.absoluteString!) {
+			return Result(value: cachesURL)
+		} else {
+			let error = NSError(domain: CarthageKitBundleIdentifier, code: 0, userInfo: nil)
+			return Result(error: error)
+		}
+	}
 
 	switch URL {
 	case .Success:
@@ -29,7 +49,9 @@ private let CarthageUserCachesURL: NSURL = {
 		NSLog("Warning: No Caches directory could be found or created: \(error.value.localizedDescription). (\(error.value))")
 	}
 
-	return URL.value?.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true) ?? fallbackDependenciesURL
+	let dependenciesURL = URL.value?.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
+	return dependenciesURL ?? fallbackDependenciesURL
+	
 }()
 
 /// The file URL to the directory in which downloaded release binaries will be
