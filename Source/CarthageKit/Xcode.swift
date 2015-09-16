@@ -1283,7 +1283,7 @@ private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> Sig
 }
 
 /// Returns a signal of all architectures present in a given framework.
-private func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<String, CarthageError> {
+public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<String, CarthageError> {
 	return SignalProducer.try { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
