@@ -608,7 +608,7 @@ private func filesInDirectory(directoryURL: NSURL, typeIdentifier: String) -> Si
 /// Sends the URL for the Info.plist of the specified Framework.
 private func infoPlistForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return filesInDirectory(frameworkURL, "com.apple.property-list")
-		|> filter { $0.lastPathComponent == "Info.plist" }
+		|> filter { plist in plist.lastPathComponent == "Info.plist" }
 		|> take(1)
 }
 
