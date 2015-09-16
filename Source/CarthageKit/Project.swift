@@ -607,8 +607,25 @@ private func filesInDirectory(directoryURL: NSURL, typeIdentifier: String) -> Si
 
 /// Sends the URL for the Info.plist of the specified Framework.
 private func infoPlistForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	return filesInDirectory(frameworkURL, "com.apple.property-list")
-		|> filter { plist in plist.lastPathComponent == "Info.plist" }
+	// The paths at which the Info.plist can be located within a framework:
+	let infoPlistCantidatePaths = [
+		// iOS, watchOS, and tvOS
+		"/Info.plist",
+		// Mac OSX
+		"/Resources/Info.plist",
+	]
+
+	return SignalProducer(values: infoPlistCantidatePaths.map { frameworkURL.URLByAppendingPathComponent($0) })
+		|> filter { infoPlistCantidateURL in
+			var isDirectory: ObjCBool = false
+			return NSFileManager.defaultManager().fileExistsAtPath(infoPlistCantidateURL.path!, isDirectory: &isDirectory) && !isDirectory
+		}
+		|> filter { (infoPlistCantidateURL: NSURL) in
+			return infoPlistCantidateURL.typeIdentifier
+				.analysis(ifSuccess: { identifier in
+					return UTTypeConformsTo(identifier, "com.apple.property-list") != 0
+				}, ifFailure: { _ in false })
+		}
 		|> take(1)
 }
 
