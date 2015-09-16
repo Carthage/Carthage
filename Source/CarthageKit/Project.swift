@@ -629,13 +629,13 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 			if let pist: AnyObject = plist {
 				return .success(pist)
 			}
-			return .failure(CarthageError.ReadFailed(plistURL, error))
+			return .failure(.ReadFailed(plistURL, error))
 		}
 		|> tryMap { plist -> Result<Dictionary<String, AnyObject>, CarthageError> in
 			if let plist = plist as? Dictionary<String, AnyObject> {
 				return .success(plist)
 			}
-			return .failure(CarthageError.InfoPlistParseFailed(plistURL: plistURL, reason: "the root plist object is not a dictionary of values by strings"))
+			return .failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the root plist object is not a dictionary of values by strings"))
 		}
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used 
 		// because Xcode 6 and below do not include either in Mac OSX frameworks.
@@ -643,7 +643,7 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 			if let sdkName = propertyList["DTSDKName"] as? String {
 				return .success(sdkName)
 			}
-			return .failure(CarthageError.InfoPlistParseFailed(plistURL: plistURL, reason: "the value for the DTSDKName key is not a string"))
+			return .failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the value for the DTSDKName key is not a string"))
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
