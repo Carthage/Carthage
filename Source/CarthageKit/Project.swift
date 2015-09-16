@@ -409,8 +409,7 @@ public final class Project {
 	/// Sends the URL to the framework after copying.
 	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 		return infoPlistForFramework(frameworkURL)
-			|> flatMap(.Merge) { infoPlistURL in platformsForInfoPlist(infoPlistURL) }
-			|> take(1)
+			|> flatMap(.Merge) { infoPlistURL in platformForInfoPlist(infoPlistURL) }
 			|> map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
 			|> map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
 			|> flatMap(.Merge) { destinationFrameworkURL in copyProduct(frameworkURL, destinationFrameworkURL.URLByResolvingSymlinksInPath!) }
@@ -613,9 +612,8 @@ private func infoPlistForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL,
 		|> take(1)
 }
 
-/// Sends the platforms specified in the given Info.plist for the
-/// CFBundleSupportedPlatforms key.
-private func platformsForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, CarthageError> {
+/// Sends the platform specified in the given Info.plist.
+private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, CarthageError> {
 	return SignalProducer(value: plistURL)
 		|> startOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.platformForInfoPlist"))
 		|> tryMap { URL in
