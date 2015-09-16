@@ -648,8 +648,7 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
 		|> map { sdkName in sdkName.stringByTrimmingCharactersInSet(NSCharacterSet.letterCharacterSet().invertedSet) }
-		|> tryMap { platform in SDK.fromString(platform) }
-		|> map { sdk in sdk.platform }
+		|> tryMap { platform in SDK.fromString(platform).map { $0.platform } }
 }
 
 /// Sends the URL to each framework bundle found in the given directory.
