@@ -639,8 +639,8 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 		}
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used 
 		// because Xcode 6 and below do not include either in Mac OSX frameworks.
-		|> tryMap { propertyList -> Result<String, CarthageError> in
-			if let sdkName = propertyList["DTSDKName"] as? String {
+		|> tryMap { plist -> Result<String, CarthageError> in
+			if let sdkName = plist["DTSDKName"] as? String {
 				return .success(sdkName)
 			}
 			return .failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the value for the DTSDKName key is not a string"))
