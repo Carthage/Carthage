@@ -614,15 +614,14 @@ private func infoPlistForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL,
 
 /// Sends the platform specified in the given Info.plist.
 private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, CarthageError> {
-	return SignalProducer(value: plistURL)
-		|> startOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.platformForInfoPlist"))
-		|> tryMap { URL in
+	return SignalProducer.try { () -> Result<NSData, CarthageError> in
 			var error: NSError?
-			if let data = NSData(contentsOfURL: URL, options: nil, error: &error) {
+			if let data = NSData(contentsOfURL: plistURL, options: nil, error: &error) {
 				return .success(data)
 			}
-			return .failure(CarthageError.ReadFailed(URL, error))
+			return .failure(.ReadFailed(plistURL, error))
 		}
+		|> startOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.platformForInfoPlist"))
 		|> tryMap { (data: NSData) -> Result<AnyObject, CarthageError> in
 			var error: NSError?
 			let options = NSPropertyListReadOptions(NSPropertyListMutabilityOptions.Immutable.rawValue)
