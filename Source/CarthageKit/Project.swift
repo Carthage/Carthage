@@ -639,7 +639,7 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 			return .failure(CarthageError.InfoPlistParseFailed(plistURL: plistURL, reason: "the root plist object is not a dictionary of values by strings"))
 		}
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used 
-        // because Xcode 6 and below do not include either in Mac OSX frameworks.
+		// because Xcode 6 and below do not include either in Mac OSX frameworks.
 		|> tryMap { propertyList -> Result<String, CarthageError> in
 			if let sdkName = propertyList["DTSDKName"] as? String {
 				return .success(sdkName)
