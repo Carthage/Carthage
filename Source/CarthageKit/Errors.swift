@@ -49,6 +49,9 @@ public enum CarthageError: Equatable {
 	// An error occurred reading a dSYM or framework's UUIDs.
 	case InvalidUUIDs(description: String)
 
+	/// An error occurred when parsing the contents of a framework's Info.plist.
+	case InfoPlistParseFailed(plistURL: NSURL, reason: String)
+
 	/// The project is not sharing any framework schemes, so Carthage cannot
 	/// discover them.
 	case NoSharedFrameworkSchemes(ProjectIdentifier, Set<Platform>)
@@ -112,6 +115,9 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	
 	case let (.InvalidArchitectures(left), .InvalidArchitectures(right)):
 		return left == right
+
+	case let (.InfoPlistParseFailed(la, lb), .InfoPlistParseFailed(ra, rb)):
+		return la == ra && lb == rb
 
 	case let (.NoSharedFrameworkSchemes(la, lb), .NoSharedFrameworkSchemes(ra, rb)):
 		return la == ra && lb == rb
@@ -193,6 +199,9 @@ extension CarthageError: Printable {
 
 		case let .InvalidUUIDs(description):
 			return "Invalid architecture UUIDs: \(description)"
+
+		case let .InfoPlistParseFailed(plistURL, reason):
+			return "Failed to parse the framework Info.plist file at \(plistURL.path!): \(reason)"
 
 		case let .MissingEnvironmentVariable(variable):
 			return "Environment variable not set: \(variable)"

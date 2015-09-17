@@ -408,12 +408,8 @@ public final class Project {
 	///
 	/// Sends the URL to the framework after copying.
 	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-		return architecturesInFramework(frameworkURL)
-			|> filter { arch in arch.hasPrefix("arm") }
-			|> map { _ in SDK.iPhoneOS }
-			|> concat(SignalProducer(value: SDK.MacOSX))
-			|> take(1)
-			|> map { sdk in sdk.platform }
+		return infoPlistForFramework(frameworkURL)
+			|> flatMap(.Merge) { infoPlistURL in platformForInfoPlist(infoPlistURL) }
 			|> map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
 			|> map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
 			|> flatMap(.Merge) { destinationFrameworkURL in copyProduct(frameworkURL, destinationFrameworkURL.URLByResolvingSymlinksInPath!) }
@@ -607,6 +603,69 @@ private func filesInDirectory(directoryURL: NSURL, typeIdentifier: String) -> Si
 					return UTTypeConformsTo(identifier, typeIdentifier) != 0
 				}, ifFailure: { _ in false })
 		}
+}
+
+/// Sends the URL for the Info.plist of the specified Framework.
+private func infoPlistForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	// The paths at which the Info.plist can be located within a framework:
+	let infoPlistCantidatePaths = [
+		// iOS, watchOS, and tvOS
+		"/Info.plist",
+		// Mac OSX
+		"/Resources/Info.plist",
+	]
+
+	return SignalProducer(values: infoPlistCantidatePaths.map { frameworkURL.URLByAppendingPathComponent($0) })
+		|> filter { infoPlistCantidateURL in
+			var isDirectory: ObjCBool = false
+			return NSFileManager.defaultManager().fileExistsAtPath(infoPlistCantidateURL.path!, isDirectory: &isDirectory) && !isDirectory
+		}
+		|> filter { (infoPlistCantidateURL: NSURL) in
+			return infoPlistCantidateURL.typeIdentifier
+				.analysis(ifSuccess: { identifier in
+					return UTTypeConformsTo(identifier, "com.apple.property-list") != 0
+				}, ifFailure: { _ in false })
+		}
+		|> take(1)
+}
+
+/// Sends the platform specified in the given Info.plist.
+private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, CarthageError> {
+	return SignalProducer.try { () -> Result<NSData, CarthageError> in
+			var error: NSError?
+			if let data = NSData(contentsOfURL: plistURL, options: nil, error: &error) {
+				return .success(data)
+			}
+			return .failure(.ReadFailed(plistURL, error))
+		}
+		|> startOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.platformForInfoPlist"))
+		|> tryMap { (data: NSData) -> Result<AnyObject, CarthageError> in
+			var error: NSError?
+			let options = NSPropertyListReadOptions(NSPropertyListMutabilityOptions.Immutable.rawValue)
+			let plist: AnyObject? = NSPropertyListSerialization.propertyListWithData(data, options: options, format: nil, error: &error)
+			if let pist: AnyObject = plist {
+				return .success(pist)
+			}
+			return .failure(.ReadFailed(plistURL, error))
+		}
+		|> tryMap { plist -> Result<[String: AnyObject], CarthageError> in
+			if let plist = plist as? [String: AnyObject] {
+				return .success(plist)
+			}
+			return .failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the root plist object is not a dictionary of values by strings"))
+		}
+		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used 
+		// because Xcode 6 and below do not include either in Mac OSX frameworks.
+		|> tryMap { plist -> Result<String, CarthageError> in
+			if let sdkName = plist["DTSDKName"] as? String {
+				return .success(sdkName)
+			}
+			return .failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the value for the DTSDKName key is not a string"))
+		}
+		// Thus, the SDK name must be trimmed to match the platform name, e.g.
+		// macosx10.10 -> macosx
+		|> map { sdkName in sdkName.stringByTrimmingCharactersInSet(NSCharacterSet.letterCharacterSet().invertedSet) }
+		|> tryMap { platform in SDK.fromString(platform).map { $0.platform } }
 }
 
 /// Sends the URL to each framework bundle found in the given directory.
