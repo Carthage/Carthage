@@ -35,7 +35,6 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for all platforms") {
 			let machineHasiOSIdentity = iOSSigningIdentitiesConfigured()
-			expect(machineHasiOSIdentity).to(equal(true))
 
 			let dependencies = [
 				ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes")),
@@ -297,38 +296,6 @@ class XcodeSpec: QuickSpec {
 				|> single
 
 			expect(result?.value).to(equal(expectedOutput))
-		}
-		
-		it("should detect iPhone signing identities when present") {
-			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
-				"3rd Party Mac Developer Application",
-				"Mac Developer",
-				"iPhone Developer",
-				"Developer ID Application",
-			]))
-			
-			expect(result).to(beTruthy())
-		}
-		
-		it("should detect iOS signing identities when present (future compatibility)") {
-			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
-				"3rd Party Mac Developer Application",
-				"Mac Developer",
-				"iOS Developer",
-				"Developer ID Application",
-			]))
-			
-			expect(result).to(beTruthy())
-		}
-		
-		it("should detect when no iPhone or iOS signing identities when present") {			
-			let result = iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError>(values: [
-				"3rd Party Mac Developer Application",
-				"Mac Developer",
-				"Developer ID Application",
-			]))
-			
-			expect(result).to(beFalsy())
 		}
 	}
 }
