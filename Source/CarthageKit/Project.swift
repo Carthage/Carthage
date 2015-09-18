@@ -13,23 +13,49 @@ import ReactiveCocoa
 /// Carthage’s bundle identifier.
 public let CarthageKitBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
 
+/// The fallback dependencies URL to be used in case
+/// the intended ~/Library/Caches/org.carthage.CarthageKit cannot
+/// be found or created.
+private let fallbackDependenciesURL: NSURL = {
+	let homePath: String
+	if let homeEnvValue = NSProcessInfo.processInfo().environment["HOME"] as? NSString {
+		homePath = homeEnvValue.stringByAppendingPathComponent(".carthage")
+	} else {
+		homePath = "~/.carthage".stringByExpandingTildeInPath
+	}
+	return NSURL.fileURLWithPath(homePath, isDirectory:true)!
+}()
+
 /// ~/Library/Caches/org.carthage.CarthageKit/
 private let CarthageUserCachesURL: NSURL = {
-	let URL: Result<NSURL, NSError> = try({ (error: NSErrorPointer) -> NSURL? in
-		NSFileManager.defaultManager().URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: error)
-	})
-
-	let fallbackDependenciesURL = NSURL.fileURLWithPath("~/.carthage".stringByExpandingTildeInPath, isDirectory:true)!
-
-	switch URL {
-	case .Success:
-		NSFileManager.defaultManager().removeItemAtURL(fallbackDependenciesURL, error: nil)
-
-	case let .Failure(error):
-		NSLog("Warning: No Caches directory could be found or created: \(error.value.localizedDescription). (\(error.value))")
+	let fileManager = NSFileManager.defaultManager()
+	
+	let URLResult: Result<NSURL, NSError> = try({ (error: NSErrorPointer) -> NSURL? in
+		fileManager.URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: error)
+	}).flatMap { cachesURL in
+		let dependenciesURL = cachesURL.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
+		let dependenciesPath = dependenciesURL.absoluteString!
+		
+		if fileManager.fileExistsAtPath(dependenciesPath, isDirectory:nil) {
+			if fileManager.isWritableFileAtPath(dependenciesPath) {
+				return Result(value: dependenciesURL)
+			} else {
+				let error = NSError(domain: CarthageKitBundleIdentifier, code: 0, userInfo: nil)
+				return Result(error: error)
+			}
+		} else {
+			return try { fileManager.createDirectoryAtURL(dependenciesURL, withIntermediateDirectories: true, attributes: [NSFilePosixPermissions : NSNumber(short:755)], error: $0) }.map { dependenciesURL }
+		}
 	}
 
-	return URL.value?.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true) ?? fallbackDependenciesURL
+	switch URLResult {
+	case let .Success(URL):
+		NSFileManager.defaultManager().removeItemAtURL(fallbackDependenciesURL, error: nil)
+		return URL.value
+	case let .Failure(error):
+		NSLog("Warning: No Caches directory could be found or created: \(error.value.localizedDescription). (\(error.value))")
+		return fallbackDependenciesURL
+	}
 }()
 
 /// The file URL to the directory in which downloaded release binaries will be
