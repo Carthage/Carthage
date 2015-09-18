@@ -34,12 +34,25 @@ private let CarthageUserCachesURL: NSURL = {
 		fileManager.URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: error)
 	}).flatMap { cachesURL in
 		let dependenciesURL = cachesURL.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
-		if fileManager.isWritableFileAtPath(dependenciesURL.absoluteString!) {
-			return Result(value: dependenciesURL)
+		let dependenciesPath = dependenciesURL.absoluteString!
+		
+		let result: Result<NSURL, NSError>
+		if fileManager.fileExistsAtPath(dependenciesPath, isDirectory:nil) {
+			if fileManager.isWritableFileAtPath(dependenciesPath) {
+				result = Result(value: dependenciesURL)
+			} else {
+				let error = NSError(domain: CarthageKitBundleIdentifier, code: 0, userInfo: nil)
+				result = Result(error: error)
+			}
 		} else {
-			let error = NSError(domain: CarthageKitBundleIdentifier, code: 0, userInfo: nil)
-			return Result(error: error)
+			result = try { (error: NSErrorPointer) -> NSURL? in
+				let attributes = [NSFilePosixPermissions : NSNumber(short:755)]
+				fileManager.createDirectoryAtURL(dependenciesURL, withIntermediateDirectories: true, attributes:attributes, error: error)
+				return dependenciesURL
+			}
 		}
+		
+		return result
 	}
 
 	switch URLResult {
