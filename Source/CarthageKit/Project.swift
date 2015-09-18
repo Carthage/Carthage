@@ -30,28 +30,26 @@ private let fallbackDependenciesURL: NSURL = {
 private let CarthageUserCachesURL: NSURL = {
 	let fileManager = NSFileManager.defaultManager()
 	
-	let URL: Result<NSURL, NSError> = try({ (error: NSErrorPointer) -> NSURL? in
+	let URLResult: Result<NSURL, NSError> = try({ (error: NSErrorPointer) -> NSURL? in
 		fileManager.URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true, error: error)
 	}).flatMap { cachesURL in
-		if fileManager.isWritableFileAtPath(cachesURL.absoluteString!) {
-			return Result(value: cachesURL)
+		let dependenciesURL = cachesURL.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
+		if fileManager.isWritableFileAtPath(dependenciesURL.absoluteString!) {
+			return Result(value: dependenciesURL)
 		} else {
 			let error = NSError(domain: CarthageKitBundleIdentifier, code: 0, userInfo: nil)
 			return Result(error: error)
 		}
 	}
 
-	switch URL {
-	case .Success:
+	switch URLResult {
+	case let .Success(URL):
 		NSFileManager.defaultManager().removeItemAtURL(fallbackDependenciesURL, error: nil)
-
+		return URL.value
 	case let .Failure(error):
 		NSLog("Warning: No Caches directory could be found or created: \(error.value.localizedDescription). (\(error.value))")
+		return fallbackDependenciesURL
 	}
-
-	let dependenciesURL = URL.value?.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
-	return dependenciesURL ?? fallbackDependenciesURL
-	
 }()
 
 /// The file URL to the directory in which downloaded release binaries will be
