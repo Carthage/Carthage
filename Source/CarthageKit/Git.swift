@@ -411,7 +411,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 	return isGitRepository(submoduleDirectoryURL)
 		|> promoteErrors(CarthageError.self)
 		|> flatMap(.Merge) { submoduleExists in
-			if (submoduleExists) {
+			if submoduleExists {
 				// Just check out and stage the correct revision.
 				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
 					|> then(launchGitTask([ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.URL.URLString ], repositoryFileURL: repositoryFileURL))
