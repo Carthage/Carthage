@@ -47,7 +47,7 @@ public struct Cartfile {
 				return
 			}
 
-			switch (Dependency<VersionSpecifier>.fromScanner(scanner)) {
+			switch Dependency<VersionSpecifier>.fromScanner(scanner) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep.value)
 
@@ -142,7 +142,7 @@ public struct ResolvedCartfile {
 
 		let scanner = NSScanner(string: string)
 		scannerLoop: while !scanner.atEnd {
-			switch (Dependency<PinnedVersion>.fromScanner(scanner)) {
+			switch Dependency<PinnedVersion>.fromScanner(scanner) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep.value)
 
@@ -174,7 +174,7 @@ public enum ProjectIdentifier: Equatable {
 
 	/// The unique, user-visible name for this project.
 	public var name: String {
-		switch (self) {
+		switch self {
 		case let .GitHub(repo):
 			return repo.name
 
@@ -205,7 +205,7 @@ public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 
 extension ProjectIdentifier: Hashable {
 	public var hashValue: Int {
-		switch (self) {
+		switch self {
 		case let .GitHub(repo):
 			return repo.hashValue
 
@@ -251,7 +251,7 @@ extension ProjectIdentifier: Scannable {
 
 extension ProjectIdentifier: Printable {
 	public var description: String {
-		switch (self) {
+		switch self {
 		case let .GitHub(repo):
 			return "github \"\(repo)\""
 
