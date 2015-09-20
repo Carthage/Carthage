@@ -254,18 +254,18 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 }
 
 /// Represents a platform to build for.
-public enum Platform {
+public enum Platform: String {
 	/// Mac OS X.
-	case Mac
+	case Mac = "Mac"
 
 	/// iOS for device and simulator.
-	case iOS
+	case iOS = "iOS"
 
 	/// Apple Watch device and simulator.
-	case watchOS
+	case watchOS = "watchOS"
 
 	/// Apple TV device and simulator.
-	case tvOS
+	case tvOS = "tvOS"
 
 	/// All supported build platforms.
 	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS, .tvOS ]
@@ -273,22 +273,7 @@ public enum Platform {
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
 	public var relativePath: String {
-		let subfolderName: String
-
-		switch self {
-		case .Mac:
-			subfolderName = "Mac"
-
-		case .iOS:
-			subfolderName = "iOS"
-
-		case .watchOS:
-			subfolderName = "watchOS"
-
-		case .tvOS:
-			subfolderName = "tvOS"
-		}
-
+		let subfolderName = rawValue
 		return CarthageBinariesFolderPath.stringByAppendingPathComponent(subfolderName)
 	}
 
@@ -313,19 +298,7 @@ public enum Platform {
 // TODO: this won't be necessary anymore with Swift 2.
 extension Platform: Printable {
 	public var description: String {
-		switch self {
-		case .Mac:
-			return "Mac"
-
-		case .iOS:
-			return "iOS"
-
-		case .watchOS:
-			return "watchOS"
-
-		case .tvOS:
-			return "tvOS"
-		}
+		return rawValue
 	}
 }
 
