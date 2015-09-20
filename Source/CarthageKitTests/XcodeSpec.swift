@@ -178,7 +178,7 @@ class XcodeSpec: QuickSpec {
 
 			NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL, error: nil)
 
-			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
+			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
 				|> flatten(.Concat)
 				|> ignoreTaskData
 				|> on(next: { (project, scheme) in
