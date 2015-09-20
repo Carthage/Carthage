@@ -21,6 +21,31 @@ class XcodeSpec: QuickSpec {
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 		let targetFolderURL = NSURL(fileURLWithPath: NSTemporaryDirectory().stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)!
 
+		var machineHasiOSIdentity: Bool = false
+		var sdkFilter: SDKFilterCallback = { $0.0 }
+
+		beforeSuite {
+			machineHasiOSIdentity = iOSSigningIdentitiesConfigured()
+
+			// Works around the test failure in CI environment for pull requests
+			// sent from forked repositories.
+			//
+			// See https://github.com/Carthage/Carthage/pull/766#issuecomment-141671784.
+			if !machineHasiOSIdentity {
+				sdkFilter = { args in
+					args.0.filter { sdk in
+						switch sdk {
+						case .MacOSX, .iPhoneSimulator, .watchSimulator, .tvSimulator:
+							return true
+
+						case _:
+							return false
+						}
+					}
+				}
+			}
+		}
+
 		beforeEach {
 			NSFileManager.defaultManager().removeItemAtURL(buildFolderURL, error: nil)
 
@@ -34,15 +59,13 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for all platforms") {
-			let machineHasiOSIdentity = iOSSigningIdentitiesConfigured()
-
 			let dependencies = [
 				ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes")),
 				ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
 			]
 
 			for project in dependencies {
-				let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
+				let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
 					|> flatten(.Concat)
 					|> ignoreTaskData
 					|> on(next: { (project, scheme) in
@@ -53,7 +76,7 @@ class XcodeSpec: QuickSpec {
 				expect(result.error).to(beNil())
 			}
 
-			let result = buildInDirectory(directoryURL, withConfiguration: "Debug")
+			let result = buildInDirectory(directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
 				|> flatten(.Concat)
 				|> ignoreTaskData
 				|> on(next: { (project, scheme) in
@@ -229,7 +252,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for multiple platforms") {
 			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
-			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac, .iOS ])
+			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac, .iOS ], sdkFilter: sdkFilter)
 				|> flatten(.Concat)
 				|> ignoreTaskData
 				|> on(next: { (project, scheme) in
