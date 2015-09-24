@@ -865,26 +865,35 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		|> map { $0.platform }
-		|> collect
-		// Exclude duplicated platforms to avoid building the same SDKs multiple
-		// times.
-		|> flatMap(.Concat) { platforms in
-			if platforms.isEmpty {
+		|> reduce([:]) { (var sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
+			let platform = sdk.platform
+
+			if var sdks = sdksByPlatform[platform] {
+				sdks.append(sdk)
+				sdksByPlatform.updateValue(sdks, forKey: platform)
+			} else {
+				sdksByPlatform[platform] = [ sdk ]
+			}
+
+			return sdksByPlatform
+		}
+		|> flatMap(.Concat) { sdksByPlatform -> SignalProducer<(Platform, [SDK]), CarthageError> in
+			if sdksByPlatform.isEmpty {
 				fatalError("No SDKs found for scheme \(scheme)")
 			}
 
-			return SignalProducer(values: Set(platforms))
+			let values = map(sdksByPlatform) { ($0, $1) }
+			return SignalProducer(values: values)
 		}
-		|> flatMap(.Concat) { (platform: Platform) in
+		|> flatMap(.Concat) { platform, sdks in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 
-			let sdksToBuild = sdkFilter(sdks: platform.SDKs, scheme: scheme, configuration: configuration, project: project)
+			let sdksToBuild = sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
 			
 			// TODO: Generalize this further?
 			switch sdksToBuild.count {
 			case 0:
-				let isMissingSigningIdentities = !platform.SDKs.isEmpty
+				let isMissingSigningIdentities = !sdks.isEmpty
 				let identityAddendum = isMissingSigningIdentities ? " (you're missing one or more signing identities)" : ""
 				fatalError("No valid SDKs found to build\(identityAddendum)")
 
