@@ -865,24 +865,38 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		|> collect
-		|> flatMap(.Concat) { (schemeSDKList: [SDK]) in
-			let platform: Platform! = schemeSDKList.first?.platform
-			
-			if platform == nil {
+		|> reduce([:]) { (var sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
+			let platform = sdk.platform
+
+			if var sdks = sdksByPlatform[platform] {
+				sdks.append(sdk)
+				sdksByPlatform.updateValue(sdks, forKey: platform)
+			} else {
+				sdksByPlatform[platform] = [ sdk ]
+			}
+
+			return sdksByPlatform
+		}
+		|> flatMap(.Concat) { sdksByPlatform -> SignalProducer<(Platform, [SDK]), CarthageError> in
+			if sdksByPlatform.isEmpty {
 				fatalError("No SDKs found for scheme \(scheme)")
 			}
-			
+
+			let values = map(sdksByPlatform) { ($0, $1) }
+			return SignalProducer(values: values)
+		}
+		|> flatMap(.Concat) { platform, sdks in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
-			
-			let sdksToBuild = sdkFilter(sdks: schemeSDKList, scheme: scheme, configuration: configuration, project: project)
+
+			let sdksToBuild = sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
 			
 			// TODO: Generalize this further?
 			switch sdksToBuild.count {
 			case 0:
-				let isMissingSigningIdentities = !schemeSDKList.isEmpty
+				let isMissingSigningIdentities = !sdks.isEmpty
 				let identityAddendum = isMissingSigningIdentities ? " (you're missing one or more signing identities)" : ""
 				fatalError("No valid SDKs found to build\(identityAddendum)")
+
 			case 1:
 				return buildSDK(sdksToBuild[0])
 					|> flatMapTaskEvents(.Merge) { settings in
