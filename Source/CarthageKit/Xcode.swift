@@ -866,6 +866,16 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
 		|> map { $0.platform }
+		|> collect
+		// Exclude duplicated platforms to avoid building the same SDKs multiple
+		// times.
+		|> flatMap(.Concat) { platforms in
+			if platforms.isEmpty {
+				fatalError("No SDKs found for scheme \(scheme)")
+			}
+
+			return SignalProducer(values: Set(platforms))
+		}
 		|> flatMap(.Concat) { (platform: Platform) in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 
