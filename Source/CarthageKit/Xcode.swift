@@ -865,24 +865,19 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		|> collect
-		|> flatMap(.Concat) { (schemeSDKList: [SDK]) in
-			let platform: Platform! = schemeSDKList.first?.platform
-			
-			if platform == nil {
-				fatalError("No SDKs found for scheme \(scheme)")
-			}
-			
+		|> map { $0.platform }
+		|> flatMap(.Concat) { (platform: Platform) in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
-			
-			let sdksToBuild = sdkFilter(sdks: schemeSDKList, scheme: scheme, configuration: configuration, project: project)
+
+			let sdksToBuild = sdkFilter(sdks: platform.SDKs, scheme: scheme, configuration: configuration, project: project)
 			
 			// TODO: Generalize this further?
 			switch sdksToBuild.count {
 			case 0:
-				let isMissingSigningIdentities = !schemeSDKList.isEmpty
+				let isMissingSigningIdentities = !platform.SDKs.isEmpty
 				let identityAddendum = isMissingSigningIdentities ? " (you're missing one or more signing identities)" : ""
 				fatalError("No valid SDKs found to build\(identityAddendum)")
+
 			case 1:
 				return buildSDK(sdksToBuild[0])
 					|> flatMapTaskEvents(.Merge) { settings in
