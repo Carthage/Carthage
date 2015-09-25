@@ -22,7 +22,7 @@ class XcodeSpec: QuickSpec {
 		let targetFolderURL = NSURL(fileURLWithPath: NSTemporaryDirectory().stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)!
 
 		var machineHasiOSIdentity: Bool = false
-		var sdkFilter: SDKFilterCallback = { $0.0 }
+		var sdkFilter: SDKFilterCallback = { .success($0.0) }
 
 		beforeSuite {
 			machineHasiOSIdentity = iOSSigningIdentitiesConfigured()
@@ -33,7 +33,7 @@ class XcodeSpec: QuickSpec {
 			// See https://github.com/Carthage/Carthage/pull/766#issuecomment-141671784.
 			if !machineHasiOSIdentity {
 				sdkFilter = { args in
-					args.0.filter { sdk in
+					let filtered = args.0.filter { sdk in
 						switch sdk {
 						case .MacOSX, .iPhoneSimulator, .watchSimulator, .tvSimulator:
 							return true
@@ -42,6 +42,7 @@ class XcodeSpec: QuickSpec {
 							return false
 						}
 					}
+					return .success(filtered)
 				}
 			}
 		}
