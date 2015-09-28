@@ -787,12 +787,11 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 /// A callback function used to determine whether or not an SDK should be built
 public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator) -> Result<[SDK], CarthageError>
 
-/// Builds one scheme of the given project, for all supported SDKs, or only for
-/// the SDKs whose platform is contained in the given platform set.
+/// Builds one scheme of the given project, for all supported SDKs.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
@@ -869,10 +868,6 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		|> reduce([:]) { (var sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
 			let platform = sdk.platform
 
-			if !platforms.isEmpty && !platforms.contains(platform) {
-				return sdksByPlatform
-			}
-
 			if var sdks = sdksByPlatform[platform] {
 				sdks.append(sdk)
 				sdksByPlatform.updateValue(sdks, forKey: platform)
@@ -892,16 +887,24 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		}
 		|> flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK], Bool), CarthageError> in
 			let filterResult = sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
-			return SignalProducer(result: filterResult.map { (platform, $0, !sdks.isEmpty) })
+
+			if let filteredSDKs = filterResult.value where filteredSDKs.isEmpty {
+				return .empty
+			}
+
+			return SignalProducer(result: filterResult.map { filteredSDKs in
+				let isFiltered = filteredSDKs.count != sdks.count
+				return (platform, filteredSDKs, isFiltered)
+			})
 		}
-		|> flatMap(.Concat) { platform, sdks, isMissingSigningIdentities in
+		|> flatMap(.Concat) { platform, sdks, isFiltered in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 
 			// TODO: Generalize this further?
 			switch sdks.count {
 			case 0:
-				let identityAddendum = isMissingSigningIdentities ? " (you're missing one or more signing identities)" : ""
-				fatalError("No valid SDKs found to build\(identityAddendum)")
+				let filterlingAddendum = isFiltered ? " (you may be missing one or more signing identities)" : ""
+				fatalError("No valid SDKs found to build\(filterlingAddendum)")
 
 			case 1:
 				return buildSDK(sdks[0])
@@ -1198,7 +1201,16 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
 				let initialValue = (project, scheme)
 
-				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, platforms: platforms, sdkFilter: sdkFilter)
+				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
+					if platforms.isEmpty {
+						return sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
+					}
+
+					let filteredSDKs = sdks.filter { platforms.contains($0.platform) }
+					return sdkFilter(sdks: filteredSDKs, scheme: scheme, configuration: configuration, project: project)
+				}
+
+				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for
 					// completion.
