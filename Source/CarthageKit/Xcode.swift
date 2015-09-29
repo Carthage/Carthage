@@ -249,7 +249,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		// xcodebuild has a bug where xcodebuild -list can sometimes hang
 		// indefinitely on projects that don't share any schemes, so
 		// automatically bail out if it looks like that's happening.
-		|> timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 8, onScheduler: QueueScheduler())
+		|> timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 15, onScheduler: QueueScheduler())
 		|> map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
