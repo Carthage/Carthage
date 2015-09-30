@@ -1202,11 +1202,14 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				let initialValue = (project, scheme)
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
+					let filteredSDKs: [SDK]
+
 					if platforms.isEmpty {
-						return sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
+						filteredSDKs = sdks
+					} else {
+						filteredSDKs = sdks.filter { platforms.contains($0.platform) }
 					}
 
-					let filteredSDKs = sdks.filter { platforms.contains($0.platform) }
 					return sdkFilter(sdks: filteredSDKs, scheme: scheme, configuration: configuration, project: project)
 				}
 
