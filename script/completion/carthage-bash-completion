@@ -27,8 +27,8 @@ _carthage() {
                 return 0
                 ;;
             bootstrap|update)
-                COMPREPLY=($(compgen -W '--configuration --platform --verbose --no-build \
-                	--use-ssh --use-submodules --no-use-binaries --color' -- ${cur}))
+                COMPREPLY=($(compgen -W '--configuration --platform --verbose --no-checkout \
+                	--no-build --use-ssh --use-submodules --no-use-binaries --color' -- ${cur}))
                 return 0
                 ;;
             build)
@@ -62,7 +62,7 @@ _carthage() {
             return 0
             ;;
         --platform)
-            COMPREPLY=($(compgen -W 'all iOS Mac watchOS' -- ${cur}))
+            COMPREPLY=($(compgen -W 'all iOS Mac watchOS tvOS' -- ${cur}))
             return 0
             ;;
     esac

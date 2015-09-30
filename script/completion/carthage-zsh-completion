@@ -40,10 +40,11 @@ _carthage() {
                 (bootstrap|update)
                     _arguments \
                         '--configuration: :(Release Debug)' \
-                        '--platform: :(all iOS Mac watchOS)' \
+                        '--platform: :(all iOS Mac watchOS tvOS)' \
                         '--use-ssh' \
                         '--use-submodules' \
                         '--no-use-binaries' \
+                        '--no-checkout' \
                         '--no-build' \
                         '--color: :(auto always never)' \
                         '--verbose' \
@@ -53,7 +54,7 @@ _carthage() {
                 (build)
                     _arguments \
                         '--configuration: :(Release Debug)' \
-                        '--platform: :(all iOS Mac watchOS)' \
+                        '--platform: :(all iOS Mac watchOS tvOS)' \
                         '--no-skip-current' \
                         '--color: :(auto always never)' \
                         '--verbose' \
