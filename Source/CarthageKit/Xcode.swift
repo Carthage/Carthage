@@ -1194,7 +1194,6 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
 					let filteredSDKs: [SDK]
-
 					if platforms.isEmpty {
 						filteredSDKs = sdks
 					} else {
