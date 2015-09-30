@@ -887,15 +887,13 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		}
 		|> flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK], Bool), CarthageError> in
 			let filterResult = sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
-
-			if let filteredSDKs = filterResult.value where filteredSDKs.isEmpty {
-				return .empty
-			}
-
 			return SignalProducer(result: filterResult.map { filteredSDKs in
 				let isFiltered = filteredSDKs.count != sdks.count
 				return (platform, filteredSDKs, isFiltered)
 			})
+		}
+		|> filter { _, sdks, _ in
+			return !sdks.isEmpty
 		}
 		|> flatMap(.Concat) { platform, sdks, isFiltered in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
