@@ -885,25 +885,18 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			let values = map(sdksByPlatform) { ($0, $1) }
 			return SignalProducer(values: values)
 		}
-		|> flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK], Bool), CarthageError> in
+		|> flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
 			let filterResult = sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
-			return SignalProducer(result: filterResult.map { filteredSDKs in
-				let isFiltered = filteredSDKs.count != sdks.count
-				return (platform, filteredSDKs, isFiltered)
-			})
+			return SignalProducer(result: filterResult.map { (platform, $0) })
 		}
-		|> filter { _, sdks, _ in
+		|> filter { _, sdks in
 			return !sdks.isEmpty
 		}
-		|> flatMap(.Concat) { platform, sdks, isFiltered in
+		|> flatMap(.Concat) { platform, sdks in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 
 			// TODO: Generalize this further?
 			switch sdks.count {
-			case 0:
-				let filterlingAddendum = isFiltered ? " (you may be missing one or more signing identities)" : ""
-				fatalError("No valid SDKs found to build\(filterlingAddendum)")
-
 			case 1:
 				return buildSDK(sdks[0])
 					|> flatMapTaskEvents(.Merge) { settings in
