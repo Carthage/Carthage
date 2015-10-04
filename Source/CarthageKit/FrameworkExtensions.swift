@@ -166,10 +166,10 @@ internal func dematerializeErrorsIfEmpty<T, E>(signal: Signal<Event<T, E>, E>) -
 			switch event {
 			case let .Next(value):
 				receivedValue = true
-				sendNext(observer, value.value)
+				sendNext(observer, value)
 
 			case let .Error(error):
-				receivedError = error.value
+				receivedError = error
 
 			case .Completed:
 				sendCompleted(observer)

@@ -917,10 +917,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						case let .Success(firstSettingsByTarget):
 							return settingsByTarget(buildSDK(secondSDK))
 								.flatMapTaskEvents(.Concat) { (secondSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
-									assert(firstSettingsByTarget.value.count == secondSettingsByTarget.count, "Number of targets built for \(firstSDK) (\(firstSettingsByTarget.value.count)) does not match number of targets built for \(secondSDK) (\(secondSettingsByTarget.count))")
+									assert(firstSettingsByTarget.value.count == secondSettingsByTarget.count, "Number of targets built for \(firstSDK) (\(firstSettingsByTarget.count)) does not match number of targets built for \(secondSDK) (\(secondSettingsByTarget.count))")
 
 									return SignalProducer { observer, disposable in
-										for (target, firstSettings) in firstSettingsByTarget.value {
+										for (target, firstSettings) in firstSettingsByTarget {
 											if disposable.disposed {
 												break
 											}

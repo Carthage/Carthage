@@ -151,10 +151,10 @@ public struct Resolver {
 
 					switch graph.addNode(node, dependencyOf: dependencyOf) {
 					case let .Success(newNode):
-						newNodes.append(newNode.value)
+						newNodes.append(newNode)
 
 					case let .Failure(error):
-						sendError(observer, error.value)
+						sendError(observer, error)
 						return
 					}
 				}

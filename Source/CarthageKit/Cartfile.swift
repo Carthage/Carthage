@@ -49,10 +49,10 @@ public struct Cartfile {
 
 			switch Dependency<VersionSpecifier>.fromScanner(scanner) {
 			case let .Success(dep):
-				cartfile.dependencies.append(dep.value)
+				cartfile.dependencies.append(dep)
 
 			case let .Failure(error):
-				result = .Failure(error.value)
+				result = .Failure(error)
 				stop.memory = true
 			}
 
@@ -144,10 +144,10 @@ public struct ResolvedCartfile {
 		scannerLoop: while !scanner.atEnd {
 			switch Dependency<PinnedVersion>.fromScanner(scanner) {
 			case let .Success(dep):
-				cartfile.dependencies.append(dep.value)
+				cartfile.dependencies.append(dep)
 
 			case let .Failure(error):
-				result = .Failure(error.value)
+				result = .Failure(error)
 				break scannerLoop
 			}
 		}
