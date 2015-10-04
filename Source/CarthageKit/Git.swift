@@ -183,7 +183,7 @@ public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, Carthag
 			return SignalProducer { observer, disposable in
 				let string = allTags as NSString
 
-				string.enumerateSubstringsInRange(NSMakeRange(0, string.length), options: [ .ByLines, .Reverse]) { line, substringRange, enclosingRange, stop in
+				string.enumerateSubstringsInRange(NSMakeRange(0, string.length), options: [ .ByLines, .Reverse ]) { line, substringRange, enclosingRange, stop in
 					if disposable.disposed {
 						stop.memory = true
 					}

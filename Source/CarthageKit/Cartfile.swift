@@ -97,7 +97,7 @@ extension Cartfile {
 	/// Returns an array containing projects that are listed as duplicate
 	/// dependencies.
 	public func duplicateProjects() -> [ProjectIdentifier] {
-		return self.dependencyCountedSet.filter { $0.1 > 1}
+		return self.dependencyCountedSet.filter { $0.1 > 1 }
 			.map { $0.0 }
 	}
 

@@ -234,7 +234,7 @@ extension Project {
 				let oldCheckoutsURL = self.directoryURL.URLByAppendingPathComponent(carthageCheckout)
 
 				do {
-					let contents = try fileManager.contentsOfDirectoryAtURL(oldCheckoutsURL, includingPropertiesForKeys: nil, options: [ .SkipsSubdirectoryDescendants, .SkipsPackageDescendants, .SkipsHiddenFiles])
+					let contents = try fileManager.contentsOfDirectoryAtURL(oldCheckoutsURL, includingPropertiesForKeys: nil, options: [ .SkipsSubdirectoryDescendants, .SkipsPackageDescendants, .SkipsHiddenFiles ])
 					let trashProducer = SignalProducer<(), CarthageError>.attempt {
 						do {
 							try fileManager.trashItemAtURL(oldCheckoutsURL, resultingItemURL: nil)
