@@ -25,7 +25,7 @@ public func zipIntoArchive(destinationArchiveURL: NSURL, inputPaths: [String]) -
 
 /// Unzips the archive at the given file URL, extracting into the given
 /// directory URL (which must already exist).
-public func unzipArchiveToDirectory(fileURL: NSURL, destinationDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
+public func unzipArchiveToDirectory(fileURL: NSURL, _ destinationDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
 	precondition(fileURL.fileURL)
 	precondition(destinationDirectoryURL.fileURL)
 
@@ -39,7 +39,7 @@ public func unzipArchiveToDirectory(fileURL: NSURL, destinationDirectoryURL: NSU
 /// sends the file URL to that directory.
 public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return SignalProducer.attempt {
-			var temporaryDirectoryTemplate: ContiguousArray<CChar> = NSTemporaryDirectory().stringByAppendingPathComponent("carthage-archive.XXXXXX").nulTerminatedUTF8.map { CChar($0) }
+			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("carthage-archive.XXXXXX").nulTerminatedUTF8.map { CChar($0) }
 			let result = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> UnsafeMutablePointer<CChar> in
 				return mkdtemp(template.baseAddress)
 			}
@@ -54,7 +54,7 @@ public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<N
 
 			return .Success(temporaryPath)
 		}
-		.map { NSURL.fileURLWithPath($0, isDirectory: true)! }
+		.map { NSURL.fileURLWithPath($0, isDirectory: true) }
 		.flatMap(.Merge) { directoryURL in
 			return unzipArchiveToDirectory(fileURL, directoryURL)
 				.then(SignalProducer(value: directoryURL))
