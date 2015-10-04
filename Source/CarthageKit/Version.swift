@@ -313,7 +313,7 @@ private func intersection(compatibleWith compatibleWith: SemanticVersion, exactl
 ///
 /// In other words, any version that satisfies the returned specifier will
 /// satisfy _both_ of the given specifiers.
-public func intersection(lhs: VersionSpecifier, rhs: VersionSpecifier) -> VersionSpecifier? {
+public func intersection(lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> VersionSpecifier? {
 	switch (lhs, rhs) {
 	// Unfortunately, patterns with a wildcard _ are not considered exhaustive,
 	// so do the same thing manually.

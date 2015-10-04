@@ -65,7 +65,7 @@ public struct Resolver {
 
 		return SignalProducer(values: cartfile.dependencies)
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
-				let allowedVersions = SignalProducer<String?, CarthageError>.`try` {
+				let allowedVersions = SignalProducer<String?, CarthageError>.attempt {
 						switch dependency.version {
 						case let .GitReference(refName):
 							return .Success(refName)
@@ -358,7 +358,7 @@ extension DependencyGraph: CustomStringConvertible {
 ///
 /// Returns the new graph, or an error if the graphs specify inconsistent
 /// versions for one or more dependencies.
-private func mergeGraphs(lhs: DependencyGraph, rhs: DependencyGraph) -> Result<DependencyGraph, CarthageError> {
+private func mergeGraphs(lhs: DependencyGraph, _ rhs: DependencyGraph) -> Result<DependencyGraph, CarthageError> {
 	var result: Result<DependencyGraph, CarthageError> = .Success(lhs)
 
 	for root in rhs.roots {
