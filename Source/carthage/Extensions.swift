@@ -76,7 +76,7 @@ extension Result {
 	}
 }
 
-extension Signal {
+extension SignalType {
 
 	/// Bring back the `observe` overload. The `observeNext` or pattern matching
 	/// on `observe(Event)` is still annoying in practice and more verbose. This is
@@ -97,7 +97,7 @@ extension Signal {
 	}
 }
 
-extension SignalProducer {
+extension SignalProducerType {
 
 	/// Bring back the `start` overload. The `startNext` or pattern matching
 	/// on `start(Event)` is annoying in practice and more verbose. This is also
