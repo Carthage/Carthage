@@ -25,6 +25,3 @@
 [submodule "Carthage/Checkouts/Result"]
 	path = Carthage/Checkouts/Result
 	url = https://github.com/antitypical/Result.git
-[submodule "Carthage/Checkouts/Runes"]
-	path = Carthage/Checkouts/Runes
-	url = https://github.com/thoughtbot/Runes.git
