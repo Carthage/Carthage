@@ -585,7 +585,7 @@ private func fileURLToCachedBinary(project: ProjectIdentifier, release: GitHubRe
 /// Sends the final file URL upon .success.
 private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return SignalProducer(value: cachedURL)
-		.try { fileURL in
+		.attempt { fileURL in
 			var error: NSError?
 			let parentDirectoryURL = fileURL.URLByDeletingLastPathComponent!
 			if NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
@@ -594,7 +594,7 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 				return .failure(.WriteFailed(parentDirectoryURL, error))
 			}
 		}
-		.try { newDownloadURL in
+		.attempt { newDownloadURL in
 			// Tries `rename()` system call at first.
 			if rename(downloadURL.fileSystemRepresentation, newDownloadURL.fileSystemRepresentation) == 0 {
 				return .success(())

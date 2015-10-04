@@ -237,7 +237,7 @@ extension Project {
 
 				var error: NSError?
 				if let contents = fileManager.contentsOfDirectoryAtURL(oldCheckoutsURL, includingPropertiesForKeys: nil, options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsPackageDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, error: &error) {
-					let trashProducer = SignalProducer<(), CarthageError>.try {
+					let trashProducer = SignalProducer<(), CarthageError>.attempt {
 						var error: NSError?
 						if fileManager.trashItemAtURL(oldCheckoutsURL, resultingItemURL: nil, error: &error) {
 							return .success(())

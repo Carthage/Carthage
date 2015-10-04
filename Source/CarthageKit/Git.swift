@@ -448,7 +448,7 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, fromPath: Str
 	let toURL = repositoryFileURL.URLByAppendingPathComponent(toPath)
 	let parentDirectoryURL = toURL.URLByDeletingLastPathComponent!
 
-	return SignalProducer<(), CarthageError>.try {
+	return SignalProducer<(), CarthageError>.attempt {
 			var error: NSError?
 			if !NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
 				return .failure(CarthageError.WriteFailed(parentDirectoryURL, error))

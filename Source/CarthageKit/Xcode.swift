@@ -1238,7 +1238,7 @@ public func stripFramework(frameworkURL: NSURL, keepingArchitectures: [String], 
 ///
 /// Returns a signal that will send the URL after copying upon .success.
 public func copyProduct(from: NSURL, to: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	return SignalProducer<NSURL, CarthageError>.try {
+	return SignalProducer<NSURL, CarthageError>.attempt {
 		var error: NSError? = nil
 
 		let manager = NSFileManager.defaultManager()
