@@ -96,7 +96,7 @@ public struct Resolver {
 					.observeOn(scheduler)
 					.map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
 					.collect()
-					.map(sorted)
+					.map { $0.sort() }
 					.flatMap(.Concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
 						if nodes.isEmpty {
 							return SignalProducer(error: CarthageError.RequiredVersionNotFound(dependency.project, dependency.version))

@@ -203,7 +203,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 
 			return matches
 		}
-		.map(sorted)
+		.map { $0.sort() }
 		.flatMap(.Merge) { matches -> SignalProducer<ProjectEnumerationMatch, CarthageError> in
 			return SignalProducer(values: matches)
 		}

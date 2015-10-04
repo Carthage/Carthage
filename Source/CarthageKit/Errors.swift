@@ -126,7 +126,7 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 		return la == ra && lb == rb
 	
 	case let (.DuplicateDependencies(left), .DuplicateDependencies(right)):
-		return sorted(left) == sorted(right)
+		return left.sort() == right.sort()
 	
 	case let (.GitHubAPIRequestFailed(left), .GitHubAPIRequestFailed(right)):
 		return left == right
@@ -240,7 +240,7 @@ extension CarthageError: CustomStringConvertible {
 			return description
 			
 		case let .DuplicateDependencies(duplicateDeps):
-			let deps = sorted(duplicateDeps) // important to match expected order in test cases
+			let deps = duplicateDeps.sort() // important to match expected order in test cases
 				.reduce("") { (acc, dep) in
 					"\(acc)\n\t\(dep)"
 				}
@@ -306,7 +306,7 @@ public struct DuplicateDependency: Comparable {
 	// test case.
 	public init(project: ProjectIdentifier, locations: [String]) {
 		self.project = project
-		self.locations = locations.sorted(<)
+		self.locations = locations.sort(<)
 	}
 }
 
