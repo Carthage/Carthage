@@ -18,17 +18,17 @@ public struct CheckoutCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(CheckoutOptions.evaluate(mode))
-			|> flatMap(.Merge) { options in
+			.flatMap(.Merge) { options in
 				return self.checkoutWithOptions(options)
-					|> promoteErrors
+					.promoteErrors()
 			}
-			|> waitOnCommand
+			.waitOnCommand()
 	}
 
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: CheckoutOptions) -> SignalProducer<(), CarthageError> {
 		return options.loadProject()
-			|> flatMap(.Merge) { $0.checkoutResolvedDependencies() }
+			.flatMap(.Merge) { $0.checkoutResolvedDependencies() }
 	}
 }
 
@@ -72,8 +72,8 @@ public struct CheckoutOptions: OptionsType {
 			project.projectEvents.observe(next: { eventSink.put($0) })
 
 			return project.migrateIfNecessary(colorOptions)
-				|> on(next: carthage.println)
-				|> then(SignalProducer(value: project))
+				.on(next: carthage.println)
+				.then(SignalProducer(value: project))
 		} else {
 			return SignalProducer(error: CarthageError.InvalidArgument(description: "Invalid project path: \(directoryPath)"))
 		}

@@ -19,8 +19,8 @@ public func zipIntoArchive(destinationArchiveURL: NSURL, inputPaths: [String]) -
 
 	let task = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "zip", "-q", "-r", "--symlinks", destinationArchiveURL.path! ] + inputPaths)
 	return launchTask(task)
-		|> mapError { .TaskError($0) }
-		|> then(.empty)
+		.mapError { .TaskError($0) }
+		.then(.empty)
 }
 
 /// Unzips the archive at the given file URL, extracting into the given
@@ -31,8 +31,8 @@ public func unzipArchiveToDirectory(fileURL: NSURL, destinationDirectoryURL: NSU
 
 	let task = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "unzip", "-qq", "-d", destinationDirectoryURL.path!, fileURL.path! ])
 	return launchTask(task)
-		|> mapError { .TaskError($0) }
-		|> then(.empty)
+		.mapError { .TaskError($0) }
+		.then(.empty)
 }
 
 /// Unzips the archive at the given file URL into a temporary directory, then
@@ -54,9 +54,9 @@ public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<N
 
 			return .success(temporaryPath)
 		}
-		|> map { NSURL.fileURLWithPath($0, isDirectory: true)! }
-		|> flatMap(.Merge) { directoryURL in
+		.map { NSURL.fileURLWithPath($0, isDirectory: true)! }
+		.flatMap(.Merge) { directoryURL in
 			return unzipArchiveToDirectory(fileURL, directoryURL)
-				|> then(SignalProducer(value: directoryURL))
+				.then(SignalProducer(value: directoryURL))
 		}
 }

@@ -200,8 +200,8 @@ internal func permutations<T, E>(producers: [SignalProducer<T, E>]) -> SignalPro
 
 	for producer in producers {
 		combined = combined
-			|> permuteWith(producer)
-			|> map { (var array, value) in
+			.permuteWith(producer)
+			.map { (var array, value) in
 				array.append(value)
 				return array
 			}

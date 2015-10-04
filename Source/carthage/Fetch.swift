@@ -18,18 +18,18 @@ public struct FetchCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(FetchOptions.evaluate(mode))
-			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
+			.flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				let project = ProjectIdentifier.Git(options.repositoryURL)
 				var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
 				return cloneOrFetchProject(project, preferHTTPS: true)
-					|> on(next: { event, _ in
+					.on(next: { event, _ in
 						eventSink.put(event)
 					})
-					|> then(.empty)
-					|> promoteErrors
+					.then(.empty)
+					.promoteErrors()
 			}
-			|> waitOnCommand
+			.waitOnCommand()
 	}
 }
 

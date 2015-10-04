@@ -322,10 +322,10 @@ private func loadCredentialsFromGit(forServer server: GitHubRepository.Server) -
 	let data = "url=\(server)".dataUsingEncoding(NSUTF8StringEncoding)!
 	
 	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
-		|> flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
-			return string.linesProducer |> promoteErrors(CarthageError.self)
+		.flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
+			return string.linesProducer.promoteErrors(CarthageError.self)
 		}
-		|> reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
+		.reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
 			let parts = split(line, maxSplit: 1, allowEmptySlices: false) { $0 == "=" }
 			if parts.count >= 2 {
 				let key = parts[0]
@@ -336,14 +336,14 @@ private func loadCredentialsFromGit(forServer server: GitHubRepository.Server) -
 			
 			return values
 		}
-		|> map { (values: [String: String]) -> BasicGitHubCredentials? in
+		.map { (values: [String: String]) -> BasicGitHubCredentials? in
 			if let username = values["username"], password = values["password"] {
 				return (username, password)
 			}
 			
 			return nil
 		}
-		|> flatMapError { error in
+		.flatMapError { error in
 			return SignalProducer(value: nil)
 		}
 }
@@ -383,7 +383,7 @@ internal func loadGitHubAuthorization(forServer server: GitHubRepository.Server)
 	if let accessTokenForServer = parseGitHubAccessTokenFromEnvironment()[server.hostname] {
 		return SignalProducer(value: "token \(accessTokenForServer)")
 	} else {
-		return loadCredentialsFromGit(forServer: server) |> map { maybeCredentials in
+		return loadCredentialsFromGit(forServer: server).map { maybeCredentials in
 			maybeCredentials.map { (username, password) in
 				let data = "\(username):\(password)".dataUsingEncoding(NSUTF8StringEncoding)!
 				let encodedString = data.base64EncodedStringWithOptions(nil)
@@ -439,32 +439,32 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 	let request = createGitHubRequest(URL, authorizationHeaderValue)
 
 	return NSURLSession.sharedSession().rac_dataWithRequest(request)
-		|> mapError { .NetworkError($0) }
-		|> flatMap(.Concat) { data, response in
+		.mapError { .NetworkError($0) }
+		.flatMap(.Concat) { data, response in
 			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
 
 			if let HTTPResponse = response as? NSHTTPURLResponse {
 				let statusCode = HTTPResponse.statusCode
 				if statusCode > 400 && statusCode < 600 && statusCode != 404 {
 					return thisData
-						|> attemptMap { data -> Result<AnyObject, CarthageError> in
+						.attemptMap { data -> Result<AnyObject, CarthageError> in
 							if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
 								return .success(object)
 							} else {
 								return .failure(.ParseError(description: "Invalid JSON in API error response \(data)"))
 							}
 						}
-						|> map { (dictionary: AnyObject) -> String in
+						.map { (dictionary: AnyObject) -> String in
 							if let error: GitHubError = decode(dictionary) {
 								return error.message
 							} else {
 								return (NSString(data: data, encoding: NSUTF8StringEncoding) ?? NSHTTPURLResponse.localizedStringForStatusCode(statusCode)) as String
 							}
 						}
-						|> flatMapError { (error: CarthageError) in
+						.flatMapError { (error: CarthageError) in
 							return SignalProducer(value: error.description)
 						}
-						|> attemptMap { message -> Result<NSData, CarthageError> in
+						.attemptMap { message -> Result<NSData, CarthageError> in
 							return Result.failure(CarthageError.GitHubAPIRequestFailed(message))
 						}
 				}
@@ -474,7 +474,7 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 					for (URL, parameters) in links {
 						if contains(parameters, "rel=\"next\"") {
 							// Automatically fetch the next page too.
-							return thisData |> concat(fetchAllPages(URL, authorizationHeaderValue))
+							return thisData.concat(fetchAllPages(URL, authorizationHeaderValue))
 						}
 					}
 				}
@@ -489,14 +489,14 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 /// complete without sending any values.
 internal func releaseForTag(tag: String, repository: GitHubRepository, authorizationHeaderValue: String?) -> SignalProducer<GitHubRelease, CarthageError> {
 	return fetchAllPages(NSURL(string: "\(repository.server.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
-		|> attemptMap { data -> Result<AnyObject, CarthageError> in
+		.attemptMap { data -> Result<AnyObject, CarthageError> in
 			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
 				return .success(object)
 			} else {
 				return .failure(.ParseError(description: "Invalid JSON in releases for tag \(tag)"))
 			}
 		}
-		|> flatMap(.Concat) { releaseDictionary -> SignalProducer<GitHubRelease, CarthageError> in
+		.flatMap(.Concat) { releaseDictionary -> SignalProducer<GitHubRelease, CarthageError> in
 			if let release: GitHubRelease = decode(releaseDictionary) {
 				return SignalProducer(value: release)
 			} else {
@@ -516,6 +516,6 @@ internal func downloadAsset(asset: GitHubRelease.Asset, authorizationHeaderValue
 	let request = createGitHubRequest(asset.URL, authorizationHeaderValue, contentType: APIAssetDownloadContentType)
 
 	return NSURLSession.sharedSession().carthage_downloadWithRequest(request)
-		|> mapError { .NetworkError($0) }
-		|> map { URL, _ in URL }
+		.mapError { .NetworkError($0) }
+		.map { URL, _ in URL }
 }

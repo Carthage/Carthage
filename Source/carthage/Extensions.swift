@@ -133,7 +133,7 @@ extension SignalProducer {
 
 /// Promotes CarthageErrors into CommandErrors.
 internal func promoteErrors<T>(signal: Signal<T, CarthageError>) -> Signal<T, CommandError> {
-	return signal |> mapError { (error: CarthageError) -> CommandError in
+	return signal.mapError { (error: CarthageError) -> CommandError in
 		let commandantError = CommandantError.CommandError(Box(error))
 		return CommandError(commandantError)
 	}
@@ -148,8 +148,8 @@ internal func producerWithOptions<T>(result: Result<T, CommandantError<CarthageE
 /// Waits on a SignalProducer that implements the behavior of a CommandType.
 internal func waitOnCommand<T>(producer: SignalProducer<T, CommandError>) -> Result<(), CommandantError<CarthageError>> {
 	let result = producer
-		|> then(SignalProducer<(), CommandError>.empty)
-		|> wait
+		.then(SignalProducer<(), CommandError>.empty)
+		.wait()
 	
 	TaskDescription.waitForAllTaskTermination()
 	return mapError(result) { $0.error }
@@ -219,8 +219,8 @@ extension Project {
 			let checkFile: (String, String) -> () = { oldName, newName in
 				if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(oldName)) {
 					let producer = SignalProducer(value: migrationMessage)
-						|> concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName)
-							|> then(.empty))
+						.concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName)
+							.then(.empty))
 
 					sendNext(observer, producer)
 				}
@@ -247,17 +247,17 @@ extension Project {
 					}
 
 					let moveProducer: SignalProducer<(), CarthageError> = SignalProducer(values: contents)
-						|> map { (object: AnyObject) in object as! NSURL }
-						|> flatMap(.Concat) { (URL: NSURL) -> SignalProducer<NSURL, CarthageError> in
+						.map { (object: AnyObject) in object as! NSURL }
+						.flatMap(.Concat) { (URL: NSURL) -> SignalProducer<NSURL, CarthageError> in
 							let lastPathComponent: String! = URL.lastPathComponent
 							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
 						}
-						|> then(trashProducer)
-						|> then(.empty)
+						.then(trashProducer)
+						.then(.empty)
 
 					let producer = SignalProducer<String, CarthageError>(value: migrationMessage)
-						|> concat(moveProducer
-							|> then(.empty))
+						.concat(moveProducer
+							.then(.empty))
 
 					sendNext(observer, producer)
 				} else {
@@ -270,7 +270,7 @@ extension Project {
 		}
 
 		return producers
-			|> flatten(.Concat)
-			|> takeLast(1)
+			.flatten(.Concat)
+			.takeLast(1)
 	}
 }

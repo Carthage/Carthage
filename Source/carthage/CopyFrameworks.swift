@@ -21,22 +21,22 @@ public struct CopyFrameworksCommand: CommandType {
 		switch mode {
 		case .Arguments:
 			return inputFiles()
-				|> flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
+				.flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
 					let frameworkName = frameworkPath.lastPathComponent
 
 					let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.InvalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
 					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
 					return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
-						|> flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
+						.flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
 							return combineLatest(copyProduct(source, target), codeSigningIdentity())
-								|> flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
+								.flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
 									return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 								}
 						}
 				}
-				|> promoteErrors
-				|> waitOnCommand
+				.promoteErrors()
+				.waitOnCommand()
 
 		case .Usage:
 			return .success(())
@@ -84,12 +84,12 @@ private func inputFiles() -> SignalProducer<String, CarthageError> {
 	}
 
 	return SignalProducer(result: count)
-		|> flatMap(.Merge) { count -> SignalProducer<String, CarthageError> in
+		.flatMap(.Merge) { count -> SignalProducer<String, CarthageError> in
 			let variables = (0..<count).map { index -> SignalProducer<String, CarthageError> in
 				return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
 			}
 
 			return SignalProducer(values: variables)
-				|> flatten(.Concat)
+				.flatten(.Concat)
 		}
 }
