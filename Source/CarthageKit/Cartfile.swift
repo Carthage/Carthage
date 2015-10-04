@@ -72,10 +72,10 @@ public struct Cartfile {
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
 	public static func fromFile(cartfileURL: NSURL) -> Result<Cartfile, CarthageError> {
-		var error: NSError?
-		if let cartfileContents = NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding, error: &error) {
+		do {
+			let cartfileContents = try NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding)
 			return Cartfile.fromString(cartfileContents as String)
-		} else {
+		} catch let error as NSError {
 			return .Failure(CarthageError.ReadFailed(cartfileURL, error))
 		}
 	}
@@ -186,7 +186,7 @@ public enum ProjectIdentifier: Equatable {
 	/// The path at which this project will be checked out, relative to the
 	/// working directory of the main project.
 	public var relativePath: String {
-		return CarthageProjectCheckoutsPath.stringByAppendingPathComponent(name)
+		return (CarthageProjectCheckoutsPath as NSString).stringByAppendingPathComponent(name)
 	}
 }
 
@@ -288,7 +288,7 @@ extension Dependency: Scannable {
 	/// Attempts to parse a Dependency specification.
 	public static func fromScanner(scanner: NSScanner) -> Result<Dependency, CarthageError> {
 		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
-			return V.fromScanner(scanner).map { specifier in self(project: identifier, version: specifier) }
+			return V.fromScanner(scanner).map { specifier in self.init(project: identifier, version: specifier) }
 		}
 	}
 }
