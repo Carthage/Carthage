@@ -487,7 +487,7 @@ private func fetchAllPages(URL: NSURL, _ authorizationHeaderValue: String?) -> S
 /// Fetches the release corresponding to the given tag on the given repository,
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
-internal func releaseForTag(tag: String, repository: GitHubRepository, authorizationHeaderValue: String?) -> SignalProducer<GitHubRelease, CarthageError> {
+internal func releaseForTag(tag: String, _ repository: GitHubRepository, _ authorizationHeaderValue: String?) -> SignalProducer<GitHubRelease, CarthageError> {
 	return fetchAllPages(NSURL(string: "\(repository.server.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
 		.attemptMap { data -> Result<AnyObject, CarthageError> in
 			if let object = try? NSJSONSerialization.JSONObjectWithData(data, options: []) {
@@ -512,7 +512,7 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, authoriza
 ///
 /// The downloaded file will be deleted after the URL has been sent upon the
 /// signal.
-internal func downloadAsset(asset: GitHubRelease.Asset, authorizationHeaderValue: String?) -> SignalProducer<NSURL, CarthageError> {
+internal func downloadAsset(asset: GitHubRelease.Asset, _ authorizationHeaderValue: String?) -> SignalProducer<NSURL, CarthageError> {
 	let request = createGitHubRequest(asset.URL, authorizationHeaderValue, contentType: APIAssetDownloadContentType)
 
 	return NSURLSession.sharedSession().carthage_downloadWithRequest(request)

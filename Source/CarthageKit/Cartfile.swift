@@ -110,7 +110,7 @@ extension Cartfile {
 
 /// Returns an array containing projects that are listed as dependencies
 /// in both arguments.
-public func duplicateProjectsInCartfiles(cartfile1: Cartfile, cartfile2: Cartfile) -> [ProjectIdentifier] {
+public func duplicateProjectsInCartfiles(cartfile1: Cartfile, _ cartfile2: Cartfile) -> [ProjectIdentifier] {
 	let projectSet1 = cartfile1.dependencyCountedSet
 
 	return cartfile2.dependencies

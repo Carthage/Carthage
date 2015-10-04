@@ -198,7 +198,7 @@ public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, Carthag
 
 /// Returns the text contents of the path at the given revision, or an error if
 /// the path could not be loaded.
-public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
+public func contentsOfFileInRepository(repositoryFileURL: NSURL, _ path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
 	let showObject = "\(revision):\(path)"
 	return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryFileURL)
 }
@@ -206,7 +206,7 @@ public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, r
 /// Checks out the working tree of the given (ideally bare) repository, at the
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
-public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
+public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt {
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil)
@@ -396,7 +396,7 @@ public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String 
 }
 
 /// Attempts to resolve the given reference into an object SHA.
-public func resolveReferenceInRepository(repositoryFileURL: NSURL, reference: String) -> SignalProducer<String, CarthageError> {
+public func resolveReferenceInRepository(repositoryFileURL: NSURL, _ reference: String) -> SignalProducer<String, CarthageError> {
 	return launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL)
 		.map { string in string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
 		.mapError { _ in CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists", underlyingError: nil) }
@@ -419,7 +419,7 @@ public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError
 
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if
 /// the desired revision does not exist or the submodule needs to be cloned.
-public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submodule, fetchURL: GitURL) -> SignalProducer<(), CarthageError> {
+public func addSubmoduleToRepository(repositoryFileURL: NSURL, _ submodule: Submodule, _ fetchURL: GitURL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = repositoryFileURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
 
 	return isGitRepository(submoduleDirectoryURL)
