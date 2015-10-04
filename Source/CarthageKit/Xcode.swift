@@ -996,7 +996,9 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 			// automatically drop this dependency's product in the right place.
 			let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 
-			if let _ = try? NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL) {
+			do {
+				try NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL)
+			} catch {
 				let dependencyParentURL = dependencyBinariesURL.URLByDeletingLastPathComponent!
 
 				do {
