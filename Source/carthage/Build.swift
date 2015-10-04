@@ -52,7 +52,7 @@ public struct BuildCommand: CommandType {
 								break
 							}
 						})
-						|> catch { _ in .empty }
+						|> flatMapError { _ in .empty }
 						|> then(.empty)
 						|> promoteErrors(CarthageError.self)
 
@@ -117,7 +117,7 @@ public struct BuildCommand: CommandType {
 
 		let buildProducer = project.loadCombinedCartfile()
 			|> map { _ in project }
-			|> catch { error in
+			|> flatMapError { error in
 				if options.skipCurrent {
 					return SignalProducer(error: error)
 				} else {
@@ -139,7 +139,7 @@ public struct BuildCommand: CommandType {
 			return buildProducer
 		} else {
 			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms, sdkFilter: sdkFilter)
-				|> catch { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
+				|> flatMapError { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
 					switch error {
 					case let .NoSharedFrameworkSchemes(project, _):
 						// Log that building the current project is being skipped.

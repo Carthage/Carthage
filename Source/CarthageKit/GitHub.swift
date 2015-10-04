@@ -343,7 +343,7 @@ private func loadCredentialsFromGit(forServer server: GitHubRepository.Server) -
 			
 			return nil
 		}
-		|> catch { error in
+		|> flatMapError { error in
 			return SignalProducer(value: nil)
 		}
 }
@@ -461,7 +461,7 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 								return (NSString(data: data, encoding: NSUTF8StringEncoding) ?? NSHTTPURLResponse.localizedStringForStatusCode(statusCode)) as String
 							}
 						}
-						|> catch { (error: CarthageError) in
+						|> flatMapError { (error: CarthageError) in
 							return SignalProducer(value: error.description)
 						}
 						|> attemptMap { message -> Result<NSData, CarthageError> in

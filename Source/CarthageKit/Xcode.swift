@@ -692,12 +692,12 @@ private func shouldBuildScheme(buildArguments: BuildArguments, forPlatforms: Set
 
 			if forPlatforms.isEmpty {
 				return productType
-					|> catch { _ in .empty }
+					|> flatMapError { _ in .empty }
 			} else {
 				return settings.buildSDKs
 					|> filter { forPlatforms.contains($0.platform) }
 					|> flatMap(.Merge) { _ in productType }
-					|> catch { _ in .empty }
+					|> flatMapError { _ in .empty }
 			}
 		}
 		|> filter(shouldBuildProductType)
@@ -1122,7 +1122,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 							|> map { _ in scheme }
 					}
 					|> collect
-					|> catch { error in
+					|> flatMapError { error in
 						switch error {
 						case .NoSharedSchemes:
 							return SignalProducer(value: [])

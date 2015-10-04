@@ -348,7 +348,7 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = 
 	let baseArguments = [ "config", "--blob", modulesObject, "-z" ]
 
 	return launchGitTask(baseArguments + [ "--get-regexp", "submodule\\..*\\.path" ], repositoryFileURL: repositoryFileURL)
-		|> catch { _ in SignalProducer<String, NoError>.empty }
+		|> flatMapError { _ in SignalProducer<String, NoError>.empty }
 		|> flatMap(.Concat) { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
 		|> promoteErrors(CarthageError.self)
 		|> flatMap(.Concat) { name, path -> SignalProducer<Submodule, CarthageError> in
@@ -376,7 +376,7 @@ public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String 
 
 		launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL)
 			|> then(SignalProducer<Bool, CarthageError>(value: true))
-			|> catch { _ in SignalProducer<Bool, NoError>(value: false) }
+			|> flatMapError { _ in SignalProducer<Bool, NoError>(value: false) }
 			|> startWithSignal { signal, signalDisposable in
 				disposable.addDisposable(signalDisposable)
 				signal.observe(observer)
@@ -403,7 +403,7 @@ public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError
 			var isDirectory: ObjCBool = false
 			return NSFileManager.defaultManager().fileExistsAtPath(gitDirectory, isDirectory: &isDirectory) && isDirectory
 		}
-		|> catch { _ in SignalProducer(value: false) }
+		|> flatMapError { _ in SignalProducer(value: false) }
 }
 
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if
@@ -426,7 +426,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 				let addSubmodule = launchGitTask([ "submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.URL.URLString, submodule.path ], repositoryFileURL: repositoryFileURL)
 					// A .failure to add usually means the folder was already added
 					// to the index. That's okay.
-					|> catch { _ in SignalProducer<String, CarthageError>.empty }
+					|> flatMapError { _ in SignalProducer<String, CarthageError>.empty }
 
 				// If it doesn't exist, clone and initialize a submodule from our
 				// local bare repository.

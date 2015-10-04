@@ -189,7 +189,7 @@ public final class Project {
 		let cartfile = SignalProducer.attempt {
 				return Cartfile.fromFile(cartfileURL)
 			}
-			|> catch { error -> SignalProducer<Cartfile, CarthageError> in
+			|> flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) && NSFileManager.defaultManager().fileExistsAtPath(privateCartfileURL.path!) {
 					return SignalProducer(value: Cartfile())
 				}
@@ -200,7 +200,7 @@ public final class Project {
 		let privateCartfile = SignalProducer.attempt {
 				return Cartfile.fromFile(privateCartfileURL)
 			}
-			|> catch { error -> SignalProducer<Cartfile, CarthageError> in
+			|> flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) {
 					return SignalProducer(value: Cartfile())
 				}
@@ -354,7 +354,7 @@ public final class Project {
 					return loadGitHubAuthorization(forServer: repository.server)
 						|> flatMap(.Concat) { authorizationHeaderValue in
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withAuthorizationHeaderValue: authorizationHeaderValue)
-								|> catch { error in
+								|> flatMapError { error in
 									if authorizationHeaderValue == nil {
 										return SignalProducer(error: error)
 									}
@@ -398,7 +398,7 @@ public final class Project {
 	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withAuthorizationHeaderValue authorizationHeaderValue: String?) -> SignalProducer<NSURL, CarthageError> {
 		return releaseForTag(revision, repository, authorizationHeaderValue)
 			|> filter(binaryFrameworksCanBeProvidedByRelease)
-			|> catch { error in
+			|> flatMapError { error in
 				switch error {
 				case .GitHubAPIRequestFailed:
 					// Log the GitHub API request failure, not to error out,
@@ -555,7 +555,7 @@ public final class Project {
 				}
 
 				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, sdkFilter: sdkFilter)
-					|> catch { error in
+					|> flatMapError { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:
 							// Log that building the dependency is being skipped,
@@ -755,7 +755,7 @@ private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> Sig
 	let repositoryURL = repositoryFileURLForProject(dependency.project)
 
 	return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
-		|> catch { _ in .empty }
+		|> flatMapError { _ in .empty }
 		|> attemptMap { Cartfile.fromString($0) }
 }
 
