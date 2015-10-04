@@ -747,7 +747,7 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 /// built for.
 ///
 /// Upon .success, sends the URL to the merged product, then completes.
-private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings, secondProductSettings: BuildSettings, destinationFolderURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings, _ secondProductSettings: BuildSettings, _ destinationFolderURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return copyBuildProductIntoDirectory(destinationFolderURL, firstProductSettings)
 		.flatMap(.Merge) { productURL in
 			let executableURLs = (firstProductSettings.executableURL &&& secondProductSettings.executableURL).map { [ $0, $1 ] }
@@ -880,7 +880,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				fatalError("No SDKs found for scheme \(scheme)")
 			}
 
-			let values = map(sdksByPlatform) { ($0, $1) }
+			let values = sdksByPlatform.map { ($0, $1) }
 			return SignalProducer(values: values)
 		}
 		.flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
@@ -890,7 +890,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		.filter { _, sdks in
 			return !sdks.isEmpty
 		}
-		.flatMap(.Concat) { platform, sdks in
+		.flatMap(.Concat) { platform, sdks -> SignalProducer<TaskEvent<NSURL>, CarthageError> in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 
 			// TODO: Generalize this further?
@@ -917,7 +917,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						case let .Success(firstSettingsByTarget):
 							return settingsByTarget(buildSDK(secondSDK))
 								.flatMapTaskEvents(.Concat) { (secondSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
-									assert(firstSettingsByTarget.value.count == secondSettingsByTarget.count, "Number of targets built for \(firstSDK) (\(firstSettingsByTarget.count)) does not match number of targets built for \(secondSDK) (\(secondSettingsByTarget.count))")
+									assert(firstSettingsByTarget.count == secondSettingsByTarget.count, "Number of targets built for \(firstSDK) (\(firstSettingsByTarget.count)) does not match number of targets built for \(secondSDK) (\(secondSettingsByTarget.count))")
 
 									return SignalProducer { observer, disposable in
 										for (target, firstSettings) in firstSettingsByTarget {
@@ -944,7 +944,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				fatalError("SDK count \(sdks.count) in scheme \(scheme) is not supported")
 			}
 		}
-		.flatMapTaskEvents(.Concat) { builtProductURL -> SignalProducer<TaskEvent<NSURL>, CarthageError> in
+		.flatMapTaskEvents(.Concat) { builtProductURL -> SignalProducer<NSURL, CarthageError> in
 			return createDebugInformation(builtProductURL)
 				.then(SignalProducer(value: builtProductURL))
 		}
