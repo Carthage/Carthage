@@ -44,7 +44,7 @@ class ArchiveSpec: QuickSpec {
 			let archiveURL = temporaryURL.URLByAppendingPathComponent("archive.zip", isDirectory: false)
 
 			beforeEach {
-				expect(try? NSFileManager.defaultManager().createDirectoryAtPath(temporaryURL.path!, withIntermediateDirectories: true, attributes: nil)).notTo(beNil())
+				expect { try NSFileManager.defaultManager().createDirectoryAtPath(temporaryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
 				expect(NSFileManager.defaultManager().changeCurrentDirectoryPath(temporaryURL.path!)).to(beTruthy())
 				return
 			}
@@ -57,13 +57,13 @@ class ArchiveSpec: QuickSpec {
 
 			it("should zip relative paths into an archive") {
 				let subdirPath = "subdir"
-				expect(try? NSFileManager.defaultManager().createDirectoryAtPath(subdirPath, withIntermediateDirectories: true, attributes: nil)).notTo(beNil())
+				expect { try NSFileManager.defaultManager().createDirectoryAtPath(subdirPath, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
 
 				let innerFilePath = (subdirPath as NSString).stringByAppendingPathComponent("inner")
-				expect(try? "foobar".writeToFile(innerFilePath, atomically: true, encoding: NSUTF8StringEncoding)).notTo(beNil())
+				expect { try "foobar".writeToFile(innerFilePath, atomically: true, encoding: NSUTF8StringEncoding) }.notTo(throwError())
 
 				let outerFilePath = "outer"
-				expect(try? "foobar".writeToFile(outerFilePath, atomically: true, encoding: NSUTF8StringEncoding)).notTo(beNil())
+				expect { try "foobar".writeToFile(outerFilePath, atomically: true, encoding: NSUTF8StringEncoding) }.notTo(throwError())
 
 				let result = zipIntoArchive(archiveURL, [ innerFilePath, outerFilePath ]).wait()
 				expect(result.error).to(beNil())
@@ -89,10 +89,10 @@ class ArchiveSpec: QuickSpec {
 
 			it("should preserve symlinks") {
 				let destinationPath = "symlink-destination"
-				expect(try? "foobar".writeToFile(destinationPath, atomically: true, encoding: NSUTF8StringEncoding)).notTo(beNil())
+				expect { try "foobar".writeToFile(destinationPath, atomically: true, encoding: NSUTF8StringEncoding) }.notTo(throwError())
 
 				let symlinkPath = "symlink"
-				expect(try? NSFileManager.defaultManager().createSymbolicLinkAtPath(symlinkPath, withDestinationPath: destinationPath)).notTo(beNil())
+				expect { try NSFileManager.defaultManager().createSymbolicLinkAtPath(symlinkPath, withDestinationPath: destinationPath) }.notTo(throwError())
 				expect { try NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(symlinkPath) }.to(equal(destinationPath))
 
 				let result = zipIntoArchive(archiveURL, [ symlinkPath, destinationPath ]).wait()

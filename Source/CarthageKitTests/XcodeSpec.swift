@@ -50,7 +50,7 @@ class XcodeSpec: QuickSpec {
 		beforeEach {
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(buildFolderURL)
 
-			expect(try? NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil)).notTo(beNil())
+			expect { try NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
 			return
 		}
 		
