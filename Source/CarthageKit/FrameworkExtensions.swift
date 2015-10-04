@@ -39,6 +39,48 @@ internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	return result
 }
 
+extension SignalType {
+
+	/// Bring back the `observe` overload. The `observeNext` or pattern matching
+	/// on `observe(Event)` is still annoying in practice and more verbose. This is
+	/// also likely to change in a later RAC 4 alpha.
+	internal func observe(next next: (T -> ())? = nil, error: (E -> ())? = nil, completed: (() -> ())? = nil, interrupted: (() -> ())? = nil) -> Disposable? {
+		return self.observe { (event: Event<T, E>) in
+			switch event {
+			case let .Next(value):
+				next?(value)
+			case let .Error(err):
+				error?(err)
+			case .Completed:
+				completed?()
+			case .Interrupted:
+				interrupted?()
+			}
+		}
+	}
+}
+
+extension SignalProducerType {
+
+	/// Bring back the `start` overload. The `startNext` or pattern matching
+	/// on `start(Event)` is annoying in practice and more verbose. This is also
+	/// likely to change in a later RAC 4 alpha.
+	internal func start(next next: (T -> ())? = nil, error: (E -> ())? = nil, completed: (() -> ())? = nil, interrupted: (() -> ())? = nil) -> Disposable? {
+		return self.start { (event: Event<T, E>) in
+			switch event {
+			case let .Next(value):
+				next?(value)
+			case let .Error(err):
+				error?(err)
+			case .Completed:
+				completed?()
+			case .Interrupted:
+				interrupted?()
+			}
+		}
+	}
+}
+
 /// Sends each value that occurs on `signal` combined with each value that
 /// occurs on `otherSignal` (repeats included).
 internal func permuteWith<T, U, E>(otherSignal: Signal<U, E>) -> Signal<T, E> -> Signal<(T, U), E> {
