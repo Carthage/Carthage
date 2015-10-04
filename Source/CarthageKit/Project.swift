@@ -626,7 +626,7 @@ private func filesInDirectory(directoryURL: NSURL, typeIdentifier: String) -> Si
 		.filter { URL in
 			return URL.typeIdentifier
 				.analysis(ifSuccess: { identifier in
-					return UTTypeConformsTo(identifier, typeIdentifier) != 0
+					return UTTypeConformsTo(identifier, typeIdentifier)
 				}, ifFailure: { _ in false })
 		}
 }
@@ -649,7 +649,7 @@ private func infoPlistForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL,
 		.filter { (infoPlistCantidateURL: NSURL) in
 			return infoPlistCantidateURL.typeIdentifier
 				.analysis(ifSuccess: { identifier in
-					return UTTypeConformsTo(identifier, "com.apple.property-list") != 0
+					return UTTypeConformsTo(identifier, "com.apple.property-list")
 				}, ifFailure: { _ in false })
 		}
 		.take(1)

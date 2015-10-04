@@ -160,9 +160,9 @@ private struct ProjectEnumerationMatch: Comparable {
 	static func matchURL(URL: NSURL, fromEnumerator enumerator: NSDirectoryEnumerator) -> Result<ProjectEnumerationMatch, CarthageError> {
 		if let URL = URL.URLByResolvingSymlinksInPath {
 			return URL.typeIdentifier.flatMap { typeIdentifier in
-				if (UTTypeConformsTo(typeIdentifier, "com.apple.dt.document.workspace") != 0) {
+				if (UTTypeConformsTo(typeIdentifier, "com.apple.dt.document.workspace")) {
 					return .success(ProjectEnumerationMatch(locator: .Workspace(URL), level: enumerator.level))
-				} else if (UTTypeConformsTo(typeIdentifier, "com.apple.xcode.project") != 0) {
+				} else if (UTTypeConformsTo(typeIdentifier, "com.apple.xcode.project")) {
 					return .success(ProjectEnumerationMatch(locator: .ProjectFile(URL), level: enumerator.level))
 				}
 
