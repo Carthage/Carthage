@@ -325,14 +325,14 @@ private func loadCredentialsFromGit(forServer server: GitHubRepository.Server) -
 			return string.linesProducer.promoteErrors(CarthageError.self)
 		}
 		.reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
-			let parts = line.characters.split(maxSplit: 1, allowEmptySlices: false) { $0 == "=" }
+			let parts = line.characters.split(1, allowEmptySlices: false) { $0 == "=" }.map(String.init)
 			if parts.count >= 2 {
-				let key = String(parts[0])
-				let value = String(parts[1])
+				let key = parts[0]
+				let value = parts[1]
 				
 				values[key] = value
 			}
-			
+
 			return values
 		}
 		.map { (values: [String: String]) -> BasicGitHubCredentials? in
@@ -355,17 +355,16 @@ private func parseGitHubAccessTokenFromEnvironment() -> [String: String] {
 		// (e.g., `GITHUB_ACCESS_TOKEN="github.com=XXXXXXXXXXXXX,enterprise.local/ghe=YYYYYYYYY"`)
 		let records = accessTokenInput.characters.split(allowEmptySlices: false) { $0 == "," }
 
-		return records.reduce([:]) { (var values: [String: String], recordView) in
-			let record = String(recordView)
-			let parts = record.characters.split(maxSplit: 1, allowEmptySlices: false) { $0 == "=" }
+		return records.reduce([:]) { (var values: [String: String], record) in
+			let parts = record.split(1, allowEmptySlices: false) { $0 == "=" }.map(String.init)
 			switch parts.count {
 			case 1:
 				// If the input is provided as an access token itself, use the
 				// token for Github.com.
-				values[GitHubRepository.Server.GitHub.hostname] = String(parts[0])
+				values[GitHubRepository.Server.GitHub.hostname] = parts[0]
 
 			case 2:
-				let (key, value) = (String(parts[0]), String(parts[1]))
+				let (key, value) = (parts[0], parts[1])
 				values[key] = value
 
 			default:

@@ -303,20 +303,18 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 	let entries = contents.characters.split(allowEmptySlices: false) { $0 == "\0" }
 
 	return SignalProducer { observer, disposable in
-		for entryView in entries {
+		for entry in entries {
 			if disposable.disposed {
 				break
 			}
 
-			let entry = String(entryView)
-
-			let components = entry.characters.split(maxSplit: 1, allowEmptySlices: true) { $0 == "\n" }
+			let components = entry.split(1, allowEmptySlices: true) { $0 == "\n" }.map(String.init)
 			if components.count != 2 {
 				continue
 			}
 
 			let value = components[1]
-			let scanner = NSScanner(string: String(components[0]))
+			let scanner = NSScanner(string: components[0])
 
 			if !scanner.scanString(keyPrefix, intoString: nil) {
 				continue
@@ -328,7 +326,7 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 			}
 
 			if let key = key as? String {
-				sendNext(observer, (key, String(value)))
+				sendNext(observer, (key, value))
 			}
 		}
 
@@ -343,9 +341,9 @@ public func submoduleSHAForPath(repositoryFileURL: NSURL, _ path: String, revisi
 		.attemptMap { string in
 			// Example:
 			// 160000 commit 083fd81ecf00124cbdaa8f86ef10377737f6325a	External/ObjectiveGit
-			let components = string.characters.split(maxSplit: 3, allowEmptySlices: false) { $0 == " " || $0 == "\t" }
+			let components = string.characters.split(3, allowEmptySlices: false) { $0 == " " || $0 == "\t" }
 			if components.count >= 3 {
-				return .Success(components[2])
+				return .Success(String(components[2]))
 			} else {
 				return .Failure(CarthageError.ParseError(description: "expected submodule commit SHA in ls-tree output: \(string)"))
 			}

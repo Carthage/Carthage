@@ -501,7 +501,7 @@ public struct BuildSettings {
 							return
 						}
 
-						let components = line.characters.split(maxSplit: 1) { $0 == "=" }
+						let components = line.characters.split(1) { $0 == "=" }.map(String.init)
 						let trimSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
 
 						if components.count == 2 {
