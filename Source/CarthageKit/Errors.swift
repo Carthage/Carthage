@@ -11,7 +11,7 @@ import ReactiveCocoa
 import ReactiveTask
 
 /// Possible errors that can originate from Carthage.
-public enum CarthageError: Equatable {
+public enum CarthageError: ErrorType, Equatable {
 	/// One or more arguments was invalid.
 	case InvalidArgument(description: String)
 
@@ -131,7 +131,7 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	case let (.GitHubAPIRequestFailed(left), .GitHubAPIRequestFailed(right)):
 		return left == right
 	
-	case let (.TaskError(left), .TaskError(right)):
+	case (.TaskError, .TaskError):
 		// TODO: Implement Equatable in ReactiveTask.
 		return false
 	
@@ -209,7 +209,7 @@ extension CarthageError: CustomStringConvertible {
 		case let .NoSharedFrameworkSchemes(projectIdentifier, platforms):
 			var description = "Dependency \"\(projectIdentifier.name)\" has no shared framework schemes"
 			if !platforms.isEmpty {
-				let platformsString = ", ".join(map(platforms) { $0.description })
+				let platformsString = platforms.map { $0.description }.joinWithSeparator(", ")
 				description += " for any of the platforms: \(platformsString)"
 			}
 
@@ -262,36 +262,6 @@ extension CarthageError: CustomStringConvertible {
 	}
 }
 
-extension CarthageError: ErrorType {
-	public var nsError: NSError {
-		let defaultError: () -> NSError = {
-			return NSError(domain: "org.carthage.CarthageKit", code: 0, userInfo: [
-				NSLocalizedDescriptionKey: self.description
-			])
-		}
-
-		switch self {
-		case let .TaskError(taskError):
-			return taskError.nsError
-
-		case let .ReadFailed(_, underlyingError):
-			return underlyingError ?? defaultError()
-
-		case let .WriteFailed(_, underlyingError):
-			return underlyingError ?? defaultError()
-
-		case let .NetworkError(underlyingError):
-			return underlyingError
-
-		case let .RepositoryCheckoutFailed(_, _, underlyingError):
-			return underlyingError ?? defaultError()
-
-		default:
-			return defaultError()
-		}
-	}
-}
-
 /// A duplicate dependency, used in CarthageError.DuplicateDependencies.
 public struct DuplicateDependency: Comparable {
 	/// The duplicate dependency as a project.
@@ -321,7 +291,7 @@ extension DuplicateDependency: CustomStringConvertible {
 		}
 
 		return "(found in "
-			+ " and ".join(locations)
+			+ locations.joinWithSeparator(" and ")
 			+ ")"
 	}
 }
