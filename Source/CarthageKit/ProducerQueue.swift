@@ -39,13 +39,13 @@ internal final class ProducerQueue {
 				producer.startWithSignal { signal, signalDisposable in
 					disposable.addDisposable(signalDisposable)
 
-					signal.observe(Signal.Observer { event in
-						observer.put(event)
+					signal.observe { event in
+						observer(event)
 
 						if event.isTerminating {
 							dispatch_resume(self.queue)
 						}
-					})
+					}
 				}
 			}
 		}
