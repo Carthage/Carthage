@@ -53,7 +53,7 @@ class VersionSpecifierSpec: QuickSpec {
 		let versionTwoTwo = SemanticVersion.fromPinnedVersion(PinnedVersion("2.2.0")).value!
 		let versionThree = SemanticVersion.fromPinnedVersion(PinnedVersion("3.0.0")).value!
 
-		func testIntersection(lhs: VersionSpecifier, rhs: VersionSpecifier, #expected: VersionSpecifier?) {
+		func testIntersection(lhs: VersionSpecifier, rhs: VersionSpecifier, expected: VersionSpecifier?) {
 			if let expected = expected {
 				expect(intersection(lhs, rhs)).to(equal(expected))
 				expect(intersection(rhs, lhs)).to(equal(expected))

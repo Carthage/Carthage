@@ -38,7 +38,7 @@ internal func println() {
 /// A thread-safe version of Swift's standard println().
 internal func println<T>(object: T) {
 	dispatch_async(outputQueue) {
-		Swift.println(object)
+		Swift.print(object)
 	}
 }
 
@@ -58,7 +58,7 @@ public struct CommandError {
 	}
 }
 
-extension CommandError: Printable {
+extension CommandError: CustomStringConvertible {
 	public var description: String {
 		return error.description
 	}

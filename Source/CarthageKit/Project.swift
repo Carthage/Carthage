@@ -23,7 +23,7 @@ private let fallbackDependenciesURL: NSURL = {
 	} else {
 		homePath = "~/.carthage".stringByExpandingTildeInPath
 	}
-	return NSURL.fileURLWithPath(homePath, isDirectory:true)!
+	return NSURL.fileURLWithPath(homePath, isDirectory:true)
 }()
 
 /// ~/Library/Caches/org.carthage.CarthageKit/
@@ -760,7 +760,7 @@ private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> Sig
 }
 
 /// Returns the URL that the project's remote repository exists at.
-private func repositoryURLForProject(project: ProjectIdentifier, #preferHTTPS: Bool) -> GitURL {
+private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bool) -> GitURL {
 	switch project {
 	case let .GitHub(repository):
 		if preferHTTPS {
@@ -780,7 +780,7 @@ private func repositoryURLForProject(project: ProjectIdentifier, #preferHTTPS: B
 /// Returns a signal which will send the operation type once started, and
 /// the URL to where the repository's folder will exist on disk, then complete
 /// when the operation completes.
-public func cloneOrFetchProject(project: ProjectIdentifier, #preferHTTPS: Bool) -> SignalProducer<(ProjectEvent, NSURL), CarthageError> {
+public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool) -> SignalProducer<(ProjectEvent, NSURL), CarthageError> {
 	let fileManager = NSFileManager.defaultManager()
 	let repositoryURL = repositoryFileURLForProject(project)
 

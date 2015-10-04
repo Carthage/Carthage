@@ -146,7 +146,7 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	}
 }
 
-extension CarthageError: Printable {
+extension CarthageError: CustomStringConvertible {
 	public var description: String {
 		switch self {
 		case let .InvalidArgument(description):
@@ -215,7 +215,7 @@ extension CarthageError: Printable {
 
 			switch projectIdentifier {
 			case let .GitHub(repository):
-				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString!)"
+				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
 
 			case .Git:
 				break
@@ -226,7 +226,7 @@ extension CarthageError: Printable {
 		case let .NoSharedSchemes(project, repository):
 			var description = "Project \"\(project)\" has no shared schemes"
 			if let repository = repository {
-				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString!)"
+				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
 			}
 
 			return description
@@ -234,7 +234,7 @@ extension CarthageError: Printable {
 		case let .XcodebuildListTimeout(project, repository):
 			var description = "Failed to discover shared schemes in project \(project)—either the project does not have any shared schemes, or xcodebuild never returned"
 			if let repository = repository {
-				description += "\n\nIf you believe this to be a project configuration error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString!)"
+				description += "\n\nIf you believe this to be a project configuration error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
 			}
 
 			return description
@@ -310,7 +310,7 @@ public struct DuplicateDependency: Comparable {
 	}
 }
 
-extension DuplicateDependency: Printable {
+extension DuplicateDependency: CustomStringConvertible {
 	public var description: String {
 		return "\(project) \(printableLocations)"
 	}
@@ -342,7 +342,7 @@ public func < (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
 		return false
 	}
 
-	for (lhsLocation, rhsLocation) in Zip2(lhs.locations, rhs.locations) {
+	for (lhsLocation, rhsLocation) in Zip2Sequence(lhs.locations, rhs.locations) {
 		if lhsLocation < rhsLocation {
 			return true
 		}

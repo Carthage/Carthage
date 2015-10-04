@@ -217,7 +217,7 @@ extension NSURL {
 		var typeIdentifier: AnyObject?
 		var error: NSError?
 
-		if self.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey, error: &error), let identifier = typeIdentifier as? String {
+		if self.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey), let identifier = typeIdentifier as? String {
 			return .success(identifier)
 		}
 
@@ -266,7 +266,7 @@ extension NSFileManager {
 /// dictionary where the keys are elements from the sequence and values count
 /// how many times elements are present in the sequence.
 internal func buildCountedSet<S: SequenceType>(sequence: S) -> [S.Generator.Element: Int] {
-	return reduce(sequence, [:]) { (var set, elem) in
+	return sequence.reduce([:]) { (var set, elem) in
 		if let count = set[elem] {
 			set[elem] = count + 1
 		}

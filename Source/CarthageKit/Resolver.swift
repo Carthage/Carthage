@@ -65,7 +65,7 @@ public struct Resolver {
 
 		return SignalProducer(values: cartfile.dependencies)
 			|> map { dependency -> SignalProducer<DependencyNode, CarthageError> in
-				let allowedVersions = SignalProducer<String?, CarthageError>.try {
+				let allowedVersions = SignalProducer<String?, CarthageError>.`try` {
 						switch dependency.version {
 						case let .GitReference(refName):
 							return .success(refName)
@@ -210,7 +210,7 @@ private struct DependencyGraph: Equatable {
 
 	/// Returns all of the graph nodes, in the order that they should be built.
 	var orderedNodes: [DependencyNode] {
-		return sorted(allNodes) { lhs, rhs in
+		return allNodes.sort { lhs, rhs in
 			let lhsDependencies = self.edges[lhs]
 			let rhsDependencies = self.edges[rhs]
 
@@ -333,7 +333,7 @@ private func ==(lhs: DependencyGraph, rhs: DependencyGraph) -> Bool {
 	return true
 }
 
-extension DependencyGraph: Printable {
+extension DependencyGraph: CustomStringConvertible {
 	private var description: String {
 		var str = "Roots:"
 
@@ -427,7 +427,7 @@ extension DependencyNode: Hashable {
 	}
 }
 
-extension DependencyNode: Printable {
+extension DependencyNode: CustomStringConvertible {
 	private var description: String {
 		return "\(project) @ \(proposedVersion) (restricted to \(versionSpecifier))"
 	}

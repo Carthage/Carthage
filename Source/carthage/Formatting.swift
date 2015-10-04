@@ -18,7 +18,7 @@ private func wrap(colorful: Bool)(wrap: Color.Wrap)(string: String) -> String {
 }
 
 /// Argument for whether to color and format terminal output.
-public enum ColorArgument: String, ArgumentType, Printable {
+public enum ColorArgument: String, ArgumentType, CustomStringConvertible {
 	case Auto = "auto"
 	case Never = "never"
 	case Always = "always"
@@ -42,7 +42,7 @@ public enum ColorArgument: String, ArgumentType, Printable {
 	public static let name = "color"
 	
 	public static func fromString(string: String) -> ColorArgument? {
-		return self(rawValue: string.lowercaseString)
+		return self.init(rawValue: string.lowercaseString)
 	}
 	
 }
@@ -85,7 +85,7 @@ public struct ColorOptions: OptionsType {
 	}
 	
 	public static func create(argument: ColorArgument) -> ColorOptions {
-		return self(argument: argument, formatting: Formatting(argument.isColorful))
+		return self.init(argument: argument, formatting: Formatting(argument.isColorful))
 	}
 	
 	public static func evaluate(m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {

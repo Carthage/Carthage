@@ -31,7 +31,7 @@ public struct Cartfile {
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile, CarthageError> {
-		var cartfile = self()
+		var cartfile = self.init()
 		var result: Result<(), CarthageError> = .success(())
 
 		let commentIndicator = "#"
@@ -86,7 +86,7 @@ public struct Cartfile {
 	}
 }
 
-extension Cartfile: Printable {
+extension Cartfile: CustomStringConvertible {
 	public var description: String {
 		return "\(dependencies)"
 	}
@@ -97,7 +97,7 @@ extension Cartfile {
 	/// Returns an array containing projects that are listed as duplicate
 	/// dependencies.
 	public func duplicateProjects() -> [ProjectIdentifier] {
-		return filter(self.dependencyCountedSet) { $0.1 > 1}
+		return self.dependencyCountedSet.filter { $0.1 > 1}
 			.map { $0.0 }
 	}
 
@@ -137,7 +137,7 @@ public struct ResolvedCartfile {
 
 	/// Attempts to parse Cartfile.resolved information from a string.
 	public static func fromString(string: String) -> Result<ResolvedCartfile, CarthageError> {
-		var cartfile = self(dependencies: [])
+		var cartfile = self.init(dependencies: [])
 		var result: Result<(), CarthageError> = .success(())
 
 		let scanner = NSScanner(string: string)
@@ -156,7 +156,7 @@ public struct ResolvedCartfile {
 	}
 }
 
-extension ResolvedCartfile: Printable {
+extension ResolvedCartfile: CustomStringConvertible {
 	public var description: String {
 		return dependencies.reduce("") { (string, dependency) in
 			return string + "\(dependency)\n"
@@ -249,7 +249,7 @@ extension ProjectIdentifier: Scannable {
 	}
 }
 
-extension ProjectIdentifier: Printable {
+extension ProjectIdentifier: CustomStringConvertible {
 	public var description: String {
 		switch self {
 		case let .GitHub(repo):
@@ -293,7 +293,7 @@ extension Dependency: Scannable {
 	}
 }
 
-extension Dependency: Printable {
+extension Dependency: CustomStringConvertible {
 	public var description: String {
 		return "\(project) \(version)"
 	}

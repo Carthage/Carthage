@@ -45,7 +45,7 @@ public struct CopyFrameworksCommand: CommandType {
 }
 
 private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
-	return SignalProducer.try {
+	return SignalProducer.`try` {
 		if codeSigningAllowed() {
 			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY").map { $0 }
 		} else {

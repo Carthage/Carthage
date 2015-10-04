@@ -78,7 +78,7 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 	}
 }
 
-extension ProjectLocator: Printable {
+extension ProjectLocator: CustomStringConvertible {
 	public var description: String {
 		return fileURL.lastPathComponent!
 	}
@@ -145,7 +145,7 @@ public struct BuildArguments {
 	}
 }
 
-extension BuildArguments: Printable {
+extension BuildArguments: CustomStringConvertible {
 	public var description: String {
 		return " ".join(arguments)
 	}
@@ -296,7 +296,7 @@ public enum Platform: String {
 }
 
 // TODO: this won't be necessary anymore with Swift 2.
-extension Platform: Printable {
+extension Platform: CustomStringConvertible {
 	public var description: String {
 		return rawValue
 	}
@@ -367,7 +367,7 @@ public enum SDK: String {
 }
 
 // TODO: this won't be necessary anymore in Swift 2.
-extension SDK: Printable {
+extension SDK: CustomStringConvertible {
 	public var description: String {
 		switch self {
 		case .iPhoneOS:
@@ -613,7 +613,7 @@ public struct BuildSettings {
 	}
 }
 
-extension BuildSettings: Printable {
+extension BuildSettings: CustomStringConvertible {
 	public var description: String {
 		return "Build settings for target \"\(target)\": \(settings)"
 	}
@@ -791,7 +791,7 @@ public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: NSURL, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
@@ -1224,7 +1224,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 
 /// Strips a framework from unexpected architectures, optionally codesigning the
 /// result.
-public func stripFramework(frameworkURL: NSURL, #keepingArchitectures: [String], codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
+public func stripFramework(frameworkURL: NSURL, keepingArchitectures: [String], codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
 	let strip = architecturesInFramework(frameworkURL)
 		|> filter { !contains(keepingArchitectures, $0) }
 		|> flatMap(.Concat) { stripArchitecture(frameworkURL, $0) }

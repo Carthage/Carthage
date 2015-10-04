@@ -247,7 +247,7 @@ public struct BuildOptions: OptionsType {
 	public let directoryPath: String
 
 	public static func create(configuration: String)(buildPlatform: BuildPlatform)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
-		return self(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+		return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
@@ -320,7 +320,7 @@ public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
 	}
 }
 
-extension BuildPlatform: Printable {
+extension BuildPlatform: CustomStringConvertible {
 	public var description: String {
 		switch self {
 		case .All:

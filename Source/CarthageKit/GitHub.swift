@@ -46,7 +46,7 @@ extension GitHubError: Hashable {
 	}
 }
 
-extension GitHubError: Printable {
+extension GitHubError: CustomStringConvertible {
 	public var description: String {
 		return message
 	}
@@ -54,7 +54,7 @@ extension GitHubError: Printable {
 
 extension GitHubError: Decodable {
 	public static func create(message: String) -> GitHubError {
-		return self(message: message)
+		return self.init(message: message)
 	}
 	
 	public static func decode(j: JSON) -> Decoded<GitHubError> {
@@ -67,7 +67,7 @@ extension GitHubError: Decodable {
 public struct GitHubRepository: Equatable {
 
 	/// Represents a GitHub server instance.
-	public enum Server: Equatable, Hashable, Printable {
+	public enum Server: Equatable, Hashable, CustomStringConvertible {
 		/// The github.com server instance.
 		case GitHub
 
@@ -203,7 +203,7 @@ extension GitHubRepository: Hashable {
 	}
 }
 
-extension GitHubRepository: Printable {
+extension GitHubRepository: CustomStringConvertible {
 	public var description: String {
 		let nameWithOwner = "\(owner)/\(name)"
 		switch server {
@@ -245,7 +245,7 @@ public struct GitHubRelease: Equatable {
 	public let assets: [Asset]
 
 	/// An asset attached to a GitHub Release.
-	public struct Asset: Equatable, Hashable, Printable, Decodable {
+	public struct Asset: Equatable, Hashable, CustomStringConvertible, Decodable {
 		/// The unique ID for this release asset.
 		public let ID: Int
 
@@ -267,7 +267,7 @@ public struct GitHubRelease: Equatable {
 		}
 
 		public static func create(ID: Int)(name: String)(contentType: String)(URL: NSURL) -> Asset {
-			return self(ID: ID, name: name, contentType: contentType, URL: URL)
+			return self.init(ID: ID, name: name, contentType: contentType, URL: URL)
 		}
 
 		public static func decode(j: JSON) -> Decoded<Asset> {
@@ -294,7 +294,7 @@ extension GitHubRelease: Hashable {
 	}
 }
 
-extension GitHubRelease: Printable {
+extension GitHubRelease: CustomStringConvertible {
 	public var description: String {
 		return "Release { ID = \(ID), name = \(name), tag = \(tag) } with assets: \(assets)"
 	}
@@ -302,7 +302,7 @@ extension GitHubRelease: Printable {
 
 extension GitHubRelease: Decodable {
 	public static func create(ID: Int)(name: String?)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
-		return self(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
+		return self.init(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
 	}
 
 	public static func decode(j: JSON) -> Decoded<GitHubRelease> {

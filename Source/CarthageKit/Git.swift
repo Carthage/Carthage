@@ -86,7 +86,7 @@ extension GitURL: Hashable {
 	}
 }
 
-extension GitURL: Printable {
+extension GitURL: CustomStringConvertible {
 	public var description: String {
 		return URLString
 	}
@@ -125,7 +125,7 @@ extension Submodule: Hashable {
 	}
 }
 
-extension Submodule: Printable {
+extension Submodule: CustomStringConvertible {
 	public var description: String {
 		return "\(name) @ \(SHA)"
 	}
@@ -444,7 +444,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 /// repository is not found.
 ///
 /// Sends the new URL of the item after moving.
-public func moveItemInPossibleRepository(repositoryFileURL: NSURL, #fromPath: String, #toPath: String) -> SignalProducer<NSURL, CarthageError> {
+public func moveItemInPossibleRepository(repositoryFileURL: NSURL, fromPath: String, toPath: String) -> SignalProducer<NSURL, CarthageError> {
 	let toURL = repositoryFileURL.URLByAppendingPathComponent(toPath)
 	let parentDirectoryURL = toURL.URLByDeletingLastPathComponent!
 
