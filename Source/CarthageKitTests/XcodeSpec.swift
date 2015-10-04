@@ -172,9 +172,9 @@ class XcodeSpec: QuickSpec {
 			}
 		}
 
-		pending("should skip projects without shared dynamic framework schems") {
-			let dependency = "SwiftyJSON"
-			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("\(dependency)-2.2.0", withExtension: nil)!
+		it("should skip projects without shared dynamic framework schems") {
+			let dependency = "SchemeDiscoverySampleForCarthage"
+			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("\(dependency)-0.1", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
@@ -189,13 +189,9 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).to(beNil())
 
-			let macPath = _buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
 			let iOSPath = _buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
 
 			var isDirectory: ObjCBool = false
-			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beTruthy())
-
 			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
 			expect(isDirectory).to(beTruthy())
 		}
