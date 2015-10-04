@@ -22,7 +22,7 @@ class XcodeSpec: QuickSpec {
 		let targetFolderURL = NSURL(fileURLWithPath: NSTemporaryDirectory().stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
 
 		var machineHasiOSIdentity: Bool = false
-		var sdkFilter: SDKFilterCallback = { .success($0.0) }
+		var sdkFilter: SDKFilterCallback = { .Success($0.0) }
 
 		beforeSuite {
 			machineHasiOSIdentity = iOSSigningIdentitiesConfigured()
@@ -42,7 +42,7 @@ class XcodeSpec: QuickSpec {
 							return false
 						}
 					}
-					return .success(filtered)
+					return .Success(filtered)
 				}
 			}
 		}

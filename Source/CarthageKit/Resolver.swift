@@ -68,10 +68,10 @@ public struct Resolver {
 				let allowedVersions = SignalProducer<String?, CarthageError>.`try` {
 						switch dependency.version {
 						case let .GitReference(refName):
-							return .success(refName)
+							return .Success(refName)
 
 						default:
-							return .success(nil)
+							return .Success(nil)
 						}
 					}
 					.flatMap(.Concat) { refName -> SignalProducer<PinnedVersion, CarthageError> in
@@ -171,7 +171,7 @@ public struct Resolver {
 					.flatMap(.Concat) { graphProducers in permutations(graphProducers) }
 					.flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 						let mergedGraphs = SignalProducer(values: graphs)
-							.scan(Result<DependencyGraph, CarthageError>.success(inputGraph)) { result, nextGraph in
+							.scan(Result<DependencyGraph, CarthageError>.Success(inputGraph)) { result, nextGraph in
 								return result.flatMap { previousGraph in mergeGraphs(previousGraph, nextGraph) }
 							}
 							.attemptMap { $0 }
@@ -267,10 +267,10 @@ private struct DependencyGraph: Equatable {
 					node = existingNode
 					node.versionSpecifier = newSpecifier
 				} else {
-					return .failure(CarthageError.RequiredVersionNotFound(node.project, newSpecifier))
+					return .Failure(CarthageError.RequiredVersionNotFound(node.project, newSpecifier))
 				}
 			} else {
-				return .failure(CarthageError.IncompatibleRequirements(node.project, existingNode.versionSpecifier, node.versionSpecifier))
+				return .Failure(CarthageError.IncompatibleRequirements(node.project, existingNode.versionSpecifier, node.versionSpecifier))
 			}
 		} else {
 			allNodes.insert(node)
@@ -299,7 +299,7 @@ private struct DependencyGraph: Equatable {
 			roots.insert(node)
 		}
 
-		return .success(node)
+		return .Success(node)
 	}
 }
 
@@ -359,7 +359,7 @@ extension DependencyGraph: CustomStringConvertible {
 /// Returns the new graph, or an error if the graphs specify inconsistent
 /// versions for one or more dependencies.
 private func mergeGraphs(lhs: DependencyGraph, rhs: DependencyGraph) -> Result<DependencyGraph, CarthageError> {
-	var result: Result<DependencyGraph, CarthageError> = .success(lhs)
+	var result: Result<DependencyGraph, CarthageError> = .Success(lhs)
 
 	for root in rhs.roots {
 		result = result.flatMap { (var graph) in

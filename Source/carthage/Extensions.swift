@@ -239,9 +239,9 @@ extension Project {
 					let trashProducer = SignalProducer<(), CarthageError>.attempt {
 						var error: NSError?
 						if fileManager.trashItemAtURL(oldCheckoutsURL, resultingItemURL: nil, error: &error) {
-							return .success(())
+							return .Success(())
 						} else {
-							return .failure(CarthageError.WriteFailed(oldCheckoutsURL, error))
+							return .Failure(CarthageError.WriteFailed(oldCheckoutsURL, error))
 						}
 					}
 

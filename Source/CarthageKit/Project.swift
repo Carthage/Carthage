@@ -217,10 +217,10 @@ public final class Project {
 
 				if duplicateDeps.count == 0 {
 					cartfile.appendCartfile(privateCartfile)
-					return .success(cartfile)
+					return .Success(cartfile)
 				}
 
-				return .failure(.DuplicateDependencies(duplicateDeps))
+				return .Failure(.DuplicateDependencies(duplicateDeps))
 			}
 	}
 
@@ -232,7 +232,7 @@ public final class Project {
 			if let resolvedCartfileContents = resolvedCartfileContents {
 				return ResolvedCartfile.fromString(resolvedCartfileContents as String)
 			} else {
-				return .failure(.ReadFailed(self.resolvedCartfileURL, error))
+				return .Failure(.ReadFailed(self.resolvedCartfileURL, error))
 			}
 		}
 	}
@@ -241,9 +241,9 @@ public final class Project {
 	public func writeResolvedCartfile(resolvedCartfile: ResolvedCartfile) -> Result<(), CarthageError> {
 		var error: NSError?
 		if resolvedCartfile.description.writeToURL(resolvedCartfileURL, atomically: true, encoding: NSUTF8StringEncoding, error: &error) {
-			return .success(())
+			return .Success(())
 		} else {
-			return .failure(.WriteFailed(resolvedCartfileURL, error))
+			return .Failure(.WriteFailed(resolvedCartfileURL, error))
 		}
 	}
 
@@ -279,7 +279,7 @@ public final class Project {
 			.flatMap(.Concat) { versions in SignalProducer(values: versions) }
 
 		return SignalProducer.attempt {
-				return .success(self.cachedVersions)
+				return .Success(self.cachedVersions)
 			}
 			.promoteErrors(CarthageError.self)
 			.flatMap(.Merge) { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
@@ -340,7 +340,7 @@ public final class Project {
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer.attempt {
-				return .success(self.useBinaries)
+				return .Success(self.useBinaries)
 			}
 			.flatMap(.Merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
 				if !useBinaries {
@@ -376,9 +376,9 @@ public final class Project {
 						.attemptMap { (temporaryDirectoryURL: NSURL) -> Result<Bool, CarthageError> in
 							var error: NSError?
 							if NSFileManager.defaultManager().removeItemAtURL(temporaryDirectoryURL, error: &error) {
-								return .success(true)
+								return .Success(true)
 							} else {
-								return .failure(.WriteFailed(temporaryDirectoryURL, error))
+								return .Failure(.WriteFailed(temporaryDirectoryURL, error))
 							}
 						}
 						.concat(SignalProducer(value: false))
@@ -476,7 +476,7 @@ public final class Project {
 					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), SHA: revision)
 				}
 
-				return .success(submodule)
+				return .Success(submodule)
 			}
 			.flatMap(.Merge) { submodule -> SignalProducer<(), CarthageError> in
 				if let submodule = submodule {
@@ -545,7 +545,7 @@ public final class Project {
 	/// Attempts to build each Carthage dependency that has been checked out.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
@@ -589,19 +589,19 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			var error: NSError?
 			let parentDirectoryURL = fileURL.URLByDeletingLastPathComponent!
 			if NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-				return .success(())
+				return .Success(())
 			} else {
-				return .failure(.WriteFailed(parentDirectoryURL, error))
+				return .Failure(.WriteFailed(parentDirectoryURL, error))
 			}
 		}
 		.attempt { newDownloadURL in
 			// Tries `rename()` system call at first.
 			if rename(downloadURL.fileSystemRepresentation, newDownloadURL.fileSystemRepresentation) == 0 {
-				return .success(())
+				return .Success(())
 			}
 
 			if errno != EXDEV {
-				return .failure(.TaskError(.POSIXError(errno)))
+				return .Failure(.TaskError(.POSIXError(errno)))
 			}
 
 			// If the “Cross-device link” error occurred, then falls back to
@@ -611,9 +611,9 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			// https://github.com/Carthage/Carthage/issues/711.
 			var error: NSError?
 			if NSFileManager.defaultManager().moveItemAtURL(downloadURL, toURL: newDownloadURL, error: &error) {
-				return .success(())
+				return .Success(())
 			} else {
-				return .failure(.WriteFailed(newDownloadURL, error))
+				return .Failure(.WriteFailed(newDownloadURL, error))
 			}
 		}
 }
@@ -660,9 +660,9 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 	return SignalProducer.attempt { () -> Result<NSData, CarthageError> in
 			var error: NSError?
 			if let data = NSData(contentsOfURL: plistURL, options: nil, error: &error) {
-				return .success(data)
+				return .Success(data)
 			}
-			return .failure(.ReadFailed(plistURL, error))
+			return .Failure(.ReadFailed(plistURL, error))
 		}
 		.startOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.platformForInfoPlist"))
 		.attemptMap { (data: NSData) -> Result<AnyObject, CarthageError> in
@@ -670,23 +670,23 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 			let options = NSPropertyListReadOptions(NSPropertyListMutabilityOptions.Immutable.rawValue)
 			let plist: AnyObject? = NSPropertyListSerialization.propertyListWithData(data, options: options, format: nil, error: &error)
 			if let pist: AnyObject = plist {
-				return .success(pist)
+				return .Success(pist)
 			}
-			return .failure(.ReadFailed(plistURL, error))
+			return .Failure(.ReadFailed(plistURL, error))
 		}
 		.attemptMap { plist -> Result<[String: AnyObject], CarthageError> in
 			if let plist = plist as? [String: AnyObject] {
-				return .success(plist)
+				return .Success(plist)
 			}
-			return .failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the root plist object is not a dictionary of values by strings"))
+			return .Failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the root plist object is not a dictionary of values by strings"))
 		}
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used 
 		// because Xcode 6 and below do not include either in Mac OSX frameworks.
 		.attemptMap { plist -> Result<String, CarthageError> in
 			if let sdkName = plist["DTSDKName"] as? String {
-				return .success(sdkName)
+				return .Success(sdkName)
 			}
-			return .failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the value for the DTSDKName key is not a string"))
+			return .Failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the value for the DTSDKName key is not a string"))
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
@@ -787,10 +787,10 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool) -
 	return SignalProducer.attempt { () -> Result<GitURL, CarthageError> in
 			var error: NSError?
 			if !fileManager.createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-				return .failure(.WriteFailed(CarthageDependencyRepositoriesURL, error))
+				return .Failure(.WriteFailed(CarthageDependencyRepositoriesURL, error))
 			}
 
-			return .success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
+			return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
 		}
 		.flatMap(.Merge) { remoteURL in
 			let cloneProducer: () -> SignalProducer<(ProjectEvent, NSURL), CarthageError> = {

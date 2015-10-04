@@ -161,16 +161,16 @@ private struct ProjectEnumerationMatch: Comparable {
 		if let URL = URL.URLByResolvingSymlinksInPath {
 			return URL.typeIdentifier.flatMap { typeIdentifier in
 				if (UTTypeConformsTo(typeIdentifier, "com.apple.dt.document.workspace")) {
-					return .success(ProjectEnumerationMatch(locator: .Workspace(URL), level: enumerator.level))
+					return .Success(ProjectEnumerationMatch(locator: .Workspace(URL), level: enumerator.level))
 				} else if (UTTypeConformsTo(typeIdentifier, "com.apple.xcode.project")) {
-					return .success(ProjectEnumerationMatch(locator: .ProjectFile(URL), level: enumerator.level))
+					return .Success(ProjectEnumerationMatch(locator: .ProjectFile(URL), level: enumerator.level))
 				}
 
-				return .failure(.NotAProject(URL))
+				return .Failure(.NotAProject(URL))
 			}
 		}
 
-		return .failure(.ReadFailed(URL, nil))
+		return .Failure(.ReadFailed(URL, nil))
 	}
 }
 
@@ -529,9 +529,9 @@ public struct BuildSettings {
 	/// not be determined.
 	public subscript(key: String) -> Result<String, CarthageError> {
 		if let value = settings[key] {
-			return .success(value)
+			return .Success(value)
 		} else {
-			return .failure(.MissingBuildSetting(key))
+			return .Failure(.MissingBuildSetting(key))
 		}
 	}
 
@@ -561,9 +561,9 @@ public struct BuildSettings {
 	public var builtProductsDirectoryURL: Result<NSURL, CarthageError> {
 		return self["BUILT_PRODUCTS_DIR"].flatMap { productsDir in
 			if let fileURL = NSURL.fileURLWithPath(productsDir, isDirectory: true) {
-				return .success(fileURL)
+				return .Success(fileURL)
 			} else {
-				return .failure(.ParseError(description: "expected file URL for built products directory, got \(productsDir)"))
+				return .Failure(.ParseError(description: "expected file URL for built products directory, got \(productsDir)"))
 			}
 		}
 	}
@@ -607,7 +607,7 @@ public struct BuildSettings {
 				return contentsPath.stringByAppendingPathComponent("Modules").stringByAppendingPathComponent(moduleName).stringByAppendingPathExtension("swiftmodule")!
 			}
 		} else {
-			return .success(nil)
+			return .Success(nil)
 		}
 	}
 }
@@ -639,9 +639,9 @@ private func mergeExecutables(executableURLs: [NSURL], outputURL: NSURL) -> Sign
 	return SignalProducer(values: executableURLs)
 		.attemptMap { URL -> Result<String, CarthageError> in
 			if let path = URL.path {
-				return .success(path)
+				return .Success(path)
 			} else {
-				return .failure(.ParseError(description: "expected file URL to built executable, got (URL)"))
+				return .Failure(.ParseError(description: "expected file URL to built executable, got (URL)"))
 			}
 		}
 		.collect()
@@ -790,7 +790,7 @@ public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: NSURL, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: NSURL, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
@@ -976,7 +976,7 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
@@ -985,7 +985,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 	return SignalProducer.attempt { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			var error: NSError?
 			if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-				return .failure(.WriteFailed(rootBinariesURL, error))
+				return .Failure(.WriteFailed(rootBinariesURL, error))
 			}
 
 			// Link this dependency's Carthage/Build folder to that of the root
@@ -996,20 +996,20 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 			if !NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL, error: nil) {
 				let dependencyParentURL = dependencyBinariesURL.URLByDeletingLastPathComponent!
 				if !NSFileManager.defaultManager().createDirectoryAtURL(dependencyParentURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
-					return .failure(.WriteFailed(dependencyParentURL, error))
+					return .Failure(.WriteFailed(dependencyParentURL, error))
 				}
 			}
 
 			var isSymlink: AnyObject?
 			if !rawDependencyURL.getResourceValue(&isSymlink, forKey: NSURLIsSymbolicLinkKey, error: &error) {
-				return .failure(.ReadFailed(rawDependencyURL, error))
+				return .Failure(.ReadFailed(rawDependencyURL, error))
 			}
 
 			if isSymlink as? Bool == true {
 				// Since this dependency is itself a symlink, we'll create an
 				// absolute link back to the project's Build folder.
 				if !NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL, error: &error) {
-					return .failure(.WriteFailed(dependencyBinariesURL, error))
+					return .Failure(.WriteFailed(dependencyBinariesURL, error))
 				}
 			} else {
 				// The relative path to this dependency's Carthage/Build folder, from
@@ -1023,11 +1023,11 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 				}
 
 				if !NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath, error: &error) {
-					return .failure(.WriteFailed(dependencyBinariesURL, error))
+					return .Failure(.WriteFailed(dependencyBinariesURL, error))
 				}
 			}
 
-			return .success(schemeProducers)
+			return .Success(schemeProducers)
 		}
 		.flatMap(.Merge) { schemeProducers in
 			return schemeProducers
@@ -1102,7 +1102,7 @@ public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<St
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
 	return SignalProducer { observer, disposable in
@@ -1251,17 +1251,17 @@ public func copyProduct(from: NSURL, to: NSURL) -> SignalProducer<NSURL, Carthag
 			// See https://github.com/Carthage/Carthage/issues/591.
 			&& error?.code != NSFileWriteFileExistsError
 		{
-			return .failure(.WriteFailed(to.URLByDeletingLastPathComponent!, error))
+			return .Failure(.WriteFailed(to.URLByDeletingLastPathComponent!, error))
 		}
 
 		if !manager.removeItemAtURL(to, error: &error) && error?.code != NSFileNoSuchFileError {
-			return .failure(.WriteFailed(to, error))
+			return .Failure(.WriteFailed(to, error))
 		}
 
 		if manager.copyItemAtURL(from, toURL: to, error: &error) {
-			return .success(to)
+			return .Success(to)
 		} else {
-			return .failure(.WriteFailed(to, error))
+			return .Failure(.WriteFailed(to, error))
 		}
 	}
 }
@@ -1404,9 +1404,9 @@ private func binaryURL(frameworkURL: NSURL) -> Result<NSURL, CarthageError> {
 	let bundle = NSBundle(path: frameworkURL.path!)
 
 	if let binaryName = bundle?.objectForInfoDictionaryKey("CFBundleExecutable") as? String {
-		return .success(frameworkURL.URLByAppendingPathComponent(binaryName))
+		return .Success(frameworkURL.URLByAppendingPathComponent(binaryName))
 	} else {
-		return .failure(.ReadFailed(frameworkURL, nil))
+		return .Failure(.ReadFailed(frameworkURL, nil))
 	}
 }
 

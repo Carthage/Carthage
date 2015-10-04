@@ -150,7 +150,7 @@ public struct GitHubRepository: Equatable {
 		if let match = NWORegex.firstMatchInString(identifier, options: nil, range: range) {
 			let owner = (identifier as NSString).substringWithRange(match.rangeAtIndex(1))
 			let name = (identifier as NSString).substringWithRange(match.rangeAtIndex(2))
-			return .success(self(owner: owner, name: stripGitSuffix(name)))
+			return .Success(self(owner: owner, name: stripGitSuffix(name)))
 		}
 
 		// GitHub Enterprise
@@ -170,13 +170,13 @@ public struct GitHubRepository: Equatable {
 			// If the host name starts with “github.com”, that is not an enterprise
 			// one.
 			if hostnameWithSubdirectories.hasPrefix(Server.GitHub.hostname) {
-				return .success(self(owner: owner, name: stripGitSuffix(name)))
+				return .Success(self(owner: owner, name: stripGitSuffix(name)))
 			} else {
-				return .success(self(server: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: stripGitSuffix(name)))
+				return .Success(self(server: .Enterprise(scheme: scheme, hostname: hostnameWithSubdirectories), owner: owner, name: stripGitSuffix(name)))
 			}
 		}
 
-		return .failure(CarthageError.ParseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
+		return .Failure(CarthageError.ParseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
 	}
 }
 
@@ -449,9 +449,9 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 					return thisData
 						.attemptMap { data -> Result<AnyObject, CarthageError> in
 							if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
-								return .success(object)
+								return .Success(object)
 							} else {
-								return .failure(.ParseError(description: "Invalid JSON in API error response \(data)"))
+								return .Failure(.ParseError(description: "Invalid JSON in API error response \(data)"))
 							}
 						}
 						.map { (dictionary: AnyObject) -> String in
@@ -465,7 +465,7 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 							return SignalProducer(value: error.description)
 						}
 						.attemptMap { message -> Result<NSData, CarthageError> in
-							return Result.failure(CarthageError.GitHubAPIRequestFailed(message))
+							return Result.Failure(CarthageError.GitHubAPIRequestFailed(message))
 						}
 				}
 				
@@ -491,9 +491,9 @@ internal func releaseForTag(tag: String, repository: GitHubRepository, authoriza
 	return fetchAllPages(NSURL(string: "\(repository.server.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
 		.attemptMap { data -> Result<AnyObject, CarthageError> in
 			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
-				return .success(object)
+				return .Success(object)
 			} else {
-				return .failure(.ParseError(description: "Invalid JSON in releases for tag \(tag)"))
+				return .Failure(.ParseError(description: "Invalid JSON in releases for tag \(tag)"))
 			}
 		}
 		.flatMap(.Concat) { releaseDictionary -> SignalProducer<GitHubRelease, CarthageError> in

@@ -260,10 +260,10 @@ extension NSURL {
 		var error: NSError?
 
 		if self.getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey), let identifier = typeIdentifier as? String {
-			return .success(identifier)
+			return .Success(identifier)
 		}
 
-		return .failure(.ReadFailed(self, error))
+		return .Failure(.ReadFailed(self, error))
 	}
 }
 

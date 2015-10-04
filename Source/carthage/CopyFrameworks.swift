@@ -39,7 +39,7 @@ public struct CopyFrameworksCommand: CommandType {
 				.waitOnCommand()
 
 		case .Usage:
-			return .success(())
+			return .Success(())
 		}
 	}
 }
@@ -49,7 +49,7 @@ private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
 		if codeSigningAllowed() {
 			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY").map { $0 }
 		} else {
-			return .success(nil)
+			return .Success(nil)
 		}
 	}
 }
@@ -77,9 +77,9 @@ private func validArchitectures() -> Result<[String], CarthageError> {
 private func inputFiles() -> SignalProducer<String, CarthageError> {
 	let count: Result<Int, CarthageError> = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT").flatMap { count in
 		if let i = count.toInt() {
-			return .success(i)
+			return .Success(i)
 		} else {
-			return .failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
+			return .Failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
 		}
 	}
 
