@@ -96,7 +96,7 @@ extension SemanticVersion: Scannable {
 
 		let patch = (components.count > 2 ? Int(components[2]) : 0)
 
-		return .Success(self(major: major!, minor: minor ?? 0, patch: patch ?? 0))
+		return .Success(self.init(major: major!, minor: minor ?? 0, patch: patch ?? 0))
 	}
 }
 
@@ -151,7 +151,7 @@ extension PinnedVersion: Scannable {
 			return .Failure(CarthageError.ParseError(description: "unterminated pinned version in line: \(scanner.currentLine)"))
 		}
 
-		return .Success(self(commitish! as String))
+		return .Success(self.init(commitish! as String))
 	}
 }
 
@@ -213,7 +213,7 @@ public enum VersionSpecifier: Equatable {
 
 public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 	switch (lhs, rhs) {
-	case let (.Any, .Any):
+	case (.Any, .Any):
 		return true
 
 	case let (.Exactly(left), .Exactly(right)):
@@ -392,7 +392,7 @@ public func intersection(lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Vers
 public func intersection<S: SequenceType where S.Generator.Element == VersionSpecifier>(specs: S) -> VersionSpecifier? {
 	return specs.reduce(nil) { (left: VersionSpecifier?, right: VersionSpecifier) -> VersionSpecifier? in
 		if let left = left {
-			return intersection(left, rhs: right)
+			return intersection(left, right)
 		} else {
 			return right
 		}
