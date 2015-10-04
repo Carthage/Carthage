@@ -44,7 +44,7 @@ internal func println<T>(object: T) {
 /// A thread-safe version of Swift's standard print().
 internal func print<T>(object: T) {
 	dispatch_async(outputQueue) {
-		Swift.print(object)
+		Swift.print(object, terminator: "")
 	}
 }
 
