@@ -447,7 +447,7 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 				let statusCode = HTTPResponse.statusCode
 				if statusCode > 400 && statusCode < 600 && statusCode != 404 {
 					return thisData
-						|> tryMap { data -> Result<AnyObject, CarthageError> in
+						|> attemptMap { data -> Result<AnyObject, CarthageError> in
 							if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
 								return .success(object)
 							} else {
@@ -464,7 +464,7 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 						|> catch { (error: CarthageError) in
 							return SignalProducer(value: error.description)
 						}
-						|> tryMap { message -> Result<NSData, CarthageError> in
+						|> attemptMap { message -> Result<NSData, CarthageError> in
 							return Result.failure(CarthageError.GitHubAPIRequestFailed(message))
 						}
 				}
@@ -489,7 +489,7 @@ private func fetchAllPages(URL: NSURL, authorizationHeaderValue: String?) -> Sig
 /// complete without sending any values.
 internal func releaseForTag(tag: String, repository: GitHubRepository, authorizationHeaderValue: String?) -> SignalProducer<GitHubRelease, CarthageError> {
 	return fetchAllPages(NSURL(string: "\(repository.server.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
-		|> tryMap { data -> Result<AnyObject, CarthageError> in
+		|> attemptMap { data -> Result<AnyObject, CarthageError> in
 			if let object: AnyObject = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) {
 				return .success(object)
 			} else {

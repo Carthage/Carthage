@@ -210,7 +210,7 @@ public final class Project {
 
 		return cartfile
 			|> zipWith(privateCartfile)
-			|> tryMap { (var cartfile, privateCartfile) -> Result<Cartfile, CarthageError> in
+			|> attemptMap { (var cartfile, privateCartfile) -> Result<Cartfile, CarthageError> in
 				let duplicateDeps = cartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)"]) }
 					+ privateCartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectPrivateCartfilePath)"]) }
 					+ duplicateProjectsInCartfiles(cartfile, privateCartfile).map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]) }
@@ -329,7 +329,7 @@ public final class Project {
 	/// directory checkouts if the given parameter is true.
 	public func updateDependencies(shouldCheckout: Bool = true) -> SignalProducer<(), CarthageError> {
 		return updatedResolvedCartfile()
-			|> tryMap { resolvedCartfile -> Result<(), CarthageError> in
+			|> attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}
 			|> then(shouldCheckout ? checkoutResolvedDependencies() : .empty)
@@ -373,7 +373,7 @@ public final class Project {
 								})
 								|> then(SignalProducer(value: directoryURL))
 						}
-						|> tryMap { (temporaryDirectoryURL: NSURL) -> Result<Bool, CarthageError> in
+						|> attemptMap { (temporaryDirectoryURL: NSURL) -> Result<Bool, CarthageError> in
 							var error: NSError?
 							if NSFileManager.defaultManager().removeItemAtURL(temporaryDirectoryURL, error: &error) {
 								return .success(true)
@@ -665,7 +665,7 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 			return .failure(.ReadFailed(plistURL, error))
 		}
 		|> startOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.platformForInfoPlist"))
-		|> tryMap { (data: NSData) -> Result<AnyObject, CarthageError> in
+		|> attemptMap { (data: NSData) -> Result<AnyObject, CarthageError> in
 			var error: NSError?
 			let options = NSPropertyListReadOptions(NSPropertyListMutabilityOptions.Immutable.rawValue)
 			let plist: AnyObject? = NSPropertyListSerialization.propertyListWithData(data, options: options, format: nil, error: &error)
@@ -674,7 +674,7 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 			}
 			return .failure(.ReadFailed(plistURL, error))
 		}
-		|> tryMap { plist -> Result<[String: AnyObject], CarthageError> in
+		|> attemptMap { plist -> Result<[String: AnyObject], CarthageError> in
 			if let plist = plist as? [String: AnyObject] {
 				return .success(plist)
 			}
@@ -682,7 +682,7 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 		}
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used 
 		// because Xcode 6 and below do not include either in Mac OSX frameworks.
-		|> tryMap { plist -> Result<String, CarthageError> in
+		|> attemptMap { plist -> Result<String, CarthageError> in
 			if let sdkName = plist["DTSDKName"] as? String {
 				return .success(sdkName)
 			}
@@ -691,7 +691,7 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
 		|> map { sdkName in sdkName.stringByTrimmingCharactersInSet(NSCharacterSet.letterCharacterSet().invertedSet) }
-		|> tryMap { platform in SDK.fromString(platform).map { $0.platform } }
+		|> attemptMap { platform in SDK.fromString(platform).map { $0.platform } }
 }
 
 /// Sends the URL to each framework bundle found in the given directory.
@@ -756,7 +756,7 @@ private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> Sig
 
 	return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
 		|> catch { _ in .empty }
-		|> tryMap { Cartfile.fromString($0) }
+		|> attemptMap { Cartfile.fromString($0) }
 }
 
 /// Returns the URL that the project's remote repository exists at.

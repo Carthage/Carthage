@@ -638,7 +638,7 @@ private func mergeExecutables(executableURLs: [NSURL], outputURL: NSURL) -> Sign
 	precondition(outputURL.fileURL)
 
 	return SignalProducer(values: executableURLs)
-		|> tryMap { URL -> Result<String, CarthageError> in
+		|> attemptMap { URL -> Result<String, CarthageError> in
 			if let path = URL.path {
 				return .success(path)
 			} else {

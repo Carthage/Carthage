@@ -174,7 +174,7 @@ public struct Resolver {
 							|> scan(Result<DependencyGraph, CarthageError>.success(inputGraph)) { result, nextGraph in
 								return result.flatMap { previousGraph in mergeGraphs(previousGraph, nextGraph) }
 							}
-							|> tryMap { $0 }
+							|> attemptMap { $0 }
 
 						return SignalProducer(value: inputGraph)
 							|> concat(mergedGraphs)
