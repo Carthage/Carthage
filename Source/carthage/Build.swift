@@ -337,7 +337,7 @@ extension BuildPlatform: CustomStringConvertible {
 			return "tvOS"
 
 		case let .Multiple(buildPlatforms):
-			return ", ".join(buildPlatforms.map { $0.description })
+			return buildPlatforms.map { $0.description }.joinWithSeparator(", ")
 		}
 	}
 }
