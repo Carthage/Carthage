@@ -1095,7 +1095,7 @@ private let signingIdentitiesRegex = try! NSRegularExpression(pattern:
 	),
  options: [])
 
-public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError> = getSecuritySigningIdentities()) -> SignalProducer<CodeSigningIdentity, CarthageError> {
+public func parseSecuritySigningIdentities(securityIdentities securityIdentities: SignalProducer<String, CarthageError> = getSecuritySigningIdentities()) -> SignalProducer<CodeSigningIdentity, CarthageError> {
 	return securityIdentities
 		.map { (identityLine: String) -> CodeSigningIdentity? in
 			let fullRange = NSMakeRange(0, identityLine.characters.count)

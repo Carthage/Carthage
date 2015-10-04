@@ -16,9 +16,9 @@ class CartfileSpec: QuickSpec {
 	override func spec() {
 		it("should parse a Cartfile") {
 			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("TestCartfile", withExtension: "")!
-			let testCartfile = String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
+			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
 
-			let result = Cartfile.fromString(testCartfile!)
+			let result = Cartfile.fromString(testCartfile)
 			expect(result.error).to(beNil())
 
 			let cartfile = result.value!
@@ -55,9 +55,9 @@ class CartfileSpec: QuickSpec {
 
 		it("should parse a Cartfile.resolved") {
 			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("TestCartfile", withExtension: "resolved")!
-			let testCartfile = String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
+			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
 
-			let result = ResolvedCartfile.fromString(testCartfile!)
+			let result = ResolvedCartfile.fromString(testCartfile)
 			expect(result.error).to(beNil())
 
 			let resolvedCartfile = result.value!
@@ -74,9 +74,9 @@ class CartfileSpec: QuickSpec {
 
 		it("should detect duplicate dependencies in a single Cartfile") {
 			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependencies/Cartfile", withExtension: "")!
-			let testCartfile = String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
+			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
 
-			let result = Cartfile.fromString(testCartfile!)
+			let result = Cartfile.fromString(testCartfile)
 			expect(result.error).to(beNil())
 
 			let cartfile = result.value!
@@ -96,13 +96,13 @@ class CartfileSpec: QuickSpec {
 			let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependencies/Cartfile", withExtension: "")!
 			let testCartfile2URL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependencies/Cartfile.private", withExtension: "")!
 
-			let testCartfile = String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
-			let testCartfile2 = String(contentsOfURL: testCartfile2URL, encoding: NSUTF8StringEncoding, error: nil)
+			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
+			let testCartfile2 = try! String(contentsOfURL: testCartfile2URL, encoding: NSUTF8StringEncoding)
 
-			let result = Cartfile.fromString(testCartfile!)
+			let result = Cartfile.fromString(testCartfile)
 			expect(result.error).to(beNil())
 
-			let result2 = Cartfile.fromString(testCartfile2!)
+			let result2 = Cartfile.fromString(testCartfile2)
 			expect(result2.error).to(beNil())
 
 			let cartfile = result.value!
