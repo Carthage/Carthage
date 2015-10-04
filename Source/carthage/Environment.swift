@@ -13,7 +13,7 @@ import Result
 internal func getEnvironmentVariable(variable: String) -> Result<String, CarthageError> {
 	let environment = NSProcessInfo.processInfo().environment
 
-	if let value = environment[variable] as? String {
+	if let value = environment[variable] {
 		return .Success(value)
 	} else {
 		return .Failure(CarthageError.MissingEnvironmentVariable(variable: variable))

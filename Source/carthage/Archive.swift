@@ -23,8 +23,9 @@ public struct ArchiveCommand: CommandType {
 
 				return SignalProducer(values: Platform.supportedPlatforms)
 					.flatMap(.Concat) { platform in
-						let framework = platform.relativePath.stringByAppendingPathComponent(options.frameworkName).stringByAppendingPathExtension("framework")!
-						let dSYM = framework.stringByAppendingPathExtension("dSYM")!
+						let frameworkName = (platform.relativePath as NSString).stringByAppendingPathComponent(options.frameworkName)
+						let framework = (frameworkName as NSString).stringByAppendingPathExtension("framework")!
+						let dSYM = (framework as NSString).stringByAppendingPathExtension("dSYM")!
 						return SignalProducer(values: [framework, dSYM])
 					}
 					.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
@@ -38,7 +39,7 @@ public struct ArchiveCommand: CommandType {
 						}
 
 						let outputPath = (options.outputPath.isEmpty ? "\(options.frameworkName).framework.zip" : options.outputPath)
-						let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)!
+						let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
 
 						return zipIntoArchive(outputURL, paths).on(completed: {
 							carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))

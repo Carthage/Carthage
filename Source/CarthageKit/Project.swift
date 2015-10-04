@@ -331,7 +331,7 @@ public final class Project {
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in Cartfile.resolved, and also in the working
 	/// directory checkouts if the given parameter is true.
-	public func updateDependencies(shouldCheckout: Bool = true) -> SignalProducer<(), CarthageError> {
+	public func updateDependencies(shouldCheckout shouldCheckout: Bool = true) -> SignalProducer<(), CarthageError> {
 		return updatedResolvedCartfile()
 			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)

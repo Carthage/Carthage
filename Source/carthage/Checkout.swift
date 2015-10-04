@@ -62,20 +62,17 @@ public struct CheckoutOptions: OptionsType {
 	/// Attempts to load the project referenced by the options, and configure it
 	/// accordingly.
 	public func loadProject() -> SignalProducer<Project, CarthageError> {
-		if let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true) {
-			let project = Project(directoryURL: directoryURL)
-			project.preferHTTPS = !self.useSSH
-			project.useSubmodules = self.useSubmodules
-			project.useBinaries = self.useBinaries
+		let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true)
+		let project = Project(directoryURL: directoryURL)
+		project.preferHTTPS = !self.useSSH
+		project.useSubmodules = self.useSubmodules
+		project.useBinaries = self.useBinaries
 
-			var eventSink = ProjectEventSink(colorOptions: colorOptions)
-			project.projectEvents.observe(next: { eventSink.put($0) })
+		var eventSink = ProjectEventSink(colorOptions: colorOptions)
+		project.projectEvents.observe(next: { eventSink.put($0) })
 
-			return project.migrateIfNecessary(colorOptions)
-				.on(next: carthage.println)
-				.then(SignalProducer(value: project))
-		} else {
-			return SignalProducer(error: CarthageError.InvalidArgument(description: "Invalid project path: \(directoryPath)"))
-		}
+		return project.migrateIfNecessary(colorOptions)
+			.on(next: carthage.println)
+			.then(SignalProducer(value: project))
 	}
 }

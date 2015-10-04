@@ -22,7 +22,7 @@ public struct CopyFrameworksCommand: CommandType {
 		case .Arguments:
 			return inputFiles()
 				.flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
-					let frameworkName = frameworkPath.lastPathComponent
+					let frameworkName = (frameworkPath as NSString).lastPathComponent
 
 					let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.InvalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
 					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
@@ -61,7 +61,7 @@ private func codeSigningAllowed() -> Bool {
 
 private func frameworksFolder() -> Result<NSURL, CarthageError> {
 	return getEnvironmentVariable("BUILT_PRODUCTS_DIR")
-		.map { NSURL(fileURLWithPath: $0, isDirectory: true)! }
+		.map { NSURL(fileURLWithPath: $0, isDirectory: true) }
 		.flatMap { url -> Result<NSURL, CarthageError> in
 			getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH")
 				.map { url.URLByAppendingPathComponent($0, isDirectory: true) }
@@ -69,14 +69,14 @@ private func frameworksFolder() -> Result<NSURL, CarthageError> {
 }
 
 private func validArchitectures() -> Result<[String], CarthageError> {
-	return getEnvironmentVariable("VALID_ARCHS").map { architectures in
-		split(architectures) { $0 == " " }
+	return getEnvironmentVariable("VALID_ARCHS").map { architectures -> [String] in
+		architectures.componentsSeparatedByString(" ")
 	}
 }
 
 private func inputFiles() -> SignalProducer<String, CarthageError> {
 	let count: Result<Int, CarthageError> = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT").flatMap { count in
-		if let i = count.toInt() {
+		if let i = Int(count) {
 			return .Success(i)
 		} else {
 			return .Failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))

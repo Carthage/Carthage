@@ -30,7 +30,7 @@ public struct BuildCommand: CommandType {
 	public func buildWithOptions(options: BuildOptions) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
 			.flatMap(.Merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
-				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
+				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
 
 				var buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
 					.flatten(.Concat)
@@ -52,7 +52,7 @@ public struct BuildCommand: CommandType {
 							}
 						})
 						.flatMapError { _ in .empty }
-						.then(.empty)
+						.then(SignalProducer<TaskEvent<(ProjectLocator, String)>, NoError>.empty)
 						.promoteErrors(CarthageError.self)
 
 					buildProgress = buildProgress
@@ -156,7 +156,7 @@ public struct BuildCommand: CommandType {
 	/// file.
 	private func openTemporaryFile() -> SignalProducer<(NSFileHandle, NSURL), NSError> {
 		return SignalProducer.attempt {
-			var temporaryDirectoryTemplate: ContiguousArray<CChar> = NSTemporaryDirectory().stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
+			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
 			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
 				return mkstemps(template.baseAddress, 4)
 			}
@@ -170,7 +170,7 @@ public struct BuildCommand: CommandType {
 			}
 
 			let handle = NSFileHandle(fileDescriptor: logFD, closeOnDealloc: true)
-			let fileURL = NSURL.fileURLWithPath(temporaryPath, isDirectory: false)!
+			let fileURL = NSURL.fileURLWithPath(temporaryPath, isDirectory: false)
 			return .Success((handle, fileURL))
 		}
 	}
@@ -185,7 +185,7 @@ public struct BuildCommand: CommandType {
 			return openTemporaryFile()
 				.map { handle, URL in (handle, .Some(URL)) }
 				.mapError { error in
-					let temporaryDirectoryURL = NSURL.fileURLWithPath(NSTemporaryDirectory(), isDirectory: true)!
+					let temporaryDirectoryURL = NSURL.fileURLWithPath(NSTemporaryDirectory(), isDirectory: true)
 					return .WriteFailed(temporaryDirectoryURL, error)
 				}
 		}
@@ -204,7 +204,7 @@ the signing identities available
 
 :returns: A list of SDKs that can be built with the configured signing identities
 */
-public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator, formatting: ColorOptions.Formatting) -> SignalProducer<[SDK], CarthageError> {
+public func buildableSDKs(sdks: [SDK], _ scheme: String, _ configuration: String, _ project: ProjectLocator, _ formatting: ColorOptions.Formatting) -> SignalProducer<[SDK], CarthageError> {
 	var identityCheckArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 	
 	return parseSecuritySigningIdentities()
@@ -298,7 +298,7 @@ public enum BuildPlatform: Equatable {
 			return [ .tvOS ]
 
 		case let .Multiple(buildPlatforms):
-			return reduce(buildPlatforms, []) { (set, buildPlatform) in
+			return buildPlatforms.reduce([]) { (set, buildPlatform) in
 				return set.union(buildPlatform.platforms)
 			}
 		}
@@ -354,7 +354,7 @@ extension BuildPlatform: ArgumentType {
 	]
 
 	public static func fromString(string: String) -> BuildPlatform? {
-		let commaSeparated = split(string, allowEmptySlices: false) { $0 == "," }
+		let commaSeparated = string.characters.split(allowEmptySlices: false) { $0 == "," }.map(String.init)
 
 		let findBuildPlatform: String -> BuildPlatform? = { string in
 			for (key, platform) in self.acceptedStrings {

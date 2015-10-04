@@ -26,7 +26,7 @@ public struct FetchCommand: CommandType {
 					.on(next: { event, _ in
 						eventSink.put(event)
 					})
-					.then(.empty)
+					.then(SignalProducer<(), CarthageError>.empty)
 					.promoteErrors()
 			}
 			.waitOnCommand()
@@ -38,7 +38,7 @@ private struct FetchOptions: OptionsType {
 	let repositoryURL: GitURL
 
 	static func create(colorOptions: ColorOptions)(repositoryURL: GitURL) -> FetchOptions {
-		return self(colorOptions: colorOptions, repositoryURL: repositoryURL)
+		return self.init(colorOptions: colorOptions, repositoryURL: repositoryURL)
 	}
 
 	static func evaluate(m: CommandMode) -> Result<FetchOptions, CommandantError<CarthageError>> {

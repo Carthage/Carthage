@@ -30,7 +30,7 @@ private let outputQueue = { () -> dispatch_queue_t in
 /// A thread-safe version of Swift's standard println().
 internal func println() {
 	dispatch_async(outputQueue) {
-		Swift.println()
+		Swift.print()
 	}
 }
 
@@ -49,7 +49,7 @@ internal func print<T>(object: T) {
 }
 
 /// Wraps CommandantError and adds ErrorType conformance.
-public struct CommandError {
+public struct CommandError: ErrorType {
 	public let error: CommandantError<CarthageError>
 
 	public init(_ error: CommandantError<CarthageError>) {
@@ -63,28 +63,16 @@ extension CommandError: CustomStringConvertible {
 	}
 }
 
-extension CommandError: ErrorType {
-	public var nsError: NSError {
-		switch error {
-		case let .UsageError(description):
-			return NSError(domain: "org.carthage.Carthage", code: 0, userInfo: [
-				NSLocalizedDescriptionKey: description
-			])
-
-		case let .CommandError(commandError):
-			return commandError.value.nsError
-		}
-	}
-}
-
 /// Transforms the error type in a Result.
-internal func mapError<T, E, F>(result: Result<T, E>, transform: E -> F) -> Result<T, F> {
-	switch result {
-	case let .Success(value):
-		return .Success(value)
+extension Result {
+	internal func mapError<F>(transform: Error -> F) -> Result<Value, F> {
+		switch self {
+		case let .Success(value):
+			return .Success(value)
 
-	case let .Failure(error):
-		return .Failure(transform(error))
+		case let .Failure(error):
+			return .Failure(transform(error))
+		}
 	}
 }
 
@@ -131,39 +119,50 @@ extension SignalProducer {
 }
 
 /// Promotes CarthageErrors into CommandErrors.
-internal func promoteErrors<T>(signal: Signal<T, CarthageError>) -> Signal<T, CommandError> {
-	return signal.mapError { (error: CarthageError) -> CommandError in
-		let commandantError = CommandantError.CommandError(error)
-		return CommandError(commandantError)
+extension SignalType where E == CarthageError {
+	internal func promoteErrors() -> Signal<T, CommandError> {
+		return signal.mapError { (error: CarthageError) -> CommandError in
+			let commandantError = CommandantError.CommandError(error)
+			return CommandError(commandantError)
+		}
+	}
+}
+
+/// Promotes CarthageErrors into CommandErrors.
+extension SignalProducerType where E == CarthageError {
+	internal func promoteErrors() -> SignalProducer<T, CommandError> {
+		return lift { $0.promoteErrors() }
 	}
 }
 
 /// Lifts the Result of options parsing into a SignalProducer.
 internal func producerWithOptions<T>(result: Result<T, CommandantError<CarthageError>>) -> SignalProducer<T, CommandError> {
-	let mappedResult = mapError(result) { CommandError($0) }
+	let mappedResult = result.mapError { CommandError($0) }
 	return SignalProducer(result: mappedResult)
 }
 
 /// Waits on a SignalProducer that implements the behavior of a CommandType.
-internal func waitOnCommand<T>(producer: SignalProducer<T, CommandError>) -> Result<(), CommandantError<CarthageError>> {
-	let result = producer
-		.then(SignalProducer<(), CommandError>.empty)
-		.wait()
-	
-	TaskDescription.waitForAllTaskTermination()
-	return mapError(result) { $0.error }
+extension SignalProducerType where E == CommandError {
+	internal func waitOnCommand() -> Result<(), CommandantError<CarthageError>> {
+		let result = producer
+			.then(SignalProducer<(), CommandError>.empty)
+			.wait()
+		
+		TaskDescription.waitForAllTaskTermination()
+		return result.mapError { $0.error }
+	}
 }
 
 extension GitURL: ArgumentType {
 	public static let name = "URL"
 
 	public static func fromString(string: String) -> GitURL? {
-		return self(string)
+		return self.init(string)
 	}
 }
 
 /// Logs project events put into the sink.
-internal struct ProjectEventSink: SinkType {
+internal struct ProjectEventSink {
 	private let colorOptions: ColorOptions
 	
 	init(colorOptions: ColorOptions) {
@@ -216,7 +215,7 @@ extension Project {
 
 		let producers = SignalProducer<SignalProducer<String, CarthageError>, CarthageError> { observer, disposable in
 			let checkFile: (String, String) -> () = { oldName, newName in
-				if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(oldName)) {
+				if fileManager.fileExistsAtPath((directoryPath as NSString).stringByAppendingPathComponent(oldName)) {
 					let producer = SignalProducer(value: migrationMessage)
 						.concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName)
 							.then(.empty))
@@ -231,16 +230,16 @@ extension Project {
 			// Carthage.checkout has to be handled specially, because if it
 			// includes submodules, we need to move them one-by-one to ensure
 			// that .gitmodules is properly updated.
-			if fileManager.fileExistsAtPath(directoryPath.stringByAppendingPathComponent(carthageCheckout)) {
+			if fileManager.fileExistsAtPath((directoryPath as NSString).stringByAppendingPathComponent(carthageCheckout)) {
 				let oldCheckoutsURL = self.directoryURL.URLByAppendingPathComponent(carthageCheckout)
 
-				var error: NSError?
-				if let contents = fileManager.contentsOfDirectoryAtURL(oldCheckoutsURL, includingPropertiesForKeys: nil, options: NSDirectoryEnumerationOptions.SkipsSubdirectoryDescendants | NSDirectoryEnumerationOptions.SkipsPackageDescendants | NSDirectoryEnumerationOptions.SkipsHiddenFiles, error: &error) {
+				do {
+					let contents = try fileManager.contentsOfDirectoryAtURL(oldCheckoutsURL, includingPropertiesForKeys: nil, options: [ .SkipsSubdirectoryDescendants, .SkipsPackageDescendants, .SkipsHiddenFiles])
 					let trashProducer = SignalProducer<(), CarthageError>.attempt {
-						var error: NSError?
-						if fileManager.trashItemAtURL(oldCheckoutsURL, resultingItemURL: nil, error: &error) {
+						do {
+							try fileManager.trashItemAtURL(oldCheckoutsURL, resultingItemURL: nil)
 							return .Success(())
-						} else {
+						} catch let error as NSError {
 							return .Failure(CarthageError.WriteFailed(oldCheckoutsURL, error))
 						}
 					}
@@ -249,7 +248,7 @@ extension Project {
 						.map { (object: AnyObject) in object as! NSURL }
 						.flatMap(.Concat) { (URL: NSURL) -> SignalProducer<NSURL, CarthageError> in
 							let lastPathComponent: String! = URL.lastPathComponent
-							return moveItemInPossibleRepository(self.directoryURL, fromPath: carthageCheckout.stringByAppendingPathComponent(lastPathComponent), toPath: CarthageProjectCheckoutsPath.stringByAppendingPathComponent(lastPathComponent))
+							return moveItemInPossibleRepository(self.directoryURL, fromPath: (carthageCheckout as NSString).stringByAppendingPathComponent(lastPathComponent), toPath: (CarthageProjectCheckoutsPath as NSString).stringByAppendingPathComponent(lastPathComponent))
 						}
 						.then(trashProducer)
 						.then(.empty)
@@ -259,7 +258,7 @@ extension Project {
 							.then(.empty))
 
 					sendNext(observer, producer)
-				} else {
+				} catch let error as NSError {
 					sendError(observer, CarthageError.ReadFailed(oldCheckoutsURL, error))
 					return
 				}
