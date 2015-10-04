@@ -157,7 +157,7 @@ public struct BuildCommand: CommandType {
 	/// Opens a temporary file on disk, returning a handle and the URL to the
 	/// file.
 	private func openTemporaryFile() -> SignalProducer<(NSFileHandle, NSURL), NSError> {
-		return SignalProducer.try {
+		return SignalProducer.attempt {
 			var temporaryDirectoryTemplate: ContiguousArray<CChar> = NSTemporaryDirectory().stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
 			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
 				return mkstemps(template.baseAddress, 4)

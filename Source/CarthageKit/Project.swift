@@ -186,7 +186,7 @@ public final class Project {
 			}
 		}
 
-		let cartfile = SignalProducer.try {
+		let cartfile = SignalProducer.attempt {
 				return Cartfile.fromFile(cartfileURL)
 			}
 			|> catch { error -> SignalProducer<Cartfile, CarthageError> in
@@ -197,7 +197,7 @@ public final class Project {
 				return SignalProducer(error: error)
 			}
 
-		let privateCartfile = SignalProducer.try {
+		let privateCartfile = SignalProducer.attempt {
 				return Cartfile.fromFile(privateCartfileURL)
 			}
 			|> catch { error -> SignalProducer<Cartfile, CarthageError> in
@@ -226,7 +226,7 @@ public final class Project {
 
 	/// Reads the project's Cartfile.resolved.
 	public func loadResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
-		return SignalProducer.try {
+		return SignalProducer.attempt {
 			var error: NSError?
 			let resolvedCartfileContents = NSString(contentsOfURL: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding, error: &error)
 			if let resolvedCartfileContents = resolvedCartfileContents {
@@ -278,7 +278,7 @@ public final class Project {
 			})
 			|> flatMap(.Concat) { versions in SignalProducer(values: versions) }
 
-		return SignalProducer.try {
+		return SignalProducer.attempt {
 				return .success(self.cachedVersions)
 			}
 			|> promoteErrors(CarthageError.self)
@@ -339,7 +339,7 @@ public final class Project {
 	///
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> SignalProducer<Bool, CarthageError> {
-		return SignalProducer.try {
+		return SignalProducer.attempt {
 				return .success(self.useBinaries)
 			}
 			|> flatMap(.Merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
@@ -465,7 +465,7 @@ public final class Project {
 		let repositoryURL = repositoryFileURLForProject(project)
 		let workingDirectoryURL = directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 
-		let checkoutSignal = SignalProducer.try { () -> Result<Submodule?, CarthageError> in
+		let checkoutSignal = SignalProducer.attempt { () -> Result<Submodule?, CarthageError> in
 				var submodule: Submodule?
 
 				if var foundSubmodule = submodulesByPath[project.relativePath] {
@@ -657,7 +657,7 @@ private func infoPlistForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL,
 
 /// Sends the platform specified in the given Info.plist.
 private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, CarthageError> {
-	return SignalProducer.try { () -> Result<NSData, CarthageError> in
+	return SignalProducer.attempt { () -> Result<NSData, CarthageError> in
 			var error: NSError?
 			if let data = NSData(contentsOfURL: plistURL, options: nil, error: &error) {
 				return .success(data)
@@ -784,7 +784,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool) -
 	let fileManager = NSFileManager.defaultManager()
 	let repositoryURL = repositoryFileURLForProject(project)
 
-	return SignalProducer.try { () -> Result<GitURL, CarthageError> in
+	return SignalProducer.attempt { () -> Result<GitURL, CarthageError> in
 			var error: NSError?
 			if !fileManager.createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
 				return .failure(.WriteFailed(CarthageDependencyRepositoriesURL, error))

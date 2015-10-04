@@ -207,7 +207,7 @@ public func contentsOfFileInRepository(repositoryFileURL: NSURL, path: String, r
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
 public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
-	return SignalProducer.try {
+	return SignalProducer.attempt {
 			var error: NSError?
 			if !NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
 				return .failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory", underlyingError: error))
@@ -267,7 +267,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, workingDirect
 			}
 		}
 
-	return SignalProducer.try {
+	return SignalProducer.attempt {
 			var error: NSError?
 			if !NSFileManager.defaultManager().removeItemAtURL(submoduleDirectoryURL, error: &error) {
 				return .failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout", underlyingError: error))

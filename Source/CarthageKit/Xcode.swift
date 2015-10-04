@@ -983,7 +983,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryU
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
 	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platforms: platforms, sdkFilter: sdkFilter)
-	return SignalProducer.try { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
+	return SignalProducer.attempt { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			var error: NSError?
 			if !NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil, error: &error) {
 				return .failure(.WriteFailed(rootBinariesURL, error))
@@ -1269,7 +1269,7 @@ public func copyProduct(from: NSURL, to: NSURL) -> SignalProducer<NSURL, Carthag
 
 /// Strips the given architecture from a framework.
 private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> SignalProducer<(), CarthageError> {
-	return SignalProducer.try { () -> Result<NSURL, CarthageError> in
+	return SignalProducer.attempt { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
 		|> flatMap(.Merge) { binaryURL -> SignalProducer<TaskEvent<NSData>, CarthageError> in
@@ -1282,7 +1282,7 @@ private func stripArchitecture(frameworkURL: NSURL, architecture: String) -> Sig
 
 /// Returns a signal of all architectures present in a given framework.
 public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<String, CarthageError> {
-	return SignalProducer.try { () -> Result<NSURL, CarthageError> in
+	return SignalProducer.attempt { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
 		|> flatMap(.Merge) { binaryURL -> SignalProducer<String, CarthageError> in
@@ -1344,7 +1344,7 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 
 /// Sends a set of UUIDs for each architecture present in the given framework.
 public func UUIDsForFramework(frameworkURL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
-	return SignalProducer.try { () -> Result<NSURL, CarthageError> in
+	return SignalProducer.attempt { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
 		|> flatMap(.Merge, UUIDsFromDwarfdump)
