@@ -6,7 +6,6 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
-import Box
 import Foundation
 import Result
 import ReactiveCocoa
@@ -715,7 +714,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments, forPlatforms: Set
 /// of the input signal, then itself complete.
 private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSettings>, Error>) -> SignalProducer<TaskEvent<[String: BuildSettings]>, Error> {
 	return SignalProducer { observer, disposable in
-		let settings: MutableBox<[String: BuildSettings]> = MutableBox([:])
+		var settings: [String: BuildSettings] = [:]
 
 		producer.startWithSignal { signal, signalDisposable in
 			disposable += signalDisposable
@@ -724,14 +723,14 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 				let transformedEvent = settingsEvent.map { settings in [ settings.target: settings ] }
 
 				if let transformed = transformedEvent.value {
-					settings.value = combineDictionaries(settings.value, transformed)
+					settings = combineDictionaries(settings, rhs: transformed)
 				} else {
 					sendNext(observer, transformedEvent)
 				}
 			}, error: { error in
 				sendError(observer, error)
 			}, completed: {
-				sendNext(observer, .Success(Box(settings.value)))
+				sendNext(observer, .Success(settings))
 				sendCompleted(observer)
 			}, interrupted: {
 				sendInterrupted(observer)
@@ -1212,7 +1211,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 					}
 					.filter { taskEvent in taskEvent.value == nil }
 
-				return BuildSchemeProducer(value: .Success(Box(initialValue)))
+				return BuildSchemeProducer(value: .Success(initialValue))
 					.concat(buildProgress)
 			}
 			.startWithSignal { signal, signalDisposable in

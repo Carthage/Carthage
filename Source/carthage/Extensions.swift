@@ -9,7 +9,6 @@
 // This file contains extensions to anything that's not appropriate for
 // CarthageKit.
 
-import Box
 import CarthageKit
 import Commandant
 import Foundation
@@ -85,7 +84,7 @@ internal func mapError<T, E, F>(result: Result<T, E>, transform: E -> F) -> Resu
 		return .Success(value)
 
 	case let .Failure(error):
-		return .Failure(Box(transform(error.value)))
+		return .Failure(transform(error))
 	}
 }
 
@@ -134,7 +133,7 @@ extension SignalProducer {
 /// Promotes CarthageErrors into CommandErrors.
 internal func promoteErrors<T>(signal: Signal<T, CarthageError>) -> Signal<T, CommandError> {
 	return signal.mapError { (error: CarthageError) -> CommandError in
-		let commandantError = CommandantError.CommandError(Box(error))
+		let commandantError = CommandantError.CommandError(error)
 		return CommandError(commandantError)
 	}
 }

@@ -6,7 +6,6 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
-import Box
 import CarthageKit
 import Commandant
 import Foundation
@@ -90,8 +89,7 @@ public struct BuildCommand: CommandType {
 						case let .StandardError(data):
 							stderrHandle.writeData(data)
 
-						case let .Success(box):
-							let (project, scheme) = box.value
+						case let .Success(project, scheme):
 							carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(string: project.description))
 						}
 					})
