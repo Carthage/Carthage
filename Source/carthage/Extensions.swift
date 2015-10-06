@@ -239,8 +239,8 @@ extension Project {
 						do {
 							try fileManager.trashItemAtURL(oldCheckoutsURL, resultingItemURL: nil)
 							return .Success(())
-						} catch let error as NSError {
-							return .Failure(CarthageError.WriteFailed(oldCheckoutsURL, error))
+						} catch {
+							return .Failure(CarthageError.WriteFailed(oldCheckoutsURL, error as NSError))
 						}
 					}
 
@@ -258,8 +258,8 @@ extension Project {
 							.then(.empty))
 
 					sendNext(observer, producer)
-				} catch let error as NSError {
-					sendError(observer, CarthageError.ReadFailed(oldCheckoutsURL, error))
+				} catch {
+					sendError(observer, CarthageError.ReadFailed(oldCheckoutsURL, error as NSError))
 					return
 				}
 			}

@@ -210,8 +210,8 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDir
 	return SignalProducer.attempt {
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil)
-			} catch let error as NSError {
-				return .Failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory", underlyingError: error))
+			} catch {
+				return .Failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory", underlyingError: error as NSError))
 			}
 
 			var environment = NSProcessInfo.processInfo().environment
@@ -245,8 +245,8 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 			var name: AnyObject?
 			do {
 				try URL.getResourceValue(&name, forKey: NSURLNameKey)
-			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)", underlyingError: error))
+			} catch {
+				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)", underlyingError: error as NSError))
 			}
 
 			if (name as? String) != ".git" {
@@ -259,8 +259,8 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 				if isDirectory == nil {
 					return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: nil))
 				}
-			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: error))
+			} catch {
+				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: error as NSError))
 			}
 
 			if let directory = isDirectory?.boolValue where directory {
@@ -270,16 +270,16 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 			do {
 				try NSFileManager.defaultManager().removeItemAtURL(URL)
 				return .empty
-			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)", underlyingError: error))
+			} catch {
+				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)", underlyingError: error as NSError))
 			}
 		}
 
 	return SignalProducer.attempt {
 			do {
 				try NSFileManager.defaultManager().removeItemAtURL(submoduleDirectoryURL)
-			} catch let error as NSError {
-				return .Failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout", underlyingError: error))
+			} catch {
+				return .Failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout", underlyingError: error as NSError))
 			}
 
 			return .Success(workingDirectoryURL.URLByAppendingPathComponent(submodule.path))
@@ -460,8 +460,8 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, fromPath: Str
 	return SignalProducer<(), CarthageError>.attempt {
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil)
-			} catch let error as NSError {
-				return .Failure(CarthageError.WriteFailed(parentDirectoryURL, error))
+			} catch {
+				return .Failure(CarthageError.WriteFailed(parentDirectoryURL, error as NSError))
 			}
 
 			return .Success(())
@@ -478,8 +478,8 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, fromPath: Str
 				do {
 					try NSFileManager.defaultManager().moveItemAtURL(fromURL, toURL: toURL)
 					return SignalProducer(value: toURL)
-				} catch let error as NSError {
-					return SignalProducer(error: .WriteFailed(toURL, error))
+				} catch {
+					return SignalProducer(error: .WriteFailed(toURL, error as NSError))
 				}
 			}
 		}
