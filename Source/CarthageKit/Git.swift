@@ -188,7 +188,9 @@ public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, Carthag
 						stop.memory = true
 					}
 
-					sendNext(observer, line!)
+					if let line = line {
+						sendNext(observer, line)
+					}
 				}
 
 				sendCompleted(observer)
