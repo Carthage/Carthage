@@ -118,8 +118,8 @@ extension SignalProducerType {
 	}
 }
 
-/// Promotes CarthageErrors into CommandErrors.
 extension SignalType where E == CarthageError {
+	/// Promotes CarthageErrors into CommandErrors.
 	internal func promoteErrors() -> Signal<T, CommandError> {
 		return signal.mapError { (error: CarthageError) -> CommandError in
 			let commandantError = CommandantError.CommandError(error)
@@ -128,8 +128,8 @@ extension SignalType where E == CarthageError {
 	}
 }
 
-/// Promotes CarthageErrors into CommandErrors.
 extension SignalProducerType where E == CarthageError {
+	/// Promotes CarthageErrors into CommandErrors.
 	internal func promoteErrors() -> SignalProducer<T, CommandError> {
 		return lift { $0.promoteErrors() }
 	}
@@ -141,8 +141,8 @@ internal func producerWithOptions<T>(result: Result<T, CommandantError<CarthageE
 	return SignalProducer(result: mappedResult)
 }
 
-/// Waits on a SignalProducer that implements the behavior of a CommandType.
 extension SignalProducerType where E == CommandError {
+	/// Waits on a SignalProducer that implements the behavior of a CommandType.
 	internal func waitOnCommand() -> Result<(), CommandantError<CarthageError>> {
 		let result = producer
 			.then(SignalProducer<(), CommandError>.empty)

@@ -81,9 +81,9 @@ extension SignalProducerType {
 	}
 }
 
-/// Sends each value that occurs on `signal` combined with each value that
-/// occurs on `otherSignal` (repeats included).
 extension SignalType {
+	/// Sends each value that occurs on `signal` combined with each value that
+	/// occurs on `otherSignal` (repeats included).
 	internal func permuteWith<U>(otherSignal: Signal<U, E>) -> Signal<(T, U), E> {
 		return Signal { observer in
 			let lock = NSLock()
@@ -149,17 +149,17 @@ extension SignalType {
 	}
 }
 
-/// Sends each value that occurs on `producer` combined with each value that
-/// occurs on `otherProducer` (repeats included).
 extension SignalProducerType {
+	/// Sends each value that occurs on `producer` combined with each value that
+	/// occurs on `otherProducer` (repeats included).
 	internal func permuteWith<U>(otherProducer: SignalProducer<U, E>) -> SignalProducer<(T, U), E> {
 		return lift { signal in { $0.permuteWith(signal) } }(otherProducer)
 	}
 }
 
-/// Dematerializes the signal, like dematerialize(), but only yields inner Error
-/// events if no values were sent.
 extension SignalType where T: EventType, T.E == E {
+	/// Dematerializes the signal, like dematerialize(), but only yields inner
+	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> Signal<T.T, E> {
 		return Signal { observer in
 			var receivedValue = false
@@ -196,9 +196,9 @@ extension SignalType where T: EventType, T.E == E {
 	}
 }
 
-/// Dematerializes the producer, like dematerialize(), but only yields inner Error
-/// events if no values were sent.
 extension SignalProducerType where T: EventType, T.E == E {
+	/// Dematerializes the producer, like dematerialize(), but only yields inner
+	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> SignalProducer<T.T, E> {
 		return lift { $0.dematerializeErrorsIfEmpty() }
 	}

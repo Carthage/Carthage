@@ -52,8 +52,8 @@ internal final class ProducerQueue {
 	}
 }
 
-/// Shorthand for enqueuing the given producer upon the given queue.
 extension SignalProducerType {
+	/// Shorthand for enqueuing the given producer upon the given queue.
 	internal func startOnQueue(queue: ProducerQueue) -> SignalProducer<T, E> {
 		return queue.enqueue(self.producer)
 	}
