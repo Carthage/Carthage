@@ -18,35 +18,36 @@ public struct ArchiveCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(ArchiveOptions.evaluate(mode))
-			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
+			.flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				let formatting = options.colorOptions.formatting
 
 				return SignalProducer(values: Platform.supportedPlatforms)
-					|> flatMap(.Concat) { platform in
-						let framework = platform.relativePath.stringByAppendingPathComponent(options.frameworkName).stringByAppendingPathExtension("framework")!
-						let dSYM = framework.stringByAppendingPathExtension("dSYM")!
+					.flatMap(.Concat) { platform in
+						let frameworkName = (platform.relativePath as NSString).stringByAppendingPathComponent(options.frameworkName)
+						let framework = (frameworkName as NSString).stringByAppendingPathExtension("framework")!
+						let dSYM = (framework as NSString).stringByAppendingPathExtension("dSYM")!
 						return SignalProducer(values: [framework, dSYM])
 					}
-					|> filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
-					|> on(next: { path in
+					.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+					.on(next: { path in
 						carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
 					})
-					|> collect
-					|> flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
+					.collect()
+					.flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
 						if paths.isEmpty {
 							return SignalProducer(error: CarthageError.InvalidArgument(description: "Could not find any copies of \(options.frameworkName).framework. Make sure you're in the project’s root and that the framework has already been built using 'carthage build --no-skip-current'."))
 						}
 
 						let outputPath = (options.outputPath.isEmpty ? "\(options.frameworkName).framework.zip" : options.outputPath)
-						let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)!
+						let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
 
-						return zipIntoArchive(outputURL, paths) |> on(completed: {
+						return zipIntoArchive(outputURL, paths).on(completed: {
 							carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
 						})
 					}
-					|> promoteErrors
+					.promoteErrors()
 			}
-			|> waitOnCommand
+			.waitOnCommand()
 	}
 }
 
@@ -56,7 +57,7 @@ private struct ArchiveOptions: OptionsType {
 	let colorOptions: ColorOptions
 
 	static func create(outputPath: String)(colorOptions: ColorOptions)(frameworkName: String) -> ArchiveOptions {
-		return self(frameworkName: frameworkName, outputPath: outputPath, colorOptions: colorOptions)
+		return self.init(frameworkName: frameworkName, outputPath: outputPath, colorOptions: colorOptions)
 	}
 
 	static func evaluate(m: CommandMode) -> Result<ArchiveOptions, CommandantError<CarthageError>> {

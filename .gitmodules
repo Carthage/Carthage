@@ -22,12 +22,6 @@
 [submodule "Carthage/Checkouts/PrettyColors"]
 	path = Carthage/Checkouts/PrettyColors
 	url = https://github.com/jdhealy/PrettyColors.git
-[submodule "Carthage/Checkouts/Box"]
-	path = Carthage/Checkouts/Box
-	url = https://github.com/robrix/Box.git
 [submodule "Carthage/Checkouts/Result"]
 	path = Carthage/Checkouts/Result
 	url = https://github.com/antitypical/Result.git
-[submodule "Carthage/Checkouts/Runes"]
-	path = Carthage/Checkouts/Runes
-	url = https://github.com/thoughtbot/Runes.git

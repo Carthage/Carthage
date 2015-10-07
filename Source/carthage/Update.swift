@@ -18,13 +18,13 @@ public struct UpdateCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(UpdateOptions.evaluate(mode))
-			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
+			.flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				return options.loadProject()
-					|> flatMap(.Merge) { $0.updateDependencies(shouldCheckout: options.checkoutAfterUpdate) }
-					|> then(options.buildProducer)
-					|> promoteErrors
+					.flatMap(.Merge) { $0.updateDependencies(shouldCheckout: options.checkoutAfterUpdate) }
+					.then(options.buildProducer)
+					.promoteErrors()
 			}
-			|> waitOnCommand
+			.waitOnCommand()
 	}
 }
 
@@ -54,7 +54,7 @@ public struct UpdateOptions: OptionsType {
 	}
 
 	public static func create(configuration: String)(buildPlatform: BuildPlatform)(verbose: Bool)(checkoutAfterUpdate: Bool)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
-		return self(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions)
+		return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<UpdateOptions, CommandantError<CarthageError>> {
@@ -71,7 +71,7 @@ public struct UpdateOptions: OptionsType {
 	/// accordingly.
 	public func loadProject() -> SignalProducer<Project, CarthageError> {
 		return checkoutOptions.loadProject()
-			|> on(next: { project in
+			.on(next: { project in
 				// Never check out binaries if we're skipping the build step,
 				// because that means users may need the repository checkout.
 				if !self.buildAfterUpdate {

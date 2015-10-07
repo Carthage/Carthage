@@ -17,7 +17,7 @@ class ProjectSpec: QuickSpec {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("CartfilePrivateOnly", withExtension: nil)!
 
 		it("should load a combined Cartfile when only a Cartfile.private is present") {
-			let result = Project(directoryURL: directoryURL).loadCombinedCartfile() |> single
+			let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 			expect(result).notTo(beNil())
 			expect(result?.value).notTo(beNil())
 
@@ -28,7 +28,7 @@ class ProjectSpec: QuickSpec {
 
         it("should detect duplicate dependencies across Cartfile and Cartfile.private") {
             let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependencies", withExtension: nil)!
-            let result = Project(directoryURL: directoryURL).loadCombinedCartfile() |> single
+            let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 			expect(result).notTo(beNil())
 
 			let resultError = result?.error

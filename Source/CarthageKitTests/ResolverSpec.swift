@@ -15,16 +15,16 @@ import ReactiveCocoa
 class ResolverSpec: QuickSpec {
 	private func loadTestCartfile(name: String) -> Cartfile {
 		let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource(name, withExtension: "")!
-		let testCartfile = String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding, error: nil)
+		let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
 
-		return Cartfile.fromString(testCartfile!).value!
+		return Cartfile.fromString(testCartfile).value!
 	}
 
 	private func orderedDependencies(resolver: Resolver, fromCartfile cartfile: Cartfile) -> [[String: PinnedVersion]] {
 		let result = resolver.resolveDependenciesInCartfile(cartfile)
-			|> map { [ $0.project.name: $0.version ] }
-			|> collect
-			|> first
+			.map { [ $0.project.name: $0.version ] }
+			.collect()
+			.first()
 
 		expect(result).notTo(beNil())
 		expect(result?.error).to(beNil())

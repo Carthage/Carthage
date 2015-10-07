@@ -18,17 +18,17 @@ public struct CheckoutCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(CheckoutOptions.evaluate(mode))
-			|> flatMap(.Merge) { options in
+			.flatMap(.Merge) { options in
 				return self.checkoutWithOptions(options)
-					|> promoteErrors
+					.promoteErrors()
 			}
-			|> waitOnCommand
+			.waitOnCommand()
 	}
 
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: CheckoutOptions) -> SignalProducer<(), CarthageError> {
 		return options.loadProject()
-			|> flatMap(.Merge) { $0.checkoutResolvedDependencies() }
+			.flatMap(.Merge) { $0.checkoutResolvedDependencies() }
 	}
 }
 
@@ -43,7 +43,7 @@ public struct CheckoutOptions: OptionsType {
 		// Disable binary downloads when using submodules.
 		// See https://github.com/Carthage/Carthage/issues/419.
 		let shouldUseBinaries = useSubmodules ? false : useBinaries
-		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: shouldUseBinaries, colorOptions: colorOptions)
+		return self.init(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: shouldUseBinaries, colorOptions: colorOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions, CommandantError<CarthageError>> {
@@ -62,20 +62,17 @@ public struct CheckoutOptions: OptionsType {
 	/// Attempts to load the project referenced by the options, and configure it
 	/// accordingly.
 	public func loadProject() -> SignalProducer<Project, CarthageError> {
-		if let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true) {
-			let project = Project(directoryURL: directoryURL)
-			project.preferHTTPS = !self.useSSH
-			project.useSubmodules = self.useSubmodules
-			project.useBinaries = self.useBinaries
+		let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true)
+		let project = Project(directoryURL: directoryURL)
+		project.preferHTTPS = !self.useSSH
+		project.useSubmodules = self.useSubmodules
+		project.useBinaries = self.useBinaries
 
-			var eventSink = ProjectEventSink(colorOptions: colorOptions)
-			project.projectEvents.observe(next: { eventSink.put($0) })
+		var eventSink = ProjectEventSink(colorOptions: colorOptions)
+		project.projectEvents.observe(next: { eventSink.put($0) })
 
-			return project.migrateIfNecessary(colorOptions)
-				|> on(next: carthage.println)
-				|> then(SignalProducer(value: project))
-		} else {
-			return SignalProducer(error: CarthageError.InvalidArgument(description: "Invalid project path: \(directoryPath)"))
-		}
+		return project.migrateIfNecessary(colorOptions)
+			.on(next: carthage.println)
+			.then(SignalProducer(value: project))
 	}
 }

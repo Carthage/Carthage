@@ -21,35 +21,35 @@ public struct CopyFrameworksCommand: CommandType {
 		switch mode {
 		case .Arguments:
 			return inputFiles()
-				|> flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
-					let frameworkName = frameworkPath.lastPathComponent
+				.flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
+					let frameworkName = (frameworkPath as NSString).lastPathComponent
 
 					let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.InvalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
 					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
 					return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
-						|> flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
+						.flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
 							return combineLatest(copyProduct(source, target), codeSigningIdentity())
-								|> flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
+								.flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
 									return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 								}
 						}
 				}
-				|> promoteErrors
-				|> waitOnCommand
+				.promoteErrors()
+				.waitOnCommand()
 
 		case .Usage:
-			return .success(())
+			return .Success(())
 		}
 	}
 }
 
 private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
-	return SignalProducer.try {
+	return SignalProducer.attempt {
 		if codeSigningAllowed() {
 			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY").map { $0.isEmpty ? nil : $0 }
 		} else {
-			return .success(nil)
+			return .Success(nil)
 		}
 	}
 }
@@ -61,7 +61,7 @@ private func codeSigningAllowed() -> Bool {
 
 private func frameworksFolder() -> Result<NSURL, CarthageError> {
 	return getEnvironmentVariable("BUILT_PRODUCTS_DIR")
-		.map { NSURL(fileURLWithPath: $0, isDirectory: true)! }
+		.map { NSURL(fileURLWithPath: $0, isDirectory: true) }
 		.flatMap { url -> Result<NSURL, CarthageError> in
 			getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH")
 				.map { url.URLByAppendingPathComponent($0, isDirectory: true) }
@@ -69,27 +69,27 @@ private func frameworksFolder() -> Result<NSURL, CarthageError> {
 }
 
 private func validArchitectures() -> Result<[String], CarthageError> {
-	return getEnvironmentVariable("VALID_ARCHS").map { architectures in
-		split(architectures) { $0 == " " }
+	return getEnvironmentVariable("VALID_ARCHS").map { architectures -> [String] in
+		architectures.componentsSeparatedByString(" ")
 	}
 }
 
 private func inputFiles() -> SignalProducer<String, CarthageError> {
 	let count: Result<Int, CarthageError> = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT").flatMap { count in
-		if let i = count.toInt() {
-			return .success(i)
+		if let i = Int(count) {
+			return .Success(i)
 		} else {
-			return .failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
+			return .Failure(.InvalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
 		}
 	}
 
 	return SignalProducer(result: count)
-		|> flatMap(.Merge) { count -> SignalProducer<String, CarthageError> in
+		.flatMap(.Merge) { count -> SignalProducer<String, CarthageError> in
 			let variables = (0..<count).map { index -> SignalProducer<String, CarthageError> in
 				return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
 			}
 
 			return SignalProducer(values: variables)
-				|> flatten(.Concat)
+				.flatten(.Concat)
 		}
 }

@@ -6,7 +6,6 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
-import Box
 import CarthageKit
 import Commandant
 import Foundation
@@ -20,21 +19,21 @@ public struct BuildCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(BuildOptions.evaluate(mode))
-			|> flatMap(.Merge) { options in
+			.flatMap(.Merge) { options in
 				return self.buildWithOptions(options)
-					|> promoteErrors
+					.promoteErrors()
 			}
-			|> waitOnCommand
+			.waitOnCommand()
 	}
 
 	/// Builds a project with the given options.
 	public func buildWithOptions(options: BuildOptions) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
-			|> flatMap(.Merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
-				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)!
+			.flatMap(.Merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
+				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
 
 				var buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
-					|> flatten(.Concat)
+					.flatten(.Concat)
 
 				let stderrHandle = NSFileHandle.fileHandleWithStandardError()
 
@@ -43,7 +42,7 @@ public struct BuildCommand: CommandType {
 				if !options.verbose {
 					let (stdoutProducer, stdoutSink) = SignalProducer<NSData, NoError>.buffer(0)
 					let grepTask: BuildSchemeProducer = launchTask(TaskDescription(launchPath: "/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ], standardInput: stdoutProducer))
-						|> on(next: { taskEvent in
+						.on(next: { taskEvent in
 							switch taskEvent {
 							case let .StandardOutput(data):
 								stderrHandle.writeData(data)
@@ -52,12 +51,12 @@ public struct BuildCommand: CommandType {
 								break
 							}
 						})
-						|> catch { _ in .empty }
-						|> then(.empty)
-						|> promoteErrors(CarthageError.self)
+						.flatMapError { _ in .empty }
+						.then(SignalProducer<TaskEvent<(ProjectLocator, String)>, NoError>.empty)
+						.promoteErrors(CarthageError.self)
 
 					buildProgress = buildProgress
-						|> on(next: { taskEvent in
+						.on(next: { taskEvent in
 							switch taskEvent {
 							case let .StandardOutput(data):
 								sendNext(stdoutSink, data)
@@ -72,13 +71,13 @@ public struct BuildCommand: CommandType {
 						})
 
 					buildProgress = SignalProducer(values: [ grepTask, buildProgress ])
-						|> flatten(.Merge)
+						.flatten(.Merge)
 				}
 
 				let formatting = options.colorOptions.formatting
 
 				return buildProgress
-					|> on(started: {
+					.on(started: {
 						if let path = temporaryURL?.path {
 							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: path))
 						}
@@ -90,12 +89,11 @@ public struct BuildCommand: CommandType {
 						case let .StandardError(data):
 							stderrHandle.writeData(data)
 
-						case let .Success(box):
-							let (project, scheme) = box.value
+						case let .Success(project, scheme):
 							carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(string: project.description))
 						}
 					})
-					|> then(.empty)
+					.then(.empty)
 			}
 	}
 
@@ -107,7 +105,7 @@ public struct BuildCommand: CommandType {
 
 		let sdkFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
 			let result = buildableSDKs(sdks, scheme, configuration, project, options.colorOptions.formatting)
-				|> first
+				.first()
 			
 			return result!
 		}
@@ -116,8 +114,8 @@ public struct BuildCommand: CommandType {
 		project.projectEvents.observe(next: { eventSink.put($0) })
 
 		let buildProducer = project.loadCombinedCartfile()
-			|> map { _ in project }
-			|> catch { error in
+			.map { _ in project }
+			.flatMapError { error in
 				if options.skipCurrent {
 					return SignalProducer(error: error)
 				} else {
@@ -126,12 +124,12 @@ public struct BuildCommand: CommandType {
 					return .empty
 				}
 			}
-			|> flatMap(.Merge) { project in
+			.flatMap(.Merge) { project in
 				return project.migrateIfNecessary(options.colorOptions)
-					|> on(next: carthage.println)
-					|> then(SignalProducer(value: project))
+					.on(next: carthage.println)
+					.then(SignalProducer(value: project))
 			}
-			|> flatMap(.Merge) { project in
+			.flatMap(.Merge) { project in
 				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms, sdkFilter: sdkFilter)
 			}
 
@@ -139,7 +137,7 @@ public struct BuildCommand: CommandType {
 			return buildProducer
 		} else {
 			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms, sdkFilter: sdkFilter)
-				|> catch { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
+				.flatMapError { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
 					switch error {
 					case let .NoSharedFrameworkSchemes(project, _):
 						// Log that building the current project is being skipped.
@@ -150,21 +148,21 @@ public struct BuildCommand: CommandType {
 						return SignalProducer(error: error)
 					}
 				}
-			return buildProducer |> concat(currentProducers)
+			return buildProducer.concat(currentProducers)
 		}
 	}
 
 	/// Opens a temporary file on disk, returning a handle and the URL to the
 	/// file.
 	private func openTemporaryFile() -> SignalProducer<(NSFileHandle, NSURL), NSError> {
-		return SignalProducer.try {
-			var temporaryDirectoryTemplate: ContiguousArray<CChar> = NSTemporaryDirectory().stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
+		return SignalProducer.attempt {
+			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
 			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
 				return mkstemps(template.baseAddress, 4)
 			}
 
 			if logFD < 0 {
-				return .failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
+				return .Failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
 			}
 
 			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
@@ -172,8 +170,8 @@ public struct BuildCommand: CommandType {
 			}
 
 			let handle = NSFileHandle(fileDescriptor: logFD, closeOnDealloc: true)
-			let fileURL = NSURL.fileURLWithPath(temporaryPath, isDirectory: false)!
-			return .success((handle, fileURL))
+			let fileURL = NSURL.fileURLWithPath(temporaryPath, isDirectory: false)
+			return .Success((handle, fileURL))
 		}
 	}
 
@@ -185,9 +183,9 @@ public struct BuildCommand: CommandType {
 			return SignalProducer(value: out)
 		} else {
 			return openTemporaryFile()
-				|> map { handle, URL in (handle, .Some(URL)) }
-				|> mapError { error in
-					let temporaryDirectoryURL = NSURL.fileURLWithPath(NSTemporaryDirectory(), isDirectory: true)!
+				.map { handle, URL in (handle, .Some(URL)) }
+				.mapError { error in
+					let temporaryDirectoryURL = NSURL.fileURLWithPath(NSTemporaryDirectory(), isDirectory: true)
 					return .WriteFailed(temporaryDirectoryURL, error)
 				}
 		}
@@ -206,21 +204,21 @@ the signing identities available
 
 :returns: A list of SDKs that can be built with the configured signing identities
 */
-public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator, formatting: ColorOptions.Formatting) -> SignalProducer<[SDK], CarthageError> {
+public func buildableSDKs(sdks: [SDK], _ scheme: String, _ configuration: String, _ project: ProjectLocator, _ formatting: ColorOptions.Formatting) -> SignalProducer<[SDK], CarthageError> {
 	var identityCheckArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 	
 	return parseSecuritySigningIdentities()
-		|> collect
-		|> flatMap(.Concat) { identities in
-			return SignalProducer(values: sdks) |> map { ($0, identities) }
+		.collect()
+		.flatMap(.Concat) { identities in
+			return SignalProducer(values: sdks).map { ($0, identities) }
 		}
-		|> flatMap(.Concat) { (sdk: SDK, signingIdentities: [CodeSigningIdentity]) -> SignalProducer<SDK, CarthageError> in
+		.flatMap(.Concat) { (sdk: SDK, signingIdentities: [CodeSigningIdentity]) -> SignalProducer<SDK, CarthageError> in
 			let availableIdentities = Set(signingIdentities)
 			
 			identityCheckArgs.sdk = sdk
 			
 			return BuildSettings.loadWithArguments(identityCheckArgs)
-				|> filter { settings -> Bool in
+				.filter { settings -> Bool in
 					if let configuredSigningIdentity = settings["CODE_SIGN_IDENTITY"].value
 						where !availableIdentities.contains(configuredSigningIdentity) {
 							let quotedSDK = formatting.quote(sdk.rawValue)
@@ -232,10 +230,10 @@ public func buildableSDKs(sdks: [SDK], scheme: String, configuration: String, pr
 					}
 					return true
 				}
-				|> map { _ in sdk }
-				|> take(1)
+				.map { _ in sdk }
+				.take(1)
 		}
-		|> collect
+		.collect()
 }
 
 public struct BuildOptions: OptionsType {
@@ -247,7 +245,7 @@ public struct BuildOptions: OptionsType {
 	public let directoryPath: String
 
 	public static func create(configuration: String)(buildPlatform: BuildPlatform)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
-		return self(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+		return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
@@ -300,7 +298,7 @@ public enum BuildPlatform: Equatable {
 			return [ .tvOS ]
 
 		case let .Multiple(buildPlatforms):
-			return reduce(buildPlatforms, []) { (set, buildPlatform) in
+			return buildPlatforms.reduce([]) { (set, buildPlatform) in
 				return set.union(buildPlatform.platforms)
 			}
 		}
@@ -320,7 +318,7 @@ public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
 	}
 }
 
-extension BuildPlatform: Printable {
+extension BuildPlatform: CustomStringConvertible {
 	public var description: String {
 		switch self {
 		case .All:
@@ -339,7 +337,7 @@ extension BuildPlatform: Printable {
 			return "tvOS"
 
 		case let .Multiple(buildPlatforms):
-			return ", ".join(buildPlatforms.map { $0.description })
+			return buildPlatforms.map { $0.description }.joinWithSeparator(", ")
 		}
 	}
 }
@@ -356,7 +354,7 @@ extension BuildPlatform: ArgumentType {
 	]
 
 	public static func fromString(string: String) -> BuildPlatform? {
-		let commaSeparated = split(string, allowEmptySlices: false) { $0 == "," }
+		let commaSeparated = string.characters.split(allowEmptySlices: false) { $0 == "," }.map(String.init)
 
 		let findBuildPlatform: String -> BuildPlatform? = { string in
 			for (key, platform) in self.acceptedStrings {

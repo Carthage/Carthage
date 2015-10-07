@@ -20,9 +20,9 @@ public struct BootstrapCommand: CommandType {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
 		// `update` flags.
 		return producerWithOptions(UpdateOptions.evaluate(mode))
-			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
+			.flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				return options.loadProject()
-					|> flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
+					.flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
 						if !NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
 							let formatting = options.checkoutOptions.colorOptions.formatting
 							carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
@@ -35,9 +35,9 @@ public struct BootstrapCommand: CommandType {
 							return .empty
 						}
 					}
-					|> then(options.buildProducer)
-					|> promoteErrors
+					.then(options.buildProducer)
+					.promoteErrors()
 			}
-			|> waitOnCommand
+			.waitOnCommand()
 	}
 }
