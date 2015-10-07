@@ -296,7 +296,7 @@ extension VersionSpecifier: VersionType {}
 
 extension VersionSpecifier: Printable {
 	public var description: String {
-		switch (self) {
+		switch self {
 		case .Any:
 			return ""
 

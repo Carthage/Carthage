@@ -399,7 +399,10 @@ public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError
 	}
 
 	return launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: directoryURL)
-		|> map { _ in true }
+		|> map { gitDirectory in
+			var isDirectory: ObjCBool = false
+			return NSFileManager.defaultManager().fileExistsAtPath(gitDirectory, isDirectory: &isDirectory) && isDirectory
+		}
 		|> catch { _ in SignalProducer(value: false) }
 }
 
@@ -411,7 +414,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, submodule: Submod
 	return isGitRepository(submoduleDirectoryURL)
 		|> promoteErrors(CarthageError.self)
 		|> flatMap(.Merge) { submoduleExists in
-			if (submoduleExists) {
+			if submoduleExists {
 				// Just check out and stage the correct revision.
 				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
 					|> then(launchGitTask([ "config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.URL.URLString ], repositoryFileURL: repositoryFileURL))

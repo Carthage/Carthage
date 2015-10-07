@@ -249,23 +249,23 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		// xcodebuild has a bug where xcodebuild -list can sometimes hang
 		// indefinitely on projects that don't share any schemes, so
 		// automatically bail out if it looks like that's happening.
-		|> timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 8, onScheduler: QueueScheduler())
+		|> timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 15, onScheduler: QueueScheduler())
 		|> map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
 /// Represents a platform to build for.
-public enum Platform {
+public enum Platform: String {
 	/// Mac OS X.
-	case Mac
+	case Mac = "Mac"
 
 	/// iOS for device and simulator.
-	case iOS
+	case iOS = "iOS"
 
 	/// Apple Watch device and simulator.
-	case watchOS
+	case watchOS = "watchOS"
 
 	/// Apple TV device and simulator.
-	case tvOS
+	case tvOS = "tvOS"
 
 	/// All supported build platforms.
 	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS, .tvOS ]
@@ -273,22 +273,7 @@ public enum Platform {
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
 	public var relativePath: String {
-		let subfolderName: String
-
-		switch self {
-		case .Mac:
-			subfolderName = "Mac"
-
-		case .iOS:
-			subfolderName = "iOS"
-
-		case .watchOS:
-			subfolderName = "watchOS"
-
-		case .tvOS:
-			subfolderName = "tvOS"
-		}
-
+		let subfolderName = rawValue
 		return CarthageBinariesFolderPath.stringByAppendingPathComponent(subfolderName)
 	}
 
@@ -313,19 +298,7 @@ public enum Platform {
 // TODO: this won't be necessary anymore with Swift 2.
 extension Platform: Printable {
 	public var description: String {
-		switch self {
-		case .Mac:
-			return "Mac"
-
-		case .iOS:
-			return "iOS"
-
-		case .watchOS:
-			return "watchOS"
-
-		case .tvOS:
-			return "tvOS"
-		}
+		return rawValue
 	}
 }
 
@@ -354,7 +327,7 @@ public enum SDK: String {
 
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
-		return Result(self(rawValue: string), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
+		return Result(self(rawValue: string.lowercaseString), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
 	}
 
 	/// The platform that this SDK targets.
@@ -812,13 +785,13 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 
 
 /// A callback function used to determine whether or not an SDK should be built
-public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator) -> [SDK]
+public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator) -> Result<[SDK], CarthageError>
 
 /// Builds one scheme of the given project, for all supported SDKs.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, #workingDirectoryURL: NSURL, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
@@ -892,33 +865,47 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		|> collect
-		|> flatMap(.Concat) { (schemeSDKList: [SDK]) in
-			let platform: Platform! = schemeSDKList.first?.platform
-			
-			if platform == nil {
+		|> reduce([:]) { (var sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
+			let platform = sdk.platform
+
+			if var sdks = sdksByPlatform[platform] {
+				sdks.append(sdk)
+				sdksByPlatform.updateValue(sdks, forKey: platform)
+			} else {
+				sdksByPlatform[platform] = [ sdk ]
+			}
+
+			return sdksByPlatform
+		}
+		|> flatMap(.Concat) { sdksByPlatform -> SignalProducer<(Platform, [SDK]), CarthageError> in
+			if sdksByPlatform.isEmpty {
 				fatalError("No SDKs found for scheme \(scheme)")
 			}
-			
+
+			let values = map(sdksByPlatform) { ($0, $1) }
+			return SignalProducer(values: values)
+		}
+		|> flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
+			let filterResult = sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
+			return SignalProducer(result: filterResult.map { (platform, $0) })
+		}
+		|> filter { _, sdks in
+			return !sdks.isEmpty
+		}
+		|> flatMap(.Concat) { platform, sdks in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
-			
-			let sdksToBuild = sdkFilter(sdks: schemeSDKList, scheme: scheme, configuration: configuration, project: project)
-			
+
 			// TODO: Generalize this further?
-			switch sdksToBuild.count {
-			case 0:
-				let isMissingSigningIdentities = !schemeSDKList.isEmpty
-				let identityAddendum = isMissingSigningIdentities ? " (you're missing one or more signing identities)" : ""
-				fatalError("No valid SDKs found to build\(identityAddendum)")
+			switch sdks.count {
 			case 1:
-				return buildSDK(sdksToBuild[0])
+				return buildSDK(sdks[0])
 					|> flatMapTaskEvents(.Merge) { settings in
 						return copyBuildProductIntoDirectory(folderURL, settings)
 					}
 
 			case 2:
-				let firstSDK = sdksToBuild[0]
-				let secondSDK = sdksToBuild[1]
+				let firstSDK = sdks[0]
+				let secondSDK = sdks[1]
 
 				return settingsByTarget(buildSDK(firstSDK))
 					|> flatMap(.Concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
@@ -956,7 +943,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					}
 
 			default:
-				fatalError("SDK count \(sdksToBuild.count) in scheme \(scheme) is not supported")
+				fatalError("SDK count \(sdks.count) in scheme \(scheme) is not supported")
 			}
 		}
 		|> flatMapTaskEvents(.Concat) { builtProductURL in
@@ -990,7 +977,7 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
@@ -1116,7 +1103,7 @@ public func parseSecuritySigningIdentities(securityIdentities: SignalProducer<St
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { $0.0 }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
 	return SignalProducer { observer, disposable in
@@ -1205,7 +1192,18 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			|> map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
 				let initialValue = (project, scheme)
 
-				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: sdkFilter)
+				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
+					let filteredSDKs: [SDK]
+					if platforms.isEmpty {
+						filteredSDKs = sdks
+					} else {
+						filteredSDKs = sdks.filter { platforms.contains($0.platform) }
+					}
+
+					return sdkFilter(sdks: filteredSDKs, scheme: scheme, configuration: configuration, project: project)
+				}
+
+				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for
 					// completion.

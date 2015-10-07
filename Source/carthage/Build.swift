@@ -106,10 +106,10 @@ public struct BuildCommand: CommandType {
 		let project = Project(directoryURL: directoryURL)
 
 		let sdkFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
-			let sdks = buildableSDKs(sdks, scheme, configuration, project, options.colorOptions.formatting)
+			let result = buildableSDKs(sdks, scheme, configuration, project, options.colorOptions.formatting)
 				|> first
 			
-			return sdks!.value!
+			return result!
 		}
 
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
