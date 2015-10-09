@@ -601,9 +601,8 @@ public struct BuildSettings {
 		if let moduleName = self["PRODUCT_MODULE_NAME"].value {
 			return self["CONTENTS_FOLDER_PATH"].map { contentsPath in
 				let path1 = (contentsPath as NSString).stringByAppendingPathComponent("Modules")
-				let path2 = (path1 as NSString).stringByAppendingPathComponent("Modules")
-				let path3 = (path2 as NSString).stringByAppendingPathComponent(moduleName)
-				return (path3 as NSString).stringByAppendingPathExtension("swiftmodule")
+				let path2 = (path1 as NSString).stringByAppendingPathComponent(moduleName)
+				return (path2 as NSString).stringByAppendingPathExtension("swiftmodule")
 			}
 		} else {
 			return .Success(nil)
