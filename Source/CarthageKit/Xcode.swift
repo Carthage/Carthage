@@ -1353,6 +1353,11 @@ public func stripModulesDirectory(frameworkURL: NSURL) -> SignalProducer<(), Car
 	return SignalProducer.try {
 		let modulesDirectoryURL = frameworkURL.URLByAppendingPathComponent("Modules", isDirectory: true)
 
+		var isDirectory: ObjCBool = false
+		if !NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!, isDirectory: &isDirectory) || !isDirectory {
+			return .success(())
+		}
+
 		var error: NSError? = nil
 		if !NSFileManager.defaultManager().removeItemAtURL(modulesDirectoryURL, error: &error) {
 			return .failure(.WriteFailed(modulesDirectoryURL, error))
