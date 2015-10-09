@@ -335,11 +335,11 @@ public final class Project {
 	/// them out into the project's working directory.
 	public func outdatedDependencies(includeTransientDependencies: Bool) -> SignalProducer<[Dependency<OutdatedVersion>], CarthageError> {
 		let currentDependenciesProducer = loadResolvedCartfile()
-			|> map { $0.dependencies }
+			.map { $0.dependencies }
 		let updatedDependenciesProducer = updatedResolvedCartfile()
-			|> map { $0.dependencies }
+			.map { $0.dependencies }
 		let outdatedDependenciesProducer = combineLatest(currentDependenciesProducer, updatedDependenciesProducer)
-			|> map { (currentDependencies, updatedDependencies) -> [Dependency<OutdatedVersion>] in
+			.map { (currentDependencies, updatedDependencies) -> [Dependency<OutdatedVersion>] in
 				var outdatedDependencies: [Dependency<OutdatedVersion>] = []
 
 				for updatedDependency in updatedDependencies {
@@ -355,12 +355,12 @@ public final class Project {
 
 		if !includeTransientDependencies {
 			let explicitDependencyIdentifiersProducer = loadCombinedCartfile()
-				|> map { $0.dependencies.map { $0.project } }
+				.map { $0.dependencies.map { $0.project } }
 
 			return outdatedDependenciesProducer
-				|> combineLatestWith(explicitDependencyIdentifiersProducer)
-				|> map { (oudatedDependencies: [Dependency<OutdatedVersion>], explicitDependencyIdentifiers: [ProjectIdentifier]) -> [Dependency<OutdatedVersion>] in
-					return oudatedDependencies.filter{ contains(explicitDependencyIdentifiers, $0.project) }
+				.combineLatestWith(explicitDependencyIdentifiersProducer)
+				.map { (oudatedDependencies: [Dependency<OutdatedVersion>], explicitDependencyIdentifiers: [ProjectIdentifier]) -> [Dependency<OutdatedVersion>] in
+					return oudatedDependencies.filter{ explicitDependencyIdentifiers.contains($0.project) }
 				}
 		}
 

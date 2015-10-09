@@ -18,10 +18,10 @@ public struct OutdatedCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(OutdatedOptions.evaluate(mode))
-			|> flatMap(.Merge) { options in
+			.flatMap(.Merge) { options in
 				return options.loadProject()
-					|> flatMap(.Merge) { $0.outdatedDependencies(options.verbose) }
-					|> on(next: { outdatedDependencies in
+					.flatMap(.Merge) { $0.outdatedDependencies(options.verbose) }
+					.on(next: { outdatedDependencies in
 						let formatting = options.colorOptions.formatting
 
 						if outdatedDependencies.count > 0 {
@@ -33,9 +33,9 @@ public struct OutdatedCommand: CommandType {
 							carthage.println(formatting.bullets + "All dependencies are up to date.")
 						}
 					})
-					|> promoteErrors
+					.promoteErrors()
 			}
-			|> waitOnCommand
+			.waitOnCommand()
 	}
 }
 
@@ -52,7 +52,7 @@ public struct OutdatedOptions: OptionsType {
 	}
 
 	public static func create(useSSH: Bool)(useSubmodules: Bool)(verbose: Bool)(colorOptions: ColorOptions)(directoryPath: String) -> OutdatedOptions {
-		return self(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, verbose: verbose, colorOptions: colorOptions)
+		return self.init(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, verbose: verbose, colorOptions: colorOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<OutdatedOptions, CommandantError<CarthageError>> {

@@ -184,13 +184,13 @@ public func ==(lhs: OutdatedVersion, rhs: OutdatedVersion) -> Bool {
 
 extension OutdatedVersion: Scannable {
 	public static func fromScanner(scanner: NSScanner) -> Result<OutdatedVersion, CarthageError> {
-		return .failure(CarthageError.ParseError(description: "OutdatedVersion is not Scannable"))
+		return .Failure(CarthageError.ParseError(description: "OutdatedVersion is not Scannable"))
 	}
 }
 
 extension OutdatedVersion: VersionType {}
 
-extension OutdatedVersion: Printable {
+extension OutdatedVersion: CustomStringConvertible {
 	public var description: String {
 		return "\(currentVersion) -> \(proposedVersion)"
 	}
