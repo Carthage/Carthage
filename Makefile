@@ -50,6 +50,14 @@ installables: clean bootstrap
 	mv -f "$(CARTHAGE_EXECUTABLE)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage"
 	rm -rf "$(BUILT_BUNDLE)"
 
+homebrew: installables
+	mkdir -p "homebrew/Frameworks" "homebrew/bin"
+	cp -rf "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)" "homebrew/Frameworks/"
+	cp -f "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage" "homebrew/bin/"
+	install_name_tool -add_rpath "@executable_path/../Frameworks/$(OUTPUT_FRAMEWORK)/Versions/Current/Frameworks/"  "homebrew/bin/carthage"
+	tar -cvzf "carthage-$(VERSION_STRING).tar.gz" "homebrew"
+	rm -r homebrew
+
 prefix_install: installables
 	mkdir -p "$(PREFIX)/Frameworks" "$(PREFIX)/bin"
 	cp -rf "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)" "$(PREFIX)/Frameworks/"
