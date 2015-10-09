@@ -235,6 +235,8 @@ extension NSScanner {
 	}
 }
 
+private let defaultSessionError = NSError(domain: "org.carthage.CarthageKit.carthage_downloadWithRequest", code: 1, userInfo: nil)
+
 extension NSURLSession {
 	/// Returns a producer that will download a file using the given request. The
 	/// file will be deleted after the producer terminates.
@@ -251,7 +253,7 @@ extension NSURLSession {
 					sendNext(observer, (URL, response))
 					sendCompleted(observer)
 				} else {
-					sendError(observer, error!)
+					sendError(observer, error ?? defaultSessionError)
 				}
 			}
 
