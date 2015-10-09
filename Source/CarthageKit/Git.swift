@@ -410,9 +410,12 @@ public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError
 	}
 
 	return launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: directoryURL)
-		.map { gitDirectory in
+		.map { outputIncludingLineEndings in
+			let relativeGitDirectory = outputIncludingLineEndings.stringByTrimmingCharactersInSet(.newlineCharacterSet())
+			let gitDirectory = directoryURL.URLByAppendingPathComponent(relativeGitDirectory).path
 			var isDirectory: ObjCBool = false
-			return NSFileManager.defaultManager().fileExistsAtPath(gitDirectory, isDirectory: &isDirectory) && isDirectory
+			let directoryExists = gitDirectory.map { NSFileManager.defaultManager().fileExistsAtPath($0, isDirectory: &isDirectory) } ?? false
+			return directoryExists && isDirectory
 		}
 		.flatMapError { _ in SignalProducer(value: false) }
 }
