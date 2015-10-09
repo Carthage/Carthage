@@ -1225,12 +1225,18 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 /// Strips a framework from unexpected architectures, optionally codesigning the
 /// result.
 public func stripFramework(frameworkURL: NSURL, #keepingArchitectures: [String], codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
-	let strip = architecturesInFramework(frameworkURL)
+	let stripArchitectures = architecturesInFramework(frameworkURL)
 		|> filter { !contains(keepingArchitectures, $0) }
 		|> flatMap(.Concat) { stripArchitecture(frameworkURL, $0) }
 
+	// Xcode doesn't copy “Modules” directory at all.
+	let stripModules = stripModulesDirectory(frameworkURL)
+
 	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty
-	return strip |> concat(sign)
+
+	return stripArchitectures
+		|> concat(stripModules)
+		|> concat(sign)
 }
 
 /// Copies a product into the given folder. The folder will be created if it
@@ -1340,6 +1346,20 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 					return SignalProducer(error: .InvalidArchitectures(description: "Could not read architectures from \(frameworkURL.path!)"))
 				}
 		}
+}
+
+/// Strips “Modules” directory from the given framework.
+public func stripModulesDirectory(frameworkURL: NSURL) -> SignalProducer<(), CarthageError> {
+	return SignalProducer.try {
+		let modulesDirectoryURL = frameworkURL.URLByAppendingPathComponent("Modules", isDirectory: true)
+
+		var error: NSError? = nil
+		if !NSFileManager.defaultManager().removeItemAtURL(modulesDirectoryURL, error: &error) {
+			return .failure(.WriteFailed(modulesDirectoryURL, error))
+		}
+
+		return .success(())
+	}
 }
 
 /// Sends a set of UUIDs for each architecture present in the given framework.
