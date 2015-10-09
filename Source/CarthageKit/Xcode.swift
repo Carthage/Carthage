@@ -1229,7 +1229,7 @@ public func stripFramework(frameworkURL: NSURL, #keepingArchitectures: [String],
 		|> filter { !contains(keepingArchitectures, $0) }
 		|> flatMap(.Concat) { stripArchitecture(frameworkURL, $0) }
 
-	// Xcode doesn't copy “Modules” directory at all.
+	// Xcode doesn't copy `Modules` directory at all.
 	let stripModules = stripModulesDirectory(frameworkURL)
 
 	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty
@@ -1348,7 +1348,7 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 		}
 }
 
-/// Strips “Modules” directory from the given framework.
+/// Strips `Modules` directory from the given framework.
 public func stripModulesDirectory(frameworkURL: NSURL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.try {
 		let modulesDirectoryURL = frameworkURL.URLByAppendingPathComponent("Modules", isDirectory: true)
