@@ -151,6 +151,9 @@ class XcodeSpec: QuickSpec {
 				expect(strippedArchitectures?.value).notTo(contain("i386"))
 				expect(strippedArchitectures?.value).to(contain("armv7"))
 				expect(strippedArchitectures?.value).to(contain("arm64"))
+
+				let modulesDirectoryURL = targetURL.URLByAppendingPathComponent("Modules", isDirectory: true)
+				expect(NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!)).to(beFalsy())
 				
 				var output: String = ""
 				let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
