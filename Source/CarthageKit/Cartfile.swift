@@ -88,7 +88,7 @@ public struct Cartfile {
 
 extension Cartfile: Printable {
 	public var description: String {
-		return "\(dependencies)"
+		return dependencies.description
 	}
 }
 
