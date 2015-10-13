@@ -35,8 +35,9 @@ public struct Cartfile {
 		var result: Result<(), CarthageError> = .success(())
 
 		let commentIndicator = "#"
-		(string as NSString).enumerateLinesUsingBlock { (line, stop) in
+		string.enumerateLines { (line, stop) in
 			let scanner = NSScanner(string: line)
+			
 			if scanner.scanString(commentIndicator, intoString: nil) {
 				// Skip the rest of the line.
 				return
@@ -53,7 +54,7 @@ public struct Cartfile {
 
 			case let .Failure(error):
 				result = .failure(error.value)
-				stop.memory = true
+				stop = true
 			}
 
 			if scanner.scanString(commentIndicator, intoString: nil) {
@@ -63,7 +64,7 @@ public struct Cartfile {
 
 			if !scanner.atEnd {
 				result = .failure(CarthageError.ParseError(description: "unexpected trailing characters in line: \(line)"))
-				stop.memory = true
+				stop = true
 			}
 		}
 
