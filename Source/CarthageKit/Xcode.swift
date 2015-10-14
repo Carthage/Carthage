@@ -107,6 +107,9 @@ public struct BuildArguments {
 	/// the native architecture.
 	public var onlyActiveArchitecture: OnlyActiveArchitecture = .NotSpecified
 
+	/// The build setting whether full bitcode should be embedded in the binary.
+	public var bitcodeGenerationMode: BitcodeGenerationMode = .None
+
 	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, sdk: SDK? = nil) {
 		self.project = project
 		self.scheme = scheme
@@ -139,6 +142,7 @@ public struct BuildArguments {
 		}
 
 		args += onlyActiveArchitecture.arguments
+		args += bitcodeGenerationMode.arguments
 
 		return args
 	}
@@ -421,6 +425,31 @@ public enum OnlyActiveArchitecture {
 	}
 }
 
+/// Represents a build setting whether full bitcode should be embedded in the
+/// binary.
+public enum BitcodeGenerationMode: String {
+	/// None.
+	case None = ""
+
+	/// Only bitcode marker will be embedded.
+	case Marker = "marker"
+
+	/// Full bitcode will be embedded.
+	case Bitcode = "bitcode"
+
+	/// The arguments that should be passed to `xcodebuild` to specify the
+	/// setting for this case.
+	private var arguments: [String] {
+		switch self {
+		case .None:
+			return []
+
+		case .Marker, Bitcode:
+			return [ "BITCODE_GENERATION_MODE=\(rawValue)" ]
+		}
+	}
+}
+
 /// Describes the type of product built by an Xcode target.
 public enum ProductType: String {
 	/// A framework bundle.
@@ -591,6 +620,11 @@ public struct BuildSettings {
 				return builtProductsURL.URLByAppendingPathComponent(wrapperName)
 			}
 		}
+	}
+
+	/// Attempts to determine whether bitcode is enabled or not.
+	public var bitcodeEnabled: Result<Bool, CarthageError> {
+		return self["ENABLE_BITCODE"].map { $0 == "YES" }
 	}
 
 	/// Attempts to determine the relative path (from the build folder) where
@@ -814,7 +848,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		// simulator on the list, iPad 2 7.1, which is invalid for the target.
 		//
 		// See https://github.com/Carthage/Carthage/issues/417.
-		func fetchDestination() -> SignalProducer<String?, ReactiveTaskError> {
+		func fetchDestination() -> SignalProducer<String?, CarthageError> {
 			if sdk == .iPhoneSimulator {
 				let destinationLookup = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
 				return launchTask(destinationLookup)
@@ -833,13 +867,14 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							let deviceID = string.substringWithRange(result.rangeAtIndex(1))
 							return "platform=iOS Simulator,id=\(deviceID)"
 						}
-				}
+					}
+					.mapError { .TaskError($0) }
 			}
 			return SignalProducer(value: nil)
 		}
 
 		return fetchDestination()
-			.flatMap(.Concat) { destination -> SignalProducer<TaskEvent<NSData>, ReactiveTaskError> in
+			.flatMap(.Concat) { destination -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 				if let destination = destination {
 					argsForBuilding.destination = destination
 					// Also set the destination lookup timeout. Since we're building
@@ -848,13 +883,6 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					argsForBuilding.destinationTimeout = 3
 				}
 
-				var buildScheme = xcodebuildTask("build", argsForBuilding)
-				buildScheme.workingDirectoryPath = workingDirectoryURL.path!
-
-				return launchTask(buildScheme)
-			}
-			.mapError(CarthageError.TaskError)
-			.flatMapTaskEvents(.Concat) { _ in
 				return BuildSettings.loadWithArguments(argsForLoading)
 					.filter { settings in
 						// Only copy build products for the product types we care about.
@@ -863,6 +891,20 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						} else {
 							return false
 						}
+					}
+					.flatMap(.Concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
+						if settings.bitcodeEnabled.value == true {
+							argsForBuilding.bitcodeGenerationMode = .Bitcode
+						}
+
+						var buildScheme = xcodebuildTask("build", argsForBuilding)
+						buildScheme.workingDirectoryPath = workingDirectoryURL.path!
+
+						return launchTask(buildScheme)
+							.map { taskEvent in
+								taskEvent.map { _ in settings }
+							}
+							.mapError { .TaskError($0) }
 					}
 			}
 	}
@@ -1243,12 +1285,18 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 /// Strips a framework from unexpected architectures, optionally codesigning the
 /// result.
 public func stripFramework(frameworkURL: NSURL, keepingArchitectures: [String], codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
-	let strip = architecturesInFramework(frameworkURL)
+	let stripArchitectures = architecturesInFramework(frameworkURL)
 		.filter { !keepingArchitectures.contains($0) }
 		.flatMap(.Concat) { stripArchitecture(frameworkURL, $0) }
 
+	// Xcode doesn't copy `Modules` directory at all.
+	let stripModules = stripModulesDirectory(frameworkURL)
+
 	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty
-	return strip.concat(sign)
+
+	return stripArchitectures
+		.concat(stripModules)
+		.concat(sign)
 }
 
 /// Copies a product into the given folder. The folder will be created if it
@@ -1362,6 +1410,26 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 					return SignalProducer(error: .InvalidArchitectures(description: "Could not read architectures from \(frameworkURL.path!)"))
 				}
 		}
+}
+
+/// Strips `Modules` directory from the given framework.
+public func stripModulesDirectory(frameworkURL: NSURL) -> SignalProducer<(), CarthageError> {
+	return SignalProducer.attempt {
+		let modulesDirectoryURL = frameworkURL.URLByAppendingPathComponent("Modules", isDirectory: true)
+
+		var isDirectory: ObjCBool = false
+		if !NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!, isDirectory: &isDirectory) || !isDirectory {
+			return .Success(())
+		}
+
+		do {
+			try NSFileManager.defaultManager().removeItemAtURL(modulesDirectoryURL)
+		} catch let error as NSError {
+			return .Failure(.WriteFailed(modulesDirectoryURL, error))
+		}
+
+		return .Success(())
+	}
 }
 
 /// Sends a set of UUIDs for each architecture present in the given framework.
