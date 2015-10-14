@@ -111,7 +111,7 @@ public struct BuildCommand: CommandType {
 		}
 
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
-		project.projectEvents.observe(next: { eventSink.put($0) })
+		project.projectEvents.observeNext { eventSink.put($0) }
 
 		let buildProducer = project.loadCombinedCartfile()
 			.map { _ in project }
