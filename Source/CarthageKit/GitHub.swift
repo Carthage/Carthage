@@ -325,7 +325,10 @@ private func loadCredentialsFromGit(forServer server: GitHubRepository.Server) -
 			return string.linesProducer.promoteErrors(CarthageError.self)
 		}
 		.reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
-			let parts = line.characters.split(1, allowEmptySlices: false) { $0 == "=" }.map(String.init)
+			let parts = line.characters
+				.split(1, allowEmptySlices: false) { $0 == "=" }
+				.map(String.init)
+
 			if parts.count >= 2 {
 				let key = parts[0]
 				let value = parts[1]
