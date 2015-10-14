@@ -312,7 +312,7 @@ public func < (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
 		return false
 	}
 
-	for (lhsLocation, rhsLocation) in Zip2Sequence(lhs.locations, rhs.locations) {
+	for (lhsLocation, rhsLocation) in zip(lhs.locations, rhs.locations) {
 		if lhsLocation < rhsLocation {
 			return true
 		}
