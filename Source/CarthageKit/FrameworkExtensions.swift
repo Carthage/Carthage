@@ -40,48 +40,6 @@ internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 }
 
 extension SignalType {
-
-	/// Bring back the `observe` overload. The `observeNext` or pattern matching
-	/// on `observe(Event)` is still annoying in practice and more verbose. This is
-	/// also likely to change in a later RAC 4 alpha.
-	internal func observe(next next: (T -> ())? = nil, error: (E -> ())? = nil, completed: (() -> ())? = nil, interrupted: (() -> ())? = nil) -> Disposable? {
-		return self.observe { (event: Event<T, E>) in
-			switch event {
-			case let .Next(value):
-				next?(value)
-			case let .Error(err):
-				error?(err)
-			case .Completed:
-				completed?()
-			case .Interrupted:
-				interrupted?()
-			}
-		}
-	}
-}
-
-extension SignalProducerType {
-
-	/// Bring back the `start` overload. The `startNext` or pattern matching
-	/// on `start(Event)` is annoying in practice and more verbose. This is also
-	/// likely to change in a later RAC 4 alpha.
-	internal func start(next next: (T -> ())? = nil, error: (E -> ())? = nil, completed: (() -> ())? = nil, interrupted: (() -> ())? = nil) -> Disposable? {
-		return self.start { (event: Event<T, E>) in
-			switch event {
-			case let .Next(value):
-				next?(value)
-			case let .Error(err):
-				error?(err)
-			case .Completed:
-				completed?()
-			case .Interrupted:
-				interrupted?()
-			}
-		}
-	}
-}
-
-extension SignalType {
 	/// Sends each value that occurs on `signal` combined with each value that
 	/// occurs on `otherSignal` (repeats included).
 	internal func permuteWith<U>(otherSignal: Signal<U, E>) -> Signal<(T, U), E> {
@@ -96,53 +54,65 @@ extension SignalType {
 
 			let compositeDisposable = CompositeDisposable()
 
-			compositeDisposable += self.observe(next: { value in
-				lock.lock()
+			compositeDisposable += self.observe { event in
+				switch event {
+				case let .Next(value):
+					lock.lock()
 
-				signalValues.append(value)
-				for otherValue in otherValues {
-					sendNext(observer, (value, otherValue))
+					signalValues.append(value)
+					for otherValue in otherValues {
+						sendNext(observer, (value, otherValue))
+					}
+
+					lock.unlock()
+
+				case let .Error(error):
+					sendError(observer, error)
+
+				case .Completed:
+					lock.lock()
+
+					signalCompleted = true
+					if otherCompleted {
+						sendCompleted(observer)
+					}
+
+					lock.unlock()
+
+				case .Interrupted:
+					sendInterrupted(observer)
 				}
+			}
 
-				lock.unlock()
-			}, error: { error in
-				sendError(observer, error)
-			}, completed: {
-				lock.lock()
+			compositeDisposable += otherSignal.observe { event in
+				switch event {
+				case let .Next(value):
+					lock.lock()
 
-				signalCompleted = true
-				if otherCompleted {
-					sendCompleted(observer)
+					otherValues.append(value)
+					for signalValue in signalValues {
+						sendNext(observer, (signalValue, value))
+					}
+
+					lock.unlock()
+
+				case let .Error(error):
+					sendError(observer, error)
+
+				case .Completed:
+					lock.lock()
+
+					otherCompleted = true
+					if signalCompleted {
+						sendCompleted(observer)
+					}
+
+					lock.unlock()
+
+				case .Interrupted:
+					sendInterrupted(observer)
 				}
-
-				lock.unlock()
-			}, interrupted: {
-				sendInterrupted(observer)
-			})
-
-			compositeDisposable += otherSignal.observe(next: { value in
-				lock.lock()
-
-				otherValues.append(value)
-				for signalValue in signalValues {
-					sendNext(observer, (signalValue, value))
-				}
-
-				lock.unlock()
-			}, error: { error in
-				sendError(observer, error)
-			}, completed: {
-				lock.lock()
-
-				otherCompleted = true
-				if signalCompleted {
-					sendCompleted(observer)
-				}
-
-				lock.unlock()
-			}, interrupted: {
-				sendInterrupted(observer)
-			})
+			}
 
 			return compositeDisposable
 		}
@@ -165,33 +135,38 @@ extension SignalType where T: EventType, T.E == E {
 			var receivedValue = false
 			var receivedError: E? = nil
 
-			return self.observe(next: { (event: T) in
-				switch event.event {
-				case let .Next(value):
-					receivedValue = true
-					sendNext(observer, value)
+			return self.observe { event in
+				switch event {
+				case let .Next(innerEvent):
+					switch innerEvent.event {
+					case let .Next(value):
+						receivedValue = true
+						sendNext(observer, value)
+
+					case let .Error(error):
+						receivedError = error
+
+					case .Completed:
+						sendCompleted(observer)
+
+					case .Interrupted:
+						sendInterrupted(observer)
+					}
 
 				case let .Error(error):
-					receivedError = error
+					sendError(observer, error)
 
 				case .Completed:
+					if let receivedError = receivedError where !receivedValue {
+						sendError(observer, receivedError)
+					}
+
 					sendCompleted(observer)
 
 				case .Interrupted:
 					sendInterrupted(observer)
 				}
-			}, error: { error in
-				sendError(observer, error)
-			}, completed: {
-				
-				if let receivedError = receivedError where !receivedValue {
-					sendError(observer, receivedError)
-				}
-			
-				sendCompleted(observer)
-			}, interrupted: {
-				sendInterrupted(observer)
-			})
+			}
 		}
 	}
 }

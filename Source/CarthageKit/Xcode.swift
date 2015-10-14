@@ -717,22 +717,28 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 		producer.startWithSignal { signal, signalDisposable in
 			disposable += signalDisposable
 
-			signal.observe(next: { settingsEvent in
-				let transformedEvent = settingsEvent.map { settings in [ settings.target: settings ] }
+			signal.observe { event in
+				switch event {
+				case let .Next(settingsEvent):
+					let transformedEvent = settingsEvent.map { settings in [ settings.target: settings ] }
 
-				if let transformed = transformedEvent.value {
-					settings = combineDictionaries(settings, rhs: transformed)
-				} else {
-					sendNext(observer, transformedEvent)
+					if let transformed = transformedEvent.value {
+						settings = combineDictionaries(settings, rhs: transformed)
+					} else {
+						sendNext(observer, transformedEvent)
+					}
+
+				case let .Error(error):
+					sendError(observer, error)
+
+				case .Completed:
+					sendNext(observer, .Success(settings))
+					sendCompleted(observer)
+
+				case .Interrupted:
+					sendInterrupted(observer)
 				}
-			}, error: { error in
-				sendError(observer, error)
-			}, completed: {
-				sendNext(observer, .Success(settings))
-				sendCompleted(observer)
-			}, interrupted: {
-				sendInterrupted(observer)
-			})
+			}
 		}
 	}
 }
