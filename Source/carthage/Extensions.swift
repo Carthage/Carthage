@@ -95,7 +95,7 @@ extension SignalProducerType where E == CarthageError {
 
 /// Lifts the Result of options parsing into a SignalProducer.
 internal func producerWithOptions<T>(result: Result<T, CommandantError<CarthageError>>) -> SignalProducer<T, CommandError> {
-	let mappedResult = result.mapError { CommandError($0) }
+	let mappedResult = result.mapError(CommandError.init)
 	return SignalProducer(result: mappedResult)
 }
 

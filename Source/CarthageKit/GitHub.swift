@@ -441,7 +441,7 @@ private func fetchAllPages(URL: NSURL, _ authorizationHeaderValue: String?) -> S
 	let request = createGitHubRequest(URL, authorizationHeaderValue)
 
 	return NSURLSession.sharedSession().rac_dataWithRequest(request)
-		.mapError { .NetworkError($0) }
+		.mapError(CarthageError.NetworkError)
 		.flatMap(.Concat) { data, response in
 			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
 
@@ -518,6 +518,6 @@ internal func downloadAsset(asset: GitHubRelease.Asset, _ authorizationHeaderVal
 	let request = createGitHubRequest(asset.URL, authorizationHeaderValue, contentType: APIAssetDownloadContentType)
 
 	return NSURLSession.sharedSession().carthage_downloadWithRequest(request)
-		.mapError { .NetworkError($0) }
+		.mapError(CarthageError.NetworkError)
 		.map { URL, _ in URL }
 }

@@ -59,7 +59,10 @@ public struct GitURL: Equatable {
 	public var name: String? {
 		let components = URLString.characters.split(allowEmptySlices: false) { $0 == "/" }
 
-		return components.last.map { stripGitSuffix(String($0)) }
+		return components
+			.last
+			.map(String.init)
+			.map(stripGitSuffix)
 	}
 
 	public init(_ URLString: String) {
@@ -142,7 +145,7 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 
 	return launchTask(taskDescription)
 		.ignoreTaskData()
-		.mapError { .TaskError($0) }
+		.mapError(CarthageError.TaskError)
 		.map { data in
 			return NSString(data: data, encoding: NSUTF8StringEncoding)! as String
 		}

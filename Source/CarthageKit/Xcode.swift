@@ -224,7 +224,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 
 	return launchTask(task)
 		.ignoreTaskData()
-		.mapError { .TaskError($0) }
+		.mapError(CarthageError.TaskError)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
@@ -468,7 +468,7 @@ public struct BuildSettings {
 
 		return launchTask(task)
 			.ignoreTaskData()
-			.mapError { .TaskError($0) }
+			.mapError(CarthageError.TaskError)
 			.map { (data: NSData) -> String in
 				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 			}
@@ -647,7 +647,7 @@ private func mergeExecutables(executableURLs: [NSURL], _ outputURL: NSURL) -> Si
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
 
 			return launchTask(lipoTask)
-				.mapError { .TaskError($0) }
+				.mapError(CarthageError.TaskError)
 		}
 		.then(.empty)
 }
@@ -853,7 +853,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 				return launchTask(buildScheme)
 			}
-			.mapError { .TaskError($0) }
+			.mapError(CarthageError.TaskError)
 			.flatMapTaskEvents(.Concat) { _ in
 				return BuildSettings.loadWithArguments(argsForLoading)
 					.filter { settings in
@@ -966,7 +966,7 @@ public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<Tas
 		let dsymutilTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
 
 		return launchTask(dsymutilTask)
-			.mapError { .TaskError($0) }
+			.mapError(CarthageError.TaskError)
 			.flatMapTaskEvents(.Concat) { _ in SignalProducer(value: dSYMURL) }
 	} else {
 		return .empty
@@ -1074,7 +1074,7 @@ public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageErr
 	
 	return launchTask(securityTask)
 		.ignoreTaskData()
-		.mapError { .TaskError($0) }
+		.mapError(CarthageError.TaskError)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
@@ -1298,7 +1298,7 @@ private func stripArchitecture(frameworkURL: NSURL, _ architecture: String) -> S
 		.flatMap(.Merge) { binaryURL -> SignalProducer<TaskEvent<NSData>, CarthageError> in
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
 			return launchTask(lipoTask)
-				.mapError { .TaskError($0) }
+				.mapError(CarthageError.TaskError)
 		}
 		.then(.empty)
 }
@@ -1313,7 +1313,7 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 
 			return launchTask(lipoTask)
 				.ignoreTaskData()
-				.mapError { .TaskError($0) }
+				.mapError(CarthageError.TaskError)
 				.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
 				.flatMap(.Merge) { output -> SignalProducer<String, CarthageError> in
 					let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
@@ -1383,7 +1383,7 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, Carth
 
 	return launchTask(dwarfdumpTask)
 		.ignoreTaskData()
-		.mapError { .TaskError($0) }
+		.mapError(CarthageError.TaskError)
 		.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
 		.flatMap(.Merge) { output -> SignalProducer<Set<NSUUID>, CarthageError> in
 			// UUIDs are letters, decimals, or hyphens.
@@ -1438,6 +1438,6 @@ private func codesign(frameworkURL: NSURL, _ expandedIdentity: String) -> Signal
 	let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
 
 	return launchTask(codesignTask)
-		.mapError { .TaskError($0) }
+		.mapError(CarthageError.TaskError)
 		.then(.empty)
 }
