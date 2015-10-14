@@ -75,8 +75,8 @@ public struct Cartfile {
 		do {
 			let cartfileContents = try NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding)
 			return Cartfile.fromString(cartfileContents as String)
-		} catch {
-			return .Failure(CarthageError.ReadFailed(cartfileURL, error as NSError))
+		} catch let error as NSError {
+			return .Failure(CarthageError.ReadFailed(cartfileURL, error))
 		}
 	}
 

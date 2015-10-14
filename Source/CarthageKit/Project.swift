@@ -47,8 +47,8 @@ private let CarthageUserCachesURL: NSURL = {
 			do {
 				try fileManager.createDirectoryAtURL(dependenciesURL, withIntermediateDirectories: true, attributes: [NSFilePosixPermissions : NSNumber(short:755)])
 				return Result(value: dependenciesURL)
-			} catch {
-				return Result(error: error as NSError)
+			} catch let error as NSError {
+				return Result(error: error)
 			}
 		}
 	}
@@ -235,8 +235,8 @@ public final class Project {
 			do {
 				let resolvedCartfileContents = try NSString(contentsOfURL: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
 				return ResolvedCartfile.fromString(resolvedCartfileContents as String)
-			} catch {
-				return .Failure(.ReadFailed(self.resolvedCartfileURL, error as NSError))
+			} catch let error as NSError {
+				return .Failure(.ReadFailed(self.resolvedCartfileURL, error))
 			}
 		}
 	}
@@ -246,8 +246,8 @@ public final class Project {
 		do {
 			try resolvedCartfile.description.writeToURL(resolvedCartfileURL, atomically: true, encoding: NSUTF8StringEncoding)
 			return .Success(())
-		} catch {
-			return .Failure(.WriteFailed(resolvedCartfileURL, error as NSError))
+		} catch let error as NSError {
+			return .Failure(.WriteFailed(resolvedCartfileURL, error))
 		}
 	}
 
@@ -381,8 +381,8 @@ public final class Project {
 							do {
 								try NSFileManager.defaultManager().removeItemAtURL(temporaryDirectoryURL)
 								return .Success(true)
-							} catch {
-								return .Failure(.WriteFailed(temporaryDirectoryURL, error as NSError))
+							} catch let error as NSError {
+								return .Failure(.WriteFailed(temporaryDirectoryURL, error))
 							}
 						}
 						.concat(SignalProducer(value: false))
@@ -594,8 +594,8 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil)
 				return .Success(())
-			} catch {
-				return .Failure(.WriteFailed(parentDirectoryURL, error as NSError))
+			} catch let error as NSError {
+				return .Failure(.WriteFailed(parentDirectoryURL, error))
 			}
 		}
 		.attempt { newDownloadURL in
@@ -616,8 +616,8 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			do {
 				try NSFileManager.defaultManager().moveItemAtURL(downloadURL, toURL: newDownloadURL)
 				return .Success(())
-			} catch {
-				return .Failure(.WriteFailed(newDownloadURL, error as NSError))
+			} catch let error as NSError {
+				return .Failure(.WriteFailed(newDownloadURL, error))
 			}
 		}
 }
@@ -664,8 +664,8 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 	return SignalProducer.attempt { () -> Result<NSData, CarthageError> in
 			do {
 				return .Success(try NSData(contentsOfURL: plistURL, options: []))
-			} catch {
-				return .Failure(.ReadFailed(plistURL, error as NSError))
+			} catch let error as NSError {
+				return .Failure(.ReadFailed(plistURL, error))
 			}
 		}
 		.startOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.platformForInfoPlist"))
@@ -792,8 +792,8 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool) -
 	return SignalProducer.attempt { () -> Result<GitURL, CarthageError> in
 			do {
 				try fileManager.createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil)
-			} catch {
-				return .Failure(.WriteFailed(CarthageDependencyRepositoriesURL, error as NSError))
+			} catch let error as NSError {
+				return .Failure(.WriteFailed(CarthageDependencyRepositoriesURL, error))
 			}
 
 			return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))

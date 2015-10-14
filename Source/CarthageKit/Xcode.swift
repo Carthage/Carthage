@@ -668,8 +668,8 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, _ destinatio
 			do {
 				try NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL)
 				return SignalProducer(value: destinationURL)
-			} catch {
-				return SignalProducer(error: .WriteFailed(destinationURL, error as NSError))
+			} catch let error as NSError {
+				return SignalProducer(error: .WriteFailed(destinationURL, error))
 			}
 		}
 }
@@ -986,8 +986,8 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 	return SignalProducer.attempt { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil)
-			} catch {
-				return .Failure(.WriteFailed(rootBinariesURL, error as NSError))
+			} catch let error as NSError {
+				return .Failure(.WriteFailed(rootBinariesURL, error))
 			}
 
 			// Link this dependency's Carthage/Build folder to that of the root
@@ -1002,16 +1002,16 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 
 				do {
 					try NSFileManager.defaultManager().createDirectoryAtURL(dependencyParentURL, withIntermediateDirectories: true, attributes: nil)
-				} catch {
-					return .Failure(.WriteFailed(dependencyParentURL, error as NSError))
+				} catch let error as NSError {
+					return .Failure(.WriteFailed(dependencyParentURL, error))
 				}
 			}
 
 			var isSymlink: AnyObject?
 			do {
 				try rawDependencyURL.getResourceValue(&isSymlink, forKey: NSURLIsSymbolicLinkKey)
-			} catch {
-				return .Failure(.ReadFailed(rawDependencyURL, error as NSError))
+			} catch let error as NSError {
+				return .Failure(.ReadFailed(rawDependencyURL, error))
 			}
 
 			if isSymlink as? Bool == true {
@@ -1019,8 +1019,8 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 				// absolute link back to the project's Build folder.
 				do {
 					try NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL)
-				} catch {
-					return .Failure(.WriteFailed(dependencyBinariesURL, error as NSError))
+				} catch let error as NSError {
+					return .Failure(.WriteFailed(dependencyBinariesURL, error))
 				}
 			} else {
 				// The relative path to this dependency's Carthage/Build folder, from
@@ -1035,8 +1035,8 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 
 				do {
 					try NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath)
-				} catch {
-					return .Failure(.WriteFailed(dependencyBinariesURL, error as NSError))
+				} catch let error as NSError {
+					return .Failure(.WriteFailed(dependencyBinariesURL, error))
 				}
 			}
 
@@ -1278,8 +1278,8 @@ public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, Carth
 		do {
 			try manager.copyItemAtURL(from, toURL: to)
 			return .Success(to)
-		} catch {
-			return .Failure(.WriteFailed(to, error as NSError))
+		} catch let error as NSError {
+			return .Failure(.WriteFailed(to, error))
 		}
 	}
 }
