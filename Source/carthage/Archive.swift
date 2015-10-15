@@ -25,7 +25,15 @@ public struct ArchiveCommand: CommandType {
 					|> flatMap(.Concat) { platform in
 						let framework = platform.relativePath.stringByAppendingPathComponent(options.frameworkName).stringByAppendingPathExtension("framework")!
 						let dSYM = framework.stringByAppendingPathExtension("dSYM")!
-						return SignalProducer(values: [framework, dSYM])
+						if NSFileManager.defaultManager().fileExistsAtPath(framework) {
+							let frameworkURL = NSURL(fileURLWithPath: framework)!
+							let bcsymbolmapProducer = UUIDsForFramework(frameworkURL)
+								|> flatMap(.Merge) { uuids in SignalProducer(values: uuids) }
+								|> map { uuid in platform.relativePath.stringByAppendingPathComponent(uuid.UUIDString).stringByAppendingPathExtension("bcsymbolmap")! }
+							return SignalProducer(values: [framework, dSYM]) |> concat(bcsymbolmapProducer)
+						} else {
+							return .empty
+						}
 					}
 					|> filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
 					|> on(next: { path in
