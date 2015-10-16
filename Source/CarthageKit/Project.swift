@@ -367,6 +367,10 @@ public final class Project {
 								|> flatMap(.Merge, self.copyFrameworkToBuildFolder)
 								|> flatMap(.Merge) { frameworkURL in
 									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
+										|> then(SignalProducer(value: frameworkURL))
+								}
+								|> flatMap(.Merge) { frameworkURL in
+									return self.copyBCSymbolMapToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
 								}
 								|> on(completed: {
 									_ = NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
@@ -456,6 +460,31 @@ public final class Project {
 				let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
 
 				return copyProduct(dSYMURL, resolvedDestinationURL)
+			}
+	}
+	
+	/// Copies any *.bcsymbolmap files matching the given framework and contained
+	/// within the given directory URL to the directory that the framework
+	/// resides within.
+	///
+	/// If no bcsymbolmap files are found for the given framework, completes with
+	/// no values.
+	///
+	/// Sends the URLs of the bcsymbolmap files after copying.
+	public func copyBCSymbolMapToBuildFolderForFramework(frameworkURL: NSURL, fromDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+		return UUIDsForFramework(frameworkURL)
+			|> flatMap(.Merge) { uuids in SignalProducer(values: uuids) }
+			|> flatMap(.Merge) { uuid in
+				let fileName = uuid.UUIDString.stringByAppendingPathExtension("bcsymbolmap")!
+				let fileURL = directoryURL.URLByAppendingPathComponent(fileName)
+				if fileURL.checkResourceIsReachableAndReturnError(nil) {
+					let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
+					let destinationURL = destinationDirectoryURL.URLByAppendingPathComponent(fileName)
+					let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
+					return copyProduct(fileURL, resolvedDestinationURL)
+				} else {
+					return SignalProducer.empty
+				}
 			}
 	}
 
