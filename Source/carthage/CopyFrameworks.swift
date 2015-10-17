@@ -18,29 +18,61 @@ public struct CopyFrameworksCommand: CommandType {
 	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
-		switch mode {
-		case .Arguments:
-			return inputFiles()
-				|> flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
-					let frameworkName = frameworkPath.lastPathComponent
+		return producerWithOptions(CopyFrameworksOptions.evaluate(mode))
+			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
+				return inputFiles()
+					|> flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
+						let frameworkName = frameworkPath.lastPathComponent
 
-					let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.InvalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
-					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
+						let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.InvalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
+						let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
-					return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
-						|> flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
-							return combineLatest(copyProduct(source, target), codeSigningIdentity())
-								|> flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
-									return stripFramework(target, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
-								}
-						}
-				}
-				|> promoteErrors
-				|> waitOnCommand
+						return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
+							|> flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
+								return combineLatest(copyProduct(source, target), codeSigningIdentity())
+									|> flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
+										let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
+										if options.copyBCSymbolMaps {
+											return strip
+												|> then(self.copyBCSymbolMapsForFramework(url, fromDirectory: source.URLByDeletingLastPathComponent!))
+												|> then(.empty)
+										} else {
+											return strip
+										}
+									}
+							}
+					}
+					|> promoteErrors
+			}
+			|> waitOnCommand
+	}
+	
+	private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+		return UUIDsForFramework(frameworkURL)
+			|> flatMap(.Merge) { uuids in SignalProducer(values: uuids) }
+			|> map { uuid in directoryURL.URLByAppendingPathComponent(uuid.UUIDString).URLByAppendingPathExtension("bcsymbolmap") }
+			|> filter { url in url.checkResourceIsReachableAndReturnError(nil) }
+			|> flatMap(.Merge) { url in
+				return SignalProducer(result: builtProductsFolder())
+					|> flatMap(.Merge) { builtProducts in
+						let target = builtProducts.URLByAppendingPathComponent(url.lastPathComponent!)
+						return copyProduct(url, target)
+					}
+			}
+	}
+}
 
-		case .Usage:
-			return .success(())
-		}
+private struct CopyFrameworksOptions: OptionsType {
+	let copyBCSymbolMaps: Bool
+	
+	static func create(copyBCSymbolMaps: Bool) -> CopyFrameworksOptions {
+		return self(copyBCSymbolMaps: copyBCSymbolMaps)
+	}
+	
+	static func evaluate(m: CommandMode) -> Result<CopyFrameworksOptions, CommandantError<CarthageError>> {
+		let actionIsArchive = buildAction() == "install" // archives use ACTION=install
+		return create
+			<*> m <| Option(key: "copy-bcsymbolmaps", defaultValue: actionIsArchive, usage: "copy the bcsymbolmap files for each product built with bitcode (enabled by default for archive builds)")
 	}
 }
 
@@ -59,9 +91,13 @@ private func codeSigningAllowed() -> Bool {
 		.map { $0 == "YES" }.value ?? false
 }
 
-private func frameworksFolder() -> Result<NSURL, CarthageError> {
+private func builtProductsFolder() -> Result<NSURL, CarthageError> {
 	return getEnvironmentVariable("BUILT_PRODUCTS_DIR")
 		.map { NSURL(fileURLWithPath: $0, isDirectory: true)! }
+}
+
+private func frameworksFolder() -> Result<NSURL, CarthageError> {
+	return builtProductsFolder()
 		.flatMap { url -> Result<NSURL, CarthageError> in
 			getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH")
 				.map { url.URLByAppendingPathComponent($0, isDirectory: true) }
@@ -92,4 +128,8 @@ private func inputFiles() -> SignalProducer<String, CarthageError> {
 			return SignalProducer(values: variables)
 				|> flatten(.Concat)
 		}
+}
+
+private func buildAction() -> String? {
+	return getEnvironmentVariable("ACTION").value
 }
