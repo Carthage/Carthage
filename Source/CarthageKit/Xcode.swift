@@ -678,12 +678,8 @@ private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildS
 /// Returns a signal that will send the URL after copying for each file.
 private func copyBCSymbolMapForBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildSettings) -> SignalProducer<NSURL, CarthageError> {
 	if settings.bitcodeEnabled.value == true {
-		return SignalProducer(result: settings.builtProductsDirectoryURL &&& settings.executableURL)
-			|> flatMap(.Merge) { (products, exe) in
-				return UUIDsFromDwarfdump(exe)
-					|> flatMap(.Merge) { uuids in SignalProducer(values: uuids) }
-					|> map { uuid in products.URLByAppendingPathComponent(uuid.UUIDString).URLByAppendingPathExtension("bcsymbolmap") }
-			}
+		return SignalProducer(result: settings.wrapperURL)
+			|> flatMap(.Merge) { wrapperURL in BCSymbolMapsForFramework(wrapperURL) }
 			|> filter { url in url.checkResourceIsReachableAndReturnError(nil) }
 			|> flatMap(.Merge) { source in
 				return copyProduct(source, directoryURL.URLByAppendingPathComponent(source.lastPathComponent!, isDirectory: false))
@@ -1450,6 +1446,19 @@ public func UUIDsForFramework(frameworkURL: NSURL) -> SignalProducer<Set<NSUUID>
 /// Sends a set of UUIDs for each architecture present in the given dSYM.
 public func UUIDsForDSYM(dSYMURL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
 	return UUIDsFromDwarfdump(dSYMURL)
+}
+
+/// Sends an NSURL for each bcsymbolmap file for the given framework.
+/// The files do not necessarily exist on disk.
+///
+/// The returned URLs are relative to the parent directory of the framework.
+public func BCSymbolMapsForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	let directoryURL = frameworkURL.URLByDeletingLastPathComponent!
+	return UUIDsForFramework(frameworkURL)
+		|> flatMap(.Merge) { UUIDs in SignalProducer(values: UUIDs) }
+		|> map { UUID in
+			return directoryURL.URLByAppendingPathComponent(UUID.UUIDString, isDirectory: false).URLByAppendingPathExtension("bcsymbolmap")
+		}
 }
 
 /// Sends a set of UUIDs for each architecture present in the given URL.

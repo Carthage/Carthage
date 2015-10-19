@@ -367,10 +367,7 @@ public final class Project {
 								|> flatMap(.Merge, self.copyFrameworkToBuildFolder)
 								|> flatMap(.Merge) { frameworkURL in
 									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
-										|> then(SignalProducer(value: frameworkURL))
-								}
-								|> flatMap(.Merge) { frameworkURL in
-									return self.copyBCSymbolMapToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
+										|> then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
 								}
 								|> on(completed: {
 									_ = NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil, error: nil)
@@ -471,21 +468,11 @@ public final class Project {
 	/// no values.
 	///
 	/// Sends the URLs of the bcsymbolmap files after copying.
-	public func copyBCSymbolMapToBuildFolderForFramework(frameworkURL: NSURL, fromDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-		return UUIDsForFramework(frameworkURL)
-			|> flatMap(.Merge) { uuids in SignalProducer(values: uuids) }
-			|> flatMap(.Merge) { uuid in
-				let fileName = uuid.UUIDString.stringByAppendingPathExtension("bcsymbolmap")!
-				let fileURL = directoryURL.URLByAppendingPathComponent(fileName)
-				if fileURL.checkResourceIsReachableAndReturnError(nil) {
-					let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
-					let destinationURL = destinationDirectoryURL.URLByAppendingPathComponent(fileName)
-					let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
-					return copyProduct(fileURL, resolvedDestinationURL)
-				} else {
-					return SignalProducer.empty
-				}
-			}
+	public func copyBCSymbolMapsToBuildFolderForFramework(frameworkURL: NSURL, fromDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+		return BCSymbolMapsForFramework(frameworkURL)
+			|> map { fileURL in (target: fileURL, source: directoryURL.URLByAppendingPathComponent(fileURL.lastPathComponent!, isDirectory: false)) }
+			|> filter { $0.source.checkResourceIsReachableAndReturnError(nil) }
+			|> flatMap(.Merge) { copyProduct($0.source, $0.target.URLByResolvingSymlinksInPath!) }
 	}
 
 	/// Checks out the given project into its intended working directory,

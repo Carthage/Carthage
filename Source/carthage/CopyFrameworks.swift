@@ -34,7 +34,7 @@ public struct CopyFrameworksCommand: CommandType {
 										let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 										if options.copyBCSymbolMaps {
 											return strip
-												|> then(self.copyBCSymbolMapsForFramework(url, fromDirectory: source.URLByDeletingLastPathComponent!))
+												|> then(copyBCSymbolMapsForFramework(url, fromDirectory: source.URLByDeletingLastPathComponent!))
 												|> then(.empty)
 										} else {
 											return strip
@@ -46,20 +46,6 @@ public struct CopyFrameworksCommand: CommandType {
 			}
 			|> waitOnCommand
 	}
-	
-	private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-		return UUIDsForFramework(frameworkURL)
-			|> flatMap(.Merge) { uuids in SignalProducer(values: uuids) }
-			|> map { uuid in directoryURL.URLByAppendingPathComponent(uuid.UUIDString).URLByAppendingPathExtension("bcsymbolmap") }
-			|> filter { url in url.checkResourceIsReachableAndReturnError(nil) }
-			|> flatMap(.Merge) { url in
-				return SignalProducer(result: builtProductsFolder())
-					|> flatMap(.Merge) { builtProducts in
-						let target = builtProducts.URLByAppendingPathComponent(url.lastPathComponent!)
-						return copyProduct(url, target)
-					}
-			}
-	}
 }
 
 private struct CopyFrameworksOptions: OptionsType {
@@ -70,10 +56,22 @@ private struct CopyFrameworksOptions: OptionsType {
 	}
 	
 	static func evaluate(m: CommandMode) -> Result<CopyFrameworksOptions, CommandantError<CarthageError>> {
-		let actionIsArchive = buildAction() == "install" // archives use ACTION=install
 		return create
-			<*> m <| Option(key: "copy-bcsymbolmaps", defaultValue: actionIsArchive, usage: "copy the bcsymbolmap files for each product built with bitcode (enabled by default for archive builds)")
+			<*> m <| Option(key: "copy-bcsymbolmaps", defaultValue: buildActionIsArchiveOrInstall(), usage: "copy the bcsymbolmap files for each product built with bitcode (enabled by default for archive builds)")
 	}
+}
+
+private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	return BCSymbolMapsForFramework(frameworkURL)
+		|> map { url in directoryURL.URLByAppendingPathComponent(url.lastPathComponent!, isDirectory: false) }
+		|> filter { url in url.checkResourceIsReachableAndReturnError(nil) }
+		|> flatMap(.Merge) { url in
+			return SignalProducer(result: builtProductsFolder())
+				|> flatMap(.Merge) { builtProductsURL in
+					let target = builtProductsURL.URLByAppendingPathComponent(url.lastPathComponent!)
+					return copyProduct(url, target)
+				}
+		}
 }
 
 private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
@@ -110,6 +108,11 @@ private func validArchitectures() -> Result<[String], CarthageError> {
 	}
 }
 
+private func buildActionIsArchiveOrInstall() -> Bool {
+	// archives use ACTION=install
+	return getEnvironmentVariable("ACTION").value == "install"
+}
+
 private func inputFiles() -> SignalProducer<String, CarthageError> {
 	let count: Result<Int, CarthageError> = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT").flatMap { count in
 		if let i = count.toInt() {
@@ -128,8 +131,4 @@ private func inputFiles() -> SignalProducer<String, CarthageError> {
 			return SignalProducer(values: variables)
 				|> flatten(.Concat)
 		}
-}
-
-private func buildAction() -> String? {
-	return getEnvironmentVariable("ACTION").value
 }
