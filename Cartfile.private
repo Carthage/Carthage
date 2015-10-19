@@ -1,3 +1,3 @@
-github "Quick/Quick" "4c19d1257813c44df9c3c56b296b2b11ca40d4a9"
-github "Quick/Nimble" "v2.0.0-rc.3"
+github "Quick/Quick" ~> 0.7
+github "Quick/Nimble" ~> 2.0
 github "jspahrsummers/xcconfigs" "ec5753493605deed7358dec5f9260f503d3ed650"
