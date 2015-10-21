@@ -470,9 +470,13 @@ public final class Project {
 	/// Sends the URLs of the bcsymbolmap files after copying.
 	public func copyBCSymbolMapsToBuildFolderForFramework(frameworkURL: NSURL, fromDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 		return BCSymbolMapsForFramework(frameworkURL, inDirectoryURL: directoryURL)
-			|> flatMap(.Merge) { source in
-				let target = frameworkURL.URLByDeletingLastPathComponent!.URLByAppendingPathComponent(source.lastPathComponent!)
-				return copyProduct(source, target.URLByResolvingSymlinksInPath!)
+			|> flatMap(.Merge) { fileURL in
+				let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
+				let fileName = fileURL.lastPathComponent!
+				let destinationURL = destinationDirectoryURL.URLByAppendingPathComponent(fileName, isDirectory: false)
+				let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
+				
+				return copyProduct(fileURL, resolvedDestinationURL)
 			}
 	}
 
@@ -636,27 +640,21 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 }
 
 /// Sends the URL to each file found in the given directory conforming to the
-/// given type identifier.
-private func filesInDirectory(directoryURL: NSURL, #typeIdentifier: String) -> SignalProducer<NSURL, CarthageError> {
-	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: NSDirectoryEnumerationOptions.SkipsHiddenFiles | NSDirectoryEnumerationOptions.SkipsPackageDescendants, catchErrors: true)
+/// given type identifier. If no type identifier is provided, all files are sent.
+private func filesInDirectory(directoryURL: NSURL, _ typeIdentifier: String? = nil) -> SignalProducer<NSURL, CarthageError> {
+	let producer = NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: .SkipsHiddenFiles | .SkipsPackageDescendants, catchErrors: true)
 		|> map { enumerator, URL in URL }
-		|> filter { URL in
-			return URL.typeIdentifier
-				.analysis(ifSuccess: { identifier in
-					return UTTypeConformsTo(identifier, typeIdentifier) != 0
-				}, ifFailure: { _ in false })
-		}
-}
-
-/// Sends the URL to each file found in the given directory that has the
-/// given file extension.
-///
-/// Note: If a proper UTI is defined for the file extension,
-///	      `filesInDirectory(_:typeIdentifier:)` is preferred.
-private func filesInDirectory(directoryURL: NSURL, #fileExtension: String) -> SignalProducer<NSURL, CarthageError> {
-	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [], options: .SkipsHiddenFiles | .SkipsPackageDescendants, catchErrors: true)
-		|> map { enumerator, URL in URL }
-		|> filter { URL in URL.pathExtension == fileExtension }
+	if let typeIdentifier = typeIdentifier {
+		return producer
+			|> filter { URL in
+				return URL.typeIdentifier
+					.analysis(ifSuccess: { identifier in
+						return UTTypeConformsTo(identifier, typeIdentifier) != 0
+					}, ifFailure: { _ in false })
+			}
+	} else {
+		return producer
+	}
 }
 
 /// Sends the URL for the Info.plist of the specified Framework.
@@ -724,7 +722,7 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 
 /// Sends the URL to each framework bundle found in the given directory.
 private func frameworksInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	return filesInDirectory(directoryURL, typeIdentifier: kUTTypeFramework as! String)
+	return filesInDirectory(directoryURL, (kUTTypeFramework as! String))
 		|> filter { URL in
 			// Skip nested frameworks
 			let frameworksInURL = URL.pathComponents?.filter { pathComponent in
@@ -736,7 +734,7 @@ private func frameworksInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL,
 
 /// Sends the URL to each dSYM found in the given directory
 private func dSYMsInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	return filesInDirectory(directoryURL, typeIdentifier: "com.apple.xcode.dsym")
+	return filesInDirectory(directoryURL, "com.apple.xcode.dsym")
 }
 
 /// Sends the URL of the dSYM whose UUIDs match those of the given framework, or
@@ -758,7 +756,8 @@ private func dSYMForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: 
 
 /// Sends the URL to each bcsymbolmap found in the given directory.
 private func BCSymbolMapsInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	return filesInDirectory(directoryURL, fileExtension: "bcsymbolmap")
+	return filesInDirectory(directoryURL)
+		|> filter { URL in URL.pathExtension == "bcsymbolmap" }
 }
 
 /// Sends the URLs of the bcsymbolmap files that match the given framework and are

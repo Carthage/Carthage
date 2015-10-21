@@ -667,7 +667,7 @@ private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildS
 			return copyProduct(source, target)
 		}
 		|> flatMap(.Merge) { url in
-			return copyBCSymbolMapForBuildProductIntoDirectory(directoryURL, settings)
+			return copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL, settings)
 				|> then(SignalProducer(value: url))
 		}
 }
@@ -676,7 +676,7 @@ private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildS
 /// the given folder. Does nothing if bitcode is disabled.
 ///
 /// Returns a signal that will send the URL after copying for each file.
-private func copyBCSymbolMapForBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildSettings) -> SignalProducer<NSURL, CarthageError> {
+private func copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildSettings) -> SignalProducer<NSURL, CarthageError> {
 	if settings.bitcodeEnabled.value == true {
 		return SignalProducer(result: settings.wrapperURL)
 			|> flatMap(.Merge) { wrapperURL in BCSymbolMapsForFramework(wrapperURL) }
@@ -838,7 +838,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 
 			return mergeProductBinaries
 				|> then(mergeProductModules)
-				|> then(copyBCSymbolMapForBuildProductIntoDirectory(destinationFolderURL, secondProductSettings))
+				|> then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, secondProductSettings))
 				|> then(SignalProducer(value: productURL))
 		}
 }
