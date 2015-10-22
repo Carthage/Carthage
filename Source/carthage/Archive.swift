@@ -22,7 +22,7 @@ public struct ArchiveCommand: CommandType {
 				let formatting = options.colorOptions.formatting
 
 				return SignalProducer(values: Platform.supportedPlatforms)
-					.flatMap(.Concat) { platform in
+					.flatMap(.Concat) { platform -> SignalProducer<String, CarthageError> in
 						let frameworkName = (platform.relativePath as NSString).stringByAppendingPathComponent(options.frameworkName)
 						let framework = (frameworkName as NSString).stringByAppendingPathExtension("framework")!
 						let dSYM = (framework as NSString).stringByAppendingPathExtension("dSYM")!
