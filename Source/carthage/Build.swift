@@ -40,7 +40,7 @@ public struct BuildCommand: CommandType {
 				// Redirect any error-looking messages from stdout, because
 				// Xcode doesn't always forward them.
 				if !options.verbose {
-					let (stdoutProducer, stdoutSink) = SignalProducer<NSData, NoError>.buffer(0)
+					let (stdoutProducer, stdoutObserver) = SignalProducer<NSData, NoError>.buffer(0)
 					let grepTask: BuildSchemeProducer = launchTask(TaskDescription(launchPath: "/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ], standardInput: stdoutProducer))
 						.on(next: { taskEvent in
 							switch taskEvent {
@@ -59,15 +59,15 @@ public struct BuildCommand: CommandType {
 						.on(next: { taskEvent in
 							switch taskEvent {
 							case let .StandardOutput(data):
-								sendNext(stdoutSink, data)
+								stdoutObserver.sendNext(data)
 
 							default:
 								break
 							}
 						}, terminated: {
-							sendCompleted(stdoutSink)
+							stdoutObserver.sendCompleted()
 						}, interrupted: {
-							sendInterrupted(stdoutSink)
+							stdoutObserver.sendInterrupted()
 						})
 
 					buildProgress = SignalProducer(values: [ grepTask, buildProgress ])

@@ -40,7 +40,7 @@ internal final class ProducerQueue {
 					disposable.addDisposable(signalDisposable)
 
 					signal.observe { event in
-						observer(event)
+						observer.action(event)
 
 						if event.isTerminating {
 							dispatch_resume(self.queue)
@@ -54,7 +54,7 @@ internal final class ProducerQueue {
 
 extension SignalProducerType {
 	/// Shorthand for enqueuing the given producer upon the given queue.
-	internal func startOnQueue(queue: ProducerQueue) -> SignalProducer<T, E> {
+	internal func startOnQueue(queue: ProducerQueue) -> SignalProducer<Value, Error> {
 		return queue.enqueue(self.producer)
 	}
 }

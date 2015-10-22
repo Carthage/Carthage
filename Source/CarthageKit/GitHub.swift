@@ -442,7 +442,7 @@ private func fetchAllPages(URL: NSURL, _ authorizationHeaderValue: String?) -> S
 
 	return NSURLSession.sharedSession().rac_dataWithRequest(request)
 		.mapError(CarthageError.NetworkError)
-		.flatMap(.Concat) { data, response in
+		.flatMap(.Concat) { data, response -> SignalProducer<NSData, CarthageError> in
 			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
 
 			if let HTTPResponse = response as? NSHTTPURLResponse {

@@ -161,7 +161,7 @@ public final class Project {
 	}
 
 	deinit {
-		sendCompleted(_projectEventsObserver)
+		_projectEventsObserver.sendCompleted()
 	}
 
 	private typealias CachedVersions = [ProjectIdentifier: [PinnedVersion]]
@@ -261,7 +261,7 @@ public final class Project {
 	private func cloneOrFetchDependency(project: ProjectIdentifier) -> SignalProducer<NSURL, CarthageError> {
 		return cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS)
 			.on(next: { event, _ in
-				sendNext(self._projectEventsObserver, event)
+				self._projectEventsObserver.sendNext(event)
 			})
 			.map { _, URL in URL }
 			.takeLast(1)
@@ -300,7 +300,7 @@ public final class Project {
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
 		return versionsForProject(project)
 			.collect()
-			.flatMap(.Concat) { (versions: [PinnedVersion]) in
+			.flatMap(.Concat) { (versions: [PinnedVersion]) -> SignalProducer<PinnedVersion, CarthageError> in
 				let referencedVersion = PinnedVersion(reference)
 
 				if versions.contains(referencedVersion) {
@@ -407,7 +407,7 @@ public final class Project {
 				case .GitHubAPIRequestFailed:
 					// Log the GitHub API request failure, not to error out,
 					// because that should not be fatal error.
-					sendNext(self._projectEventsObserver, .SkippedDownloadingBinaries(project, error.description))
+					self._projectEventsObserver.sendNext(.SkippedDownloadingBinaries(project, error.description))
 					return .empty
 
 				default:
@@ -415,7 +415,7 @@ public final class Project {
 				}
 			}
 			.on(next: { release in
-				sendNext(self._projectEventsObserver, .DownloadingBinaries(project, release.nameWithFallback))
+				self._projectEventsObserver.sendNext(.DownloadingBinaries(project, release.nameWithFallback))
 			})
 			.flatMap(.Concat) { release -> SignalProducer<NSURL, CarthageError> in
 				return SignalProducer(values: release.assets)
@@ -453,7 +453,7 @@ public final class Project {
 	/// Sends the URL of the dSYM after copying.
 	public func copyDSYMToBuildFolderForFramework(frameworkURL: NSURL, fromDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 		return dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
-			.flatMap(.Merge) { dSYMURL in
+			.flatMap(.Merge) { dSYMURL -> SignalProducer<NSURL, CarthageError> in
 				let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
 				let fileName = dSYMURL.lastPathComponent!
 				let destinationURL = destinationDirectoryURL.URLByAppendingPathComponent(fileName)
@@ -491,7 +491,7 @@ public final class Project {
 				}
 			}
 			.on(started: {
-				sendNext(self._projectEventsObserver, .CheckingOut(project, revision))
+				self._projectEventsObserver.sendNext(.CheckingOut(project, revision))
 			})
 
 		return commitExistsInRepository(repositoryURL, revision: revision)
@@ -520,7 +520,7 @@ public final class Project {
 			.zipWith(submodulesSignal)
 			.flatMap(.Merge) { resolvedCartfile, submodulesByPath -> SignalProducer<(), CarthageError> in
 				return SignalProducer(values: resolvedCartfile.dependencies)
-					.flatMap(.Merge) { dependency in
+					.flatMap(.Merge) { dependency -> SignalProducer<(), CarthageError> in
 						let project = dependency.project
 						let revision = dependency.version.commitish
 
@@ -534,7 +534,7 @@ public final class Project {
 						}
 
 						return self.installBinariesForProject(project, atRevision: revision)
-							.flatMap(.Merge) { installed in
+							.flatMap(.Merge) { installed -> SignalProducer<(), CarthageError> in
 								if installed {
 									return .empty
 								} else {
@@ -565,7 +565,7 @@ public final class Project {
 							// Log that building the dependency is being skipped,
 							// not to error out with `.NoSharedFrameworkSchemes`
 							// to continue building other dependencies.
-							sendNext(self._projectEventsObserver, .SkippedBuilding(dependency.project, error.description))
+							self._projectEventsObserver.sendNext(.SkippedBuilding(dependency.project, error.description))
 							return .empty
 
 						default:
@@ -668,7 +668,7 @@ private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, C
 				return .Failure(.ReadFailed(plistURL, error))
 			}
 		}
-		.startOn(QueueScheduler(name: "org.carthage.CarthageKit.Project.platformForInfoPlist"))
+		.startOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Project.platformForInfoPlist"))
 		.attemptMap { (data: NSData) -> Result<AnyObject, CarthageError> in
 			var error: NSError?
 			do {
@@ -798,7 +798,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool) -
 
 			return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
 		}
-		.flatMap(.Merge) { remoteURL in
+		.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
 			let cloneProducer: () -> SignalProducer<(ProjectEvent, NSURL), CarthageError> = {
 				let cloneProducer = cloneRepository(remoteURL, repositoryURL)
 
@@ -813,7 +813,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool) -
 			} else {
 				return isGitRepository(repositoryURL)
 					.promoteErrors(CarthageError.self)
-					.flatMap(.Concat) { isRepository in
+					.flatMap(.Concat) { isRepository -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
 						if isRepository {
 							let fetchProducer = fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
 

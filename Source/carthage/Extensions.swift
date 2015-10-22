@@ -178,7 +178,7 @@ extension Project {
 						.concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName)
 							.then(.empty))
 
-					sendNext(observer, producer)
+					observer.sendNext(producer)
 				}
 			}
 
@@ -215,14 +215,14 @@ extension Project {
 						.concat(moveProducer
 							.then(.empty))
 
-					sendNext(observer, producer)
+					observer.sendNext(producer)
 				} catch let error as NSError {
-					sendError(observer, CarthageError.ReadFailed(oldCheckoutsURL, error))
+					observer.sendError(CarthageError.ReadFailed(oldCheckoutsURL, error))
 					return
 				}
 			}
 
-			sendCompleted(observer)
+			observer.sendCompleted()
 		}
 
 		return producers

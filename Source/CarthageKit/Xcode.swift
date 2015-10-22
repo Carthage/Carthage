@@ -252,7 +252,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		// xcodebuild has a bug where xcodebuild -list can sometimes hang
 		// indefinitely on projects that don't share any schemes, so
 		// automatically bail out if it looks like that's happening.
-		.timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 15, onScheduler: QueueScheduler())
+		.timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 15, onScheduler: QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)))
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
@@ -509,7 +509,7 @@ public struct BuildSettings {
 					let flushTarget = { () -> () in
 						if let currentTarget = currentTarget {
 							let buildSettings = self.init(target: currentTarget, settings: currentSettings)
-							sendNext(observer, buildSettings)
+							observer.sendNext(buildSettings)
 						}
 
 						currentTarget = nil
@@ -539,7 +539,7 @@ public struct BuildSettings {
 					}
 
 					flushTarget()
-					sendCompleted(observer)
+					observer.sendCompleted()
 				}
 			}
 	}
@@ -695,7 +695,7 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, _ destinatio
 	precondition(destinationModuleDirectoryURL.fileURL)
 
 	return NSFileManager.defaultManager().carthage_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants, .SkipsHiddenFiles ], catchErrors: true)
-		.flatMap(.Merge) { enumerator, URL in
+		.flatMap(.Merge) { enumerator, URL -> SignalProducer<NSURL, CarthageError> in
 			let lastComponent: String? = URL.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!).URLByResolvingSymlinksInPath!
 
@@ -759,18 +759,18 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 					if let transformed = transformedEvent.value {
 						settings = combineDictionaries(settings, rhs: transformed)
 					} else {
-						sendNext(observer, transformedEvent)
+						observer.sendNext(transformedEvent)
 					}
 
 				case let .Error(error):
-					sendError(observer, error)
+					observer.sendError(error)
 
 				case .Completed:
-					sendNext(observer, .Success(settings))
-					sendCompleted(observer)
+					observer.sendNext(.Success(settings))
+					observer.sendCompleted()
 
 				case .Interrupted:
-					sendInterrupted(observer)
+					observer.sendInterrupted()
 				}
 			}
 		}
@@ -788,7 +788,7 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 /// Upon .success, sends the URL to the merged product, then completes.
 private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings, _ secondProductSettings: BuildSettings, _ destinationFolderURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return copyBuildProductIntoDirectory(destinationFolderURL, firstProductSettings)
-		.flatMap(.Merge) { productURL in
+		.flatMap(.Merge) { productURL -> SignalProducer<NSURL, CarthageError> in
 			let executableURLs = (firstProductSettings.executableURL &&& secondProductSettings.executableURL).map { [ $0, $1 ] }
 			let outputURL = firstProductSettings.executablePath.map(destinationFolderURL.URLByAppendingPathComponent)
 
@@ -975,10 +975,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 											let secondSettings = secondSettingsByTarget[target]
 											assert(secondSettings != nil, "No \(secondSDK) build settings found for target \"\(target)\"")
 
-											sendNext(observer, (firstSettings, secondSettings!))
+											observer.sendNext((firstSettings, secondSettings!))
 										}
 
-										sendCompleted(observer)
+										observer.sendCompleted()
 									}
 								}
 						}
@@ -1232,7 +1232,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				return locatorBuffer
 					// This scheduler hop is required to avoid disallowed recursive signals.
 					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
-					.startOn(QueueScheduler(name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
+					.startOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
 					// Pick up the first workspace which can build the scheme.
 					.filter { project, schemes in
 						switch project {

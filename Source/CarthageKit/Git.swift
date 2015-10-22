@@ -192,11 +192,11 @@ public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, Carthag
 					}
 
 					if let line = line {
-						sendNext(observer, line)
+						observer.sendNext(line)
 					}
 				}
 
-				sendCompleted(observer)
+				observer.sendCompleted()
 			}
 		}
 }
@@ -331,11 +331,11 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 			}
 
 			if let key = key as? String {
-				sendNext(observer, (key, value))
+				observer.sendNext((key, value))
 			}
 		}
 
-		sendCompleted(observer)
+		observer.sendCompleted()
 	}
 }
 
@@ -383,8 +383,8 @@ public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String 
 		// doesn't exist, so pre-emptively check for that.
 		var isDirectory: ObjCBool = false
 		if !NSFileManager.defaultManager().fileExistsAtPath(repositoryFileURL.path!, isDirectory: &isDirectory) || !isDirectory {
-			sendNext(observer, false)
-			sendCompleted(observer)
+			observer.sendNext(false)
+			observer.sendCompleted()
 			return
 		}
 
@@ -430,7 +430,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, _ submodule: Subm
 
 	return isGitRepository(submoduleDirectoryURL)
 		.promoteErrors(CarthageError.self)
-		.flatMap(.Merge) { submoduleExists in
+		.flatMap(.Merge) { submoduleExists -> SignalProducer<(), CarthageError> in
 			if submoduleExists {
 				// Just check out and stage the correct revision.
 				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
