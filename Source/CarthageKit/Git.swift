@@ -401,8 +401,14 @@ public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError
 	return launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: directoryURL)
 		|> map { outputIncludingLineEndings in
 			let relativeOrAbsoluteGitDirectory = outputIncludingLineEndings.stringByTrimmingCharactersInSet(.newlineCharacterSet())
+			var absoluteGitDirectory: String
+			if (relativeOrAbsoluteGitDirectory as NSString).absolutePath {
+				absoluteGitDirectory = relativeOrAbsoluteGitDirectory
+			} else {
+				absoluteGitDirectory = (directoryURL.path! as NSString).stringByAppendingPathComponent(relativeOrAbsoluteGitDirectory)
+			}
 			var isDirectory: ObjCBool = false
-			let directoryExists = NSFileManager.defaultManager().fileExistsAtPath(relativeOrAbsoluteGitDirectory, isDirectory: &isDirectory)
+			let directoryExists = NSFileManager.defaultManager().fileExistsAtPath(absoluteGitDirectory, isDirectory: &isDirectory)
 			return directoryExists && isDirectory
 		}
 		|> catch { _ in SignalProducer(value: false) }
