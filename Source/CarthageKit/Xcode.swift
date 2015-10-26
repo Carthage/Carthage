@@ -762,8 +762,8 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 						observer.sendNext(transformedEvent)
 					}
 
-				case let .Error(error):
-					observer.sendError(error)
+				case let .Failed(error):
+					observer.sendFailed(error)
 
 				case .Completed:
 					observer.sendNext(.Success(settings))

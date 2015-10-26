@@ -66,8 +66,8 @@ extension SignalType {
 
 					lock.unlock()
 
-				case let .Error(error):
-					observer.sendError(error)
+				case let .Failed(error):
+					observer.sendFailed(error)
 
 				case .Completed:
 					lock.lock()
@@ -96,8 +96,8 @@ extension SignalType {
 
 					lock.unlock()
 
-				case let .Error(error):
-					observer.sendError(error)
+				case let .Failed(error):
+					observer.sendFailed(error)
 
 				case .Completed:
 					lock.lock()
@@ -127,7 +127,7 @@ extension SignalProducerType {
 	}
 }
 
-extension SignalType where Value: EventType, Value.Err == Error {
+extension SignalType where Value: EventType, Value.Error == Error {
 	/// Dematerializes the signal, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> Signal<Value.Value, Error> {
@@ -143,7 +143,7 @@ extension SignalType where Value: EventType, Value.Err == Error {
 						receivedValue = true
 						observer.sendNext(value)
 
-					case let .Error(error):
+					case let .Failed(error):
 						receivedError = error
 
 					case .Completed:
@@ -153,12 +153,12 @@ extension SignalType where Value: EventType, Value.Err == Error {
 						observer.sendInterrupted()
 					}
 
-				case let .Error(error):
-					observer.sendError(error)
+				case let .Failed(error):
+					observer.sendFailed(error)
 
 				case .Completed:
 					if let receivedError = receivedError where !receivedValue {
-						observer.sendError(receivedError)
+						observer.sendFailed(receivedError)
 					}
 
 					observer.sendCompleted()
@@ -171,7 +171,7 @@ extension SignalType where Value: EventType, Value.Err == Error {
 	}
 }
 
-extension SignalProducerType where Value: EventType, Value.Err == Error {
+extension SignalProducerType where Value: EventType, Value.Error == Error {
 	/// Dematerializes the producer, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> SignalProducer<Value.Value, Error> {
@@ -228,7 +228,7 @@ extension NSURLSession {
 					observer.sendNext((URL, response))
 					observer.sendCompleted()
 				} else {
-					observer.sendError(error ?? defaultSessionError)
+					observer.sendFailed(error ?? defaultSessionError)
 				}
 			}
 
@@ -280,7 +280,7 @@ extension NSFileManager {
 				if catchErrors {
 					return true
 				} else {
-					observer.sendError(CarthageError.ReadFailed(URL, error))
+					observer.sendFailed(CarthageError.ReadFailed(URL, error))
 					return false
 				}
 			}!

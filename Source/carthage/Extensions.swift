@@ -217,7 +217,7 @@ extension Project {
 
 					observer.sendNext(producer)
 				} catch let error as NSError {
-					observer.sendError(CarthageError.ReadFailed(oldCheckoutsURL, error))
+					observer.sendFailed(CarthageError.ReadFailed(oldCheckoutsURL, error))
 					return
 				}
 			}

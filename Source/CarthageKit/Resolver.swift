@@ -154,7 +154,7 @@ public struct Resolver {
 						newNodes.append(newNode)
 
 					case let .Failure(error):
-						observer.sendError(error)
+						observer.sendFailed(error)
 						return
 					}
 				}
