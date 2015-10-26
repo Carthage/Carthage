@@ -63,19 +63,6 @@ extension CommandError: CustomStringConvertible {
 	}
 }
 
-/// Transforms the error type in a Result.
-extension Result {
-	internal func mapError<F>(transform: Error -> F) -> Result<Value, F> {
-		switch self {
-		case let .Success(value):
-			return .Success(value)
-
-		case let .Failure(error):
-			return .Failure(transform(error))
-		}
-	}
-}
-
 extension SignalType where Error == CarthageError {
 	/// Promotes CarthageErrors into CommandErrors.
 	internal func promoteErrors() -> Signal<Value, CommandError> {
