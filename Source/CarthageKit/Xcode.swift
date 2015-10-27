@@ -657,6 +657,8 @@ extension BuildSettings: Printable {
 /// its name) into the given folder. The folder will be created if it does not
 /// already exist.
 ///
+/// If this built product has any *.bcsymbolmap files they will also be copied.
+///
 /// Returns a signal that will send the URL after copying upon .success.
 private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildSettings) -> SignalProducer<NSURL, CarthageError> {
 	let target = settings.wrapperName.map(directoryURL.URLByAppendingPathComponent)
@@ -664,6 +666,27 @@ private func copyBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildS
 		|> flatMap(.Merge) { (target, source) in
 			return copyProduct(source, target)
 		}
+		|> flatMap(.Merge) { url in
+			return copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL, settings)
+				|> then(SignalProducer(value: url))
+		}
+}
+
+/// Finds any *.bcsymbolmap files for the built product and copies them into
+/// the given folder. Does nothing if bitcode is disabled.
+///
+/// Returns a signal that will send the URL after copying for each file.
+private func copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL: NSURL, settings: BuildSettings) -> SignalProducer<NSURL, CarthageError> {
+	if settings.bitcodeEnabled.value == true {
+		return SignalProducer(result: settings.wrapperURL)
+			|> flatMap(.Merge) { wrapperURL in BCSymbolMapsForFramework(wrapperURL) }
+			|> filter { url in url.checkResourceIsReachableAndReturnError(nil) }
+			|> flatMap(.Merge) { source in
+				return copyProduct(source, directoryURL.URLByAppendingPathComponent(source.lastPathComponent!, isDirectory: false))
+			}
+	} else {
+		return .empty
+	}
 }
 
 /// Attempts to merge the given executables into one fat binary, written to
@@ -782,6 +805,8 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 /// been created from the same target, and differ only in the SDK they were
 /// built for.
 ///
+/// Any *.bcsymbolmap files for the built products are also copied.
+///
 /// Upon .success, sends the URL to the merged product, then completes.
 private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings, secondProductSettings: BuildSettings, destinationFolderURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return copyBuildProductIntoDirectory(destinationFolderURL, firstProductSettings)
@@ -813,6 +838,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 
 			return mergeProductBinaries
 				|> then(mergeProductModules)
+				|> then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, secondProductSettings))
 				|> then(SignalProducer(value: productURL))
 		}
 }
@@ -1420,6 +1446,19 @@ public func UUIDsForFramework(frameworkURL: NSURL) -> SignalProducer<Set<NSUUID>
 /// Sends a set of UUIDs for each architecture present in the given dSYM.
 public func UUIDsForDSYM(dSYMURL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
 	return UUIDsFromDwarfdump(dSYMURL)
+}
+
+/// Sends an NSURL for each bcsymbolmap file for the given framework.
+/// The files do not necessarily exist on disk.
+///
+/// The returned URLs are relative to the parent directory of the framework.
+public func BCSymbolMapsForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	let directoryURL = frameworkURL.URLByDeletingLastPathComponent!
+	return UUIDsForFramework(frameworkURL)
+		|> flatMap(.Merge) { UUIDs in SignalProducer(values: UUIDs) }
+		|> map { UUID in
+			return directoryURL.URLByAppendingPathComponent(UUID.UUIDString, isDirectory: false).URLByAppendingPathExtension("bcsymbolmap")
+		}
 }
 
 /// Sends a set of UUIDs for each architecture present in the given URL.

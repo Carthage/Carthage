@@ -22,12 +22,21 @@ public struct ArchiveCommand: CommandType {
 				let formatting = options.colorOptions.formatting
 
 				return SignalProducer(values: Platform.supportedPlatforms)
-					|> flatMap(.Concat) { platform in
-						let framework = platform.relativePath.stringByAppendingPathComponent(options.frameworkName).stringByAppendingPathExtension("framework")!
-						let dSYM = framework.stringByAppendingPathExtension("dSYM")!
-						return SignalProducer(values: [framework, dSYM])
+					|> map { platform in
+						return platform.relativePath.stringByAppendingPathComponent(options.frameworkName).stringByAppendingPathExtension("framework")!
 					}
 					|> filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+					|> flatMap(.Merge) { framework in
+						let dSYM = framework.stringByAppendingPathExtension("dSYM")!
+						let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework)!)
+							// generate relative paths for the bcsymbolmaps so they print nicely
+							|> map { url in framework.stringByDeletingLastPathComponent.stringByAppendingPathComponent(url.lastPathComponent!) }
+						let extraFilesProducer = SignalProducer(value: dSYM)
+							|> concat(bcsymbolmapsProducer)
+							|> filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+						return SignalProducer(value: framework)
+							|> concat(extraFilesProducer)
+					}
 					|> on(next: { path in
 						carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
 					})
