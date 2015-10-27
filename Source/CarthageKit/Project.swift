@@ -768,31 +768,20 @@ private func BCSymbolMapsForFramework(frameworkURL: NSURL, inDirectoryURL direct
 			if UUIDs.isEmpty {
 				return SignalProducer.empty
 			}
-			// conceptually, we just want to filter the URLs to find any that are in uuids.
-			// but we'd like to stop enumeration early when we find all the files.
-			// this also guarantees we don't send two URLs for bcsymbolmap files with the same UUID.
-			return SignalProducer { observer, disposable in
-				var remainingUUIDs = UUIDs
-				BCSymbolMapsInDirectory(directoryURL)
-					|> startWithSignal { signal, signalDisposable in
-						disposable += signalDisposable
-						signal.observe(Signal.Observer { event in
-							switch event {
-							case let .Next(value):
-								if let basename = value.value.lastPathComponent?.stringByDeletingPathExtension, fileUUID = NSUUID(UUIDString: basename) {
-									if remainingUUIDs.remove(fileUUID) != nil {
-										observer.put(event)
-										if remainingUUIDs.isEmpty {
-											sendCompleted(observer)
-										}
-									}
-								}
-							default:
-								observer.put(event)
+			return BCSymbolMapsInDirectory(directoryURL)
+				|> { (signal: Signal<NSURL, CarthageError>) -> Signal<NSURL, CarthageError> in
+					var remainingUUIDs = UUIDs
+					let count = remainingUUIDs.count
+					return signal
+						|> filter { fileURL in
+							if let basename = fileURL.lastPathComponent?.stringByDeletingPathExtension, fileUUID = NSUUID(UUIDString: basename) {
+								return remainingUUIDs.remove(fileUUID) != nil
+							} else {
+								return false
 							}
-						})
-					}
-			}
+						}
+						|> take(count)
+				}
 	}
 }
 
