@@ -766,22 +766,23 @@ private func BCSymbolMapsForFramework(frameworkURL: NSURL, inDirectoryURL direct
 	return UUIDsForFramework(frameworkURL)
 		|> flatMap(.Merge) { UUIDs in
 			if UUIDs.isEmpty {
-				return SignalProducer.empty
+				return .empty
+			}
+			func filterUUIDs(signal: Signal<NSURL, CarthageError>) -> Signal<NSURL, CarthageError> {
+				var remainingUUIDs = UUIDs
+				let count = remainingUUIDs.count
+				return signal
+					|> filter { fileURL in
+						if let basename = fileURL.lastPathComponent?.stringByDeletingPathExtension, fileUUID = NSUUID(UUIDString: basename) {
+							return remainingUUIDs.remove(fileUUID) != nil
+						} else {
+							return false
+						}
+					}
+					|> take(count)
 			}
 			return BCSymbolMapsInDirectory(directoryURL)
-				|> { (signal: Signal<NSURL, CarthageError>) -> Signal<NSURL, CarthageError> in
-					var remainingUUIDs = UUIDs
-					let count = remainingUUIDs.count
-					return signal
-						|> filter { fileURL in
-							if let basename = fileURL.lastPathComponent?.stringByDeletingPathExtension, fileUUID = NSUUID(UUIDString: basename) {
-								return remainingUUIDs.remove(fileUUID) != nil
-							} else {
-								return false
-							}
-						}
-						|> take(count)
-				}
+				|> filterUUIDs
 	}
 }
 
