@@ -437,9 +437,10 @@ public final class Project {
 	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 		return infoPlistForFramework(frameworkURL)
 			|> flatMap(.Merge) { infoPlistURL in platformForInfoPlist(infoPlistURL) }
-			|> map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
-			|> map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
-			|> flatMap(.Merge) { destinationFrameworkURL in copyProduct(frameworkURL, destinationFrameworkURL.URLByResolvingSymlinksInPath!) }
+			|> flatMap(.Merge) { platform in
+				let platformFolderURL = self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
+				return copyFileURLsFromProducer(SignalProducer(value: frameworkURL), intoDirectory: platformFolderURL)
+			}
 	}
 
 	/// Copies the DSYM matching the given framework and contained within the
@@ -449,15 +450,9 @@ public final class Project {
 	///
 	/// Sends the URL of the dSYM after copying.
 	public func copyDSYMToBuildFolderForFramework(frameworkURL: NSURL, fromDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-		return dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
-			|> flatMap(.Merge) { dSYMURL in
-				let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
-				let fileName = dSYMURL.lastPathComponent!
-				let destinationURL = destinationDirectoryURL.URLByAppendingPathComponent(fileName)
-				let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
-
-				return copyProduct(dSYMURL, resolvedDestinationURL)
-			}
+		let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
+		let dSYMProducer = dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
+		return copyFileURLsFromProducer(dSYMProducer, intoDirectory: destinationDirectoryURL)
 	}
 	
 	/// Copies any *.bcsymbolmap files matching the given framework and contained
@@ -469,15 +464,9 @@ public final class Project {
 	///
 	/// Sends the URLs of the bcsymbolmap files after copying.
 	public func copyBCSymbolMapsToBuildFolderForFramework(frameworkURL: NSURL, fromDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-		return BCSymbolMapsForFramework(frameworkURL, inDirectoryURL: directoryURL)
-			|> flatMap(.Merge) { fileURL in
-				let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
-				let fileName = fileURL.lastPathComponent!
-				let destinationURL = destinationDirectoryURL.URLByAppendingPathComponent(fileName, isDirectory: false)
-				let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
-				
-				return copyProduct(fileURL, resolvedDestinationURL)
-			}
+		let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
+		let bcsymbolmapsProducer = BCSymbolMapsForFramework(frameworkURL, inDirectoryURL: directoryURL)
+		return copyFileURLsFromProducer(bcsymbolmapsProducer, intoDirectory: destinationDirectoryURL)
 	}
 
 	/// Checks out the given project into its intended working directory,
