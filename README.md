@@ -67,7 +67,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
   $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
   ```
 
-  This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries.
+  This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files are copied when archiving.
 
 ##### Copying debug symbols for debugging and crash reporting
 
@@ -116,6 +116,10 @@ If you want to work on your dependencies during development, and want them to be
 ```
 
 Note that you should be [using submodules](#using-submodules-for-dependencies) before doing this, because plain checkouts [should not be modified][Carthage/Checkouts] directly.
+
+### Bash/Zsh completion
+
+Auto completion of Carthage commands and options are available as documented in [Bash/Zsh Completion][Bash/Zsh Completion].
 
 ## Supporting Carthage for your framework
 
@@ -190,4 +194,5 @@ Header backdrop photo is released under the [CC BY-NC-SA 2.0](https://creativeco
 [Cartfile.resolved]: Documentation/Artifacts.md#cartfileresolved
 [Carthage/Build]: Documentation/Artifacts.md#carthagebuild
 [Carthage/Checkouts]: Documentation/Artifacts.md#carthagecheckouts
+[Bash/Zsh Completion]: Documentation/BashZshCompletion.md
 [CarthageKit]: Source/CarthageKit

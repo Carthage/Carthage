@@ -371,6 +371,7 @@ public final class Project {
 								.flatMap(.Merge, transform: self.copyFrameworkToBuildFolder)
 								.flatMap(.Merge) { frameworkURL in
 									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
+										.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
 								}
 								.on(completed: {
 									_ = try? NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil)
@@ -440,9 +441,10 @@ public final class Project {
 	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 		return infoPlistForFramework(frameworkURL)
 			.flatMap(.Merge) { infoPlistURL in platformForInfoPlist(infoPlistURL) }
-			.map { platform in self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true) }
-			.map { platformFolderURL in platformFolderURL.URLByAppendingPathComponent(frameworkURL.lastPathComponent!) }
-			.flatMap(.Merge) { destinationFrameworkURL in copyProduct(frameworkURL, destinationFrameworkURL.URLByResolvingSymlinksInPath!) }
+			.flatMap(.Merge) { platform -> SignalProducer<NSURL, CarthageError> in
+				let platformFolderURL = self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
+				return copyFileURLsFromProducer(SignalProducer(value: frameworkURL), intoDirectory: platformFolderURL)
+			}
 	}
 
 	/// Copies the DSYM matching the given framework and contained within the
@@ -452,15 +454,23 @@ public final class Project {
 	///
 	/// Sends the URL of the dSYM after copying.
 	public func copyDSYMToBuildFolderForFramework(frameworkURL: NSURL, fromDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-		return dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
-			.flatMap(.Merge) { dSYMURL -> SignalProducer<NSURL, CarthageError> in
-				let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
-				let fileName = dSYMURL.lastPathComponent!
-				let destinationURL = destinationDirectoryURL.URLByAppendingPathComponent(fileName)
-				let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
-
-				return copyProduct(dSYMURL, resolvedDestinationURL)
-			}
+		let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
+		let dSYMProducer = dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
+		return copyFileURLsFromProducer(dSYMProducer, intoDirectory: destinationDirectoryURL)
+	}
+	
+	/// Copies any *.bcsymbolmap files matching the given framework and contained
+	/// within the given directory URL to the directory that the framework
+	/// resides within.
+	///
+	/// If no bcsymbolmap files are found for the given framework, completes with
+	/// no values.
+	///
+	/// Sends the URLs of the bcsymbolmap files after copying.
+	public func copyBCSymbolMapsToBuildFolderForFramework(frameworkURL: NSURL, fromDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+		let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
+		let bcsymbolmapsProducer = BCSymbolMapsForFramework(frameworkURL, inDirectoryURL: directoryURL)
+		return copyFileURLsFromProducer(bcsymbolmapsProducer, intoDirectory: destinationDirectoryURL)
 	}
 
 	/// Checks out the given project into its intended working directory,
@@ -623,16 +633,21 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 }
 
 /// Sends the URL to each file found in the given directory conforming to the
-/// given type identifier.
-private func filesInDirectory(directoryURL: NSURL, _ typeIdentifier: String) -> SignalProducer<NSURL, CarthageError> {
-	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: [ .SkipsHiddenFiles, .SkipsPackageDescendants ], catchErrors: true)
+/// given type identifier. If no type identifier is provided, all files are sent.
+private func filesInDirectory(directoryURL: NSURL, _ typeIdentifier: String? = nil) -> SignalProducer<NSURL, CarthageError> {
+	let producer = NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: [ .SkipsHiddenFiles, .SkipsPackageDescendants ], catchErrors: true)
 		.map { enumerator, URL in URL }
-		.filter { URL in
-			return URL.typeIdentifier
-				.analysis(ifSuccess: { identifier in
-					return UTTypeConformsTo(identifier, typeIdentifier)
-				}, ifFailure: { _ in false })
-		}
+	if let typeIdentifier = typeIdentifier {
+		return producer
+			.filter { URL in
+				return URL.typeIdentifier
+					.analysis(ifSuccess: { identifier in
+						return UTTypeConformsTo(identifier, typeIdentifier)
+					}, ifFailure: { _ in false })
+			}
+	} else {
+		return producer
+	}
 }
 
 /// Sends the URL for the Info.plist of the specified Framework.
@@ -731,6 +746,38 @@ private func dSYMForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: 
 				}
 		}
 		.take(1)
+}
+
+/// Sends the URL to each bcsymbolmap found in the given directory.
+private func BCSymbolMapsInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	return filesInDirectory(directoryURL)
+		.filter { URL in URL.pathExtension == "bcsymbolmap" }
+}
+
+/// Sends the URLs of the bcsymbolmap files that match the given framework and are
+/// located somewhere within the given directory.
+private func BCSymbolMapsForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	return UUIDsForFramework(frameworkURL)
+		.flatMap(.Merge) { UUIDs -> SignalProducer<NSURL, CarthageError> in
+			if UUIDs.isEmpty {
+				return .empty
+			}
+			func filterUUIDs(signal: Signal<NSURL, CarthageError>) -> Signal<NSURL, CarthageError> {
+				var remainingUUIDs = UUIDs
+				let count = remainingUUIDs.count
+				return signal
+					.filter { fileURL in
+						if let basename = fileURL.URLByDeletingPathExtension?.lastPathComponent, fileUUID = NSUUID(UUIDString: basename) {
+							return remainingUUIDs.remove(fileUUID) != nil
+						} else {
+							return false
+						}
+					}
+					.take(count)
+			}
+			return BCSymbolMapsInDirectory(directoryURL)
+				.lift(filterUUIDs)
+	}
 }
 
 /// Determines whether a Release is a suitable candidate for binary frameworks.

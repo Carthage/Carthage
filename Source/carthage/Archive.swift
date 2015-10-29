@@ -22,13 +22,22 @@ public struct ArchiveCommand: CommandType {
 				let formatting = options.colorOptions.formatting
 
 				return SignalProducer(values: Platform.supportedPlatforms)
-					.flatMap(.Concat) { platform -> SignalProducer<String, CarthageError> in
+					.map { platform -> String in
 						let frameworkName = (platform.relativePath as NSString).stringByAppendingPathComponent(options.frameworkName)
-						let framework = (frameworkName as NSString).stringByAppendingPathExtension("framework")!
-						let dSYM = (framework as NSString).stringByAppendingPathExtension("dSYM")!
-						return SignalProducer(values: [framework, dSYM])
+						return (frameworkName as NSString).stringByAppendingPathExtension("framework")!
 					}
 					.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+					.flatMap(.Merge) { framework -> SignalProducer<String, CarthageError> in
+						let dSYM = (framework as NSString).stringByAppendingPathExtension("dSYM")!
+						let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework))
+							// generate relative paths for the bcsymbolmaps so they print nicely
+							.map { url in ((framework as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.lastPathComponent!) }
+						let extraFilesProducer = SignalProducer(value: dSYM)
+							.concat(bcsymbolmapsProducer)
+							.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+						return SignalProducer(value: framework)
+							.concat(extraFilesProducer)
+					}
 					.on(next: { path in
 						carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
 					})
