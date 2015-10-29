@@ -45,21 +45,17 @@ public struct CopyFrameworksCommand: CommandType {
 				|> promoteErrors
 				|> waitOnCommand
 		case .Usage:
-			return .success()
+			return .success(())
 		}
 	}
 }
 
 private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	return BCSymbolMapsForFramework(frameworkURL)
-		|> map { url in directoryURL.URLByAppendingPathComponent(url.lastPathComponent!, isDirectory: false) }
-		|> filter { url in url.checkResourceIsReachableAndReturnError(nil) }
-		|> flatMap(.Merge) { url in
-			return SignalProducer(result: builtProductsFolder())
-				|> flatMap(.Merge) { builtProductsURL in
-					let target = builtProductsURL.URLByAppendingPathComponent(url.lastPathComponent!)
-					return copyProduct(url, target)
-				}
+	return SignalProducer(result: builtProductsFolder())
+		|> flatMap(.Merge) { builtProductsURL in
+			let bcsymbolmapsProducer = BCSymbolMapsForFramework(frameworkURL)
+				|> map { URL in directoryURL.URLByAppendingPathComponent(URL.lastPathComponent!, isDirectory: false) }
+			return copyFileURLsFromProducer(bcsymbolmapsProducer, intoDirectory: builtProductsURL)
 		}
 }
 
