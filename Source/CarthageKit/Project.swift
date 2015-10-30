@@ -309,7 +309,7 @@ public final class Project {
 				} else {
 					// Otherwise, it is resolved to an object SHA.
 					return resolveReferenceInRepository(repositoryFileURLForProject(project), reference)
-						.map { PinnedVersion($0) }
+						.map(PinnedVersion.init)
 				}
 			}
 	}
@@ -325,7 +325,7 @@ public final class Project {
 		return loadCombinedCartfile()
 			.flatMap(.Merge) { cartfile in resolver.resolveDependenciesInCartfile(cartfile) }
 			.collect()
-			.map { ResolvedCartfile(dependencies: $0) }
+			.map(ResolvedCartfile.init)
 	}
 
 	/// Updates the dependencies of the project to the latest version. The
@@ -808,7 +808,7 @@ private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> Sig
 
 	return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
 		.flatMapError { _ in .empty }
-		.attemptMap { Cartfile.fromString($0) }
+		.attemptMap(Cartfile.fromString)
 }
 
 /// Returns the URL that the project's remote repository exists at.

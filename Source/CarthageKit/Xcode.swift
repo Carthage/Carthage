@@ -891,7 +891,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							return "platform=iOS Simulator,id=\(deviceID)"
 						}
 					}
-					.mapError { .TaskError($0) }
+					.mapError(CarthageError.TaskError)
 			}
 			return SignalProducer(value: nil)
 		}
