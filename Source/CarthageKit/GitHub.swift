@@ -119,7 +119,13 @@ public struct GitHubRepository: Equatable {
 
 	/// The URL that should be used for cloning this repository over HTTPS.
 	public var HTTPSURL: GitURL {
-		return GitURL("\(server)/\(owner)/\(name).git")
+		let gitAuth = parseGitHubAccessTokenFromEnvironment()
+
+		var serverAuth:String = ""
+		if let auth = gitAuth[server.hostname] {
+			serverAuth = "\(auth)@"
+		}
+		return GitURL("\(server.scheme)://\(serverAuth)\(server.hostname)/\(owner)/\(name).git")
 	}
 
 	/// The URL that should be used for cloning this repository over SSH.
