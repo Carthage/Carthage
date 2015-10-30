@@ -18,44 +18,45 @@ public struct ArchiveCommand: CommandType {
 
 	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
 		return producerWithOptions(ArchiveOptions.evaluate(mode))
-			|> flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
+			.flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				let formatting = options.colorOptions.formatting
 
 				return SignalProducer(values: Platform.supportedPlatforms)
-					|> map { platform in
-						return platform.relativePath.stringByAppendingPathComponent(options.frameworkName).stringByAppendingPathExtension("framework")!
+					.map { platform -> String in
+						let frameworkName = (platform.relativePath as NSString).stringByAppendingPathComponent(options.frameworkName)
+						return (frameworkName as NSString).stringByAppendingPathExtension("framework")!
 					}
-					|> filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
-					|> flatMap(.Merge) { framework in
-						let dSYM = framework.stringByAppendingPathExtension("dSYM")!
-						let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework)!)
+					.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+					.flatMap(.Merge) { framework -> SignalProducer<String, CarthageError> in
+						let dSYM = (framework as NSString).stringByAppendingPathExtension("dSYM")!
+						let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework))
 							// generate relative paths for the bcsymbolmaps so they print nicely
-							|> map { url in framework.stringByDeletingLastPathComponent.stringByAppendingPathComponent(url.lastPathComponent!) }
+							.map { url in ((framework as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.lastPathComponent!) }
 						let extraFilesProducer = SignalProducer(value: dSYM)
-							|> concat(bcsymbolmapsProducer)
-							|> filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+							.concat(bcsymbolmapsProducer)
+							.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
 						return SignalProducer(value: framework)
-							|> concat(extraFilesProducer)
+							.concat(extraFilesProducer)
 					}
-					|> on(next: { path in
+					.on(next: { path in
 						carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
 					})
-					|> collect
-					|> flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
+					.collect()
+					.flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
 						if paths.isEmpty {
 							return SignalProducer(error: CarthageError.InvalidArgument(description: "Could not find any copies of \(options.frameworkName).framework. Make sure you're in the project’s root and that the framework has already been built using 'carthage build --no-skip-current'."))
 						}
 
 						let outputPath = (options.outputPath.isEmpty ? "\(options.frameworkName).framework.zip" : options.outputPath)
-						let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)!
+						let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
 
-						return zipIntoArchive(outputURL, paths) |> on(completed: {
+						return zipIntoArchive(outputURL, paths).on(completed: {
 							carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
 						})
 					}
-					|> promoteErrors
+					.promoteErrors()
 			}
-			|> waitOnCommand
+			.waitOnCommand()
 	}
 }
 
@@ -65,7 +66,7 @@ private struct ArchiveOptions: OptionsType {
 	let colorOptions: ColorOptions
 
 	static func create(outputPath: String)(colorOptions: ColorOptions)(frameworkName: String) -> ArchiveOptions {
-		return self(frameworkName: frameworkName, outputPath: outputPath, colorOptions: colorOptions)
+		return self.init(frameworkName: frameworkName, outputPath: outputPath, colorOptions: colorOptions)
 	}
 
 	static func evaluate(m: CommandMode) -> Result<ArchiveOptions, CommandantError<CarthageError>> {

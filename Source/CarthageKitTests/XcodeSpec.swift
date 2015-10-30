@@ -19,10 +19,10 @@ class XcodeSpec: QuickSpec {
 		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("ReactiveCocoaLayout", withExtension: nil)!
 		let projectURL = directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout.xcodeproj")
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
-		let targetFolderURL = NSURL(fileURLWithPath: NSTemporaryDirectory().stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)!
+		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
 
 		var machineHasiOSIdentity: Bool = false
-		var sdkFilter: SDKFilterCallback = { .success($0.0) }
+		var sdkFilter: SDKFilterCallback = { .Success($0.0) }
 
 		beforeSuite {
 			machineHasiOSIdentity = iOSSigningIdentitiesConfigured()
@@ -42,20 +42,20 @@ class XcodeSpec: QuickSpec {
 							return false
 						}
 					}
-					return .success(filtered)
+					return .Success(filtered)
 				}
 			}
 		}
 
 		beforeEach {
-			NSFileManager.defaultManager().removeItemAtURL(buildFolderURL, error: nil)
+			_ = try? NSFileManager.defaultManager().removeItemAtURL(buildFolderURL)
 
-			expect(NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil, error: nil)).to(beTruthy())
+			expect { try NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
 			return
 		}
 		
 		afterEach {
-			NSFileManager.defaultManager().removeItemAtURL(targetFolderURL, error: nil)
+			_ = try? NSFileManager.defaultManager().removeItemAtURL(targetFolderURL)
 			return
 		}
 
@@ -67,23 +67,23 @@ class XcodeSpec: QuickSpec {
 
 			for project in dependencies {
 				let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
-					|> flatten(.Concat)
-					|> ignoreTaskData
-					|> on(next: { (project, scheme) in
+					.flatten(.Concat)
+					.ignoreTaskData()
+					.on(next: { (project, scheme) in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 					})
-					|> wait
+					.wait()
 
 				expect(result.error).to(beNil())
 			}
 
 			let result = buildInDirectory(directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
-				|> flatten(.Concat)
-				|> ignoreTaskData
-				|> on(next: { (project, scheme) in
+				.flatten(.Concat)
+				.ignoreTaskData()
+				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
-				|> wait
+				.wait()
 
 			expect(result.error).to(beNil())
 
@@ -93,9 +93,9 @@ class XcodeSpec: QuickSpec {
 
 			for dependency in projectNames {
 				let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
-				let macdSYMPath = macPath.stringByAppendingPathExtension("dSYM")!
+				let macdSYMPath = (macPath as NSString).stringByAppendingPathExtension("dSYM")!
 				let iOSPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
-				let iOSdSYMPath = iOSPath.stringByAppendingPathExtension("dSYM")!
+				let iOSdSYMPath = (iOSPath as NSString).stringByAppendingPathExtension("dSYM")!
 
 				var isDirectory: ObjCBool = false
 				expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
@@ -115,8 +115,8 @@ class XcodeSpec: QuickSpec {
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
 			let architectures = architecturesInFramework(frameworkFolderURL)
-				|> collect
-				|> single
+				.collect()
+				.single()
 
 			expect(architectures?.value).to(contain("i386"))
 			if machineHasiOSIdentity {
@@ -134,19 +134,19 @@ class XcodeSpec: QuickSpec {
 			// Copy ReactiveCocoaLayout.framework to the temporary folder.
 			let targetURL = targetFolderURL.URLByAppendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
 
-			let resultURL = copyProduct(frameworkFolderURL, targetURL) |> single
+			let resultURL = copyProduct(frameworkFolderURL, targetURL).single()
 			expect(resultURL?.value).to(equal(targetURL))
 
 			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)).to(beTruthy())
 			expect(isDirectory).to(beTruthy())
 
 			if machineHasiOSIdentity {
-				let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-") |> wait
+				let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
 				expect(strippingResult.value).notTo(beNil())
 				
 				let strippedArchitectures = architecturesInFramework(targetURL)
-					|> collect
-					|> single
+					.collect()
+					.single()
 				
 				expect(strippedArchitectures?.value).notTo(contain("i386"))
 				expect(strippedArchitectures?.value).to(contain("armv7"))
@@ -159,7 +159,7 @@ class XcodeSpec: QuickSpec {
 				let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
 				
 				let codesignResult = launchTask(codeSign)
-					|> on(next: { taskEvent in
+					.on(next: { taskEvent in
 						switch taskEvent {
 						case let .StandardError(data):
 							output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
@@ -168,7 +168,7 @@ class XcodeSpec: QuickSpec {
 							break
 						}
 					})
-					|> wait
+					.wait()
 				
 				expect(codesignResult.value).notTo(beNil())
 				expect(output).to(contain("satisfies its Designated Requirement"))
@@ -176,19 +176,19 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should skip projects without shared dynamic framework schems") {
-			let dependency = "SwiftyJSON"
-			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("\(dependency)-2.2.0", withExtension: nil)!
+			let dependency = "SchemeDiscoverySampleForCarthage"
+			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("\(dependency)-0.2", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 
-			NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL, error: nil)
+			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
-				|> flatten(.Concat)
-				|> ignoreTaskData
-				|> on(next: { (project, scheme) in
+				.flatten(.Concat)
+				.ignoreTaskData()
+				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
-				|> wait
+				.wait()
 
 			expect(result.error).to(beNil())
 
@@ -207,15 +207,15 @@ class XcodeSpec: QuickSpec {
 			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("Swell-0.5.0", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 
-			NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL, error: nil)
+			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
-				|> flatten(.Concat)
-				|> ignoreTaskData
-				|> on(next: { (project, scheme) in
+				.flatten(.Concat)
+				.ignoreTaskData()
+				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
-				|> wait
+				.wait()
 
 			expect(result.error).notTo(beNil())
 
@@ -234,12 +234,12 @@ class XcodeSpec: QuickSpec {
 		it("should build for one platform") {
 			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac ])
-				|> flatten(.Concat)
-				|> ignoreTaskData
-				|> on(next: { (project, scheme) in
+				.flatten(.Concat)
+				.ignoreTaskData()
+				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
-				|> wait
+				.wait()
 
 			expect(result.error).to(beNil())
 
@@ -257,12 +257,12 @@ class XcodeSpec: QuickSpec {
 		it("should build for multiple platforms") {
 			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac, .iOS ], sdkFilter: sdkFilter)
-				|> flatten(.Concat)
-				|> ignoreTaskData
-				|> on(next: { (project, scheme) in
+				.flatten(.Concat)
+				.ignoreTaskData()
+				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
-				|> wait
+				.wait()
 
 			expect(result.error).to(beNil())
 
@@ -280,7 +280,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should locate the project") {
-			let result = locateProjectsInDirectory(directoryURL) |> first
+			let result = locateProjectsInDirectory(directoryURL).first()
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
 
@@ -289,7 +289,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should locate the project from the parent directory") {
-			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!) |> collect |> first
+			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!).collect().first()
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
 
@@ -298,7 +298,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should not locate the project from a directory not containing it") {
-			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")) |> first
+			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")).first()
 			expect(result).to(beNil())
 		}
 		
@@ -319,8 +319,8 @@ class XcodeSpec: QuickSpec {
 			]
 			
 			let result = parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError>(values: inputLines))
-				|> collect
-				|> single
+				.collect()
+				.single()
 
 			expect(result?.value).to(equal(expectedOutput))
 		}
@@ -332,11 +332,10 @@ class XcodeSpec: QuickSpec {
 /// Returns true if the current user has any iOS signing identities configured
 private func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
 	let iOSIdentities = identities
-		|> filter { identity in
-			let id = identity as NSString
-			return id.containsString("iPhone") || id.containsString("iOS")
+		.filter { identity in
+			return identity.containsString("iPhone") || identity.containsString("iOS")
 		}
-		|> last
+		.last()
 	
 	return iOSIdentities != nil
 }

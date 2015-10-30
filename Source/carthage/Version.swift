@@ -26,6 +26,6 @@ public struct VersionCommand: CommandType {
 			break
 		}
 
-		return .success(())
+		return .Success(())
 	}
 }

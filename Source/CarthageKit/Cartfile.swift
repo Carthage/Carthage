@@ -31,8 +31,8 @@ public struct Cartfile {
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile, CarthageError> {
-		var cartfile = self()
-		var result: Result<(), CarthageError> = .success(())
+		var cartfile = self.init()
+		var result: Result<(), CarthageError> = .Success(())
 
 		let commentIndicator = "#"
 		string.enumerateLines { (line, stop) in
@@ -50,10 +50,10 @@ public struct Cartfile {
 
 			switch Dependency<VersionSpecifier>.fromScanner(scanner) {
 			case let .Success(dep):
-				cartfile.dependencies.append(dep.value)
+				cartfile.dependencies.append(dep)
 
 			case let .Failure(error):
-				result = .failure(error.value)
+				result = .Failure(error)
 				stop = true
 			}
 
@@ -63,7 +63,7 @@ public struct Cartfile {
 			}
 
 			if !scanner.atEnd {
-				result = .failure(CarthageError.ParseError(description: "unexpected trailing characters in line: \(line)"))
+				result = .Failure(CarthageError.ParseError(description: "unexpected trailing characters in line: \(line)"))
 				stop = true
 			}
 		}
@@ -73,11 +73,11 @@ public struct Cartfile {
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
 	public static func fromFile(cartfileURL: NSURL) -> Result<Cartfile, CarthageError> {
-		var error: NSError?
-		if let cartfileContents = NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding, error: &error) {
+		do {
+			let cartfileContents = try NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding)
 			return Cartfile.fromString(cartfileContents as String)
-		} else {
-			return .failure(CarthageError.ReadFailed(cartfileURL, error))
+		} catch let error as NSError {
+			return .Failure(CarthageError.ReadFailed(cartfileURL, error))
 		}
 	}
 
@@ -87,7 +87,7 @@ public struct Cartfile {
 	}
 }
 
-extension Cartfile: Printable {
+extension Cartfile: CustomStringConvertible {
 	public var description: String {
 		return dependencies.description
 	}
@@ -98,7 +98,7 @@ extension Cartfile {
 	/// Returns an array containing projects that are listed as duplicate
 	/// dependencies.
 	public func duplicateProjects() -> [ProjectIdentifier] {
-		return filter(self.dependencyCountedSet) { $0.1 > 1}
+		return self.dependencyCountedSet.filter { $0.1 > 1 }
 			.map { $0.0 }
 	}
 
@@ -111,7 +111,7 @@ extension Cartfile {
 
 /// Returns an array containing projects that are listed as dependencies
 /// in both arguments.
-public func duplicateProjectsInCartfiles(cartfile1: Cartfile, cartfile2: Cartfile) -> [ProjectIdentifier] {
+public func duplicateProjectsInCartfiles(cartfile1: Cartfile, _ cartfile2: Cartfile) -> [ProjectIdentifier] {
 	let projectSet1 = cartfile1.dependencyCountedSet
 
 	return cartfile2.dependencies
@@ -138,17 +138,17 @@ public struct ResolvedCartfile {
 
 	/// Attempts to parse Cartfile.resolved information from a string.
 	public static func fromString(string: String) -> Result<ResolvedCartfile, CarthageError> {
-		var cartfile = self(dependencies: [])
-		var result: Result<(), CarthageError> = .success(())
+		var cartfile = self.init(dependencies: [])
+		var result: Result<(), CarthageError> = .Success(())
 
 		let scanner = NSScanner(string: string)
 		scannerLoop: while !scanner.atEnd {
 			switch Dependency<PinnedVersion>.fromScanner(scanner) {
 			case let .Success(dep):
-				cartfile.dependencies.append(dep.value)
+				cartfile.dependencies.append(dep)
 
 			case let .Failure(error):
-				result = .failure(error.value)
+				result = .Failure(error)
 				break scannerLoop
 			}
 		}
@@ -157,7 +157,7 @@ public struct ResolvedCartfile {
 	}
 }
 
-extension ResolvedCartfile: Printable {
+extension ResolvedCartfile: CustomStringConvertible {
 	public var description: String {
 		return dependencies.reduce("") { (string, dependency) in
 			return string + "\(dependency)\n"
@@ -187,7 +187,7 @@ public enum ProjectIdentifier: Equatable {
 	/// The path at which this project will be checked out, relative to the
 	/// working directory of the main project.
 	public var relativePath: String {
-		return CarthageProjectCheckoutsPath.stringByAppendingPathComponent(name)
+		return (CarthageProjectCheckoutsPath as NSString).stringByAppendingPathComponent(name)
 	}
 }
 
@@ -227,30 +227,30 @@ extension ProjectIdentifier: Scannable {
 			}
 		} else if scanner.scanString("git", intoString: nil) {
 			parser = { URLString in
-				return .success(self.Git(GitURL(URLString)))
+				return .Success(self.Git(GitURL(URLString)))
 			}
 		} else {
-			return .failure(CarthageError.ParseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
+			return .Failure(CarthageError.ParseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
 		}
 
 		if !scanner.scanString("\"", intoString: nil) {
-			return .failure(CarthageError.ParseError(description: "expected string after dependency type in line: \(scanner.currentLine)"))
+			return .Failure(CarthageError.ParseError(description: "expected string after dependency type in line: \(scanner.currentLine)"))
 		}
 
 		var address: NSString? = nil
 		if !scanner.scanUpToString("\"", intoString: &address) || !scanner.scanString("\"", intoString: nil) {
-			return .failure(CarthageError.ParseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)"))
+			return .Failure(CarthageError.ParseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)"))
 		}
 
 		if let address = address {
 			return parser(address as String)
 		} else {
-			return .failure(CarthageError.ParseError(description: "empty string after dependency type in line: \(scanner.currentLine)"))
+			return .Failure(CarthageError.ParseError(description: "empty string after dependency type in line: \(scanner.currentLine)"))
 		}
 	}
 }
 
-extension ProjectIdentifier: Printable {
+extension ProjectIdentifier: CustomStringConvertible {
 	public var description: String {
 		switch self {
 		case let .GitHub(repo):
@@ -289,12 +289,12 @@ extension Dependency: Scannable {
 	/// Attempts to parse a Dependency specification.
 	public static func fromScanner(scanner: NSScanner) -> Result<Dependency, CarthageError> {
 		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
-			return V.fromScanner(scanner).map { specifier in self(project: identifier, version: specifier) }
+			return V.fromScanner(scanner).map { specifier in self.init(project: identifier, version: specifier) }
 		}
 	}
 }
 
-extension Dependency: Printable {
+extension Dependency: CustomStringConvertible {
 	public var description: String {
 		return "\(project) \(version)"
 	}
