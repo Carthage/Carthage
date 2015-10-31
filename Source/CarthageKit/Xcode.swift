@@ -675,9 +675,9 @@ private func copyBuildProductIntoDirectory(directoryURL: NSURL, _ settings: Buil
 /// Returns a signal that will send the URL after copying for each file.
 private func copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL: NSURL, _ settings: BuildSettings) -> SignalProducer<NSURL, CarthageError> {
 	if settings.bitcodeEnabled.value == true {
-		let bcsymbolmapsProducer = SignalProducer(result: settings.wrapperURL)
+		return SignalProducer(result: settings.wrapperURL)
 			.flatMap(.Merge) { wrapperURL in BCSymbolMapsForFramework(wrapperURL) }
-		return copyFileURLsFromProducer(bcsymbolmapsProducer, intoDirectory: directoryURL)
+			.copyFileURLsIntoDirectory(directoryURL)
 	} else {
 		return .empty
 	}
@@ -1361,18 +1361,20 @@ public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, Carth
 	}
 }
 
-/// Copies existing files sent from the given producer into the given directory.
-///
-/// Returns a producer that will send locations where the copied files are.
-public func copyFileURLsFromProducer(producer: SignalProducer<NSURL, CarthageError>, intoDirectory directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	return producer
-		.filter { fileURL in fileURL.checkResourceIsReachableAndReturnError(nil) }
-		.flatMap(.Merge) { fileURL -> SignalProducer<NSURL, CarthageError> in
-			let fileName = fileURL.lastPathComponent!
-			let destinationURL = directoryURL.URLByAppendingPathComponent(fileName, isDirectory: false)
-			let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
+extension SignalProducerType where Value == NSURL, Error == CarthageError {
+	/// Copies existing files sent from the producer into the given directory.
+	///
+	/// Returns a producer that will send locations where the copied files are.
+	public func copyFileURLsIntoDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+		return producer
+			.filter { fileURL in fileURL.checkResourceIsReachableAndReturnError(nil) }
+			.flatMap(.Merge) { fileURL -> SignalProducer<NSURL, CarthageError> in
+				let fileName = fileURL.lastPathComponent!
+				let destinationURL = directoryURL.URLByAppendingPathComponent(fileName, isDirectory: false)
+				let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
 
-			return copyProduct(fileURL, resolvedDestinationURL)
+				return copyProduct(fileURL, resolvedDestinationURL)
+			}
 	}
 }
 

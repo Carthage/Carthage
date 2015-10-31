@@ -53,10 +53,10 @@ public struct CopyFrameworksCommand: CommandType {
 
 private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return SignalProducer(result: builtProductsFolder())
-		.flatMap(.Merge) { builtProductsURL -> SignalProducer<NSURL, CarthageError> in
-			let bcsymbolmapsProducer = BCSymbolMapsForFramework(frameworkURL)
+		.flatMap(.Merge) { builtProductsURL in
+			return BCSymbolMapsForFramework(frameworkURL)
 				.map { URL in directoryURL.URLByAppendingPathComponent(URL.lastPathComponent!, isDirectory: false) }
-			return copyFileURLsFromProducer(bcsymbolmapsProducer, intoDirectory: builtProductsURL)
+				.copyFileURLsIntoDirectory(builtProductsURL)
 		}
 }
 
