@@ -73,7 +73,7 @@ public struct GitURL: Equatable {
 /// Strips any trailing .git in the given name, if one exists.
 public func stripGitSuffix(string: String) -> String {
 	if string.hasSuffix(".git") {
-		return string.substringToIndex(string.endIndex.advancedBy(-4))
+		return string[string.startIndex..<string.endIndex.advancedBy(-4)]
 	} else {
 		return string
 	}
@@ -184,11 +184,9 @@ public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, Carthag
 	return launchGitTask([ "tag" ], repositoryFileURL: repositoryFileURL)
 		.flatMap(.Concat) { (allTags: String) -> SignalProducer<String, CarthageError> in
 			return SignalProducer { observer, disposable in
-				let string = allTags as NSString
-
-				string.enumerateSubstringsInRange(NSMakeRange(0, string.length), options: [ .ByLines, .Reverse ]) { line, substringRange, enclosingRange, stop in
+				allTags.enumerateSubstringsInRange(allTags.characters.indices, options: [ .ByLines, .Reverse ]) { line, substringRange, enclosingRange, stop in
 					if disposable.disposed {
-						stop.memory = true
+						stop = true
 					}
 
 					if let line = line {
