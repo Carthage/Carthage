@@ -171,6 +171,40 @@ class XcodeSpec: QuickSpec {
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
 
+		it("should build all subprojects for all platforms by default") {
+			let multipleSubprojects = "SampleMultipleSubprojects"
+			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource(multipleSubprojects, withExtension: nil)!
+			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+
+			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
+
+			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
+				.flatten(.Concat)
+				.ignoreTaskData()
+				.on(next: { (project, scheme) in
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+
+			expect(result.error).to(beNil())
+
+			let expectedPlatformsFrameworks = [("iOS", "SampleiOSFramework"), ("Mac", "SampleMacFramework"), ("tvOS", "SampleTVFramework"), ("watchOS", "SampleWatchFramework")]
+
+			for (platform, framework) in expectedPlatformsFrameworks {
+				var isDirectory: ObjCBool = false
+
+				let path = _buildFolderURL.URLByAppendingPathComponent("\(platform)/\(framework).framework").path!
+
+				let fileExists = NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)
+				expect(fileExists).to(beTruthy())
+				if fileExists {
+					expect(isDirectory).to(beTruthy())
+				} else {
+					print("failed to build \(platform)/\(framework).framework")
+				}
+			}
+		}
+
 		it("should skip projects without shared dynamic framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
 			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("\(dependency)-0.2", withExtension: nil)!

@@ -1217,6 +1217,8 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 						}
 						return (project, containedSchemes)
 					}
+					// replace the filter and concat with something that accounts for multiple subprojects
+					// cause it errors out if even one of the results is that error...
 					.filter { (project: ProjectLocator, schemes: [String]) in
 						switch project {
 						case .ProjectFile where !schemes.isEmpty:
@@ -1226,9 +1228,17 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 							return false
 						}
 					}
-					.concat(SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), platforms)))
-					.take(1)
-					.flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
+					.flatMap(FlattenStrategy.Merge) { project, schemes in
+						return SignalProducer(values: schemes.map { ($0, project) })
+					}
+					.collect()
+					.flatMap(.Merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+						if schemes.count > 0 {
+							return SignalProducer(values: schemes)
+						} else {
+							return SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), platforms))
+						}
+					}
 			}
 			.flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
 				return locatorBuffer
