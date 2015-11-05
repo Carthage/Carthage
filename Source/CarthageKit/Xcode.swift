@@ -943,9 +943,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 				return BuildSettings.loadWithArguments(argsForLoading)
 					.filter { settings in
-						// Only copy build products for the product types we care about.
-						if let productType = settings.productType.value {
-							return shouldBuildProductType(productType)
+						// Only copy build products for the product types and the
+						// Mach-O types we care about.
+						if let (productType, machOType) = (settings.productType &&& settings.machOType).value {
+							return shouldBuildProductType(productType) && shouldBuildMachOType(machOType)
 						} else {
 							return false
 						}
