@@ -611,9 +611,7 @@ public struct BuildSettings {
 	}
 
 	public var machOType: Result<MachOType, CarthageError> {
-		return self["MACH_O_TYPE"].flatMap { typeString in
-			return MachOType.fromString(typeString)
-		}
+		return self["MACH_O_TYPE"].flatMap(MachOType.fromString)
 	}
 
 	/// Attempts to determine the URL to the built products directory.
