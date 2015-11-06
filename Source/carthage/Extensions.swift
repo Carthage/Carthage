@@ -63,64 +63,9 @@ extension CommandError: CustomStringConvertible {
 	}
 }
 
-/// Transforms the error type in a Result.
-extension Result {
-	internal func mapError<F>(transform: Error -> F) -> Result<Value, F> {
-		switch self {
-		case let .Success(value):
-			return .Success(value)
-
-		case let .Failure(error):
-			return .Failure(transform(error))
-		}
-	}
-}
-
-extension SignalType {
-
-	/// Bring back the `observe` overload. The `observeNext` or pattern matching
-	/// on `observe(Event)` is still annoying in practice and more verbose. This is
-	/// also likely to change in a later RAC 4 alpha.
-	internal func observe(next next: (T -> ())? = nil, error: (E -> ())? = nil, completed: (() -> ())? = nil, interrupted: (() -> ())? = nil) -> Disposable? {
-		return self.observe { (event: Event<T, E>) in
-			switch event {
-			case let .Next(value):
-				next?(value)
-			case let .Error(err):
-				error?(err)
-			case .Completed:
-				completed?()
-			case .Interrupted:
-				interrupted?()
-			}
-		}
-	}
-}
-
-extension SignalProducerType {
-
-	/// Bring back the `start` overload. The `startNext` or pattern matching
-	/// on `start(Event)` is annoying in practice and more verbose. This is also
-	/// likely to change in a later RAC 4 alpha.
-	internal func start(next next: (T -> ())? = nil, error: (E -> ())? = nil, completed: (() -> ())? = nil, interrupted: (() -> ())? = nil) -> Disposable? {
-		return self.start { (event: Event<T, E>) in
-			switch event {
-			case let .Next(value):
-				next?(value)
-			case let .Error(err):
-				error?(err)
-			case .Completed:
-				completed?()
-			case .Interrupted:
-				interrupted?()
-			}
-		}
-	}
-}
-
-extension SignalType where E == CarthageError {
+extension SignalType where Error == CarthageError {
 	/// Promotes CarthageErrors into CommandErrors.
-	internal func promoteErrors() -> Signal<T, CommandError> {
+	internal func promoteErrors() -> Signal<Value, CommandError> {
 		return signal.mapError { (error: CarthageError) -> CommandError in
 			let commandantError = CommandantError.CommandError(error)
 			return CommandError(commandantError)
@@ -128,20 +73,20 @@ extension SignalType where E == CarthageError {
 	}
 }
 
-extension SignalProducerType where E == CarthageError {
+extension SignalProducerType where Error == CarthageError {
 	/// Promotes CarthageErrors into CommandErrors.
-	internal func promoteErrors() -> SignalProducer<T, CommandError> {
+	internal func promoteErrors() -> SignalProducer<Value, CommandError> {
 		return lift { $0.promoteErrors() }
 	}
 }
 
 /// Lifts the Result of options parsing into a SignalProducer.
 internal func producerWithOptions<T>(result: Result<T, CommandantError<CarthageError>>) -> SignalProducer<T, CommandError> {
-	let mappedResult = result.mapError { CommandError($0) }
+	let mappedResult = result.mapError(CommandError.init)
 	return SignalProducer(result: mappedResult)
 }
 
-extension SignalProducerType where E == CommandError {
+extension SignalProducerType where Error == CommandError {
 	/// Waits on a SignalProducer that implements the behavior of a CommandType.
 	internal func waitOnCommand() -> Result<(), CommandantError<CarthageError>> {
 		let result = producer
@@ -220,7 +165,7 @@ extension Project {
 						.concat(moveItemInPossibleRepository(self.directoryURL, fromPath: oldName, toPath: newName)
 							.then(.empty))
 
-					sendNext(observer, producer)
+					observer.sendNext(producer)
 				}
 			}
 
@@ -239,8 +184,8 @@ extension Project {
 						do {
 							try fileManager.trashItemAtURL(oldCheckoutsURL, resultingItemURL: nil)
 							return .Success(())
-						} catch {
-							return .Failure(CarthageError.WriteFailed(oldCheckoutsURL, error as NSError))
+						} catch let error as NSError {
+							return .Failure(CarthageError.WriteFailed(oldCheckoutsURL, error))
 						}
 					}
 
@@ -257,14 +202,14 @@ extension Project {
 						.concat(moveProducer
 							.then(.empty))
 
-					sendNext(observer, producer)
-				} catch {
-					sendError(observer, CarthageError.ReadFailed(oldCheckoutsURL, error as NSError))
+					observer.sendNext(producer)
+				} catch let error as NSError {
+					observer.sendFailed(CarthageError.ReadFailed(oldCheckoutsURL, error))
 					return
 				}
 			}
 
-			sendCompleted(observer)
+			observer.sendCompleted()
 		}
 
 		return producers

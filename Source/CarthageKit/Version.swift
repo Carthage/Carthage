@@ -79,7 +79,7 @@ extension SemanticVersion: Scannable {
 			return .Failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
 
-		let components = (version! as String).characters.split(allowEmptySlices: false) { $0 == "." }.map { String($0) }
+		let components = (version! as String).characters.split(allowEmptySlices: false) { $0 == "." }.map(String.init)
 		if components.count == 0 {
 			return .Failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)"))
 		}

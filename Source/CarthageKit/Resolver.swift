@@ -45,7 +45,7 @@ public struct Resolver {
 			// a valid graph.
 			.dematerializeErrorsIfEmpty()
 			.take(1)
-			.observeOn(QueueScheduler(name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
+			.observeOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				return SignalProducer(values: graph.orderedNodes)
 					.map { node in node.dependencyVersion }
@@ -61,7 +61,7 @@ public struct Resolver {
 	/// of those dependencies (chosen from among the versions that actually
 	/// exist for each).
 	private func nodePermutationsForCartfile(cartfile: Cartfile) -> SignalProducer<[DependencyNode], CarthageError> {
-		let scheduler = QueueScheduler(name: "org.carthage.CarthageKit.Resolver.nodePermutationsForCartfile")
+		let scheduler = QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.nodePermutationsForCartfile")
 
 		return SignalProducer(values: cartfile.dependencies)
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
@@ -117,7 +117,7 @@ public struct Resolver {
 	/// possible permutation of the dependencies for the given node (chosen from
 	/// among the verisons that actually exist for each).
 	private func graphPermutationsForDependenciesOfNode(node: DependencyNode, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
-		let scheduler = QueueScheduler(name: "org.carthage.CarthageKit.Resolver.graphPermutationsForDependenciesOfNode")
+		let scheduler = QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.graphPermutationsForDependenciesOfNode")
 
 		return cartfileForDependency(node.dependencyVersion)
 			.startOn(scheduler)
@@ -154,20 +154,20 @@ public struct Resolver {
 						newNodes.append(newNode)
 
 					case let .Failure(error):
-						sendError(observer, error)
+						observer.sendFailed(error)
 						return
 					}
 				}
 
-				sendNext(observer, (graph, newNodes))
-				sendCompleted(observer)
+				observer.sendNext((graph, newNodes))
+				observer.sendCompleted()
 			}
 			.flatMap(.Concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
 				return SignalProducer(values: nodes)
 					// Each producer represents all evaluations of one subtree.
 					.map { node in self.graphPermutationsForDependenciesOfNode(node, basedOnGraph: graph) }
 					.collect()
-					.observeOn(QueueScheduler(name: "org.carthage.CarthageKit.Resolver.graphPermutationsForEachNode"))
+					.observeOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.graphPermutationsForEachNode"))
 					.flatMap(.Concat) { graphProducers in permutations(graphProducers) }
 					.flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 						let mergedGraphs = SignalProducer(values: graphs)

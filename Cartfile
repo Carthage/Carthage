@@ -1,4 +1,4 @@
-github "Carthage/ReactiveTask" "a0e0492d7e156136a73f869ddd900faab4bc726d"
+github "Carthage/ReactiveTask" "0.8.0-beta.1"
 github "thoughtbot/Argo" ~> 2.1
-github "Carthage/Commandant" "468bbd0d82d1f4850f0f0c1aff2c90077e9e9056"
+github "Carthage/Commandant" "0.7.0-beta.1"
 github "jdhealy/PrettyColors" ~> 3.0

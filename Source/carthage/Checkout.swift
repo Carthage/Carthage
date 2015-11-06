@@ -69,7 +69,7 @@ public struct CheckoutOptions: OptionsType {
 		project.useBinaries = self.useBinaries
 
 		var eventSink = ProjectEventSink(colorOptions: colorOptions)
-		project.projectEvents.observe(next: { eventSink.put($0) })
+		project.projectEvents.observeNext { eventSink.put($0) }
 
 		return project.migrateIfNecessary(colorOptions)
 			.on(next: carthage.println)

@@ -17,14 +17,14 @@ extension String {
 	internal var linesProducer: SignalProducer<String, NoError> {
 		return SignalProducer { observer, disposable in
 			(self as NSString).enumerateLinesUsingBlock { (line, stop) in
-				sendNext(observer, line)
+				observer.sendNext(line)
 
 				if disposable.disposed {
 					stop.memory = true
 				}
 			}
 
-			sendCompleted(observer)
+			observer.sendCompleted()
 		}
 	}
 }
@@ -40,109 +40,79 @@ internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 }
 
 extension SignalType {
-
-	/// Bring back the `observe` overload. The `observeNext` or pattern matching
-	/// on `observe(Event)` is still annoying in practice and more verbose. This is
-	/// also likely to change in a later RAC 4 alpha.
-	internal func observe(next next: (T -> ())? = nil, error: (E -> ())? = nil, completed: (() -> ())? = nil, interrupted: (() -> ())? = nil) -> Disposable? {
-		return self.observe { (event: Event<T, E>) in
-			switch event {
-			case let .Next(value):
-				next?(value)
-			case let .Error(err):
-				error?(err)
-			case .Completed:
-				completed?()
-			case .Interrupted:
-				interrupted?()
-			}
-		}
-	}
-}
-
-extension SignalProducerType {
-
-	/// Bring back the `start` overload. The `startNext` or pattern matching
-	/// on `start(Event)` is annoying in practice and more verbose. This is also
-	/// likely to change in a later RAC 4 alpha.
-	internal func start(next next: (T -> ())? = nil, error: (E -> ())? = nil, completed: (() -> ())? = nil, interrupted: (() -> ())? = nil) -> Disposable? {
-		return self.start { (event: Event<T, E>) in
-			switch event {
-			case let .Next(value):
-				next?(value)
-			case let .Error(err):
-				error?(err)
-			case .Completed:
-				completed?()
-			case .Interrupted:
-				interrupted?()
-			}
-		}
-	}
-}
-
-extension SignalType {
 	/// Sends each value that occurs on `signal` combined with each value that
 	/// occurs on `otherSignal` (repeats included).
-	internal func permuteWith<U>(otherSignal: Signal<U, E>) -> Signal<(T, U), E> {
+	internal func permuteWith<U>(otherSignal: Signal<U, Error>) -> Signal<(Value, U), Error> {
 		return Signal { observer in
 			let lock = NSLock()
 			lock.name = "org.carthage.CarthageKit.permuteWith"
 
-			var signalValues: [T] = []
+			var signalValues: [Value] = []
 			var signalCompleted = false
 			var otherValues: [U] = []
 			var otherCompleted = false
 
 			let compositeDisposable = CompositeDisposable()
 
-			compositeDisposable += self.observe(next: { value in
-				lock.lock()
+			compositeDisposable += self.observe { event in
+				switch event {
+				case let .Next(value):
+					lock.lock()
 
-				signalValues.append(value)
-				for otherValue in otherValues {
-					sendNext(observer, (value, otherValue))
+					signalValues.append(value)
+					for otherValue in otherValues {
+						observer.sendNext((value, otherValue))
+					}
+
+					lock.unlock()
+
+				case let .Failed(error):
+					observer.sendFailed(error)
+
+				case .Completed:
+					lock.lock()
+
+					signalCompleted = true
+					if otherCompleted {
+						observer.sendCompleted()
+					}
+
+					lock.unlock()
+
+				case .Interrupted:
+					observer.sendInterrupted()
 				}
+			}
 
-				lock.unlock()
-			}, error: { error in
-				sendError(observer, error)
-			}, completed: {
-				lock.lock()
+			compositeDisposable += otherSignal.observe { event in
+				switch event {
+				case let .Next(value):
+					lock.lock()
 
-				signalCompleted = true
-				if otherCompleted {
-					sendCompleted(observer)
+					otherValues.append(value)
+					for signalValue in signalValues {
+						observer.sendNext((signalValue, value))
+					}
+
+					lock.unlock()
+
+				case let .Failed(error):
+					observer.sendFailed(error)
+
+				case .Completed:
+					lock.lock()
+
+					otherCompleted = true
+					if signalCompleted {
+						observer.sendCompleted()
+					}
+
+					lock.unlock()
+
+				case .Interrupted:
+					observer.sendInterrupted()
 				}
-
-				lock.unlock()
-			}, interrupted: {
-				sendInterrupted(observer)
-			})
-
-			compositeDisposable += otherSignal.observe(next: { value in
-				lock.lock()
-
-				otherValues.append(value)
-				for signalValue in signalValues {
-					sendNext(observer, (signalValue, value))
-				}
-
-				lock.unlock()
-			}, error: { error in
-				sendError(observer, error)
-			}, completed: {
-				lock.lock()
-
-				otherCompleted = true
-				if signalCompleted {
-					sendCompleted(observer)
-				}
-
-				lock.unlock()
-			}, interrupted: {
-				sendInterrupted(observer)
-			})
+			}
 
 			return compositeDisposable
 		}
@@ -152,54 +122,59 @@ extension SignalType {
 extension SignalProducerType {
 	/// Sends each value that occurs on `producer` combined with each value that
 	/// occurs on `otherProducer` (repeats included).
-	internal func permuteWith<U>(otherProducer: SignalProducer<U, E>) -> SignalProducer<(T, U), E> {
-		return lift { signal in { $0.permuteWith(signal) } }(otherProducer)
+	internal func permuteWith<U>(otherProducer: SignalProducer<U, Error>) -> SignalProducer<(Value, U), Error> {
+		return lift(Signal.permuteWith)(otherProducer)
 	}
 }
 
-extension SignalType where T: EventType, T.E == E {
+extension SignalType where Value: EventType, Value.Error == Error {
 	/// Dematerializes the signal, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
-	internal func dematerializeErrorsIfEmpty() -> Signal<T.T, E> {
+	internal func dematerializeErrorsIfEmpty() -> Signal<Value.Value, Error> {
 		return Signal { observer in
 			var receivedValue = false
-			var receivedError: E? = nil
+			var receivedError: Error? = nil
 
-			return self.observe(next: { (event: T) in
-				switch event.event {
-				case let .Next(value):
-					receivedValue = true
-					sendNext(observer, value)
+			return self.observe { event in
+				switch event {
+				case let .Next(innerEvent):
+					switch innerEvent.event {
+					case let .Next(value):
+						receivedValue = true
+						observer.sendNext(value)
 
-				case let .Error(error):
-					receivedError = error
+					case let .Failed(error):
+						receivedError = error
+
+					case .Completed:
+						observer.sendCompleted()
+
+					case .Interrupted:
+						observer.sendInterrupted()
+					}
+
+				case let .Failed(error):
+					observer.sendFailed(error)
 
 				case .Completed:
-					sendCompleted(observer)
+					if let receivedError = receivedError where !receivedValue {
+						observer.sendFailed(receivedError)
+					}
+
+					observer.sendCompleted()
 
 				case .Interrupted:
-					sendInterrupted(observer)
+					observer.sendInterrupted()
 				}
-			}, error: { error in
-				sendError(observer, error)
-			}, completed: {
-				
-				if let receivedError = receivedError where !receivedValue {
-					sendError(observer, receivedError)
-				}
-			
-				sendCompleted(observer)
-			}, interrupted: {
-				sendInterrupted(observer)
-			})
+			}
 		}
 	}
 }
 
-extension SignalProducerType where T: EventType, T.E == E {
+extension SignalProducerType where Value: EventType, Value.Error == Error {
 	/// Dematerializes the producer, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
-	internal func dematerializeErrorsIfEmpty() -> SignalProducer<T.T, E> {
+	internal func dematerializeErrorsIfEmpty() -> SignalProducer<Value.Value, Error> {
 		return lift { $0.dematerializeErrorsIfEmpty() }
 	}
 }
@@ -235,6 +210,8 @@ extension NSScanner {
 	}
 }
 
+private let defaultSessionError = NSError(domain: "org.carthage.CarthageKit.carthage_downloadWithRequest", code: 1, userInfo: nil)
+
 extension NSURLSession {
 	/// Returns a producer that will download a file using the given request. The
 	/// file will be deleted after the producer terminates.
@@ -248,10 +225,10 @@ extension NSURLSession {
 				handle.remove()
 
 				if let URL = URL, response = response {
-					sendNext(observer, (URL, response))
-					sendCompleted(observer)
+					observer.sendNext((URL, response))
+					observer.sendCompleted()
 				} else {
-					sendError(observer, error!)
+					observer.sendFailed(error ?? defaultSessionError)
 				}
 			}
 
@@ -303,7 +280,7 @@ extension NSFileManager {
 				if catchErrors {
 					return true
 				} else {
-					sendError(observer, CarthageError.ReadFailed(URL, error))
+					observer.sendFailed(CarthageError.ReadFailed(URL, error))
 					return false
 				}
 			}!
@@ -311,13 +288,13 @@ extension NSFileManager {
 			while !disposable.disposed {
 				if let URL = enumerator.nextObject() as? NSURL {
 					let value = (enumerator, URL)
-					sendNext(observer, value)
+					observer.sendNext(value)
 				} else {
 					break
 				}
 			}
 
-			sendCompleted(observer)
+			observer.sendCompleted()
 		}
 	}
 }

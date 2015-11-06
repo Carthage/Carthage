@@ -107,6 +107,9 @@ public struct BuildArguments {
 	/// the native architecture.
 	public var onlyActiveArchitecture: OnlyActiveArchitecture = .NotSpecified
 
+	/// The build setting whether full bitcode should be embedded in the binary.
+	public var bitcodeGenerationMode: BitcodeGenerationMode = .None
+
 	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, sdk: SDK? = nil) {
 		self.project = project
 		self.scheme = scheme
@@ -139,6 +142,7 @@ public struct BuildArguments {
 		}
 
 		args += onlyActiveArchitecture.arguments
+		args += bitcodeGenerationMode.arguments
 
 		return args
 	}
@@ -224,7 +228,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 
 	return launchTask(task)
 		.ignoreTaskData()
-		.mapError { .TaskError($0) }
+		.mapError(CarthageError.TaskError)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
@@ -248,7 +252,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		// xcodebuild has a bug where xcodebuild -list can sometimes hang
 		// indefinitely on projects that don't share any schemes, so
 		// automatically bail out if it looks like that's happening.
-		.timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 15, onScheduler: QueueScheduler())
+		.timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 15, onScheduler: QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)))
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
@@ -421,6 +425,31 @@ public enum OnlyActiveArchitecture {
 	}
 }
 
+/// Represents a build setting whether full bitcode should be embedded in the
+/// binary.
+public enum BitcodeGenerationMode: String {
+	/// None.
+	case None = ""
+
+	/// Only bitcode marker will be embedded.
+	case Marker = "marker"
+
+	/// Full bitcode will be embedded.
+	case Bitcode = "bitcode"
+
+	/// The arguments that should be passed to `xcodebuild` to specify the
+	/// setting for this case.
+	private var arguments: [String] {
+		switch self {
+		case .None:
+			return []
+
+		case .Marker, Bitcode:
+			return [ "BITCODE_GENERATION_MODE=\(rawValue)" ]
+		}
+	}
+}
+
 /// Describes the type of product built by an Xcode target.
 public enum ProductType: String {
 	/// A framework bundle.
@@ -468,7 +497,7 @@ public struct BuildSettings {
 
 		return launchTask(task)
 			.ignoreTaskData()
-			.mapError { .TaskError($0) }
+			.mapError(CarthageError.TaskError)
 			.map { (data: NSData) -> String in
 				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 			}
@@ -480,7 +509,7 @@ public struct BuildSettings {
 					let flushTarget = { () -> () in
 						if let currentTarget = currentTarget {
 							let buildSettings = self.init(target: currentTarget, settings: currentSettings)
-							sendNext(observer, buildSettings)
+							observer.sendNext(buildSettings)
 						}
 
 						currentTarget = nil
@@ -510,7 +539,7 @@ public struct BuildSettings {
 					}
 
 					flushTarget()
-					sendCompleted(observer)
+					observer.sendCompleted()
 				}
 			}
 	}
@@ -593,6 +622,11 @@ public struct BuildSettings {
 		}
 	}
 
+	/// Attempts to determine whether bitcode is enabled or not.
+	public var bitcodeEnabled: Result<Bool, CarthageError> {
+		return self["ENABLE_BITCODE"].map { $0 == "YES" }
+	}
+
 	/// Attempts to determine the relative path (from the build folder) where
 	/// the Swift modules for the built product will exist.
 	///
@@ -601,9 +635,8 @@ public struct BuildSettings {
 		if let moduleName = self["PRODUCT_MODULE_NAME"].value {
 			return self["CONTENTS_FOLDER_PATH"].map { contentsPath in
 				let path1 = (contentsPath as NSString).stringByAppendingPathComponent("Modules")
-				let path2 = (path1 as NSString).stringByAppendingPathComponent("Modules")
-				let path3 = (path2 as NSString).stringByAppendingPathComponent(moduleName)
-				return (path3 as NSString).stringByAppendingPathExtension("swiftmodule")
+				let path2 = (path1 as NSString).stringByAppendingPathComponent(moduleName)
+				return (path2 as NSString).stringByAppendingPathExtension("swiftmodule")
 			}
 		} else {
 			return .Success(nil)
@@ -621,6 +654,8 @@ extension BuildSettings: CustomStringConvertible {
 /// its name) into the given folder. The folder will be created if it does not
 /// already exist.
 ///
+/// If this built product has any *.bcsymbolmap files they will also be copied.
+///
 /// Returns a signal that will send the URL after copying upon .success.
 private func copyBuildProductIntoDirectory(directoryURL: NSURL, _ settings: BuildSettings) -> SignalProducer<NSURL, CarthageError> {
 	let target = settings.wrapperName.map(directoryURL.URLByAppendingPathComponent)
@@ -628,6 +663,24 @@ private func copyBuildProductIntoDirectory(directoryURL: NSURL, _ settings: Buil
 		.flatMap(.Merge) { (target, source) in
 			return copyProduct(source, target)
 		}
+		.flatMap(.Merge) { url in
+			return copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL, settings)
+				.then(SignalProducer(value: url))
+		}
+}
+
+/// Finds any *.bcsymbolmap files for the built product and copies them into
+/// the given folder. Does nothing if bitcode is disabled.
+///
+/// Returns a signal that will send the URL after copying for each file.
+private func copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL: NSURL, _ settings: BuildSettings) -> SignalProducer<NSURL, CarthageError> {
+	if settings.bitcodeEnabled.value == true {
+		return SignalProducer(result: settings.wrapperURL)
+			.flatMap(.Merge) { wrapperURL in BCSymbolMapsForFramework(wrapperURL) }
+			.copyFileURLsIntoDirectory(directoryURL)
+	} else {
+		return .empty
+	}
 }
 
 /// Attempts to merge the given executables into one fat binary, written to
@@ -648,7 +701,7 @@ private func mergeExecutables(executableURLs: [NSURL], _ outputURL: NSURL) -> Si
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
 
 			return launchTask(lipoTask)
-				.mapError { .TaskError($0) }
+				.mapError(CarthageError.TaskError)
 		}
 		.then(.empty)
 }
@@ -662,15 +715,15 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, _ destinatio
 	precondition(destinationModuleDirectoryURL.fileURL)
 
 	return NSFileManager.defaultManager().carthage_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants, .SkipsHiddenFiles ], catchErrors: true)
-		.flatMap(.Merge) { enumerator, URL in
+		.flatMap(.Merge) { enumerator, URL -> SignalProducer<NSURL, CarthageError> in
 			let lastComponent: String? = URL.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!).URLByResolvingSymlinksInPath!
 
 			do {
 				try NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL)
 				return SignalProducer(value: destinationURL)
-			} catch {
-				return SignalProducer(error: .WriteFailed(destinationURL, error as NSError))
+			} catch let error as NSError {
+				return SignalProducer(error: .WriteFailed(destinationURL, error))
 			}
 		}
 }
@@ -718,22 +771,28 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 		producer.startWithSignal { signal, signalDisposable in
 			disposable += signalDisposable
 
-			signal.observe(next: { settingsEvent in
-				let transformedEvent = settingsEvent.map { settings in [ settings.target: settings ] }
+			signal.observe { event in
+				switch event {
+				case let .Next(settingsEvent):
+					let transformedEvent = settingsEvent.map { settings in [ settings.target: settings ] }
 
-				if let transformed = transformedEvent.value {
-					settings = combineDictionaries(settings, rhs: transformed)
-				} else {
-					sendNext(observer, transformedEvent)
+					if let transformed = transformedEvent.value {
+						settings = combineDictionaries(settings, rhs: transformed)
+					} else {
+						observer.sendNext(transformedEvent)
+					}
+
+				case let .Failed(error):
+					observer.sendFailed(error)
+
+				case .Completed:
+					observer.sendNext(.Success(settings))
+					observer.sendCompleted()
+
+				case .Interrupted:
+					observer.sendInterrupted()
 				}
-			}, error: { error in
-				sendError(observer, error)
-			}, completed: {
-				sendNext(observer, .Success(settings))
-				sendCompleted(observer)
-			}, interrupted: {
-				sendInterrupted(observer)
-			})
+			}
 		}
 	}
 }
@@ -746,10 +805,12 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 /// been created from the same target, and differ only in the SDK they were
 /// built for.
 ///
+/// Any *.bcsymbolmap files for the built products are also copied.
+///
 /// Upon .success, sends the URL to the merged product, then completes.
 private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings, _ secondProductSettings: BuildSettings, _ destinationFolderURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return copyBuildProductIntoDirectory(destinationFolderURL, firstProductSettings)
-		.flatMap(.Merge) { productURL in
+		.flatMap(.Merge) { productURL -> SignalProducer<NSURL, CarthageError> in
 			let executableURLs = (firstProductSettings.executableURL &&& secondProductSettings.executableURL).map { [ $0, $1 ] }
 			let outputURL = firstProductSettings.executablePath.map(destinationFolderURL.URLByAppendingPathComponent)
 
@@ -777,6 +838,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 
 			return mergeProductBinaries
 				.then(mergeProductModules)
+				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, secondProductSettings))
 				.then(SignalProducer(value: productURL))
 		}
 }
@@ -809,7 +871,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		// simulator on the list, iPad 2 7.1, which is invalid for the target.
 		//
 		// See https://github.com/Carthage/Carthage/issues/417.
-		func fetchDestination() -> SignalProducer<String?, ReactiveTaskError> {
+		func fetchDestination() -> SignalProducer<String?, CarthageError> {
 			if sdk == .iPhoneSimulator {
 				let destinationLookup = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
 				return launchTask(destinationLookup)
@@ -828,13 +890,14 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							let deviceID = string.substringWithRange(result.rangeAtIndex(1))
 							return "platform=iOS Simulator,id=\(deviceID)"
 						}
-				}
+					}
+					.mapError(CarthageError.TaskError)
 			}
 			return SignalProducer(value: nil)
 		}
 
 		return fetchDestination()
-			.flatMap(.Concat) { destination -> SignalProducer<TaskEvent<NSData>, ReactiveTaskError> in
+			.flatMap(.Concat) { destination -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 				if let destination = destination {
 					argsForBuilding.destination = destination
 					// Also set the destination lookup timeout. Since we're building
@@ -843,13 +906,6 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					argsForBuilding.destinationTimeout = 3
 				}
 
-				var buildScheme = xcodebuildTask("build", argsForBuilding)
-				buildScheme.workingDirectoryPath = workingDirectoryURL.path!
-
-				return launchTask(buildScheme)
-			}
-			.mapError { .TaskError($0) }
-			.flatMapTaskEvents(.Concat) { _ in
 				return BuildSettings.loadWithArguments(argsForLoading)
 					.filter { settings in
 						// Only copy build products for the product types we care about.
@@ -858,6 +914,20 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						} else {
 							return false
 						}
+					}
+					.flatMap(.Concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
+						if settings.bitcodeEnabled.value == true {
+							argsForBuilding.bitcodeGenerationMode = .Bitcode
+						}
+
+						var buildScheme = xcodebuildTask("build", argsForBuilding)
+						buildScheme.workingDirectoryPath = workingDirectoryURL.path!
+
+						return launchTask(buildScheme)
+							.map { taskEvent in
+								taskEvent.map { _ in settings }
+							}
+							.mapError { .TaskError($0) }
 					}
 			}
 	}
@@ -928,10 +998,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 											let secondSettings = secondSettingsByTarget[target]
 											assert(secondSettings != nil, "No \(secondSDK) build settings found for target \"\(target)\"")
 
-											sendNext(observer, (firstSettings, secondSettings!))
+											observer.sendNext((firstSettings, secondSettings!))
 										}
 
-										sendCompleted(observer)
+										observer.sendCompleted()
 									}
 								}
 						}
@@ -961,7 +1031,7 @@ public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<Tas
 		let dsymutilTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
 
 		return launchTask(dsymutilTask)
-			.mapError { .TaskError($0) }
+			.mapError(CarthageError.TaskError)
 			.flatMapTaskEvents(.Concat) { _ in SignalProducer(value: dSYMURL) }
 	} else {
 		return .empty
@@ -987,8 +1057,8 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 	return SignalProducer.attempt { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil)
-			} catch {
-				return .Failure(.WriteFailed(rootBinariesURL, error as NSError))
+			} catch let error as NSError {
+				return .Failure(.WriteFailed(rootBinariesURL, error))
 			}
 
 			// Link this dependency's Carthage/Build folder to that of the root
@@ -1003,16 +1073,16 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 
 				do {
 					try NSFileManager.defaultManager().createDirectoryAtURL(dependencyParentURL, withIntermediateDirectories: true, attributes: nil)
-				} catch {
-					return .Failure(.WriteFailed(dependencyParentURL, error as NSError))
+				} catch let error as NSError {
+					return .Failure(.WriteFailed(dependencyParentURL, error))
 				}
 			}
 
 			var isSymlink: AnyObject?
 			do {
 				try rawDependencyURL.getResourceValue(&isSymlink, forKey: NSURLIsSymbolicLinkKey)
-			} catch {
-				return .Failure(.ReadFailed(rawDependencyURL, error as NSError))
+			} catch let error as NSError {
+				return .Failure(.ReadFailed(rawDependencyURL, error))
 			}
 
 			if isSymlink as? Bool == true {
@@ -1020,8 +1090,8 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 				// absolute link back to the project's Build folder.
 				do {
 					try NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL)
-				} catch {
-					return .Failure(.WriteFailed(dependencyBinariesURL, error as NSError))
+				} catch let error as NSError {
+					return .Failure(.WriteFailed(dependencyBinariesURL, error))
 				}
 			} else {
 				// The relative path to this dependency's Carthage/Build folder, from
@@ -1036,8 +1106,8 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 
 				do {
 					try NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath)
-				} catch {
-					return .Failure(.WriteFailed(dependencyBinariesURL, error as NSError))
+				} catch let error as NSError {
+					return .Failure(.WriteFailed(dependencyBinariesURL, error))
 				}
 			}
 
@@ -1069,7 +1139,7 @@ public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageErr
 	
 	return launchTask(securityTask)
 		.ignoreTaskData()
-		.mapError { .TaskError($0) }
+		.mapError(CarthageError.TaskError)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
@@ -1185,7 +1255,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 				return locatorBuffer
 					// This scheduler hop is required to avoid disallowed recursive signals.
 					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
-					.startOn(QueueScheduler(name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
+					.startOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
 					// Pick up the first workspace which can build the scheme.
 					.filter { project, schemes in
 						switch project {
@@ -1238,12 +1308,18 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 /// Strips a framework from unexpected architectures, optionally codesigning the
 /// result.
 public func stripFramework(frameworkURL: NSURL, keepingArchitectures: [String], codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
-	let strip = architecturesInFramework(frameworkURL)
+	let stripArchitectures = architecturesInFramework(frameworkURL)
 		.filter { !keepingArchitectures.contains($0) }
 		.flatMap(.Concat) { stripArchitecture(frameworkURL, $0) }
 
+	// Xcode doesn't copy `Modules` directory at all.
+	let stripModules = stripModulesDirectory(frameworkURL)
+
 	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty
-	return strip.concat(sign)
+
+	return stripArchitectures
+		.concat(stripModules)
+		.concat(sign)
 }
 
 /// Copies a product into the given folder. The folder will be created if it
@@ -1279,9 +1355,26 @@ public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, Carth
 		do {
 			try manager.copyItemAtURL(from, toURL: to)
 			return .Success(to)
-		} catch {
-			return .Failure(.WriteFailed(to, error as NSError))
+		} catch let error as NSError {
+			return .Failure(.WriteFailed(to, error))
 		}
+	}
+}
+
+extension SignalProducerType where Value == NSURL, Error == CarthageError {
+	/// Copies existing files sent from the producer into the given directory.
+	///
+	/// Returns a producer that will send locations where the copied files are.
+	public func copyFileURLsIntoDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+		return producer
+			.filter { fileURL in fileURL.checkResourceIsReachableAndReturnError(nil) }
+			.flatMap(.Merge) { fileURL -> SignalProducer<NSURL, CarthageError> in
+				let fileName = fileURL.lastPathComponent!
+				let destinationURL = directoryURL.URLByAppendingPathComponent(fileName, isDirectory: false)
+				let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
+
+				return copyProduct(fileURL, resolvedDestinationURL)
+			}
 	}
 }
 
@@ -1293,7 +1386,7 @@ private func stripArchitecture(frameworkURL: NSURL, _ architecture: String) -> S
 		.flatMap(.Merge) { binaryURL -> SignalProducer<TaskEvent<NSData>, CarthageError> in
 			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
 			return launchTask(lipoTask)
-				.mapError { .TaskError($0) }
+				.mapError(CarthageError.TaskError)
 		}
 		.then(.empty)
 }
@@ -1308,7 +1401,7 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 
 			return launchTask(lipoTask)
 				.ignoreTaskData()
-				.mapError { .TaskError($0) }
+				.mapError(CarthageError.TaskError)
 				.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
 				.flatMap(.Merge) { output -> SignalProducer<String, CarthageError> in
 					let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
@@ -1359,6 +1452,26 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 		}
 }
 
+/// Strips `Modules` directory from the given framework.
+public func stripModulesDirectory(frameworkURL: NSURL) -> SignalProducer<(), CarthageError> {
+	return SignalProducer.attempt {
+		let modulesDirectoryURL = frameworkURL.URLByAppendingPathComponent("Modules", isDirectory: true)
+
+		var isDirectory: ObjCBool = false
+		if !NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!, isDirectory: &isDirectory) || !isDirectory {
+			return .Success(())
+		}
+
+		do {
+			try NSFileManager.defaultManager().removeItemAtURL(modulesDirectoryURL)
+		} catch let error as NSError {
+			return .Failure(.WriteFailed(modulesDirectoryURL, error))
+		}
+
+		return .Success(())
+	}
+}
+
 /// Sends a set of UUIDs for each architecture present in the given framework.
 public func UUIDsForFramework(frameworkURL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
 	return SignalProducer.attempt { () -> Result<NSURL, CarthageError> in
@@ -1372,13 +1485,26 @@ public func UUIDsForDSYM(dSYMURL: NSURL) -> SignalProducer<Set<NSUUID>, Carthage
 	return UUIDsFromDwarfdump(dSYMURL)
 }
 
+/// Sends an NSURL for each bcsymbolmap file for the given framework.
+/// The files do not necessarily exist on disk.
+///
+/// The returned URLs are relative to the parent directory of the framework.
+public func BCSymbolMapsForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	let directoryURL = frameworkURL.URLByDeletingLastPathComponent!
+	return UUIDsForFramework(frameworkURL)
+		.flatMap(.Merge) { UUIDs in SignalProducer(values: UUIDs) }
+		.map { UUID in
+			return directoryURL.URLByAppendingPathComponent(UUID.UUIDString, isDirectory: false).URLByAppendingPathExtension("bcsymbolmap")
+		}
+}
+
 /// Sends a set of UUIDs for each architecture present in the given URL.
 private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
 	let dwarfdumpTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", URL.path! ])
 
 	return launchTask(dwarfdumpTask)
 		.ignoreTaskData()
-		.mapError { .TaskError($0) }
+		.mapError(CarthageError.TaskError)
 		.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
 		.flatMap(.Merge) { output -> SignalProducer<Set<NSUUID>, CarthageError> in
 			// UUIDs are letters, decimals, or hyphens.
@@ -1433,6 +1559,6 @@ private func codesign(frameworkURL: NSURL, _ expandedIdentity: String) -> Signal
 	let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
 
 	return launchTask(codesignTask)
-		.mapError { .TaskError($0) }
+		.mapError(CarthageError.TaskError)
 		.then(.empty)
 }

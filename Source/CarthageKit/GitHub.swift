@@ -119,7 +119,13 @@ public struct GitHubRepository: Equatable {
 
 	/// The URL that should be used for cloning this repository over HTTPS.
 	public var HTTPSURL: GitURL {
-		return GitURL("\(server)/\(owner)/\(name).git")
+		let gitAuth = parseGitHubAccessTokenFromEnvironment()
+
+		var serverAuth:String = ""
+		if let auth = gitAuth[server.hostname] {
+			serverAuth = "\(auth)@"
+		}
+		return GitURL("\(server.scheme)://\(serverAuth)\(server.hostname)/\(owner)/\(name).git")
 	}
 
 	/// The URL that should be used for cloning this repository over SSH.
@@ -325,7 +331,10 @@ private func loadCredentialsFromGit(forServer server: GitHubRepository.Server) -
 			return string.linesProducer.promoteErrors(CarthageError.self)
 		}
 		.reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
-			let parts = line.characters.split(1, allowEmptySlices: false) { $0 == "=" }.map(String.init)
+			let parts = line.characters
+				.split(1, allowEmptySlices: false) { $0 == "=" }
+				.map(String.init)
+
 			if parts.count >= 2 {
 				let key = parts[0]
 				let value = parts[1]
@@ -438,8 +447,8 @@ private func fetchAllPages(URL: NSURL, _ authorizationHeaderValue: String?) -> S
 	let request = createGitHubRequest(URL, authorizationHeaderValue)
 
 	return NSURLSession.sharedSession().rac_dataWithRequest(request)
-		.mapError { .NetworkError($0) }
-		.flatMap(.Concat) { data, response in
+		.mapError(CarthageError.NetworkError)
+		.flatMap(.Concat) { data, response -> SignalProducer<NSData, CarthageError> in
 			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
 
 			if let HTTPResponse = response as? NSHTTPURLResponse {
@@ -515,6 +524,6 @@ internal func downloadAsset(asset: GitHubRelease.Asset, _ authorizationHeaderVal
 	let request = createGitHubRequest(asset.URL, authorizationHeaderValue, contentType: APIAssetDownloadContentType)
 
 	return NSURLSession.sharedSession().carthage_downloadWithRequest(request)
-		.mapError { .NetworkError($0) }
+		.mapError(CarthageError.NetworkError)
 		.map { URL, _ in URL }
 }

@@ -151,6 +151,9 @@ class XcodeSpec: QuickSpec {
 				expect(strippedArchitectures?.value).notTo(contain("i386"))
 				expect(strippedArchitectures?.value).to(contain("armv7"))
 				expect(strippedArchitectures?.value).to(contain("arm64"))
+
+				let modulesDirectoryURL = targetURL.URLByAppendingPathComponent("Modules", isDirectory: true)
+				expect(NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!)).to(beFalsy())
 				
 				var output: String = ""
 				let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
@@ -174,7 +177,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should skip projects without shared dynamic framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
-			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("\(dependency)-0.1", withExtension: nil)!
+			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("\(dependency)-0.2", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
@@ -189,9 +192,13 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).to(beNil())
 
+			let macPath = _buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
 			let iOSPath = _buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
 
 			var isDirectory: ObjCBool = false
+			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(isDirectory).to(beTruthy())
+
 			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
 			expect(isDirectory).to(beTruthy())
 		}
