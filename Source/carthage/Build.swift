@@ -219,7 +219,15 @@ public func buildableSDKs(sdks: [SDK], _ scheme: String, _ configuration: String
 			
 			return BuildSettings.loadWithArguments(identityCheckArgs)
 				.filter { settings -> Bool in
-					if let configuredSigningIdentity = settings["CODE_SIGN_IDENTITY"].value
+					let codeSigningIdentity = settings.codeSigningIdentity.value
+
+					if settings.adHocCodeSigningAllowed.value != false && codeSigningIdentity == "-" {
+						// Accept ad hoc code signing. Normally, this would be
+						// used for Cocoa (OS X) framework targets.
+						return true
+					}
+
+					if let configuredSigningIdentity = codeSigningIdentity
 						where !availableIdentities.contains(configuredSigningIdentity) {
 							let quotedSDK = formatting.quote(sdk.rawValue)
 							let quotedIdentity = formatting.quote(configuredSigningIdentity)
@@ -228,6 +236,7 @@ public func buildableSDKs(sdks: [SDK], _ scheme: String, _ configuration: String
 							
 							return false
 					}
+
 					return true
 				}
 				.map { _ in sdk }

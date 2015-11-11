@@ -698,6 +698,16 @@ public struct BuildSettings {
 			return .Success(nil)
 		}
 	}
+
+	/// Attempts to determine the code signing identity.
+	public var codeSigningIdentity: Result<String, CarthageError> {
+		return self["CODE_SIGN_IDENTITY"]
+	}
+
+	/// Attempts to determine if ad hoc code signing is allowed.
+	public var adHocCodeSigningAllowed: Result<Bool, CarthageError> {
+		return self["AD_HOC_CODE_SIGNING_ALLOWED"].map { $0 == "YES" }
+	}
 }
 
 extension BuildSettings: CustomStringConvertible {
