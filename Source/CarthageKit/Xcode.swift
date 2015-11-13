@@ -36,18 +36,6 @@ public enum ProjectLocator: Comparable {
 			return URL
 		}
 	}
-
-	/// The arguments that should be passed to `xcodebuild` to help it locate
-	/// this project.
-	private var arguments: [String] {
-		switch self {
-		case let .Workspace(URL):
-			return [ "-workspace", URL.path! ]
-
-		case let .ProjectFile(URL):
-			return [ "-project", URL.path! ]
-		}
-	}
 }
 
 public func ==(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
@@ -119,7 +107,15 @@ public struct BuildArguments {
 
 	/// The `xcodebuild` invocation corresponding to the receiver.
 	private var arguments: [String] {
-		var args = [ "xcodebuild" ] + project.arguments
+		var args = [ "xcodebuild" ]
+		
+		switch project {
+		case let .Workspace(URL):
+			args += [ "-workspace", URL.path! ]
+			
+		case let .ProjectFile(URL):
+			args += [ "-project", URL.path! ]
+		}
 
 		if let scheme = scheme {
 			args += [ "-scheme", scheme ]
