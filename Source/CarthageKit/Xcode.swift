@@ -259,16 +259,16 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 /// Represents a platform to build for.
 public enum Platform: String {
 	/// Mac OS X.
-	case Mac = "Mac"
+	case Mac
 
 	/// iOS for device and simulator.
-	case iOS = "iOS"
+	case iOS
 
 	/// Apple Watch device and simulator.
-	case watchOS = "watchOS"
+	case watchOS
 
 	/// Apple TV device and simulator.
-	case tvOS = "tvOS"
+	case tvOS
 
 	/// All supported build platforms.
 	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS, .tvOS ]
