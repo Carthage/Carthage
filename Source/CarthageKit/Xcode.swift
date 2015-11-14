@@ -133,9 +133,17 @@ public struct BuildArguments {
 		if let configuration = configuration {
 			args += [ "-configuration", configuration ]
 		}
-
+		
 		if let sdk = sdk {
-			args += sdk.arguments
+			// Passing in -sdk macosx appears to break implicit dependency
+			// resolution (see Carthage/Carthage#347).
+			//
+			// Since we wouldn't be trying to build this target unless it were
+			// for OS X already, just let xcodebuild figure out the SDK on its
+			// own.
+			if sdk != .MacOSX {
+				args += [ "-sdk", sdk.rawValue ]
+			}
 		}
 
 		if let destination = destination {
@@ -316,24 +324,6 @@ public enum SDK: String {
 
 		case .MacOSX:
 			return .Mac
-		}
-	}
-
-	/// The arguments that should be passed to `xcodebuild` to select this
-	/// SDK for building.
-	private var arguments: [String] {
-		switch self {
-		case .MacOSX:
-			// Passing in -sdk macosx appears to break implicit dependency
-			// resolution (see Carthage/Carthage#347).
-			//
-			// Since we wouldn't be trying to build this target unless it were
-			// for OS X already, just let xcodebuild figure out the SDK on its
-			// own.
-			return []
-
-		case .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator:
-			return [ "-sdk", rawValue ]
 		}
 	}
 }
