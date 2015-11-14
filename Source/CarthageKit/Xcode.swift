@@ -52,6 +52,15 @@ public func ==(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 }
 
 public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
+	// Prefer top-level directories
+	let leftLevel = lhs.fileURL.pathComponents!.count
+	let rightLevel = rhs.fileURL.pathComponents!.count
+	if leftLevel < rightLevel {
+		return true
+	} else if leftLevel > rightLevel {
+		return false
+	}
+	
 	// Prefer workspaces over projects.
 	switch (lhs, rhs) {
 	case (.Workspace, .ProjectFile):
@@ -179,12 +188,6 @@ private func ==(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> B
 }
 
 private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bool {
-	if lhs.level < rhs.level {
-		return true
-	} else if lhs.level > rhs.level {
-		return false
-	}
-
 	return lhs.locator < rhs.locator
 }
 

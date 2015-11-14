@@ -76,6 +76,12 @@ class XcodeSpec: QuickSpec {
 					let projectB = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/B.xcodeproj"))
 					expect(projectA < projectB).to(beTrue())
 				}
+				
+				it("should put top-level directories first") {
+					let top = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/Z.xcodeproj"))
+					let bottom = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/A/A.xcodeproj"))
+					expect(top < bottom).to(beTrue())
+				}
 			}
 		}
 
