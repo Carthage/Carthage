@@ -159,38 +159,6 @@ extension BuildArguments: CustomStringConvertible {
 	}
 }
 
-/// A candidate match for a project's canonical `ProjectLocator`.
-private struct ProjectEnumerationMatch: Comparable {
-	let locator: ProjectLocator
-	let level: Int
-
-	/// Checks whether a project exists at the given URL, returning a match if
-	/// so.
-	static func matchURL(URL: NSURL, fromEnumerator enumerator: NSDirectoryEnumerator) -> Result<ProjectEnumerationMatch, CarthageError> {
-		if let URL = URL.URLByResolvingSymlinksInPath {
-			return URL.typeIdentifier.flatMap { typeIdentifier in
-				if (UTTypeConformsTo(typeIdentifier, "com.apple.dt.document.workspace")) {
-					return .Success(ProjectEnumerationMatch(locator: .Workspace(URL), level: enumerator.level))
-				} else if (UTTypeConformsTo(typeIdentifier, "com.apple.xcode.project")) {
-					return .Success(ProjectEnumerationMatch(locator: .ProjectFile(URL), level: enumerator.level))
-				}
-
-				return .Failure(.NotAProject(URL))
-			}
-		}
-
-		return .Failure(.ReadFailed(URL, nil))
-	}
-}
-
-private func ==(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bool {
-	return lhs.locator == rhs.locator
-}
-
-private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bool {
-	return lhs.locator < rhs.locator
-}
-
 /// Attempts to locate projects and workspaces within the given directory.
 ///
 /// Sends all matches in preferential order.
@@ -198,20 +166,22 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 	let enumerationOptions: NSDirectoryEnumerationOptions = [ .SkipsHiddenFiles, .SkipsPackageDescendants ]
 
 	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-		.reduce([]) { (var matches: [ProjectEnumerationMatch], tuple) -> [ProjectEnumerationMatch] in
-			let (enumerator, URL) = tuple
-			if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value {
-				matches.append(match)
+		.reduce([]) { (var matches: [ProjectLocator], tuple) -> [ProjectLocator] in
+			let (_, URL) = tuple
+			
+			if let UTI = URL.typeIdentifier.value {
+				if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
+					matches.append(.Workspace(URL))
+				} else if (UTTypeConformsTo(UTI, "com.apple.xcode.project")) {
+					matches.append(.ProjectFile(URL))
+				}
 			}
 
 			return matches
 		}
 		.map { $0.sort() }
-		.flatMap(.Merge) { matches -> SignalProducer<ProjectEnumerationMatch, CarthageError> in
+		.flatMap(.Merge) { matches -> SignalProducer<ProjectLocator, CarthageError> in
 			return SignalProducer(values: matches)
-		}
-		.map { (match: ProjectEnumerationMatch) -> ProjectLocator in
-			return match.locator
 		}
 }
 
