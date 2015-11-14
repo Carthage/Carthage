@@ -500,12 +500,14 @@ public struct BuildSettings {
 							currentTarget = (line as NSString).substringWithRange(targetRange)
 							return
 						}
-
-						let components = line.characters.split(1) { $0 == "=" }.map(String.init)
+						
 						let trimSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
+						let components = line.characters
+							.split(1) { $0 == "=" }
+							.map { String($0).stringByTrimmingCharactersInSet(trimSet) }
 
 						if components.count == 2 {
-							currentSettings[components[0].stringByTrimmingCharactersInSet(trimSet)] = components[1].stringByTrimmingCharactersInSet(trimSet)
+							currentSettings[components[0]] = components[1]
 						}
 					}
 
