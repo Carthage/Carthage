@@ -105,7 +105,7 @@ public struct BuildArguments {
 	public var onlyActiveArchitecture: Bool? = nil
 
 	/// The build setting whether full bitcode should be embedded in the binary.
-	public var bitcodeGenerationMode: BitcodeGenerationMode = .None
+	public var bitcodeGenerationMode: BitcodeGenerationMode? = nil
 
 	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, sdk: SDK? = nil) {
 		self.project = project
@@ -162,7 +162,9 @@ public struct BuildArguments {
 			}
 		}
 		
-		args += bitcodeGenerationMode.arguments
+		if let bitcodeGenerationMode = bitcodeGenerationMode {
+			args += [ "BITCODE_GENERATION_MODE=\(bitcodeGenerationMode.rawValue)" ]
+		}
 
 		return args
 	}
@@ -366,26 +368,11 @@ extension SDK: CustomStringConvertible {
 /// Represents a build setting whether full bitcode should be embedded in the
 /// binary.
 public enum BitcodeGenerationMode: String {
-	/// None.
-	case None = ""
-
 	/// Only bitcode marker will be embedded.
 	case Marker = "marker"
 
 	/// Full bitcode will be embedded.
 	case Bitcode = "bitcode"
-
-	/// The arguments that should be passed to `xcodebuild` to specify the
-	/// setting for this case.
-	private var arguments: [String] {
-		switch self {
-		case .None:
-			return []
-
-		case .Marker, Bitcode:
-			return [ "BITCODE_GENERATION_MODE=\(rawValue)" ]
-		}
-	}
 }
 
 /// Describes the type of product built by an Xcode target.
