@@ -102,7 +102,7 @@ public struct BuildArguments {
 
 	/// The build setting whether the product includes only object code for
 	/// the native architecture.
-	public var onlyActiveArchitecture: OnlyActiveArchitecture = .NotSpecified
+	public var onlyActiveArchitecture: Bool? = nil
 
 	/// The build setting whether full bitcode should be embedded in the binary.
 	public var bitcodeGenerationMode: BitcodeGenerationMode = .None
@@ -154,7 +154,14 @@ public struct BuildArguments {
 			args += [ "-destination-timeout", String(destinationTimeout) ]
 		}
 
-		args += onlyActiveArchitecture.arguments
+		if let onlyActiveArchitecture = onlyActiveArchitecture {
+			if onlyActiveArchitecture {
+				args += [ "ONLY_ACTIVE_ARCH=YES" ]
+			} else {
+				args += [ "ONLY_ACTIVE_ARCH=NO" ]
+			}
+		}
+		
 		args += bitcodeGenerationMode.arguments
 
 		return args
@@ -352,34 +359,6 @@ extension SDK: CustomStringConvertible {
 
 		case .tvSimulator:
 			return "tvOS Simulator"
-		}
-	}
-}
-
-/// Represents a build setting whether the product includes only object code
-/// for the native architecture.
-public enum OnlyActiveArchitecture {
-	/// Not specified.
-	case NotSpecified
-
-	/// The product includes only code for the native architecture.
-	case Yes
-
-	/// The product includes code for its target's valid architectures.
-	case No
-
-	/// The arguments that should be passed to `xcodebuild` to specify the
-	/// setting for this case.
-	private var arguments: [String] {
-		switch self {
-		case .NotSpecified:
-			return []
-
-		case .Yes:
-			return [ "ONLY_ACTIVE_ARCH=YES" ]
-
-		case .No:
-			return [ "ONLY_ACTIVE_ARCH=NO" ]
 		}
 	}
 }
@@ -886,7 +865,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		argsForLoading.sdk = sdk
 
 		var argsForBuilding = argsForLoading
-		argsForBuilding.onlyActiveArchitecture = .No
+		argsForBuilding.onlyActiveArchitecture = false
 
 		// If SDK is the iOS simulator, then also find and set a valid destination.
 		// This fixes problems when the project deployment version is lower than
