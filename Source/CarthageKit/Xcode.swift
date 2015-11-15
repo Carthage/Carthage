@@ -36,6 +36,11 @@ public enum ProjectLocator: Comparable {
 			return URL
 		}
 	}
+	
+	/// The number of levels deep the current object is in the directory hierarchy.
+	public var level: Int {
+		return fileURL.pathComponents!.count - 1
+	}
 }
 
 public func ==(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
@@ -53,8 +58,8 @@ public func ==(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 
 public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 	// Prefer top-level directories
-	let leftLevel = lhs.fileURL.pathComponents!.count
-	let rightLevel = rhs.fileURL.pathComponents!.count
+	let leftLevel = lhs.level
+	let rightLevel = rhs.level
 	if leftLevel < rightLevel {
 		return true
 	} else if leftLevel > rightLevel {
