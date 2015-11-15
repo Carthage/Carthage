@@ -75,9 +75,6 @@ public enum CarthageError: ErrorType, Equatable {
 
 	/// An error occurred in a network operation.
 	case NetworkError(NSError)
-
-	/// The file or folder at the given URL is not an Xcode project.
-	case NotAProject(NSURL)
 }
 
 public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
@@ -136,9 +133,6 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 		return false
 	
 	case let (.NetworkError(left), .NetworkError(right)):
-		return left == right
-	
-	case let (.NotAProject(left), .NotAProject(right)):
 		return left == right
 	
 	default:
@@ -255,9 +249,6 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .NetworkError(error):
 			return error.description
-
-		case let .NotAProject(URL):
-			return "\(URL.path!) does not refer to an Xcode project"
 		}
 	}
 }
