@@ -60,10 +60,8 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 	// Prefer top-level directories
 	let leftLevel = lhs.level
 	let rightLevel = rhs.level
-	if leftLevel < rightLevel {
-		return true
-	} else if leftLevel > rightLevel {
-		return false
+	guard leftLevel == rightLevel else {
+		return leftLevel < rightLevel
 	}
 	
 	// Prefer workspaces over projects.
