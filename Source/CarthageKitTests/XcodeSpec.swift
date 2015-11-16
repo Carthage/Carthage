@@ -58,6 +58,32 @@ class XcodeSpec: QuickSpec {
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(targetFolderURL)
 			return
 		}
+		
+		describe("\(ProjectLocator.self)") {
+			describe("sorting") {
+				it("should put workspaces before projects") {
+					let workspace = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/Z.xcworkspace"))
+					let project = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
+					expect(workspace < project).to(beTruthy())
+				}
+				
+				it("should fall back to lexicographical sorting") {
+					let workspaceA = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/A.xcworkspace"))
+					let workspaceB = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/B.xcworkspace"))
+					expect(workspaceA < workspaceB).to(beTruthy())
+					
+					let projectA = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
+					let projectB = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/B.xcodeproj"))
+					expect(projectA < projectB).to(beTruthy())
+				}
+				
+				it("should put top-level directories first") {
+					let top = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/Z.xcodeproj"))
+					let bottom = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/A/A.xcodeproj"))
+					expect(top < bottom).to(beTruthy())
+				}
+			}
+		}
 
 		it("should build for all platforms") {
 			let dependencies = [

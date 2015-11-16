@@ -36,17 +36,10 @@ public enum ProjectLocator: Comparable {
 			return URL
 		}
 	}
-
-	/// The arguments that should be passed to `xcodebuild` to help it locate
-	/// this project.
-	private var arguments: [String] {
-		switch self {
-		case let .Workspace(URL):
-			return [ "-workspace", URL.path! ]
-
-		case let .ProjectFile(URL):
-			return [ "-project", URL.path! ]
-		}
+	
+	/// The number of levels deep the current object is in the directory hierarchy.
+	public var level: Int {
+		return fileURL.pathComponents!.count - 1
 	}
 }
 
@@ -64,6 +57,15 @@ public func ==(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 }
 
 public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
+	// Prefer top-level directories
+	let leftLevel = lhs.level
+	let rightLevel = rhs.level
+	if leftLevel < rightLevel {
+		return true
+	} else if leftLevel > rightLevel {
+		return false
+	}
+	
 	// Prefer workspaces over projects.
 	switch (lhs, rhs) {
 	case (.Workspace, .ProjectFile):
@@ -105,10 +107,10 @@ public struct BuildArguments {
 
 	/// The build setting whether the product includes only object code for
 	/// the native architecture.
-	public var onlyActiveArchitecture: OnlyActiveArchitecture = .NotSpecified
+	public var onlyActiveArchitecture: Bool? = nil
 
 	/// The build setting whether full bitcode should be embedded in the binary.
-	public var bitcodeGenerationMode: BitcodeGenerationMode = .None
+	public var bitcodeGenerationMode: BitcodeGenerationMode? = nil
 
 	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, sdk: SDK? = nil) {
 		self.project = project
@@ -119,7 +121,15 @@ public struct BuildArguments {
 
 	/// The `xcodebuild` invocation corresponding to the receiver.
 	private var arguments: [String] {
-		var args = [ "xcodebuild" ] + project.arguments
+		var args = [ "xcodebuild" ]
+		
+		switch project {
+		case let .Workspace(URL):
+			args += [ "-workspace", URL.path! ]
+			
+		case let .ProjectFile(URL):
+			args += [ "-project", URL.path! ]
+		}
 
 		if let scheme = scheme {
 			args += [ "-scheme", scheme ]
@@ -128,9 +138,17 @@ public struct BuildArguments {
 		if let configuration = configuration {
 			args += [ "-configuration", configuration ]
 		}
-
+		
 		if let sdk = sdk {
-			args += sdk.arguments
+			// Passing in -sdk macosx appears to break implicit dependency
+			// resolution (see Carthage/Carthage#347).
+			//
+			// Since we wouldn't be trying to build this target unless it were
+			// for OS X already, just let xcodebuild figure out the SDK on its
+			// own.
+			if sdk != .MacOSX {
+				args += [ "-sdk", sdk.rawValue ]
+			}
 		}
 
 		if let destination = destination {
@@ -141,8 +159,17 @@ public struct BuildArguments {
 			args += [ "-destination-timeout", String(destinationTimeout) ]
 		}
 
-		args += onlyActiveArchitecture.arguments
-		args += bitcodeGenerationMode.arguments
+		if let onlyActiveArchitecture = onlyActiveArchitecture {
+			if onlyActiveArchitecture {
+				args += [ "ONLY_ACTIVE_ARCH=YES" ]
+			} else {
+				args += [ "ONLY_ACTIVE_ARCH=NO" ]
+			}
+		}
+		
+		if let bitcodeGenerationMode = bitcodeGenerationMode {
+			args += [ "BITCODE_GENERATION_MODE=\(bitcodeGenerationMode.rawValue)" ]
+		}
 
 		return args
 	}
@@ -154,44 +181,6 @@ extension BuildArguments: CustomStringConvertible {
 	}
 }
 
-/// A candidate match for a project's canonical `ProjectLocator`.
-private struct ProjectEnumerationMatch: Comparable {
-	let locator: ProjectLocator
-	let level: Int
-
-	/// Checks whether a project exists at the given URL, returning a match if
-	/// so.
-	static func matchURL(URL: NSURL, fromEnumerator enumerator: NSDirectoryEnumerator) -> Result<ProjectEnumerationMatch, CarthageError> {
-		if let URL = URL.URLByResolvingSymlinksInPath {
-			return URL.typeIdentifier.flatMap { typeIdentifier in
-				if (UTTypeConformsTo(typeIdentifier, "com.apple.dt.document.workspace")) {
-					return .Success(ProjectEnumerationMatch(locator: .Workspace(URL), level: enumerator.level))
-				} else if (UTTypeConformsTo(typeIdentifier, "com.apple.xcode.project")) {
-					return .Success(ProjectEnumerationMatch(locator: .ProjectFile(URL), level: enumerator.level))
-				}
-
-				return .Failure(.NotAProject(URL))
-			}
-		}
-
-		return .Failure(.ReadFailed(URL, nil))
-	}
-}
-
-private func ==(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bool {
-	return lhs.locator == rhs.locator
-}
-
-private func <(lhs: ProjectEnumerationMatch, rhs: ProjectEnumerationMatch) -> Bool {
-	if lhs.level < rhs.level {
-		return true
-	} else if lhs.level > rhs.level {
-		return false
-	}
-
-	return lhs.locator < rhs.locator
-}
-
 /// Attempts to locate projects and workspaces within the given directory.
 ///
 /// Sends all matches in preferential order.
@@ -199,20 +188,22 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 	let enumerationOptions: NSDirectoryEnumerationOptions = [ .SkipsHiddenFiles, .SkipsPackageDescendants ]
 
 	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-		.reduce([]) { (var matches: [ProjectEnumerationMatch], tuple) -> [ProjectEnumerationMatch] in
-			let (enumerator, URL) = tuple
-			if let match = ProjectEnumerationMatch.matchURL(URL, fromEnumerator: enumerator).value {
-				matches.append(match)
+		.reduce([]) { (var matches: [ProjectLocator], tuple) -> [ProjectLocator] in
+			let (_, URL) = tuple
+			
+			if let UTI = URL.typeIdentifier.value {
+				if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
+					matches.append(.Workspace(URL))
+				} else if (UTTypeConformsTo(UTI, "com.apple.xcode.project")) {
+					matches.append(.ProjectFile(URL))
+				}
 			}
 
 			return matches
 		}
 		.map { $0.sort() }
-		.flatMap(.Merge) { matches -> SignalProducer<ProjectEnumerationMatch, CarthageError> in
+		.flatMap(.Merge) { matches -> SignalProducer<ProjectLocator, CarthageError> in
 			return SignalProducer(values: matches)
-		}
-		.map { (match: ProjectEnumerationMatch) -> ProjectLocator in
-			return match.locator
 		}
 }
 
@@ -259,16 +250,16 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 /// Represents a platform to build for.
 public enum Platform: String {
 	/// Mac OS X.
-	case Mac = "Mac"
+	case Mac
 
 	/// iOS for device and simulator.
-	case iOS = "iOS"
+	case iOS
 
 	/// Apple Watch device and simulator.
-	case watchOS = "watchOS"
+	case watchOS
 
 	/// Apple TV device and simulator.
-	case tvOS = "tvOS"
+	case tvOS
 
 	/// All supported build platforms.
 	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS, .tvOS ]
@@ -349,24 +340,6 @@ public enum SDK: String {
 			return .Mac
 		}
 	}
-
-	/// The arguments that should be passed to `xcodebuild` to select this
-	/// SDK for building.
-	private var arguments: [String] {
-		switch self {
-		case .MacOSX:
-			// Passing in -sdk macosx appears to break implicit dependency
-			// resolution (see Carthage/Carthage#347).
-			//
-			// Since we wouldn't be trying to build this target unless it were
-			// for OS X already, just let xcodebuild figure out the SDK on its
-			// own.
-			return []
-
-		case .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator:
-			return [ "-sdk", rawValue ]
-		}
-	}
 }
 
 // TODO: this won't be necessary anymore in Swift 2.
@@ -397,57 +370,14 @@ extension SDK: CustomStringConvertible {
 	}
 }
 
-/// Represents a build setting whether the product includes only object code
-/// for the native architecture.
-public enum OnlyActiveArchitecture {
-	/// Not specified.
-	case NotSpecified
-
-	/// The product includes only code for the native architecture.
-	case Yes
-
-	/// The product includes code for its target's valid architectures.
-	case No
-
-	/// The arguments that should be passed to `xcodebuild` to specify the
-	/// setting for this case.
-	private var arguments: [String] {
-		switch self {
-		case .NotSpecified:
-			return []
-
-		case .Yes:
-			return [ "ONLY_ACTIVE_ARCH=YES" ]
-
-		case .No:
-			return [ "ONLY_ACTIVE_ARCH=NO" ]
-		}
-	}
-}
-
 /// Represents a build setting whether full bitcode should be embedded in the
 /// binary.
 public enum BitcodeGenerationMode: String {
-	/// None.
-	case None = ""
-
 	/// Only bitcode marker will be embedded.
 	case Marker = "marker"
 
 	/// Full bitcode will be embedded.
 	case Bitcode = "bitcode"
-
-	/// The arguments that should be passed to `xcodebuild` to specify the
-	/// setting for this case.
-	private var arguments: [String] {
-		switch self {
-		case .None:
-			return []
-
-		case .Marker, Bitcode:
-			return [ "BITCODE_GENERATION_MODE=\(rawValue)" ]
-		}
-	}
 }
 
 /// Describes the type of product built by an Xcode target.
@@ -575,12 +505,14 @@ public struct BuildSettings {
 							currentTarget = (line as NSString).substringWithRange(targetRange)
 							return
 						}
-
-						let components = line.characters.split(1) { $0 == "=" }.map(String.init)
+						
 						let trimSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
+						let components = line.characters
+							.split(1) { $0 == "=" }
+							.map { String($0).stringByTrimmingCharactersInSet(trimSet) }
 
 						if components.count == 2 {
-							currentSettings[components[0].stringByTrimmingCharactersInSet(trimSet)] = components[1].stringByTrimmingCharactersInSet(trimSet)
+							currentSettings[components[0]] = components[1]
 						}
 					}
 
@@ -627,9 +559,7 @@ public struct BuildSettings {
 
 	/// Attempts to determine the ProductType specified in these build settings.
 	public var productType: Result<ProductType, CarthageError> {
-		return self["PRODUCT_TYPE"].flatMap { typeString in
-			return ProductType.fromString(typeString)
-		}
+		return self["PRODUCT_TYPE"].flatMap(ProductType.fromString)
 	}
 
 	/// Attempts to determine the MachOType specified in these build settings.
@@ -927,7 +857,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		argsForLoading.sdk = sdk
 
 		var argsForBuilding = argsForLoading
-		argsForBuilding.onlyActiveArchitecture = .No
+		argsForBuilding.onlyActiveArchitecture = false
 
 		// If SDK is the iOS simulator, then also find and set a valid destination.
 		// This fixes problems when the project deployment version is lower than
