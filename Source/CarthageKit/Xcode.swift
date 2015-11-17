@@ -947,7 +947,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							.map { taskEvent in
 								taskEvent.map { _ in settings }
 							}
-							.mapError { .TaskError($0) }
+							.mapError(CarthageError.TaskError)
 					}
 			}
 	}
