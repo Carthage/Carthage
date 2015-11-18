@@ -432,6 +432,10 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, _ submodule: Subm
 	let submoduleDirectoryURL = repositoryFileURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
 
 	return isGitRepository(submoduleDirectoryURL)
+		.map { isRepository in
+			// Check if the submodule is initialized/updated already.
+			return isRepository && NSFileManager.defaultManager().fileExistsAtPath(submoduleDirectoryURL.URLByAppendingPathComponent(".git").path!)
+		}
 		.promoteErrors(CarthageError.self)
 		.flatMap(.Merge) { submoduleExists -> SignalProducer<(), CarthageError> in
 			if submoduleExists {
