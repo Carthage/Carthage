@@ -11,6 +11,9 @@ import Result
 import ReactiveCocoa
 import ReactiveTask
 
+/// The git version Carthage requires at least.
+public let CarthageRequiredGitVersion = "2.3.0"
+
 /// Represents a URL for a Git remote.
 public struct GitURL: Equatable {
 	/// The string representation of the URL.
@@ -148,6 +151,24 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 		.mapError(CarthageError.TaskError)
 		.map { data in
 			return NSString(data: data, encoding: NSUTF8StringEncoding)! as String
+		}
+}
+
+/// Checks if the git version satisfies the given required version.
+public func ensureGitVersion(requiredVersion: String = CarthageRequiredGitVersion) -> SignalProducer<Bool, CarthageError> {
+	return launchGitTask([ "--version" ])
+		.map { input -> Bool in
+			let scanner = NSScanner(string: input)
+			guard scanner.scanString("git version ", intoString: nil) else {
+				return false
+			}
+
+			var version: NSString?
+			if scanner.scanUpToString("", intoString: &version), let version = version {
+				return version.compare(requiredVersion, options: [ .NumericSearch ]) != .OrderedAscending
+			} else {
+				return false
+			}
 		}
 }
 
