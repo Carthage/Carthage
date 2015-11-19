@@ -11,10 +11,10 @@ import Result
 import ReactiveCocoa
 
 /// An abstract type representing a way to specify versions.
-public protocol VersionType: Scannable, Equatable {}
+public protocol VersionType: Equatable {}
 
 /// A semantic version.
-public struct SemanticVersion: Comparable {
+public struct SemanticVersion: VersionType, Comparable {
 	/// The major version.
 	///
 	/// Increments to this component represent incompatible API changes.
@@ -100,8 +100,6 @@ extension SemanticVersion: Scannable {
 	}
 }
 
-extension SemanticVersion: VersionType {}
-
 public func <(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
 	return lhs.components.lexicographicalCompare(rhs.components)
 }
@@ -123,7 +121,7 @@ extension SemanticVersion: CustomStringConvertible {
 }
 
 /// An immutable version that a project can be pinned to.
-public struct PinnedVersion: Equatable {
+public struct PinnedVersion: VersionType {
 	/// The commit SHA, or name of the tag, to pin to.
 	public let commitish: String
 
@@ -155,8 +153,6 @@ extension PinnedVersion: Scannable {
 	}
 }
 
-extension PinnedVersion: VersionType {}
-
 extension PinnedVersion: CustomStringConvertible {
 	public var description: String {
 		return "\"\(commitish)\""
@@ -165,7 +161,7 @@ extension PinnedVersion: CustomStringConvertible {
 
 /// Describes which versions are acceptable for satisfying a dependency
 /// requirement.
-public enum VersionSpecifier: Equatable {
+public enum VersionSpecifier: VersionType {
 	case Any
 	case AtLeast(SemanticVersion)
 	case CompatibleWith(SemanticVersion)
@@ -258,8 +254,6 @@ extension VersionSpecifier: Scannable {
 		}
 	}
 }
-
-extension VersionSpecifier: VersionType {}
 
 extension VersionSpecifier: CustomStringConvertible {
 	public var description: String {
