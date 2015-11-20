@@ -285,7 +285,7 @@ public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 	return lhs.project == rhs.project && lhs.version == rhs.version
 }
 
-extension Dependency: Scannable {
+extension Dependency where V: Scannable {
 	/// Attempts to parse a Dependency specification.
 	public static func fromScanner(scanner: NSScanner) -> Result<Dependency, CarthageError> {
 		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
