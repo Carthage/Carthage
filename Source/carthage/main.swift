@@ -14,7 +14,7 @@ import ReactiveTask
 import Result
 
 guard ensureGitVersion().first()?.value == true else {
-	fputs("Carthage requires git \(CarthageRequiredGitVersion) or later. Please update your git version at first.\n", stderr)
+	fputs("Carthage requires git \(CarthageRequiredGitVersion) or later.\n", stderr)
 	exit(EXIT_FAILURE)
 }
 
