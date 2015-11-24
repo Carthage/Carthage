@@ -54,8 +54,13 @@ prefix_install: installables
 	mkdir -p "$(PREFIX)/Frameworks" "$(PREFIX)/bin"
 	cp -Rf "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)" "$(PREFIX)/Frameworks/"
 	cp -f "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage" "$(PREFIX)/bin/"
+	install_name_tool -add_rpath "@executable_path/../Frameworks/$(OUTPUT_FRAMEWORK)/Versions/Current/Frameworks" "$(PREFIX)/bin/carthage"
+	install_name_tool -add_rpath "@executable_path/../Frameworks" "$(PREFIX)/bin/carthage"
 
 package: installables
+	install_name_tool -add_rpath "$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)/Versions/Current/Frameworks" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage"
+	install_name_tool -add_rpath "$(FRAMEWORKS_FOLDER)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage"
+	
 	pkgbuild \
 		--component-plist "$(COMPONENTS_PLIST)" \
 		--identifier "org.carthage.carthage" \
