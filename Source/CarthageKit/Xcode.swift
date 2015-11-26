@@ -322,6 +322,17 @@ public enum SDK: String {
 		return Result(self.init(rawValue: string.lowercaseString), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
 	}
 
+	/// Returns whether this is a simulator SDK.
+	public var isSimulator: Bool {
+		switch self {
+		case .iPhoneSimulator, .watchSimulator, .tvSimulator:
+			return true
+
+		case _:
+			return false
+		}
+	}
+
 	/// The platform that this SDK targets.
 	public var platform: Platform {
 		switch self {
@@ -866,7 +877,9 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		//
 		// See https://github.com/Carthage/Carthage/issues/417.
 		func fetchDestination() -> SignalProducer<String?, CarthageError> {
-			if sdk == .iPhoneSimulator {
+			// Specifying destination seems to be required for building with
+			// simulator SDKs since Xcode 7.2.
+			if sdk.isSimulator {
 				let destinationLookup = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
 				return launchTask(destinationLookup)
 					.ignoreTaskData()
@@ -877,12 +890,13 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						// altogether if parsing fails. Xcode 7.0 beta 4 added a
 						// JSON output option as `xcrun simctl list devices --json`
 						// so this can be switched once 7.0 becomes a requirement.
-						let regex = try! NSRegularExpression(pattern: "-- iOS [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: [])
+						let platform = sdk.platform.rawValue
+						let regex = try! NSRegularExpression(pattern: "-- \(platform) [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: [])
 						let lastDeviceResult = regex.matchesInString(string as String, options: [], range: NSRange(location: 0, length: string.length)).last
 						return lastDeviceResult.map { result in
 							// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
 							let deviceID = string.substringWithRange(result.rangeAtIndex(1))
-							return "platform=iOS Simulator,id=\(deviceID)"
+							return "platform=\(platform) Simulator,id=\(deviceID)"
 						}
 					}
 					.mapError(CarthageError.TaskError)
