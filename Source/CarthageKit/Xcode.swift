@@ -238,6 +238,9 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.skipWhile { line in !line.hasSuffix("Schemes:") }
 		.skip(1)
 		.takeWhile { line in !line.isEmpty }
+		// workaround for carthage build error (XCode 7.1.1).
+		// xcodebuild -list always append "Plugin Console Open With Application: [NSApp mainMenu] returned nil" at last of schemes.
+		.takeWhile { line in !line.containsString("Plugin Console Open With Application: [NSApp mainMenu] returned nil") }
 		// xcodebuild has a bug where xcodebuild -list can sometimes hang
 		// indefinitely on projects that don't share any schemes, so
 		// automatically bail out if it looks like that's happening.
