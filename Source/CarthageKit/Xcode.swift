@@ -890,13 +890,13 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						// altogether if parsing fails. Xcode 7.0 beta 4 added a
 						// JSON output option as `xcrun simctl list devices --json`
 						// so this can be switched once 7.0 becomes a requirement.
-						let platform = sdk.platform.rawValue
-						let regex = try! NSRegularExpression(pattern: "-- \(platform) [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: [])
+						let platformName = sdk.platform.rawValue
+						let regex = try! NSRegularExpression(pattern: "-- \(platformName) [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: [])
 						let lastDeviceResult = regex.matchesInString(string as String, options: [], range: NSRange(location: 0, length: string.length)).last
 						return lastDeviceResult.map { result in
 							// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
 							let deviceID = string.substringWithRange(result.rangeAtIndex(1))
-							return "platform=\(platform) Simulator,id=\(deviceID)"
+							return "platform=\(platformName) Simulator,id=\(deviceID)"
 						}
 					}
 					.mapError(CarthageError.TaskError)
