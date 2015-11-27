@@ -890,7 +890,7 @@
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -900,7 +900,7 @@
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Test;
@@ -910,7 +910,7 @@
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -920,7 +920,7 @@
 			baseConfigurationReference = D0D1213419E878CC005E4BAA /* Mac-Application.xcconfig */;
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Profile;

@@ -49,6 +49,7 @@ installables: clean bootstrap
 	mv -f "$(CARTHAGEKIT_BUNDLE)" "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)"
 	mv -f "$(CARTHAGE_EXECUTABLE)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage"
 	rm -rf "$(BUILT_BUNDLE)"
+	install_name_tool -delete_rpath "@executable_path/../Frameworks" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage"
 
 prefix_install: installables
 	mkdir -p "$(PREFIX)/Frameworks" "$(PREFIX)/bin"
