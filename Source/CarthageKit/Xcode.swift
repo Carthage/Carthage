@@ -169,6 +169,10 @@ public struct BuildArguments {
 			args += [ "BITCODE_GENERATION_MODE=\(bitcodeGenerationMode.rawValue)" ]
 		}
 
+		// Disable code signing requirement for all builds
+		// Frameworks get signed in the copy-frameworks action
+		args += [ "CODE_SIGNING_REQUIRED=NO" ]
+
 		return args
 	}
 }

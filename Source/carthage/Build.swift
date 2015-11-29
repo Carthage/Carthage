@@ -213,32 +213,10 @@ public func buildableSDKs(sdks: [SDK], _ scheme: String, _ configuration: String
 			return SignalProducer(values: sdks).map { ($0, identities) }
 		}
 		.flatMap(.Concat) { (sdk: SDK, signingIdentities: [CodeSigningIdentity]) -> SignalProducer<SDK, CarthageError> in
-			let availableIdentities = Set(signingIdentities)
 			
 			identityCheckArgs.sdk = sdk
 			
 			return BuildSettings.loadWithArguments(identityCheckArgs)
-				.filter { settings -> Bool in
-					let codeSigningIdentity = settings.codeSigningIdentity.value
-
-					if settings.adHocCodeSigningAllowed.value != false && codeSigningIdentity == "-" {
-						// Accept ad hoc code signing. Normally, this would be
-						// used for Cocoa (OS X) framework targets.
-						return true
-					}
-
-					if let configuredSigningIdentity = codeSigningIdentity
-						where !availableIdentities.contains(configuredSigningIdentity) {
-							let quotedSDK = formatting.quote(sdk.rawValue)
-							let quotedIdentity = formatting.quote(configuredSigningIdentity)
-							let message = "Skipping build for \(quotedSDK) SDK because the necessary signing identity \(quotedIdentity) is not installed"
-							carthage.println(formatting.bullets + "WARNING: \(message)")
-							
-							return false
-					}
-
-					return true
-				}
 				.map { _ in sdk }
 				.take(1)
 		}
