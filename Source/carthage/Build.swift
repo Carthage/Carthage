@@ -207,12 +207,18 @@ the signing identities available
 public func buildableSDKs(sdks: [SDK], _ scheme: String, _ configuration: String, _ project: ProjectLocator, _ formatting: ColorOptions.Formatting) -> SignalProducer<[SDK], CarthageError> {
 	var identityCheckArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 	
+	
+	
 	return SignalProducer(values: sdks)
 		.flatMap(.Concat) { sdk -> SignalProducer<SDK, CarthageError> in
+			
 			identityCheckArgs.sdk = sdk
+			
 			return BuildSettings.loadWithArguments(identityCheckArgs)
+				.map { _ in sdk }
+				.take(1)
 		}
-		.take(1)
+		.collect()
 }
 
 public struct BuildOptions: OptionsType {
