@@ -169,6 +169,10 @@ public struct BuildArguments {
 			args += [ "BITCODE_GENERATION_MODE=\(bitcodeGenerationMode.rawValue)" ]
 		}
 
+		// Disable code signing requirement for all builds
+		// Frameworks get signed in the copy-frameworks action
+		args += [ "CODE_SIGNING_REQUIRED=NO" , "CODE_SIGN_IDENTITY=" ]
+
 		return args
 	}
 }
@@ -1154,39 +1158,6 @@ public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageErr
 		.flatMap(.Merge) { (string: String) -> SignalProducer<String, CarthageError> in
 			return string.linesProducer.promoteErrors(CarthageError.self)
 		}
-}
-
-public typealias CodeSigningIdentity = String
-
-/// Matches lines of the form:
-///
-/// '  1) 4E8D512C8480AAC679947D6E50190AE97AB3E825 "3rd Party Mac Developer Application: Developer Name (DUCNFCN445)"'
-/// '  2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D "Mac Developer: Developer Name (DUCNFCN445)"'
-private let signingIdentitiesRegex = try! NSRegularExpression(pattern:
-	(
-		"\\s*"               + // Leading spaces
-		"\\d+\\)\\s+"        + // Number of identity
-		"([A-F0-9]+)\\s+"    + // Hash (e.g. 4E8D512C8480AAC67995D69CA09B769663BC844D)
-		"\"(.+):\\s"         + // Identity type (e.g. Mac Developer, iPhone Developer)
-		"(.+)\\s\\("         + // Developer Name
-		"([A-Z0-9]+)\\)\"\\s*" // Developer ID (e.g. DUCNFCN445)
-	),
- options: [])
-
-public func parseSecuritySigningIdentities(securityIdentities securityIdentities: SignalProducer<String, CarthageError> = getSecuritySigningIdentities()) -> SignalProducer<CodeSigningIdentity, CarthageError> {
-	return securityIdentities
-		.map { (identityLine: String) -> CodeSigningIdentity? in
-			let fullRange = NSMakeRange(0, identityLine.characters.count)
-			
-			if let match = signingIdentitiesRegex.matchesInString(identityLine, options: [], range: fullRange).first {
-				let id = identityLine as NSString
-				
-				return id.substringWithRange(match.rangeAtIndex(2))
-			}
-			
-			return nil
-		}
-		.ignoreNil()
 }
 
 /// Builds the first project or workspace found within the given directory which
