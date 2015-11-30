@@ -21,31 +21,8 @@ class XcodeSpec: QuickSpec {
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
 
-		var machineHasiOSIdentity: Bool = false
-		var sdkFilter: SDKFilterCallback = { .Success($0.0) }
-
-		beforeSuite {
-			machineHasiOSIdentity = iOSSigningIdentitiesConfigured()
-
-			// Works around the test failure in CI environment for pull requests
-			// sent from forked repositories.
-			//
-			// See https://github.com/Carthage/Carthage/pull/766#issuecomment-141671784.
-			if !machineHasiOSIdentity {
-				sdkFilter = { args in
-					let filtered = args.0.filter { sdk in
-						switch sdk {
-						case .MacOSX, .iPhoneSimulator, .watchSimulator, .tvSimulator:
-							return true
-
-						case _:
-							return false
-						}
-					}
-					return .Success(filtered)
-				}
-			}
-		}
+		let machineHasiOSIdentity: Bool = true
+		let sdkFilter: SDKFilterCallback = { .Success($0.0) }
 
 		beforeEach {
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(buildFolderURL)
@@ -327,41 +304,6 @@ class XcodeSpec: QuickSpec {
 			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")).first()
 			expect(result).to(beNil())
 		}
-		
-		it("should parse signing identities correctly") {
-			let inputLines = [
-				"  1) 4E8D512C8480FAC679947D6E50190AE9BAB3E825 \"3rd Party Mac Developer Application: Some Developer (DUCNFCN445)\"",
-				"  2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D \"Mac Developer: Developer Name (AUCNACN346)\"",
-				"  3) 4E8D512C8480AAC67995D69CA09B769663BC844D \"iPhone Developer: App Developer (VZAPFCN445)\"",
-				"  4) 65E24CDAF5B3E1E1480818CA4656210871214337 \"Developer ID Application: Development, Inc. (DSVNEZN954)\"",
-				"     4 valid identities found"
-			]
-			
-			let expectedOutput = [
-				"3rd Party Mac Developer Application",
-				"Mac Developer",
-				"iPhone Developer",
-				"Developer ID Application",
-			]
-			
-			let result = parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError>(values: inputLines))
-				.collect()
-				.single()
 
-			expect(result?.value).to(equal(expectedOutput))
-		}
 	}
-}
-
-// MARK: - Helper functions
-
-/// Returns true if the current user has any iOS signing identities configured
-private func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
-	let iOSIdentities = identities
-		.filter { identity in
-			return identity.containsString("iPhone") || identity.containsString("iOS")
-		}
-		.last()
-	
-	return iOSIdentities != nil
 }
