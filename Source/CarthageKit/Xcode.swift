@@ -299,7 +299,7 @@ extension Platform: CustomStringConvertible {
 }
 
 /// Represents an SDK buildable by Xcode.
-public enum SDK: String {
+public enum SDK: String, Comparable {
 	/// Mac OS X.
 	case MacOSX = "macosx"
 
@@ -352,6 +352,39 @@ public enum SDK: String {
 		case .MacOSX:
 			return .Mac
 		}
+	}
+}
+
+public func < (lhs: SDK, rhs: SDK) -> Bool {
+	switch (lhs, rhs) {
+	// Prefer Mac OS X SDK.
+	case (.MacOSX, _):
+		return true
+
+	case (_, .MacOSX):
+		return false
+
+	// Prefer device SDK over simulator SDK in same platform.
+	case (.iPhoneOS, .iPhoneSimulator):
+		return true
+
+	case (.iPhoneSimulator, .iPhoneOS):
+		return false
+
+	case (.watchOS, .watchSimulator):
+		return true
+
+	case (.watchSimulator, .watchOS):
+		return false
+
+	case (.tvOS, .tvSimulator):
+		return true
+
+	case (.tvSimulator, .tvOS):
+		return false
+
+	case _:
+		return true
 	}
 }
 
@@ -967,7 +1000,11 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		}
 		.flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
 			let filterResult = sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
-			return SignalProducer(result: filterResult.map { (platform, $0) })
+			return SignalProducer(result: filterResult.map { sdks in
+				// Ensure that a device SDK are ordered before than a simulator
+				// SDK of the same platform.
+				return (platform, sdks.sort())
+			})
 		}
 		.filter { _, sdks in
 			return !sdks.isEmpty
@@ -984,10 +1021,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					}
 
 			case 2:
-				let firstSDK = sdks[0]
-				let secondSDK = sdks[1]
+				let deviceSDK = sdks[0]
+				let simulatorSDK = sdks[1]
 
-				return settingsByTarget(buildSDK(firstSDK))
+				return settingsByTarget(buildSDK(deviceSDK))
 					.flatMap(.Concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
 						switch settingsEvent {
 						case let .StandardOutput(data):
@@ -996,21 +1033,21 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						case let .StandardError(data):
 							return SignalProducer(value: .StandardError(data))
 
-						case let .Success(firstSettingsByTarget):
-							return settingsByTarget(buildSDK(secondSDK))
-								.flatMapTaskEvents(.Concat) { (secondSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
-									assert(firstSettingsByTarget.count == secondSettingsByTarget.count, "Number of targets built for \(firstSDK) (\(firstSettingsByTarget.count)) does not match number of targets built for \(secondSDK) (\(secondSettingsByTarget.count))")
+						case let .Success(deviceSettingsByTarget):
+							return settingsByTarget(buildSDK(simulatorSDK))
+								.flatMapTaskEvents(.Concat) { (simulatorSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
+									assert(deviceSettingsByTarget.count == simulatorSettingsByTarget.count, "Number of targets built for \(deviceSDK) (\(deviceSettingsByTarget.count)) does not match number of targets built for \(simulatorSDK) (\(simulatorSettingsByTarget.count))")
 
 									return SignalProducer { observer, disposable in
-										for (target, firstSettings) in firstSettingsByTarget {
+										for (target, deviceSettings) in deviceSettingsByTarget {
 											if disposable.disposed {
 												break
 											}
 
-											let secondSettings = secondSettingsByTarget[target]
-											assert(secondSettings != nil, "No \(secondSDK) build settings found for target \"\(target)\"")
+											let simulatorSettings = simulatorSettingsByTarget[target]
+											assert(simulatorSettings != nil, "No \(simulatorSDK) build settings found for target \"\(target)\"")
 
-											observer.sendNext((firstSettings, secondSettings!))
+											observer.sendNext((deviceSettings, simulatorSettings!))
 										}
 
 										observer.sendCompleted()
@@ -1018,8 +1055,8 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 								}
 						}
 					}
-					.flatMapTaskEvents(.Concat) { (firstSettings, secondSettings) in
-						return mergeBuildProductsIntoDirectory(secondSettings, firstSettings, folderURL)
+					.flatMapTaskEvents(.Concat) { (deviceSettings, simulatorSettings) in
+						return mergeBuildProductsIntoDirectory(deviceSettings, simulatorSettings, folderURL)
 					}
 
 			default:
