@@ -543,7 +543,7 @@
 			attributes = {
 				LastSwiftMigration = 0700;
 				LastSwiftUpdateCheck = 0700;
-				LastUpgradeCheck = 0630;
+				LastUpgradeCheck = 0710;
 				ORGANIZATIONNAME = Carthage;
 				TargetAttributes = {
 					D0D1216C19E87B05005E4BAA = {
@@ -728,11 +728,11 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212619E878CC005E4BAA /* Debug.xcconfig */;
 			buildSettings = {
+				ENABLE_TESTABILITY = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
 			name = Debug;
 		};
@@ -742,8 +742,7 @@
 			buildSettings = {
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
 			name = Release;
 		};
@@ -757,6 +756,7 @@
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -773,6 +773,7 @@
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -788,6 +789,7 @@
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -801,6 +803,7 @@
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -811,8 +814,7 @@
 			buildSettings = {
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
 			name = Profile;
 		};
@@ -826,6 +828,7 @@
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -841,6 +844,7 @@
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Profile;
@@ -851,8 +855,7 @@
 			buildSettings = {
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_WHOLE_MODULE_OPTIMIZATION = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
 			name = Test;
 		};
@@ -866,6 +869,7 @@
 				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -881,6 +885,7 @@
 					"$(inherited)",
 				);
 				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Test;
@@ -891,6 +896,7 @@
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks $(inherited)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -901,6 +907,7 @@
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks $(inherited)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Test;
@@ -911,6 +918,7 @@
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks $(inherited)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -921,6 +929,7 @@
 			buildSettings = {
 				INFOPLIST_FILE = Source/carthage/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/. @executable_path/CarthageKit.framework/Versions/Current/Frameworks /Library/Frameworks /Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks $(inherited)";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Profile;
