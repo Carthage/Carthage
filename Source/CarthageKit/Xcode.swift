@@ -171,7 +171,7 @@ public struct BuildArguments {
 
 		// Disable code signing requirement for all builds
 		// Frameworks get signed in the copy-frameworks action
-		args += [ "CODE_SIGNING_REQUIRED=NO" , "CODE_SIGN_IDENTITY=" ]
+		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]
 
 		return args
 	}
@@ -1142,21 +1142,6 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 						return error
 					}
 				}
-		}
-}
-
-
-public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageError> {
-	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: [ "find-identity", "-v", "-p", "codesigning" ])
-	
-	return launchTask(securityTask)
-		.ignoreTaskData()
-		.mapError(CarthageError.TaskError)
-		.map { (data: NSData) -> String in
-			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
-		}
-		.flatMap(.Merge) { (string: String) -> SignalProducer<String, CarthageError> in
-			return string.linesProducer.promoteErrors(CarthageError.self)
 		}
 }
 

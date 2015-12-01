@@ -103,13 +103,6 @@ public struct BuildCommand: CommandType {
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
 
-		let sdkFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
-			let result = buildableSDKs(sdks, scheme, configuration, project, options.colorOptions.formatting)
-				.first()
-			
-			return result!
-		}
-
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeNext { eventSink.put($0) }
 
@@ -130,13 +123,13 @@ public struct BuildCommand: CommandType {
 					.then(SignalProducer(value: project))
 			}
 			.flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms, sdkFilter: sdkFilter)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms)
 			}
 
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms, sdkFilter: sdkFilter)
+			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms)
 				.flatMapError { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
 					switch error {
 					case let .NoSharedFrameworkSchemes(project, _):
@@ -190,35 +183,6 @@ public struct BuildCommand: CommandType {
 				}
 		}
 	}
-}
-
-/**
-Returns the SDKs that the given scheme, configuration, and project are capable of building, given
-the signing identities available
-
-:param: sdk           The list of SDKs to filter
-:param: scheme        The scheme name to be built
-:param: configuration The Xcode configuration to be built
-:param: project       The project being built
-:param: formatting    An instance of formatting options
-
-:returns: A list of SDKs that can be built with the configured signing identities
-*/
-public func buildableSDKs(sdks: [SDK], _ scheme: String, _ configuration: String, _ project: ProjectLocator, _ formatting: ColorOptions.Formatting) -> SignalProducer<[SDK], CarthageError> {
-	var identityCheckArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-	
-	
-	
-	return SignalProducer(values: sdks)
-		.flatMap(.Concat) { sdk -> SignalProducer<SDK, CarthageError> in
-			
-			identityCheckArgs.sdk = sdk
-			
-			return BuildSettings.loadWithArguments(identityCheckArgs)
-				.map { _ in sdk }
-				.take(1)
-		}
-		.collect()
 }
 
 public struct BuildOptions: OptionsType {
