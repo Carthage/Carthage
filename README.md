@@ -167,6 +167,64 @@ carthage archive YourFrameworkName
 
 Draft Releases will be automatically ignored, even if they correspond to the desired tag.
 
+#### Use travis-ci to upload your tagged prebuild frameworks
+
+It is possible to use travis-ci in order to build and upload your tagged releases.
+
+1. [Install travis CLI](https://github.com/travis-ci/travis.rb#installation) with `gem install travis`
+1. [Setup](https://docs.travis-ci.com/user/getting-started/) travis-ci for your repository (Steps 1 and 2)
+1. Create `.travis.yml` file at the root of your repository based on that template. Set `FRAMEWORK_NAME` to the correct value.
+
+	Replace PROJECT_PLACEHOLDER and SCHEME_PLACEHOLDER
+	
+	If you are using a *workspace* instead of a *project* remove the xcode_project line and uncomment the xcode_workspace line.
+	
+	The project should be in the format: MyProject.xcodeproj
+	
+	The workspace should be in the format: MyWorkspace.xcworkspace
+	
+	For mor informations you can visit [travis docs for objective-c projects](https://docs.travis-ci.com/user/languages/objective-c)
+	
+	```
+	language: objective-c
+	osx_image: xcode7.1
+	xcode_project: <PROJECT_PLACEHOLDER>
+	# xcode_workspace: <WORKSPACE_PLACEHOLDER>
+	xcode_scheme: <SCHEME_PLACEHOLDER>
+	env:
+		global: 
+		- FRAMEWORK_NAME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
+	before_install:
+	- brew install carthage
+	before_script:
+	# bootstrap the dependencies for the project
+	# you can remove if you don't have dependencies
+	- carthage bootstrap	
+	before_deploy:
+	- carthage build --no-skip-current
+	- carthage archive $FRAMEWORK_NAME
+	```
+1. Run `travis setup releases`, follow documentation (here)[https://docs.travis-ci.com/user/deployment/releases/]
+
+	This command will encode your github credentials into the .travis.yml file in order to let travis upload the release to github.com
+	When prompted for the file to upload, enter $FRAMEWORK_NAME.framework.zip
+	
+1. Update the deploy section to run on tags:
+	
+	In `.travis.yml` locate: 
+	
+		on: 
+			repo: repo/repo
+		
+	And add `tags: true` and `skip_cleanup: true`:
+		
+		skip_cleanup: true
+		on:
+			repo: repo/repo
+			tags: true
+	
+	That will let travis know to create a deployment when a new tag is pushed and prevent travis to cleanup the generated zip file
+
 ### Declare your compatibility
 
 Want to advertise that your project can be used with Carthage? You can add a compatibility badge:
