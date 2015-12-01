@@ -173,14 +173,26 @@ It is possible to use travis-ci in order to build and upload your tagged release
 
 1. [Install travis CLI](https://github.com/travis-ci/travis.rb#installation) with `gem install travis`
 1. [Setup](https://docs.travis-ci.com/user/getting-started/) travis-ci for your repository (Steps 1 and 2)
-1. Create `.travis.yml` file at the root of your repository based on that template. Set `XCODE_SCHEME` as well as `FRAMEWORK_NAME` to your correct values
+1. Create `.travis.yml` file at the root of your repository based on that template. Set `FRAMEWORK_NAME` to the correct value.
 
+	Replace PROJECT_PLACEHOLDER and SCHEME_PLACEHOLDER
+	
+	If you are using a *workspace* instead of a *project* remove the xcode_project line and uncomment the xcode_workspace line.
+	
+	The project should be in the format: MyProject.xcodeproj
+	
+	The workspace should be in the format: MyWorkspace.xcworkspace
+	
+	For mor informations you can visit [travis docs for objective-c projects](https://docs.travis-ci.com/user/languages/objective-c)
+	
 	```
 	language: objective-c
 	osx_image: xcode7.1
+	xcode_project: <PROJECT_PLACEHOLDER>
+	# xcode_workspace: <WORKSPACE_PLACEHOLDER>
+	xcode_scheme: <SCHEME_PLACEHOLDER>
 	env:
 		global: 
-		- XCODE_SCHEME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
 		- FRAMEWORK_NAME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
 	before_install:
 	- brew install carthage
@@ -188,10 +200,6 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	# bootstrap the dependencies for the project
 	# you can remove if you don't have dependencies
 	- carthage bootstrap	
-	script:
-	- true
-	# uncomment those line to run tests:
-	# - xcodebuild -scheme $XCODE_SCHEME -destination 'platform=iOS Simulator,name=iPhone 6,OS=9.1' -sdk iphonesimulator test
 	before_deploy:
 	- carthage build --no-skip-current
 	- carthage archive $FRAMEWORK_NAME
