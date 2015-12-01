@@ -185,9 +185,9 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	before_install:
 	- brew install carthage
 	before_script:
-	# update the dependencies for the project
+	# bootstrap the dependencies for the project
 	# you can remove if you don't have dependencies
-	- carthage update	
+	- carthage bootstrap	
 	script:
 	- true
 	# uncomment those line to run tests:
