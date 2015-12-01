@@ -21,8 +21,6 @@ class XcodeSpec: QuickSpec {
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
 
-		let sdkFilter: SDKFilterCallback = { .Success($0.0) }
-
 		beforeEach {
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(buildFolderURL)
 
@@ -68,7 +66,7 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for project in dependencies {
-				let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
+				let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
 					.flatten(.Concat)
 					.ignoreTaskData()
 					.on(next: { (project, scheme) in
@@ -79,7 +77,7 @@ class XcodeSpec: QuickSpec {
 				expect(result.error).to(beNil())
 			}
 
-			let result = buildInDirectory(directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
+			let result = buildInDirectory(directoryURL, withConfiguration: "Debug")
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -180,7 +178,7 @@ class XcodeSpec: QuickSpec {
 
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
+			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -254,7 +252,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for multiple platforms") {
 			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
-			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac, .iOS ], sdkFilter: sdkFilter)
+			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac, .iOS ])
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
