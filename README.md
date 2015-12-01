@@ -180,8 +180,8 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	osx_image: xcode7.1
 	env:
 		global: 
-		- XCODE_SCHEME=
-		- FRAMEWORK_NAME=
+		- XCODE_SCHEME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
+		- FRAMEWORK_NAME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
 	before_install:
 	- brew install carthage
 	before_script:
