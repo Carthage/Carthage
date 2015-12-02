@@ -1001,8 +1001,8 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		.flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
 			let filterResult = sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
 			return SignalProducer(result: filterResult.map { sdks in
-				// Ensure that a device SDK are ordered before than a simulator
-				// SDK of the same platform.
+				// Ensure that device SDKs are ordered before simulator SDKs of
+				// the same platform.
 				return (platform, sdks.sort())
 			})
 		}
