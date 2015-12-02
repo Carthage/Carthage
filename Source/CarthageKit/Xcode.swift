@@ -328,18 +328,10 @@ public enum SDK: String {
 
 	/// Split the given SDKs into simulator ones and device ones.
 	private static func splitSDKs<S: SequenceType where S.Generator.Element == SDK>(sdks: S) -> (simulators: [SDK], devices: [SDK]) {
-		var simulators: [SDK] = []
-		var devices: [SDK] = []
-
-		sdks.forEach { sdk in
-			if sdk.isSimulator {
-				simulators.append(sdk)
-			} else {
-				devices.append(sdk)
-			}
-		}
-
-		return (simulators: simulators, devices: devices)
+		return (
+			simulators: sdks.filter { $0.isSimulator },
+			devices: sdks.filter { !$0.isSimulator }
+		)
 	}
 
 	/// Returns whether this is a simulator SDK.
