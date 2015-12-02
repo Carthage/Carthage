@@ -299,7 +299,7 @@ extension Platform: CustomStringConvertible {
 }
 
 /// Represents an SDK buildable by Xcode.
-public enum SDK: String, Comparable {
+public enum SDK: String {
 	/// Mac OS X.
 	case MacOSX = "macosx"
 
@@ -368,39 +368,6 @@ public enum SDK: String, Comparable {
 		case .MacOSX:
 			return .Mac
 		}
-	}
-}
-
-public func < (lhs: SDK, rhs: SDK) -> Bool {
-	switch (lhs, rhs) {
-	// Prefer Mac OS X SDK.
-	case (.MacOSX, _):
-		return true
-
-	case (_, .MacOSX):
-		return false
-
-	// Prefer device SDK over simulator SDK in same platform.
-	case (.iPhoneOS, .iPhoneSimulator):
-		return true
-
-	case (.iPhoneSimulator, .iPhoneOS):
-		return false
-
-	case (.watchOS, .watchSimulator):
-		return true
-
-	case (.watchSimulator, .watchOS):
-		return false
-
-	case (.tvOS, .tvSimulator):
-		return true
-
-	case (.tvSimulator, .tvOS):
-		return false
-
-	case _:
-		return true
 	}
 }
 
