@@ -732,7 +732,6 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
 			name = Debug;
 		};
@@ -742,7 +741,6 @@
 			buildSettings = {
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
 			name = Release;
 		};
@@ -814,7 +812,6 @@
 			buildSettings = {
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
 			name = Profile;
 		};
@@ -855,7 +852,6 @@
 			buildSettings = {
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
 			name = Test;
 		};
