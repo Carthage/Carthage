@@ -993,8 +993,8 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 			case 2:
 				let (simulatorSDKs, deviceSDKs) = SDK.splitSDKs(sdks)
-				let deviceSDK = deviceSDKs.first!
-				let simulatorSDK = simulatorSDKs.first!
+				guard let deviceSDK = deviceSDKs.first else { fatalError("Could not find device SDK in \(sdks)") }
+				guard let simulatorSDK = simulatorSDKs.first else { fatalError("Could not find simulator SDK in \(sdks)") }
 
 				return settingsByTarget(buildSDK(deviceSDK))
 					.flatMap(.Concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
