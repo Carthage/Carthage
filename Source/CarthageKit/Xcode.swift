@@ -975,9 +975,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		}
 		.flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
 			let filterResult = sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
-			return SignalProducer(result: filterResult.map { sdks in
-				return (platform, sdks)
-			})
+			return SignalProducer(result: filterResult.map { (platform, $0) })
 		}
 		.filter { _, sdks in
 			return !sdks.isEmpty
