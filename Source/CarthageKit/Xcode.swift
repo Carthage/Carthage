@@ -326,6 +326,14 @@ public enum SDK: String {
 		return Result(self.init(rawValue: string.lowercaseString), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
 	}
 
+	/// Split the given SDKs into simulator ones and device ones.
+	private static func splitSDKs<S: SequenceType where S.Generator.Element == SDK>(sdks: S) -> (simulators: [SDK], devices: [SDK]) {
+		return (
+			simulators: sdks.filter { $0.isSimulator },
+			devices: sdks.filter { !$0.isSimulator }
+		)
+	}
+
 	/// Returns whether this is a simulator SDK.
 	public var isSimulator: Bool {
 		switch self {
@@ -984,10 +992,11 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					}
 
 			case 2:
-				let firstSDK = sdks[0]
-				let secondSDK = sdks[1]
+				let (simulatorSDKs, deviceSDKs) = SDK.splitSDKs(sdks)
+				guard let deviceSDK = deviceSDKs.first else { fatalError("Could not find device SDK in \(sdks)") }
+				guard let simulatorSDK = simulatorSDKs.first else { fatalError("Could not find simulator SDK in \(sdks)") }
 
-				return settingsByTarget(buildSDK(firstSDK))
+				return settingsByTarget(buildSDK(deviceSDK))
 					.flatMap(.Concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
 						switch settingsEvent {
 						case let .StandardOutput(data):
@@ -996,21 +1005,21 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						case let .StandardError(data):
 							return SignalProducer(value: .StandardError(data))
 
-						case let .Success(firstSettingsByTarget):
-							return settingsByTarget(buildSDK(secondSDK))
-								.flatMapTaskEvents(.Concat) { (secondSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
-									assert(firstSettingsByTarget.count == secondSettingsByTarget.count, "Number of targets built for \(firstSDK) (\(firstSettingsByTarget.count)) does not match number of targets built for \(secondSDK) (\(secondSettingsByTarget.count))")
+						case let .Success(deviceSettingsByTarget):
+							return settingsByTarget(buildSDK(simulatorSDK))
+								.flatMapTaskEvents(.Concat) { (simulatorSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
+									assert(deviceSettingsByTarget.count == simulatorSettingsByTarget.count, "Number of targets built for \(deviceSDK) (\(deviceSettingsByTarget.count)) does not match number of targets built for \(simulatorSDK) (\(simulatorSettingsByTarget.count))")
 
 									return SignalProducer { observer, disposable in
-										for (target, firstSettings) in firstSettingsByTarget {
+										for (target, deviceSettings) in deviceSettingsByTarget {
 											if disposable.disposed {
 												break
 											}
 
-											let secondSettings = secondSettingsByTarget[target]
-											assert(secondSettings != nil, "No \(secondSDK) build settings found for target \"\(target)\"")
+											let simulatorSettings = simulatorSettingsByTarget[target]
+											assert(simulatorSettings != nil, "No \(simulatorSDK) build settings found for target \"\(target)\"")
 
-											observer.sendNext((firstSettings, secondSettings!))
+											observer.sendNext((deviceSettings, simulatorSettings!))
 										}
 
 										observer.sendCompleted()
@@ -1018,8 +1027,8 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 								}
 						}
 					}
-					.flatMapTaskEvents(.Concat) { (firstSettings, secondSettings) in
-						return mergeBuildProductsIntoDirectory(secondSettings, firstSettings, folderURL)
+					.flatMapTaskEvents(.Concat) { (deviceSettings, simulatorSettings) in
+						return mergeBuildProductsIntoDirectory(deviceSettings, simulatorSettings, folderURL)
 					}
 
 			default:
