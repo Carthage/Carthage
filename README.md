@@ -183,7 +183,9 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	
 	The workspace should be in the format: MyWorkspace.xcworkspace
 	
-	For mor informations you can visit [travis docs for objective-c projects](https://docs.travis-ci.com/user/languages/objective-c)
+	Feel free to update the `xcode_sdk` value to another SDK, note that testing on iphoneos SDK would require you to upload a code signing identity
+
+	For more informations you can visit [travis docs for objective-c projects](https://docs.travis-ci.com/user/languages/objective-c)
 	
 	```
 	language: objective-c
@@ -191,6 +193,7 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	xcode_project: <PROJECT_PLACEHOLDER>
 	# xcode_workspace: <WORKSPACE_PLACEHOLDER>
 	xcode_scheme: <SCHEME_PLACEHOLDER>
+	xcode_sdk: iphonesimulator9.1
 	env:
 		global: 
 		- FRAMEWORK_NAME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
