@@ -326,6 +326,22 @@ public enum SDK: String, Comparable {
 		return Result(self.init(rawValue: string.lowercaseString), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
 	}
 
+	/// Split the given SDKs into simulator ones and device ones.
+	private static func splitSDKs<S: SequenceType where S.Generator.Element == SDK>(sdks: S) -> (simulators: [SDK], devices: [SDK]) {
+		var simulators: [SDK] = []
+		var devices: [SDK] = []
+
+		sdks.forEach { sdk in
+			if sdk.isSimulator {
+				simulators.append(sdk)
+			} else {
+				devices.append(sdk)
+			}
+		}
+
+		return (simulators: simulators, devices: devices)
+	}
+
 	/// Returns whether this is a simulator SDK.
 	public var isSimulator: Bool {
 		switch self {
@@ -1001,9 +1017,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		.flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
 			let filterResult = sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
 			return SignalProducer(result: filterResult.map { sdks in
-				// Ensure that device SDKs are ordered before simulator SDKs of
-				// the same platform.
-				return (platform, sdks.sort())
+				return (platform, sdks)
 			})
 		}
 		.filter { _, sdks in
@@ -1021,8 +1035,9 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					}
 
 			case 2:
-				let deviceSDK = sdks[0]
-				let simulatorSDK = sdks[1]
+				let (simulatorSDKs, deviceSDKs) = SDK.splitSDKs(sdks)
+				let deviceSDK = deviceSDKs.first!
+				let simulatorSDK = simulatorSDKs.first!
 
 				return settingsByTarget(buildSDK(deviceSDK))
 					.flatMap(.Concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
