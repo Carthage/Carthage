@@ -12,6 +12,7 @@
 		5482DAF11A3849D700197FB8 /* CopyFrameworks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */; };
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */; };
+		575983761C0FF18C00B3D3CB /* carthage-fish-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 575983731C0FF16400B3D3CB /* carthage-fish-completion */; };
 		6724C86A1A850A4600E47F00 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6724C8691A850A4600E47F00 /* Environment.swift */; };
 		67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; };
 		67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -103,6 +104,7 @@
 			dstPath = Scripts;
 			dstSubfolderSpec = 6;
 			files = (
+				575983761C0FF18C00B3D3CB /* carthage-fish-completion in Copy Scripts */,
 				98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */,
 				98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */,
 			);
@@ -146,6 +148,7 @@
 		5499CA961A2394B700783309 /* Components.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Components.plist; sourceTree = "<group>"; };
 		5499CA971A2394B700783309 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectSpec.swift; sourceTree = "<group>"; };
+		575983731C0FF16400B3D3CB /* carthage-fish-completion */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "carthage-fish-completion"; sourceTree = "<group>"; };
 		6724C8691A850A4600E47F00 /* Environment.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		67AFA9891A79430B00B7DA78 /* PrettyColors.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PrettyColors.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		67C870071A7A04E100F6647C /* Formatting.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
@@ -274,6 +277,7 @@
 			isa = PBXGroup;
 			children = (
 				98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */,
+				575983731C0FF16400B3D3CB /* carthage-fish-completion */,
 				98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */,
 			);
 			name = Scripts;
