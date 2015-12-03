@@ -303,7 +303,9 @@ extension BuildPlatform: ArgumentType {
 	]
 
 	public static func fromString(string: String) -> BuildPlatform? {
-		let commaSeparated = string.characters.split(allowEmptySlices: false) { $0 == "," }.map(String.init)
+		let tokens = string.characters
+			.split(allowEmptySlices: false) { $0 == "," || $0 == " " }
+			.map(String.init)
 
 		let findBuildPlatform: String -> BuildPlatform? = { string in
 			for (key, platform) in self.acceptedStrings {
@@ -314,17 +316,17 @@ extension BuildPlatform: ArgumentType {
 			return nil
 		}
 
-		switch commaSeparated.count {
+		switch tokens.count {
 		case 0:
 			return nil
 
 		case 1:
-			return findBuildPlatform(commaSeparated[0])
+			return findBuildPlatform(tokens[0])
 
 		default:
 			var buildPlatforms = [BuildPlatform]()
-			for string in commaSeparated {
-				if let found = findBuildPlatform(string) where found != .All {
+			for token in tokens {
+				if let found = findBuildPlatform(token) where found != .All {
 					buildPlatforms.append(found)
 				} else {
 					// Reject if an invalid value is included in the comma-
