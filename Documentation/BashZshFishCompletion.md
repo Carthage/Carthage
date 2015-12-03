@@ -42,11 +42,11 @@ compinit -u
 Create a symbolic link named `_carthage` in one of directories specified by `$fpath`, and point it to `/Library/Frameworks/CarthageKit.framework/Versions/A/Scripts/carthage-zsh-completion`.
 
 ```
-# check $fpath
+# Check $fpath
 echo $fpath
 
-# create a symbolic link
-ln -s /library/frameworks/carthagekit.framework/versions/a/scripts/carthage-zsh-completion /path/to/fpath/directory/_carthage
+# Create a symbolic link
+ln -s /Library/Frameworks/CarthageKit.framework/Versions/A/Scripts/carthage-zsh-completion /path/to/fpath/directory/_carthage
 ```
 
 ### Fish
@@ -58,5 +58,5 @@ Create a symbolic link named `carthage.fish` in one of the directories specified
 echo $fish_complete_path
 
 # create a symbolic link
-ln -s /library/frameworks/carthagekit.framework/versions/a/scripts/carthage-fish-completion /path/to/fpath/directory/carthage.fish
+ln -s /Library/Frameworks/CarthageKit.framework/Versions/A/Scripts/carthage-fish-completion /path/to/fpath/directory/carthage.fish
 ```
