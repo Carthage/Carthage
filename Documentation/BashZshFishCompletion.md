@@ -1,9 +1,10 @@
-# Bash/Zsh Completion
+# Bash/Zsh/Fish Completion
 
-The following scripts are used to add auto completion of Carthage commands and options to Bash or Zsh.
+The following scripts are used to add auto completion of Carthage commands and options to Bash, Zsh, or Fish.
 
 - `Source/Scripts/carthage-bash-completion`
 - `Source/Scripts/carthage-zsh-completion`
+- `Source/Scripts/carthage-fish-completion`
 
 ## Configuration
 ### Bash
@@ -41,9 +42,21 @@ compinit -u
 Create a symbolic link named `_carthage` in one of directories specified by `$fpath`, and point it to `/Library/Frameworks/CarthageKit.framework/Versions/A/Scripts/carthage-zsh-completion`.
 
 ```
-# Check $fpath
+# check $fpath
 echo $fpath
 
-# Create a symbolic link
-ln -s /Library/Frameworks/CarthageKit.framework/Versions/A/Scripts/carthage-zsh-completion /path/to/fpath/directory/_carthage
+# create a symbolic link
+ln -s /library/frameworks/carthagekit.framework/versions/a/scripts/carthage-zsh-completion /path/to/fpath/directory/_carthage
+```
+
+### Fish
+
+Create a symbolic link named `carthage.fish` in one of the directories specified by `$fish_complete_path`, and point it to `/Library/Frameworks/CarthageKit.framework/Versions/A/Scripts/carthage-fish-completion`.
+
+```
+# check $fish_complete_path
+echo $fish_complete_path
+
+# create a symbolic link
+ln -s /library/frameworks/carthagekit.framework/versions/a/scripts/carthage-fish-completion /path/to/fpath/directory/carthage.fish
 ```
