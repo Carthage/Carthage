@@ -207,7 +207,7 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	- carthage build --no-skip-current
 	- carthage archive $FRAMEWORK_NAME
 	```
-1. Run `travis setup releases`, follow documentation (here)[https://docs.travis-ci.com/user/deployment/releases/]
+1. Run `travis setup releases`, follow documentation [here](https://docs.travis-ci.com/user/deployment/releases/)
 
 	This command will encode your github credentials into the .travis.yml file in order to let travis upload the release to github.com
 	When prompted for the file to upload, enter $FRAMEWORK_NAME.framework.zip
