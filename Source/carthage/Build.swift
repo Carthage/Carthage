@@ -124,7 +124,7 @@ public struct BuildCommand: CommandType {
 			}
 			.flatMap(.Merge) { project -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				if let dependency = options.dependencyName {
-					return project.buildDependencyWithName(dependency, withConfiguration: options.configuration, forPlatforms: options.buildPlatform.platforms)
+					return project.buildCheckedOutDependencyWithName(dependency, withConfiguration: options.configuration, forPlatforms: options.buildPlatform.platforms)
 				} else {
 					return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms)
 				}
