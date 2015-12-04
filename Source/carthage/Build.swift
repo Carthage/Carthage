@@ -309,9 +309,7 @@ extension BuildPlatform: ArgumentType {
 	]
 
 	public static func fromString(string: String) -> BuildPlatform? {
-		let tokens = string.characters
-			.split(allowEmptySlices: false) { $0 == "," || $0 == " " }
-			.map(String.init)
+		let tokens = string.split()
 
 		let findBuildPlatform: String -> BuildPlatform? = { string in
 			return self.acceptedStrings.lazy

@@ -20,14 +20,10 @@ public struct UpdateCommand: CommandType {
 		return producerWithOptions(UpdateOptions.evaluate(mode))
 			.flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
 				return options.loadProject()
-					.flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
-						var targetDependencies: [String] = []
-						if let dependencyName = options.dependencyName {
-							targetDependencies = dependencyName.characters
-								.split(allowEmptySlices: false) { $0 == "," || $0 == " " }
-								.map(String.init)
-						}
-						return project.updateDependencies(shouldCheckout: options.checkoutAfterUpdate, targetDependencies: targetDependencies)
+					.flatMap(.Merge) { $0.updateDependencies(
+						shouldCheckout: options.checkoutAfterUpdate,
+						targetDependencies: options.dependencyName?.split() ?? []
+						)
 					}
 					.then(options.buildProducer)
 					.promoteErrors()
