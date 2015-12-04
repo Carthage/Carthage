@@ -198,15 +198,15 @@ public struct BuildOptions: OptionsType {
 	public let verbose: Bool
 	public let directoryPath: String
 
-	public static func create(configuration: String)(buildPlatform: BuildPlatform)(dependencyName: String?)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
-		return self.init(configuration: configuration, buildPlatform: buildPlatform, dependencyName: dependencyName, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+	public static func create(configuration: String)(buildPlatform: BuildPlatform)(dependencyName: String)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
+		return self.init(configuration: configuration, buildPlatform: buildPlatform, dependencyName: dependencyName.isEmpty ? nil : dependencyName, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)")
-			<*> m <| Option(key: "dependency", defaultValue: Optional<String>.None, usage: "the dependency to build")
+			<*> m <| Option(key: "dependency", defaultValue: "", usage: "the dependency to build")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
