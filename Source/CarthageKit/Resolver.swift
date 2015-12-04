@@ -35,7 +35,7 @@ public struct Resolver {
 	///
 	/// Sends each recursive dependency with its resolved version, in the order
 	/// that they should be built.
-	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	public func resolveDependenciesInCartfile(cartfile: Cartfile, lastResolved: ResolvedCartfile? = nil, targetDependencies: [String] = []) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return nodePermutationsForCartfile(cartfile)
 			.flatMap(.Concat) { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 				return self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph())
@@ -47,8 +47,39 @@ public struct Resolver {
 			.take(1)
 			.observeOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				return SignalProducer(values: graph.orderedNodes)
-					.map { node in node.dependencyVersion }
+				let orderedNodes = SignalProducer<DependencyNode, CarthageError>(values: graph.orderedNodes)
+
+				guard !targetDependencies.isEmpty, let lastResolved = lastResolved else {
+					// All the dependencies are affected.
+					return orderedNodes.map { node in node.dependencyVersion }
+				}
+
+				// When target dependenceis are specified
+				return orderedNodes.map { node -> Dependency<PinnedVersion> in
+					// A dependency included in the targets should be affected.
+					if targetDependencies.contains(node.project.name) {
+						return node.dependencyVersion
+					}
+
+					// Nested dependencies of the targets should also be affected.
+					for (edge, nodeSet) in graph.edges {
+						if targetDependencies.contains(edge.project.name) && nodeSet.contains(node) {
+							return node.dependencyVersion
+						}
+					}
+
+					// The dependenceis which are not related to the targets
+					// should not be affected, so use the version in the last
+					// Cartfile.resolved.
+					for dependency in lastResolved.dependencies {
+						if dependency.project.name == node.project.name {
+							return dependency
+						}
+					}
+
+					// Newly added dependencies.
+					return node.dependencyVersion
+				}
 			}
 	}
 

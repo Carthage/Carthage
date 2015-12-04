@@ -319,11 +319,17 @@ public final class Project {
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func updatedResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
+	public func updatedResolvedCartfile(targetDependencies: [String] = []) -> SignalProducer<ResolvedCartfile, CarthageError> {
 		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
 
-		return loadCombinedCartfile()
-			.flatMap(.Merge) { cartfile in resolver.resolveDependenciesInCartfile(cartfile) }
+		let resolvedCartfile: SignalProducer<ResolvedCartfile?, CarthageError> = loadResolvedCartfile()
+			.map(Optional.init)
+			.flatMapError { _ in .init(value: nil) }
+
+		return zip(loadCombinedCartfile(), resolvedCartfile)
+			.flatMap(.Merge) { cartfile, resolvedCartfile in
+				return resolver.resolveDependenciesInCartfile(cartfile, lastResolved: resolvedCartfile, targetDependencies: targetDependencies)
+			}
 			.collect()
 			.map(ResolvedCartfile.init)
 	}
@@ -331,8 +337,8 @@ public final class Project {
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in Cartfile.resolved, and also in the working
 	/// directory checkouts if the given parameter is true.
-	public func updateDependencies(shouldCheckout shouldCheckout: Bool = true) -> SignalProducer<(), CarthageError> {
-		return updatedResolvedCartfile()
+	public func updateDependencies(shouldCheckout shouldCheckout: Bool = true, targetDependencies: [String] = []) -> SignalProducer<(), CarthageError> {
+		return updatedResolvedCartfile(targetDependencies)
 			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}
