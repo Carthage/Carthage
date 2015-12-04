@@ -32,7 +32,7 @@ complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l no-use-binar
 complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l color -a "auto always never" -x
 
 complete -c carthage -n '__fish_prog_using_subcommand build' -l configuration -r
-complete -c carthage -n '__fish_prog_using_subcommand build' -l platform -x -a "all Mac iOS watchOS tvOS"
+complete -c carthage -n '__fish_prog_using_subcommand build' -l platform -x -a "all Mac OSX iOS watchOS tvOS"
 complete -c carthage -n '__fish_prog_using_subcommand build' -l no-skip-current
 complete -c carthage -n '__fish_prog_using_subcommand build' -l color -a "auto always never" -x
 complete -c carthage -n '__fish_prog_using_subcommand build' -l verbose
