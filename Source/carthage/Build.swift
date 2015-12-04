@@ -308,12 +308,10 @@ extension BuildPlatform: ArgumentType {
 			.map(String.init)
 
 		let findBuildPlatform: String -> BuildPlatform? = { string in
-			for (key, platform) in self.acceptedStrings {
-				if string.caseInsensitiveCompare(key) == .OrderedSame {
-					return platform
-				}
-			}
-			return nil
+			return self.acceptedStrings.lazy
+				.filter { key, _ in string.caseInsensitiveCompare(key) == .OrderedSame }
+				.map { _, platform in platform }
+				.first
 		}
 
 		switch tokens.count {
