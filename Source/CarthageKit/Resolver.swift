@@ -34,12 +34,12 @@ public struct Resolver {
 	/// specified in the given Cartfile, and all nested dependencies thereof.
 	///
 	/// Sends each recursive dependency with its resolved version, in the
-	/// alphabetical order of its project name.
+	/// lexical order of its project name.
 	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return resolveDependenciesFromNodePermutations(nodePermutationsForCartfile(cartfile))
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				let sortedNodes = graph.allNodes.sort { lhs, rhs in
-					return lhs.project.name < rhs.project.name
+					return lhs.project.name.caseInsensitiveCompare(rhs.project.name) != .OrderedDescending
 				}
 				return SignalProducer(values: sortedNodes)
 					.map { node in

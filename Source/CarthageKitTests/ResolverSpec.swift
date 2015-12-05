@@ -40,15 +40,15 @@ class ResolverSpec: QuickSpec {
 
 			var generator = dependencies.generate()
 
-			// Dependencies should be listed in build order.
-			expect(generator.next()).to(equal([ "Mantle": PinnedVersion("1.3.0") ]))
+			// Dependencies should be listed in lexical order of its project name.
 			expect(generator.next()).to(equal([ "git-error-translations": PinnedVersion("3.0.0") ]))
 			expect(generator.next()).to(equal([ "git-error-translations2": PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9") ]))
 			expect(generator.next()).to(equal([ "ios-charts": PinnedVersion("3.0.0") ]))
 			expect(generator.next()).to(equal([ "libextobjc": PinnedVersion("0.4.1") ]))
-			expect(generator.next()).to(equal([ "xcconfigs": PinnedVersion("1.3.0") ]))
+			expect(generator.next()).to(equal([ "Mantle": PinnedVersion("1.3.0") ]))
 			expect(generator.next()).to(equal([ "objc-build-scripts": PinnedVersion("3.0.0") ]))
 			expect(generator.next()).to(equal([ "ReactiveCocoa": PinnedVersion("3.0.0") ]))
+			expect(generator.next()).to(equal([ "xcconfigs": PinnedVersion("1.3.0") ]))
 		}
 
 		it("should correctly order transitive dependencies") {
@@ -84,11 +84,11 @@ class ResolverSpec: QuickSpec {
 
 			var generator = dependencies.generate()
 
-			// Dependencies should be listed in build order.
+			// Dependencies should be listed in lexical order of its project name.
 			expect(generator.next()).to(equal([ "Alamofire": PinnedVersion("1.1.2") ]))
+			expect(generator.next()).to(equal([ "EmbeddedFrameworks": PinnedVersion("1.0.0") ]))
 			expect(generator.next()).to(equal([ "Swell": PinnedVersion("1.0.0") ]))
 			expect(generator.next()).to(equal([ "SwiftyJSON": PinnedVersion("2.1.2") ]))
-			expect(generator.next()).to(equal([ "EmbeddedFrameworks": PinnedVersion("1.0.0") ]))
 		}
 	}
 
