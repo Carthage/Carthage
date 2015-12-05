@@ -39,11 +39,13 @@ public struct CheckoutOptions: OptionsType {
 	public let useBinaries: Bool
 	public let colorOptions: ColorOptions
 
-	public static func create(useSSH: Bool)(useSubmodules: Bool)(useBinaries: Bool)(colorOptions: ColorOptions)(directoryPath: String) -> CheckoutOptions {
-		// Disable binary downloads when using submodules.
-		// See https://github.com/Carthage/Carthage/issues/419.
-		let shouldUseBinaries = useSubmodules ? false : useBinaries
-		return self.init(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: shouldUseBinaries, colorOptions: colorOptions)
+	public static func create(useSSH: Bool) -> Bool -> Bool -> ColorOptions -> String -> CheckoutOptions {
+		return { useSubmodules in { useBinaries in { colorOptions in { directoryPath in
+			// Disable binary downloads when using submodules.
+			// See https://github.com/Carthage/Carthage/issues/419.
+			let shouldUseBinaries = useSubmodules ? false : useBinaries
+			return self.init(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: shouldUseBinaries, colorOptions: colorOptions)
+		} } } }
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<CheckoutOptions, CommandantError<CarthageError>> {

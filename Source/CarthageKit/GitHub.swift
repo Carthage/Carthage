@@ -53,12 +53,8 @@ extension GitHubError: CustomStringConvertible {
 }
 
 extension GitHubError: Decodable {
-	public static func create(message: String) -> GitHubError {
-		return self.init(message: message)
-	}
-	
 	public static func decode(j: JSON) -> Decoded<GitHubError> {
-		return self.create
+		return self.init
 			<^> j <| "message"
 	}
 }
@@ -271,8 +267,10 @@ public struct GitHubRelease: Equatable {
 			return "Asset { name = \(name), contentType = \(contentType), URL = \(URL) }"
 		}
 
-		public static func create(ID: Int)(name: String)(contentType: String)(URL: NSURL) -> Asset {
-			return self.init(ID: ID, name: name, contentType: contentType, URL: URL)
+		public static func create(ID: Int) -> String -> String -> NSURL -> Asset {
+			return { name in { contentType in { URL in
+				return self.init(ID: ID, name: name, contentType: contentType, URL: URL)
+			} } }
 		}
 
 		public static func decode(j: JSON) -> Decoded<Asset> {
@@ -306,8 +304,10 @@ extension GitHubRelease: CustomStringConvertible {
 }
 
 extension GitHubRelease: Decodable {
-	public static func create(ID: Int)(name: String?)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
-		return self.init(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
+	public static func create(ID: Int) -> String? -> String -> Bool -> Bool -> [Asset] -> GitHubRelease {
+		return { name in { tag in { draft in { prerelease in { assets in
+			return self.init(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
+		} } } } }
 	}
 
 	public static func decode(j: JSON) -> Decoded<GitHubRelease> {

@@ -37,8 +37,10 @@ private struct FetchOptions: OptionsType {
 	let colorOptions: ColorOptions
 	let repositoryURL: GitURL
 
-	static func create(colorOptions: ColorOptions)(repositoryURL: GitURL) -> FetchOptions {
-		return self.init(colorOptions: colorOptions, repositoryURL: repositoryURL)
+	static func create(colorOptions: ColorOptions) -> GitURL -> FetchOptions {
+		return { repositoryURL in
+			return self.init(colorOptions: colorOptions, repositoryURL: repositoryURL)
+		}
 	}
 
 	static func evaluate(m: CommandMode) -> Result<FetchOptions, CommandantError<CarthageError>> {
