@@ -561,8 +561,10 @@ public final class Project {
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
 	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
+
 		return loadResolvedCartfile()
-			.flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
+			.flatMap(.Merge) { resolvedCartfile in resolver.resolveDependenciesInResolvedCartfile(resolvedCartfile) }
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
 				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
