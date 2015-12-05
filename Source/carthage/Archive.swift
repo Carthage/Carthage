@@ -65,8 +65,10 @@ private struct ArchiveOptions: OptionsType {
 	let outputPath: String
 	let colorOptions: ColorOptions
 
-	static func create(outputPath: String)(colorOptions: ColorOptions)(frameworkName: String) -> ArchiveOptions {
-		return self.init(frameworkName: frameworkName, outputPath: outputPath, colorOptions: colorOptions)
+	static func create(outputPath: String) -> ColorOptions -> String -> ArchiveOptions {
+		return { colorOptions in { frameworkName in
+			return self.init(frameworkName: frameworkName, outputPath: outputPath, colorOptions: colorOptions)
+		} }
 	}
 
 	static func evaluate(m: CommandMode) -> Result<ArchiveOptions, CommandantError<CarthageError>> {

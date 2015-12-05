@@ -58,8 +58,10 @@ public struct UpdateOptions: OptionsType {
 		}
 	}
 
-	public static func create(configuration: String)(buildPlatform: BuildPlatform)(includeDependencies: String)(verbose: Bool)(checkoutAfterUpdate: Bool)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
-		return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies.split(), verbose: verbose, checkoutOptions: checkoutOptions)
+	public static func create(configuration: String) -> BuildPlatform -> String -> Bool -> Bool -> Bool -> CheckoutOptions -> UpdateOptions {
+		return { buildPlatform in { includeDependencies in { verbose in { checkoutAfterUpdate in { buildAfterUpdate in { checkoutOptions in
+			return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies.split(), verbose: verbose, checkoutOptions: checkoutOptions)
+		} } } } } }
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<UpdateOptions, CommandantError<CarthageError>> {

@@ -194,8 +194,10 @@ public struct BuildOptions: OptionsType {
 	public let verbose: Bool
 	public let directoryPath: String
 
-	public static func create(configuration: String)(buildPlatform: BuildPlatform)(includeDependencies: String)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
-		return self.init(configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies.split(), skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+	public static func create(configuration: String) -> BuildPlatform -> String -> Bool -> ColorOptions -> Bool -> String -> BuildOptions {
+		return { buildPlatform in { includeDependencies in { skipCurrent in { colorOptions in { verbose in { directoryPath in
+			return self.init(configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies.split(), skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+		} } } } } }
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
