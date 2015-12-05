@@ -22,7 +22,7 @@ public struct UpdateCommand: CommandType {
 				return options.loadProject()
 					.flatMap(.Merge) { $0.updateDependencies(
 						shouldCheckout: options.checkoutAfterUpdate,
-						targetDependencies: options.includeDependencies?.split() ?? []
+						targetDependencies: options.includeDependencies
 						)
 					}
 					.then(options.buildProducer)
@@ -37,7 +37,7 @@ public struct UpdateOptions: OptionsType {
 	public let buildAfterUpdate: Bool
 	public let configuration: String
 	public let buildPlatform: BuildPlatform
-	public let includeDependencies: String?
+	public let includeDependencies: [String]
 	public let verbose: Bool
 	public let checkoutOptions: CheckoutOptions
 
@@ -59,7 +59,7 @@ public struct UpdateOptions: OptionsType {
 	}
 
 	public static func create(configuration: String)(buildPlatform: BuildPlatform)(includeDependencies: String)(verbose: Bool)(checkoutAfterUpdate: Bool)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
-		return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies.isEmpty ? nil : includeDependencies, verbose: verbose, checkoutOptions: checkoutOptions)
+		return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies.split(), verbose: verbose, checkoutOptions: checkoutOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<UpdateOptions, CommandantError<CarthageError>> {

@@ -123,8 +123,8 @@ public struct BuildCommand: CommandType {
 					.then(SignalProducer(value: project))
 			}
 			.flatMap(.Merge) { project -> SignalProducer<BuildSchemeProducer, CarthageError> in
-				if let dependency = options.includeDependencies {
-					return project.buildCheckedOutDependencyWithName(dependency, withConfiguration: options.configuration, forPlatforms: options.buildPlatform.platforms)
+				if !options.includeDependencies.isEmpty {
+					return project.buildCheckedOutDependencyWithNames(options.includeDependencies, withConfiguration: options.configuration, forPlatforms: options.buildPlatform.platforms)
 				} else {
 					return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms)
 				}
@@ -192,14 +192,14 @@ public struct BuildCommand: CommandType {
 public struct BuildOptions: OptionsType {
 	public let configuration: String
 	public let buildPlatform: BuildPlatform
-	public let includeDependencies: String?
+	public let includeDependencies: [String]
 	public let skipCurrent: Bool
 	public let colorOptions: ColorOptions
 	public let verbose: Bool
 	public let directoryPath: String
 
 	public static func create(configuration: String)(buildPlatform: BuildPlatform)(includeDependencies: String)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
-		return self.init(configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies.isEmpty ? nil : includeDependencies, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+		return self.init(configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies.split(), skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {

@@ -567,11 +567,11 @@ public final class Project {
 	/// name that has been checked out.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependencyWithName(dependencyName: String, withConfiguration configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependencyWithNames(targetDependencies: [String], withConfiguration configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return buildDependencies(
 			loadResolvedCartfile()
 				.flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
-				.filter { $0.project.name == dependencyName },
+				.filter { targetDependencies.contains($0.project.name) },
 			withConfiguration: configuration,
 			forPlatforms: platforms,
 			sdkFilter: sdkFilter
