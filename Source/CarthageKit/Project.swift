@@ -563,28 +563,22 @@ public final class Project {
 			.then(.empty)
 	}
 
-	/// Attempts to build a specific Carthage dependency identified by the given
-	/// name that has been checked out.
+	/// Attempts to build each Carthage dependency that has been checked out, 
+	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependencyWithNames(targetDependencies: [String], withConfiguration configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, targetDependencies: [String] = [], forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return buildDependencies(
 			loadResolvedCartfile()
-				.flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) }
-				.filter { targetDependencies.contains($0.project.name) },
-			withConfiguration: configuration,
-			forPlatforms: platforms,
-			sdkFilter: sdkFilter
-		)
-	}
+				.flatMap(.Merge) { resolvedCartfile -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+					let dependencies = resolvedCartfile.dependencies
 
-	/// Attempts to build each Carthage dependency that has been checked out.
-	///
-	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-		return buildDependencies(
-			loadResolvedCartfile()
-				.flatMap(.Merge) { resolvedCartfile in SignalProducer(values: resolvedCartfile.dependencies) },
+					if targetDependencies.isEmpty {
+						return .init(values: dependencies)
+					} else {
+						return .init(values: dependencies.filter { targetDependencies.contains($0.project.name) })
+					}
+				},
 			withConfiguration: configuration,
 			forPlatforms: platforms,
 			sdkFilter: sdkFilter

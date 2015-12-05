@@ -123,11 +123,7 @@ public struct BuildCommand: CommandType {
 					.then(SignalProducer(value: project))
 			}
 			.flatMap(.Merge) { project -> SignalProducer<BuildSchemeProducer, CarthageError> in
-				if !options.includeDependencies.isEmpty {
-					return project.buildCheckedOutDependencyWithNames(options.includeDependencies, withConfiguration: options.configuration, forPlatforms: options.buildPlatform.platforms)
-				} else {
-					return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms)
-				}
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, targetDependencies: options.includeDependencies, forPlatforms: options.buildPlatform.platforms)
 			}
 
 		if options.skipCurrent {
