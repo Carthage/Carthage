@@ -22,7 +22,7 @@ public struct UpdateCommand: CommandType {
 				return options.loadProject()
 					.flatMap(.Merge) { $0.updateDependencies(
 						shouldCheckout: options.checkoutAfterUpdate,
-						targetDependencies: options.dependencyName?.split() ?? []
+						targetDependencies: options.includeDependencies?.split() ?? []
 						)
 					}
 					.then(options.buildProducer)
@@ -37,13 +37,13 @@ public struct UpdateOptions: OptionsType {
 	public let buildAfterUpdate: Bool
 	public let configuration: String
 	public let buildPlatform: BuildPlatform
-	public let dependencyName: String?
+	public let includeDependencies: String?
 	public let verbose: Bool
 	public let checkoutOptions: CheckoutOptions
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
-		return BuildOptions(configuration: configuration, buildPlatform: buildPlatform, dependencyName: dependencyName, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
+		return BuildOptions(configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
 	}
 
 	/// If `checkoutAfterUpdate` and `buildAfterUpdate` are both true, this will
@@ -58,15 +58,15 @@ public struct UpdateOptions: OptionsType {
 		}
 	}
 
-	public static func create(configuration: String)(buildPlatform: BuildPlatform)(dependencyName: String)(verbose: Bool)(checkoutAfterUpdate: Bool)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
-		return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, dependencyName: dependencyName.isEmpty ? nil : dependencyName, verbose: verbose, checkoutOptions: checkoutOptions)
+	public static func create(configuration: String)(buildPlatform: BuildPlatform)(includeDependencies: String)(verbose: Bool)(checkoutAfterUpdate: Bool)(buildAfterUpdate: Bool)(checkoutOptions: CheckoutOptions) -> UpdateOptions {
+		return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies.isEmpty ? nil : includeDependencies, verbose: verbose, checkoutOptions: checkoutOptions)
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<UpdateOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (ignored if --no-build option is present)")
-			<*> m <| Option(key: "dependency", defaultValue: "", usage: "the dependency to build (ignored if --no-build option is present)")
+			<*> m <| Option(key: "include", defaultValue: "", usage: "the comma-separated dependency names to update and build")
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 			<*> m <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 			<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating (ignored if --no-checkout option is present)")
