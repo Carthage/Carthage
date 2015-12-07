@@ -72,7 +72,7 @@ public struct Resolver {
 					// should not be affected, so use the version in the last
 					// Cartfile.resolved.
 					for dependency in lastResolved.dependencies {
-						if dependency.project.name == node.project.name {
+						if dependency.project == node.project {
 							return dependency
 						}
 					}
