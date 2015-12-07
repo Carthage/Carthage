@@ -187,7 +187,7 @@ It is possible to use travis-ci in order to build and upload your tagged release
 
 	For more informations you can visit [travis docs for objective-c projects](https://docs.travis-ci.com/user/languages/objective-c)
 	
-	```
+	```YAML
 	language: objective-c
 	osx_image: xcode7.1
 	xcode_project: <PROJECT_PLACEHOLDER>
@@ -198,6 +198,7 @@ It is possible to use travis-ci in order to build and upload your tagged release
 		global: 
 		- FRAMEWORK_NAME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
 	before_install:
+	- brew update
 	- brew install carthage
 	before_script:
 	# bootstrap the dependencies for the project
