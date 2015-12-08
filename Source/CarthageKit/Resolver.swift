@@ -34,7 +34,7 @@ public struct Resolver {
 	/// specified in the given Cartfile, and all nested dependencies thereof.
 	///
 	/// Sends each recursive dependency with its resolved version, in the
-	/// lexical order of its project name.
+	/// lexicographical order of its project name.
 	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return resolveDependenciesFromNodePermutations(nodePermutationsForCartfile(cartfile))
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in

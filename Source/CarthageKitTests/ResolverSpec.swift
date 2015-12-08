@@ -40,7 +40,8 @@ class ResolverSpec: QuickSpec {
 
 			var generator = dependencies.generate()
 
-			// Dependencies should be listed in lexical order of its project name.
+			// Dependencies should be listed in lexicographical order of its 
+			// project name.
 			expect(generator.next()).to(equal([ "git-error-translations": PinnedVersion("3.0.0") ]))
 			expect(generator.next()).to(equal([ "git-error-translations2": PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9") ]))
 			expect(generator.next()).to(equal([ "ios-charts": PinnedVersion("3.0.0") ]))
@@ -84,7 +85,8 @@ class ResolverSpec: QuickSpec {
 
 			var generator = dependencies.generate()
 
-			// Dependencies should be listed in lexical order of its project name.
+			// Dependencies should be listed in lexicographical order of its
+			// project name.
 			expect(generator.next()).to(equal([ "Alamofire": PinnedVersion("1.1.2") ]))
 			expect(generator.next()).to(equal([ "EmbeddedFrameworks": PinnedVersion("1.0.0") ]))
 			expect(generator.next()).to(equal([ "Swell": PinnedVersion("1.0.0") ]))
