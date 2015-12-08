@@ -1,0 +1,40 @@
+#!/bin/bash
+# Usage: script/brew-publish
+#
+# Publish an updated formula to Homebrew.
+
+set -e
+
+# 1. Get the tag and SHA
+PROJECT=carthage
+TAG="0.10"
+SHA=$(git show-ref -s --tags $TAG)
+AUTHOR_NAME="Matt Diephouse"
+AUTHOR_EMAIL="matt@diephouse.com"
+BRANCH="$PROJECT-$TAG"
+FORMULA="Library/Formula/carthage.rb"
+COMMIT_MESSAGE="$PROJECT $TAG"
+PULL_REQUEST_TITLE="$PROJECT $TAG"
+
+# 2. Clone homebrew fork
+git clone https://github.com/Carthage/homebrew
+cd homebrew
+
+# 3. Update fork from master
+git remote add upstream https://github.com/homebrew/homebrew
+git fetch upstream
+git rebase upstream/master
+git push
+
+# 4. Create branch and update formula
+git checkout -b $BRANCH
+perl -pi -e "s/:tag => \".+?\"/:tag => \"$TAG\"/" $FORMULA
+perl -pi -e "s/:revision => \".+?\"/:revision => \"$SHA\"/" $FORMULA
+git add .
+GIT_COMMITTER_NAME=$AUTHOR_NAME GIT_COMMITTER_EMAIL=$AUTHOR_EMAIL git commit --author="$AUTHOR_NAME <$AUTHOR_EMAIL>" -m "$COMMIT_MESSAGE"
+
+# 5. Publish branch
+git push -u origin $BRANCH
+
+# 6. Open PR
+hub pull-request -m "$PULL_REQUEST_TITLE"

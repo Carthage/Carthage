@@ -14,6 +14,7 @@ notifications:
 env:
   global:
     secure: DofNs+Ej7JblkkGMTHOl4XMBfv0EKVvzZU7OOm7U6Hyxu0J0SN6E3s61Q4HUWOBvM3Yrxf+8jpFKI29w69WArmRPpmK6GCaZar8ldUBHNmN3gaeOaGmGyrmnre4hxHjJzc0E3HAmJ03v94HW5JwQzKpIUjxg4dSttJMT6WOmnxE=
+    secure: "IvC9T+m7fLM65e/zK7t2jxsvChD+Kbx1qjHnjhnzfJhlFKu6wHEbtZmMtt9e1qyavbbrFwkNAL8s5xUd9GFKgxSjZETuqhPkggCFhNnfcoTs8JPVyd9OBK8lgN//IGIAcvE33R+vouq7rkVszgLoBcC8SWcDkaWYNy74kvljKew="
 deploy:
   - provider: releases
     api-key:
@@ -24,3 +25,7 @@ deploy:
     skip_cleanup: true
     on:
       tags: true
+  - provider: script
+    script: script/brew-publish
+    on:
+      branch: brew-publish
