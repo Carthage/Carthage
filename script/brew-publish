@@ -17,7 +17,7 @@ COMMIT_MESSAGE="$PROJECT $TAG"
 PULL_REQUEST_TITLE="$PROJECT $TAG"
 
 # 2. Clone homebrew fork
-git clone https://github.com/Carthage/homebrew
+git clone https://github.com/Carthage/homebrew.git homebrew
 cd homebrew
 
 # 3. Update fork from master
