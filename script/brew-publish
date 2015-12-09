@@ -13,6 +13,7 @@ AUTHOR_NAME="Matt Diephouse"
 AUTHOR_EMAIL="matt@diephouse.com"
 BRANCH="$PROJECT-$TAG"
 FORMULA="Library/Formula/carthage.rb"
+GITHUB_USER="mdiep"
 COMMIT_MESSAGE="$PROJECT $TAG"
 PULL_REQUEST_TITLE="$PROJECT $TAG"
 
@@ -24,7 +25,7 @@ cd homebrew
 git remote add upstream https://github.com/homebrew/homebrew.git
 git fetch upstream
 git rebase upstream/master
-git push
+git push -f -q https://$GITHUB_USER:$GITHUB_TOKEN@github.com/Carthage/homebrew master >/dev/null &2>/dev/null
 
 # 4. Create branch and update formula
 git checkout -b $BRANCH
@@ -34,7 +35,7 @@ git add .
 GIT_COMMITTER_NAME=$AUTHOR_NAME GIT_COMMITTER_EMAIL=$AUTHOR_EMAIL git commit --author="$AUTHOR_NAME <$AUTHOR_EMAIL>" -m "$COMMIT_MESSAGE"
 
 # 5. Publish branch
-git push -u origin $BRANCH
+git push -f -q https://$GITHUB_USER:$GITHUB_TOKEN@github.com/Carthage/homebrew $BRANCH >/dev/null &2>/dev/null
 
 # 6. Open PR
 hub pull-request -m "$PULL_REQUEST_TITLE"
