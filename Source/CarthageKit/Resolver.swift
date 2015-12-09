@@ -35,7 +35,7 @@ public struct Resolver {
 	///
 	/// Sends each recursive dependency with its resolved version, in the order
 	/// that they should be built.
-	public func resolveDependenciesInCartfile(cartfile: Cartfile, lastResolved: ResolvedCartfile? = nil, dependenciesToUpdate: [String] = []) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	public func resolveDependenciesInCartfile(cartfile: Cartfile, lastResolved: ResolvedCartfile? = nil, dependenciesToUpdate: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return nodePermutationsForCartfile(cartfile)
 			.flatMap(.Concat) { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 				return self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph())
@@ -49,7 +49,10 @@ public struct Resolver {
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				let orderedNodes = SignalProducer<DependencyNode, CarthageError>(values: graph.orderedNodes)
 
-				guard !dependenciesToUpdate.isEmpty, let lastResolved = lastResolved else {
+				guard
+					let dependenciesToUpdate = dependenciesToUpdate,
+					let lastResolved = lastResolved
+					where !dependenciesToUpdate.isEmpty else {
 					// All the dependencies are affected.
 					return orderedNodes.map { node in node.dependencyVersion }
 				}

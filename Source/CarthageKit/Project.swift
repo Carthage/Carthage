@@ -319,7 +319,7 @@ public final class Project {
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func updatedResolvedCartfile(dependenciesToUpdate: [String] = []) -> SignalProducer<ResolvedCartfile, CarthageError> {
+	public func updatedResolvedCartfile(dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
 		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
 
 		let resolvedCartfile: SignalProducer<ResolvedCartfile?, CarthageError> = loadResolvedCartfile()
@@ -337,7 +337,7 @@ public final class Project {
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in Cartfile.resolved, and also in the working
 	/// directory checkouts if the given parameter is true.
-	public func updateDependencies(shouldCheckout shouldCheckout: Bool = true, dependenciesToUpdate: [String] = []) -> SignalProducer<(), CarthageError> {
+	public func updateDependencies(shouldCheckout shouldCheckout: Bool = true, dependenciesToUpdate: [String]? = nil) -> SignalProducer<(), CarthageError> {
 		return updatedResolvedCartfile(dependenciesToUpdate)
 			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
@@ -567,16 +567,16 @@ public final class Project {
 	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String] = [], forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return buildDependencies(
 			loadResolvedCartfile()
 				.flatMap(.Merge) { resolvedCartfile -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 					let dependencies = resolvedCartfile.dependencies
 
-					if dependenciesToBuild.isEmpty {
-						return .init(values: dependencies)
-					} else {
+					if let dependenciesToBuild = dependenciesToBuild where !dependenciesToBuild.isEmpty {
 						return .init(values: dependencies.filter { dependenciesToBuild.contains($0.project.name) })
+					} else {
+						return .init(values: dependencies)
 					}
 				},
 			withConfiguration: configuration,
