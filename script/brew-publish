@@ -21,7 +21,7 @@ git clone https://github.com/Carthage/homebrew.git homebrew
 cd homebrew
 
 # 3. Update fork from master
-git remote add upstream https://github.com/homebrew/homebrew
+git remote add upstream https://github.com/homebrew/homebrew.git
 git fetch upstream
 git rebase upstream/master
 git push
