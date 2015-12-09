@@ -33,18 +33,18 @@ public struct CheckoutCommand: CommandType {
 }
 
 public struct CheckoutOptions: OptionsType {
-	public let directoryPath: String
 	public let useSSH: Bool
 	public let useSubmodules: Bool
 	public let useBinaries: Bool
 	public let colorOptions: ColorOptions
+	public let directoryPath: String
 
 	public static func create(useSSH: Bool) -> Bool -> Bool -> ColorOptions -> String -> CheckoutOptions {
 		return { useSubmodules in { useBinaries in { colorOptions in { directoryPath in
 			// Disable binary downloads when using submodules.
 			// See https://github.com/Carthage/Carthage/issues/419.
 			let shouldUseBinaries = useSubmodules ? false : useBinaries
-			return self.init(directoryPath: directoryPath, useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: shouldUseBinaries, colorOptions: colorOptions)
+			return self.init(useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: shouldUseBinaries, colorOptions: colorOptions, directoryPath: directoryPath)
 		} } } }
 	}
 
@@ -58,7 +58,7 @@ public struct CheckoutOptions: OptionsType {
 			<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 			<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist, disabled if --use-submodules option is present" + useBinariesAddendum)
 			<*> ColorOptions.evaluate(m)
-			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+			<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 
 	/// Attempts to load the project referenced by the options, and configure it
