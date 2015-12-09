@@ -22,7 +22,7 @@ public struct UpdateCommand: CommandType {
 				return options.loadProject()
 					.flatMap(.Merge) { $0.updateDependencies(
 						shouldCheckout: options.checkoutAfterUpdate,
-						targetDependencies: options.includeDependencies
+						dependenciesToUpdate: options.includeDependencies
 						)
 					}
 					.then(options.buildProducer)

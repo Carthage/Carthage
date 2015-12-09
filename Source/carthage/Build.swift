@@ -123,7 +123,7 @@ public struct BuildCommand: CommandType {
 					.then(SignalProducer(value: project))
 			}
 			.flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, targetDependencies: options.includeDependencies, forPlatforms: options.buildPlatform.platforms)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, dependenciesToBuild: options.includeDependencies, forPlatforms: options.buildPlatform.platforms)
 			}
 
 		if options.skipCurrent {

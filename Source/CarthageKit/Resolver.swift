@@ -35,7 +35,7 @@ public struct Resolver {
 	///
 	/// Sends each recursive dependency with its resolved version, in the order
 	/// that they should be built.
-	public func resolveDependenciesInCartfile(cartfile: Cartfile, lastResolved: ResolvedCartfile? = nil, targetDependencies: [String] = []) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	public func resolveDependenciesInCartfile(cartfile: Cartfile, lastResolved: ResolvedCartfile? = nil, dependenciesToUpdate: [String] = []) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return nodePermutationsForCartfile(cartfile)
 			.flatMap(.Concat) { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 				return self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph())
@@ -49,7 +49,7 @@ public struct Resolver {
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				let orderedNodes = SignalProducer<DependencyNode, CarthageError>(values: graph.orderedNodes)
 
-				guard !targetDependencies.isEmpty, let lastResolved = lastResolved else {
+				guard !dependenciesToUpdate.isEmpty, let lastResolved = lastResolved else {
 					// All the dependencies are affected.
 					return orderedNodes.map { node in node.dependencyVersion }
 				}
@@ -57,13 +57,13 @@ public struct Resolver {
 				// When target dependencies are specified
 				return orderedNodes.map { node -> Dependency<PinnedVersion> in
 					// A dependency included in the targets should be affected.
-					if targetDependencies.contains(node.project.name) {
+					if dependenciesToUpdate.contains(node.project.name) {
 						return node.dependencyVersion
 					}
 
 					// Nested dependencies of the targets should also be affected.
 					for (edge, nodeSet) in graph.edges {
-						if targetDependencies.contains(edge.project.name) && nodeSet.contains(node) {
+						if dependenciesToUpdate.contains(edge.project.name) && nodeSet.contains(node) {
 							return node.dependencyVersion
 						}
 					}
