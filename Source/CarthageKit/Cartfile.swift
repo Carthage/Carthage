@@ -270,14 +270,18 @@ public struct Dependency<V: VersionType>: Equatable {
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: V
 
-	public init(project: ProjectIdentifier, version: V) {
+	/// The dependencies of this dependency.
+	public let dependencies: Set<ProjectIdentifier>
+
+	public init(project: ProjectIdentifier, version: V, dependencies: Set<ProjectIdentifier> = []) {
 		self.project = project
 		self.version = version
+		self.dependencies = dependencies
 	}
 
 	/// Maps over the `version` in the receiver.
 	public func map<W: VersionType>(f: V -> W) -> Dependency<W> {
-		return Dependency<W>(project: project, version: f(version))
+		return Dependency<W>(project: project, version: f(version), dependencies: dependencies)
 	}
 }
 

@@ -36,7 +36,40 @@ public struct Resolver {
 	/// Sends each recursive dependency with its resolved version, in the order
 	/// that they should be built.
 	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
-		return nodePermutationsForCartfile(cartfile)
+		return resolveDependenciesFromNodePermutations(nodePermutationsForCartfile(cartfile))
+			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+				return SignalProducer(values: graph.orderedNodes)
+					.map { node in
+						node.dependencies = graph.edges[node] ?? []
+						return node.dependencyVersion
+					}
+			}
+	}
+
+	/// Attempts to determine the build order for the resolved dependencies.
+	///
+	/// Sends each recursive dependency with its already resolved version, in the
+	/// order that they should be built.
+	public func resolveDependenciesInResolvedCartfile(resolvedCartfile: ResolvedCartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+		let nodes = resolvedCartfile.dependencies.map {
+			DependencyNode(
+				project: $0.project,
+				proposedVersion: $0.version,
+				versionSpecifier: .GitReference($0.version.commitish)
+			)
+		}
+		return resolveDependenciesFromNodePermutations(SignalProducer(value: nodes))
+			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+				return SignalProducer(values: graph.orderedNodes)
+					.map { node in
+						node.dependencies = graph.edges[node] ?? []
+						return node.dependencyVersion
+					}
+			}
+	}
+
+	private func resolveDependenciesFromNodePermutations(permutationsProducer: SignalProducer<[DependencyNode], CarthageError>) -> SignalProducer<DependencyGraph, CarthageError> {
+		return permutationsProducer
 			.flatMap(.Concat) { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 				return self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph())
 					.promoteErrors(CarthageError.self)
@@ -46,10 +79,6 @@ public struct Resolver {
 			.dematerializeErrorsIfEmpty()
 			.take(1)
 			.observeOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
-			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				return SignalProducer(values: graph.orderedNodes)
-					.map { node in node.dependencyVersion }
-			}
 	}
 
 	/// Sends all permutations of valid DependencyNodes, corresponding to the
@@ -395,9 +424,12 @@ private class DependencyNode: Comparable {
 	/// become more stringent.
 	var versionSpecifier: VersionSpecifier
 
+	/// The dependencies of this node.
+	var dependencies: Set<DependencyNode> = []
+
 	/// A Dependency equivalent to this node.
 	var dependencyVersion: Dependency<PinnedVersion> {
-		return Dependency(project: project, version: proposedVersion)
+		return Dependency(project: project, version: proposedVersion, dependencies: Set(dependencies.map { $0.project }))
 	}
 
 	init(project: ProjectIdentifier, proposedVersion: PinnedVersion, versionSpecifier: VersionSpecifier) {
