@@ -54,7 +54,7 @@ public struct Resolver {
 					return orderedNodes.map { node in node.dependencyVersion }
 				}
 
-				// When target dependenceis are specified
+				// When target dependencies are specified
 				return orderedNodes.map { node -> Dependency<PinnedVersion> in
 					// A dependency included in the targets should be affected.
 					if targetDependencies.contains(node.project.name) {
@@ -68,7 +68,7 @@ public struct Resolver {
 						}
 					}
 
-					// The dependenceis which are not related to the targets
+					// The dependencies which are not related to the targets
 					// should not be affected, so use the version in the last
 					// Cartfile.resolved.
 					for dependency in lastResolved.dependencies {
