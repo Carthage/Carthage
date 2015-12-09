@@ -568,25 +568,23 @@ public final class Project {
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
 	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-		return buildDependencies(
-			loadResolvedCartfile()
-				.flatMap(.Merge) { resolvedCartfile -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-					let dependencies = resolvedCartfile.dependencies
+		return loadResolvedCartfile()
+			.flatMap(.Merge) { resolvedCartfile -> SignalProducer<BuildSchemeProducer, CarthageError> in
+				var dependencies = resolvedCartfile.dependencies
 
-					if let dependenciesToBuild = dependenciesToBuild where !dependenciesToBuild.isEmpty {
-						return .init(values: dependencies.filter { dependenciesToBuild.contains($0.project.name) })
-					} else {
-						return .init(values: dependencies)
-					}
-				},
-			withConfiguration: configuration,
-			forPlatforms: platforms,
-			sdkFilter: sdkFilter
-		)
+				if let dependenciesToBuild = dependenciesToBuild where !dependenciesToBuild.isEmpty {
+					dependencies = dependencies.filter { dependenciesToBuild.contains($0.project.name) }
+				}
+
+				return self.buildDependencies(dependencies,
+					withConfiguration: configuration,
+					forPlatforms: platforms,
+					sdkFilter: sdkFilter)
+			}
 	}
 
-	private func buildDependencies(dependencies: SignalProducer<Dependency<PinnedVersion>, CarthageError>, withConfiguration configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-		return dependencies
+	private func buildDependencies(dependencies: [Dependency<PinnedVersion>], withConfiguration configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+		return SignalProducer(values: dependencies)
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
 				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
