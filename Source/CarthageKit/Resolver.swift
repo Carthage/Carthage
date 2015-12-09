@@ -58,7 +58,7 @@ public struct Resolver {
 				}
 
 				// When target dependencies are specified
-				return orderedNodes.map { node -> Dependency<PinnedVersion> in
+				return orderedNodes.map { node -> Dependency<PinnedVersion>? in
 					// A dependency included in the targets should be affected.
 					if dependenciesToUpdate.contains(node.project.name) {
 						return node.dependencyVersion
@@ -80,9 +80,10 @@ public struct Resolver {
 						}
 					}
 
-					// Newly added dependencies.
-					return node.dependencyVersion
+					// Skip newly added nodes which are not in the targets.
+					return nil
 				}
+				.ignoreNil()
 			}
 	}
 
