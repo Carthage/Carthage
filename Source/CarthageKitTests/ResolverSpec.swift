@@ -11,17 +11,18 @@ import Foundation
 import Nimble
 import Quick
 import ReactiveCocoa
+import Result
 
 class ResolverSpec: QuickSpec {
-	private func loadTestCartfile(name: String) -> Cartfile {
-		let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource(name, withExtension: "")!
+	private func loadTestCartfile<T: CartfileType>(name: String, withExtension: String = "") -> T {
+		let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource(name, withExtension: withExtension)!
 		let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
 
-		return Cartfile.fromString(testCartfile).value!
+		return T.fromString(testCartfile).value!
 	}
 
-	private func orderedDependencies(resolver: Resolver, fromCartfile cartfile: Cartfile) -> [[String: PinnedVersion]] {
-		let result = resolver.resolveDependenciesInCartfile(cartfile)
+	private func orderedDependencies<T: CartfileType>(resolver: Resolver, fromCartfile cartfile: T) -> [[String: PinnedVersion]] {
+		let result = cartfile.resolveDependenciesWith(resolver)
 			.map { [ $0.project.name: $0.version ] }
 			.collect()
 			.first()
@@ -35,7 +36,8 @@ class ResolverSpec: QuickSpec {
 	override func spec() {
 		it("should resolve a Cartfile") {
 			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency, resolvedGitReference: self.resolvedGitReference)
-			let dependencies = self.orderedDependencies(resolver, fromCartfile: self.loadTestCartfile("TestCartfile"))
+			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
+			let dependencies = self.orderedDependencies(resolver, fromCartfile: testCartfile)
 			expect(dependencies.count).to(equal(8));
 
 			var generator = dependencies.generate()
@@ -50,6 +52,31 @@ class ResolverSpec: QuickSpec {
 			expect(generator.next()).to(equal([ "objc-build-scripts": PinnedVersion("3.0.0") ]))
 			expect(generator.next()).to(equal([ "ReactiveCocoa": PinnedVersion("3.0.0") ]))
 			expect(generator.next()).to(equal([ "xcconfigs": PinnedVersion("1.3.0") ]))
+		}
+
+		it("should sort dependencies from Cartfile.resolved in build order") {
+			let resolver = Resolver(
+				versionsForDependency: self.versionsForDependency,
+				cartfileForDependency: self.cartfileForDependency,
+				resolvedGitReference: { _, gitRef -> SignalProducer<PinnedVersion, CarthageError> in
+					return .init(value: PinnedVersion(gitRef))
+				})
+
+			let testCartfile: ResolvedCartfile = self.loadTestCartfile("TestResolvedCartfile", withExtension: "resolved")
+			let dependencies = self.orderedDependencies(resolver, fromCartfile: testCartfile)
+			expect(dependencies.count).to(equal(8));
+
+			var generator = dependencies.generate()
+
+			// Dependencies should be listed in build order.
+			expect(generator.next()).to(equal([ "Mantle": PinnedVersion("1.3.0") ]))
+			expect(generator.next()).to(equal([ "git-error-translations": PinnedVersion("3.0.0") ]))
+			expect(generator.next()).to(equal([ "git-error-translations2": PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9") ]))
+			expect(generator.next()).to(equal([ "ios-charts": PinnedVersion("3.0.0") ]))
+			expect(generator.next()).to(equal([ "libextobjc": PinnedVersion("0.4.1") ]))
+			expect(generator.next()).to(equal([ "xcconfigs": PinnedVersion("1.3.0") ]))
+			expect(generator.next()).to(equal([ "objc-build-scripts": PinnedVersion("3.0.0") ]))
+			expect(generator.next()).to(equal([ "ReactiveCocoa": PinnedVersion("3.0.0") ]))
 		}
 
 		it("should correctly order transitive dependencies") {
@@ -80,7 +107,8 @@ class ResolverSpec: QuickSpec {
 				return SignalProducer(error: .InvalidArgument(description: "unexpected test error"))
 			})
 
-			let dependencies = self.orderedDependencies(resolver, fromCartfile: self.loadTestCartfile("EmbeddedFrameworksContainerCartfile"))
+			let testCartfile: Cartfile = self.loadTestCartfile("EmbeddedFrameworksContainerCartfile")
+			let dependencies = self.orderedDependencies(resolver, fromCartfile: testCartfile)
 			expect(dependencies.count).to(equal(4));
 
 			var generator = dependencies.generate()
@@ -119,5 +147,24 @@ class ResolverSpec: QuickSpec {
 
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
 		return SignalProducer(value: PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"))
+	}
+}
+
+// MARK: - Helpers
+
+private protocol CartfileType {
+	static func fromString(string: String) -> Result<Self, CarthageError>
+	func resolveDependenciesWith(resolver: Resolver) -> SignalProducer<Dependency<PinnedVersion>, CarthageError>
+}
+
+extension Cartfile: CartfileType {
+	private func resolveDependenciesWith(resolver: Resolver) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+		return resolver.resolveDependenciesInCartfile(self)
+	}
+}
+
+extension ResolvedCartfile: CartfileType {
+	private func resolveDependenciesWith(resolver: Resolver) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+		return resolver.resolveDependenciesInResolvedCartfile(self)
 	}
 }
