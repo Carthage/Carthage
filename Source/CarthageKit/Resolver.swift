@@ -33,15 +33,12 @@ public struct Resolver {
 	/// Attempts to determine the latest valid version to use for each dependency
 	/// specified in the given Cartfile, and all nested dependencies thereof.
 	///
-	/// Sends each recursive dependency with its resolved version, in the
-	/// lexicographical order of its project name.
+	/// Sends each recursive dependency with its resolved version, in the order
+	/// that they should be built.
 	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return resolveDependenciesFromNodePermutations(nodePermutationsForCartfile(cartfile))
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				let sortedNodes = graph.allNodes.sort { lhs, rhs in
-					return lhs.project.name.caseInsensitiveCompare(rhs.project.name) != .OrderedDescending
-				}
-				return SignalProducer(values: sortedNodes)
+				return SignalProducer(values: graph.orderedNodes)
 					.map { node in
 						node.dependencies = graph.edges[node] ?? []
 						return node.dependencyVersion
