@@ -57,9 +57,8 @@ class ResolverSpec: QuickSpec {
 			let resolver = Resolver(
 				versionsForDependency: self.versionsForDependency,
 				cartfileForDependency: self.cartfileForDependency,
-				resolvedGitReference: { _, gitRef -> SignalProducer<PinnedVersion, CarthageError> in
-					return .init(value: PinnedVersion(gitRef))
-				})
+				resolvedGitReference: { _, refName in SignalProducer(value: PinnedVersion(refName)) }
+			)
 
 			let testCartfile: ResolvedCartfile = self.loadTestCartfile("TestResolvedCartfile", withExtension: "resolved")
 			let dependencies = self.orderedDependencies(resolver, fromCartfile: testCartfile)

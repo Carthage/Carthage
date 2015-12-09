@@ -561,7 +561,15 @@ public final class Project {
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
 	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
+		let resolver = Resolver(
+			versionsForDependency: versionsForProject,
+			cartfileForDependency: cartfileForDependency,
+			resolvedGitReference: { _, refName in
+				// This could be OK since the dependencies should be fully
+				// resolved already.
+				return SignalProducer(value: PinnedVersion(refName))
+			}
+		)
 
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in resolver.resolveDependenciesInResolvedCartfile(resolvedCartfile) }
