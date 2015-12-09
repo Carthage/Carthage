@@ -565,8 +565,7 @@ public final class Project {
 			versionsForDependency: versionsForProject,
 			cartfileForDependency: cartfileForDependency,
 			resolvedGitReference: { _, refName in
-				// This could be OK since the dependencies should be fully
-				// resolved already.
+				// Dependencies should be fully resolved already.
 				return SignalProducer(value: PinnedVersion(refName))
 			}
 		)
