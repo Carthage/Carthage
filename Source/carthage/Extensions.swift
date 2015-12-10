@@ -93,7 +93,7 @@ extension SignalProducerType where Error == CommandError {
 			.then(SignalProducer<(), CommandError>.empty)
 			.wait()
 		
-		TaskDescription.waitForAllTaskTermination()
+		Task.waitForAllTaskTermination()
 		return result.mapError { $0.error }
 	}
 }

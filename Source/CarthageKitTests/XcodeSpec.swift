@@ -153,7 +153,7 @@ class XcodeSpec: QuickSpec {
 			expect(NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!)).to(beFalsy())
 			
 			var output: String = ""
-			let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
+			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
 			
 			let codesignResult = launchTask(codeSign)
 				.on(next: { taskEvent in
