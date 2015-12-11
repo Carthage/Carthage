@@ -16,6 +16,7 @@ env:
     secure: DofNs+Ej7JblkkGMTHOl4XMBfv0EKVvzZU7OOm7U6Hyxu0J0SN6E3s61Q4HUWOBvM3Yrxf+8jpFKI29w69WArmRPpmK6GCaZar8ldUBHNmN3gaeOaGmGyrmnre4hxHjJzc0E3HAmJ03v94HW5JwQzKpIUjxg4dSttJMT6WOmnxE=
     secure: "ehB+3qjRcHR9tCeX9omi69V7XihSdySXVo45GoyqLncCa90tpeLviI+m2XRJn2ajHtrz+iwBaBut6buFpcbCrSOdHsZ5FQb2sGkGprll/Tz8B2XvNRqpQan2eFouO2/SPpOVDurpbqf78KsRSRD6mMNuCS4AfKM/hDnbGUxzCfs="
 before_deploy:
+  - brew update
   - brew install hub
 deploy:
   - provider: releases
