@@ -13,31 +13,29 @@ import Result
 import ReactiveCocoa
 
 public struct BootstrapCommand: CommandType {
+	// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
+	// `update` flags.
+	public typealias Options = UpdateOptions
+	
 	public let verb = "bootstrap"
 	public let function = "Check out and build the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
-		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
-		// `update` flags.
-		return producerWithOptions(UpdateOptions.evaluate(mode))
-			.flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
-				return options.loadProject()
-					.flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
-						if !NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
-							let formatting = options.checkoutOptions.colorOptions.formatting
-							carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
-							return project.updateDependencies(shouldCheckout: options.checkoutAfterUpdate)
-						}
+	public func run(options: Options) -> Result<(), CarthageError> {
+		return options.loadProject()
+			.flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
+				if !NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
+					let formatting = options.checkoutOptions.colorOptions.formatting
+					carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
+					return project.updateDependencies(shouldCheckout: options.checkoutAfterUpdate)
+				}
 
-						if options.checkoutAfterUpdate {
-							return project.checkoutResolvedDependencies()
-						} else {
-							return .empty
-						}
-					}
-					.then(options.buildProducer)
-					.promoteErrors()
+				if options.checkoutAfterUpdate {
+					return project.checkoutResolvedDependencies()
+				} else {
+					return .empty
+				}
 			}
+			.then(options.buildProducer)
 			.waitOnCommand()
 	}
 }

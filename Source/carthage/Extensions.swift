@@ -78,6 +78,16 @@ extension SignalProducerType where Error == CarthageError {
 	internal func promoteErrors() -> SignalProducer<Value, CommandError> {
 		return lift { $0.promoteErrors() }
 	}
+	
+	/// Waits on a SignalProducer that implements the behavior of a CommandType.
+	internal func waitOnCommand() -> Result<(), CarthageError> {
+		let result = producer
+			.then(SignalProducer<(), CarthageError>.empty)
+			.wait()
+		
+		TaskDescription.waitForAllTaskTermination()
+		return result
+	}
 }
 
 /// Lifts the Result of options parsing into a SignalProducer.

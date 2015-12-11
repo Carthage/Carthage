@@ -13,15 +13,12 @@ import Result
 import ReactiveCocoa
 
 public struct CheckoutCommand: CommandType {
+	public typealias Options = CheckoutOptions
 	public let verb = "checkout"
 	public let function = "Check out the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
-		return producerWithOptions(CheckoutOptions.evaluate(mode))
-			.flatMap(.Merge) { options in
-				return self.checkoutWithOptions(options)
-					.promoteErrors()
-			}
+	public func run(options: CheckoutOptions) -> Result<(), CarthageError> {
+		return self.checkoutWithOptions(options)
 			.waitOnCommand()
 	}
 
