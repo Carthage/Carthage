@@ -578,17 +578,16 @@ public final class Project {
 		)
 
 		return loadResolvedCartfile()
-			.flatMap(.Concat) { resolvedCartfile in
-				return resolver
-					.resolveDependenciesInResolvedCartfile(resolvedCartfile)
-					.collect()
-			}
-			.flatMap(.Merge) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+			.flatMap(.Merge) { resolvedCartfile -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+				let dependenciesProducer = resolver.resolveDependenciesInResolvedCartfile(resolvedCartfile)
+
 				guard let dependenciesToBuild = dependenciesToBuild where !dependenciesToBuild.isEmpty else {
-					return .init(values: dependencies)
+					return dependenciesProducer
 				}
 
-				return .init(values: dependencies.filter { dependenciesToBuild.contains($0.project.name) })
+				return dependenciesProducer.filter { dependency in
+					return dependenciesToBuild.contains(dependency.project.name)
+				}
 			}
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
