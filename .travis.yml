@@ -14,7 +14,7 @@ notifications:
 env:
   global:
     secure: DofNs+Ej7JblkkGMTHOl4XMBfv0EKVvzZU7OOm7U6Hyxu0J0SN6E3s61Q4HUWOBvM3Yrxf+8jpFKI29w69WArmRPpmK6GCaZar8ldUBHNmN3gaeOaGmGyrmnre4hxHjJzc0E3HAmJ03v94HW5JwQzKpIUjxg4dSttJMT6WOmnxE=
-    secure: "EYsCq9/f8w1I0DlHKnE1CPOh6IZ0STwO3obIXfD0Tcf5hR5K5pYElPVIgZwjzeK+4IJUp378n18XYgo9DzzmB24aohsV3V3iMd9kuzQ7Tvhu3XiJhKkZ/mH5nufkQLx2SCt/yu9VrIiviMieDJVeCNdQ/fR9qUhL63+nwGDoZbk="
+    secure: "ehB+3qjRcHR9tCeX9omi69V7XihSdySXVo45GoyqLncCa90tpeLviI+m2XRJn2ajHtrz+iwBaBut6buFpcbCrSOdHsZ5FQb2sGkGprll/Tz8B2XvNRqpQan2eFouO2/SPpOVDurpbqf78KsRSRD6mMNuCS4AfKM/hDnbGUxzCfs="
 before_deploy:
   - brew install hub
 deploy:
