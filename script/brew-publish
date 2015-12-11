@@ -38,4 +38,5 @@ GIT_COMMITTER_NAME=$AUTHOR_NAME GIT_COMMITTER_EMAIL=$AUTHOR_EMAIL git commit --a
 git push -f -q https://$GITHUB_USER:$GITHUB_TOKEN@github.com/Carthage/homebrew.git $BRANCH &>/dev/null
 
 # 6. Open PR
+sleep 5 # Don't race with the push
 hub pull-request -m "$PULL_REQUEST_TITLE"
