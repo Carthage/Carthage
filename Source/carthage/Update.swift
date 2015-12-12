@@ -39,7 +39,7 @@ public struct UpdateOptions: OptionsType {
 	public let buildPlatform: BuildPlatform
 	public let verbose: Bool
 	public let checkoutOptions: CheckoutOptions
-	public let dependenciesToUpdate: [String]
+	public let dependenciesToUpdate: [String]?
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
@@ -60,7 +60,8 @@ public struct UpdateOptions: OptionsType {
 
 	public static func create(configuration: String) -> BuildPlatform -> Bool -> Bool -> Bool -> CheckoutOptions -> String -> UpdateOptions {
 		return { buildPlatform in { verbose in { checkoutAfterUpdate in { buildAfterUpdate in { checkoutOptions in { dependenciesToUpdate in
-			return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions, dependenciesToUpdate: dependenciesToUpdate.split())
+			let dependenciesToUpdate: [String]? = dependenciesToUpdate.isEmpty ? nil : dependenciesToUpdate.split()
+			return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions, dependenciesToUpdate: dependenciesToUpdate)
 		} } } } } }
 	}
 
