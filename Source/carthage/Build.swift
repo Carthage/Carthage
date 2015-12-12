@@ -118,11 +118,6 @@ public struct BuildCommand: CommandType {
 				}
 			}
 			.flatMap(.Merge) { project in
-				return project.migrateIfNecessary(options.colorOptions)
-					.on(next: carthage.println)
-					.then(SignalProducer(value: project))
-			}
-			.flatMap(.Merge) { project in
 				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms)
 			}
 
