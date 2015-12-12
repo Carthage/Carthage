@@ -73,8 +73,6 @@ public struct CheckoutOptions: OptionsType {
 		var eventSink = ProjectEventSink(colorOptions: colorOptions)
 		project.projectEvents.observeNext { eventSink.put($0) }
 
-		return project.migrateIfNecessary(colorOptions)
-			.on(next: carthage.println)
-			.then(SignalProducer(value: project))
+		return SignalProducer(value: project)
 	}
 }
