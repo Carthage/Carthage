@@ -192,11 +192,12 @@ public struct BuildOptions: OptionsType {
 	public let colorOptions: ColorOptions
 	public let verbose: Bool
 	public let directoryPath: String
-	public let dependenciesToBuild: [String]
+	public let dependenciesToBuild: [String]?
 
 	public static func create(configuration: String) -> BuildPlatform -> Bool -> ColorOptions -> Bool -> String -> String -> BuildOptions {
 		return { buildPlatform in { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
-			return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild.split())
+			let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild.split()
+			return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
 		} } } } } }
 	}
 
