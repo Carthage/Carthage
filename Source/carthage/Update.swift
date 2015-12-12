@@ -22,7 +22,7 @@ public struct UpdateCommand: CommandType {
 				return options.loadProject()
 					.flatMap(.Merge) { $0.updateDependencies(
 						shouldCheckout: options.checkoutAfterUpdate,
-						dependenciesToUpdate: options.includeDependencies
+						dependenciesToUpdate: options.dependenciesToUpdate
 						)
 					}
 					.then(options.buildProducer)
@@ -37,13 +37,13 @@ public struct UpdateOptions: OptionsType {
 	public let buildAfterUpdate: Bool
 	public let configuration: String
 	public let buildPlatform: BuildPlatform
-	public let includeDependencies: [String]
+	public let dependenciesToUpdate: [String]
 	public let verbose: Bool
 	public let checkoutOptions: CheckoutOptions
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
-		return BuildOptions(configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
+		return BuildOptions(configuration: configuration, buildPlatform: buildPlatform, dependenciesToBuild: dependenciesToUpdate, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
 	}
 
 	/// If `checkoutAfterUpdate` and `buildAfterUpdate` are both true, this will
@@ -59,8 +59,8 @@ public struct UpdateOptions: OptionsType {
 	}
 
 	public static func create(configuration: String) -> BuildPlatform -> String -> Bool -> Bool -> Bool -> CheckoutOptions -> UpdateOptions {
-		return { buildPlatform in { includeDependencies in { verbose in { checkoutAfterUpdate in { buildAfterUpdate in { checkoutOptions in
-			return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies.split(), verbose: verbose, checkoutOptions: checkoutOptions)
+		return { buildPlatform in { dependenciesToUpdate in { verbose in { checkoutAfterUpdate in { buildAfterUpdate in { checkoutOptions in
+			return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, dependenciesToUpdate: dependenciesToUpdate.split(), verbose: verbose, checkoutOptions: checkoutOptions)
 		} } } } } }
 	}
 

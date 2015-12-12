@@ -123,7 +123,7 @@ public struct BuildCommand: CommandType {
 					.then(SignalProducer(value: project))
 			}
 			.flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, dependenciesToBuild: options.includeDependencies, forPlatforms: options.buildPlatform.platforms)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, dependenciesToBuild: options.dependenciesToBuild, forPlatforms: options.buildPlatform.platforms)
 			}
 
 		if options.skipCurrent {
@@ -188,15 +188,15 @@ public struct BuildCommand: CommandType {
 public struct BuildOptions: OptionsType {
 	public let configuration: String
 	public let buildPlatform: BuildPlatform
-	public let includeDependencies: [String]
+	public let dependenciesToBuild: [String]
 	public let skipCurrent: Bool
 	public let colorOptions: ColorOptions
 	public let verbose: Bool
 	public let directoryPath: String
 
 	public static func create(configuration: String) -> BuildPlatform -> String -> Bool -> ColorOptions -> Bool -> String -> BuildOptions {
-		return { buildPlatform in { includeDependencies in { skipCurrent in { colorOptions in { verbose in { directoryPath in
-			return self.init(configuration: configuration, buildPlatform: buildPlatform, includeDependencies: includeDependencies.split(), skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+		return { buildPlatform in { dependenciesToBuild in { skipCurrent in { colorOptions in { verbose in { directoryPath in
+			return self.init(configuration: configuration, buildPlatform: buildPlatform, dependenciesToBuild: dependenciesToBuild.split(), skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
 		} } } } } }
 	}
 
