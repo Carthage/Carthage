@@ -188,15 +188,15 @@ public struct BuildCommand: CommandType {
 public struct BuildOptions: OptionsType {
 	public let configuration: String
 	public let buildPlatform: BuildPlatform
-	public let dependenciesToBuild: [String]
 	public let skipCurrent: Bool
 	public let colorOptions: ColorOptions
 	public let verbose: Bool
 	public let directoryPath: String
+	public let dependenciesToBuild: [String]
 
-	public static func create(configuration: String) -> BuildPlatform -> String -> Bool -> ColorOptions -> Bool -> String -> BuildOptions {
-		return { buildPlatform in { dependenciesToBuild in { skipCurrent in { colorOptions in { verbose in { directoryPath in
-			return self.init(configuration: configuration, buildPlatform: buildPlatform, dependenciesToBuild: dependenciesToBuild.split(), skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
+	public static func create(configuration: String) -> BuildPlatform -> Bool -> ColorOptions -> Bool -> String -> String -> BuildOptions {
+		return { buildPlatform in { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
+			return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild.split())
 		} } } } } }
 	}
 
@@ -204,11 +204,11 @@ public struct BuildOptions: OptionsType {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)")
-			<*> m <| Option(key: "include", defaultValue: "", usage: "the comma-separated dependency names to build")
 			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 			<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+			<*> m <| Option(defaultValue: "", usage: "the comma-separated dependency names to build")
 	}
 }
 

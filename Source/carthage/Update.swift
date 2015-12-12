@@ -37,13 +37,13 @@ public struct UpdateOptions: OptionsType {
 	public let buildAfterUpdate: Bool
 	public let configuration: String
 	public let buildPlatform: BuildPlatform
-	public let dependenciesToUpdate: [String]
 	public let verbose: Bool
 	public let checkoutOptions: CheckoutOptions
+	public let dependenciesToUpdate: [String]
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
-		return BuildOptions(configuration: configuration, buildPlatform: buildPlatform, dependenciesToBuild: dependenciesToUpdate, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
+		return BuildOptions(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath, dependenciesToBuild: dependenciesToUpdate)
 	}
 
 	/// If `checkoutAfterUpdate` and `buildAfterUpdate` are both true, this will
@@ -58,9 +58,9 @@ public struct UpdateOptions: OptionsType {
 		}
 	}
 
-	public static func create(configuration: String) -> BuildPlatform -> String -> Bool -> Bool -> Bool -> CheckoutOptions -> UpdateOptions {
-		return { buildPlatform in { dependenciesToUpdate in { verbose in { checkoutAfterUpdate in { buildAfterUpdate in { checkoutOptions in
-			return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, dependenciesToUpdate: dependenciesToUpdate.split(), verbose: verbose, checkoutOptions: checkoutOptions)
+	public static func create(configuration: String) -> BuildPlatform -> Bool -> Bool -> Bool -> CheckoutOptions -> String -> UpdateOptions {
+		return { buildPlatform in { verbose in { checkoutAfterUpdate in { buildAfterUpdate in { checkoutOptions in { dependenciesToUpdate in
+			return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions, dependenciesToUpdate: dependenciesToUpdate.split())
 		} } } } } }
 	}
 
@@ -68,11 +68,11 @@ public struct UpdateOptions: OptionsType {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)\n(ignored if --no-build option is present)")
-			<*> m <| Option(key: "include", defaultValue: "", usage: "the comma-separated dependency names to update and build")
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 			<*> m <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 			<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating (ignored if --no-checkout option is present)")
 			<*> CheckoutOptions.evaluate(m, useBinariesAddendum: " (ignored if --no-build option is present)")
+			<*> m <| Option(defaultValue: "", usage: "the comma-separated dependency names to update and build")
 	}
 
 	/// Attempts to load the project referenced by the options, and configure it
