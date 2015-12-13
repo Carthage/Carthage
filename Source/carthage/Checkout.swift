@@ -56,7 +56,7 @@ public struct CheckoutOptions: OptionsType {
 		return evaluate(
 			m,
 			useBinariesAddendum: "",
-			dependenciesToCheckout: m <| Option(defaultValue: "", usage: "the comma-separated dependency names to checkout")
+			dependenciesToCheckout: m <| Option(defaultValue: "", usage: "the dependency names to checkout separated by commas or spaces")
 		)
 	}
 

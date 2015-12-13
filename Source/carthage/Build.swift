@@ -204,7 +204,7 @@ public struct BuildOptions: OptionsType {
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 			<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
-			<*> m <| Option(defaultValue: "", usage: "the comma-separated dependency names to build")
+			<*> m <| Option(defaultValue: "", usage: "the dependency names to build separated by commas or spaces")
 	}
 }
 
