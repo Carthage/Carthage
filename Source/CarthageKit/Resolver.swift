@@ -63,10 +63,8 @@ public struct Resolver {
 					}
 
 					// Nested dependencies of the targets should also be affected.
-					for (edge, nodeSet) in graph.edges {
-						if dependenciesToUpdate.contains(edge.project.name) && nodeSet.contains(node) {
-							return node.dependencyVersion
-						}
+					if graph.dependencies(dependenciesToUpdate, containsNestedDependencyOfNode: node) {
+						return node.dependencyVersion
 					}
 
 					// The dependencies which are not related to the targets
@@ -366,6 +364,17 @@ private struct DependencyGraph: Equatable {
 		}
 
 		return .Success(node)
+	}
+
+	/// Whether the given node is included or not in the nested dependencies of
+	/// the given dependencies.
+	func dependencies(dependencies: [String], containsNestedDependencyOfNode node: DependencyNode) -> Bool {
+		return edges.lazy
+			.filter { edge, nodeSet in
+				return dependencies.contains(edge.project.name) && nodeSet.contains(node)
+			}
+			.map { _ in true }
+			.first ?? false
 	}
 }
 
