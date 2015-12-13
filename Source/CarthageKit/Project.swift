@@ -585,9 +585,18 @@ public final class Project {
 					return dependenciesProducer
 				}
 
-				return dependenciesProducer.filter { dependency in
-					return dependenciesToBuild.contains(dependency.project.name)
-				}
+				return dependenciesProducer
+					.collect()
+					.flatMap(.Concat) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+						var dependenciesToBuild = Set(dependenciesToBuild)
+
+						dependencies
+							.filter { dependenciesToBuild.contains($0.project.name) }
+							.forEach { dependenciesToBuild.unionInPlace($0.dependencies.map { $0.name }) }
+
+						let filtered = dependencies.filter { dependenciesToBuild.contains($0.project.name) }
+						return .init(values: filtered)
+					}
 			}
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
