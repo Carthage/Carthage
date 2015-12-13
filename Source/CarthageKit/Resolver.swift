@@ -81,11 +81,12 @@ public struct Resolver {
 			}
 	}
 
-	/// Attempts to determine the build order for the resolved dependencies.
+	/// Attempts to determine the build order for the resolved dependencies,
+	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Sends each recursive dependency with its already resolved version, in the
 	/// order that they should be built.
-	public func resolveDependenciesInResolvedCartfile(resolvedCartfile: ResolvedCartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	public func resolveDependenciesInResolvedCartfile(resolvedCartfile: ResolvedCartfile, dependenciesToResolve: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		let nodes = resolvedCartfile.dependencies.map {
 			DependencyNode(
 				project: $0.project,
@@ -94,12 +95,26 @@ public struct Resolver {
 			)
 		}
 		return resolveDependenciesFromNodePermutations(SignalProducer(value: nodes))
-			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				return SignalProducer(values: graph.orderedNodes)
-					.map { node in
-						node.dependencies = graph.edges[node] ?? []
-						return node.dependencyVersion
-					}
+			.flatMap(.Merge) { graph -> SignalProducer<[Dependency<PinnedVersion>], CarthageError> in
+				let orderedDependencies = graph.orderedNodes.map { node -> Dependency<PinnedVersion> in
+					node.dependencies = graph.edges[node] ?? []
+					return node.dependencyVersion
+				}
+				return SignalProducer(value: orderedDependencies)
+			}
+			.flatMap(.Concat) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+				guard let dependenciesToResolve = dependenciesToResolve where !dependenciesToResolve.isEmpty else {
+					return .init(values: dependencies)
+				}
+
+				var toResolve = Set(dependenciesToResolve)
+
+				dependencies
+					.filter { toResolve.contains($0.project.name) }
+					.forEach { toResolve.unionInPlace($0.dependencies.map { $0.name }) }
+
+				let filtered = dependencies.filter { toResolve.contains($0.project.name) }
+				return .init(values: filtered)
 			}
 	}
 

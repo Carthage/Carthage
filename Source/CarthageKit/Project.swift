@@ -534,35 +534,20 @@ public final class Project {
 				return submodulesByPath
 			}
 
+		let resolver = Resolver(
+			versionsForDependency: versionsForProject,
+			cartfileForDependency: cartfileForDependency,
+			resolvedGitReference: { _, refName in
+				// Dependencies should be fully resolved already.
+				return SignalProducer(value: PinnedVersion(refName))
+			}
+		)
+
 		return loadResolvedCartfile()
-			.flatMap(.Merge) { resolvedCartfile -> SignalProducer<[Dependency<PinnedVersion>], CarthageError> in
-				let resolver = Resolver(
-					versionsForDependency: self.versionsForProject,
-					cartfileForDependency: cartfileForDependency,
-					resolvedGitReference: { _, refName in
-						// Dependencies should be fully resolved already.
-						return SignalProducer(value: PinnedVersion(refName))
-					}
-				)
-
-				let dependenciesProducer = resolver
-					.resolveDependenciesInResolvedCartfile(resolvedCartfile)
+			.flatMap(.Merge) { resolvedCartfile in
+				return resolver
+					.resolveDependenciesInResolvedCartfile(resolvedCartfile, dependenciesToResolve: dependenciesToCheckout)
 					.collect()
-
-				guard let dependenciesToCheckout = dependenciesToCheckout where !dependenciesToCheckout.isEmpty else {
-					return dependenciesProducer
-				}
-
-				return dependenciesProducer
-					.map { dependencies -> [Dependency<PinnedVersion>] in
-						var dependenciesToCheckout = Set(dependenciesToCheckout)
-
-						dependencies
-							.filter { dependenciesToCheckout.contains($0.project.name) }
-							.forEach { dependenciesToCheckout.unionInPlace($0.dependencies.map { $0.name }) }
-
-						return dependencies.filter { dependenciesToCheckout.contains($0.project.name) }
-					}
 			}
 			.zipWith(submodulesSignal)
 			.flatMap(.Merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
@@ -608,25 +593,10 @@ public final class Project {
 		)
 
 		return loadResolvedCartfile()
-			.flatMap(.Merge) { resolvedCartfile -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				let dependenciesProducer = resolver.resolveDependenciesInResolvedCartfile(resolvedCartfile)
-
-				guard let dependenciesToBuild = dependenciesToBuild where !dependenciesToBuild.isEmpty else {
-					return dependenciesProducer
-				}
-
-				return dependenciesProducer
-					.collect()
-					.flatMap(.Concat) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-						var dependenciesToBuild = Set(dependenciesToBuild)
-
-						dependencies
-							.filter { dependenciesToBuild.contains($0.project.name) }
-							.forEach { dependenciesToBuild.unionInPlace($0.dependencies.map { $0.name }) }
-
-						let filtered = dependencies.filter { dependenciesToBuild.contains($0.project.name) }
-						return .init(values: filtered)
-					}
+			.flatMap(.Merge) { resolvedCartfile in
+				return resolver.resolveDependenciesInResolvedCartfile(resolvedCartfile,
+					dependenciesToResolve: dependenciesToBuild
+				)
 			}
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
