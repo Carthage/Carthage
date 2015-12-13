@@ -342,7 +342,7 @@ public final class Project {
 			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}
-			.then(shouldCheckout ? checkoutResolvedDependencies() : .empty)
+			.then(shouldCheckout ? checkoutResolvedDependencies(dependenciesToUpdate) : .empty)
 	}
 
 	/// Installs binaries and debug symbols for the given project, if available.
@@ -523,8 +523,9 @@ public final class Project {
 			.then(checkoutSignal)
 	}
 
-	/// Checks out the dependencies listed in the project's Cartfile.resolved.
-	public func checkoutResolvedDependencies() -> SignalProducer<(), CarthageError> {
+	/// Checks out the dependencies listed in the project's Cartfile.resolved,
+	/// optionally they are limited by the given list of dependency names.
+	public func checkoutResolvedDependencies(dependenciesToCheckout: [String]? = nil) -> SignalProducer<(), CarthageError> {
 		/// Determine whether the repository currently holds any submodules (if
 		/// it even is a repository).
 		let submodulesSignal = submodulesInRepository(self.directoryURL)
@@ -534,9 +535,38 @@ public final class Project {
 			}
 
 		return loadResolvedCartfile()
+			.flatMap(.Merge) { resolvedCartfile -> SignalProducer<[Dependency<PinnedVersion>], CarthageError> in
+				let resolver = Resolver(
+					versionsForDependency: self.versionsForProject,
+					cartfileForDependency: cartfileForDependency,
+					resolvedGitReference: { _, refName in
+						// Dependencies should be fully resolved already.
+						return SignalProducer(value: PinnedVersion(refName))
+					}
+				)
+
+				let dependenciesProducer = resolver
+					.resolveDependenciesInResolvedCartfile(resolvedCartfile)
+					.collect()
+
+				guard let dependenciesToCheckout = dependenciesToCheckout where !dependenciesToCheckout.isEmpty else {
+					return dependenciesProducer
+				}
+
+				return dependenciesProducer
+					.map { dependencies -> [Dependency<PinnedVersion>] in
+						var dependenciesToCheckout = Set(dependenciesToCheckout)
+
+						dependencies
+							.filter { dependenciesToCheckout.contains($0.project.name) }
+							.forEach { dependenciesToCheckout.unionInPlace($0.dependencies.map { $0.name }) }
+
+						return dependencies.filter { dependenciesToCheckout.contains($0.project.name) }
+					}
+			}
 			.zipWith(submodulesSignal)
-			.flatMap(.Merge) { resolvedCartfile, submodulesByPath -> SignalProducer<(), CarthageError> in
-				return SignalProducer(values: resolvedCartfile.dependencies)
+			.flatMap(.Merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
+				return SignalProducer(values: dependencies)
 					.flatMap(.Merge) { dependency -> SignalProducer<(), CarthageError> in
 						let project = dependency.project
 						let revision = dependency.version.commitish
