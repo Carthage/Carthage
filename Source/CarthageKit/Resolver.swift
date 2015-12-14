@@ -37,14 +37,11 @@ public struct Resolver {
 	/// that they should be built.
 	public func resolveDependenciesInCartfile(cartfile: Cartfile, lastResolved: ResolvedCartfile? = nil, dependenciesToUpdate: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return resolveDependenciesFromNodePermutations(nodePermutationsForCartfile(cartfile))
-			.map { graph -> (DependencyGraph, [DependencyNode]) in
+			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				let orderedNodes = graph.orderedNodes.map { node -> DependencyNode in
 					node.dependencies = graph.edges[node] ?? []
 					return node
 				}
-				return (graph, orderedNodes)
-			}
-			.flatMap(.Merge) { graph, orderedNodes -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				let orderedNodesProducer = SignalProducer<DependencyNode, CarthageError>(values: orderedNodes)
 
 				guard
@@ -95,14 +92,12 @@ public struct Resolver {
 			)
 		}
 		return resolveDependenciesFromNodePermutations(SignalProducer(value: nodes))
-			.flatMap(.Merge) { graph -> SignalProducer<[Dependency<PinnedVersion>], CarthageError> in
-				let orderedDependencies = graph.orderedNodes.map { node -> Dependency<PinnedVersion> in
+			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+				let dependencies = graph.orderedNodes.map { node -> Dependency<PinnedVersion> in
 					node.dependencies = graph.edges[node] ?? []
 					return node.dependencyVersion
 				}
-				return SignalProducer(value: orderedDependencies)
-			}
-			.flatMap(.Concat) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+
 				guard let dependenciesToResolve = dependenciesToResolve where !dependenciesToResolve.isEmpty else {
 					return .init(values: dependencies)
 				}
