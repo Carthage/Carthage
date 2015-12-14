@@ -42,6 +42,6 @@ public struct FetchOptions: OptionsType {
 	public static func evaluate(m: CommandMode) -> Result<FetchOptions, CommandantError<CarthageError>> {
 		return create
 			<*> ColorOptions.evaluate(m)
-			<*> m <| Option(usage: "the Git repository that should be cloned or fetched")
+			<*> m <| Argument(usage: "the Git repository that should be cloned or fetched")
 	}
 }

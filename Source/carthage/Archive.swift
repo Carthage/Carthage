@@ -72,6 +72,6 @@ public struct ArchiveOptions: OptionsType {
 		return create
 			<*> m <| Option(key: "output", defaultValue: "", usage: "the path at which to create the zip file (or blank to infer it from the framework name)")
 			<*> ColorOptions.evaluate(m)
-			<*> m <| Option(usage: "the name of the built framework to archive (without any extension)")
+			<*> m <| Argument(usage: "the name of the built framework to archive (without any extension)")
 	}
 }
