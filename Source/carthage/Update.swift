@@ -13,17 +13,14 @@ import Result
 import ReactiveCocoa
 
 public struct UpdateCommand: CommandType {
+	public typealias Options = UpdateOptions
 	public let verb = "update"
 	public let function = "Update and rebuild the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
-		return producerWithOptions(UpdateOptions.evaluate(mode))
-			.flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
-				return options.loadProject()
-					.flatMap(.Merge) { $0.updateDependencies(shouldCheckout: options.checkoutAfterUpdate) }
-					.then(options.buildProducer)
-					.promoteErrors()
-			}
+	public func run(options: Options) -> Result<(), CarthageError> {
+		return options.loadProject()
+			.flatMap(.Merge) { $0.updateDependencies(shouldCheckout: options.checkoutAfterUpdate) }
+			.then(options.buildProducer)
 			.waitOnCommand()
 	}
 }
