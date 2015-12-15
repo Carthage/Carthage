@@ -52,7 +52,7 @@ extension String {
 	/// Split the string into substrings separated by the given separators.
 	internal func split(allowEmptySlices: Bool = false, separators: [Character] = [ ",", " " ]) -> [String] {
 		return characters
-			.split(allowEmptySlices: allowEmptySlices) { separators.contains($0) }
+			.split(allowEmptySlices: allowEmptySlices, isSeparator: separators.contains)
 			.map(String.init)
 	}
 }
