@@ -63,7 +63,7 @@ public struct UpdateOptions: OptionsType {
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<UpdateOptions, CommandantError<CarthageError>> {
-		let dependenciesToUpdate: Result<String, CommandantError<CarthageError>> = m <| Option(defaultValue: "", usage: "the dependency names to update and build separated by commas or spaces")
+		let dependenciesToUpdate: Result<String, CommandantError<CarthageError>> = m <| Argument(defaultValue: "", usage: "the dependency names to update and build separated by commas or spaces")
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)\n(ignored if --no-build option is present)")
