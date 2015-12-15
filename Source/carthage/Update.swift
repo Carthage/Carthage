@@ -55,23 +55,20 @@ public struct UpdateOptions: OptionsType {
 		}
 	}
 
-	public static func create(configuration: String) -> BuildPlatform -> Bool -> Bool -> Bool -> CheckoutOptions -> String -> UpdateOptions {
-		return { buildPlatform in { verbose in { checkoutAfterUpdate in { buildAfterUpdate in { checkoutOptions in { dependenciesToUpdate in
-			let dependenciesToUpdate: [String]? = dependenciesToUpdate.isEmpty ? nil : dependenciesToUpdate.split()
-			return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions, dependenciesToUpdate: dependenciesToUpdate)
-		} } } } } }
+	public static func create(configuration: String) -> BuildPlatform -> Bool -> Bool -> Bool -> CheckoutOptions -> UpdateOptions {
+		return { buildPlatform in { verbose in { checkoutAfterUpdate in { buildAfterUpdate in { checkoutOptions in
+			return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions, dependenciesToUpdate: checkoutOptions.dependenciesToCheckout)
+		} } } } }
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<UpdateOptions, CommandantError<CarthageError>> {
-		let dependenciesToUpdate: Result<String, CommandantError<CarthageError>> = m <| Argument(defaultValue: "", usage: "the dependency names to update and build separated by commas or spaces")
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)\n(ignored if --no-build option is present)")
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 			<*> m <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 			<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating (ignored if --no-checkout option is present)")
-			<*> CheckoutOptions.evaluate(m, useBinariesAddendum: " (ignored if --no-build option is present)", dependenciesToCheckout: dependenciesToUpdate)
-			<*> dependenciesToUpdate
+			<*> CheckoutOptions.evaluate(m, useBinariesAddendum: " (ignored if --no-build option is present)", dependenciesUsage: "the dependency names to update, checkout and build")
 	}
 
 	/// Attempts to load the project referenced by the options, and configure it

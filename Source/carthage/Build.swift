@@ -186,9 +186,9 @@ public struct BuildOptions: OptionsType {
 	public let directoryPath: String
 	public let dependenciesToBuild: [String]?
 
-	public static func create(configuration: String) -> BuildPlatform -> Bool -> ColorOptions -> Bool -> String -> String -> BuildOptions {
+	public static func create(configuration: String) -> BuildPlatform -> Bool -> ColorOptions -> Bool -> String -> [String] -> BuildOptions {
 		return { buildPlatform in { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
-			let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild.split()
+			let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
 			return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
 		} } } } } }
 	}
@@ -201,7 +201,7 @@ public struct BuildOptions: OptionsType {
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 			<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
-			<*> m <| Argument(defaultValue: "", usage: "the dependency names to build separated by commas or spaces")
+			<*> m <| Argument(defaultValue: [], usage: "the dependency names to build")
 	}
 }
 
