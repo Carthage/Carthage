@@ -594,7 +594,8 @@ public final class Project {
 
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in
-				return resolver.resolveDependenciesInResolvedCartfile(resolvedCartfile,
+				return resolver.resolveDependenciesInResolvedCartfile(
+					resolvedCartfile,
 					dependenciesToResolve: dependenciesToBuild
 				)
 			}

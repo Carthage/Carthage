@@ -19,9 +19,10 @@ public struct UpdateCommand: CommandType {
 
 	public func run(options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
-			.flatMap(.Merge) { $0.updateDependencies(
-				shouldCheckout: options.checkoutAfterUpdate,
-				dependenciesToUpdate: options.dependenciesToUpdate
+			.flatMap(.Merge) {
+				$0.updateDependencies(
+					shouldCheckout: options.checkoutAfterUpdate,
+					dependenciesToUpdate: options.dependenciesToUpdate
 				)
 			}
 			.then(options.buildProducer)

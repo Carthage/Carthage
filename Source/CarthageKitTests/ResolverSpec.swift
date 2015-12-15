@@ -62,11 +62,13 @@ class ResolverSpec: QuickSpec {
 			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency, resolvedGitReference: self.resolvedGitReference)
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
 
-			let producer = resolver.resolveDependenciesInCartfile(testCartfile,
+			let producer = resolver.resolveDependenciesInCartfile(
+				testCartfile,
 				lastResolved: ResolvedCartfile(dependencies: [
 						self.dependencyForOwner("danielgindi", name: "ios-charts", version: "2.4.0"),
 					]),
-				dependenciesToUpdate: [ "Mantle", "ReactiveCocoa" ])
+				dependenciesToUpdate: [ "Mantle", "ReactiveCocoa" ]
+			)
 			let dependencies = self.orderedDependencies(producer)
 			expect(dependencies.count) == 6
 
@@ -124,8 +126,10 @@ class ResolverSpec: QuickSpec {
 			)
 
 			let testCartfile: ResolvedCartfile = self.loadTestCartfile("TestResolvedCartfile", withExtension: "resolved")
-			let producer = resolver.resolveDependenciesInResolvedCartfile(testCartfile,
-				dependenciesToResolve: [ "ios-charts", "objc-build-scripts" ])
+			let producer = resolver.resolveDependenciesInResolvedCartfile(
+				testCartfile,
+				dependenciesToResolve: [ "ios-charts", "objc-build-scripts" ]
+			)
 			let dependencies = self.orderedDependencies(producer)
 			expect(dependencies.count) == 3
 
