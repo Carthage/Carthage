@@ -43,7 +43,7 @@ class ResolverSpec: QuickSpec {
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
 			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
 			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count).to(equal(8));
+			expect(dependencies.count) == 8
 
 			var generator = dependencies.generate()
 
@@ -68,7 +68,7 @@ class ResolverSpec: QuickSpec {
 					]),
 				dependenciesToUpdate: [ "Mantle", "ReactiveCocoa" ])
 			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count).to(equal(6));
+			expect(dependencies.count) == 6
 
 			var generator = dependencies.generate()
 
@@ -101,7 +101,7 @@ class ResolverSpec: QuickSpec {
 			let testCartfile: ResolvedCartfile = self.loadTestCartfile("TestResolvedCartfile", withExtension: "resolved")
 			let producer = resolver.resolveDependenciesInResolvedCartfile(testCartfile)
 			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count).to(equal(8));
+			expect(dependencies.count) == 8
 
 			var generator = dependencies.generate()
 
@@ -127,7 +127,7 @@ class ResolverSpec: QuickSpec {
 			let producer = resolver.resolveDependenciesInResolvedCartfile(testCartfile,
 				dependenciesToResolve: [ "ios-charts", "objc-build-scripts" ])
 			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count).to(equal(3));
+			expect(dependencies.count) == 3
 
 			var generator = dependencies.generate()
 
@@ -170,7 +170,7 @@ class ResolverSpec: QuickSpec {
 			let testCartfile: Cartfile = self.loadTestCartfile("EmbeddedFrameworksContainerCartfile")
 			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
 			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count).to(equal(4));
+			expect(dependencies.count) == 4
 
 			var generator = dependencies.generate()
 
