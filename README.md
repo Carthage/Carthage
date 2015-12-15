@@ -119,9 +119,9 @@ If you want to work on your dependencies during development, and want them to be
 
 Note that you should be [using submodules](#using-submodules-for-dependencies) before doing this, because plain checkouts [should not be modified][Carthage/Checkouts] directly.
 
-### Bash/Zsh completion
+### Bash/Zsh/Fish completion
 
-Auto completion of Carthage commands and options are available as documented in [Bash/Zsh Completion][Bash/Zsh Completion].
+Auto completion of Carthage commands and options are available as documented in [Bash/Zsh/Fish Completion][Bash/Zsh/Fish Completion].
 
 ## Supporting Carthage for your framework
 
@@ -240,6 +240,11 @@ Want to advertise that your project can be used with Carthage? You can add a com
 ```markdown
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 ```
+## Known issues
+
+See [Carthage issue #924](https://github.com/Carthage/Carthage/issues/924) for background on the reasons, but as at Xcode 7.2, Apple recommends that ["Frameworks written in Swift should be compiled from source as part of the same project that depends on them to guarantee a single, consistent compilation environment. (22492040)"](https://developer.apple.com/library/ios/releasenotes/DeveloperTools/RN-Xcode/Chapters/Introduction.html). Using Swift frameworks built on other machines will cause Xcode's [debugger](https://github.com/Carthage/Carthage/issues/832) to [crash](https://github.com/Carthage/Carthage/issues/924) and other [strange build errors](https://github.com/Carthage/Carthage/issues/785). To avoid this, do not check your `Carthage/Build` directory into source control or use .framework release binaries. Instead, create a Run Script build phase in your Xcode project which calls `carthage build --no-use-binaries` (optionally wrap this in a check for the existence of the `Carthage/Build/` directory to avoid long build times due to recompiling dependencies unnecessarily.)
+
+Dupe [rdar://23551273](http://www.openradar.me/23551273) if you want Apple to fix the root cause of this problem.
 
 ## CarthageKit
 
@@ -258,5 +263,5 @@ Header backdrop photo is released under the [CC BY-NC-SA 2.0](https://creativeco
 [Cartfile.resolved]: Documentation/Artifacts.md#cartfileresolved
 [Carthage/Build]: Documentation/Artifacts.md#carthagebuild
 [Carthage/Checkouts]: Documentation/Artifacts.md#carthagecheckouts
-[Bash/Zsh Completion]: Documentation/BashZshCompletion.md
+[Bash/Zsh/Fish Completion]: Documentation/BashZshFishCompletion.md
 [CarthageKit]: Source/CarthageKit

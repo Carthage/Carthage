@@ -13,29 +13,25 @@ import Foundation
 import ReactiveCocoa
 
 public struct FetchCommand: CommandType {
+	public typealias Options = FetchOptions
 	public let verb = "fetch"
 	public let function = "Clones or fetches a Git repository ahead of time"
 
-	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
-		return producerWithOptions(FetchOptions.evaluate(mode))
-			.flatMap(.Merge) { options -> SignalProducer<(), CommandError> in
-				let project = ProjectIdentifier.Git(options.repositoryURL)
-				var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
+	public func run(options: Options) -> Result<(), CarthageError> {
+		let project = ProjectIdentifier.Git(options.repositoryURL)
+		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
-				return cloneOrFetchProject(project, preferHTTPS: true)
-					.on(next: { event, _ in
-						eventSink.put(event)
-					})
-					.then(SignalProducer<(), CarthageError>.empty)
-					.promoteErrors()
-			}
+		return cloneOrFetchProject(project, preferHTTPS: true)
+			.on(next: { event, _ in
+				eventSink.put(event)
+			})
 			.waitOnCommand()
 	}
 }
 
-private struct FetchOptions: OptionsType {
-	let colorOptions: ColorOptions
-	let repositoryURL: GitURL
+public struct FetchOptions: OptionsType {
+	public let colorOptions: ColorOptions
+	public let repositoryURL: GitURL
 
 	static func create(colorOptions: ColorOptions) -> GitURL -> FetchOptions {
 		return { repositoryURL in
@@ -43,9 +39,9 @@ private struct FetchOptions: OptionsType {
 		}
 	}
 
-	static func evaluate(m: CommandMode) -> Result<FetchOptions, CommandantError<CarthageError>> {
+	public static func evaluate(m: CommandMode) -> Result<FetchOptions, CommandantError<CarthageError>> {
 		return create
 			<*> ColorOptions.evaluate(m)
-			<*> m <| Option(usage: "the Git repository that should be cloned or fetched")
+			<*> m <| Argument(usage: "the Git repository that should be cloned or fetched")
 	}
 }

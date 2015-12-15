@@ -57,53 +57,15 @@ extension String {
 	}
 }
 
-/// Wraps CommandantError and adds ErrorType conformance.
-public struct CommandError: ErrorType {
-	public let error: CommandantError<CarthageError>
-
-	public init(_ error: CommandantError<CarthageError>) {
-		self.error = error
-	}
-}
-
-extension CommandError: CustomStringConvertible {
-	public var description: String {
-		return error.description
-	}
-}
-
-extension SignalType where Error == CarthageError {
-	/// Promotes CarthageErrors into CommandErrors.
-	internal func promoteErrors() -> Signal<Value, CommandError> {
-		return signal.mapError { (error: CarthageError) -> CommandError in
-			let commandantError = CommandantError.CommandError(error)
-			return CommandError(commandantError)
-		}
-	}
-}
-
 extension SignalProducerType where Error == CarthageError {
-	/// Promotes CarthageErrors into CommandErrors.
-	internal func promoteErrors() -> SignalProducer<Value, CommandError> {
-		return lift { $0.promoteErrors() }
-	}
-}
-
-/// Lifts the Result of options parsing into a SignalProducer.
-internal func producerWithOptions<T>(result: Result<T, CommandantError<CarthageError>>) -> SignalProducer<T, CommandError> {
-	let mappedResult = result.mapError(CommandError.init)
-	return SignalProducer(result: mappedResult)
-}
-
-extension SignalProducerType where Error == CommandError {
 	/// Waits on a SignalProducer that implements the behavior of a CommandType.
-	internal func waitOnCommand() -> Result<(), CommandantError<CarthageError>> {
+	internal func waitOnCommand() -> Result<(), CarthageError> {
 		let result = producer
-			.then(SignalProducer<(), CommandError>.empty)
+			.then(SignalProducer<(), CarthageError>.empty)
 			.wait()
 		
 		TaskDescription.waitForAllTaskTermination()
-		return result.mapError { $0.error }
+		return result
 	}
 }
 

@@ -12,20 +12,14 @@ import Foundation
 import Result
 
 public struct VersionCommand: CommandType {
+	public typealias Options = NoOptions<CarthageError>
 	public let verb = "version"
 	public let function = "Display the current version of Carthage"
 
-	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
-		switch mode {
-		case .Arguments:
-			let versionString = NSBundle(identifier: CarthageKitBundleIdentifier)?.objectForInfoDictionaryKey("CFBundleShortVersionString") as! String
-			let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString)).value
-			carthage.println(semVer!)
-
-		default:
-			break
-		}
-
+	public func run(options: Options) -> Result<(), CarthageError> {
+		let versionString = NSBundle(identifier: CarthageKitBundleIdentifier)?.objectForInfoDictionaryKey("CFBundleShortVersionString") as! String
+		let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString)).value
+		carthage.println(semVer!)
 		return .Success(())
 	}
 }
