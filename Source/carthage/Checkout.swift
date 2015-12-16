@@ -13,7 +13,6 @@ import Result
 import ReactiveCocoa
 
 public struct CheckoutCommand: CommandType {
-	public typealias Options = CheckoutOptions
 	public let verb = "checkout"
 	public let function = "Check out the project's dependencies"
 

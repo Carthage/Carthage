@@ -14,11 +14,10 @@ import ReactiveCocoa
 
 
 public struct CopyFrameworksCommand: CommandType {
-	public typealias Options = NoOptions<CarthageError>
 	public let verb = "copy-frameworks"
 	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
 		return inputFiles()
 			.flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
 				let frameworkName = (frameworkPath as NSString).lastPathComponent
