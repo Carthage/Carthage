@@ -188,7 +188,8 @@ internal func permutations<T, E>(producers: [SignalProducer<T, E>]) -> SignalPro
 	for producer in producers {
 		combined = combined
 			.permuteWith(producer)
-			.map { (var array, value) in
+			.map { array, value in
+				var array = array
 				array.append(value)
 				return array
 			}
@@ -303,7 +304,8 @@ extension NSFileManager {
 /// dictionary where the keys are elements from the sequence and values count
 /// how many times elements are present in the sequence.
 internal func buildCountedSet<S: SequenceType>(sequence: S) -> [S.Generator.Element: Int] {
-	return sequence.reduce([:]) { (var set, elem) in
+	return sequence.reduce([:]) { set, elem in
+		var set = set
 		if let count = set[elem] {
 			set[elem] = count + 1
 		}

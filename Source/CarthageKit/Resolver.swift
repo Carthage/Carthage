@@ -287,7 +287,9 @@ private struct DependencyGraph: Equatable {
 	/// Returns the node as actually inserted into the graph (which may be
 	/// different from the node passed in), or an error if this addition would
 	/// make the graph inconsistent.
-	mutating func addNode(var node: DependencyNode, dependencyOf: DependencyNode?) -> Result<DependencyNode, CarthageError> {
+	mutating func addNode(node: DependencyNode, dependencyOf: DependencyNode?) -> Result<DependencyNode, CarthageError> {
+		var node = node
+
 		if let index = allNodes.indexOf(node) {
 			let existingNode = allNodes[index]
 
@@ -318,7 +320,8 @@ private struct DependencyGraph: Equatable {
 
 			// Add a nested dependency to the list of its ancestor.
 			let edgesCopy = edges
-			for (ancestor, var itsDependencies) in edgesCopy {
+			for (ancestor, itsDependencies) in edgesCopy {
+				var itsDependencies = itsDependencies
 				if itsDependencies.contains(dependencyOf) {
 					itsDependencies.insert(node)
 					edges[ancestor] = itsDependencies
@@ -391,14 +394,16 @@ private func mergeGraphs(lhs: DependencyGraph, _ rhs: DependencyGraph) -> Result
 	var result: Result<DependencyGraph, CarthageError> = .Success(lhs)
 
 	for root in rhs.roots {
-		result = result.flatMap { (var graph) in
+		result = result.flatMap { graph in
+			var graph = graph
 			return graph.addNode(root, dependencyOf: nil).map { _ in graph }
 		}
 	}
 
 	for (node, dependencies) in rhs.edges {
 		for dependency in dependencies {
-			result = result.flatMap { (var graph) in
+			result = result.flatMap { graph in
+				var graph = graph
 				return graph.addNode(dependency, dependencyOf: node).map { _ in graph }
 			}
 		}
