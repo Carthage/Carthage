@@ -215,7 +215,9 @@ public final class Project {
 
 		return cartfile
 			.zipWith(privateCartfile)
-			.attemptMap { (var cartfile, privateCartfile) -> Result<Cartfile, CarthageError> in
+			.attemptMap { cartfile, privateCartfile -> Result<Cartfile, CarthageError> in
+				var cartfile = cartfile
+
 				let duplicateDeps = cartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)"]) }
 					+ privateCartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectPrivateCartfilePath)"]) }
 					+ duplicateProjectsInCartfiles(cartfile, privateCartfile).map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]) }
@@ -483,7 +485,8 @@ public final class Project {
 		let checkoutSignal = SignalProducer.attempt { () -> Result<Submodule?, CarthageError> in
 				var submodule: Submodule?
 
-				if var foundSubmodule = submodulesByPath[project.relativePath] {
+				if let foundSubmodule = submodulesByPath[project.relativePath] {
+					var foundSubmodule = foundSubmodule
 					foundSubmodule.URL = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
 					foundSubmodule.SHA = revision
 					submodule = foundSubmodule
@@ -522,7 +525,8 @@ public final class Project {
 		/// Determine whether the repository currently holds any submodules (if
 		/// it even is a repository).
 		let submodulesSignal = submodulesInRepository(self.directoryURL)
-			.reduce([:]) { (var submodulesByPath: [String: Submodule], submodule) in
+			.reduce([:]) { (submodulesByPath: [String: Submodule], submodule) in
+				var submodulesByPath = submodulesByPath
 				submodulesByPath[submodule.path] = submodule
 				return submodulesByPath
 			}
