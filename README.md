@@ -189,11 +189,11 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	
 	```YAML
 	language: objective-c
-	osx_image: xcode7.1
+	osx_image: xcode7.2
 	xcode_project: <PROJECT_PLACEHOLDER>
 	# xcode_workspace: <WORKSPACE_PLACEHOLDER>
 	xcode_scheme: <SCHEME_PLACEHOLDER>
-	xcode_sdk: iphonesimulator9.1
+	xcode_sdk: iphonesimulator9.2
 	env:
 	  global: 
 	    - FRAMEWORK_NAME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
