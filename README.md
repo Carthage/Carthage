@@ -217,15 +217,19 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	
 	In `.travis.yml` locate: 
 	
-		on: 
-			repo: repo/repo
+	```YAML
+	on: 
+		repo: repo/repo
+	```
 		
 	And add `tags: true` and `skip_cleanup: true`:
 		
-		skip_cleanup: true
-		on:
-			repo: repo/repo
-			tags: true
+	```YAML
+	skip_cleanup: true
+	on:
+		repo: repo/repo
+		tags: true
+	```
 	
 	That will let travis know to create a deployment when a new tag is pushed and prevent travis to cleanup the generated zip file
 
