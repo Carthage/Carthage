@@ -195,18 +195,18 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	xcode_scheme: <SCHEME_PLACEHOLDER>
 	xcode_sdk: iphonesimulator9.1
 	env:
-		global: 
-		- FRAMEWORK_NAME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
+	  global: 
+	    - FRAMEWORK_NAME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
 	before_install:
-	- brew update
-	- brew install carthage
+	  - brew update
+	  - brew install carthage
 	before_script:
-	# bootstrap the dependencies for the project
-	# you can remove if you don't have dependencies
-	- carthage bootstrap	
+	  # bootstrap the dependencies for the project
+	  # you can remove if you don't have dependencies
+	  - carthage bootstrap	
 	before_deploy:
-	- carthage build --no-skip-current
-	- carthage archive $FRAMEWORK_NAME
+	  - carthage build --no-skip-current
+	  - carthage archive $FRAMEWORK_NAME
 	```
 1. Run `travis setup releases`, follow documentation [here](https://docs.travis-ci.com/user/deployment/releases/)
 
@@ -219,7 +219,7 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	
 	```YAML
 	on: 
-		repo: repo/repo
+	  repo: repo/repo
 	```
 		
 	And add `tags: true` and `skip_cleanup: true`:
@@ -227,8 +227,8 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	```YAML
 	skip_cleanup: true
 	on:
-		repo: repo/repo
-		tags: true
+	  repo: repo/repo
+	  tags: true
 	```
 	
 	That will let travis know to create a deployment when a new tag is pushed and prevent travis to cleanup the generated zip file
