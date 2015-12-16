@@ -13,14 +13,12 @@ import Result
 import ReactiveCocoa
 
 public struct BootstrapCommand: CommandType {
-	// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
-	// `update` flags.
-	public typealias Options = UpdateOptions
-	
 	public let verb = "bootstrap"
 	public let function = "Check out and build the project's dependencies"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(options: UpdateOptions) -> Result<(), CarthageError> {
+		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
+		// `update` flags.
 		return options.loadProject()
 			.flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
 				if !NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {

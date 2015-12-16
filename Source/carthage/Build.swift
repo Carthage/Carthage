@@ -14,11 +14,10 @@ import ReactiveCocoa
 import ReactiveTask
 
 public struct BuildCommand: CommandType {
-	public typealias Options = BuildOptions
 	public let verb = "build"
 	public let function = "Build the project's dependencies"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(options: BuildOptions) -> Result<(), CarthageError> {
 		return self.buildWithOptions(options)
 			.waitOnCommand()
 	}

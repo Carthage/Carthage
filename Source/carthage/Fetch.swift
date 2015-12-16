@@ -13,11 +13,10 @@ import Foundation
 import ReactiveCocoa
 
 public struct FetchCommand: CommandType {
-	public typealias Options = FetchOptions
 	public let verb = "fetch"
 	public let function = "Clones or fetches a Git repository ahead of time"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(options: FetchOptions) -> Result<(), CarthageError> {
 		let project = ProjectIdentifier.Git(options.repositoryURL)
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 

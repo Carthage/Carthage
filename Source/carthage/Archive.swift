@@ -13,11 +13,10 @@ import Result
 import ReactiveCocoa
 
 public struct ArchiveCommand: CommandType {
-	public typealias Options = ArchiveOptions
 	public let verb = "archive"
 	public let function = "Archives a built framework into a zip that Carthage can use"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(options: ArchiveOptions) -> Result<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 
 		return SignalProducer(values: Platform.supportedPlatforms)
