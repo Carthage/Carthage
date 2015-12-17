@@ -321,11 +321,17 @@ public final class Project {
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func updatedResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
+	public func updatedResolvedCartfile(dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
 		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
 
-		return loadCombinedCartfile()
-			.flatMap(.Merge) { cartfile in resolver.resolveDependenciesInCartfile(cartfile) }
+		let resolvedCartfile: SignalProducer<ResolvedCartfile?, CarthageError> = loadResolvedCartfile()
+			.map(Optional.init)
+			.flatMapError { _ in .init(value: nil) }
+
+		return zip(loadCombinedCartfile(), resolvedCartfile)
+			.flatMap(.Merge) { cartfile, resolvedCartfile in
+				return resolver.resolveDependenciesInCartfile(cartfile, lastResolved: resolvedCartfile, dependenciesToUpdate: dependenciesToUpdate)
+			}
 			.collect()
 			.map(ResolvedCartfile.init)
 	}
@@ -333,12 +339,12 @@ public final class Project {
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in Cartfile.resolved, and also in the working
 	/// directory checkouts if the given parameter is true.
-	public func updateDependencies(shouldCheckout shouldCheckout: Bool = true) -> SignalProducer<(), CarthageError> {
-		return updatedResolvedCartfile()
+	public func updateDependencies(shouldCheckout shouldCheckout: Bool = true, dependenciesToUpdate: [String]? = nil) -> SignalProducer<(), CarthageError> {
+		return updatedResolvedCartfile(dependenciesToUpdate)
 			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}
-			.then(shouldCheckout ? checkoutResolvedDependencies() : .empty)
+			.then(shouldCheckout ? checkoutResolvedDependencies(dependenciesToUpdate) : .empty)
 	}
 
 	/// Installs binaries and debug symbols for the given project, if available.
@@ -520,8 +526,9 @@ public final class Project {
 			.then(checkoutSignal)
 	}
 
-	/// Checks out the dependencies listed in the project's Cartfile.resolved.
-	public func checkoutResolvedDependencies() -> SignalProducer<(), CarthageError> {
+	/// Checks out the dependencies listed in the project's Cartfile.resolved,
+	/// optionally they are limited by the given list of dependency names.
+	public func checkoutResolvedDependencies(dependenciesToCheckout: [String]? = nil) -> SignalProducer<(), CarthageError> {
 		/// Determine whether the repository currently holds any submodules (if
 		/// it even is a repository).
 		let submodulesSignal = submodulesInRepository(self.directoryURL)
@@ -531,10 +538,24 @@ public final class Project {
 				return submodulesByPath
 			}
 
+		let resolver = Resolver(
+			versionsForDependency: versionsForProject,
+			cartfileForDependency: cartfileForDependency,
+			resolvedGitReference: { _, refName in
+				// Dependencies should be fully resolved already.
+				return SignalProducer(value: PinnedVersion(refName))
+			}
+		)
+
 		return loadResolvedCartfile()
+			.flatMap(.Merge) { resolvedCartfile in
+				return resolver
+					.resolveDependenciesInResolvedCartfile(resolvedCartfile, dependenciesToResolve: dependenciesToCheckout)
+					.collect()
+			}
 			.zipWith(submodulesSignal)
-			.flatMap(.Merge) { resolvedCartfile, submodulesByPath -> SignalProducer<(), CarthageError> in
-				return SignalProducer(values: resolvedCartfile.dependencies)
+			.flatMap(.Merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
+				return SignalProducer(values: dependencies)
 					.flatMap(.Merge) { dependency -> SignalProducer<(), CarthageError> in
 						let project = dependency.project
 						let revision = dependency.version.commitish
@@ -561,10 +582,11 @@ public final class Project {
 			.then(.empty)
 	}
 
-	/// Attempts to build each Carthage dependency that has been checked out.
+	/// Attempts to build each Carthage dependency that has been checked out, 
+	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let resolver = Resolver(
 			versionsForDependency: versionsForProject,
 			cartfileForDependency: cartfileForDependency,
@@ -575,7 +597,12 @@ public final class Project {
 		)
 
 		return loadResolvedCartfile()
-			.flatMap(.Merge) { resolvedCartfile in resolver.resolveDependenciesInResolvedCartfile(resolvedCartfile) }
+			.flatMap(.Merge) { resolvedCartfile in
+				return resolver.resolveDependenciesInResolvedCartfile(
+					resolvedCartfile,
+					dependenciesToResolve: dependenciesToBuild
+				)
+			}
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
 				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {

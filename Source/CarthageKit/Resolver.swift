@@ -35,22 +35,55 @@ public struct Resolver {
 	///
 	/// Sends each recursive dependency with its resolved version, in the order
 	/// that they should be built.
-	public func resolveDependenciesInCartfile(cartfile: Cartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	public func resolveDependenciesInCartfile(cartfile: Cartfile, lastResolved: ResolvedCartfile? = nil, dependenciesToUpdate: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return resolveDependenciesFromNodePermutations(nodePermutationsForCartfile(cartfile))
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				return SignalProducer(values: graph.orderedNodes)
-					.map { node in
-						node.dependencies = graph.edges[node] ?? []
+				let orderedNodes = graph.orderedNodes.map { node -> DependencyNode in
+					node.dependencies = graph.edges[node] ?? []
+					return node
+				}
+				let orderedNodesProducer = SignalProducer<DependencyNode, CarthageError>(values: orderedNodes)
+
+				guard
+					let dependenciesToUpdate = dependenciesToUpdate,
+					let lastResolved = lastResolved
+					where !dependenciesToUpdate.isEmpty else {
+					// All the dependencies are affected.
+					return orderedNodesProducer.map { node in node.dependencyVersion }
+				}
+
+				// When target dependencies are specified
+				return orderedNodesProducer.map { node -> Dependency<PinnedVersion>? in
+					// A dependency included in the targets should be affected.
+					if dependenciesToUpdate.contains(node.project.name) {
 						return node.dependencyVersion
 					}
+
+					// Nested dependencies of the targets should also be affected.
+					if graph.dependencies(dependenciesToUpdate, containsNestedDependencyOfNode: node) {
+						return node.dependencyVersion
+					}
+
+					// The dependencies which are not related to the targets
+					// should not be affected, so use the version in the last
+					// Cartfile.resolved.
+					if let dependencyForProject = lastResolved.dependencyForProject(node.project) {
+						return dependencyForProject
+					}
+
+					// Skip newly added nodes which are not in the targets.
+					return nil
+				}
+				.ignoreNil()
 			}
 	}
 
-	/// Attempts to determine the build order for the resolved dependencies.
+	/// Attempts to determine the build order for the resolved dependencies,
+	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Sends each recursive dependency with its already resolved version, in the
 	/// order that they should be built.
-	public func resolveDependenciesInResolvedCartfile(resolvedCartfile: ResolvedCartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	public func resolveDependenciesInResolvedCartfile(resolvedCartfile: ResolvedCartfile, dependenciesToResolve: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		let nodes = resolvedCartfile.dependencies.map {
 			DependencyNode(
 				project: $0.project,
@@ -60,11 +93,23 @@ public struct Resolver {
 		}
 		return resolveDependenciesFromNodePermutations(SignalProducer(value: nodes))
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				return SignalProducer(values: graph.orderedNodes)
-					.map { node in
-						node.dependencies = graph.edges[node] ?? []
-						return node.dependencyVersion
-					}
+				let dependencies = graph.orderedNodes.map { node -> Dependency<PinnedVersion> in
+					node.dependencies = graph.edges[node] ?? []
+					return node.dependencyVersion
+				}
+
+				guard let dependenciesToResolve = dependenciesToResolve where !dependenciesToResolve.isEmpty else {
+					return .init(values: dependencies)
+				}
+
+				var toResolve = Set(dependenciesToResolve)
+
+				dependencies
+					.filter { toResolve.contains($0.project.name) }
+					.forEach { toResolve.unionInPlace($0.dependencies.map { $0.name }) }
+
+				let filtered = dependencies.filter { toResolve.contains($0.project.name) }
+				return .init(values: filtered)
 			}
 	}
 
@@ -332,6 +377,17 @@ private struct DependencyGraph: Equatable {
 		}
 
 		return .Success(node)
+	}
+
+	/// Whether the given node is included or not in the nested dependencies of
+	/// the given dependencies.
+	func dependencies(dependencies: [String], containsNestedDependencyOfNode node: DependencyNode) -> Bool {
+		return edges.lazy
+			.filter { edge, nodeSet in
+				return dependencies.contains(edge.project.name) && nodeSet.contains(node)
+			}
+			.map { _ in true }
+			.first ?? false
 	}
 }
 

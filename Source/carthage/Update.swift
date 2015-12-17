@@ -18,7 +18,12 @@ public struct UpdateCommand: CommandType {
 
 	public func run(options: UpdateOptions) -> Result<(), CarthageError> {
 		return options.loadProject()
-			.flatMap(.Merge) { $0.updateDependencies(shouldCheckout: options.checkoutAfterUpdate) }
+			.flatMap(.Merge) {
+				$0.updateDependencies(
+					shouldCheckout: options.checkoutAfterUpdate,
+					dependenciesToUpdate: options.dependenciesToUpdate
+				)
+			}
 			.then(options.buildProducer)
 			.waitOnCommand()
 	}
@@ -31,10 +36,11 @@ public struct UpdateOptions: OptionsType {
 	public let buildPlatform: BuildPlatform
 	public let verbose: Bool
 	public let checkoutOptions: CheckoutOptions
+	public let dependenciesToUpdate: [String]?
 
 	/// The build options corresponding to these options.
 	public var buildOptions: BuildOptions {
-		return BuildOptions(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath)
+		return BuildOptions(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath, dependenciesToBuild: dependenciesToUpdate)
 	}
 
 	/// If `checkoutAfterUpdate` and `buildAfterUpdate` are both true, this will
@@ -51,7 +57,7 @@ public struct UpdateOptions: OptionsType {
 
 	public static func create(configuration: String) -> BuildPlatform -> Bool -> Bool -> Bool -> CheckoutOptions -> UpdateOptions {
 		return { buildPlatform in { verbose in { checkoutAfterUpdate in { buildAfterUpdate in { checkoutOptions in
-			return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions)
+			return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, verbose: verbose, checkoutOptions: checkoutOptions, dependenciesToUpdate: checkoutOptions.dependenciesToCheckout)
 		} } } } }
 	}
 
@@ -62,7 +68,7 @@ public struct UpdateOptions: OptionsType {
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 			<*> m <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 			<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating (ignored if --no-checkout option is present)")
-			<*> CheckoutOptions.evaluate(m, useBinariesAddendum: " (ignored if --no-build option is present)")
+			<*> CheckoutOptions.evaluate(m, useBinariesAddendum: " (ignored if --no-build option is present)", dependenciesUsage: "the dependency names to update, checkout and build")
 	}
 
 	/// Attempts to load the project referenced by the options, and configure it

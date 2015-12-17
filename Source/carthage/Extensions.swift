@@ -48,6 +48,15 @@ internal func print<T>(object: T) {
 	}
 }
 
+extension String {
+	/// Split the string into substrings separated by the given separators.
+	internal func split(allowEmptySlices: Bool = false, separators: [Character] = [ ",", " " ]) -> [String] {
+		return characters
+			.split(allowEmptySlices: allowEmptySlices, isSeparator: separators.contains)
+			.map(String.init)
+	}
+}
+
 extension SignalProducerType where Error == CarthageError {
 	/// Waits on a SignalProducer that implements the behavior of a CommandType.
 	internal func waitOnCommand() -> Result<(), CarthageError> {

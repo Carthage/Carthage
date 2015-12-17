@@ -114,7 +114,7 @@ public struct BuildCommand: CommandType {
 				}
 			}
 			.flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, dependenciesToBuild: options.dependenciesToBuild, forPlatforms: options.buildPlatform.platforms)
 			}
 
 		if options.skipCurrent {
@@ -183,11 +183,13 @@ public struct BuildOptions: OptionsType {
 	public let colorOptions: ColorOptions
 	public let verbose: Bool
 	public let directoryPath: String
+	public let dependenciesToBuild: [String]?
 
-	public static func create(configuration: String) -> BuildPlatform -> Bool -> ColorOptions -> Bool -> String -> BuildOptions {
-		return { buildPlatform in { skipCurrent in { colorOptions in { verbose in { directoryPath in
-			return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
-		} } } } }
+	public static func create(configuration: String) -> BuildPlatform -> Bool -> ColorOptions -> Bool -> String -> [String] -> BuildOptions {
+		return { buildPlatform in { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
+			let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
+			return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
+		} } } } } }
 	}
 
 	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
@@ -198,6 +200,7 @@ public struct BuildOptions: OptionsType {
 			<*> ColorOptions.evaluate(m)
 			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 			<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+			<*> m <| Argument(defaultValue: [], usage: "the dependency names to build")
 	}
 }
 
@@ -296,9 +299,7 @@ extension BuildPlatform: ArgumentType {
 	]
 
 	public static func fromString(string: String) -> BuildPlatform? {
-		let tokens = string.characters
-			.split(allowEmptySlices: false) { $0 == "," || $0 == " " }
-			.map(String.init)
+		let tokens = string.split()
 
 		let findBuildPlatform: String -> BuildPlatform? = { string in
 			return self.acceptedStrings.lazy

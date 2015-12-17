@@ -28,7 +28,7 @@ public struct BootstrapCommand: CommandType {
 				}
 
 				if options.checkoutAfterUpdate {
-					return project.checkoutResolvedDependencies()
+					return project.checkoutResolvedDependencies(options.dependenciesToUpdate)
 				} else {
 					return .empty
 				}
