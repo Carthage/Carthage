@@ -13,10 +13,29 @@ import Result
 import ReactiveCocoa
 
 public struct ArchiveCommand: CommandType {
+	public struct Options: OptionsType {
+		public let frameworkName: String
+		public let outputPath: String
+		public let colorOptions: ColorOptions
+
+		static func create(outputPath: String) -> ColorOptions -> String -> Options {
+			return { colorOptions in { frameworkName in
+				return self.init(frameworkName: frameworkName, outputPath: outputPath, colorOptions: colorOptions)
+			} }
+		}
+
+		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+			return create
+				<*> m <| Option(key: "output", defaultValue: "", usage: "the path at which to create the zip file (or blank to infer it from the framework name)")
+				<*> ColorOptions.evaluate(m)
+				<*> m <| Argument(usage: "the name of the built framework to archive (without any extension)")
+		}
+	}
+	
 	public let verb = "archive"
 	public let function = "Archives a built framework into a zip that Carthage can use"
 
-	public func run(options: ArchiveOptions) -> Result<(), CarthageError> {
+	public func run(options: Options) -> Result<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 
 		return SignalProducer(values: Platform.supportedPlatforms)
@@ -53,24 +72,5 @@ public struct ArchiveCommand: CommandType {
 				})
 			}
 			.waitOnCommand()
-	}
-}
-
-public struct ArchiveOptions: OptionsType {
-	public let frameworkName: String
-	public let outputPath: String
-	public let colorOptions: ColorOptions
-
-	static func create(outputPath: String) -> ColorOptions -> String -> ArchiveOptions {
-		return { colorOptions in { frameworkName in
-			return self.init(frameworkName: frameworkName, outputPath: outputPath, colorOptions: colorOptions)
-		} }
-	}
-
-	public static func evaluate(m: CommandMode) -> Result<ArchiveOptions, CommandantError<CarthageError>> {
-		return create
-			<*> m <| Option(key: "output", defaultValue: "", usage: "the path at which to create the zip file (or blank to infer it from the framework name)")
-			<*> ColorOptions.evaluate(m)
-			<*> m <| Argument(usage: "the name of the built framework to archive (without any extension)")
 	}
 }

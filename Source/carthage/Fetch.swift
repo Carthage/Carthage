@@ -13,10 +13,27 @@ import Foundation
 import ReactiveCocoa
 
 public struct FetchCommand: CommandType {
+	public struct Options: OptionsType {
+		public let colorOptions: ColorOptions
+		public let repositoryURL: GitURL
+
+		static func create(colorOptions: ColorOptions) -> GitURL -> Options {
+			return { repositoryURL in
+				return self.init(colorOptions: colorOptions, repositoryURL: repositoryURL)
+			}
+		}
+
+		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+			return create
+				<*> ColorOptions.evaluate(m)
+				<*> m <| Argument(usage: "the Git repository that should be cloned or fetched")
+		}
+	}
+	
 	public let verb = "fetch"
 	public let function = "Clones or fetches a Git repository ahead of time"
 
-	public func run(options: FetchOptions) -> Result<(), CarthageError> {
+	public func run(options: Options) -> Result<(), CarthageError> {
 		let project = ProjectIdentifier.Git(options.repositoryURL)
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
@@ -25,22 +42,5 @@ public struct FetchCommand: CommandType {
 				eventSink.put(event)
 			})
 			.waitOnCommand()
-	}
-}
-
-public struct FetchOptions: OptionsType {
-	public let colorOptions: ColorOptions
-	public let repositoryURL: GitURL
-
-	static func create(colorOptions: ColorOptions) -> GitURL -> FetchOptions {
-		return { repositoryURL in
-			return self.init(colorOptions: colorOptions, repositoryURL: repositoryURL)
-		}
-	}
-
-	public static func evaluate(m: CommandMode) -> Result<FetchOptions, CommandantError<CarthageError>> {
-		return create
-			<*> ColorOptions.evaluate(m)
-			<*> m <| Argument(usage: "the Git repository that should be cloned or fetched")
 	}
 }

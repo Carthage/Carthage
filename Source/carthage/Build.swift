@@ -14,16 +14,44 @@ import ReactiveCocoa
 import ReactiveTask
 
 public struct BuildCommand: CommandType {
+	public struct Options: OptionsType {
+		public let configuration: String
+		public let buildPlatform: BuildPlatform
+		public let skipCurrent: Bool
+		public let colorOptions: ColorOptions
+		public let verbose: Bool
+		public let directoryPath: String
+		public let dependenciesToBuild: [String]?
+
+		public static func create(configuration: String) -> BuildPlatform -> Bool -> ColorOptions -> Bool -> String -> [String] -> Options {
+			return { buildPlatform in { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
+				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
+				return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
+			} } } } } }
+		}
+
+		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+			return create
+				<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
+				<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)")
+				<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
+				<*> ColorOptions.evaluate(m)
+				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
+				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Argument(defaultValue: [], usage: "the dependency names to build")
+		}
+	}
+	
 	public let verb = "build"
 	public let function = "Build the project's dependencies"
 
-	public func run(options: BuildOptions) -> Result<(), CarthageError> {
+	public func run(options: Options) -> Result<(), CarthageError> {
 		return self.buildWithOptions(options)
 			.waitOnCommand()
 	}
 
 	/// Builds a project with the given options.
-	public func buildWithOptions(options: BuildOptions) -> SignalProducer<(), CarthageError> {
+	public func buildWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
 			.flatMap(.Merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
@@ -96,7 +124,7 @@ public struct BuildCommand: CommandType {
 	/// Builds the project in the given directory, using the given options.
 	///
 	/// Returns a producer of producers, representing each scheme being built.
-	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: Options) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
 
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
@@ -161,7 +189,7 @@ public struct BuildCommand: CommandType {
 
 	/// Opens a file handle for logging, returning the handle and the URL to any
 	/// temporary file on disk.
-	private func openLoggingHandle(options: BuildOptions) -> SignalProducer<(NSFileHandle, NSURL?), CarthageError> {
+	private func openLoggingHandle(options: Options) -> SignalProducer<(NSFileHandle, NSURL?), CarthageError> {
 		if options.verbose {
 			let out: (NSFileHandle, NSURL?) = (NSFileHandle.fileHandleWithStandardOutput(), nil)
 			return SignalProducer(value: out)
@@ -173,34 +201,6 @@ public struct BuildCommand: CommandType {
 					return .WriteFailed(temporaryDirectoryURL, error)
 				}
 		}
-	}
-}
-
-public struct BuildOptions: OptionsType {
-	public let configuration: String
-	public let buildPlatform: BuildPlatform
-	public let skipCurrent: Bool
-	public let colorOptions: ColorOptions
-	public let verbose: Bool
-	public let directoryPath: String
-	public let dependenciesToBuild: [String]?
-
-	public static func create(configuration: String) -> BuildPlatform -> Bool -> ColorOptions -> Bool -> String -> [String] -> BuildOptions {
-		return { buildPlatform in { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
-			let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
-			return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
-		} } } } } }
-	}
-
-	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
-		return create
-			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
-			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)")
-			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
-			<*> ColorOptions.evaluate(m)
-			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
-			<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
-			<*> m <| Argument(defaultValue: [], usage: "the dependency names to build")
 	}
 }
 
