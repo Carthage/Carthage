@@ -190,7 +190,8 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 	let enumerationOptions: NSDirectoryEnumerationOptions = [ .SkipsHiddenFiles, .SkipsPackageDescendants ]
 
 	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-		.reduce([]) { (var matches: [ProjectLocator], tuple) -> [ProjectLocator] in
+		.reduce([]) { (matches: [ProjectLocator], tuple) -> [ProjectLocator] in
+			var matches = matches
 			let (_, URL) = tuple
 			
 			if let UTI = URL.typeIdentifier.value {
@@ -953,10 +954,12 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		.reduce([:]) { (var sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
+		.reduce([:]) { (sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
+			var sdksByPlatform = sdksByPlatform
 			let platform = sdk.platform
 
-			if var sdks = sdksByPlatform[platform] {
+			if let sdks = sdksByPlatform[platform] {
+				var sdks = sdks
 				sdks.append(sdk)
 				sdksByPlatform.updateValue(sdks, forKey: platform)
 			} else {

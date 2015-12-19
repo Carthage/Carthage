@@ -57,8 +57,9 @@ public struct SemanticVersion: VersionType, Comparable {
 		// that.
 		scanner.scanUpToCharactersFromSet(versionCharacterSet, intoString: nil)
 
-		return self.fromScanner(scanner).flatMap { (var version) in
+		return self.fromScanner(scanner).flatMap { version in
 			if scanner.atEnd {
+				var version = version
 				version.pinnedVersion = pinnedVersion
 				return .Success(version)
 			} else {

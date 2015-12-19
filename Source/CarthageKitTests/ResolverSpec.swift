@@ -21,8 +21,12 @@ class ResolverSpec: QuickSpec {
 		return T.fromString(testCartfile).value!
 	}
 
-	private func orderedDependencies<T: CartfileType>(resolver: Resolver, fromCartfile cartfile: T) -> [Dependency] {
-		let result = cartfile.resolveDependenciesWith(resolver)
+	private func dependencyForOwner(owner: String, name: String, version: String) -> CarthageKit.Dependency<PinnedVersion> {
+		return CarthageKit.Dependency(project: .GitHub(GitHubRepository(owner: owner, name: name)), version: PinnedVersion(version))
+	}
+
+	private func orderedDependencies(producer: SignalProducer<CarthageKit.Dependency<PinnedVersion>, CarthageError>) -> [Dependency] {
+		let result = producer
 			.map { Dependency($0.project.name, $0.version.commitish, Set($0.dependencies.map { $0.name })) }
 			.collect()
 			.first()
@@ -37,8 +41,9 @@ class ResolverSpec: QuickSpec {
 		it("should resolve a Cartfile") {
 			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency, resolvedGitReference: self.resolvedGitReference)
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
-			let dependencies = self.orderedDependencies(resolver, fromCartfile: testCartfile)
-			expect(dependencies.count).to(equal(8));
+			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
+			let dependencies = self.orderedDependencies(producer)
+			expect(dependencies.count) == 8
 
 			var generator = dependencies.generate()
 
@@ -53,6 +58,41 @@ class ResolverSpec: QuickSpec {
 			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0", [ "libextobjc", "objc-build-scripts", "xcconfigs" ])
 		}
 
+		it("should resolve a Cartfile for specific dependencies") {
+			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency, resolvedGitReference: self.resolvedGitReference)
+			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
+
+			let producer = resolver.resolveDependenciesInCartfile(
+				testCartfile,
+				lastResolved: ResolvedCartfile(dependencies: [
+						self.dependencyForOwner("danielgindi", name: "ios-charts", version: "2.4.0"),
+					]),
+				dependenciesToUpdate: [ "Mantle", "ReactiveCocoa" ]
+			)
+			let dependencies = self.orderedDependencies(producer)
+			expect(dependencies.count) == 6
+
+			var generator = dependencies.generate()
+
+			// Dependencies should be listed in build order.
+			expect(generator.next()) == Dependency("Mantle", "1.3.0")
+
+			// Existing dependencies which are not inclued in the list should
+			// not be updated.
+			expect(generator.next()) == Dependency("ios-charts", "2.4.0")
+
+			// Nested dependencies should also be resolved.
+			expect(generator.next()) == Dependency("libextobjc", "0.4.1")
+			expect(generator.next()) == Dependency("xcconfigs", "1.3.0")
+			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0", [ "xcconfigs" ])
+			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0", [ "libextobjc", "objc-build-scripts", "xcconfigs" ])
+
+			// Newly added dependencies which are not inclued in the list should
+			// not be resolved.
+			expect(dependencies).notTo(contain(Dependency("git-error-translations", "3.0.0")))
+			expect(dependencies).notTo(contain(Dependency("git-error-translations2", "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9")))
+		}
+
 		it("should sort dependencies from Cartfile.resolved in build order") {
 			let resolver = Resolver(
 				versionsForDependency: self.versionsForDependency,
@@ -61,8 +101,9 @@ class ResolverSpec: QuickSpec {
 			)
 
 			let testCartfile: ResolvedCartfile = self.loadTestCartfile("TestResolvedCartfile", withExtension: "resolved")
-			let dependencies = self.orderedDependencies(resolver, fromCartfile: testCartfile)
-			expect(dependencies.count).to(equal(8));
+			let producer = resolver.resolveDependenciesInResolvedCartfile(testCartfile)
+			let dependencies = self.orderedDependencies(producer)
+			expect(dependencies.count) == 8
 
 			var generator = dependencies.generate()
 
@@ -75,6 +116,31 @@ class ResolverSpec: QuickSpec {
 			expect(generator.next()) == Dependency("xcconfigs", "1.3.0")
 			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0", [ "xcconfigs" ])
 			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0", [ "libextobjc", "objc-build-scripts", "xcconfigs" ])
+		}
+
+		it("should sort dependencies from Cartfile.resolved in build order for specific dependencies") {
+			let resolver = Resolver(
+				versionsForDependency: self.versionsForDependency,
+				cartfileForDependency: self.cartfileForDependency,
+				resolvedGitReference: { _, refName in SignalProducer(value: PinnedVersion(refName)) }
+			)
+
+			let testCartfile: ResolvedCartfile = self.loadTestCartfile("TestResolvedCartfile", withExtension: "resolved")
+			let producer = resolver.resolveDependenciesInResolvedCartfile(
+				testCartfile,
+				dependenciesToResolve: [ "ios-charts", "objc-build-scripts" ]
+			)
+			let dependencies = self.orderedDependencies(producer)
+			expect(dependencies.count) == 3
+
+			var generator = dependencies.generate()
+
+			// Dependencies should be listed in build order.
+			expect(generator.next()) == Dependency("ios-charts", "3.0.0")
+
+			// Nested dependencies should also be resolved.
+			expect(generator.next()) == Dependency("xcconfigs", "1.3.0")
+			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0", [ "xcconfigs" ])
 		}
 
 		it("should correctly order transitive dependencies") {
@@ -106,8 +172,9 @@ class ResolverSpec: QuickSpec {
 			})
 
 			let testCartfile: Cartfile = self.loadTestCartfile("EmbeddedFrameworksContainerCartfile")
-			let dependencies = self.orderedDependencies(resolver, fromCartfile: testCartfile)
-			expect(dependencies.count).to(equal(4));
+			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
+			let dependencies = self.orderedDependencies(producer)
+			expect(dependencies.count) == 4
 
 			var generator = dependencies.generate()
 
@@ -167,17 +234,7 @@ private func == (lhs: Dependency, rhs: Dependency) -> Bool {
 
 private protocol CartfileType {
 	static func fromString(string: String) -> Result<Self, CarthageError>
-	func resolveDependenciesWith(resolver: Resolver) -> SignalProducer<CarthageKit.Dependency<PinnedVersion>, CarthageError>
 }
 
-extension Cartfile: CartfileType {
-	private func resolveDependenciesWith(resolver: Resolver) -> SignalProducer<CarthageKit.Dependency<PinnedVersion>, CarthageError> {
-		return resolver.resolveDependenciesInCartfile(self)
-	}
-}
-
-extension ResolvedCartfile: CartfileType {
-	private func resolveDependenciesWith(resolver: Resolver) -> SignalProducer<CarthageKit.Dependency<PinnedVersion>, CarthageError> {
-		return resolver.resolveDependenciesInResolvedCartfile(self)
-	}
-}
+extension Cartfile: CartfileType {}
+extension ResolvedCartfile: CartfileType {}
