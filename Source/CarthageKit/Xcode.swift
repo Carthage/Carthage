@@ -212,8 +212,8 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
-public func xcodebuildTask(task: String, _ buildArguments: BuildArguments) -> TaskDescription {
-	return TaskDescription(launchPath: "/usr/bin/xcrun", arguments: buildArguments.arguments + [ task ])
+public func xcodebuildTask(task: String, _ buildArguments: BuildArguments) -> Task {
+	return Task("/usr/bin/xcrun", arguments: buildArguments.arguments + [ task ])
 }
 
 /// Sends each scheme found in the given project.
@@ -716,7 +716,7 @@ private func mergeExecutables(executableURLs: [NSURL], _ outputURL: NSURL) -> Si
 		}
 		.collect()
 		.flatMap(.Merge) { executablePaths -> SignalProducer<TaskEvent<NSData>, CarthageError> in
-			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
 
 			return launchTask(lipoTask)
 				.mapError(CarthageError.TaskError)
@@ -893,7 +893,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			// Specifying destination seems to be required for building with
 			// simulator SDKs since Xcode 7.2.
 			if sdk.isSimulator {
-				let destinationLookup = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
+				let destinationLookup = Task("/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
 				return launchTask(destinationLookup)
 					.ignoreTaskData()
 					.map { data in
@@ -948,7 +948,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							.map { taskEvent in
 								taskEvent.map { _ in settings }
 							}
-							.mapError { .TaskError($0) }
+							.mapError(CarthageError.TaskError)
 					}
 			}
 	}
@@ -1002,6 +1002,9 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				return settingsByTarget(buildSDK(deviceSDK))
 					.flatMap(.Concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
 						switch settingsEvent {
+						case let .Launch(task):
+							return SignalProducer(value: .Launch(task))
+
 						case let .StandardOutput(data):
 							return SignalProducer(value: .StandardOutput(data))
 
@@ -1052,7 +1055,7 @@ public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<Tas
 		executable = builtProductURL.URLByAppendingPathComponent(executableName).path,
 		dSYM = dSYMURL.path
 	{
-		let dsymutilTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
+		let dsymutilTask = Task("/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
 
 		return launchTask(dsymutilTask)
 			.mapError(CarthageError.TaskError)
@@ -1360,7 +1363,7 @@ private func stripArchitecture(frameworkURL: NSURL, _ architecture: String) -> S
 			return binaryURL(frameworkURL)
 		}
 		.flatMap(.Merge) { binaryURL -> SignalProducer<TaskEvent<NSData>, CarthageError> in
-			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
 			return launchTask(lipoTask)
 				.mapError(CarthageError.TaskError)
 		}
@@ -1373,7 +1376,7 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 			return binaryURL(frameworkURL)
 		}
 		.flatMap(.Merge) { binaryURL -> SignalProducer<String, CarthageError> in
-			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
 
 			return launchTask(lipoTask)
 				.ignoreTaskData()
@@ -1476,7 +1479,7 @@ public func BCSymbolMapsForFramework(frameworkURL: NSURL) -> SignalProducer<NSUR
 
 /// Sends a set of UUIDs for each architecture present in the given URL.
 private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
-	let dwarfdumpTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", URL.path! ])
+	let dwarfdumpTask = Task("/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", URL.path! ])
 
 	return launchTask(dwarfdumpTask)
 		.ignoreTaskData()
@@ -1532,7 +1535,7 @@ private func binaryURL(frameworkURL: NSURL) -> Result<NSURL, CarthageError> {
 
 /// Signs a framework with the given codesigning identity.
 private func codesign(frameworkURL: NSURL, _ expandedIdentity: String) -> SignalProducer<(), CarthageError> {
-	let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
+	let codesignTask = Task("/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
 
 	return launchTask(codesignTask)
 		.mapError(CarthageError.TaskError)

@@ -65,7 +65,7 @@ public struct BuildCommand: CommandType {
 				// Xcode doesn't always forward them.
 				if !options.verbose {
 					let (stdoutProducer, stdoutObserver) = SignalProducer<NSData, NoError>.buffer(0)
-					let grepTask: BuildSchemeProducer = launchTask(TaskDescription(launchPath: "/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ], standardInput: stdoutProducer))
+					let grepTask: BuildSchemeProducer = launchTask(Task("/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ]), standardInput: stdoutProducer)
 						.on(next: { taskEvent in
 							switch taskEvent {
 							case let .StandardOutput(data):
@@ -107,6 +107,9 @@ public struct BuildCommand: CommandType {
 						}
 					}, next: { taskEvent in
 						switch taskEvent {
+						case let .Launch(task):
+							stdoutHandle.writeData(task.description.dataUsingEncoding(NSUTF8StringEncoding)!)
+
 						case let .StandardOutput(data):
 							stdoutHandle.writeData(data)
 

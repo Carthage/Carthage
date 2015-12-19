@@ -64,7 +64,7 @@ extension SignalProducerType where Error == CarthageError {
 			.then(SignalProducer<(), CarthageError>.empty)
 			.wait()
 		
-		TaskDescription.waitForAllTaskTermination()
+		Task.waitForAllTaskTermination()
 		return result
 	}
 }
