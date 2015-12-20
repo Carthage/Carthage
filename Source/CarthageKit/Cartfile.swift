@@ -285,11 +285,6 @@ public struct Dependency<V: VersionType>: Equatable {
 		self.version = version
 		self.dependencies = dependencies
 	}
-
-	/// Maps over the `version` in the receiver.
-	public func map<W: VersionType>(f: V -> W) -> Dependency<W> {
-		return Dependency<W>(project: project, version: f(version), dependencies: dependencies)
-	}
 }
 
 public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
