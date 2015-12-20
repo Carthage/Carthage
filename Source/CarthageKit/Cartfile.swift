@@ -277,13 +277,9 @@ public struct Dependency<V: VersionType>: Equatable {
 	/// The version(s) that are required to satisfy this dependency.
 	public var version: V
 
-	/// The dependencies of this dependency.
-	public let dependencies: Set<ProjectIdentifier>
-
-	public init(project: ProjectIdentifier, version: V, dependencies: Set<ProjectIdentifier> = []) {
+	public init(project: ProjectIdentifier, version: V) {
 		self.project = project
 		self.version = version
-		self.dependencies = dependencies
 	}
 }
 

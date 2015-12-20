@@ -93,22 +93,24 @@ public struct Resolver {
 		}
 		return resolveDependenciesFromNodePermutations(SignalProducer(value: nodes))
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				let dependencies = graph.orderedNodes.map { node -> Dependency<PinnedVersion> in
+				let dependencies = graph.orderedNodes.map { node -> DependencyNode in
 					node.dependencies = graph.edges[node] ?? []
-					return node.dependencyVersion
+					return node
 				}
 
 				guard let dependenciesToResolve = dependenciesToResolve where !dependenciesToResolve.isEmpty else {
-					return .init(values: dependencies)
+					return .init(values: dependencies.map { $0.dependencyVersion })
 				}
 
 				var toResolve = Set(dependenciesToResolve)
 
 				dependencies
 					.filter { toResolve.contains($0.project.name) }
-					.forEach { toResolve.unionInPlace($0.dependencies.map { $0.name }) }
+					.forEach { toResolve.unionInPlace($0.dependencies.map { $0.project.name }) }
 
-				let filtered = dependencies.filter { toResolve.contains($0.project.name) }
+				let filtered = dependencies
+					.filter { toResolve.contains($0.project.name) }
+					.map { $0.dependencyVersion }
 				return .init(values: filtered)
 			}
 	}
@@ -490,7 +492,7 @@ private class DependencyNode: Comparable {
 
 	/// A Dependency equivalent to this node.
 	var dependencyVersion: Dependency<PinnedVersion> {
-		return Dependency(project: project, version: proposedVersion, dependencies: Set(dependencies.map { $0.project }))
+		return Dependency(project: project, version: proposedVersion)
 	}
 
 	init(project: ProjectIdentifier, proposedVersion: PinnedVersion, versionSpecifier: VersionSpecifier) {
