@@ -27,7 +27,7 @@ class ResolverSpec: QuickSpec {
 
 	private func orderedDependencies(producer: SignalProducer<CarthageKit.Dependency<PinnedVersion>, CarthageError>) -> [Dependency] {
 		let result = producer
-			.map { Dependency($0.project.name, $0.version.commitish, Set($0.dependencies.map { $0.name })) }
+			.map { Dependency($0.project.name, $0.version.commitish) }
 			.collect()
 			.first()
 
@@ -54,8 +54,8 @@ class ResolverSpec: QuickSpec {
 			expect(generator.next()) == Dependency("ios-charts", "3.0.0")
 			expect(generator.next()) == Dependency("libextobjc", "0.4.1")
 			expect(generator.next()) == Dependency("xcconfigs", "1.3.0")
-			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0", [ "xcconfigs" ])
-			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0", [ "libextobjc", "objc-build-scripts", "xcconfigs" ])
+			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0") // xcconfigs
+			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0") // libextobjc, objc-build-scripts, xcconfigs
 		}
 
 		it("should resolve a Cartfile for specific dependencies") {
@@ -84,8 +84,8 @@ class ResolverSpec: QuickSpec {
 			// Nested dependencies should also be resolved.
 			expect(generator.next()) == Dependency("libextobjc", "0.4.1")
 			expect(generator.next()) == Dependency("xcconfigs", "1.3.0")
-			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0", [ "xcconfigs" ])
-			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0", [ "libextobjc", "objc-build-scripts", "xcconfigs" ])
+			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0") // xcconfigs
+			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0") // libextobjc, objc-build-scripts, xcconfigs
 
 			// Newly added dependencies which are not inclued in the list should
 			// not be resolved.
@@ -114,8 +114,8 @@ class ResolverSpec: QuickSpec {
 			expect(generator.next()) == Dependency("ios-charts", "3.0.0")
 			expect(generator.next()) == Dependency("libextobjc", "0.4.1")
 			expect(generator.next()) == Dependency("xcconfigs", "1.3.0")
-			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0", [ "xcconfigs" ])
-			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0", [ "libextobjc", "objc-build-scripts", "xcconfigs" ])
+			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0") // xcconfigs
+			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0") // libextobjc, objc-build-scripts, xcconfigs
 		}
 
 		it("should sort dependencies from Cartfile.resolved in build order for specific dependencies") {
@@ -140,7 +140,7 @@ class ResolverSpec: QuickSpec {
 
 			// Nested dependencies should also be resolved.
 			expect(generator.next()) == Dependency("xcconfigs", "1.3.0")
-			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0", [ "xcconfigs" ])
+			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0") // xcconfigs
 		}
 
 		it("should correctly order transitive dependencies") {
@@ -182,7 +182,7 @@ class ResolverSpec: QuickSpec {
 			expect(generator.next()) == Dependency("Alamofire", "1.1.2")
 			expect(generator.next()) == Dependency("Swell", "1.0.0")
 			expect(generator.next()) == Dependency("SwiftyJSON", "2.1.2")
-			expect(generator.next()) == Dependency("EmbeddedFrameworks", "1.0.0", [ "Alamofire", "Swell", "SwiftyJSON" ])
+			expect(generator.next()) == Dependency("EmbeddedFrameworks", "1.0.0") // Alamofire, Swell, SwiftyJSON
 		}
 	}
 
@@ -219,17 +219,15 @@ class ResolverSpec: QuickSpec {
 private struct Dependency: Equatable {
 	let name: String
 	let version: PinnedVersion
-	let dependencies: Set<String>
 
-	init(_ name: String, _ versionString: String, _ dependencies: Set<String> = []) {
+	init(_ name: String, _ versionString: String) {
 		self.name = name
 		self.version = PinnedVersion(versionString)
-		self.dependencies = dependencies
 	}
 }
 
 private func == (lhs: Dependency, rhs: Dependency) -> Bool {
-	return lhs.name == rhs.name && lhs.version == rhs.version && lhs.dependencies == rhs.dependencies
+	return lhs.name == rhs.name && lhs.version == rhs.version
 }
 
 private protocol CartfileType {
