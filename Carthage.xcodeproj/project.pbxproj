@@ -18,6 +18,7 @@
 		67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		67C870081A7A04E100F6647C /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C870071A7A04E100F6647C /* Formatting.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
+		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
 		CDCE1CC41C170E8A00B2ED88 /* TestResolvedCartfile.resolved in Resources */ = {isa = PBXBuildFile; fileRef = CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */; };
@@ -154,6 +155,7 @@
 		67AFA9891A79430B00B7DA78 /* PrettyColors.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PrettyColors.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		67C870071A7A04E100F6647C /* Formatting.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
+		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
 		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
 		CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestResolvedCartfile.resolved; sourceTree = "<group>"; };
@@ -439,6 +441,7 @@
 			children = (
 				D0C6E5731A57040B00A5E3E7 /* ArchiveSpec.swift */,
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
+				89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */,
 				549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */,
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
 				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
@@ -689,6 +692,7 @@
 			files = (
 				D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */,
 				D0DE89421A0F2D450030A3EC /* VersionSpec.swift in Sources */,
+				89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */,
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,
 				549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */,

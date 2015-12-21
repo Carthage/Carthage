@@ -189,25 +189,37 @@ extension BuildArguments: CustomStringConvertible {
 public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<ProjectLocator, CarthageError> {
 	let enumerationOptions: NSDirectoryEnumerationOptions = [ .SkipsHiddenFiles, .SkipsPackageDescendants ]
 
-	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-		.reduce([]) { (matches: [ProjectLocator], tuple) -> [ProjectLocator] in
-			var matches = matches
-			let (_, URL) = tuple
-			
-			if let UTI = URL.typeIdentifier.value {
-				if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
-					matches.append(.Workspace(URL))
-				} else if (UTTypeConformsTo(UTI, "com.apple.xcode.project")) {
-					matches.append(.ProjectFile(URL))
+	return submodulesInRepository(directoryURL)
+		.map { directoryURL.URLByAppendingPathComponent($0.path) }
+		.concat(SignalProducer<NSURL, CarthageError>(value: directoryURL.URLByAppendingPathComponent("Carthage")))
+		.collect()
+		.flatMap(.Merge) { directoriesToSkip in
+			return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+				.filter { _, URL in
+					for directory in directoriesToSkip {
+						if directory.hasSubdirectory(URL) {
+							return false
+						}
+					}
+					return true
 				}
-			}
+				.reduce([]) { (matches: [ProjectLocator], tuple) -> [ProjectLocator] in
+					var matches = matches
+					let (_, URL) = tuple
 
-			return matches
-		}
-		.map { $0.sort() }
-		.flatMap(.Merge) { matches -> SignalProducer<ProjectLocator, CarthageError> in
-			return SignalProducer(values: matches)
-		}
+					if let UTI = URL.typeIdentifier.value {
+						if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
+							matches.append(.Workspace(URL))
+						} else if (UTTypeConformsTo(UTI, "com.apple.xcode.project")) {
+							matches.append(.ProjectFile(URL))
+						}
+					}
+
+					return matches
+				}
+				.map { $0.sort() }
+				.flatMap(.Merge) { SignalProducer(values: $0) }
+	}
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
@@ -1217,8 +1229,6 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 						}
 						return (project, containedSchemes)
 					}
-					// replace the filter and concat with something that accounts for multiple subprojects
-					// cause it errors out if even one of the results is that error...
 					.filter { (project: ProjectLocator, schemes: [String]) in
 						switch project {
 						case .ProjectFile where !schemes.isEmpty:
@@ -1228,12 +1238,12 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 							return false
 						}
 					}
-					.flatMap(FlattenStrategy.Merge) { project, schemes in
+					.flatMap(.Concat) { project, schemes in
 						return SignalProducer(values: schemes.map { ($0, project) })
 					}
 					.collect()
 					.flatMap(.Merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
-						if schemes.count > 0 {
+						if !schemes.isEmpty {
 							return SignalProducer(values: schemes)
 						} else {
 							return SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), platforms))

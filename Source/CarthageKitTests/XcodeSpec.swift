@@ -59,6 +59,34 @@ class XcodeSpec: QuickSpec {
 			}
 		}
 
+		describe("locateProjectsInDirectory:") {
+			func relativePathsForProjectsInDirectory(directoryURL: NSURL) -> [String] {
+				let result = locateProjectsInDirectory(directoryURL)
+					.map {
+						return $0.fileURL.absoluteString.substringFromIndex(directoryURL.absoluteString.endIndex)
+					}
+					.collect()
+					.first()
+				expect(result?.error).to(beNil())
+				return result?.value ?? [ ]
+			}
+
+			it("should not find anything in the Carthage Subdirectory") {
+				let relativePaths = relativePathsForProjectsInDirectory(directoryURL)
+				expect(relativePaths).toNot(beEmpty())
+				let pathsStartingWithCarthage = relativePaths.filter { return $0.hasPrefix("Carthage/") }
+				expect(pathsStartingWithCarthage).to(beEmpty())
+			}
+
+			it("should not find anything that's listed as a git submodule") {
+				let multipleSubprojects = "SampleGitSubmodule"
+				let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource(multipleSubprojects, withExtension: nil)!
+
+				let relativePaths = relativePathsForProjectsInDirectory(_directoryURL)
+				expect(relativePaths).to(equal([ "SampleGitSubmodule.xcodeproj/" ]))
+			}
+		}
+
 		it("should build for all platforms") {
 			let dependencies = [
 				ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes")),
@@ -188,7 +216,12 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).to(beNil())
 
-			let expectedPlatformsFrameworks = [("iOS", "SampleiOSFramework"), ("Mac", "SampleMacFramework"), ("tvOS", "SampleTVFramework"), ("watchOS", "SampleWatchFramework")]
+			let expectedPlatformsFrameworks = [
+				("iOS", "SampleiOSFramework"),
+				("Mac", "SampleMacFramework"),
+				("tvOS", "SampleTVFramework"),
+				("watchOS", "SampleWatchFramework")
+			]
 
 			for (platform, framework) in expectedPlatformsFrameworks {
 				var isDirectory: ObjCBool = false

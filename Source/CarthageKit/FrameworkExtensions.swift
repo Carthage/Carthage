@@ -261,6 +261,13 @@ extension NSURL {
 
 		return .Failure(.ReadFailed(self, error))
 	}
+
+	public func hasSubdirectory(possibleSubdirectory: NSURL) -> Bool {
+		if scheme == possibleSubdirectory.scheme, let path = self.path, otherPath = possibleSubdirectory.path {
+			return otherPath.hasPrefix(path)
+		}
+		return false
+	}
 }
 
 extension NSURL: Decodable {
