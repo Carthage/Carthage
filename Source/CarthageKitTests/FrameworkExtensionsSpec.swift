@@ -2,7 +2,7 @@ import Quick
 import Nimble
 
 class FrameworkExtensionsSpec: QuickSpec {
-    override func spec() {
+	override func spec() {
 		describe("NSURL Extensions") {
 			it("should figure out if a is a subdirectory of b") {
 				guard let subject = NSURL(string: "file:///foo/bar") else { return }
@@ -21,5 +21,5 @@ class FrameworkExtensionsSpec: QuickSpec {
 				expect(subject.hasSubdirectory(unrelatedDirectory)).to(beFalsy())
 			}
 		}
-    }
+	}
 }

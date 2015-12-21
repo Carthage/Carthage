@@ -191,7 +191,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 
 	return submodulesInRepository(directoryURL)
 		.map { directoryURL.URLByAppendingPathComponent($0.path) }
-		.concat(SignalProducer<NSURL, CarthageError>(value: directoryURL.URLByAppendingPathComponent("Carthage")))
+		.concat(SignalProducer(value: directoryURL.URLByAppendingPathComponent("Carthage")))
 		.collect()
 		.flatMap(.Merge) { directoriesToSkip in
 			return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
@@ -203,23 +203,23 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 					}
 					return true
 				}
-				.reduce([]) { (matches: [ProjectLocator], tuple) -> [ProjectLocator] in
-					var matches = matches
-					let (_, URL) = tuple
+		}
+		.reduce([]) { (matches: [ProjectLocator], tuple) -> [ProjectLocator] in
+			var matches = matches
+			let (_, URL) = tuple
 
-					if let UTI = URL.typeIdentifier.value {
-						if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
-							matches.append(.Workspace(URL))
-						} else if (UTTypeConformsTo(UTI, "com.apple.xcode.project")) {
-							matches.append(.ProjectFile(URL))
-						}
-					}
-
-					return matches
+			if let UTI = URL.typeIdentifier.value {
+				if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
+					matches.append(.Workspace(URL))
+				} else if (UTTypeConformsTo(UTI, "com.apple.xcode.project")) {
+					matches.append(.ProjectFile(URL))
 				}
-				.map { $0.sort() }
-				.flatMap(.Merge) { SignalProducer(values: $0) }
-	}
+			}
+
+			return matches
+		}
+		.map { $0.sort() }
+		.flatMap(.Merge) { SignalProducer(values: $0) }
 }
 
 /// Creates a task description for executing `xcodebuild` with the given

@@ -62,13 +62,11 @@ class XcodeSpec: QuickSpec {
 		describe("locateProjectsInDirectory:") {
 			func relativePathsForProjectsInDirectory(directoryURL: NSURL) -> [String] {
 				let result = locateProjectsInDirectory(directoryURL)
-					.map {
-						return $0.fileURL.absoluteString.substringFromIndex(directoryURL.absoluteString.endIndex)
-					}
+					.map { $0.fileURL.absoluteString.substringFromIndex(directoryURL.absoluteString.endIndex) }
 					.collect()
 					.first()
 				expect(result?.error).to(beNil())
-				return result?.value ?? [ ]
+				return result?.value ?? []
 			}
 
 			it("should not find anything in the Carthage Subdirectory") {
