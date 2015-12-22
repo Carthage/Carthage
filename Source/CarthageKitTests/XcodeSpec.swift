@@ -125,16 +125,16 @@ class XcodeSpec: QuickSpec {
 
 				var isDirectory: ObjCBool = false
 				expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
-				expect(isDirectory).to(beTruthy())
+				expect(isDirectory) == true
 
 				expect(NSFileManager.defaultManager().fileExistsAtPath(macdSYMPath, isDirectory: &isDirectory)) == true
-				expect(isDirectory).to(beTruthy())
+				expect(isDirectory) == true
 
 				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)) == true
-				expect(isDirectory).to(beTruthy())
+				expect(isDirectory) == true
 
 				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSdSYMPath, isDirectory: &isDirectory)) == true
-				expect(isDirectory).to(beTruthy())
+				expect(isDirectory) == true
 			}
 			let frameworkFolderURL = buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework")
 
@@ -153,7 +153,7 @@ class XcodeSpec: QuickSpec {
 			let auxiliaryFrameworkPath = buildFolderURL.URLByAppendingPathComponent("iOS/AuxiliaryFramework.framework").path!
 			var isDirectory: ObjCBool = false
 			expect(NSFileManager.defaultManager().fileExistsAtPath(auxiliaryFrameworkPath, isDirectory: &isDirectory)) == true
-			expect(isDirectory).to(beTruthy())
+			expect(isDirectory) == true
 
 			// Copy ReactiveCocoaLayout.framework to the temporary folder.
 			let targetURL = targetFolderURL.URLByAppendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
@@ -162,7 +162,7 @@ class XcodeSpec: QuickSpec {
 			expect(resultURL?.value) == targetURL
 
 			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)) == true
-			expect(isDirectory).to(beTruthy())
+			expect(isDirectory) == true
 
 			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
 			expect(strippingResult.value).notTo(beNil())
@@ -229,7 +229,7 @@ class XcodeSpec: QuickSpec {
 				let fileExists = NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)
 				expect(fileExists) == true
 				if fileExists {
-					expect(isDirectory).to(beTruthy())
+					expect(isDirectory) == true
 				} else {
 					print("failed to build \(platform)/\(framework).framework")
 				}
@@ -258,10 +258,10 @@ class XcodeSpec: QuickSpec {
 
 			var isDirectory: ObjCBool = false
 			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
-			expect(isDirectory).to(beTruthy())
+			expect(isDirectory) == true
 
 			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)) == true
-			expect(isDirectory).to(beTruthy())
+			expect(isDirectory) == true
 		}
 
 		it("should error out with .NoSharedFrameworkSchemes if there is no shared framework schemes") {
@@ -308,7 +308,7 @@ class XcodeSpec: QuickSpec {
 			let path = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
 			var isDirectory: ObjCBool = false
 			expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
-			expect(isDirectory).to(beTruthy())
+			expect(isDirectory) == true
 
 			// Verify that the other platform wasn't built.
 			let incorrectPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
@@ -332,12 +332,12 @@ class XcodeSpec: QuickSpec {
 			// Verify that the one build product exists at the top level.
 			let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
 			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
-			expect(isDirectory).to(beTruthy())
+			expect(isDirectory) == true
 
 			// Verify that the other build product exists at the top level.
 			let iosPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
 			expect(NSFileManager.defaultManager().fileExistsAtPath(iosPath, isDirectory: &isDirectory)) == true
-			expect(isDirectory).to(beTruthy())
+			expect(isDirectory) == true
 		}
 
 		it("should locate the project") {
@@ -364,4 +364,12 @@ class XcodeSpec: QuickSpec {
 		}
 
 	}
+}
+
+// MARK: Helpers
+
+extension ObjCBool: Equatable {}
+
+public func == (lhs: ObjCBool, rhs: ObjCBool) -> Bool {
+	return lhs.boolValue == rhs.boolValue
 }
