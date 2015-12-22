@@ -16,17 +16,17 @@ class SemanticVersionSpec: QuickSpec {
 		it("should order versions correctly") {
 			let version = SemanticVersion(major: 2, minor: 1, patch: 1)
 
-			expect(version).to(beLessThan(SemanticVersion(major: 3, minor: 0, patch: 0)))
-			expect(version).to(beLessThan(SemanticVersion(major: 2, minor: 2, patch: 0)))
-			expect(version).to(beLessThan(SemanticVersion(major: 2, minor: 1, patch: 2)))
+			expect(version) < SemanticVersion(major: 3, minor: 0, patch: 0)
+			expect(version) < SemanticVersion(major: 2, minor: 2, patch: 0)
+			expect(version) < SemanticVersion(major: 2, minor: 1, patch: 2)
 
 			expect(version).to(beGreaterThan(SemanticVersion(major: 1, minor: 2, patch: 2)))
 			expect(version).to(beGreaterThan(SemanticVersion(major: 2, minor: 0, patch: 2)))
 			expect(version).to(beGreaterThan(SemanticVersion(major: 2, minor: 1, patch: 0)))
 
-			expect(version).to(beLessThan(SemanticVersion(major: 10, minor: 0, patch: 0)))
-			expect(version).to(beLessThan(SemanticVersion(major: 2, minor: 10, patch: 1)))
-			expect(version).to(beLessThan(SemanticVersion(major: 2, minor: 1, patch: 10)))
+			expect(version) < SemanticVersion(major: 10, minor: 0, patch: 0)
+			expect(version) < SemanticVersion(major: 2, minor: 10, patch: 1)
+			expect(version) < SemanticVersion(major: 2, minor: 1, patch: 10)
 		}
 
 		it("should parse semantic versions") {
