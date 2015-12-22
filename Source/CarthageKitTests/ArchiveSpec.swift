@@ -93,7 +93,7 @@ class ArchiveSpec: QuickSpec {
 
 				let symlinkPath = "symlink"
 				expect { try NSFileManager.defaultManager().createSymbolicLinkAtPath(symlinkPath, withDestinationPath: destinationPath) }.notTo(throwError())
-				expect { try NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(symlinkPath) }.to(equal(destinationPath))
+				expect { try NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(symlinkPath) } == destinationPath
 
 				let result = zipIntoArchive(archiveURL, [ symlinkPath, destinationPath ]).wait()
 				expect(result.error).to(beNil())
@@ -104,7 +104,7 @@ class ArchiveSpec: QuickSpec {
 
 				let unzippedSymlinkURL = (unzipResult?.value ?? temporaryURL).URLByAppendingPathComponent(symlinkPath)
 				expect(NSFileManager.defaultManager().fileExistsAtPath(unzippedSymlinkURL.path!)) == true
-				expect { try NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(unzippedSymlinkURL.path!) }.to(equal(destinationPath))
+				expect { try NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(unzippedSymlinkURL.path!) } == destinationPath
 			}
 		}
 	}

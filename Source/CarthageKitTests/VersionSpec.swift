@@ -30,8 +30,8 @@ class SemanticVersionSpec: QuickSpec {
 		}
 
 		it("should parse semantic versions") {
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("1.4")).value).to(equal(SemanticVersion(major: 1, minor: 4, patch: 0)))
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.9")).value).to(equal(SemanticVersion(major: 2, minor: 8, patch: 9)))
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("1.4")).value) == SemanticVersion(major: 1, minor: 4, patch: 0)
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.9")).value) == SemanticVersion(major: 2, minor: 8, patch: 9)
 		}
 
 		it("should fail on invalid semantic versions") {
@@ -55,8 +55,8 @@ class VersionSpecifierSpec: QuickSpec {
 
 		func testIntersection(lhs: VersionSpecifier, _ rhs: VersionSpecifier, expected: VersionSpecifier?) {
 			if let expected = expected {
-				expect(intersection(lhs, rhs)).to(equal(expected))
-				expect(intersection(rhs, lhs)).to(equal(expected))
+				expect(intersection(lhs, rhs)) == expected
+				expect(intersection(rhs, lhs)) == expected
 			} else {
 				expect(intersection(lhs, rhs)).to(beNil())
 				expect(intersection(rhs, lhs)).to(beNil())

@@ -81,7 +81,7 @@ class XcodeSpec: QuickSpec {
 				let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource(multipleSubprojects, withExtension: nil)!
 
 				let relativePaths = relativePathsForProjectsInDirectory(_directoryURL)
-				expect(relativePaths).to(equal([ "SampleGitSubmodule.xcodeproj/" ]))
+				expect(relativePaths) == [ "SampleGitSubmodule.xcodeproj/" ]
 			}
 		}
 
@@ -159,7 +159,7 @@ class XcodeSpec: QuickSpec {
 			let targetURL = targetFolderURL.URLByAppendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
 
 			let resultURL = copyProduct(frameworkFolderURL, targetURL).single()
-			expect(resultURL?.value).to(equal(targetURL))
+			expect(resultURL?.value) == targetURL
 
 			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)) == true
 			expect(isDirectory).to(beTruthy())
@@ -346,7 +346,7 @@ class XcodeSpec: QuickSpec {
 			expect(result?.error).to(beNil())
 
 			let locator = result?.value!
-			expect(locator).to(equal(ProjectLocator.ProjectFile(projectURL)))
+			expect(locator) == ProjectLocator.ProjectFile(projectURL)
 		}
 
 		it("should locate the project from the parent directory") {
