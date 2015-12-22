@@ -16,22 +16,22 @@ class SemanticVersionSpec: QuickSpec {
 		it("should order versions correctly") {
 			let version = SemanticVersion(major: 2, minor: 1, patch: 1)
 
-			expect(version).to(beLessThan(SemanticVersion(major: 3, minor: 0, patch: 0)))
-			expect(version).to(beLessThan(SemanticVersion(major: 2, minor: 2, patch: 0)))
-			expect(version).to(beLessThan(SemanticVersion(major: 2, minor: 1, patch: 2)))
+			expect(version) < SemanticVersion(major: 3, minor: 0, patch: 0)
+			expect(version) < SemanticVersion(major: 2, minor: 2, patch: 0)
+			expect(version) < SemanticVersion(major: 2, minor: 1, patch: 2)
 
-			expect(version).to(beGreaterThan(SemanticVersion(major: 1, minor: 2, patch: 2)))
-			expect(version).to(beGreaterThan(SemanticVersion(major: 2, minor: 0, patch: 2)))
-			expect(version).to(beGreaterThan(SemanticVersion(major: 2, minor: 1, patch: 0)))
+			expect(version) > SemanticVersion(major: 1, minor: 2, patch: 2)
+			expect(version) > SemanticVersion(major: 2, minor: 0, patch: 2)
+			expect(version) > SemanticVersion(major: 2, minor: 1, patch: 0)
 
-			expect(version).to(beLessThan(SemanticVersion(major: 10, minor: 0, patch: 0)))
-			expect(version).to(beLessThan(SemanticVersion(major: 2, minor: 10, patch: 1)))
-			expect(version).to(beLessThan(SemanticVersion(major: 2, minor: 1, patch: 10)))
+			expect(version) < SemanticVersion(major: 10, minor: 0, patch: 0)
+			expect(version) < SemanticVersion(major: 2, minor: 10, patch: 1)
+			expect(version) < SemanticVersion(major: 2, minor: 1, patch: 10)
 		}
 
 		it("should parse semantic versions") {
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("1.4")).value).to(equal(SemanticVersion(major: 1, minor: 4, patch: 0)))
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.9")).value).to(equal(SemanticVersion(major: 2, minor: 8, patch: 9)))
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("1.4")).value) == SemanticVersion(major: 1, minor: 4, patch: 0)
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.9")).value) == SemanticVersion(major: 2, minor: 8, patch: 9)
 		}
 
 		it("should fail on invalid semantic versions") {
@@ -55,8 +55,8 @@ class VersionSpecifierSpec: QuickSpec {
 
 		func testIntersection(lhs: VersionSpecifier, _ rhs: VersionSpecifier, expected: VersionSpecifier?) {
 			if let expected = expected {
-				expect(intersection(lhs, rhs)).to(equal(expected))
-				expect(intersection(rhs, lhs)).to(equal(expected))
+				expect(intersection(lhs, rhs)) == expected
+				expect(intersection(rhs, lhs)) == expected
 			} else {
 				expect(intersection(lhs, rhs)).to(beNil())
 				expect(intersection(rhs, lhs)).to(beNil())
@@ -66,44 +66,44 @@ class VersionSpecifierSpec: QuickSpec {
 		describe("satisfiedBy") {
 			it("should allow all versions for Any") {
 				let specifier = VersionSpecifier.Any
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == true
 			}
 
 			it("should allow greater or equal versions for AtLeast") {
 				let specifier = VersionSpecifier.AtLeast(versionTwoOne)
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == true
 			}
 
 			it("should allow greater or equal minor and patch versions for CompatibleWith") {
 				let specifier = VersionSpecifier.CompatibleWith(versionTwoOne)
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == false
 			}
 
 			it("should only allow exact versions for Exactly") {
 				let specifier = VersionSpecifier.Exactly(versionTwoTwo)
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == false
 			}
 
 			it("should allow only greater patch versions to satisfy 0.x") {
 				let specifier = VersionSpecifier.CompatibleWith(versionZeroOne)
-				expect(specifier.satisfiedBy(versionZeroOneOne.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionZeroTwo.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionZeroOneOne.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionZeroTwo.pinnedVersion!)) == false
 			}
 		}
 
