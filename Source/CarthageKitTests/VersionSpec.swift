@@ -20,9 +20,9 @@ class SemanticVersionSpec: QuickSpec {
 			expect(version) < SemanticVersion(major: 2, minor: 2, patch: 0)
 			expect(version) < SemanticVersion(major: 2, minor: 1, patch: 2)
 
-			expect(version).to(beGreaterThan(SemanticVersion(major: 1, minor: 2, patch: 2)))
-			expect(version).to(beGreaterThan(SemanticVersion(major: 2, minor: 0, patch: 2)))
-			expect(version).to(beGreaterThan(SemanticVersion(major: 2, minor: 1, patch: 0)))
+			expect(version) > SemanticVersion(major: 1, minor: 2, patch: 2)
+			expect(version) > SemanticVersion(major: 2, minor: 0, patch: 2)
+			expect(version) > SemanticVersion(major: 2, minor: 1, patch: 0)
 
 			expect(version) < SemanticVersion(major: 10, minor: 0, patch: 0)
 			expect(version) < SemanticVersion(major: 2, minor: 10, patch: 1)
