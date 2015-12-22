@@ -66,44 +66,44 @@ class VersionSpecifierSpec: QuickSpec {
 		describe("satisfiedBy") {
 			it("should allow all versions for Any") {
 				let specifier = VersionSpecifier.Any
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == true
 			}
 
 			it("should allow greater or equal versions for AtLeast") {
 				let specifier = VersionSpecifier.AtLeast(versionTwoOne)
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beTruthy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == true
 			}
 
 			it("should allow greater or equal minor and patch versions for CompatibleWith") {
 				let specifier = VersionSpecifier.CompatibleWith(versionTwoOne)
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == false
 			}
 
 			it("should only allow exact versions for Exactly") {
 				let specifier = VersionSpecifier.Exactly(versionTwoTwo)
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)).to(beFalsy())
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == false
+				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == false
 			}
 
 			it("should allow only greater patch versions to satisfy 0.x") {
 				let specifier = VersionSpecifier.CompatibleWith(versionZeroOne)
-				expect(specifier.satisfiedBy(versionZeroOneOne.pinnedVersion!)).to(beTruthy())
-				expect(specifier.satisfiedBy(versionZeroTwo.pinnedVersion!)).to(beFalsy())
+				expect(specifier.satisfiedBy(versionZeroOneOne.pinnedVersion!)) == true
+				expect(specifier.satisfiedBy(versionZeroTwo.pinnedVersion!)) == false
 			}
 		}
 

@@ -38,23 +38,23 @@ class XcodeSpec: QuickSpec {
 				it("should put workspaces before projects") {
 					let workspace = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/Z.xcworkspace"))
 					let project = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
-					expect(workspace < project).to(beTruthy())
+					expect(workspace < project) == true
 				}
 				
 				it("should fall back to lexicographical sorting") {
 					let workspaceA = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/A.xcworkspace"))
 					let workspaceB = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/B.xcworkspace"))
-					expect(workspaceA < workspaceB).to(beTruthy())
+					expect(workspaceA < workspaceB) == true
 					
 					let projectA = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
 					let projectB = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/B.xcodeproj"))
-					expect(projectA < projectB).to(beTruthy())
+					expect(projectA < projectB) == true
 				}
 				
 				it("should put top-level directories first") {
 					let top = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/Z.xcodeproj"))
 					let bottom = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/A/A.xcodeproj"))
-					expect(top < bottom).to(beTruthy())
+					expect(top < bottom) == true
 				}
 			}
 		}
@@ -124,16 +124,16 @@ class XcodeSpec: QuickSpec {
 				let iOSdSYMPath = (iOSPath as NSString).stringByAppendingPathExtension("dSYM")!
 
 				var isDirectory: ObjCBool = false
-				expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
+				expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
 				expect(isDirectory).to(beTruthy())
 
-				expect(NSFileManager.defaultManager().fileExistsAtPath(macdSYMPath, isDirectory: &isDirectory)).to(beTruthy())
+				expect(NSFileManager.defaultManager().fileExistsAtPath(macdSYMPath, isDirectory: &isDirectory)) == true
 				expect(isDirectory).to(beTruthy())
 
-				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
+				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)) == true
 				expect(isDirectory).to(beTruthy())
 
-				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSdSYMPath, isDirectory: &isDirectory)).to(beTruthy())
+				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSdSYMPath, isDirectory: &isDirectory)) == true
 				expect(isDirectory).to(beTruthy())
 			}
 			let frameworkFolderURL = buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework")
@@ -152,7 +152,7 @@ class XcodeSpec: QuickSpec {
 			// well.
 			let auxiliaryFrameworkPath = buildFolderURL.URLByAppendingPathComponent("iOS/AuxiliaryFramework.framework").path!
 			var isDirectory: ObjCBool = false
-			expect(NSFileManager.defaultManager().fileExistsAtPath(auxiliaryFrameworkPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(auxiliaryFrameworkPath, isDirectory: &isDirectory)) == true
 			expect(isDirectory).to(beTruthy())
 
 			// Copy ReactiveCocoaLayout.framework to the temporary folder.
@@ -161,7 +161,7 @@ class XcodeSpec: QuickSpec {
 			let resultURL = copyProduct(frameworkFolderURL, targetURL).single()
 			expect(resultURL?.value).to(equal(targetURL))
 
-			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)) == true
 			expect(isDirectory).to(beTruthy())
 
 			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
@@ -176,7 +176,7 @@ class XcodeSpec: QuickSpec {
 			expect(strippedArchitectures?.value).to(contain("arm64"))
 
 			let modulesDirectoryURL = targetURL.URLByAppendingPathComponent("Modules", isDirectory: true)
-			expect(NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!)).to(beFalsy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!)) == false
 			
 			var output: String = ""
 			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
@@ -227,7 +227,7 @@ class XcodeSpec: QuickSpec {
 				let path = _buildFolderURL.URLByAppendingPathComponent("\(platform)/\(framework).framework").path!
 
 				let fileExists = NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)
-				expect(fileExists).to(beTruthy())
+				expect(fileExists) == true
 				if fileExists {
 					expect(isDirectory).to(beTruthy())
 				} else {
@@ -257,10 +257,10 @@ class XcodeSpec: QuickSpec {
 			let iOSPath = _buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
 
 			var isDirectory: ObjCBool = false
-			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
 			expect(isDirectory).to(beTruthy())
 
-			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)) == true
 			expect(isDirectory).to(beTruthy())
 		}
 
@@ -289,7 +289,7 @@ class XcodeSpec: QuickSpec {
 				expectedError = false
 			}
 
-			expect(expectedError).to(beTruthy())
+			expect(expectedError) == true
 		}
 
 		it("should build for one platform") {
@@ -307,12 +307,12 @@ class XcodeSpec: QuickSpec {
 			// Verify that the build product exists at the top level.
 			let path = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
 			var isDirectory: ObjCBool = false
-			expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
 			expect(isDirectory).to(beTruthy())
 
 			// Verify that the other platform wasn't built.
 			let incorrectPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
-			expect(NSFileManager.defaultManager().fileExistsAtPath(incorrectPath, isDirectory: nil)).to(beFalsy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(incorrectPath, isDirectory: nil)) == false
 		}
 
 		it("should build for multiple platforms") {
@@ -331,12 +331,12 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the one build product exists at the top level.
 			let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
-			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
 			expect(isDirectory).to(beTruthy())
 
 			// Verify that the other build product exists at the top level.
 			let iosPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
-			expect(NSFileManager.defaultManager().fileExistsAtPath(iosPath, isDirectory: &isDirectory)).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(iosPath, isDirectory: &isDirectory)) == true
 			expect(isDirectory).to(beTruthy())
 		}
 
