@@ -59,6 +59,32 @@ class XcodeSpec: QuickSpec {
 			}
 		}
 
+		describe("locateProjectsInDirectory:") {
+			func relativePathsForProjectsInDirectory(directoryURL: NSURL) -> [String] {
+				let result = locateProjectsInDirectory(directoryURL)
+					.map { $0.fileURL.absoluteString.substringFromIndex(directoryURL.absoluteString.endIndex) }
+					.collect()
+					.first()
+				expect(result?.error).to(beNil())
+				return result?.value ?? []
+			}
+
+			it("should not find anything in the Carthage Subdirectory") {
+				let relativePaths = relativePathsForProjectsInDirectory(directoryURL)
+				expect(relativePaths).toNot(beEmpty())
+				let pathsStartingWithCarthage = relativePaths.filter { return $0.hasPrefix("Carthage/") }
+				expect(pathsStartingWithCarthage).to(beEmpty())
+			}
+
+			it("should not find anything that's listed as a git submodule") {
+				let multipleSubprojects = "SampleGitSubmodule"
+				let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource(multipleSubprojects, withExtension: nil)!
+
+				let relativePaths = relativePathsForProjectsInDirectory(_directoryURL)
+				expect(relativePaths).to(equal([ "SampleGitSubmodule.xcodeproj/" ]))
+			}
+		}
+
 		it("should build for all platforms") {
 			let dependencies = [
 				ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes")),
@@ -169,6 +195,45 @@ class XcodeSpec: QuickSpec {
 			
 			expect(codesignResult.value).notTo(beNil())
 			expect(output).to(contain("satisfies its Designated Requirement"))
+		}
+
+		it("should build all subprojects for all platforms by default") {
+			let multipleSubprojects = "SampleMultipleSubprojects"
+			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource(multipleSubprojects, withExtension: nil)!
+			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+
+			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
+
+			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
+				.flatten(.Concat)
+				.ignoreTaskData()
+				.on(next: { (project, scheme) in
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+
+			expect(result.error).to(beNil())
+
+			let expectedPlatformsFrameworks = [
+				("iOS", "SampleiOSFramework"),
+				("Mac", "SampleMacFramework"),
+				("tvOS", "SampleTVFramework"),
+				("watchOS", "SampleWatchFramework")
+			]
+
+			for (platform, framework) in expectedPlatformsFrameworks {
+				var isDirectory: ObjCBool = false
+
+				let path = _buildFolderURL.URLByAppendingPathComponent("\(platform)/\(framework).framework").path!
+
+				let fileExists = NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)
+				expect(fileExists).to(beTruthy())
+				if fileExists {
+					expect(isDirectory).to(beTruthy())
+				} else {
+					print("failed to build \(platform)/\(framework).framework")
+				}
+			}
 		}
 
 		it("should skip projects without shared dynamic framework schems") {

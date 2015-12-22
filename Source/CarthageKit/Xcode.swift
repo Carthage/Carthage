@@ -189,11 +189,25 @@ extension BuildArguments: CustomStringConvertible {
 public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<ProjectLocator, CarthageError> {
 	let enumerationOptions: NSDirectoryEnumerationOptions = [ .SkipsHiddenFiles, .SkipsPackageDescendants ]
 
-	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+	return submodulesInRepository(directoryURL)
+		.map { directoryURL.URLByAppendingPathComponent($0.path) }
+		.concat(SignalProducer(value: directoryURL.URLByAppendingPathComponent("Carthage")))
+		.collect()
+		.flatMap(.Merge) { directoriesToSkip in
+			return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+				.filter { _, URL in
+					for directory in directoriesToSkip {
+						if directory.hasSubdirectory(URL) {
+							return false
+						}
+					}
+					return true
+				}
+		}
 		.reduce([]) { (matches: [ProjectLocator], tuple) -> [ProjectLocator] in
 			var matches = matches
 			let (_, URL) = tuple
-			
+
 			if let UTI = URL.typeIdentifier.value {
 				if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
 					matches.append(.Workspace(URL))
@@ -205,9 +219,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 			return matches
 		}
 		.map { $0.sort() }
-		.flatMap(.Merge) { matches -> SignalProducer<ProjectLocator, CarthageError> in
-			return SignalProducer(values: matches)
-		}
+		.flatMap(.Merge) { SignalProducer(values: $0) }
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
@@ -1226,9 +1238,17 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 							return false
 						}
 					}
-					.concat(SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), platforms)))
-					.take(1)
-					.flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
+					.flatMap(.Concat) { project, schemes in
+						return SignalProducer(values: schemes.map { ($0, project) })
+					}
+					.collect()
+					.flatMap(.Merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+						if !schemes.isEmpty {
+							return SignalProducer(values: schemes)
+						} else {
+							return SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), platforms))
+						}
+					}
 			}
 			.flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
 				return locatorBuffer
