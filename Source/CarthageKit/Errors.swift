@@ -71,7 +71,7 @@ public enum CarthageError: ErrorType, Equatable {
 	case GitHubAPIRequestFailed(String)
 
 	/// An error occurred while shelling out.
-	case TaskError(ReactiveTaskError)
+	case TaskError(ReactiveTask.TaskError)
 
 	/// An error occurred in a network operation.
 	case NetworkError(NSError)

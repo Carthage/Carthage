@@ -144,9 +144,9 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 	var updatedEnvironment = environment ?? NSProcessInfo.processInfo().environment 
 	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
 
-	let taskDescription = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment, standardInput: standardInput)
+	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
 
-	return launchTask(taskDescription)
+	return launchTask(taskDescription, standardInput: standardInput)
 		.ignoreTaskData()
 		.mapError(CarthageError.TaskError)
 		.map { data in

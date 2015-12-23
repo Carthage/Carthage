@@ -169,6 +169,10 @@ public struct BuildArguments {
 			args += [ "BITCODE_GENERATION_MODE=\(bitcodeGenerationMode.rawValue)" ]
 		}
 
+		// Disable code signing requirement for all builds
+		// Frameworks get signed in the copy-frameworks action
+		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]
+
 		return args
 	}
 }
@@ -185,10 +189,25 @@ extension BuildArguments: CustomStringConvertible {
 public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<ProjectLocator, CarthageError> {
 	let enumerationOptions: NSDirectoryEnumerationOptions = [ .SkipsHiddenFiles, .SkipsPackageDescendants ]
 
-	return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-		.reduce([]) { (var matches: [ProjectLocator], tuple) -> [ProjectLocator] in
+	return submodulesInRepository(directoryURL)
+		.map { directoryURL.URLByAppendingPathComponent($0.path) }
+		.concat(SignalProducer(value: directoryURL.URLByAppendingPathComponent("Carthage")))
+		.collect()
+		.flatMap(.Merge) { directoriesToSkip in
+			return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+				.filter { _, URL in
+					for directory in directoriesToSkip {
+						if directory.hasSubdirectory(URL) {
+							return false
+						}
+					}
+					return true
+				}
+		}
+		.reduce([]) { (matches: [ProjectLocator], tuple) -> [ProjectLocator] in
+			var matches = matches
 			let (_, URL) = tuple
-			
+
 			if let UTI = URL.typeIdentifier.value {
 				if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
 					matches.append(.Workspace(URL))
@@ -200,15 +219,13 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 			return matches
 		}
 		.map { $0.sort() }
-		.flatMap(.Merge) { matches -> SignalProducer<ProjectLocator, CarthageError> in
-			return SignalProducer(values: matches)
-		}
+		.flatMap(.Merge) { SignalProducer(values: $0) }
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
-public func xcodebuildTask(task: String, _ buildArguments: BuildArguments) -> TaskDescription {
-	return TaskDescription(launchPath: "/usr/bin/xcrun", arguments: buildArguments.arguments + [ task ])
+public func xcodebuildTask(task: String, _ buildArguments: BuildArguments) -> Task {
+	return Task("/usr/bin/xcrun", arguments: buildArguments.arguments + [ task ])
 }
 
 /// Sends each scheme found in the given project.
@@ -320,6 +337,25 @@ public enum SDK: String {
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
 		return Result(self.init(rawValue: string.lowercaseString), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
+	}
+
+	/// Split the given SDKs into simulator ones and device ones.
+	private static func splitSDKs<S: SequenceType where S.Generator.Element == SDK>(sdks: S) -> (simulators: [SDK], devices: [SDK]) {
+		return (
+			simulators: sdks.filter { $0.isSimulator },
+			devices: sdks.filter { !$0.isSimulator }
+		)
+	}
+
+	/// Returns whether this is a simulator SDK.
+	public var isSimulator: Bool {
+		switch self {
+		case .iPhoneSimulator, .watchSimulator, .tvSimulator:
+			return true
+
+		case _:
+			return false
+		}
 	}
 
 	/// The platform that this SDK targets.
@@ -692,7 +728,7 @@ private func mergeExecutables(executableURLs: [NSURL], _ outputURL: NSURL) -> Si
 		}
 		.collect()
 		.flatMap(.Merge) { executablePaths -> SignalProducer<TaskEvent<NSData>, CarthageError> in
-			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
 
 			return launchTask(lipoTask)
 				.mapError(CarthageError.TaskError)
@@ -866,8 +902,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		//
 		// See https://github.com/Carthage/Carthage/issues/417.
 		func fetchDestination() -> SignalProducer<String?, CarthageError> {
-			if sdk == .iPhoneSimulator {
-				let destinationLookup = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
+			// Specifying destination seems to be required for building with
+			// simulator SDKs since Xcode 7.2.
+			if sdk.isSimulator {
+				let destinationLookup = Task("/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
 				return launchTask(destinationLookup)
 					.ignoreTaskData()
 					.map { data in
@@ -877,12 +915,13 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						// altogether if parsing fails. Xcode 7.0 beta 4 added a
 						// JSON output option as `xcrun simctl list devices --json`
 						// so this can be switched once 7.0 becomes a requirement.
-						let regex = try! NSRegularExpression(pattern: "-- iOS [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: [])
+						let platformName = sdk.platform.rawValue
+						let regex = try! NSRegularExpression(pattern: "-- \(platformName) [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: [])
 						let lastDeviceResult = regex.matchesInString(string as String, options: [], range: NSRange(location: 0, length: string.length)).last
 						return lastDeviceResult.map { result in
 							// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
 							let deviceID = string.substringWithRange(result.rangeAtIndex(1))
-							return "platform=iOS Simulator,id=\(deviceID)"
+							return "platform=\(platformName) Simulator,id=\(deviceID)"
 						}
 					}
 					.mapError(CarthageError.TaskError)
@@ -921,16 +960,18 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							.map { taskEvent in
 								taskEvent.map { _ in settings }
 							}
-							.mapError { .TaskError($0) }
+							.mapError(CarthageError.TaskError)
 					}
 			}
 	}
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		.reduce([:]) { (var sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
+		.reduce([:]) { (sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
+			var sdksByPlatform = sdksByPlatform
 			let platform = sdk.platform
 
-			if var sdks = sdksByPlatform[platform] {
+			if let sdks = sdksByPlatform[platform] {
+				var sdks = sdks
 				sdks.append(sdk)
 				sdksByPlatform.updateValue(sdks, forKey: platform)
 			} else {
@@ -966,33 +1007,37 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					}
 
 			case 2:
-				let firstSDK = sdks[0]
-				let secondSDK = sdks[1]
+				let (simulatorSDKs, deviceSDKs) = SDK.splitSDKs(sdks)
+				guard let deviceSDK = deviceSDKs.first else { fatalError("Could not find device SDK in \(sdks)") }
+				guard let simulatorSDK = simulatorSDKs.first else { fatalError("Could not find simulator SDK in \(sdks)") }
 
-				return settingsByTarget(buildSDK(firstSDK))
+				return settingsByTarget(buildSDK(deviceSDK))
 					.flatMap(.Concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
 						switch settingsEvent {
+						case let .Launch(task):
+							return SignalProducer(value: .Launch(task))
+
 						case let .StandardOutput(data):
 							return SignalProducer(value: .StandardOutput(data))
 
 						case let .StandardError(data):
 							return SignalProducer(value: .StandardError(data))
 
-						case let .Success(firstSettingsByTarget):
-							return settingsByTarget(buildSDK(secondSDK))
-								.flatMapTaskEvents(.Concat) { (secondSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
-									assert(firstSettingsByTarget.count == secondSettingsByTarget.count, "Number of targets built for \(firstSDK) (\(firstSettingsByTarget.count)) does not match number of targets built for \(secondSDK) (\(secondSettingsByTarget.count))")
+						case let .Success(deviceSettingsByTarget):
+							return settingsByTarget(buildSDK(simulatorSDK))
+								.flatMapTaskEvents(.Concat) { (simulatorSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
+									assert(deviceSettingsByTarget.count == simulatorSettingsByTarget.count, "Number of targets built for \(deviceSDK) (\(deviceSettingsByTarget.count)) does not match number of targets built for \(simulatorSDK) (\(simulatorSettingsByTarget.count))")
 
 									return SignalProducer { observer, disposable in
-										for (target, firstSettings) in firstSettingsByTarget {
+										for (target, deviceSettings) in deviceSettingsByTarget {
 											if disposable.disposed {
 												break
 											}
 
-											let secondSettings = secondSettingsByTarget[target]
-											assert(secondSettings != nil, "No \(secondSDK) build settings found for target \"\(target)\"")
+											let simulatorSettings = simulatorSettingsByTarget[target]
+											assert(simulatorSettings != nil, "No \(simulatorSDK) build settings found for target \"\(target)\"")
 
-											observer.sendNext((firstSettings, secondSettings!))
+											observer.sendNext((deviceSettings, simulatorSettings!))
 										}
 
 										observer.sendCompleted()
@@ -1000,8 +1045,8 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 								}
 						}
 					}
-					.flatMapTaskEvents(.Concat) { (firstSettings, secondSettings) in
-						return mergeBuildProductsIntoDirectory(secondSettings, firstSettings, folderURL)
+					.flatMapTaskEvents(.Concat) { (deviceSettings, simulatorSettings) in
+						return mergeBuildProductsIntoDirectory(deviceSettings, simulatorSettings, folderURL)
 					}
 
 			default:
@@ -1022,7 +1067,7 @@ public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<Tas
 		executable = builtProductURL.URLByAppendingPathComponent(executableName).path,
 		dSYM = dSYMURL.path
 	{
-		let dsymutilTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
+		let dsymutilTask = Task("/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
 
 		return launchTask(dsymutilTask)
 			.mapError(CarthageError.TaskError)
@@ -1127,54 +1172,6 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 		}
 }
 
-
-public func getSecuritySigningIdentities() -> SignalProducer<String, CarthageError> {
-	let securityTask = TaskDescription(launchPath: "/usr/bin/security", arguments: [ "find-identity", "-v", "-p", "codesigning" ])
-	
-	return launchTask(securityTask)
-		.ignoreTaskData()
-		.mapError(CarthageError.TaskError)
-		.map { (data: NSData) -> String in
-			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
-		}
-		.flatMap(.Merge) { (string: String) -> SignalProducer<String, CarthageError> in
-			return string.linesProducer.promoteErrors(CarthageError.self)
-		}
-}
-
-public typealias CodeSigningIdentity = String
-
-/// Matches lines of the form:
-///
-/// '  1) 4E8D512C8480AAC679947D6E50190AE97AB3E825 "3rd Party Mac Developer Application: Developer Name (DUCNFCN445)"'
-/// '  2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D "Mac Developer: Developer Name (DUCNFCN445)"'
-private let signingIdentitiesRegex = try! NSRegularExpression(pattern:
-	(
-		"\\s*"               + // Leading spaces
-		"\\d+\\)\\s+"        + // Number of identity
-		"([A-F0-9]+)\\s+"    + // Hash (e.g. 4E8D512C8480AAC67995D69CA09B769663BC844D)
-		"\"(.+):\\s"         + // Identity type (e.g. Mac Developer, iPhone Developer)
-		"(.+)\\s\\("         + // Developer Name
-		"([A-Z0-9]+)\\)\"\\s*" // Developer ID (e.g. DUCNFCN445)
-	),
- options: [])
-
-public func parseSecuritySigningIdentities(securityIdentities securityIdentities: SignalProducer<String, CarthageError> = getSecuritySigningIdentities()) -> SignalProducer<CodeSigningIdentity, CarthageError> {
-	return securityIdentities
-		.map { (identityLine: String) -> CodeSigningIdentity? in
-			let fullRange = NSMakeRange(0, identityLine.characters.count)
-			
-			if let match = signingIdentitiesRegex.matchesInString(identityLine, options: [], range: fullRange).first {
-				let id = identityLine as NSString
-				
-				return id.substringWithRange(match.rangeAtIndex(2))
-			}
-			
-			return nil
-		}
-		.ignoreNil()
-}
-
 /// Builds the first project or workspace found within the given directory which
 /// has at least one shared framework scheme.
 ///
@@ -1241,9 +1238,17 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 							return false
 						}
 					}
-					.concat(SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), platforms)))
-					.take(1)
-					.flatMap(.Merge) { project, schemes in SignalProducer(values: schemes.map { ($0, project) }) }
+					.flatMap(.Concat) { project, schemes in
+						return SignalProducer(values: schemes.map { ($0, project) })
+					}
+					.collect()
+					.flatMap(.Merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+						if !schemes.isEmpty {
+							return SignalProducer(values: schemes)
+						} else {
+							return SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), platforms))
+						}
+					}
 			}
 			.flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
 				return locatorBuffer
@@ -1378,7 +1383,7 @@ private func stripArchitecture(frameworkURL: NSURL, _ architecture: String) -> S
 			return binaryURL(frameworkURL)
 		}
 		.flatMap(.Merge) { binaryURL -> SignalProducer<TaskEvent<NSData>, CarthageError> in
-			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
 			return launchTask(lipoTask)
 				.mapError(CarthageError.TaskError)
 		}
@@ -1391,7 +1396,7 @@ public func architecturesInFramework(frameworkURL: NSURL) -> SignalProducer<Stri
 			return binaryURL(frameworkURL)
 		}
 		.flatMap(.Merge) { binaryURL -> SignalProducer<String, CarthageError> in
-			let lipoTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
 
 			return launchTask(lipoTask)
 				.ignoreTaskData()
@@ -1494,7 +1499,7 @@ public func BCSymbolMapsForFramework(frameworkURL: NSURL) -> SignalProducer<NSUR
 
 /// Sends a set of UUIDs for each architecture present in the given URL.
 private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
-	let dwarfdumpTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", URL.path! ])
+	let dwarfdumpTask = Task("/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", URL.path! ])
 
 	return launchTask(dwarfdumpTask)
 		.ignoreTaskData()
@@ -1550,7 +1555,7 @@ private func binaryURL(frameworkURL: NSURL) -> Result<NSURL, CarthageError> {
 
 /// Signs a framework with the given codesigning identity.
 private func codesign(frameworkURL: NSURL, _ expandedIdentity: String) -> SignalProducer<(), CarthageError> {
-	let codesignTask = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
+	let codesignTask = Task("/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
 
 	return launchTask(codesignTask)
 		.mapError(CarthageError.TaskError)
