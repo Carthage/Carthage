@@ -14,10 +14,10 @@
 #include <string.h>
 #include <unistd.h>
 
-static const char * const exceptionPrelude = "\n"
+static const char exceptionPrelude[] = "\n"
 	"Caught signal triggered by the Swift runtime!\n";
 
-static const char * const exceptionExplanation = "\n"
+static const char exceptionExplanation[] = "\n"
 	"\n"
 	"Unfortunately, this is probably a bug in Swift and not Carthage. If\n"
 	"this is preventing you from doing work, please file an issue and we'll\n"
@@ -28,24 +28,11 @@ static const char * const exceptionExplanation = "\n"
 	"of Carthage and any crash report found in Console.app.\n"
 	"\n";
 
-// strnlen isn't on the async-signal safe list, but the implementation is 
-// pretty much the same as this. If this is overkill, just replace with 
-// the standard strnlen.
-static size_t safe_strnlen(const char * string, size_t max) {
-	for (size_t i = 0; i < max; ++i) {
-		if (string[i] == '\0') {
-			return i;
-		}
-	}
-
-	return max;
-}
-
 static void uncaughtSignal(int zig, siginfo_t *info, void *context) {
-	size_t preludeLength = safe_strnlen(exceptionPrelude, 90); // 47 at this time
-	size_t explanationLength = safe_strnlen(exceptionExplanation, 900); // 356 at this time
+	const size_t preludeLength = sizeof exceptionPrelude;
+	const size_t explanationLength = sizeof exceptionExplanation;
 	const char *signalName = zig < NSIG ? sys_siglist[zig] : "Unknown signal";
-	size_t signalNameLength = safe_strnlen(signalName, 90); // Currently they are all less than 25
+	const size_t signalNameLength = strlen(signalName);
 	
 	write(STDERR_FILENO, exceptionPrelude, preludeLength);
 	write(STDERR_FILENO, signalName, signalNameLength);
