@@ -50,8 +50,12 @@ _carthage() {
     fi
 
     case "${prev}" in
-        --output|--project-directory)
+        --output)
             _filedir
+            return 0
+            ;;
+        --project-directory)
+            _filedir -d
             return 0
             ;;
         --color)
