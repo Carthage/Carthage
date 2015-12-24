@@ -28,8 +28,8 @@ _carthage() {
                 ;;
             bootstrap|update)
                 COMPREPLY=($(compgen -W '--configuration --platform --verbose --no-checkout \
-				    --no-build --use-ssh --use-submodules --no-use-binaries --color \
-			        --project-directory' -- ${cur}))
+                    --no-build --use-ssh --use-submodules --no-use-binaries --color \
+                    --project-directory' -- ${cur}))
                 return 0
                 ;;
             build)
