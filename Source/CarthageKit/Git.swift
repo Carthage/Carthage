@@ -11,6 +11,9 @@ import Result
 import ReactiveCocoa
 import ReactiveTask
 
+/// The git version Carthage requires at least.
+public let CarthageRequiredGitVersion = "2.3.0"
+
 /// Represents a URL for a Git remote.
 public struct GitURL: Equatable {
 	/// The string representation of the URL.
@@ -141,13 +144,31 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 	var updatedEnvironment = environment ?? NSProcessInfo.processInfo().environment 
 	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
 
-	let taskDescription = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment, standardInput: standardInput)
+	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
 
-	return launchTask(taskDescription)
+	return launchTask(taskDescription, standardInput: standardInput)
 		.ignoreTaskData()
 		.mapError(CarthageError.TaskError)
 		.map { data in
 			return NSString(data: data, encoding: NSUTF8StringEncoding)! as String
+		}
+}
+
+/// Checks if the git version satisfies the given required version.
+public func ensureGitVersion(requiredVersion: String = CarthageRequiredGitVersion) -> SignalProducer<Bool, CarthageError> {
+	return launchGitTask([ "--version" ])
+		.map { input -> Bool in
+			let scanner = NSScanner(string: input)
+			guard scanner.scanString("git version ", intoString: nil) else {
+				return false
+			}
+
+			var version: NSString?
+			if scanner.scanUpToString("", intoString: &version), let version = version {
+				return version.compare(requiredVersion, options: [ .NumericSearch ]) != .OrderedAscending
+			} else {
+				return false
+			}
 		}
 }
 
@@ -432,6 +453,10 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, _ submodule: Subm
 	let submoduleDirectoryURL = repositoryFileURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
 
 	return isGitRepository(submoduleDirectoryURL)
+		.map { isRepository in
+			// Check if the submodule is initialized/updated already.
+			return isRepository && NSFileManager.defaultManager().fileExistsAtPath(submoduleDirectoryURL.URLByAppendingPathComponent(".git").path!)
+		}
 		.promoteErrors(CarthageError.self)
 		.flatMap(.Merge) { submoduleExists -> SignalProducer<(), CarthageError> in
 			if submoduleExists {

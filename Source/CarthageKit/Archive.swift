@@ -17,7 +17,7 @@ public func zipIntoArchive(destinationArchiveURL: NSURL, _ inputPaths: [String])
 	precondition(destinationArchiveURL.fileURL)
 	precondition(!inputPaths.isEmpty)
 
-	let task = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "zip", "-q", "-r", "--symlinks", destinationArchiveURL.path! ] + inputPaths)
+	let task = Task("/usr/bin/env", arguments: [ "zip", "-q", "-r", "--symlinks", destinationArchiveURL.path! ] + inputPaths)
 	return launchTask(task)
 		.mapError(CarthageError.TaskError)
 		.then(.empty)
@@ -29,7 +29,7 @@ public func unzipArchiveToDirectory(fileURL: NSURL, _ destinationDirectoryURL: N
 	precondition(fileURL.fileURL)
 	precondition(destinationDirectoryURL.fileURL)
 
-	let task = TaskDescription(launchPath: "/usr/bin/env", arguments: [ "unzip", "-qq", "-d", destinationDirectoryURL.path!, fileURL.path! ])
+	let task = Task("/usr/bin/env", arguments: [ "unzip", "-qq", "-d", destinationDirectoryURL.path!, fileURL.path! ])
 	return launchTask(task)
 		.mapError(CarthageError.TaskError)
 		.then(.empty)

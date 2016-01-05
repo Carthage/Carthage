@@ -22,8 +22,8 @@ class ProjectSpec: QuickSpec {
 			expect(result?.value).notTo(beNil())
 
 			let dependencies = result?.value?.dependencies
-			expect(dependencies?.count).to(equal(1))
-			expect(dependencies?.first?.project.name).to(equal("Carthage"))
+			expect(dependencies?.count) == 1
+			expect(dependencies?.first?.project.name) == "Carthage"
 		}
 
         it("should detect duplicate dependencies across Cartfile and Cartfile.private") {
@@ -50,7 +50,7 @@ class ProjectSpec: QuickSpec {
 				makeDependency("5", "5", bothLocations),
 			])
 
-			expect(resultError).to(equal(expectedError))
+			expect(resultError) == expectedError
         }
 	}
 }

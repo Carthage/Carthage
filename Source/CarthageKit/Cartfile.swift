@@ -155,6 +155,13 @@ public struct ResolvedCartfile {
 
 		return result.map { _ in cartfile }
 	}
+
+	/// Returns the dependency whose project matches the given project or nil.
+	internal func dependencyForProject(project: ProjectIdentifier) -> Dependency<PinnedVersion>? {
+		return dependencies.lazy
+			.filter { $0.project == project }
+			.first
+	}
 }
 
 extension ResolvedCartfile: CustomStringConvertible {
@@ -274,18 +281,13 @@ public struct Dependency<V: VersionType>: Equatable {
 		self.project = project
 		self.version = version
 	}
-
-	/// Maps over the `version` in the receiver.
-	public func map<W: VersionType>(f: V -> W) -> Dependency<W> {
-		return Dependency<W>(project: project, version: f(version))
-	}
 }
 
 public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 	return lhs.project == rhs.project && lhs.version == rhs.version
 }
 
-extension Dependency: Scannable {
+extension Dependency where V: Scannable {
 	/// Attempts to parse a Dependency specification.
 	public static func fromScanner(scanner: NSScanner) -> Result<Dependency, CarthageError> {
 		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in

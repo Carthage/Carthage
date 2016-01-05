@@ -14,20 +14,44 @@ import ReactiveCocoa
 import ReactiveTask
 
 public struct BuildCommand: CommandType {
+	public struct Options: OptionsType {
+		public let configuration: String
+		public let buildPlatform: BuildPlatform
+		public let skipCurrent: Bool
+		public let colorOptions: ColorOptions
+		public let verbose: Bool
+		public let directoryPath: String
+		public let dependenciesToBuild: [String]?
+
+		public static func create(configuration: String) -> BuildPlatform -> Bool -> ColorOptions -> Bool -> String -> [String] -> Options {
+			return { buildPlatform in { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
+				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
+				return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
+			} } } } } }
+		}
+
+		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+			return create
+				<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
+				<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)")
+				<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
+				<*> ColorOptions.evaluate(m)
+				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
+				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Argument(defaultValue: [], usage: "the dependency names to build")
+		}
+	}
+	
 	public let verb = "build"
 	public let function = "Build the project's dependencies"
 
-	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
-		return producerWithOptions(BuildOptions.evaluate(mode))
-			.flatMap(.Merge) { options in
-				return self.buildWithOptions(options)
-					.promoteErrors()
-			}
+	public func run(options: Options) -> Result<(), CarthageError> {
+		return self.buildWithOptions(options)
 			.waitOnCommand()
 	}
 
 	/// Builds a project with the given options.
-	public func buildWithOptions(options: BuildOptions) -> SignalProducer<(), CarthageError> {
+	public func buildWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
 			.flatMap(.Merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
@@ -41,7 +65,7 @@ public struct BuildCommand: CommandType {
 				// Xcode doesn't always forward them.
 				if !options.verbose {
 					let (stdoutProducer, stdoutObserver) = SignalProducer<NSData, NoError>.buffer(0)
-					let grepTask: BuildSchemeProducer = launchTask(TaskDescription(launchPath: "/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ], standardInput: stdoutProducer))
+					let grepTask: BuildSchemeProducer = launchTask(Task("/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ]), standardInput: stdoutProducer)
 						.on(next: { taskEvent in
 							switch taskEvent {
 							case let .StandardOutput(data):
@@ -83,6 +107,9 @@ public struct BuildCommand: CommandType {
 						}
 					}, next: { taskEvent in
 						switch taskEvent {
+						case let .Launch(task):
+							stdoutHandle.writeData(task.description.dataUsingEncoding(NSUTF8StringEncoding)!)
+
 						case let .StandardOutput(data):
 							stdoutHandle.writeData(data)
 
@@ -100,15 +127,8 @@ public struct BuildCommand: CommandType {
 	/// Builds the project in the given directory, using the given options.
 	///
 	/// Returns a producer of producers, representing each scheme being built.
-	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: BuildOptions) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: Options) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
-
-		let sdkFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
-			let result = buildableSDKs(sdks, scheme, configuration, project, options.colorOptions.formatting)
-				.first()
-			
-			return result!
-		}
 
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeNext { eventSink.put($0) }
@@ -125,18 +145,13 @@ public struct BuildCommand: CommandType {
 				}
 			}
 			.flatMap(.Merge) { project in
-				return project.migrateIfNecessary(options.colorOptions)
-					.on(next: carthage.println)
-					.then(SignalProducer(value: project))
-			}
-			.flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, forPlatforms: options.buildPlatform.platforms, sdkFilter: sdkFilter)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, dependenciesToBuild: options.dependenciesToBuild, forPlatforms: options.buildPlatform.platforms)
 			}
 
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms, sdkFilter: sdkFilter)
+			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms)
 				.flatMapError { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
 					switch error {
 					case let .NoSharedFrameworkSchemes(project, _):
@@ -177,7 +192,7 @@ public struct BuildCommand: CommandType {
 
 	/// Opens a file handle for logging, returning the handle and the URL to any
 	/// temporary file on disk.
-	private func openLoggingHandle(options: BuildOptions) -> SignalProducer<(NSFileHandle, NSURL?), CarthageError> {
+	private func openLoggingHandle(options: Options) -> SignalProducer<(NSFileHandle, NSURL?), CarthageError> {
 		if options.verbose {
 			let out: (NSFileHandle, NSURL?) = (NSFileHandle.fileHandleWithStandardOutput(), nil)
 			return SignalProducer(value: out)
@@ -189,73 +204,6 @@ public struct BuildCommand: CommandType {
 					return .WriteFailed(temporaryDirectoryURL, error)
 				}
 		}
-	}
-}
-
-/**
-Returns the SDKs that the given scheme, configuration, and project are capable of building, given
-the signing identities available
-
-:param: sdk           The list of SDKs to filter
-:param: scheme        The scheme name to be built
-:param: configuration The Xcode configuration to be built
-:param: project       The project being built
-:param: formatting    An instance of formatting options
-
-:returns: A list of SDKs that can be built with the configured signing identities
-*/
-public func buildableSDKs(sdks: [SDK], _ scheme: String, _ configuration: String, _ project: ProjectLocator, _ formatting: ColorOptions.Formatting) -> SignalProducer<[SDK], CarthageError> {
-	var identityCheckArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-	
-	return parseSecuritySigningIdentities()
-		.collect()
-		.flatMap(.Concat) { identities in
-			return SignalProducer(values: sdks).map { ($0, identities) }
-		}
-		.flatMap(.Concat) { (sdk: SDK, signingIdentities: [CodeSigningIdentity]) -> SignalProducer<SDK, CarthageError> in
-			let availableIdentities = Set(signingIdentities)
-			
-			identityCheckArgs.sdk = sdk
-			
-			return BuildSettings.loadWithArguments(identityCheckArgs)
-				.filter { settings -> Bool in
-					if let configuredSigningIdentity = settings["CODE_SIGN_IDENTITY"].value
-						where !availableIdentities.contains(configuredSigningIdentity) {
-							let quotedSDK = formatting.quote(sdk.rawValue)
-							let quotedIdentity = formatting.quote(configuredSigningIdentity)
-							let message = "Skipping build for \(quotedSDK) SDK because the necessary signing identity \(quotedIdentity) is not installed"
-							carthage.println(formatting.bullets + "WARNING: \(message)")
-							
-							return false
-					}
-					return true
-				}
-				.map { _ in sdk }
-				.take(1)
-		}
-		.collect()
-}
-
-public struct BuildOptions: OptionsType {
-	public let configuration: String
-	public let buildPlatform: BuildPlatform
-	public let skipCurrent: Bool
-	public let colorOptions: ColorOptions
-	public let verbose: Bool
-	public let directoryPath: String
-
-	public static func create(configuration: String)(buildPlatform: BuildPlatform)(skipCurrent: Bool)(colorOptions: ColorOptions)(verbose: Bool)(directoryPath: String) -> BuildOptions {
-		return self.init(configuration: configuration, buildPlatform: buildPlatform, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath)
-	}
-
-	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
-		return create
-			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
-			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)")
-			<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
-			<*> ColorOptions.evaluate(m)
-			<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
-			<*> m <| Option(defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 	}
 }
 
@@ -346,7 +294,7 @@ extension BuildPlatform: ArgumentType {
 	public static let name = "platform"
 
 	private static let acceptedStrings: [String: BuildPlatform] = [
-		"Mac": .Mac, "macosx": .Mac,
+		"Mac": .Mac, "OSX": .Mac, "macosx": .Mac,
 		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
 		"watchOS": .watchOS, "watchsimulator": .watchOS,
 		"tvOS": .tvOS, "tvsimulator": .tvOS,
@@ -354,28 +302,26 @@ extension BuildPlatform: ArgumentType {
 	]
 
 	public static func fromString(string: String) -> BuildPlatform? {
-		let commaSeparated = string.characters.split(allowEmptySlices: false) { $0 == "," }.map(String.init)
+		let tokens = string.split()
 
 		let findBuildPlatform: String -> BuildPlatform? = { string in
-			for (key, platform) in self.acceptedStrings {
-				if string.caseInsensitiveCompare(key) == .OrderedSame {
-					return platform
-				}
-			}
-			return nil
+			return self.acceptedStrings.lazy
+				.filter { key, _ in string.caseInsensitiveCompare(key) == .OrderedSame }
+				.map { _, platform in platform }
+				.first
 		}
 
-		switch commaSeparated.count {
+		switch tokens.count {
 		case 0:
 			return nil
 
 		case 1:
-			return findBuildPlatform(commaSeparated[0])
+			return findBuildPlatform(tokens[0])
 
 		default:
 			var buildPlatforms = [BuildPlatform]()
-			for string in commaSeparated {
-				if let found = findBuildPlatform(string) where found != .All {
+			for token in tokens {
+				if let found = findBuildPlatform(token) where found != .All {
 					buildPlatforms.append(found)
 				} else {
 					// Reject if an invalid value is included in the comma-

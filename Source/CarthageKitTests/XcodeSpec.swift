@@ -21,32 +21,6 @@ class XcodeSpec: QuickSpec {
 		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
 
-		var machineHasiOSIdentity: Bool = false
-		var sdkFilter: SDKFilterCallback = { .Success($0.0) }
-
-		beforeSuite {
-			machineHasiOSIdentity = iOSSigningIdentitiesConfigured()
-
-			// Works around the test failure in CI environment for pull requests
-			// sent from forked repositories.
-			//
-			// See https://github.com/Carthage/Carthage/pull/766#issuecomment-141671784.
-			if !machineHasiOSIdentity {
-				sdkFilter = { args in
-					let filtered = args.0.filter { sdk in
-						switch sdk {
-						case .MacOSX, .iPhoneSimulator, .watchSimulator, .tvSimulator:
-							return true
-
-						case _:
-							return false
-						}
-					}
-					return .Success(filtered)
-				}
-			}
-		}
-
 		beforeEach {
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(buildFolderURL)
 
@@ -58,6 +32,58 @@ class XcodeSpec: QuickSpec {
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(targetFolderURL)
 			return
 		}
+		
+		describe("\(ProjectLocator.self)") {
+			describe("sorting") {
+				it("should put workspaces before projects") {
+					let workspace = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/Z.xcworkspace"))
+					let project = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
+					expect(workspace < project) == true
+				}
+				
+				it("should fall back to lexicographical sorting") {
+					let workspaceA = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/A.xcworkspace"))
+					let workspaceB = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/B.xcworkspace"))
+					expect(workspaceA < workspaceB) == true
+					
+					let projectA = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
+					let projectB = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/B.xcodeproj"))
+					expect(projectA < projectB) == true
+				}
+				
+				it("should put top-level directories first") {
+					let top = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/Z.xcodeproj"))
+					let bottom = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/A/A.xcodeproj"))
+					expect(top < bottom) == true
+				}
+			}
+		}
+
+		describe("locateProjectsInDirectory:") {
+			func relativePathsForProjectsInDirectory(directoryURL: NSURL) -> [String] {
+				let result = locateProjectsInDirectory(directoryURL)
+					.map { $0.fileURL.absoluteString.substringFromIndex(directoryURL.absoluteString.endIndex) }
+					.collect()
+					.first()
+				expect(result?.error).to(beNil())
+				return result?.value ?? []
+			}
+
+			it("should not find anything in the Carthage Subdirectory") {
+				let relativePaths = relativePathsForProjectsInDirectory(directoryURL)
+				expect(relativePaths).toNot(beEmpty())
+				let pathsStartingWithCarthage = relativePaths.filter { return $0.hasPrefix("Carthage/") }
+				expect(pathsStartingWithCarthage).to(beEmpty())
+			}
+
+			it("should not find anything that's listed as a git submodule") {
+				let multipleSubprojects = "SampleGitSubmodule"
+				let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource(multipleSubprojects, withExtension: nil)!
+
+				let relativePaths = relativePathsForProjectsInDirectory(_directoryURL)
+				expect(relativePaths) == [ "SampleGitSubmodule.xcodeproj/" ]
+			}
+		}
 
 		it("should build for all platforms") {
 			let dependencies = [
@@ -66,7 +92,7 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for project in dependencies {
-				let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
+				let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
 					.flatten(.Concat)
 					.ignoreTaskData()
 					.on(next: { (project, scheme) in
@@ -77,7 +103,7 @@ class XcodeSpec: QuickSpec {
 				expect(result.error).to(beNil())
 			}
 
-			let result = buildInDirectory(directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
+			let result = buildInDirectory(directoryURL, withConfiguration: "Debug")
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -98,17 +124,17 @@ class XcodeSpec: QuickSpec {
 				let iOSdSYMPath = (iOSPath as NSString).stringByAppendingPathExtension("dSYM")!
 
 				var isDirectory: ObjCBool = false
-				expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
-				expect(isDirectory).to(beTruthy())
+				expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
+				expect(isDirectory) == true
 
-				expect(NSFileManager.defaultManager().fileExistsAtPath(macdSYMPath, isDirectory: &isDirectory)).to(beTruthy())
-				expect(isDirectory).to(beTruthy())
+				expect(NSFileManager.defaultManager().fileExistsAtPath(macdSYMPath, isDirectory: &isDirectory)) == true
+				expect(isDirectory) == true
 
-				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
-				expect(isDirectory).to(beTruthy())
+				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)) == true
+				expect(isDirectory) == true
 
-				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSdSYMPath, isDirectory: &isDirectory)).to(beTruthy())
-				expect(isDirectory).to(beTruthy())
+				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSdSYMPath, isDirectory: &isDirectory)) == true
+				expect(isDirectory) == true
 			}
 			let frameworkFolderURL = buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework")
 
@@ -119,59 +145,94 @@ class XcodeSpec: QuickSpec {
 				.single()
 
 			expect(architectures?.value).to(contain("i386"))
-			if machineHasiOSIdentity {
-				expect(architectures?.value).to(contain("armv7"))
-				expect(architectures?.value).to(contain("arm64"))
-			}
+			expect(architectures?.value).to(contain("armv7"))
+			expect(architectures?.value).to(contain("arm64"))
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
 			let auxiliaryFrameworkPath = buildFolderURL.URLByAppendingPathComponent("iOS/AuxiliaryFramework.framework").path!
 			var isDirectory: ObjCBool = false
-			expect(NSFileManager.defaultManager().fileExistsAtPath(auxiliaryFrameworkPath, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(auxiliaryFrameworkPath, isDirectory: &isDirectory)) == true
+			expect(isDirectory) == true
 
 			// Copy ReactiveCocoaLayout.framework to the temporary folder.
 			let targetURL = targetFolderURL.URLByAppendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
 
 			let resultURL = copyProduct(frameworkFolderURL, targetURL).single()
-			expect(resultURL?.value).to(equal(targetURL))
+			expect(resultURL?.value) == targetURL
 
-			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)) == true
+			expect(isDirectory) == true
 
-			if machineHasiOSIdentity {
-				let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
-				expect(strippingResult.value).notTo(beNil())
-				
-				let strippedArchitectures = architecturesInFramework(targetURL)
-					.collect()
-					.single()
-				
-				expect(strippedArchitectures?.value).notTo(contain("i386"))
-				expect(strippedArchitectures?.value).to(contain("armv7"))
-				expect(strippedArchitectures?.value).to(contain("arm64"))
+			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
+			expect(strippingResult.value).notTo(beNil())
+			
+			let strippedArchitectures = architecturesInFramework(targetURL)
+				.collect()
+				.single()
+			
+			expect(strippedArchitectures?.value).notTo(contain("i386"))
+			expect(strippedArchitectures?.value).to(contain("armv7"))
+			expect(strippedArchitectures?.value).to(contain("arm64"))
 
-				let modulesDirectoryURL = targetURL.URLByAppendingPathComponent("Modules", isDirectory: true)
-				expect(NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!)).to(beFalsy())
-				
-				var output: String = ""
-				let codeSign = TaskDescription(launchPath: "/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
-				
-				let codesignResult = launchTask(codeSign)
-					.on(next: { taskEvent in
-						switch taskEvent {
-						case let .StandardError(data):
-							output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
-							
-						default:
-							break
-						}
-					})
-					.wait()
-				
-				expect(codesignResult.value).notTo(beNil())
-				expect(output).to(contain("satisfies its Designated Requirement"))
+			let modulesDirectoryURL = targetURL.URLByAppendingPathComponent("Modules", isDirectory: true)
+			expect(NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!)) == false
+			
+			var output: String = ""
+			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
+			
+			let codesignResult = launchTask(codeSign)
+				.on(next: { taskEvent in
+					switch taskEvent {
+					case let .StandardError(data):
+						output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
+						
+					default:
+						break
+					}
+				})
+				.wait()
+			
+			expect(codesignResult.value).notTo(beNil())
+			expect(output).to(contain("satisfies its Designated Requirement"))
+		}
+
+		it("should build all subprojects for all platforms by default") {
+			let multipleSubprojects = "SampleMultipleSubprojects"
+			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource(multipleSubprojects, withExtension: nil)!
+			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+
+			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
+
+			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
+				.flatten(.Concat)
+				.ignoreTaskData()
+				.on(next: { (project, scheme) in
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+
+			expect(result.error).to(beNil())
+
+			let expectedPlatformsFrameworks = [
+				("iOS", "SampleiOSFramework"),
+				("Mac", "SampleMacFramework"),
+				("tvOS", "SampleTVFramework"),
+				("watchOS", "SampleWatchFramework")
+			]
+
+			for (platform, framework) in expectedPlatformsFrameworks {
+				var isDirectory: ObjCBool = false
+
+				let path = _buildFolderURL.URLByAppendingPathComponent("\(platform)/\(framework).framework").path!
+
+				let fileExists = NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)
+				expect(fileExists) == true
+				if fileExists {
+					expect(isDirectory) == true
+				} else {
+					print("failed to build \(platform)/\(framework).framework")
+				}
 			}
 		}
 
@@ -182,7 +243,7 @@ class XcodeSpec: QuickSpec {
 
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug", sdkFilter: sdkFilter)
+			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -196,11 +257,11 @@ class XcodeSpec: QuickSpec {
 			let iOSPath = _buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
 
 			var isDirectory: ObjCBool = false
-			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
+			expect(isDirectory) == true
 
-			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)) == true
+			expect(isDirectory) == true
 		}
 
 		it("should error out with .NoSharedFrameworkSchemes if there is no shared framework schemes") {
@@ -228,7 +289,7 @@ class XcodeSpec: QuickSpec {
 				expectedError = false
 			}
 
-			expect(expectedError).to(beTruthy())
+			expect(expectedError) == true
 		}
 
 		it("should build for one platform") {
@@ -246,17 +307,17 @@ class XcodeSpec: QuickSpec {
 			// Verify that the build product exists at the top level.
 			let path = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
 			var isDirectory: ObjCBool = false
-			expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
+			expect(isDirectory) == true
 
 			// Verify that the other platform wasn't built.
 			let incorrectPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
-			expect(NSFileManager.defaultManager().fileExistsAtPath(incorrectPath, isDirectory: nil)).to(beFalsy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(incorrectPath, isDirectory: nil)) == false
 		}
 
 		it("should build for multiple platforms") {
 			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
-			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac, .iOS ], sdkFilter: sdkFilter)
+			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac, .iOS ])
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -270,13 +331,13 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the one build product exists at the top level.
 			let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
-			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
+			expect(isDirectory) == true
 
 			// Verify that the other build product exists at the top level.
 			let iosPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
-			expect(NSFileManager.defaultManager().fileExistsAtPath(iosPath, isDirectory: &isDirectory)).to(beTruthy())
-			expect(isDirectory).to(beTruthy())
+			expect(NSFileManager.defaultManager().fileExistsAtPath(iosPath, isDirectory: &isDirectory)) == true
+			expect(isDirectory) == true
 		}
 
 		it("should locate the project") {
@@ -285,7 +346,7 @@ class XcodeSpec: QuickSpec {
 			expect(result?.error).to(beNil())
 
 			let locator = result?.value!
-			expect(locator).to(equal(ProjectLocator.ProjectFile(projectURL)))
+			expect(locator) == ProjectLocator.ProjectFile(projectURL)
 		}
 
 		it("should locate the project from the parent directory") {
@@ -301,41 +362,14 @@ class XcodeSpec: QuickSpec {
 			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")).first()
 			expect(result).to(beNil())
 		}
-		
-		it("should parse signing identities correctly") {
-			let inputLines = [
-				"  1) 4E8D512C8480FAC679947D6E50190AE9BAB3E825 \"3rd Party Mac Developer Application: Some Developer (DUCNFCN445)\"",
-				"  2) 8B0EBBAE7E7230BB6AF5D69CA09B769663BC844D \"Mac Developer: Developer Name (AUCNACN346)\"",
-				"  3) 4E8D512C8480AAC67995D69CA09B769663BC844D \"iPhone Developer: App Developer (VZAPFCN445)\"",
-				"  4) 65E24CDAF5B3E1E1480818CA4656210871214337 \"Developer ID Application: Development, Inc. (DSVNEZN954)\"",
-				"     4 valid identities found"
-			]
-			
-			let expectedOutput = [
-				"3rd Party Mac Developer Application",
-				"Mac Developer",
-				"iPhone Developer",
-				"Developer ID Application",
-			]
-			
-			let result = parseSecuritySigningIdentities(securityIdentities: SignalProducer<String, CarthageError>(values: inputLines))
-				.collect()
-				.single()
 
-			expect(result?.value).to(equal(expectedOutput))
-		}
 	}
 }
 
-// MARK: - Helper functions
+// MARK: Helpers
 
-/// Returns true if the current user has any iOS signing identities configured
-private func iOSSigningIdentitiesConfigured(identities: SignalProducer<CodeSigningIdentity, CarthageError> = parseSecuritySigningIdentities()) -> Bool {
-	let iOSIdentities = identities
-		.filter { identity in
-			return identity.containsString("iPhone") || identity.containsString("iOS")
-		}
-		.last()
-	
-	return iOSIdentities != nil
+extension ObjCBool: Equatable {}
+
+public func == (lhs: ObjCBool, rhs: ObjCBool) -> Bool {
+	return lhs.boolValue == rhs.boolValue
 }

@@ -9,8 +9,14 @@
 import CarthageKit
 import Commandant
 import Foundation
-import Result
+import ReactiveCocoa
 import ReactiveTask
+import Result
+
+guard ensureGitVersion().first()?.value == true else {
+	fputs("Carthage requires git \(CarthageRequiredGitVersion) or later.\n", stderr)
+	exit(EXIT_FAILURE)
+}
 
 let registry = CommandRegistry<CarthageError>()
 registry.register(ArchiveCommand())

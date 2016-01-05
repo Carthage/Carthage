@@ -17,37 +17,30 @@ public struct CopyFrameworksCommand: CommandType {
 	public let verb = "copy-frameworks"
 	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
 
-	public func run(mode: CommandMode) -> Result<(), CommandantError<CarthageError>> {
-		switch mode {
-		case .Arguments:
-			return inputFiles()
-				.flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
-					let frameworkName = (frameworkPath as NSString).lastPathComponent
+	public func run(options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
+		return inputFiles()
+			.flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
+				let frameworkName = (frameworkPath as NSString).lastPathComponent
 
-					let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.InvalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
-					let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
+				let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.InvalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
+				let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
 
-					return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
-						.flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
-							return combineLatest(copyProduct(source, target), codeSigningIdentity())
-								.flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
-									let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
-									if buildActionIsArchiveOrInstall() {
-										return strip
-											.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.URLByDeletingLastPathComponent!))
-											.then(.empty)
-									} else {
-										return strip
-									}
+				return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
+					.flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
+						return combineLatest(copyProduct(source, target), codeSigningIdentity())
+							.flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
+								let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
+								if buildActionIsArchiveOrInstall() {
+									return strip
+										.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.URLByDeletingLastPathComponent!))
+										.then(.empty)
+								} else {
+									return strip
 								}
-						}
-				}
-				.promoteErrors()
-				.waitOnCommand()
-
-		case .Usage:
-			return .Success(())
-		}
+							}
+					}
+			}
+			.waitOnCommand()
 	}
 }
 

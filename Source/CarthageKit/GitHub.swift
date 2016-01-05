@@ -53,12 +53,8 @@ extension GitHubError: CustomStringConvertible {
 }
 
 extension GitHubError: Decodable {
-	public static func create(message: String) -> GitHubError {
-		return self.init(message: message)
-	}
-	
 	public static func decode(j: JSON) -> Decoded<GitHubError> {
-		return self.create
+		return self.init
 			<^> j <| "message"
 	}
 }
@@ -271,8 +267,10 @@ public struct GitHubRelease: Equatable {
 			return "Asset { name = \(name), contentType = \(contentType), URL = \(URL) }"
 		}
 
-		public static func create(ID: Int)(name: String)(contentType: String)(URL: NSURL) -> Asset {
-			return self.init(ID: ID, name: name, contentType: contentType, URL: URL)
+		public static func create(ID: Int) -> String -> String -> NSURL -> Asset {
+			return { name in { contentType in { URL in
+				return self.init(ID: ID, name: name, contentType: contentType, URL: URL)
+			} } }
 		}
 
 		public static func decode(j: JSON) -> Decoded<Asset> {
@@ -306,8 +304,10 @@ extension GitHubRelease: CustomStringConvertible {
 }
 
 extension GitHubRelease: Decodable {
-	public static func create(ID: Int)(name: String?)(tag: String)(draft: Bool)(prerelease: Bool)(assets: [Asset]) -> GitHubRelease {
-		return self.init(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
+	public static func create(ID: Int) -> String? -> String -> Bool -> Bool -> [Asset] -> GitHubRelease {
+		return { name in { tag in { draft in { prerelease in { assets in
+			return self.init(ID: ID, name: name, tag: tag, draft: draft, prerelease: prerelease, assets: assets)
+		} } } } }
 	}
 
 	public static func decode(j: JSON) -> Decoded<GitHubRelease> {
@@ -330,7 +330,9 @@ private func loadCredentialsFromGit(forServer server: GitHubRepository.Server) -
 		.flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
 			return string.linesProducer.promoteErrors(CarthageError.self)
 		}
-		.reduce([:]) { (var values: [String: String], line: String) -> [String: String] in
+		.reduce([:]) { (values: [String: String], line: String) -> [String: String] in
+			var values = values
+
 			let parts = line.characters
 				.split(1, allowEmptySlices: false) { $0 == "=" }
 				.map(String.init)
@@ -364,7 +366,9 @@ private func parseGitHubAccessTokenFromEnvironment() -> [String: String] {
 		// (e.g., `GITHUB_ACCESS_TOKEN="github.com=XXXXXXXXXXXXX,enterprise.local/ghe=YYYYYYYYY"`)
 		let records = accessTokenInput.characters.split(allowEmptySlices: false) { $0 == "," }
 
-		return records.reduce([:]) { (var values: [String: String], record) in
+		return records.reduce([:]) { (values: [String: String], record) in
+			var values = values
+
 			let parts = record.split(1, allowEmptySlices: false) { $0 == "=" }.map(String.init)
 			switch parts.count {
 			case 1:
@@ -420,7 +424,9 @@ internal func createGitHubRequest(URL: NSURL, _ authorizationHeaderValue: String
 private func parseLinkHeader(linkValue: String) -> [(NSURL, [String])] {
 	let components = linkValue.characters.split(allowEmptySlices: false) { $0 == "," }
 
-	return components.reduce([]) { (var links, component) in
+	return components.reduce([]) { links, component in
+		var links = links
+
 		var pieces = component.split(allowEmptySlices: false) { $0 == ";" }
 		if let URLPiece = pieces.first {
 			pieces.removeAtIndex(0)
