@@ -1378,7 +1378,7 @@ extension SignalProducerType where Value == NSURL, Error == CarthageError {
 }
 
 /// Strips the given architecture from a framework.
-private func stripArchitecture(frameworkURL: NSURL, _ architecture: String) -> SignalProducer<(), CarthageError> {
+public func stripArchitecture(frameworkURL: NSURL, _ architecture: String) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
