@@ -1330,6 +1330,13 @@ public func stripFramework(frameworkURL: NSURL, keepingArchitectures: [String], 
 		.concat(sign)
 }
 
+/// Strips a dSYM from unexpected architectures.
+public func stripDSYM(dSYMURL: NSURL, keepingArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+	return architecturesInPackage(dSYMURL)
+		.filter { !keepingArchitectures.contains($0) }
+		.flatMap(.Concat) { stripArchitecture(dSYMURL, $0) }
+}
+
 /// Copies a product into the given folder. The folder will be created if it
 /// does not already exist.
 ///
