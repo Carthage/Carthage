@@ -33,6 +33,7 @@ public struct CopyFrameworksCommand: CommandType {
 								if buildActionIsArchiveOrInstall() {
 									return strip
 										.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.URLByDeletingLastPathComponent!))
+										.then(copyAndStripSymbolsFileForFramework(url, fromDirectory: source.URLByDeletingLastPathComponent!, keepingArchitectures: validArchitectures))
 										.then(.empty)
 								} else {
 									return strip
@@ -50,6 +51,21 @@ private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory dir
 			return BCSymbolMapsForFramework(frameworkURL)
 				.map { URL in directoryURL.URLByAppendingPathComponent(URL.lastPathComponent!, isDirectory: false) }
 				.copyFileURLsIntoDirectory(builtProductsURL)
+		}
+}
+
+private func copyAndStripSymbolsFileForFramework(frameworkURL: NSURL, fromDirectory directoryURL: NSURL, keepingArchitectures: [String]) -> SignalProducer<NSURL, CarthageError> {
+	return SignalProducer(result: builtProductsFolder())
+		.flatMap(.Merge) { builtProductsURL in
+			SignalProducer<NSURL, CarthageError>(value: frameworkURL.URLByAppendingPathExtension("dSYM"))
+				.map { URL in directoryURL.URLByAppendingPathComponent(URL.lastPathComponent!, isDirectory: false) }
+				.copyFileURLsIntoDirectory(builtProductsURL)
+		}
+		.flatMap(.Merge) { symbolsURL in
+			architecturesInFramework(symbolsURL)
+				.filter { !keepingArchitectures.contains($0) }
+				.flatMap(.Concat) { stripArchitecture(symbolsURL, $0) }
+				.map { symbolsURL }
 		}
 }
 
