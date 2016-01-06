@@ -58,6 +58,7 @@ private func copySymbolsFileForFramework(frameworkURL: NSURL, fromDirectory dire
 	return SignalProducer(result: builtProductsFolder())
 		.flatMap(.Merge) { builtProductsURL in
 			SignalProducer<NSURL, CarthageError>(value: frameworkURL.URLByAppendingPathExtension("dSYM"))
+				.map { URL in directoryURL.URLByAppendingPathComponent(URL.lastPathComponent!, isDirectory: false) }
 				.copyFileURLsIntoDirectory(builtProductsURL)
 		}
 }
