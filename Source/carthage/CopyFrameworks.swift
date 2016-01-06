@@ -62,7 +62,7 @@ private func copyAndStripSymbolsFileForFramework(frameworkURL: NSURL, fromDirect
 				.copyFileURLsIntoDirectory(builtProductsURL)
 		}
 		.flatMap(.Merge) { symbolsURL in
-			return architecturesInFramework(symbolsURL)
+			architecturesInFramework(symbolsURL)
 				.filter { !keepingArchitectures.contains($0) }
 				.flatMap(.Concat) { stripArchitecture(symbolsURL, $0) }
 				.map { symbolsURL }
