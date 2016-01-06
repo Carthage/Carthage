@@ -370,7 +370,7 @@ public func submoduleSHAForPath(repositoryFileURL: NSURL, _ path: String, revisi
 			if components.count >= 3 {
 				return .Success(String(components[2]))
 			} else {
-				return .Failure(CarthageError.ParseError(description: "expected submodule commit SHA in output of \(task.joinWithSeparator(" ")) but encountered: \(string)"))
+				return .Failure(CarthageError.ParseError(description: "expected submodule commit SHA in output of task (\(task.joinWithSeparator(" "))) but encountered: \(string)"))
 			}
 		}
 }
