@@ -224,8 +224,14 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
+public func xcodebuildTask(tasks: [String], _ buildArguments: BuildArguments) -> Task {
+	return Task("/usr/bin/xcrun", arguments: buildArguments.arguments + tasks)
+}
+
+/// Creates a task description for executing `xcodebuild` with the given
+/// arguments.
 public func xcodebuildTask(task: String, _ buildArguments: BuildArguments) -> Task {
-	return Task("/usr/bin/xcrun", arguments: buildArguments.arguments + [ task ])
+	return xcodebuildTask([task], buildArguments)
 }
 
 /// Sends each scheme found in the given project.
@@ -953,7 +959,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							argsForBuilding.bitcodeGenerationMode = .Bitcode
 						}
 
-						var buildScheme = xcodebuildTask("build", argsForBuilding)
+						var buildScheme = xcodebuildTask(["clean", "build"], argsForBuilding)
 						buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 						return launchTask(buildScheme)
