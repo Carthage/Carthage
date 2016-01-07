@@ -361,7 +361,8 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 /// Determines the SHA that the submodule at the given path is pinned to, in the
 /// revision of the parent repository specified.
 public func submoduleSHAForPath(repositoryFileURL: NSURL, _ path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
-	return launchGitTask([ "ls-tree", "-z", revision, path ], repositoryFileURL: repositoryFileURL)
+	let task = [ "ls-tree", "-z", revision, path ]
+	return launchGitTask(task, repositoryFileURL: repositoryFileURL)
 		.attemptMap { string in
 			// Example:
 			// 160000 commit 083fd81ecf00124cbdaa8f86ef10377737f6325a	External/ObjectiveGit
@@ -369,7 +370,7 @@ public func submoduleSHAForPath(repositoryFileURL: NSURL, _ path: String, revisi
 			if components.count >= 3 {
 				return .Success(String(components[2]))
 			} else {
-				return .Failure(CarthageError.ParseError(description: "expected submodule commit SHA in ls-tree output: \(string)"))
+				return .Failure(CarthageError.ParseError(description: "expected submodule commit SHA in output of task (\(task.joinWithSeparator(" "))) but encountered: \(string)"))
 			}
 		}
 }
