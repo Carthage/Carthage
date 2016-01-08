@@ -295,6 +295,15 @@ public final class Project {
 			}
 			.startOnQueue(cachedVersionsQueue)
 	}
+	
+	/// Loads the Cartfile for the given dependency, at the given version.
+	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
+		return self.cloneOrFetchDependency(dependency.project).flatMap(.Concat) { repositoryURL in
+			return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
+				.flatMapError { _ in .empty }
+				.attemptMap(Cartfile.fromString)
+		}
+	}
 
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
@@ -841,14 +850,6 @@ private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
 	return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
 }
 
-/// Loads the Cartfile for the given dependency, at the given version.
-private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
-	let repositoryURL = repositoryFileURLForProject(dependency.project)
-
-	return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
-		.flatMapError { _ in .empty }
-		.attemptMap(Cartfile.fromString)
-}
 
 /// Returns the URL that the project's remote repository exists at.
 private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bool) -> GitURL {
