@@ -260,7 +260,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		}
 		.skipWhile { line in !line.hasSuffix("Schemes:") }
 		.skip(1)
-		.takeWhile { line in !line.isEmpty }
+		.takeWhile { line in !line.isEmpty && line.hasPrefix("  ") }
 		// xcodebuild has a bug where xcodebuild -list can sometimes hang
 		// indefinitely on projects that don't share any schemes, so
 		// automatically bail out if it looks like that's happening.
