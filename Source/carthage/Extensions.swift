@@ -94,7 +94,12 @@ internal struct ProjectEventSink {
 
 		case let .Fetching(project):
 			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(string: project.name))
-
+			
+		case .SkippedFetching:
+			break
+			// We don't log the '.SkippedFetching' event since it can occur quite frequently as we opportunistically check
+			// if a fetch is needed.
+			
 		case let .CheckingOut(project, revision):
 			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(string: project.name) + " at " + formatting.quote(revision))
 
