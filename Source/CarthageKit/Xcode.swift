@@ -1414,64 +1414,59 @@ public func architecturesInPackage(packageURL: NSURL) -> SignalProducer<String, 
 	return SignalProducer.attempt { () -> Result<NSURL, CarthageError> in
 			return binaryURL(packageURL)
 		}
-		.flatMap(.Merge) { binaryURL in
-			return architecturesInBinary(binaryURL)
-		}
-}
+		.flatMap(.Merge) { binaryURL -> SignalProducer<String, CarthageError> in
+			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
 
-/// Returns a signal of all architectures present in a given binary.
-public func architecturesInBinary(binaryURL: NSURL) -> SignalProducer<String, CarthageError> {
-	let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
+			return launchTask(lipoTask)
+				.ignoreTaskData()
+				.mapError(CarthageError.TaskError)
+				.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
+				.flatMap(.Merge) { output -> SignalProducer<String, CarthageError> in
+					let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
+					characterSet.addCharactersInString(" _-")
 
-	return launchTask(lipoTask)
-		.ignoreTaskData()
-		.mapError(CarthageError.TaskError)
-		.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
-		.flatMap(.Merge) { output -> SignalProducer<String, CarthageError> in
-			let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
-			characterSet.addCharactersInString(" _-")
+					let scanner = NSScanner(string: output as String)
 
-			let scanner = NSScanner(string: output as String)
+					if scanner.scanString("Architectures in the fat file:", intoString: nil) {
+						// The output of "lipo -info PathToBinary" for fat files
+						// looks roughly like so:
+						//
+						//     Architectures in the fat file: PathToBinary are: armv7 arm64
+						//
+						var architectures: NSString?
 
-			if scanner.scanString("Architectures in the fat file:", intoString: nil) {
-				// The output of "lipo -info PathToBinary" for fat files
-				// looks roughly like so:
-				//
-				//     Architectures in the fat file: PathToBinary are: armv7 arm64
-				//
-				var architectures: NSString?
+						scanner.scanString(binaryURL.path!, intoString: nil)
+						scanner.scanString("are:", intoString: nil)
+						scanner.scanCharactersFromSet(characterSet, intoString: &architectures)
 
-				scanner.scanString(binaryURL.path!, intoString: nil)
-				scanner.scanString("are:", intoString: nil)
-				scanner.scanCharactersFromSet(characterSet, intoString: &architectures)
+						let components = architectures?
+							.componentsSeparatedByString(" ")
+							.filter { !$0.isEmpty }
 
-				let components = architectures?
-					.componentsSeparatedByString(" ")
-					.filter { !$0.isEmpty }
+						if let components = components {
+							return SignalProducer(values: components)
+						}
+					}
 
-				if let components = components {
-					return SignalProducer(values: components)
+					if scanner.scanString("Non-fat file:", intoString: nil) {
+						// The output of "lipo -info PathToBinary" for thin
+						// files looks roughly like so:
+						//
+						//     Non-fat file: PathToBinary is architecture: x86_64
+						//
+						var architecture: NSString?
+
+						scanner.scanString(binaryURL.path!, intoString: nil)
+						scanner.scanString("is architecture:", intoString: nil)
+						scanner.scanCharactersFromSet(characterSet, intoString: &architecture)
+
+						if let architecture = architecture {
+							return SignalProducer(value: architecture as String)
+						}
+					}
+
+					return SignalProducer(error: .InvalidArchitectures(description: "Could not read architectures from \(packageURL.path!)"))
 				}
-			}
-
-			if scanner.scanString("Non-fat file:", intoString: nil) {
-				// The output of "lipo -info PathToBinary" for thin
-				// files looks roughly like so:
-				//
-				//     Non-fat file: PathToBinary is architecture: x86_64
-				//
-				var architecture: NSString?
-
-				scanner.scanString(binaryURL.path!, intoString: nil)
-				scanner.scanString("is architecture:", intoString: nil)
-				scanner.scanCharactersFromSet(characterSet, intoString: &architecture)
-
-				if let architecture = architecture {
-					return SignalProducer(value: architecture as String)
-				}
-			}
-
-			return SignalProducer(error: .InvalidArchitectures(description: "Could not read architectures from \(binaryURL.path!)"))
 		}
 }
 
