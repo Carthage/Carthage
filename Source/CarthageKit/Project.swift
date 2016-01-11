@@ -497,12 +497,11 @@ public final class Project {
 	/// Checks out the given project into its intended working directory,
 	/// cloning it first if need be.
 	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> SignalProducer<(), CarthageError> {
-		let repositoryURL = repositoryFileURLForProject(project)
-		let workingDirectoryURL = directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
-
-		let checkoutSignal = SignalProducer.attempt { () -> Result<Submodule?, CarthageError> in
+		return cloneOrFetchDependency(project, commitish: revision).flatMap(.Merge) { repositoryURL -> SignalProducer<(), CarthageError> in
+			let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
+			let checkoutSignal = SignalProducer.attempt { () -> Result<Submodule?, CarthageError> in
 				var submodule: Submodule?
-
+				
 				if let foundSubmodule = submodulesByPath[project.relativePath] {
 					var foundSubmodule = foundSubmodule
 					foundSubmodule.URL = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
@@ -511,31 +510,24 @@ public final class Project {
 				} else if self.useSubmodules {
 					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), SHA: revision)
 				}
-
+				
 				return .Success(submodule)
-			}
-			.flatMap(.Merge) { submodule -> SignalProducer<(), CarthageError> in
-				if let submodule = submodule {
-					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!))
-						.startOnQueue(self.gitOperationQueue)
-				} else {
-					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 				}
-			}
-			.on(started: {
-				self._projectEventsObserver.sendNext(.CheckingOut(project, revision))
-			})
-
-		return commitExistsInRepository(repositoryURL, revision: revision)
-			.promoteErrors(CarthageError.self)
-			.flatMap(.Merge) { exists -> SignalProducer<NSURL, CarthageError> in
-				if exists {
-					return .empty
-				} else {
-					return self.cloneOrFetchDependency(project)
+				.flatMap(.Merge) { submodule -> SignalProducer<(), CarthageError> in
+					if let submodule = submodule {
+						return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!))
+							.startOnQueue(self.gitOperationQueue)
+					} else {
+						return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
+					}
 				}
-			}
-			.then(checkoutSignal)
+				.on(started: {
+					self._projectEventsObserver.sendNext(.CheckingOut(project, revision))
+				})
+			
+			return checkoutSignal
+		}
+		
 	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
