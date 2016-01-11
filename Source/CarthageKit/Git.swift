@@ -375,21 +375,38 @@ public func submoduleSHAForPath(repositoryFileURL: NSURL, _ path: String, revisi
 		}
 }
 
-/// Returns each submodule found in the given repository revision, or an empty
-/// signal if none exist.
-public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = "HEAD") -> SignalProducer<Submodule, CarthageError> {
-	let modulesObject = "\(revision):.gitmodules"
-	let baseArguments = [ "config", "--blob", modulesObject, "-z" ]
+/// Returns each entry of `.gitmodules` found in the given repository revision,
+/// or an empty signal if none exist.
+internal func gitmodulesEntriesInRepository(repositoryFileURL: NSURL, revision: String?) -> SignalProducer<(name: String, path: String, URL: GitURL), CarthageError> {
+	var baseArguments = [ "config", "-z" ]
+	let modulesFile = ".gitmodules"
+
+	if let revision = revision {
+		let modulesObject = "\(revision):\(modulesFile)"
+		baseArguments += [ "--blob", modulesObject ]
+	} else {
+		// This is required to support `--no-use-submodules` checkouts.
+		// See https://github.com/Carthage/Carthage/issues/1029.
+		baseArguments += [ "--file", modulesFile ]
+	}
 
 	return launchGitTask(baseArguments + [ "--get-regexp", "submodule\\..*\\.path" ], repositoryFileURL: repositoryFileURL)
 		.flatMapError { _ in SignalProducer<String, NoError>.empty }
 		.flatMap(.Concat) { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
 		.promoteErrors(CarthageError.self)
-		.flatMap(.Concat) { name, path -> SignalProducer<Submodule, CarthageError> in
+		.flatMap(.Concat) { name, path -> SignalProducer<(name: String, path: String, URL: GitURL), CarthageError> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
-				.map { GitURL($0) }
-				.zipWith(submoduleSHAForPath(repositoryFileURL, path, revision: revision))
-				.map { URL, SHA in Submodule(name: name, path: path, URL: URL, SHA: SHA) }
+				.map { URLString in (name: name, path: path, URL: GitURL(URLString)) }
+		}
+}
+
+/// Returns each submodule found in the given repository revision, or an empty
+/// signal if none exist.
+public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = "HEAD") -> SignalProducer<Submodule, CarthageError> {
+	return gitmodulesEntriesInRepository(repositoryFileURL, revision: revision)
+		.flatMap(.Concat) { name, path, URL in
+			return submoduleSHAForPath(repositoryFileURL, path, revision: revision)
+				.map { SHA in Submodule(name: name, path: path, URL: URL, SHA: SHA) }
 		}
 }
 

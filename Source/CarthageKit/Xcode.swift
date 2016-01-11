@@ -189,7 +189,7 @@ extension BuildArguments: CustomStringConvertible {
 public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<ProjectLocator, CarthageError> {
 	let enumerationOptions: NSDirectoryEnumerationOptions = [ .SkipsHiddenFiles, .SkipsPackageDescendants ]
 
-	return submodulesInRepository(directoryURL)
+	return gitmodulesEntriesInRepository(directoryURL, revision: nil)
 		.map { directoryURL.URLByAppendingPathComponent($0.path) }
 		.concat(SignalProducer(value: directoryURL.URLByAppendingPathComponent("Carthage")))
 		.collect()
