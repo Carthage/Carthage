@@ -1316,9 +1316,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 /// Strips a framework from unexpected architectures, optionally codesigning the
 /// result.
 public func stripFramework(frameworkURL: NSURL, keepingArchitectures: [String], codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
-	let stripArchitectures = architecturesInPackage(frameworkURL)
-		.filter { !keepingArchitectures.contains($0) }
-		.flatMap(.Concat) { stripArchitecture(frameworkURL, $0) }
+	let stripArchitectures = stripBinary(frameworkURL, keepingArchitectures: keepingArchitectures)
 
 	// Xcode doesn't copy `Modules` directory at all.
 	let stripModules = stripModulesDirectory(frameworkURL)
@@ -1332,9 +1330,14 @@ public func stripFramework(frameworkURL: NSURL, keepingArchitectures: [String], 
 
 /// Strips a dSYM from unexpected architectures.
 public func stripDSYM(dSYMURL: NSURL, keepingArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-	return architecturesInPackage(dSYMURL)
+	return stripBinary(dSYMURL, keepingArchitectures: keepingArchitectures)
+}
+
+/// Strips a universal file from unexpected architectures.
+private func stripBinary(binaryURL: NSURL, keepingArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+	return architecturesInPackage(binaryURL)
 		.filter { !keepingArchitectures.contains($0) }
-		.flatMap(.Concat) { stripArchitecture(dSYMURL, $0) }
+		.flatMap(.Concat) { stripArchitecture(binaryURL, $0) }
 }
 
 /// Copies a product into the given folder. The folder will be created if it
