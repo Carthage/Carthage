@@ -16,7 +16,7 @@ class GitSpec: QuickSpec {
 		describe("GitURL") {
 			describe("normalizedURLString") {
 				it("should parse normal URL") {
-					expect(GitURL("https://github.com/antitypical/Result.git")) == GitURL("https://user:password@github.com/antitypical/Result")
+					expect(GitURL("https://github.com/antitypical/Result.git")) == GitURL("https://user:password@github.com:443/antitypical/Result")
 				}
 
 				it("should parse local path") {
