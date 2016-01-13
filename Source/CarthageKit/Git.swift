@@ -25,9 +25,8 @@ public struct GitURL: Equatable {
 	private var normalizedURLString: String {
 		let parsedURL: NSURL? = NSURL(string: URLString)
 
-		if let parsedURL = parsedURL {
+		if let parsedURL = parsedURL, host = parsedURL.host {
 			// Normal, valid URL.
-			let host = parsedURL.host ?? ""
 			let path = stripGitSuffix(parsedURL.path ?? "")
 			return "\(host)\(path)"
 		} else if URLString.hasPrefix("/") {
@@ -38,13 +37,13 @@ public struct GitURL: Equatable {
 			var strippedURLString = URLString
 
 			if let index = strippedURLString.characters.indexOf("@") {
-				strippedURLString.removeRange(Range(start: strippedURLString.startIndex, end: index))
+				strippedURLString.removeRange(strippedURLString.startIndex...index)
 			}
 
 			var host = ""
 			if let index = strippedURLString.characters.indexOf(":") {
-				host = strippedURLString[Range(start: strippedURLString.startIndex, end: index.predecessor())]
-				strippedURLString.removeRange(Range(start: strippedURLString.startIndex, end: index))
+				host = strippedURLString[strippedURLString.startIndex..<index]
+				strippedURLString.removeRange(strippedURLString.startIndex...index)
 			}
 
 			var path = strippedURLString
