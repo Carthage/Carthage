@@ -50,6 +50,12 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one.
 1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 
+Additonally, you'll need to copy debug symbols for debugging and crash reporting on OS X.
+
+1. On your application target’s “Build Phases” settings tab, click the “+” icon and choose “New Copy Files Phase”.
+1. Click the “Destination” drop-down menu and select “Products Directory”.
+1. For each framework you’re using, drag and drop its corresponding dSYM file.
+
 ##### If you're building for iOS, tvOS, or watchOS
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
@@ -68,14 +74,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
   $(SRCROOT)/Carthage/Build/iOS/Result.framework
   $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
   ```
-
-  This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files are copied when archiving.
-
-##### Copying debug symbols for debugging and crash reporting
-
-1. On your application target’s “Build Phases” settings tab, click the “+” icon and choose “New Copy Files Phase”.
-1. Click the “Destination” drop-down menu and select “Products Directory”.
-1. For each framework you’re using, drag and drop its corresponding dSYM file.
+  This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files and dSYMs are copied when archiving.
 
 With the debug information copied into the built products directory, Xcode will be able to symbolicate the stack trace whenever you stop at a breakpoint. This will also enable you to step through third-party code in the debugger.
 
