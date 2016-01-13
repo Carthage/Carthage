@@ -46,7 +46,7 @@ public struct GitURL: Equatable {
 				strippedURLString.removeRange(strippedURLString.startIndex...index)
 			}
 
-			var path = strippedURLString
+			var path = stripGitSuffix(strippedURLString)
 			if !path.hasPrefix("/") {
 				// This probably isn't strictly legit, but we'll have a forward
 				// slash for other URL types.
