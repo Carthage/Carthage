@@ -14,35 +14,66 @@ import ReactiveCocoa
 
 public struct ArchiveCommand: CommandType {
 	public struct Options: OptionsType {
-		public let frameworkNames: [String]
 		public let outputPath: String
+		public let directoryPath: String
 		public let colorOptions: ColorOptions
+		public let frameworkNames: [String]
 
-		static func create(outputPath: String) -> ColorOptions -> [String] -> Options {
-			return { colorOptions in { frameworkNames in
-				return self.init(frameworkNames: frameworkNames, outputPath: outputPath, colorOptions: colorOptions)
-			} }
+		static func create(outputPath: String) -> String -> ColorOptions -> [String] -> Options {
+			return { directoryPath in { colorOptions in { frameworkNames in
+				return self.init(outputPath: outputPath, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: frameworkNames)
+			} } }
 		}
 
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "output", defaultValue: "", usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)")
+				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> ColorOptions.evaluate(m)
-				<*> m <| Argument(usage: "the names of the built frameworks to archive (without any extension)")
+				<*> m <| Argument(defaultValue: [], usage: "the names of the built frameworks to archive without any extension (or blank to pick up the frameworks in the current project built by `--no-skip-current`)")
 		}
 	}
 	
 	public let verb = "archive"
-	public let function = "Archives a built framework into a zip that Carthage can use"
+	public let function = "Archives built frameworks into a zip that Carthage can use"
 
 	public func run(options: Options) -> Result<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 
+		let frameworks: [String]
+		if !options.frameworkNames.isEmpty {
+			frameworks = options.frameworkNames.map {
+				return ($0 as NSString).stringByAppendingPathExtension("framework")!
+			}
+		} else {
+			let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
+			frameworks = locateProjectsInDirectory(directoryURL)
+				.flatMap(.Concat) { project in
+					return schemesInProject(project)
+						.flatMapError { error in
+							if case .NoSharedSchemes = error {
+								return .empty
+							} else {
+								return .init(error: error)
+							}
+						}
+						.flatMap(.Merge) { scheme -> SignalProducer<String, CarthageError> in
+							let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
+							return BuildSettings.loadWithArguments(buildArguments)
+								.map { $0.wrapperName.value }
+								.ignoreNil()
+						}
+				}
+				.skipRepeats()
+				.collect()
+				.map { $0.sort() }
+				.first()?.value ?? []
+		}
+
 		return SignalProducer(values: Platform.supportedPlatforms)
 			.flatMap(.Merge) { platform -> SignalProducer<String, CarthageError> in
-				return SignalProducer(values: options.frameworkNames).map { frameworkName in
-					let frameworkName = (platform.relativePath as NSString).stringByAppendingPathComponent(frameworkName)
-					return (frameworkName as NSString).stringByAppendingPathExtension("framework")!
+				return SignalProducer(values: frameworks).map { framework in
+					return (platform.relativePath as NSString).stringByAppendingPathComponent(framework)
 				}
 			}
 			.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
@@ -63,12 +94,11 @@ public struct ArchiveCommand: CommandType {
 			.collect()
 			.flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
 				if paths.isEmpty {
-					let frameworks = options.frameworkNames.map { "\($0).framework" }
 					let error = CarthageError.InvalidArgument(description: "Could not find any copies of \(frameworks). Make sure you're in the project’s root and that the frameworks has already been built using 'carthage build --no-skip-current'.")
 					return SignalProducer(error: error)
 				}
 
-				let outputPath = (options.outputPath.isEmpty ? "\(options.frameworkNames.first!).framework.zip" : options.outputPath)
+				let outputPath = (options.outputPath.isEmpty ? "\(frameworks.first!).zip" : options.outputPath)
 				let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
 
 				return zipIntoArchive(outputURL, paths).on(completed: {
