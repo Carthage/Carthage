@@ -303,11 +303,12 @@ public final class Project {
 	/// Loads the Cartfile for the given dependency, at the given version.
 	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
 		let revision = dependency.version.commitish
-		return self.cloneOrFetchDependency(dependency.project, commitish: revision).flatMap(.Concat) { repositoryURL in
-			return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
-				.flatMapError { _ in .empty }
-				.attemptMap(Cartfile.fromString)
-		}
+		return self.cloneOrFetchDependency(dependency.project, commitish: revision)
+			.flatMap(.Concat) { repositoryURL in
+				return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
+			}
+			.flatMapError { _ in .empty }
+			.attemptMap(Cartfile.fromString)
 	}
 
 	/// Attempts to resolve a Git reference to a version.
@@ -497,9 +498,9 @@ public final class Project {
 	/// Checks out the given project into its intended working directory,
 	/// cloning it first if need be.
 	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> SignalProducer<(), CarthageError> {
-		return cloneOrFetchDependency(project, commitish: revision).flatMap(.Merge) { repositoryURL -> SignalProducer<(), CarthageError> in
-			let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
-			let checkoutSignal = SignalProducer.attempt { () -> Result<Submodule?, CarthageError> in
+		return cloneOrFetchDependency(project, commitish: revision)
+			.flatMap(.Merge) { repositoryURL -> SignalProducer<(), CarthageError> in
+				let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 				var submodule: Submodule?
 				
 				if let foundSubmodule = submodulesByPath[project.relativePath] {
@@ -511,23 +512,16 @@ public final class Project {
 					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), SHA: revision)
 				}
 				
-				return .Success(submodule)
+				if let submodule = submodule {
+					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!))
+						.startOnQueue(self.gitOperationQueue)
+				} else {
+					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 				}
-				.flatMap(.Merge) { submodule -> SignalProducer<(), CarthageError> in
-					if let submodule = submodule {
-						return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!))
-							.startOnQueue(self.gitOperationQueue)
-					} else {
-						return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
-					}
-				}
-				.on(started: {
-					self._projectEventsObserver.sendNext(.CheckingOut(project, revision))
-				})
-			
-			return checkoutSignal
-		}
-		
+			}
+			.on(started: {
+				self._projectEventsObserver.sendNext(.CheckingOut(project, revision))
+			})
 	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
@@ -882,38 +876,38 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, c
 		}
 
 		return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
-		}
-		.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
-			return isGitRepository(repositoryURL)
-				.promoteErrors(CarthageError.self)
-				.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
-					if isRepository {
-						let fetchProducer: () -> SignalProducer<(ProjectEvent, NSURL), CarthageError> = {
-							return SignalProducer(value: (.Fetching(project), repositoryURL))
-								.concat(fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*").then(.empty))
-						}
-						// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
-						if let commitish = commitish {
-							return commitExistsInRepository(repositoryURL, revision: commitish)
-								.promoteErrors(CarthageError.self)
-								.flatMap(.Merge) { exists -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
-									if exists {
-										return SignalProducer(value: (.SkippedFetching(project), repositoryURL))
-									} else {
-										return fetchProducer()
-									}
-							}
-						} else {
-							return fetchProducer()
+	}
+	.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
+		return isGitRepository(repositoryURL)
+			.promoteErrors(CarthageError.self)
+			.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
+				if isRepository {
+					let fetchProducer: () -> SignalProducer<(ProjectEvent, NSURL), CarthageError> = {
+						return SignalProducer(value: (.Fetching(project), repositoryURL))
+							.concat(fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*").then(.empty))
+					}
+					// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
+					if let commitish = commitish {
+						return commitExistsInRepository(repositoryURL, revision: commitish)
+							.promoteErrors(CarthageError.self)
+							.flatMap(.Merge) { exists -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
+								if exists {
+									return SignalProducer(value: (.SkippedFetching(project), repositoryURL))
+								} else {
+									return fetchProducer()
+								}
 						}
 					} else {
-						// Either the directory didn't exist or it did but wasn't a git repository
-						// (Could happen if the process is killed during a previous directory creation)
-						// So we remove it, then clone
-						_ = try? fileManager.removeItemAtURL(repositoryURL)
-						return SignalProducer(value: (.Cloning(project), repositoryURL))
-							.concat(cloneRepository(remoteURL, repositoryURL).then(.empty))
+						return fetchProducer()
 					}
-			}
+				} else {
+					// Either the directory didn't exist or it did but wasn't a git repository
+					// (Could happen if the process is killed during a previous directory creation)
+					// So we remove it, then clone
+					_ = try? fileManager.removeItemAtURL(repositoryURL)
+					return SignalProducer(value: (.Cloning(project), repositoryURL))
+						.concat(cloneRepository(remoteURL, repositoryURL).then(.empty))
+				}
+		}
 	}
 }
