@@ -57,11 +57,16 @@ public struct ArchiveCommand: CommandType {
 								return .init(error: error)
 							}
 						}
-						.flatMap(.Merge) { scheme -> SignalProducer<String, CarthageError> in
+						.flatMap(.Merge) { scheme -> SignalProducer<BuildSettings, CarthageError> in
 							let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 							return BuildSettings.loadWithArguments(buildArguments)
-								.map { $0.wrapperName.value }
-								.ignoreNil()
+						}
+						.flatMap(.Concat) { settings -> SignalProducer<String, CarthageError> in
+							if let wrapperName = settings.wrapperName.value {
+								return .init(value: wrapperName)
+							} else {
+								return .empty
+							}
 						}
 				}
 				.skipRepeats()
