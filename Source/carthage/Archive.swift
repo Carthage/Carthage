@@ -70,9 +70,8 @@ public struct ArchiveCommand: CommandType {
 						return .empty
 					}
 				}
-				.skipRepeats()
 				.collect()
-				.map { $0.sort() }
+				.map { Array(Set($0)).sort() }
 		}
 
 		return frameworks.flatMap(.Merge) { frameworks -> SignalProducer<(), CarthageError> in
