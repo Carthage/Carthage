@@ -40,11 +40,11 @@ public struct ArchiveCommand: CommandType {
 	public func run(options: Options) -> Result<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 
-		let frameworks: [String]
+		let frameworks: SignalProducer<[String], CarthageError>
 		if !options.frameworkNames.isEmpty {
-			frameworks = options.frameworkNames.map {
+			frameworks = .init(value: options.frameworkNames.map {
 				return ($0 as NSString).stringByAppendingPathExtension("framework")!
-			}
+			})
 		} else {
 			let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
 			frameworks = locateProjectsInDirectory(directoryURL)
@@ -72,44 +72,45 @@ public struct ArchiveCommand: CommandType {
 				.skipRepeats()
 				.collect()
 				.map { $0.sort() }
-				.first()?.value ?? []
 		}
 
-		return SignalProducer(values: Platform.supportedPlatforms)
-			.flatMap(.Merge) { platform -> SignalProducer<String, CarthageError> in
-				return SignalProducer(values: frameworks).map { framework in
-					return (platform.relativePath as NSString).stringByAppendingPathComponent(framework)
+		return frameworks.flatMap(.Merge) { frameworks -> SignalProducer<(), CarthageError> in
+			return SignalProducer(values: Platform.supportedPlatforms)
+				.flatMap(.Merge) { platform -> SignalProducer<String, CarthageError> in
+					return SignalProducer(values: frameworks).map { framework in
+						return (platform.relativePath as NSString).stringByAppendingPathComponent(framework)
+					}
 				}
-			}
-			.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
-			.flatMap(.Merge) { framework -> SignalProducer<String, CarthageError> in
-				let dSYM = (framework as NSString).stringByAppendingPathExtension("dSYM")!
-				let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework))
-					// generate relative paths for the bcsymbolmaps so they print nicely
-					.map { url in ((framework as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.lastPathComponent!) }
-				let extraFilesProducer = SignalProducer(value: dSYM)
-					.concat(bcsymbolmapsProducer)
-					.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
-				return SignalProducer(value: framework)
-					.concat(extraFilesProducer)
-			}
-			.on(next: { path in
-				carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
-			})
-			.collect()
-			.flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
-				if paths.isEmpty {
-					let error = CarthageError.InvalidArgument(description: "Could not find any copies of \(frameworks.joinWithSeparator(", ")). Make sure you're in the project’s root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
-					return SignalProducer(error: error)
+				.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+				.flatMap(.Merge) { framework -> SignalProducer<String, CarthageError> in
+					let dSYM = (framework as NSString).stringByAppendingPathExtension("dSYM")!
+					let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework))
+						// generate relative paths for the bcsymbolmaps so they print nicely
+						.map { url in ((framework as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.lastPathComponent!) }
+					let extraFilesProducer = SignalProducer(value: dSYM)
+						.concat(bcsymbolmapsProducer)
+						.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+					return SignalProducer(value: framework)
+						.concat(extraFilesProducer)
 				}
-
-				let outputPath = (options.outputPath.isEmpty ? "\(frameworks.first!).zip" : options.outputPath)
-				let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
-
-				return zipIntoArchive(outputURL, paths).on(completed: {
-					carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
+				.on(next: { path in
+					carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
 				})
-			}
-			.waitOnCommand()
+				.collect()
+				.flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
+					if paths.isEmpty {
+						let error = CarthageError.InvalidArgument(description: "Could not find any copies of \(frameworks.joinWithSeparator(", ")). Make sure you're in the project’s root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
+						return SignalProducer(error: error)
+					}
+
+					let outputPath = (options.outputPath.isEmpty ? "\(frameworks.first!).zip" : options.outputPath)
+					let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
+
+					return zipIntoArchive(outputURL, paths).on(completed: {
+						carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
+					})
+				}
+		}
+		.waitOnCommand()
 	}
 }
