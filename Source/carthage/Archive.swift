@@ -99,7 +99,12 @@ public struct ArchiveCommand: CommandType {
 				})
 				.collect()
 				.flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
-					if paths.isEmpty {
+					let foundFrameworks = paths
+						.lazy
+						.map { ($0 as NSString).lastPathComponent }
+						.filter { $0.hasSuffix(".framework") }
+
+					if Set(foundFrameworks) != Set(frameworks) {
 						let error = CarthageError.InvalidArgument(description: "Could not find any copies of \(frameworks.joinWithSeparator(", ")). Make sure you're in the project’s root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
 						return SignalProducer(error: error)
 					}
