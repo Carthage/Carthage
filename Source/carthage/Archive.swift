@@ -47,27 +47,28 @@ public struct ArchiveCommand: CommandType {
 			})
 		} else {
 			let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
-			frameworks = locateProjectsInDirectory(directoryURL)
-				.flatMap(.Concat) { project in
-					return schemesInProject(project)
-						.flatMapError { error in
-							if case .NoSharedSchemes = error {
-								return .empty
+			frameworks = buildableSchemesByProjectLocatorInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
+				.collect()
+				.flatMap(.Merge) { projects in
+					return schemesToBuildOfProjectLocators(projects)
+						.flatMap(.Merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+							if !schemes.isEmpty {
+								return .init(values: schemes)
 							} else {
-								return .init(error: error)
+								return .init(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), []))
 							}
 						}
-						.flatMap(.Merge) { scheme -> SignalProducer<BuildSettings, CarthageError> in
-							let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
-							return BuildSettings.loadWithArguments(buildArguments)
-						}
-						.flatMap(.Concat) { settings -> SignalProducer<String, CarthageError> in
-							if let wrapperName = settings.wrapperName.value {
-								return .init(value: wrapperName)
-							} else {
-								return .empty
-							}
-						}
+				}
+				.flatMap(.Merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
+					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
+					return BuildSettings.loadWithArguments(buildArguments)
+				}
+				.flatMap(.Concat) { settings -> SignalProducer<String, CarthageError> in
+					if let wrapperName = settings.wrapperName.value {
+						return .init(value: wrapperName)
+					} else {
+						return .empty
+					}
 				}
 				.skipRepeats()
 				.collect()
