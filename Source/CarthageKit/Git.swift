@@ -187,10 +187,14 @@ public func cloneRepository(cloneURL: GitURL, _ destinationURL: NSURL, bare: Boo
 public func fetchRepository(repositoryFileURL: NSURL, remoteURL: GitURL? = nil, refspec: String? = nil) -> SignalProducer<String, CarthageError> {
 	precondition(repositoryFileURL.fileURL)
 
-	var arguments = [ "fetch", "--tags", "--prune", "--quiet" ]
+	var arguments = [ "fetch", "--prune", "--quiet" ]
 	if let remoteURL = remoteURL {
 		arguments.append(remoteURL.URLString)
 	}
+
+	// Specify an explict refspec that fetches tags for pruning.
+	// See https://github.com/Carthage/Carthage/issues/1027 and `man git-fetch`.
+	arguments.append("refs/tags/*:refs/tags/*")
 
 	if let refspec = refspec {
 		arguments.append(refspec)
