@@ -297,7 +297,7 @@ public func buildableSchemesInDirectory(directoryURL: NSURL, withConfiguration c
 
 /// Sends pairs of a scheme and a project, the scheme actually resides in
 /// the project.
-public func schemesToBuildOfProjectLocators(projects: [(ProjectLocator, [String])]) -> SignalProducer<[(String, ProjectLocator)], CarthageError> {
+public func schemesInProjects(projects: [(ProjectLocator, [String])]) -> SignalProducer<[(String, ProjectLocator)], CarthageError> {
 	return SignalProducer(values: projects)
 		.map { (project: ProjectLocator, schemes: [String]) in
 			// Only look for schemes that actually reside in the project
@@ -1268,7 +1268,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			// `.NoSharedFrameworkSchemes`.
 			.filter { projects in !projects.isEmpty }
 			.flatMap(.Merge) { (projects: [(ProjectLocator, [String])]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
-				return schemesToBuildOfProjectLocators(projects)
+				return schemesInProjects(projects)
 					.flatMap(.Merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 						if !schemes.isEmpty {
 							return .init(values: schemes)

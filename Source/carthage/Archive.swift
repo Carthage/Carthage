@@ -50,7 +50,7 @@ public struct ArchiveCommand: CommandType {
 			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
 				.collect()
 				.flatMap(.Merge) { projects in
-					return schemesToBuildOfProjectLocators(projects)
+					return schemesInProjects(projects)
 						.flatMap(.Merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 							if !schemes.isEmpty {
 								return .init(values: schemes)
