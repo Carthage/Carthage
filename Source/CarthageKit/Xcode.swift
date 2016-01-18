@@ -268,7 +268,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
-/// Finds schemes of projects or workspace, which Carthage should build, found
+/// Finds schemes of projects or workspaces, which Carthage should build, found
 /// within the given directory.
 public func buildableSchemesInDirectory(directoryURL: NSURL, withConfiguration configuration: String, forPlatforms platforms: Set<Platform> = []) -> SignalProducer<(ProjectLocator, [String]), CarthageError> {
 	precondition(directoryURL.fileURL)
