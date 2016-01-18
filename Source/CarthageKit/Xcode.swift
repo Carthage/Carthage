@@ -268,6 +268,62 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
+/// Finds schemes of projects or workspaces, which Carthage should build, found
+/// within the given directory.
+public func buildableSchemesInDirectory(directoryURL: NSURL, withConfiguration configuration: String, forPlatforms platforms: Set<Platform> = []) -> SignalProducer<(ProjectLocator, [String]), CarthageError> {
+	precondition(directoryURL.fileURL)
+
+	return locateProjectsInDirectory(directoryURL)
+		.flatMap(.Concat) { project -> SignalProducer<(ProjectLocator, [String]), CarthageError> in
+			return schemesInProject(project)
+				.flatMap(.Merge) { scheme -> SignalProducer<String, CarthageError> in
+					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+
+					return shouldBuildScheme(buildArguments, platforms)
+						.filter { $0 }
+						.map { _ in scheme }
+				}
+				.collect()
+				.flatMapError { error in
+					if case .NoSharedSchemes = error {
+						return .init(value: [])
+					} else {
+						return .init(error: error)
+					}
+				}
+				.map { (project, $0) }
+		}
+}
+
+/// Sends pairs of a scheme and a project, the scheme actually resides in
+/// the project.
+public func schemesInProjects(projects: [(ProjectLocator, [String])]) -> SignalProducer<[(String, ProjectLocator)], CarthageError> {
+	return SignalProducer(values: projects)
+		.map { (project: ProjectLocator, schemes: [String]) in
+			// Only look for schemes that actually reside in the project
+			let containedSchemes = schemes.filter { (scheme: String) -> Bool in
+				if let schemePath = project.fileURL.URLByAppendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").path {
+					return NSFileManager.defaultManager().fileExistsAtPath(schemePath)
+				}
+				return false
+			}
+			return (project, containedSchemes)
+		}
+		.filter { (project: ProjectLocator, schemes: [String]) in
+			switch project {
+			case .ProjectFile where !schemes.isEmpty:
+				return true
+
+			default:
+				return false
+			}
+		}
+		.flatMap(.Concat) { project, schemes in
+			return .init(values: schemes.map { ($0, project) })
+		}
+		.collect()
+}
+
 /// Represents a platform to build for.
 public enum Platform: String {
 	/// Mac OS X.
@@ -1200,28 +1256,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 		// multiple times.
 		let (locatorBuffer, locatorObserver) = SignalProducer<(ProjectLocator, [String]), CarthageError>.buffer()
 
-		locateProjectsInDirectory(directoryURL)
-			.flatMap(.Concat) { (project: ProjectLocator) -> SignalProducer<(ProjectLocator, [String]), CarthageError> in
-				return schemesInProject(project)
-					.flatMap(.Merge) { scheme -> SignalProducer<String, CarthageError> in
-						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-
-						return shouldBuildScheme(buildArguments, platforms)
-							.filter { $0 }
-							.map { _ in scheme }
-					}
-					.collect()
-					.flatMapError { error in
-						switch error {
-						case .NoSharedSchemes:
-							return SignalProducer(value: [])
-
-						default:
-							return SignalProducer(error: error)
-						}
-					}
-					.map { (project, $0) }
-			}
+		buildableSchemesInDirectory(directoryURL, withConfiguration: configuration, forPlatforms: platforms)
 			.startWithSignal { signal, signalDisposable in
 				disposable += signalDisposable
 				signal.observe(locatorObserver)
@@ -1233,35 +1268,12 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			// `.NoSharedFrameworkSchemes`.
 			.filter { projects in !projects.isEmpty }
 			.flatMap(.Merge) { (projects: [(ProjectLocator, [String])]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
-				return SignalProducer(values: projects)
-					.map { (project: ProjectLocator, schemes: [String]) in
-						// Only look for schemes that actually reside in the project
-						let containedSchemes = schemes.filter { (scheme: String) -> Bool in
-							if let schemePath = project.fileURL.URLByAppendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").path {
-								return NSFileManager.defaultManager().fileExistsAtPath(schemePath)
-							}
-							return false
-						}
-						return (project, containedSchemes)
-					}
-					.filter { (project: ProjectLocator, schemes: [String]) in
-						switch project {
-						case .ProjectFile where !schemes.isEmpty:
-							return true
-
-						default:
-							return false
-						}
-					}
-					.flatMap(.Concat) { project, schemes in
-						return SignalProducer(values: schemes.map { ($0, project) })
-					}
-					.collect()
+				return schemesInProjects(projects)
 					.flatMap(.Merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 						if !schemes.isEmpty {
-							return SignalProducer(values: schemes)
+							return .init(values: schemes)
 						} else {
-							return SignalProducer(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), platforms))
+							return .init(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), platforms))
 						}
 					}
 			}
