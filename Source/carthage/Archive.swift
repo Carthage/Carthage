@@ -47,7 +47,7 @@ public struct ArchiveCommand: CommandType {
 			})
 		} else {
 			let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
-			frameworks = buildableSchemesByProjectLocatorInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
+			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
 				.collect()
 				.flatMap(.Merge) { projects in
 					return schemesToBuildOfProjectLocators(projects)

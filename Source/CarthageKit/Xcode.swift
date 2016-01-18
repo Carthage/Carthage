@@ -270,7 +270,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 
 /// Finds schemes of projects or workspace, which Carthage should build, found
 /// within the given directory.
-public func buildableSchemesByProjectLocatorInDirectory(directoryURL: NSURL, withConfiguration configuration: String, forPlatforms platforms: Set<Platform> = []) -> SignalProducer<(ProjectLocator, [String]), CarthageError> {
+public func buildableSchemesInDirectory(directoryURL: NSURL, withConfiguration configuration: String, forPlatforms platforms: Set<Platform> = []) -> SignalProducer<(ProjectLocator, [String]), CarthageError> {
 	precondition(directoryURL.fileURL)
 
 	return locateProjectsInDirectory(directoryURL)
@@ -1256,7 +1256,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 		// multiple times.
 		let (locatorBuffer, locatorObserver) = SignalProducer<(ProjectLocator, [String]), CarthageError>.buffer()
 
-		buildableSchemesByProjectLocatorInDirectory(directoryURL, withConfiguration: configuration, forPlatforms: platforms)
+		buildableSchemesInDirectory(directoryURL, withConfiguration: configuration, forPlatforms: platforms)
 			.startWithSignal { signal, signalDisposable in
 				disposable += signalDisposable
 				signal.observe(locatorObserver)
