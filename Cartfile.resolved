@@ -1,5 +1,5 @@
 github "thoughtbot/Argo" "v2.2.0"
-github "Quick/Nimble" "v3.0.0"
+github "Quick/Nimble" "v3.1.0"
 github "jdhealy/PrettyColors" "v3.0.0"
 github "Quick/Quick" "v0.8.0"
 github "antitypical/Result" "1.0.1"
