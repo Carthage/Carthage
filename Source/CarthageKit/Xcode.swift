@@ -172,7 +172,12 @@ public struct BuildArguments {
 		// Disable code signing requirement for all builds
 		// Frameworks get signed in the copy-frameworks action
 		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]
-
+		
+		// If we're in xcode phase, sanitize
+		let environment = NSProcessInfo.processInfo().environment
+		if let xcodeVersionActual = environment["XCODE_VERSION_ACTUAL"] as? String {
+			args += [ "-UseSanitizedBuildSystemEnvironment=YES" ]
+		}
 		return args
 	}
 }
