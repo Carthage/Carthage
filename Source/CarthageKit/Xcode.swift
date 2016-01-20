@@ -173,11 +173,11 @@ public struct BuildArguments {
 		// Frameworks get signed in the copy-frameworks action
 		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]
 		
-		// If we're in xcode phase, sanitize
+		// Allow to force unsanitized environment
 		let environment = NSProcessInfo.processInfo().environment
-		if let xcodeVersionActual = environment["XCODE_VERSION_ACTUAL"] {
-			args += [ "-UseSanitizedBuildSystemEnvironment=YES" ]
-		}
+		let useSanitizedEnvironment = environment["XCODEBUILD_USE_SANITIZED_ENVIRONMENT"] ?? "YES"
+		args += [ "-UseSanitizedBuildSystemEnvironment=\(useSanitizedEnvironment)" ]
+
 		return args
 	}
 }
