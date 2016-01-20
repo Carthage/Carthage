@@ -175,7 +175,7 @@ public struct BuildArguments {
 		
 		// If we're in xcode phase, sanitize
 		let environment = NSProcessInfo.processInfo().environment
-		if let xcodeVersionActual = environment["XCODE_VERSION_ACTUAL"] as? String {
+		if let xcodeVersionActual = environment["XCODE_VERSION_ACTUAL"] {
 			args += [ "-UseSanitizedBuildSystemEnvironment=YES" ]
 		}
 		return args
