@@ -50,7 +50,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one.
 1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 
-Additonally, you'll need to copy debug symbols for debugging and crash reporting on OS X.
+Additionally, you'll need to copy debug symbols for debugging and crash reporting on OS X.
 
 1. On your application target’s “Build Phases” settings tab, click the “+” icon and choose “New Copy Files Phase”.
 1. Click the “Destination” drop-down menu and select “Products Directory”.
