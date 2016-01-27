@@ -94,7 +94,7 @@ internal struct ProjectEventSink {
 
 		case let .Fetching(project):
 			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(string: project.name))
-
+			
 		case let .CheckingOut(project, revision):
 			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(string: project.name) + " at " + formatting.quote(revision))
 

@@ -39,7 +39,9 @@ public struct FetchCommand: CommandType {
 
 		return cloneOrFetchProject(project, preferHTTPS: true)
 			.on(next: { event, _ in
-				eventSink.put(event)
+				if let event = event {
+					eventSink.put(event)
+				}
 			})
 			.waitOnCommand()
 	}

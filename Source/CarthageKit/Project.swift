@@ -98,7 +98,7 @@ public enum ProjectEvent {
 
 	/// The project is beginning a fetch.
 	case Fetching(ProjectIdentifier)
-
+	
 	/// The project is being checked out to the specified revision.
 	case CheckingOut(ProjectIdentifier, String)
 
@@ -258,10 +258,12 @@ public final class Project {
 	///
 	/// Returns a signal which will send the URL to the repository's folder on
 	/// disk once cloning or fetching has completed.
-	private func cloneOrFetchDependency(project: ProjectIdentifier) -> SignalProducer<NSURL, CarthageError> {
-		return cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS)
+	private func cloneOrFetchDependency(project: ProjectIdentifier, commitish: String? = nil) -> SignalProducer<NSURL, CarthageError> {
+		return cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS, commitish: commitish)
 			.on(next: { event, _ in
-				self._projectEventsObserver.sendNext(event)
+				if let event = event {
+					self._projectEventsObserver.sendNext(event)
+				}
 			})
 			.map { _, URL in URL }
 			.takeLast(1)
@@ -294,6 +296,17 @@ public final class Project {
 				}
 			}
 			.startOnQueue(cachedVersionsQueue)
+	}
+	
+	/// Loads the Cartfile for the given dependency, at the given version.
+	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
+		let revision = dependency.version.commitish
+		return self.cloneOrFetchDependency(dependency.project, commitish: revision)
+			.flatMap(.Concat) { repositoryURL in
+				return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
+			}
+			.flatMapError { _ in .empty }
+			.attemptMap(Cartfile.fromString)
 	}
 
 	/// Attempts to resolve a Git reference to a version.
@@ -483,12 +496,11 @@ public final class Project {
 	/// Checks out the given project into its intended working directory,
 	/// cloning it first if need be.
 	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> SignalProducer<(), CarthageError> {
-		let repositoryURL = repositoryFileURLForProject(project)
-		let workingDirectoryURL = directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
-
-		let checkoutSignal = SignalProducer.attempt { () -> Result<Submodule?, CarthageError> in
+		return cloneOrFetchDependency(project, commitish: revision)
+			.flatMap(.Merge) { repositoryURL -> SignalProducer<(), CarthageError> in
+				let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 				var submodule: Submodule?
-
+				
 				if let foundSubmodule = submodulesByPath[project.relativePath] {
 					var foundSubmodule = foundSubmodule
 					foundSubmodule.URL = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
@@ -497,10 +509,7 @@ public final class Project {
 				} else if self.useSubmodules {
 					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), SHA: revision)
 				}
-
-				return .Success(submodule)
-			}
-			.flatMap(.Merge) { submodule -> SignalProducer<(), CarthageError> in
+				
 				if let submodule = submodule {
 					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!))
 						.startOnQueue(self.gitOperationQueue)
@@ -511,17 +520,6 @@ public final class Project {
 			.on(started: {
 				self._projectEventsObserver.sendNext(.CheckingOut(project, revision))
 			})
-
-		return commitExistsInRepository(repositoryURL, revision: revision)
-			.promoteErrors(CarthageError.self)
-			.flatMap(.Merge) { exists -> SignalProducer<NSURL, CarthageError> in
-				if exists {
-					return .empty
-				} else {
-					return self.cloneOrFetchDependency(project)
-				}
-			}
-			.then(checkoutSignal)
 	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
@@ -841,14 +839,6 @@ private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
 	return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
 }
 
-/// Loads the Cartfile for the given dependency, at the given version.
-private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
-	let repositoryURL = repositoryFileURLForProject(dependency.project)
-
-	return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: dependency.version.commitish)
-		.flatMapError { _ in .empty }
-		.attemptMap(Cartfile.fromString)
-}
 
 /// Returns the URL that the project's remote repository exists at.
 private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bool) -> GitURL {
@@ -866,12 +856,13 @@ private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bo
 }
 
 /// Clones the given project to the global repositories folder, or fetches
-/// inside it if it has already been cloned.
+/// inside it if it has already been cloned. Optionally takes a commitish to 
+/// check for prior to fetching.
 ///
 /// Returns a signal which will send the operation type once started, and
 /// the URL to where the repository's folder will exist on disk, then complete
 /// when the operation completes.
-public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool) -> SignalProducer<(ProjectEvent, NSURL), CarthageError> {
+public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {
 	let fileManager = NSFileManager.defaultManager()
 	let repositoryURL = repositoryFileURLForProject(project)
 
@@ -884,35 +875,36 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool) -
 
 			return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
 		}
-		.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
-			let cloneProducer: () -> SignalProducer<(ProjectEvent, NSURL), CarthageError> = {
-				let cloneProducer = cloneRepository(remoteURL, repositoryURL)
-
-				return SignalProducer(value: (.Cloning(project), repositoryURL))
-					.concat(cloneProducer.then(.empty))
-			}
-
-			if let _ = try? fileManager.createDirectoryAtURL(repositoryURL, withIntermediateDirectories: false, attributes: nil) {
-				// If we created the directory, we're now responsible for
-				// cloning it.
-				return cloneProducer()
-			} else {
-				return isGitRepository(repositoryURL)
-					.promoteErrors(CarthageError.self)
-					.flatMap(.Concat) { isRepository -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
-						if isRepository {
-							let fetchProducer = fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*") /* lol syntax highlighting */
-
+		.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
+			return isGitRepository(repositoryURL)
+				.promoteErrors(CarthageError.self)
+				.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
+					if isRepository {
+						let fetchProducer: () -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> = {
 							return SignalProducer(value: (.Fetching(project), repositoryURL))
-								.concat(fetchProducer.then(.empty))
-						} else {
-							// If the directory isn't a repository (that might
-							// happen if the process is quitted right after
-							// creating the directory), remove the directory then
-							// clone it.
-							_ = try? fileManager.removeItemAtURL(repositoryURL)
-							return cloneProducer()
+								.concat(fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*").then(.empty))
 						}
+						// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
+						if let commitish = commitish {
+							return commitExistsInRepository(repositoryURL, revision: commitish)
+								.promoteErrors(CarthageError.self)
+								.flatMap(.Merge) { exists -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
+									if exists {
+										return SignalProducer(value: (nil, repositoryURL))
+									} else {
+										return fetchProducer()
+									}
+							}
+						} else {
+							return fetchProducer()
+						}
+					} else {
+						// Either the directory didn't exist or it did but wasn't a git repository
+						// (Could happen if the process is killed during a previous directory creation)
+						// So we remove it, then clone
+						_ = try? fileManager.removeItemAtURL(repositoryURL)
+						return SignalProducer(value: (.Cloning(project), repositoryURL))
+							.concat(cloneRepository(remoteURL, repositoryURL).then(.empty))
 					}
 			}
 		}
