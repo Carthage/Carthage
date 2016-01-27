@@ -869,45 +869,45 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, c
 	let repositoryURL = repositoryFileURLForProject(project)
 
 	return SignalProducer.attempt { () -> Result<GitURL, CarthageError> in
-		do {
-			try fileManager.createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil)
-		} catch let error as NSError {
-			return .Failure(.WriteFailed(CarthageDependencyRepositoriesURL, error))
-		}
+			do {
+				try fileManager.createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil)
+			} catch let error as NSError {
+				return .Failure(.WriteFailed(CarthageDependencyRepositoriesURL, error))
+			}
 
-		return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
-	}
-	.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
-		return isGitRepository(repositoryURL)
-			.promoteErrors(CarthageError.self)
-			.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
-				if isRepository {
-					let fetchProducer: () -> SignalProducer<(ProjectEvent, NSURL), CarthageError> = {
-						return SignalProducer(value: (.Fetching(project), repositoryURL))
-							.concat(fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*").then(.empty))
-					}
-					// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
-					if let commitish = commitish {
-						return commitExistsInRepository(repositoryURL, revision: commitish)
-							.promoteErrors(CarthageError.self)
-							.flatMap(.Merge) { exists -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
-								if exists {
-									return SignalProducer(value: (.SkippedFetching(project), repositoryURL))
-								} else {
-									return fetchProducer()
-								}
+			return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
+		}
+		.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
+			return isGitRepository(repositoryURL)
+				.promoteErrors(CarthageError.self)
+				.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
+					if isRepository {
+						let fetchProducer: () -> SignalProducer<(ProjectEvent, NSURL), CarthageError> = {
+							return SignalProducer(value: (.Fetching(project), repositoryURL))
+								.concat(fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*").then(.empty))
+						}
+						// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
+						if let commitish = commitish {
+							return commitExistsInRepository(repositoryURL, revision: commitish)
+								.promoteErrors(CarthageError.self)
+								.flatMap(.Merge) { exists -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
+									if exists {
+										return SignalProducer(value: (.SkippedFetching(project), repositoryURL))
+									} else {
+										return fetchProducer()
+									}
+							}
+						} else {
+							return fetchProducer()
 						}
 					} else {
-						return fetchProducer()
+						// Either the directory didn't exist or it did but wasn't a git repository
+						// (Could happen if the process is killed during a previous directory creation)
+						// So we remove it, then clone
+						_ = try? fileManager.removeItemAtURL(repositoryURL)
+						return SignalProducer(value: (.Cloning(project), repositoryURL))
+							.concat(cloneRepository(remoteURL, repositoryURL).then(.empty))
 					}
-				} else {
-					// Either the directory didn't exist or it did but wasn't a git repository
-					// (Could happen if the process is killed during a previous directory creation)
-					// So we remove it, then clone
-					_ = try? fileManager.removeItemAtURL(repositoryURL)
-					return SignalProducer(value: (.Cloning(project), repositoryURL))
-						.concat(cloneRepository(remoteURL, repositoryURL).then(.empty))
-				}
+			}
 		}
-	}
 }
