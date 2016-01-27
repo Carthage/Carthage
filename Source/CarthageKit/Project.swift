@@ -99,10 +99,6 @@ public enum ProjectEvent {
 	/// The project is beginning a fetch.
 	case Fetching(ProjectIdentifier)
 	
-	/// The project fetch is being skipped, since the desired commit
-	/// is already in the cache.
-	case SkippedFetching(ProjectIdentifier)
-
 	/// The project is being checked out to the specified revision.
 	case CheckingOut(ProjectIdentifier, String)
 
@@ -265,7 +261,9 @@ public final class Project {
 	private func cloneOrFetchDependency(project: ProjectIdentifier, commitish: String? = nil) -> SignalProducer<NSURL, CarthageError> {
 		return cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS, commitish: commitish)
 			.on(next: { event, _ in
-				self._projectEventsObserver.sendNext(event)
+				if let event = event {
+					self._projectEventsObserver.sendNext(event)
+				}
 			})
 			.map { _, URL in URL }
 			.takeLast(1)
@@ -864,7 +862,7 @@ private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bo
 /// Returns a signal which will send the operation type once started, and
 /// the URL to where the repository's folder will exist on disk, then complete
 /// when the operation completes.
-public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, commitish: String? = nil) -> SignalProducer<(ProjectEvent, NSURL), CarthageError> {
+public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {
 	let fileManager = NSFileManager.defaultManager()
 	let repositoryURL = repositoryFileURLForProject(project)
 
@@ -877,12 +875,12 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, c
 
 			return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
 		}
-		.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
+		.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 			return isGitRepository(repositoryURL)
 				.promoteErrors(CarthageError.self)
-				.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
+				.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 					if isRepository {
-						let fetchProducer: () -> SignalProducer<(ProjectEvent, NSURL), CarthageError> = {
+						let fetchProducer: () -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> = {
 							return SignalProducer(value: (.Fetching(project), repositoryURL))
 								.concat(fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*").then(.empty))
 						}
@@ -890,9 +888,9 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, c
 						if let commitish = commitish {
 							return commitExistsInRepository(repositoryURL, revision: commitish)
 								.promoteErrors(CarthageError.self)
-								.flatMap(.Merge) { exists -> SignalProducer<(ProjectEvent, NSURL), CarthageError> in
+								.flatMap(.Merge) { exists -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 									if exists {
-										return SignalProducer(value: (.SkippedFetching(project), repositoryURL))
+										return SignalProducer(value: (nil, repositoryURL))
 									} else {
 										return fetchProducer()
 									}
