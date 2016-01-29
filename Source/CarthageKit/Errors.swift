@@ -226,7 +226,7 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case let .XcodebuildListTimeout(project, repository):
-			var description = "Failed to discover shared schemes in project \(project)—either the project does not have any shared schemes, or xcodebuild never returned"
+			var description = "Failed to discover shared schemes in project \(project) — either the project does not have any shared schemes, or xcodebuild timed out."
 			if let repository = repository {
 				description += "\n\nIf you believe this to be a project configuration error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
 			}
