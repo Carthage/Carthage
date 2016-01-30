@@ -1254,7 +1254,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 	return SignalProducer { observer, disposable in
 		// Use SignalProducer.buffer() to avoid enumerating the given directory
 		// multiple times.
-		let (locatorBuffer, locatorObserver) = SignalProducer<(ProjectLocator, [String]), CarthageError>.buffer()
+		let (locatorBuffer, locatorObserver) = SignalProducer<(ProjectLocator, [String]), CarthageError>.buffer(Int.max)
 
 		buildableSchemesInDirectory(directoryURL, withConfiguration: configuration, forPlatforms: platforms)
 			.startWithSignal { signal, signalDisposable in
