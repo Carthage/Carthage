@@ -45,7 +45,7 @@ private let CarthageUserCachesURL: NSURL = {
 			}
 		} else {
 			return Result(attempt: {
-				try fileManager.createDirectoryAtURL(dependenciesURL, withIntermediateDirectories: true, attributes: [NSFilePosixPermissions : NSNumber(short:755)])
+				try fileManager.createDirectoryAtURL(dependenciesURL, withIntermediateDirectories: true, attributes: [NSFilePosixPermissions : 0o755])
 				return dependenciesURL
 			})
 		}
