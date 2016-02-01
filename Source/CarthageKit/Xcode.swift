@@ -545,6 +545,10 @@ private enum PackageType: String {
 	/// A .framework package.
 	case Framework = "FMWK"
 
+	/// A .bundle package. Some frameworks might have this package type code
+	/// (e.g. https://github.com/ResearchKit/ResearchKit/blob/1.3.0/ResearchKit/Info.plist#L15-L16).
+	case Bundle = "BNDL"
+
 	/// A .dSYM package.
 	case dSYM = "dSYM"
 }
@@ -1585,16 +1589,19 @@ private func binaryURL(packageURL: NSURL) -> Result<NSURL, CarthageError> {
 	let packageType = (bundle?.objectForInfoDictionaryKey("CFBundlePackageType") as? String).flatMap(PackageType.init)
 
 	switch packageType {
-	case .Framework?:
+	case .Framework?, .Bundle?:
 		if let binaryName = bundle?.objectForInfoDictionaryKey("CFBundleExecutable") as? String {
 			return .Success(packageURL.URLByAppendingPathComponent(binaryName))
 		}
+
 	case .dSYM?:
 		if let binaryName = packageURL.URLByDeletingPathExtension?.URLByDeletingPathExtension?.lastPathComponent {
 			let binaryURL = packageURL.URLByAppendingPathComponent("Contents/Resources/DWARF/\(binaryName)")
 			return .Success(binaryURL)
 		}
-	default: break
+
+	default:
+		break
 	}
 
 	return .Failure(.ReadFailed(packageURL, nil))
