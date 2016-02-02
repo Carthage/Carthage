@@ -98,6 +98,18 @@ In rare cases, you may want to also copy each dependency into the build product 
 
 If you’ve modified your [Cartfile][], or you want to update to the newest versions of each framework (subject to the requirements you’ve specified), simply run the `carthage update` command again.
 
+If you only want to update one , or specific, dependencies, pass them as a comma-separated list to the `update` command. e.g.
+
+```
+carthage update Box
+```
+
+or 
+
+```
+carthage update Box, Result
+```
+
 ### Nested dependencies
 
 If the framework you want to add to your project has dependencies explicitly listed in a [Cartfile][], Carthage will automatically retrieve them for you. You will then have to **drag them yourself into your project** from the [Carthage/Build] folder.
