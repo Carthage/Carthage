@@ -107,7 +107,7 @@ carthage update Box
 or 
 
 ```
-carthage update Box, Result
+carthage update Box Result
 ```
 
 ### Nested dependencies
