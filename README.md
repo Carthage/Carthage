@@ -98,7 +98,7 @@ In rare cases, you may want to also copy each dependency into the build product 
 
 If you’ve modified your [Cartfile][], or you want to update to the newest versions of each framework (subject to the requirements you’ve specified), simply run the `carthage update` command again.
 
-If you only want to update one , or specific, dependencies, pass them as a comma-separated list to the `update` command. e.g.
+If you only want to update one , or specific, dependencies, pass them as a space-separated list to the `update` command. e.g.
 
 ```
 carthage update Box
@@ -107,7 +107,7 @@ carthage update Box
 or 
 
 ```
-carthage update Box, Result
+carthage update Box Result
 ```
 
 ### Nested dependencies
