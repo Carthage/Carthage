@@ -78,43 +78,6 @@ public struct Resolver {
 			}
 	}
 
-	/// Attempts to determine the build order for the resolved dependencies,
-	/// optionally they are limited by the given list of dependency names.
-	///
-	/// Sends each recursive dependency with its already resolved version, in the
-	/// order that they should be built.
-	public func resolveDependenciesInResolvedCartfile(resolvedCartfile: ResolvedCartfile, dependenciesToResolve: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
-		let nodes = resolvedCartfile.dependencies.map {
-			DependencyNode(
-				project: $0.project,
-				proposedVersion: $0.version,
-				versionSpecifier: .GitReference($0.version.commitish)
-			)
-		}
-		return resolveDependenciesFromNodePermutations(SignalProducer(value: nodes))
-			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				let dependencies = graph.orderedNodes.map { node -> DependencyNode in
-					node.dependencies = graph.edges[node] ?? []
-					return node
-				}
-
-				guard let dependenciesToResolve = dependenciesToResolve where !dependenciesToResolve.isEmpty else {
-					return .init(values: dependencies.map { $0.dependencyVersion })
-				}
-
-				var toResolve = Set(dependenciesToResolve)
-
-				dependencies
-					.filter { toResolve.contains($0.project.name) }
-					.forEach { toResolve.unionInPlace($0.dependencies.map { $0.project.name }) }
-
-				let filtered = dependencies
-					.filter { toResolve.contains($0.project.name) }
-					.map { $0.dependencyVersion }
-				return .init(values: filtered)
-			}
-	}
-
 	private func resolveDependenciesFromNodePermutations(permutationsProducer: SignalProducer<[DependencyNode], CarthageError>) -> SignalProducer<DependencyGraph, CarthageError> {
 		return permutationsProducer
 			.flatMap(.Concat) { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in

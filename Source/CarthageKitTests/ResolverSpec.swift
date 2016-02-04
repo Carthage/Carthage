@@ -93,56 +93,6 @@ class ResolverSpec: QuickSpec {
 			expect(dependencies).notTo(contain(Dependency("git-error-translations2", "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9")))
 		}
 
-		it("should sort dependencies from Cartfile.resolved in build order") {
-			let resolver = Resolver(
-				versionsForDependency: self.versionsForDependency,
-				cartfileForDependency: self.cartfileForDependency,
-				resolvedGitReference: { _, refName in SignalProducer(value: PinnedVersion(refName)) }
-			)
-
-			let testCartfile: ResolvedCartfile = self.loadTestCartfile("TestResolvedCartfile", withExtension: "resolved")
-			let producer = resolver.resolveDependenciesInResolvedCartfile(testCartfile)
-			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count) == 8
-
-			var generator = dependencies.generate()
-
-			// Dependencies should be listed in build order.
-			expect(generator.next()) == Dependency("Mantle", "1.3.0")
-			expect(generator.next()) == Dependency("git-error-translations", "3.0.0")
-			expect(generator.next()) == Dependency("git-error-translations2", "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9")
-			expect(generator.next()) == Dependency("ios-charts", "3.0.0")
-			expect(generator.next()) == Dependency("libextobjc", "0.4.1")
-			expect(generator.next()) == Dependency("xcconfigs", "1.3.0")
-			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0") // xcconfigs
-			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0") // libextobjc, objc-build-scripts, xcconfigs
-		}
-
-		it("should sort dependencies from Cartfile.resolved in build order for specific dependencies") {
-			let resolver = Resolver(
-				versionsForDependency: self.versionsForDependency,
-				cartfileForDependency: self.cartfileForDependency,
-				resolvedGitReference: { _, refName in SignalProducer(value: PinnedVersion(refName)) }
-			)
-
-			let testCartfile: ResolvedCartfile = self.loadTestCartfile("TestResolvedCartfile", withExtension: "resolved")
-			let producer = resolver.resolveDependenciesInResolvedCartfile(
-				testCartfile,
-				dependenciesToResolve: [ "ios-charts", "objc-build-scripts" ]
-			)
-			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count) == 3
-
-			var generator = dependencies.generate()
-
-			// Dependencies should be listed in build order.
-			expect(generator.next()) == Dependency("ios-charts", "3.0.0")
-
-			// Nested dependencies should also be resolved.
-			expect(generator.next()) == Dependency("xcconfigs", "1.3.0")
-			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0") // xcconfigs
-		}
-
 		it("should correctly order transitive dependencies") {
 			let resolver = Resolver(versionsForDependency: { project -> SignalProducer<PinnedVersion, CarthageError> in
 				switch project.name {
