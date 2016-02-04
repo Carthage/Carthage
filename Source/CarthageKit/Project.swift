@@ -564,7 +564,7 @@ public final class Project {
 					if let deps = graph[left.project] where deps.contains(right.project) {
 						return false
 					}
-					return left.project.name < right.project.name
+					return left.project.name.localizedStandardCompare(right.project.name) == .OrderedAscending
 				}
 				return SignalProducer(values: sorted)
 			}
