@@ -12,6 +12,8 @@ import ReactiveTask
 
 /// Possible errors that can originate from Carthage.
 public enum CarthageError: ErrorType, Equatable {
+	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: ProjectIdentifier?)
+
 	/// One or more arguments was invalid.
 	case InvalidArgument(description: String)
 
@@ -19,7 +21,7 @@ public enum CarthageError: ErrorType, Equatable {
 	case MissingBuildSetting(String)
 
 	/// Incompatible version specifiers were given for a dependency.
-	case IncompatibleRequirements(ProjectIdentifier, (VersionSpecifier, ProjectIdentifier?), (VersionSpecifier, ProjectIdentifier?))
+	case IncompatibleRequirements(ProjectIdentifier, VersionRequirement, VersionRequirement)
 
 	/// No tagged versions could be found for the dependency.
 	case TaggedVersionNotFound(ProjectIdentifier)
@@ -77,8 +79,8 @@ public enum CarthageError: ErrorType, Equatable {
 	case NetworkError(NSError)
 }
 
-private func == (lhs: (VersionSpecifier, ProjectIdentifier?), rhs: (VersionSpecifier, ProjectIdentifier?)) -> Bool {
-	return lhs.0 == rhs.0 && lhs.1 == rhs.1
+private func == (lhs: CarthageError.VersionRequirement, rhs: CarthageError.VersionRequirement) -> Bool {
+	return lhs.specifier == rhs.specifier && lhs.fromProject == rhs.fromProject
 }
 
 public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
@@ -172,8 +174,8 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case let .IncompatibleRequirements(dependency, first, second):
-			let requirement: (VersionSpecifier, ProjectIdentifier?) -> String = { specifier, project in
-				return "\(specifier)" + (project.map { " (\($0))" } ?? "")
+			let requirement: VersionRequirement -> String = { specifier, fromProject in
+				return "\(specifier)" + (fromProject.map { " (\($0))" } ?? "")
 			}
 			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(requirement(first))\n\t\(requirement(second))"
 
