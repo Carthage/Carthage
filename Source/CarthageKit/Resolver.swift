@@ -310,7 +310,15 @@ private struct DependencyGraph: Equatable {
 				} else {
 					return .Failure(CarthageError.RequiredVersionNotFound(node.project, newSpecifier))
 				}
-			} else {
+			} else if existingNode.proposedVersion != node.proposedVersion {
+				// The guard condition above is required for enabling to build a
+				// dependency graph in the cases such as: one node has a
+				// `.GitReference` specifier of a branch name, and the other has
+				// a `.GitReference` of a SHA which is the HEAD of that branch.
+				// If the specifiers are not the same but the nodes have the same
+				// proposed version, the graph should be valid.
+				//
+				// See https://github.com/Carthage/Carthage/issues/765.
 				let existingDependencyOf = edges
 					.filter { _, value in value.contains(existingNode) }
 					.map { $0.0 }
