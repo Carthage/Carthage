@@ -19,7 +19,7 @@ public enum CarthageError: ErrorType, Equatable {
 	case MissingBuildSetting(String)
 
 	/// Incompatible version specifiers were given for a dependency.
-	case IncompatibleRequirements(ProjectIdentifier, VersionSpecifier, VersionSpecifier)
+	case IncompatibleRequirements(ProjectIdentifier, (VersionSpecifier, ProjectIdentifier?), (VersionSpecifier, ProjectIdentifier?))
 
 	/// No tagged versions could be found for the dependency.
 	case TaggedVersionNotFound(ProjectIdentifier)
@@ -75,6 +75,10 @@ public enum CarthageError: ErrorType, Equatable {
 
 	/// An error occurred in a network operation.
 	case NetworkError(NSError)
+}
+
+private func == (lhs: (VersionSpecifier, ProjectIdentifier?), rhs: (VersionSpecifier, ProjectIdentifier?)) -> Bool {
+	return lhs.0 == rhs.0 && lhs.1 == rhs.1
 }
 
 public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
@@ -168,7 +172,10 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case let .IncompatibleRequirements(dependency, first, second):
-			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(first)\n\t\(second)"
+			let requirement: (VersionSpecifier, ProjectIdentifier?) -> String = { specifier, project in
+				return "\(specifier)" + (project.map { " (\($0))" } ?? "")
+			}
+			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(requirement(first))\n\t\(requirement(second))"
 
 		case let .TaggedVersionNotFound(dependency):
 			return "No tagged versions found for \(dependency)"

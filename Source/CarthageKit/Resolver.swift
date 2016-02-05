@@ -311,7 +311,13 @@ private struct DependencyGraph: Equatable {
 					return .Failure(CarthageError.RequiredVersionNotFound(node.project, newSpecifier))
 				}
 			} else {
-				return .Failure(CarthageError.IncompatibleRequirements(node.project, existingNode.versionSpecifier, node.versionSpecifier))
+				let existingDependencyOf = edges
+					.filter { _, value in value.contains(existingNode) }
+					.map { $0.0 }
+					.first
+				let first = (existingNode.versionSpecifier, existingDependencyOf?.project)
+				let second = (node.versionSpecifier, dependencyOf?.project)
+				return .Failure(CarthageError.IncompatibleRequirements(node.project, first, second))
 			}
 		} else {
 			allNodes.insert(node)
