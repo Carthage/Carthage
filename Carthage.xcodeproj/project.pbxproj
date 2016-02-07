@@ -21,6 +21,7 @@
 		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
+		CD7F22441C67649F00B018A9 /* TestCartfileProposedVersion in Resources */ = {isa = PBXBuildFile; fileRef = CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */; };
 		CDA0B6CA1C468E67006C499C /* GitSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA0B6C91C468E67006C499C /* GitSpec.swift */; };
 		CDCE1CC41C170E8A00B2ED88 /* TestResolvedCartfile.resolved in Resources */ = {isa = PBXBuildFile; fileRef = CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */; };
 		D00105061A8EA74E0059D0A0 /* Archive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00105051A8EA74E0059D0A0 /* Archive.swift */; };
@@ -159,6 +160,7 @@
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
 		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
+		CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfileProposedVersion; sourceTree = "<group>"; };
 		CDA0B6C91C468E67006C499C /* GitSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitSpec.swift; sourceTree = "<group>"; };
 		CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestResolvedCartfile.resolved; sourceTree = "<group>"; };
 		D00105051A8EA74E0059D0A0 /* Archive.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Archive.swift; sourceTree = "<group>"; };
@@ -465,6 +467,7 @@
 				D01F8A4719EA28F600643E7C /* Quick.framework */,
 				D0D1217D19E87B05005E4BAA /* Info.plist */,
 				D0AAAB5419FB1062007B24B3 /* TestCartfile */,
+				CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */,
 				D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */,
 				CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */,
 				D04A39811A2F72FB000C5604 /* EmbeddedFrameworksCartfile */,
@@ -606,6 +609,7 @@
 				D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */,
 				D0F551DC1A0D71AB0093311F /* TestCartfile.resolved in Resources */,
 				D04A39821A2F72FB000C5604 /* EmbeddedFrameworksCartfile in Resources */,
+				CD7F22441C67649F00B018A9 /* TestCartfileProposedVersion in Resources */,
 				D0C6E5761A57042100A5E3E7 /* CartfilePrivateOnly.zip in Resources */,
 				CDCE1CC41C170E8A00B2ED88 /* TestResolvedCartfile.resolved in Resources */,
 			);

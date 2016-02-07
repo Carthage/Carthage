@@ -1,0 +1,3 @@
+git "/tmp/TestCartfileBranch" ~> 0.4.0
+git "/tmp/TestCartfileSHA" ~> 0.9
+git "https://enterprise.local/desktop/git-error-translations2.git" "8ff4393"
