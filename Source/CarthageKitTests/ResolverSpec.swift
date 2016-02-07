@@ -38,12 +38,17 @@ class ResolverSpec: QuickSpec {
 	}
 
 	override func spec() {
-		it("should resolve a Cartfile") {
-			let resolver = Resolver(
+		var resolver: Resolver!
+
+		beforeEach {
+			resolver = Resolver(
 				versionsForDependency: self.versionsForDependency,
 				cartfileForDependency: self.cartfileForDependency,
 				resolvedGitReference: self.resolvedGitReference
 			)
+		}
+
+		it("should resolve a Cartfile") {
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
 			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
 			let dependencies = self.orderedDependencies(producer)
@@ -63,11 +68,6 @@ class ResolverSpec: QuickSpec {
 		}
 
 		it("should resolve a Cartfile for specific dependencies") {
-			let resolver = Resolver(
-				versionsForDependency: self.versionsForDependency,
-				cartfileForDependency: self.cartfileForDependency,
-				resolvedGitReference: self.resolvedGitReference
-			)
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
 
 			let producer = resolver.resolveDependenciesInCartfile(
@@ -102,11 +102,6 @@ class ResolverSpec: QuickSpec {
 		}
 
 		it("should resolve a Cartfile whose dependency is specified by both a branch name and a SHA which is the HEAD of that branch") {
-			let resolver = Resolver(
-				versionsForDependency: self.versionsForDependency,
-				cartfileForDependency: self.cartfileForDependency,
-				resolvedGitReference: self.resolvedGitReference
-			)
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfileProposedVersion")
 			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
 			let dependencies = self.orderedDependencies(producer)
