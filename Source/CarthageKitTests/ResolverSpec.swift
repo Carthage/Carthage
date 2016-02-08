@@ -178,10 +178,10 @@ class ResolverSpec: QuickSpec {
 		case .GitHub(GitHubRepository(owner: "jspahrsummers", name: "objc-build-scripts")):
 			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0")
 
-		case .Git(GitURL("tmp/TestCartfileBranch")):
+		case .Git(GitURL("/tmp/TestCartfileBranch")):
 			cartfile = Cartfile.fromString("git \"https://enterprise.local/desktop/git-error-translations2.git\" \"development\"")
 
-		case .Git(GitURL("tmp/TestCartfileSHA")):
+		case .Git(GitURL("/tmp/TestCartfileSHA")):
 			cartfile = Cartfile.fromString("git \"https://enterprise.local/desktop/git-error-translations2.git\" \"8ff4393ede2ca86d5a78edaf62b3a14d90bffab9\"")
 
 		default:
