@@ -522,7 +522,7 @@ public final class Project {
 			})
 	}
 	
-	public func buildOrderForResolvedCartfile(cartfile: ResolvedCartfile) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	public func buildOrderForResolvedCartfile(cartfile: ResolvedCartfile, dependenciesToInclude: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		typealias DependencyGraph = [ProjectIdentifier: Set<ProjectIdentifier>]
 		// A resolved cartfile already has all the recursive dependencies. All we need to do is sort
 		// out the relationships between them. Loading the cartfile will each will give us its
@@ -557,6 +557,7 @@ public final class Project {
 					}
 					return result
 				}
+
 				let sorted = cartfile.dependencies.sort { left, right in
 					if let deps = graph[right.project] where deps.contains(left.project) {
 						return true
@@ -566,7 +567,23 @@ public final class Project {
 					}
 					return left.project.name.caseInsensitiveCompare(right.project.name) == .OrderedAscending
 				}
-				return SignalProducer(values: sorted)
+
+				guard let dependenciesToInclude = dependenciesToInclude where !dependenciesToInclude.isEmpty else {
+					return SignalProducer(values: sorted)
+				}
+
+				var toInclude = Set(dependenciesToInclude)
+
+				sorted
+					.filter { toInclude.contains($0.project.name) }
+					.forEach { dependency in
+						if let deps = graph[dependency.project] {
+							toInclude.unionInPlace(deps.map { $0.name })
+						}
+					}
+
+				let filtered = sorted.filter { toInclude.contains($0.project.name) }
+				return SignalProducer(values: filtered)
 			}
 	}
 
@@ -584,7 +601,9 @@ public final class Project {
 		
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in
-				return self.buildOrderForResolvedCartfile(resolvedCartfile).collect()
+				return self
+					.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToCheckout)
+					.collect()
 			}
 			.zipWith(submodulesSignal)
 			.flatMap(.Merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
@@ -622,7 +641,7 @@ public final class Project {
 	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in
-				return self.buildOrderForResolvedCartfile(resolvedCartfile)
+				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
 			}
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
