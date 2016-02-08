@@ -34,12 +34,21 @@ class ResolverSpec: QuickSpec {
 		expect(result).notTo(beNil())
 		expect(result?.error).to(beNil())
 
-		return result!.value!
+		return result?.value ?? []
 	}
 
 	override func spec() {
+		var resolver: Resolver!
+
+		beforeEach {
+			resolver = Resolver(
+				versionsForDependency: self.versionsForDependency,
+				cartfileForDependency: self.cartfileForDependency,
+				resolvedGitReference: self.resolvedGitReference
+			)
+		}
+
 		it("should resolve a Cartfile") {
-			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency, resolvedGitReference: self.resolvedGitReference)
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
 			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
 			let dependencies = self.orderedDependencies(producer)
@@ -59,7 +68,6 @@ class ResolverSpec: QuickSpec {
 		}
 
 		it("should resolve a Cartfile for specific dependencies") {
-			let resolver = Resolver(versionsForDependency: self.versionsForDependency, cartfileForDependency: self.cartfileForDependency, resolvedGitReference: self.resolvedGitReference)
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
 
 			let producer = resolver.resolveDependenciesInCartfile(
@@ -91,6 +99,19 @@ class ResolverSpec: QuickSpec {
 			// not be resolved.
 			expect(dependencies).notTo(contain(Dependency("git-error-translations", "3.0.0")))
 			expect(dependencies).notTo(contain(Dependency("git-error-translations2", "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9")))
+		}
+
+		it("should resolve a Cartfile whose dependency is specified by both a branch name and a SHA which is the HEAD of that branch") {
+			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfileProposedVersion")
+			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
+			let dependencies = self.orderedDependencies(producer)
+			expect(dependencies.count) == 3
+
+			var generator = dependencies.generate()
+
+			expect(generator.next()) == Dependency("git-error-translations2", "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9")
+			expect(generator.next()) == Dependency("TestCartfileBranch", "0.4.1")
+			expect(generator.next()) == Dependency("TestCartfileSHA", "0.9.0")
 		}
 
 		it("should correctly order transitive dependencies") {
@@ -148,15 +169,26 @@ class ResolverSpec: QuickSpec {
 	}
 
 	private func cartfileForDependency(dependency: CarthageKit.Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
-		var cartfile = Cartfile()
+		let cartfile: Result<Cartfile, CarthageError>
 
-		if dependency.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")) {
-			cartfile = Cartfile.fromString("github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0").value!
-		} else if dependency.project == ProjectIdentifier.GitHub(GitHubRepository(owner: "jspahrsummers", name: "objc-build-scripts")) {
-			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0").value!
+		switch dependency.project {
+		case .GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")):
+			cartfile = Cartfile.fromString("github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0")
+
+		case .GitHub(GitHubRepository(owner: "jspahrsummers", name: "objc-build-scripts")):
+			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0")
+
+		case .Git(GitURL("/tmp/TestCartfileBranch")):
+			cartfile = Cartfile.fromString("git \"https://enterprise.local/desktop/git-error-translations2.git\" \"development\"")
+
+		case .Git(GitURL("/tmp/TestCartfileSHA")):
+			cartfile = Cartfile.fromString("git \"https://enterprise.local/desktop/git-error-translations2.git\" \"8ff4393ede2ca86d5a78edaf62b3a14d90bffab9\"")
+
+		default:
+			cartfile = .Success(Cartfile())
 		}
 
-		return SignalProducer(value: cartfile)
+		return SignalProducer(value: cartfile.value!)
 	}
 
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
