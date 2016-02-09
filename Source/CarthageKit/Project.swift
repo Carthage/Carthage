@@ -458,8 +458,7 @@ public final class Project {
 	///
 	/// Sends the URL to the framework after copying.
 	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-		return infoPlistForFramework(frameworkURL)
-			.flatMap(.Merge) { infoPlistURL in platformForInfoPlist(infoPlistURL) }
+		return platformForFramework(frameworkURL)
 			.flatMap(.Merge) { platform -> SignalProducer<NSURL, CarthageError> in
 				let platformFolderURL = self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
 				return SignalProducer(value: frameworkURL)
@@ -731,63 +730,28 @@ private func filesInDirectory(directoryURL: NSURL, _ typeIdentifier: String? = n
 	}
 }
 
-/// Sends the URL for the Info.plist of the specified Framework.
-private func infoPlistForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	// The paths at which the Info.plist can be located within a framework:
-	let infoPlistCantidatePaths = [
-		// iOS, watchOS, and tvOS
-		"/Info.plist",
-		// Mac OSX
-		"/Resources/Info.plist",
-	]
-
-	return SignalProducer(values: infoPlistCantidatePaths.map { frameworkURL.URLByAppendingPathComponent($0) })
-		.filter { infoPlistCantidateURL in
-			var isDirectory: ObjCBool = false
-			return NSFileManager.defaultManager().fileExistsAtPath(infoPlistCantidateURL.path!, isDirectory: &isDirectory) && !isDirectory
-		}
-		.filter { (infoPlistCantidateURL: NSURL) in
-			return infoPlistCantidateURL.typeIdentifier
-				.analysis(ifSuccess: { identifier in
-					return UTTypeConformsTo(identifier, "com.apple.property-list")
-				}, ifFailure: { _ in false })
-		}
-		.take(1)
-}
-
 /// Sends the platform specified in the given Info.plist.
-private func platformForInfoPlist(plistURL: NSURL) -> SignalProducer<Platform, CarthageError> {
-	return SignalProducer.attempt { () -> Result<NSData, CarthageError> in
-			do {
-				return .Success(try NSData(contentsOfURL: plistURL, options: []))
-			} catch let error as NSError {
-				return .Failure(.ReadFailed(plistURL, error))
-			}
-		}
-		.startOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Project.platformForInfoPlist"))
-		.attemptMap { (data: NSData) -> Result<AnyObject, CarthageError> in
-			var error: NSError?
-			do {
-				let plist = try NSPropertyListSerialization.propertyListWithData(data, options: [ .Immutable ], format: nil)
-				return .Success(plist)
-			} catch let err as NSError {
-				error = err
-			}
-			return .Failure(.ReadFailed(plistURL, error))
-		}
-		.attemptMap { plist -> Result<[String: AnyObject], CarthageError> in
-			if let plist = plist as? [String: AnyObject] {
-				return .Success(plist)
-			}
-			return .Failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the root plist object is not a dictionary of values by strings"))
-		}
-		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used 
+private func platformForFramework(frameworkURL: NSURL) -> SignalProducer<Platform, CarthageError> {
+	return SignalProducer(value: frameworkURL)
+		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used
 		// because Xcode 6 and below do not include either in Mac OSX frameworks.
-		.attemptMap { plist -> Result<String, CarthageError> in
-			if let sdkName = plist["DTSDKName"] as? String {
-				return .Success(sdkName)
+		.attemptMap { URL -> Result<String, CarthageError> in
+			let bundle = NSBundle(URL: URL)
+
+			func readFailed(message: String) -> CarthageError {
+				let error = Result<(), NSError>.error(message)
+				return .ReadFailed(frameworkURL, error)
 			}
-			return .Failure(.InfoPlistParseFailed(plistURL: plistURL, reason: "the value for the DTSDKName key is not a string"))
+
+			guard let sdkName = bundle?.objectForInfoDictionaryKey("DTSDKName") else {
+				return .Failure(readFailed("the DTSDKName key in its plist file is missing"))
+			}
+
+			if let sdkName = sdkName as? String {
+				return .Success(sdkName)
+			} else {
+				return .Failure(readFailed("the value for the DTSDKName key in its plist file is not a string"))
+			}
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
