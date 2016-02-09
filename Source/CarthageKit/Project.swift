@@ -721,7 +721,9 @@ private func platformForFramework(frameworkURL: NSURL) -> SignalProducer<Platfor
 			if let sdkName = bundle?.objectForInfoDictionaryKey("DTSDKName") as? String {
 				return .Success(sdkName)
 			}
-			return .Failure(.InfoPlistParseFailed(plistURL: frameworkURL, reason: "the value for the DTSDKName key is not a string"))
+
+			let error = Result<(), NSError>.error("the value for the DTSDKName key is not a string")
+			return .Failure(.ReadFailed(frameworkURL, error))
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
