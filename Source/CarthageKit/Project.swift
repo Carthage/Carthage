@@ -718,12 +718,21 @@ private func platformForFramework(frameworkURL: NSURL) -> SignalProducer<Platfor
 		// because Xcode 6 and below do not include either in Mac OSX frameworks.
 		.attemptMap { URL -> Result<String, CarthageError> in
 			let bundle = NSBundle(URL: URL)
-			if let sdkName = bundle?.objectForInfoDictionaryKey("DTSDKName") as? String {
-				return .Success(sdkName)
+
+			func readFailed(message: String) -> CarthageError {
+				let error = Result<(), NSError>.error(message)
+				return .ReadFailed(frameworkURL, error)
 			}
 
-			let error = Result<(), NSError>.error("the value for the DTSDKName key is not a string")
-			return .Failure(.ReadFailed(frameworkURL, error))
+			guard let sdkName = bundle?.objectForInfoDictionaryKey("DTSDKName") else {
+				return .Failure(readFailed("the DTSDKName key in its plist file is missing"))
+			}
+
+			if let sdkName = sdkName as? String {
+				return .Success(sdkName)
+			} else {
+				return .Failure(readFailed("the value for the DTSDKName key in its plist file is not a string"))
+			}
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
