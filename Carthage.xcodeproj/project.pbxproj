@@ -540,6 +540,7 @@
 				D0E7B63019E9C64500EDBA4D /* Resources */,
 				D0E7B65719E9C7C700EDBA4D /* Extract CLI Tool */,
 				D0AAAB5319FB0960007B24B3 /* Embed Frameworks */,
+				89539B3B1C6BE36C00632A1B /* Update CLI version */,
 			);
 			buildRules = (
 			);
@@ -625,6 +626,21 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		89539B3B1C6BE36C00632A1B /* Update CLI version */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Update CLI version";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = ". script/update-cli-version";
+			showEnvVarsInLog = 0;
+		};
 		C2265FAB1A4B86AC00158358 /* Check Xcode Version */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;

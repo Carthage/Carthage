@@ -1,0 +1,9 @@
+#!/bin/bash
+
+main()
+{
+    local version=$(git describe --tags)
+    /usr/libexec/PlistBuddy -c "Set CFBundleShortVersionString $version" Source/carthage/Info.plist
+}
+
+main
