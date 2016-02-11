@@ -32,6 +32,16 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "8903EA821C6C3C18001C0189"
+               BuildableName = "carthageTests.xctest"
+               BlueprintName = "carthageTests"
+               ReferencedContainer = "container:Carthage.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "D0D1217619E87B05005E4BAA"
                BuildableName = "CarthageKitTests.xctest"
                BlueprintName = "CarthageKitTests"

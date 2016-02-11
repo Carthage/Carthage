@@ -10,6 +10,7 @@ import CarthageKit
 import Commandant
 import Foundation
 import ReactiveCocoa
+import Cocoa
 import ReactiveTask
 import Result
 
@@ -26,10 +27,12 @@ registry.register(CheckoutCommand())
 registry.register(CopyFrameworksCommand())
 registry.register(FetchCommand())
 registry.register(UpdateCommand())
-registry.register(VersionCommand())
+registry.register(VersionCommand(printer: ThreadSafePrinter()))
 
 let helpCommand = HelpCommand(registry: registry)
 registry.register(helpCommand)
+
+spinForTestIfNecessary()
 
 registry.main(defaultVerb: helpCommand.verb) { error in
 	fputs(error.description + "\n", stderr)
