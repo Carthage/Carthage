@@ -344,8 +344,7 @@ private struct DependencyGraph: Equatable {
 
 			// Add a nested dependency to the list of its ancestor.
 			let edgesCopy = edges
-			for (ancestor, itsDependencies) in edgesCopy {
-				var itsDependencies = itsDependencies
+			for (ancestor, var itsDependencies) in edgesCopy {
 				if itsDependencies.contains(dependencyOf) {
 					itsDependencies.insert(node)
 					edges[ancestor] = itsDependencies

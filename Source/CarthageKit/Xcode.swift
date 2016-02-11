@@ -1045,8 +1045,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			var sdksByPlatform = sdksByPlatform
 			let platform = sdk.platform
 
-			if let sdks = sdksByPlatform[platform] {
-				var sdks = sdks
+			if var sdks = sdksByPlatform[platform] {
 				sdks.append(sdk)
 				sdksByPlatform.updateValue(sdks, forKey: platform)
 			} else {
