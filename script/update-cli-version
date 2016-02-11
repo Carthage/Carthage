@@ -3,8 +3,7 @@
 main()
 {
     local version=$(git describe --tags)
-    local DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-    /usr/libexec/PlistBuddy -c "Set CFBundleShortVersionString $version" "$DIR/../Source/CarthageKit/Info.plist"
+    /usr/libexec/PlistBuddy -c "Set CFBundleShortVersionString $version" "${BUILT_PRODUCTS_DIR}/carthage.app/Contents/Info.plist"
 }
 
 main
