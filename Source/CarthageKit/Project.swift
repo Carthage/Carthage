@@ -500,8 +500,7 @@ public final class Project {
 				let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 				var submodule: Submodule?
 				
-				if let foundSubmodule = submodulesByPath[project.relativePath] {
-					var foundSubmodule = foundSubmodule
+				if var foundSubmodule = submodulesByPath[project.relativePath] {
 					foundSubmodule.URL = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
 					foundSubmodule.SHA = revision
 					submodule = foundSubmodule
