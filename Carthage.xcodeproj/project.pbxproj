@@ -534,13 +534,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D0E7B64919E9C64600EDBA4D /* Build configuration list for PBXNativeTarget "carthage" */;
 			buildPhases = (
+				89539B3B1C6BE36C00632A1B /* Update CLI version */,
 				C2265FAB1A4B86AC00158358 /* Check Xcode Version */,
 				D0E7B62E19E9C64500EDBA4D /* Sources */,
 				D0E7B62F19E9C64500EDBA4D /* Frameworks */,
 				D0E7B63019E9C64500EDBA4D /* Resources */,
 				D0E7B65719E9C7C700EDBA4D /* Extract CLI Tool */,
 				D0AAAB5319FB0960007B24B3 /* Embed Frameworks */,
-				89539B3B1C6BE36C00632A1B /* Update CLI version */,
 			);
 			buildRules = (
 			);
