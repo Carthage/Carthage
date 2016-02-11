@@ -3,7 +3,7 @@
 main()
 {
     local version=$(git describe --tags)
-    /usr/libexec/PlistBuddy -c "Set CFBundleShortVersionString $version" "${BUILT_PRODUCTS_DIR}/carthage.app/Contents/Info.plist"
+    /usr/libexec/PlistBuddy -c "Set CFBundleShortVersionString $version" "${BUILT_PRODUCTS_DIR}/CarthageKit.framework/Resources/Info.plist"
 }
 
 main
