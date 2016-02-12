@@ -241,6 +241,11 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 	return launchTask(task)
 		.ignoreTaskData()
 		.mapError(CarthageError.TaskError)
+		// xcodebuild has a bug where xcodebuild -list can sometimes hang
+		// indefinitely on projects that don't share any schemes, so
+		// automatically bail out if it looks like that's happening.
+		.timeoutWithError(.XcodebuildTimeout(project), afterInterval: 10, onScheduler: QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)))
+		.retry(5)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
@@ -261,10 +266,6 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.skipWhile { line in !line.hasSuffix("Schemes:") }
 		.skip(1)
 		.takeWhile { line in !line.isEmpty }
-		// xcodebuild has a bug where xcodebuild -list can sometimes hang
-		// indefinitely on projects that don't share any schemes, so
-		// automatically bail out if it looks like that's happening.
-		.timeoutWithError(.XcodebuildTimeout(project), afterInterval: 60, onScheduler: QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)))
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
