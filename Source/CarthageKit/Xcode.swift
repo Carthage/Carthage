@@ -584,6 +584,12 @@ public struct BuildSettings {
 		return launchTask(task)
 			.ignoreTaskData()
 			.mapError(CarthageError.TaskError)
+			// xcodebuild has a bug where xcodebuild -showBuildSettings
+			// can sometimes hang indefinitely on projects that don't
+			// share any schemes, so automatically bail out if it looks
+			// like that's happening.
+			.timeoutWithError(.XcodebuildTimeout(arguments.project), afterInterval: 15, onScheduler: QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)))
+			.retry(5)
 			.map { (data: NSData) -> String in
 				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 			}
