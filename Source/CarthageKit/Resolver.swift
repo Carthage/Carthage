@@ -100,7 +100,7 @@ public struct Resolver {
 
 		return SignalProducer(values: cartfile.dependencies)
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
-				let allowedVersions = SignalProducer<String?, CarthageError>.attempt {
+				return SignalProducer<String?, CarthageError>.attempt {
 						switch dependency.version {
 						case let .GitReference(refName):
 							return .Success(refName)
@@ -125,8 +125,6 @@ public struct Resolver {
 							}
 							.filter { dependency.version.satisfiedBy($0) }
 					}
-
-				return allowedVersions
 					.startOn(scheduler)
 					.observeOn(scheduler)
 					.map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
