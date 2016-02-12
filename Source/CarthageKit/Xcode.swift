@@ -172,6 +172,11 @@ public struct BuildArguments {
 		// Disable code signing requirement for all builds
 		// Frameworks get signed in the copy-frameworks action
 		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]
+		
+		// Allow to force unsanitized environment
+		let environment = NSProcessInfo.processInfo().environment
+		let useSanitizedEnvironment = environment["XCODEBUILD_USE_SANITIZED_ENVIRONMENT"] ?? "YES"
+		args += [ "-UseSanitizedBuildSystemEnvironment=\(useSanitizedEnvironment)" ]
 
 		return args
 	}
