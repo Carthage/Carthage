@@ -1259,17 +1259,12 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 	precondition(directoryURL.fileURL)
 
 	return SignalProducer { observer, disposable in
-		// Use SignalProducer.buffer() to avoid enumerating the given directory
+		// Use SignalProducer.replayLazily to avoid enumerating the given directory
 		// multiple times.
-		let (locatorBuffer, locatorObserver) = SignalProducer<(ProjectLocator, [String]), CarthageError>.buffer(Int.max)
+		let locator = buildableSchemesInDirectory(directoryURL, withConfiguration: configuration, forPlatforms: platforms)
+			.replayLazily(Int.max)
 
-		buildableSchemesInDirectory(directoryURL, withConfiguration: configuration, forPlatforms: platforms)
-			.startWithSignal { signal, signalDisposable in
-				disposable += signalDisposable
-				signal.observe(locatorObserver)
-			}
-
-		locatorBuffer
+		locator
 			.collect()
 			// Allow dependencies which have no projects, not to error out with
 			// `.NoSharedFrameworkSchemes`.
@@ -1285,7 +1280,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 					}
 			}
 			.flatMap(.Merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
-				return locatorBuffer
+				return locator
 					// This scheduler hop is required to avoid disallowed recursive signals.
 					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
 					.startOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
