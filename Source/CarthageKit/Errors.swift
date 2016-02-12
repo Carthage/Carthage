@@ -59,8 +59,8 @@ public enum CarthageError: ErrorType, Equatable {
 	/// them.
 	case NoSharedSchemes(ProjectLocator, GitHubRepository?)
 
-	/// Timeout whilst running `xcodebuild list` to enumerate shared schemes.
-	case XcodebuildListTimeout(ProjectLocator, GitHubRepository?)
+	/// Timeout whilst running `xcodebuild`
+	case XcodebuildTimeout(ProjectLocator)
 
 	/// A cartfile contains duplicate dependencies, either in itself or across
 	/// other cartfiles.
@@ -225,13 +225,8 @@ extension CarthageError: CustomStringConvertible {
 
 			return description
 
-		case let .XcodebuildListTimeout(project, repository):
-			var description = "Failed to discover shared schemes in project \(project) — either the project does not have any shared schemes, or xcodebuild timed out."
-			if let repository = repository {
-				description += "\n\nIf you believe this to be a project configuration error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
-			}
-
-			return description
+		case let .XcodebuildTimeout(project):
+			return "xcodebuild timed out while trying to read \(project) 😭"
 			
 		case let .DuplicateDependencies(duplicateDeps):
 			let deps = duplicateDeps.sort() // important to match expected order in test cases

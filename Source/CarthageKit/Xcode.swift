@@ -241,6 +241,11 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 	return launchTask(task)
 		.ignoreTaskData()
 		.mapError(CarthageError.TaskError)
+		// xcodebuild has a bug where xcodebuild -list can sometimes hang
+		// indefinitely on projects that don't share any schemes, so
+		// automatically bail out if it looks like that's happening.
+		.timeoutWithError(.XcodebuildTimeout(project), afterInterval: 60, onScheduler: QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)))
+		.retry(2)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
@@ -261,10 +266,6 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.skipWhile { line in !line.hasSuffix("Schemes:") }
 		.skip(1)
 		.takeWhile { line in !line.isEmpty }
-		// xcodebuild has a bug where xcodebuild -list can sometimes hang
-		// indefinitely on projects that don't share any schemes, so
-		// automatically bail out if it looks like that's happening.
-		.timeoutWithError(.XcodebuildListTimeout(project, nil), afterInterval: 60, onScheduler: QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)))
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
@@ -583,6 +584,12 @@ public struct BuildSettings {
 		return launchTask(task)
 			.ignoreTaskData()
 			.mapError(CarthageError.TaskError)
+			// xcodebuild has a bug where xcodebuild -showBuildSettings
+			// can sometimes hang indefinitely on projects that don't
+			// share any schemes, so automatically bail out if it looks
+			// like that's happening.
+			.timeoutWithError(.XcodebuildTimeout(arguments.project), afterInterval: 15, onScheduler: QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)))
+			.retry(5)
 			.map { (data: NSData) -> String in
 				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 			}
@@ -1235,9 +1242,6 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 
 					case let (.GitHub(repo), .NoSharedSchemes(project, _)):
 						return .NoSharedSchemes(project, repo)
-
-					case let (.GitHub(repo), .XcodebuildListTimeout(project, _)):
-						return .XcodebuildListTimeout(project, repo)
 
 					default:
 						return error
