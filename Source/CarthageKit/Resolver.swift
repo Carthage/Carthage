@@ -36,7 +36,16 @@ public struct Resolver {
 	/// Sends each recursive dependency with its resolved version, in the order
 	/// that they should be built.
 	public func resolveDependenciesInCartfile(cartfile: Cartfile, lastResolved: ResolvedCartfile? = nil, dependenciesToUpdate: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
-		return resolveDependenciesFromNodePermutations(nodePermutationsForCartfile(cartfile))
+		return nodePermutationsForCartfile(cartfile)
+			.flatMap(.Concat) { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
+				return self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph())
+					.promoteErrors(CarthageError.self)
+			}
+			// Pass through resolution errors only if we never got
+			// a valid graph.
+			.dematerializeErrorsIfEmpty()
+			.take(1)
+			.observeOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				let orderedNodes = graph.orderedNodes.map { node -> DependencyNode in
 					node.dependencies = graph.edges[node] ?? []
@@ -76,19 +85,6 @@ public struct Resolver {
 				}
 				.ignoreNil()
 			}
-	}
-
-	private func resolveDependenciesFromNodePermutations(permutationsProducer: SignalProducer<[DependencyNode], CarthageError>) -> SignalProducer<DependencyGraph, CarthageError> {
-		return permutationsProducer
-			.flatMap(.Concat) { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
-				return self.graphPermutationsForEachNode(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph())
-					.promoteErrors(CarthageError.self)
-			}
-			// Pass through resolution errors only if we never got
-			// a valid graph.
-			.dematerializeErrorsIfEmpty()
-			.take(1)
-			.observeOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
 	}
 
 	/// Sends all permutations of valid DependencyNodes, corresponding to the
