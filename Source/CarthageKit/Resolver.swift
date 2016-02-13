@@ -178,6 +178,8 @@ public struct Resolver {
 	///
 	/// This is a helper method, and not meant to be called from outside.
 	private func graphsForNodes(nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> {
+		let scheduler = QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.graphsForNodes")
+		
 		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError>
 			.attempt {
 				var graph = inputGraph
@@ -200,7 +202,7 @@ public struct Resolver {
 					// Each producer represents all evaluations of one subtree.
 					.map { node in self.graphsForDependenciesOfNode(node, basedOnGraph: graph) }
 					.collect()
-					.observeOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.graphsForNodes"))
+					.observeOn(scheduler)
 					.flatMap(.Concat) { graphProducers in permutations(graphProducers) }
 					.flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 						let mergedGraphs = SignalProducer(values: graphs)
