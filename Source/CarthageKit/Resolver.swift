@@ -178,27 +178,22 @@ public struct Resolver {
 	///
 	/// This is a helper method, and not meant to be called from outside.
 	private func graphsForNodes(nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> {
-		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError> { observer, disposable in
+		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError>
+			.attempt {
 				var graph = inputGraph
 				var newNodes: [DependencyNode] = []
 
 				for node in nodes {
-					if disposable.disposed {
-						return
-					}
-
 					switch graph.addNode(node, dependencyOf: dependencyOf) {
 					case let .Success(newNode):
 						newNodes.append(newNode)
 
 					case let .Failure(error):
-						observer.sendFailed(error)
-						return
+						return Result(error: error)
 					}
 				}
 
-				observer.sendNext((graph, newNodes))
-				observer.sendCompleted()
+				return Result(value: (graph, newNodes))
 			}
 			.flatMap(.Concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
 				return SignalProducer(values: nodes)
