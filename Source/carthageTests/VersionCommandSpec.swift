@@ -3,6 +3,7 @@ import Nimble
 import CarthageKit
 import Commandant
 import Cocoa
+import Result
 
 import carthage
 
@@ -55,6 +56,7 @@ class VersionSpec: QuickSpec {
 			let versionString = runCommand("/usr/bin/git describe --tags")
 
 //			subject.run(NoOptions<CarthageError>())
+			subject.run(NoOptions<CarthageError>.evaluate(.Usage).value!)
 
 			expect(printer.objectToPrintln) == versionString
 		}
