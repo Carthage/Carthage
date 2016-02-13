@@ -403,13 +403,22 @@ internal func gitmodulesEntriesInRepository(repositoryFileURL: NSURL, revision: 
 		}
 }
 
+/// Returns the root directory of the given repository
+public func gitRootDirectoryForRepository(repositoryFileURL: NSURL) -> SignalProducer<String, CarthageError> {
+	let task = [ "rev-parse", "--show-toplevel" ]
+	return launchGitTask(task, repositoryFileURL: repositoryFileURL)
+}
+
 /// Returns each submodule found in the given repository revision, or an empty
 /// signal if none exist.
 public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = "HEAD") -> SignalProducer<Submodule, CarthageError> {
 	return gitmodulesEntriesInRepository(repositoryFileURL, revision: revision)
 		.flatMap(.Concat) { name, path, URL in
-			return submoduleSHAForPath(repositoryFileURL, path, revision: revision)
-				.map { SHA in Submodule(name: name, path: path, URL: URL, SHA: SHA) }
+			return gitRootDirectoryForRepository(repositoryFileURL)
+				.map{ NSURL(fileURLWithPath: $0.stringByTrimmingCharactersInSet(.newlineCharacterSet())) }
+				.flatMap(.Concat) {actualRepoURL in submoduleSHAForPath(actualRepoURL, path, revision: revision)
+					.map { SHA in Submodule(name: name, path: path, URL: URL, SHA: SHA) }
+			}
 		}
 }
 
