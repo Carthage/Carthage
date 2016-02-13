@@ -36,14 +36,7 @@ public struct Resolver {
 	/// Sends each recursive dependency with its resolved version, in the order
 	/// that they should be built.
 	public func resolveDependenciesInCartfile(cartfile: Cartfile, lastResolved: ResolvedCartfile? = nil, dependenciesToUpdate: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
-		return nodePermutationsForCartfile(cartfile)
-			.flatMap(.Concat) { rootNodes -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
-				return self.graphsForNodes(rootNodes, dependencyOf: nil, basedOnGraph: DependencyGraph())
-					.promoteErrors(CarthageError.self)
-			}
-			// Pass through resolution errors only if we never got
-			// a valid graph.
-			.dematerializeErrorsIfEmpty()
+		return graphsForCartfile(cartfile, dependencyOf: nil, basedOnGraph: DependencyGraph())
 			.take(1)
 			.observeOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
@@ -157,9 +150,21 @@ public struct Resolver {
 			.concat(SignalProducer(value: Cartfile(dependencies: [])))
 			.take(1)
 			.observeOn(scheduler)
-			.flatMap(.Merge) { self.nodePermutationsForCartfile($0) }
-			.flatMap(.Concat) { dependencyNodes in
-				return self.graphsForNodes(dependencyNodes, dependencyOf: node, basedOnGraph: inputGraph)
+			.flatMap(.Concat) { cartfile in
+				return self.graphsForCartfile(cartfile, dependencyOf: node, basedOnGraph: inputGraph)
+			}
+	}
+	
+	/// Recursively permutes the dependencies in `cartfile` and all dependencies
+	/// thereof, attaching each permutation to `inputGraph` as a dependency of
+	/// the specified node (or as a root otherwise).
+	///
+	/// This is a helper method, and not meant to be called from outside.
+	private func graphsForCartfile(cartfile: Cartfile, dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
+		return nodePermutationsForCartfile(cartfile)
+			.flatMap(.Concat) { (nodes: [DependencyNode]) in
+				return self
+					.graphsForNodes(nodes, dependencyOf: dependencyOf, basedOnGraph: inputGraph)
 					.promoteErrors(CarthageError.self)
 			}
 			// Pass through resolution errors only if we never got
