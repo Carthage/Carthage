@@ -189,15 +189,10 @@ public struct Resolver {
 					.observeOn(scheduler)
 					.permute()
 					.flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
-						let mergedGraphs = SignalProducer(values: graphs)
-							.scan(Result<DependencyGraph, CarthageError>.Success(inputGraph)) { result, nextGraph in
-								return result.flatMap { previousGraph in mergeGraphs(previousGraph, nextGraph) }
+						return SignalProducer<DependencyGraph, CarthageError>
+							.attempt {
+								mergeGraphs([ inputGraph ] + graphs)
 							}
-							.attemptMap { $0 }
-
-						return SignalProducer(value: inputGraph)
-							.concat(mergedGraphs)
-							.takeLast(1)
 							.materialize()
 							.promoteErrors(CarthageError.self)
 					}
@@ -399,25 +394,32 @@ extension DependencyGraph: CustomStringConvertible {
 	}
 }
 
-/// Attempts to unify two graphs.
+
+/// Attempts to unify a collection of graphs.
 ///
 /// Returns the new graph, or an error if the graphs specify inconsistent
 /// versions for one or more dependencies.
-private func mergeGraphs(lhs: DependencyGraph, _ rhs: DependencyGraph) -> Result<DependencyGraph, CarthageError> {
-	var result: Result<DependencyGraph, CarthageError> = .Success(lhs)
+private func mergeGraphs
+	<Collection: CollectionType where Collection.Generator.Element == DependencyGraph>
+	(graphs: Collection) -> Result<DependencyGraph, CarthageError> {
+	precondition(graphs.count > 0)
+	
+	var result: Result<DependencyGraph, CarthageError> = .Success(graphs.first!)
 
-	for root in rhs.roots {
-		result = result.flatMap { graph in
-			var graph = graph
-			return graph.addNode(root, dependencyOf: nil).map { _ in graph }
-		}
-	}
-
-	for (node, dependencies) in rhs.edges {
-		for dependency in dependencies {
+	for next in graphs {
+		for root in next.roots {
 			result = result.flatMap { graph in
 				var graph = graph
-				return graph.addNode(dependency, dependencyOf: node).map { _ in graph }
+				return graph.addNode(root, dependencyOf: nil).map { _ in graph }
+			}
+		}
+
+		for (node, dependencies) in next.edges {
+			for dependency in dependencies {
+				result = result.flatMap { graph in
+					var graph = graph
+					return graph.addNode(dependency, dependencyOf: node).map { _ in graph }
+				}
 			}
 		}
 	}
