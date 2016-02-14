@@ -93,17 +93,9 @@ public struct Resolver {
 
 		return SignalProducer(values: cartfile.dependencies)
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
-				return SignalProducer<String?, CarthageError>.attempt {
-						switch dependency.version {
-						case let .GitReference(refName):
-							return .Success(refName)
-
-						default:
-							return .Success(nil)
-						}
-					}
-					.flatMap(.Concat) { refName -> SignalProducer<PinnedVersion, CarthageError> in
-						if let refName = refName {
+				return SignalProducer(value: dependency)
+					.flatMap(.Concat) { dependency -> SignalProducer<PinnedVersion, CarthageError> in
+						if case let .GitReference(refName) = dependency.version {
 							return self.resolvedGitReference(dependency.project, refName)
 						}
 
