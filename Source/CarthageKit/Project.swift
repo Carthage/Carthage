@@ -296,6 +296,14 @@ public final class Project {
 				}
 			}
 			.startOnQueue(cachedVersionsQueue)
+			.collect()
+			.flatMap(.Concat) { versions -> SignalProducer<PinnedVersion, CarthageError> in
+				if versions.isEmpty {
+					return SignalProducer(error: CarthageError.TaggedVersionNotFound(project))
+				}
+				
+				return SignalProducer(values: versions)
+			}
 	}
 	
 	/// Loads the Cartfile for the given dependency, at the given version.

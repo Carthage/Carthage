@@ -99,15 +99,8 @@ public struct Resolver {
 							return self.resolvedGitReference(dependency.project, refName)
 						}
 
-						return self.versionsForDependency(dependency.project)
-							.collect()
-							.flatMap(.Merge) { nodes -> SignalProducer<PinnedVersion, CarthageError> in
-								if nodes.isEmpty {
-									return SignalProducer(error: CarthageError.TaggedVersionNotFound(dependency.project))
-								} else {
-									return SignalProducer(values: nodes)
-								}
-							}
+						return self
+							.versionsForDependency(dependency.project)
 							.filter { dependency.version.satisfiedBy($0) }
 					}
 					.startOn(scheduler)
