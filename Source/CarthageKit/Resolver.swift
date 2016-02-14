@@ -164,6 +164,7 @@ public struct Resolver {
 			.flatMap(.Concat) { (nodes: [DependencyNode]) in
 				return self
 					.graphsForNodes(nodes, dependencyOf: dependencyOf, basedOnGraph: inputGraph)
+					.materialize()
 					.promoteErrors(CarthageError.self)
 			}
 			// Pass through resolution errors only if we never got
@@ -176,7 +177,7 @@ public struct Resolver {
 	/// the specified node (or as a root otherwise).
 	///
 	/// This is a helper method, and not meant to be called from outside.
-	private func graphsForNodes(nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> {
+	private func graphsForNodes(nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		let scheduler = QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.graphsForNodes")
 		
 		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError>
@@ -219,7 +220,6 @@ public struct Resolver {
 					// a valid graph.
 					.dematerializeErrorsIfEmpty()
 			}
-			.materialize()
 	}
 }
 
