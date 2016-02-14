@@ -168,19 +168,11 @@ public struct Resolver {
 		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError>
 			.attempt {
 				var graph = inputGraph
-				var newNodes: [DependencyNode] = []
-
-				for node in nodes {
-					switch graph.addNode(node, dependencyOf: dependencyOf) {
-					case let .Success(newNode):
-						newNodes.append(newNode)
-
-					case let .Failure(error):
-						return Result(error: error)
+				return graph
+					.addNodes(nodes, dependenciesOf: dependencyOf)
+					.map { newNodes in
+						return (graph, newNodes)
 					}
-				}
-
-				return Result(value: (graph, newNodes))
 			}
 			.flatMap(.Concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
 				return SignalProducer(values: nodes)
@@ -329,6 +321,33 @@ private struct DependencyGraph: Equatable {
 		}
 
 		return .Success(node)
+	}
+	
+	/// Attempts to add the given nodes to the graph, optionally as a dependency
+	/// of another.
+	///
+	/// If a given node refers to a project which already exists in the graph,
+	/// this method will attempt to unify the version specifiers of both.
+	///
+	/// Returns the nodes as actually inserted into the graph (which may be
+	/// different from the node passed in), or an error if this addition would
+	/// make the graph inconsistent.
+	mutating func addNodes
+		<C: CollectionType where C.Generator.Element == DependencyNode>
+		(nodes: C, dependenciesOf: DependencyNode?) -> Result<[DependencyNode], CarthageError> {
+		var newNodes: [DependencyNode] = []
+		
+		for node in nodes {
+			switch self.addNode(node, dependencyOf: dependenciesOf) {
+			case let .Success(newNode):
+				newNodes.append(newNode)
+				
+			case let .Failure(error):
+				return Result(error: error)
+			}
+		}
+		
+		return Result(value: newNodes)
 	}
 
 	/// Whether the given node is included or not in the nested dependencies of
