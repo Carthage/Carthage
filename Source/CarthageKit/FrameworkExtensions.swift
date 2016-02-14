@@ -127,6 +127,32 @@ extension SignalProducerType {
 	}
 }
 
+extension SignalProducerType where Value: SignalProducerType, Error == Value.Error {
+	/// Sends all permutations of the values from the inner producers, as they arrive.
+	///
+	/// If no producers are received, sends a single empty array then completes.
+	@warn_unused_result(message="Did you forget to call `start` on the producer?")
+	internal func permute() -> SignalProducer<[Value.Value], Error> {
+		return self
+			.collect()
+			.flatMap(.Concat) { (producers: [Value]) -> SignalProducer<[Value.Value], Error> in
+				var combined = SignalProducer<[Value.Value], Error>(value: [])
+
+				for producer in producers {
+					combined = combined
+						.permuteWith(producer.producer)
+						.map { array, value in
+							var array = array
+							array.append(value)
+							return array
+						}
+				}
+
+				return combined
+			}
+	}
+}
+
 extension SignalType where Value: EventType, Value.Error == Error {
 	/// Dematerializes the signal, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
@@ -177,25 +203,6 @@ extension SignalProducerType where Value: EventType, Value.Error == Error {
 	internal func dematerializeErrorsIfEmpty() -> SignalProducer<Value.Value, Error> {
 		return lift { $0.dematerializeErrorsIfEmpty() }
 	}
-}
-
-/// Sends all permutations of the values from the input producers, as they arrive.
-///
-/// If no input producers are given, sends a single empty array then completes.
-internal func permutations<T, E>(producers: [SignalProducer<T, E>]) -> SignalProducer<[T], E> {
-	var combined: SignalProducer<[T], E> = SignalProducer(value: [])
-
-	for producer in producers {
-		combined = combined
-			.permuteWith(producer)
-			.map { array, value in
-				var array = array
-				array.append(value)
-				return array
-			}
-	}
-
-	return combined
 }
 
 extension NSScanner {

@@ -131,9 +131,8 @@ public struct Resolver {
 						}
 					}
 			}
-			.collect()
 			.observeOn(scheduler)
-			.flatMap(.Concat) { nodeProducers in permutations(nodeProducers) }
+			.permute()
 	}
 
 	/// Sends all possible permutations of `inputGraph` oriented around the
@@ -201,9 +200,8 @@ public struct Resolver {
 				return SignalProducer(values: nodes)
 					// Each producer represents all evaluations of one subtree.
 					.map { node in self.graphsForDependenciesOfNode(node, basedOnGraph: graph) }
-					.collect()
 					.observeOn(scheduler)
-					.flatMap(.Concat) { graphProducers in permutations(graphProducers) }
+					.permute()
 					.flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 						let mergedGraphs = SignalProducer(values: graphs)
 							.scan(Result<DependencyGraph, CarthageError>.Success(inputGraph)) { result, nextGraph in
