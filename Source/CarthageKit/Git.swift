@@ -404,9 +404,10 @@ internal func gitmodulesEntriesInRepository(repositoryFileURL: NSURL, revision: 
 }
 
 /// Returns the root directory of the given repository
-public func gitRootDirectoryForRepository(repositoryFileURL: NSURL) -> SignalProducer<String, CarthageError> {
+public func gitRootDirectoryForRepository(repositoryFileURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	let task = [ "rev-parse", "--show-toplevel" ]
 	return launchGitTask(task, repositoryFileURL: repositoryFileURL)
+		.map { NSURL(fileURLWithPath: $0.stringByTrimmingCharactersInSet(.newlineCharacterSet())) }
 }
 
 /// Returns each submodule found in the given repository revision, or an empty
@@ -415,8 +416,7 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = 
 	return gitmodulesEntriesInRepository(repositoryFileURL, revision: revision)
 		.flatMap(.Concat) { name, path, URL in
 			return gitRootDirectoryForRepository(repositoryFileURL)
-				.map{ NSURL(fileURLWithPath: $0.stringByTrimmingCharactersInSet(.newlineCharacterSet())) }
-				.flatMap(.Concat) {actualRepoURL in submoduleSHAForPath(actualRepoURL, path, revision: revision)
+				.flatMap(.Concat) { actualRepoURL in submoduleSHAForPath(actualRepoURL, path, revision: revision)
 					.map { SHA in Submodule(name: name, path: path, URL: URL, SHA: SHA) }
 			}
 		}
