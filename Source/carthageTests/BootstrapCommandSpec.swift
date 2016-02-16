@@ -6,7 +6,7 @@ import Result
 import carthage
 
 class BootstrapCommandSpec: QuickSpec {
-    override func spec() {
+	override func spec() {
 		var subject: BootstrapCommand!
 		var printer: FakePrinter!
 		var fileManager: FakeFileManager!
@@ -78,5 +78,5 @@ class BootstrapCommandSpec: QuickSpec {
 				}
 			}
 		}
-    }
+	}
 }

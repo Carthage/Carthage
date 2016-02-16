@@ -25,7 +25,7 @@ private func runCommand(command: String, fromDirectory: String = NSProcessInfo.p
 }
 
 class VersionSpec: QuickSpec {
-    override func spec() {
+	override func spec() {
 		var subject: VersionCommand!
 		var printer: FakePrinter!
 
@@ -43,5 +43,5 @@ class VersionSpec: QuickSpec {
 			expect(printer.printlnCallCount) == 1
 			expect(printer.printlnArgsForCall(0) as? String) == versionString
 		}
-    }
+	}
 }
