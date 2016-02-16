@@ -23,7 +23,7 @@ let printer = ThreadSafePrinter()
 let fileManager = NSFileManager.defaultManager()
 
 let registry = CommandRegistry<CarthageError>()
-registry.register(ArchiveCommand())
+registry.register(ArchiveCommand(fileManager: fileManager))
 registry.register(BootstrapCommand(printer: printer, fileManager: fileManager))
 registry.register(BuildCommand())
 registry.register(CheckoutCommand())

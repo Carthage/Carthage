@@ -18,7 +18,7 @@ class BootstrapCommandSpec: QuickSpec {
 			subject = BootstrapCommand(printer: printer, fileManager: fileManager)
 		}
 
-		fdescribe("-run") {
+		describe("-run") {
 			context("when a Cartfile.resolved file is not found") {
 				beforeEach {
 					let options = UpdateCommand.Options.evaluate(CommandMode.Arguments(ArgumentParser([]))).value!
