@@ -19,15 +19,18 @@ guard ensureGitVersion().first()?.value == true else {
 	exit(EXIT_FAILURE)
 }
 
+let printer = ThreadSafePrinter()
+let fileManager = NSFileManager.defaultManager()
+
 let registry = CommandRegistry<CarthageError>()
 registry.register(ArchiveCommand())
-registry.register(BootstrapCommand())
+registry.register(BootstrapCommand(printer: printer, fileManager: fileManager))
 registry.register(BuildCommand())
 registry.register(CheckoutCommand())
 registry.register(CopyFrameworksCommand())
 registry.register(FetchCommand())
 registry.register(UpdateCommand())
-registry.register(VersionCommand(printer: ThreadSafePrinter()))
+registry.register(VersionCommand(printer: printer))
 
 let helpCommand = HelpCommand(registry: registry)
 registry.register(helpCommand)

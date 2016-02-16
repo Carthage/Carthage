@@ -16,14 +16,22 @@ public struct BootstrapCommand: CommandType {
 	public let verb = "bootstrap"
 	public let function = "Check out and build the project's dependencies"
 
+	private let printer: Printer
+	private let fileManager: FileManager
+
+	public init(printer: Printer, fileManager: FileManager) {
+		self.printer = printer
+		self.fileManager = fileManager
+	}
+
 	public func run(options: UpdateCommand.Options) -> Result<(), CarthageError> {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
 		// `update` flags.
 		return options.loadProject()
 			.flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
-				if !NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
+				if !self.fileManager.fileExistsAtPath(project.resolvedCartfileURL.path!) {
 					let formatting = options.checkoutOptions.colorOptions.formatting
-					carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
+					self.printer.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
 					return project.updateDependencies(shouldCheckout: options.checkoutAfterUpdate)
 				}
 

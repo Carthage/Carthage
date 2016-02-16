@@ -23,6 +23,10 @@
 		8903EA931C6C3CBB001C0189 /* VersionCommandSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8903EA8F1C6C3C8C001C0189 /* VersionCommandSpec.swift */; };
 		8903EA951C6C3F1C001C0189 /* Printer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8903EA941C6C3F1C001C0189 /* Printer.swift */; };
 		8903EA971C6C44C6001C0189 /* TestBehavior.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8903EA961C6C44C6001C0189 /* TestBehavior.swift */; };
+		8949698F1C73986F00A91986 /* BootstrapCommandSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8949698E1C73986F00A91986 /* BootstrapCommandSpec.swift */; };
+		894969921C7398CE00A91986 /* FakePrinter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894969911C7398CE00A91986 /* FakePrinter.swift */; };
+		894969971C739BBA00A91986 /* FileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894969951C739AC300A91986 /* FileManager.swift */; };
+		8949699B1C739C8000A91986 /* FakeFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8949699A1C739C8000A91986 /* FakeFileManager.swift */; };
 		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
@@ -174,6 +178,10 @@
 		8903EA8F1C6C3C8C001C0189 /* VersionCommandSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionCommandSpec.swift; sourceTree = "<group>"; };
 		8903EA941C6C3F1C001C0189 /* Printer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Printer.swift; sourceTree = "<group>"; };
 		8903EA961C6C44C6001C0189 /* TestBehavior.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestBehavior.swift; sourceTree = "<group>"; };
+		8949698E1C73986F00A91986 /* BootstrapCommandSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BootstrapCommandSpec.swift; sourceTree = "<group>"; };
+		894969911C7398CE00A91986 /* FakePrinter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FakePrinter.swift; sourceTree = "<group>"; };
+		894969951C739AC300A91986 /* FileManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FileManager.swift; sourceTree = "<group>"; };
+		8949699A1C739C8000A91986 /* FakeFileManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FakeFileManager.swift; sourceTree = "<group>"; };
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
 		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
@@ -310,11 +318,22 @@
 		8903EA841C6C3C18001C0189 /* carthageTests */ = {
 			isa = PBXGroup;
 			children = (
+				8949698E1C73986F00A91986 /* BootstrapCommandSpec.swift */,
 				8903EA8F1C6C3C8C001C0189 /* VersionCommandSpec.swift */,
+				894969901C73988B00A91986 /* Fakes and Mocks */,
 				8903EA871C6C3C18001C0189 /* Info.plist */,
 			);
 			name = carthageTests;
 			path = Source/carthageTests;
+			sourceTree = "<group>";
+		};
+		894969901C73988B00A91986 /* Fakes and Mocks */ = {
+			isa = PBXGroup;
+			children = (
+				894969911C7398CE00A91986 /* FakePrinter.swift */,
+				8949699A1C739C8000A91986 /* FakeFileManager.swift */,
+			);
+			path = "Fakes and Mocks";
 			sourceTree = "<group>";
 		};
 		98400F591BD24DC5008C5DDE /* Scripts */ = {
@@ -364,6 +383,7 @@
 				5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */,
 				6724C8691A850A4600E47F00 /* Environment.swift */,
 				D05BD1981A26864F00A36A0E /* Extensions.swift */,
+				894969951C739AC300A91986 /* FileManager.swift */,
 				67C870071A7A04E100F6647C /* Formatting.swift */,
 				D02DB8DF1A4BC9B600097CDE /* Fetch.swift */,
 				D0D1211B19E87861005E4BAA /* main.swift */,
@@ -749,6 +769,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				8903EA931C6C3CBB001C0189 /* VersionCommandSpec.swift in Sources */,
+				8949698F1C73986F00A91986 /* BootstrapCommandSpec.swift in Sources */,
+				8949699B1C739C8000A91986 /* FakeFileManager.swift in Sources */,
+				894969921C7398CE00A91986 /* FakePrinter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -797,6 +820,7 @@
 				54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */,
 				D0AAC2401A14933100060F2E /* Update.swift in Sources */,
 				8903EA951C6C3F1C001C0189 /* Printer.swift in Sources */,
+				894969971C739BBA00A91986 /* FileManager.swift in Sources */,
 				8903EA971C6C44C6001C0189 /* TestBehavior.swift in Sources */,
 				D05BD1991A26864F00A36A0E /* Extensions.swift in Sources */,
 				6724C86A1A850A4600E47F00 /* Environment.swift in Sources */,

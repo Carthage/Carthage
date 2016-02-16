@@ -7,24 +7,6 @@ import Result
 
 import carthage
 
-private class MockPrinter: Printer {
-	private func println() {}
-
-	private var objectToPrintln: String?
-	private func println(object: Any) {
-		if let description = (object as? CustomStringConvertible)?.description {
-			objectToPrintln = description
-		}
-	}
-
-	private var objectToPrint: String?
-	private func print(object: Any) {
-		if let description = (object as? CustomStringConvertible)?.description {
-			objectToPrint = description
-		}
-	}
-}
-
 // Because this by-default synchronous and way easier to understand than ReactiveTask
 private func runCommand(command: String, fromDirectory: String = NSProcessInfo.processInfo().environment["SourceDir"] ?? "") -> String {
 	let task = NSTask()
@@ -45,10 +27,10 @@ private func runCommand(command: String, fromDirectory: String = NSProcessInfo.p
 class VersionSpec: QuickSpec {
     override func spec() {
 		var subject: VersionCommand!
-		var printer: MockPrinter!
+		var printer: FakePrinter!
 
 		beforeEach {
-			printer = MockPrinter()
+			printer = FakePrinter()
 			subject = VersionCommand(printer: printer)
 		}
 
@@ -58,7 +40,8 @@ class VersionSpec: QuickSpec {
 //			subject.run(NoOptions<CarthageError>())
 			subject.run(NoOptions<CarthageError>.evaluate(.Usage).value!)
 
-			expect(printer.objectToPrintln) == versionString
+			expect(printer.printlnCallCount) == 1
+			expect(printer.printlnArgsForCall(0) as? String) == versionString
 		}
     }
 }
