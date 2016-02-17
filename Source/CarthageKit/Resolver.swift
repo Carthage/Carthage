@@ -421,7 +421,7 @@ extension DependencyGraph: CustomStringConvertible {
 private func mergeGraphs
 	<Collection: CollectionType where Collection.Generator.Element == DependencyGraph>
 	(graphs: Collection) -> Result<DependencyGraph, CarthageError> {
-	precondition(graphs.count > 0)
+	precondition(!graphs.isEmpty)
 	
 	var result: Result<DependencyGraph, CarthageError> = .Success(graphs.first!)
 
