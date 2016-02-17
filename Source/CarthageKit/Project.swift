@@ -299,7 +299,7 @@ public final class Project {
 			.collect()
 			.flatMap(.Concat) { versions -> SignalProducer<PinnedVersion, CarthageError> in
 				if versions.isEmpty {
-					return SignalProducer(error: CarthageError.TaggedVersionNotFound(project))
+					return SignalProducer(error: .TaggedVersionNotFound(project))
 				}
 				
 				return SignalProducer(values: versions)
