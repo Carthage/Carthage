@@ -23,6 +23,8 @@
 		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
 		89E80E621C755002000F8DCB /* BuildArguments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E601C754FFD000F8DCB /* BuildArguments.swift */; };
 		89E80E641C755059000F8DCB /* BuildArgumentsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E631C755059000F8DCB /* BuildArgumentsSpec.swift */; };
+		89E80E661C755B3D000F8DCB /* GitHubSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E651C755B3D000F8DCB /* GitHubSpec.swift */; };
+		89E80E691C755C1B000F8DCB /* FakeURLSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E681C755C1B000F8DCB /* FakeURLSession.swift */; };
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
 		CD7F22441C67649F00B018A9 /* TestCartfileProposedVersion in Resources */ = {isa = PBXBuildFile; fileRef = CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */; };
@@ -166,6 +168,8 @@
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
 		89E80E601C754FFD000F8DCB /* BuildArguments.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArguments.swift; sourceTree = "<group>"; };
 		89E80E631C755059000F8DCB /* BuildArgumentsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArgumentsSpec.swift; sourceTree = "<group>"; };
+		89E80E651C755B3D000F8DCB /* GitHubSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitHubSpec.swift; sourceTree = "<group>"; };
+		89E80E681C755C1B000F8DCB /* FakeURLSession.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FakeURLSession.swift; sourceTree = "<group>"; };
 		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
 		CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfileProposedVersion; sourceTree = "<group>"; };
@@ -287,6 +291,14 @@
 				5499CA971A2394B700783309 /* Info.plist */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		89E80E671C755BEB000F8DCB /* Fakes */ = {
+			isa = PBXGroup;
+			children = (
+				89E80E681C755C1B000F8DCB /* FakeURLSession.swift */,
+			);
+			path = Fakes;
 			sourceTree = "<group>";
 		};
 		98400F591BD24DC5008C5DDE /* Scripts */ = {
@@ -459,10 +471,12 @@
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
 				89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */,
 				CDA0B6C91C468E67006C499C /* GitSpec.swift */,
+				89E80E651C755B3D000F8DCB /* GitHubSpec.swift */,
 				549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */,
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
 				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
 				D0DB09A319EA354200234B16 /* XcodeSpec.swift */,
+				89E80E671C755BEB000F8DCB /* Fakes */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
 			name = CarthageKitTests;
@@ -732,11 +746,13 @@
 				89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */,
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
 				3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */,
+				89E80E661C755B3D000F8DCB /* GitHubSpec.swift in Sources */,
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,
 				549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */,
 				D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */,
 				CDA0B6CA1C468E67006C499C /* GitSpec.swift in Sources */,
 				89E80E641C755059000F8DCB /* BuildArgumentsSpec.swift in Sources */,
+				89E80E691C755C1B000F8DCB /* FakeURLSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
