@@ -28,6 +28,7 @@ bootstrap:
 
 test: clean bootstrap
 	$(BUILD_TOOL) $(XCODEFLAGS) test
+	bats Source/CarthageIntegration
 
 clean:
 	rm -f "$(OUTPUT_PACKAGE)"
