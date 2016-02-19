@@ -540,38 +540,57 @@ public final class Project {
 					.map { (cartfile: Cartfile) -> DependencyGraph in
 						return [ dependency.project: Set(cartfile.dependencies.map { $0.project }) ]
 					}
+					.concat(SignalProducer(value: [ dependency.project: Set() ]))
+					.take(1)
 			}
-			.collect()
-			.flatMap(.Latest) { (graphs: [DependencyGraph]) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				let graph = graphs.reduce([:]) { (graph: DependencyGraph, item: DependencyGraph) -> DependencyGraph in
-					var result = graph
-					for (dependency, projects) in item {
-						var recursive = projects
-						for project in projects {
-							if let projects = result[project] {
-								recursive.unionInPlace(projects)
-							}
-						}
-						
-						result.updateValue(recursive, forKey: dependency)
-						
-						for (project, projects) in result {
-							if projects.contains(dependency) {
-								result.updateValue(projects.union(recursive), forKey: project)
-							}
+			.reduce([:]) { (working: DependencyGraph, next: DependencyGraph) in
+				var result = working
+				next.forEach { result.updateValue($1, forKey: $0) }
+				return result
+			}
+			.flatMap(.Latest) { (graph: DependencyGraph) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+				// Open Question: Is there a place that a generic topological 
+				// sort should live?
+				func topologicalSort<Node: Equatable>(edges: Dictionary<Node, Set<Node>>, @noescape isOrderedBefore: (Node, Node) -> Bool) -> [Node] {
+					var nodeQueue: [Node] = edges.filter { $1.isEmpty }.map { return $0.0 }
+
+					var workingEdges = edges
+					nodeQueue.forEach { workingEdges.removeValueForKey($0) }
+
+					var sortedNodes: [Node] = []
+
+					while !nodeQueue.isEmpty {
+						nodeQueue.sortInPlace(isOrderedBefore)
+
+						let lastNode = nodeQueue.removeLast()
+						sortedNodes.append(lastNode)
+
+						for (node, nodeEdges) in workingEdges {
+							guard nodeEdges.contains(lastNode) else { continue }
+
+							let unsharedEdges = nodeEdges.subtract([lastNode])
+							workingEdges[node] = unsharedEdges
+
+							guard unsharedEdges.isEmpty else { continue }
+							nodeQueue.append(node)
 						}
 					}
-					return result
+
+					// There is a cycle in the graph. How should we communicate
+					// this?
+//					if sortedNodes.count != edges.count {
+//
+//					}
+
+					return sortedNodes
 				}
 
+				let sortedProjects = topologicalSort(graph, isOrderedBefore: { $0.name > $1.name })
+
 				let sorted = cartfile.dependencies.sort { left, right in
-					if let deps = graph[right.project] where deps.contains(left.project) {
-						return true
-					}
-					if let deps = graph[left.project] where deps.contains(right.project) {
-						return false
-					}
-					return left.project.name.caseInsensitiveCompare(right.project.name) == .OrderedAscending
+					let leftIndex = sortedProjects.indexOf(left.project)
+					let rightIndex = sortedProjects.indexOf(right.project)
+					return leftIndex < rightIndex
 				}
 
 				guard let dependenciesToInclude = dependenciesToInclude where !dependenciesToInclude.isEmpty else {
