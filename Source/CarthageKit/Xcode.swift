@@ -297,6 +297,8 @@ public enum SDK: String {
 	/// tvSimulator, for the Apple TV simulator.
 	case tvSimulator = "appletvsimulator"
 
+	public static let allSDKs: Set<SDK> = [.MacOSX, .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator]
+
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
 		return Result(self.init(rawValue: string.lowercaseString), failWith: .ParseError(description: "unexpected SDK key \"\(string)\""))
