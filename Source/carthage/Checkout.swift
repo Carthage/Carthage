@@ -24,7 +24,7 @@ public struct CheckoutCommand: CommandType {
 		public static func create(useSSH: Bool) -> Bool -> Bool -> ColorOptions -> String -> [String] -> Options {
 			return { useSubmodules in { useBinaries in { colorOptions in { directoryPath in { dependenciesToCheckout in
 				// Disable binary downloads when using submodules.
-				// See https://github.com/Carthage/Carthage/issues/419.
+				// See https://github.com/Carthage/Carthage/issues/419
 				let shouldUseBinaries = useSubmodules ? false : useBinaries
 
 				let dependenciesToCheckout: [String]? = dependenciesToCheckout.isEmpty ? nil : dependenciesToCheckout
@@ -34,27 +34,32 @@ public struct CheckoutCommand: CommandType {
 		}
 
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
-			return evaluate(m, useBinariesAddendum: "", dependenciesUsage: "the dependency names to checkout")
+			return evaluate(m, useBinariesAddendum: "", dependenciesUsage: "the dependency names to checkout", fileManager: NSFileManager.defaultManager())
 		}
 
-		public static func evaluate(m: CommandMode, useBinariesAddendum: String, dependenciesUsage: String) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(m: CommandMode, useBinariesAddendum: String, dependenciesUsage: String, fileManager: FileManager) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 				<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist, disabled if --use-submodules option is present" + useBinariesAddendum)
 				<*> ColorOptions.evaluate(m)
-				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: fileManager.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> m <| Argument(defaultValue: [], usage: dependenciesUsage)
 		}
 
-		/// Attempts to load the project referenced by the options, and configure it
-		/// accordingly.
-		public func loadProject() -> SignalProducer<Project, CarthageError> {
+		public func project() -> Project {
 			let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true)
 			let project = Project(directoryURL: directoryURL)
 			project.preferHTTPS = !self.useSSH
 			project.useSubmodules = self.useSubmodules
 			project.useBinaries = self.useBinaries
+			return project
+		}
+
+		/// Attempts to load the project referenced by the options, and configure it
+		/// accordingly.
+		public func loadProject() -> SignalProducer<Project, CarthageError> {
+			let project = self.project()
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
 			project.projectEvents.observeNext { eventSink.put($0) }

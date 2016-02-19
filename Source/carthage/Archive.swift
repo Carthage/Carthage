@@ -15,7 +15,7 @@ import ReactiveCocoa
 public struct ArchiveCommand: CommandType {
 	public struct Options: OptionsType {
 		public let outputPath: String
-		public let directoryPath: String
+		public let directoryPath: String?
 		public let colorOptions: ColorOptions
 		public let frameworkNames: [String]
 
@@ -28,7 +28,7 @@ public struct ArchiveCommand: CommandType {
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "output", defaultValue: "", usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)")
-				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: nil, usage: "the directory containing the Carthage project")
 				<*> ColorOptions.evaluate(m)
 				<*> m <| Argument(defaultValue: [], usage: "the names of the built frameworks to archive without any extension (or blank to pick up the frameworks in the current project built by `--no-skip-current`)")
 		}
@@ -36,6 +36,12 @@ public struct ArchiveCommand: CommandType {
 	
 	public let verb = "archive"
 	public let function = "Archives built frameworks into a zip that Carthage can use"
+
+	private let fileManager: FileManager
+
+	public init(fileManager: FileManager) {
+		self.fileManager = fileManager
+	}
 
 	public func run(options: Options) -> Result<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
@@ -46,7 +52,7 @@ public struct ArchiveCommand: CommandType {
 				return ($0 as NSString).stringByAppendingPathExtension("framework")!
 			})
 		} else {
-			let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
+			let directoryURL = NSURL.fileURLWithPath(options.directoryPath ?? fileManager.currentDirectoryPath, isDirectory: true)
 			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
 				.collect()
 				.flatMap(.Merge) { projects in
@@ -81,7 +87,7 @@ public struct ArchiveCommand: CommandType {
 						return (platform.relativePath as NSString).stringByAppendingPathComponent(framework)
 					}
 				}
-				.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+				.filter { relativePath in self.fileManager.fileExistsAtPath(relativePath) }
 				.flatMap(.Merge) { framework -> SignalProducer<String, CarthageError> in
 					let dSYM = (framework as NSString).stringByAppendingPathExtension("dSYM")!
 					let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework))
@@ -89,7 +95,7 @@ public struct ArchiveCommand: CommandType {
 						.map { url in ((framework as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.lastPathComponent!) }
 					let extraFilesProducer = SignalProducer(value: dSYM)
 						.concat(bcsymbolmapsProducer)
-						.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+						.filter { relativePath in self.fileManager.fileExistsAtPath(relativePath) }
 					return SignalProducer(value: framework)
 						.concat(extraFilesProducer)
 				}

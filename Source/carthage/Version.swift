@@ -15,10 +15,16 @@ public struct VersionCommand: CommandType {
 	public let verb = "version"
 	public let function = "Display the current version of Carthage"
 
+	private let printer: Printer
+
+	public init(printer: Printer) {
+		self.printer = printer
+	}
+
 	public func run(options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
 		let versionString = NSBundle(identifier: CarthageKitBundleIdentifier)?.objectForInfoDictionaryKey("CFBundleShortVersionString") as! String
 		let semVer = SemanticVersion.fromScanner(NSScanner(string: versionString)).value
-		carthage.println(semVer!)
+		printer.println(semVer!)
 		return .Success(())
 	}
 }

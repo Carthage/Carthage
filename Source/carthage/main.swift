@@ -10,6 +10,7 @@ import CarthageKit
 import Commandant
 import Foundation
 import ReactiveCocoa
+import Cocoa
 import ReactiveTask
 import Result
 
@@ -18,18 +19,23 @@ guard ensureGitVersion().first()?.value == true else {
 	exit(EXIT_FAILURE)
 }
 
+let printer = ThreadSafePrinter()
+let fileManager = NSFileManager.defaultManager()
+
 let registry = CommandRegistry<CarthageError>()
-registry.register(ArchiveCommand())
-registry.register(BootstrapCommand())
+registry.register(ArchiveCommand(fileManager: fileManager))
+registry.register(BootstrapCommand(printer: printer, fileManager: fileManager))
 registry.register(BuildCommand())
 registry.register(CheckoutCommand())
 registry.register(CopyFrameworksCommand())
 registry.register(FetchCommand())
 registry.register(UpdateCommand())
-registry.register(VersionCommand())
+registry.register(VersionCommand(printer: printer))
 
 let helpCommand = HelpCommand(registry: registry)
 registry.register(helpCommand)
+
+spinForTestIfNecessary()
 
 registry.main(defaultVerb: helpCommand.verb) { error in
 	fputs(error.description + "\n", stderr)
