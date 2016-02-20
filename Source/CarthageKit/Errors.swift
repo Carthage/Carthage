@@ -66,8 +66,8 @@ public enum CarthageError: ErrorType, Equatable {
 	/// other cartfiles.
 	case DuplicateDependencies([DuplicateDependency])
 
-	// There was a cycle between dependencies.
-	case DependencyCycle(String)
+	// There was a cycle between dependencies in the associated graph.
+	case DependencyCycle([ProjectIdentifier: Set<ProjectIdentifier>])
 	
 	/// A request to the GitHub API failed due to authentication or rate-limiting.
 	case GitHubAPIRequestFailed(String)
@@ -238,7 +238,20 @@ extension CarthageError: CustomStringConvertible {
 				}
 
 			return "The following dependencies are duplicates:\(deps)"
-		
+
+		case let .DependencyCycle(graph):
+			let prettyGraph = graph
+				.map { (project, dependencies) in
+					let prettyDependencies = dependencies
+						.map { $0.name }
+						.joinWithSeparator(", ")
+
+					return "\(project.name): \(prettyDependencies)"
+				}
+				.joinWithSeparator("\n")
+
+			return "The dependency graph contained a cycle :\(prettyGraph)"
+
 		case let .GitHubAPIRequestFailed(message):
 			return "GitHub API request failed: \(message)"
 
