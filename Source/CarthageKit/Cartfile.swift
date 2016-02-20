@@ -173,7 +173,7 @@ extension ResolvedCartfile: CustomStringConvertible {
 }
 
 /// Uniquely identifies a project that can be used as a dependency.
-public enum ProjectIdentifier: Equatable {
+public enum ProjectIdentifier: Comparable {
 	/// A repository hosted on GitHub.com.
 	case GitHub(GitHubRepository)
 
@@ -209,6 +209,10 @@ public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 	default:
 		return false
 	}
+}
+
+public func <(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
+	return lhs.name < rhs.name
 }
 
 extension ProjectIdentifier: Hashable {
