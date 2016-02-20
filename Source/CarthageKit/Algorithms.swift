@@ -18,10 +18,10 @@
 ///
 /// For example, the following graph:
 /// ```
-/// A ◀─── B
-/// ▲      ▲
-/// │      │
-/// C ◀─── D
+/// A<--B
+/// ^   ^
+/// |   |
+/// C<--D
 /// ```
 /// should be encoded as:
 /// ```
