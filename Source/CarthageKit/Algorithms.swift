@@ -35,8 +35,7 @@
 /// Nodes that are equal from a topological perspective are sorted by the
 /// strict total order as defined by `Comparable`.
 public func topologicalSort<Node: Comparable>(var graph: Dictionary<Node, Set<Node>>) -> [Node]? {
-	var queue = graph
-		.filter { _, incomingEdges in incomingEdges.isEmpty }
+	var queue = graph.filter { _, incomingEdges in incomingEdges.isEmpty }
 		.map { node, _ in node }
 
 	queue.forEach { node in graph.removeValueForKey(node) }
@@ -51,7 +50,6 @@ public func topologicalSort<Node: Comparable>(var graph: Dictionary<Node, Set<No
 
 		for (node, incomingEdges) in graph where incomingEdges.contains(lastNode) {
 			let filteredIncomingEdges = incomingEdges.subtract([lastNode])
-
 			graph[node] = filteredIncomingEdges
 
 			if filteredIncomingEdges.isEmpty {
