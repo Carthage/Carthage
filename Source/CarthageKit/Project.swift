@@ -549,43 +549,9 @@ public final class Project {
 				return result
 			}
 			.flatMap(.Latest) { (graph: DependencyGraph) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				// Open Question: Is there a place that a generic topological 
-				// sort should live?
-				func topologicalSort<Node: Equatable>(edges: Dictionary<Node, Set<Node>>, @noescape isOrderedBefore: (Node, Node) -> Bool) -> [Node] {
-					var nodeQueue: [Node] = edges.filter { $1.isEmpty }.map { return $0.0 }
-
-					var workingEdges = edges
-					nodeQueue.forEach { workingEdges.removeValueForKey($0) }
-
-					var sortedNodes: [Node] = []
-
-					while !nodeQueue.isEmpty {
-						nodeQueue.sortInPlace(isOrderedBefore)
-
-						let lastNode = nodeQueue.removeLast()
-						sortedNodes.append(lastNode)
-
-						for (node, nodeEdges) in workingEdges {
-							guard nodeEdges.contains(lastNode) else { continue }
-
-							let unsharedEdges = nodeEdges.subtract([lastNode])
-							workingEdges[node] = unsharedEdges
-
-							guard unsharedEdges.isEmpty else { continue }
-							nodeQueue.append(node)
-						}
-					}
-
-					// There is a cycle in the graph. How should we communicate
-					// this?
-//					if sortedNodes.count != edges.count {
-//
-//					}
-
-					return sortedNodes
+				guard let sortedProjects = topologicalSort(graph) else {
+					return SignalProducer(error: .DependencyCycle(graph))
 				}
-
-				let sortedProjects = topologicalSort(graph, isOrderedBefore: { $0.name > $1.name })
 
 				let sorted = cartfile.dependencies.sort { left, right in
 					let leftIndex = sortedProjects.indexOf(left.project)
