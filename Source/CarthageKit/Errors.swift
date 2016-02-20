@@ -65,6 +65,9 @@ public enum CarthageError: ErrorType, Equatable {
 	/// A cartfile contains duplicate dependencies, either in itself or across
 	/// other cartfiles.
 	case DuplicateDependencies([DuplicateDependency])
+
+	// There was a cycle between dependencies.
+	case DependencyCycle(String)
 	
 	/// A request to the GitHub API failed due to authentication or rate-limiting.
 	case GitHubAPIRequestFailed(String)
