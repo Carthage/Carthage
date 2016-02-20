@@ -18,10 +18,10 @@
 ///
 /// For example, the following graph:
 /// ```
-/// A<--B
-/// ^   ^
-/// |   |
-/// C<--D
+/// A <-- B
+/// ^     ^
+/// |     |
+/// C <-- D
 /// ```
 /// should be encoded as:
 /// ```
@@ -34,12 +34,12 @@
 ///
 /// Nodes that are equal from a topological perspective are sorted by the
 /// strict total order as defined by `Comparable`.
-public func topologicalSort<Node: Comparable>(var edges: Dictionary<Node, Set<Node>>) -> [Node]? {
-	var queue: [Node] = edges
-		.filter { _, edges in edges.isEmpty }
+public func topologicalSort<Node: Comparable>(var graph: Dictionary<Node, Set<Node>>) -> [Node]? {
+	var queue = graph
+		.filter { _, incomingEdges in incomingEdges.isEmpty }
 		.map { node, _ in node }
 
-	queue.forEach { node in edges.removeValueForKey(node) }
+	queue.forEach { node in graph.removeValueForKey(node) }
 
 	var sorted: [Node] = []
 
@@ -49,17 +49,17 @@ public func topologicalSort<Node: Comparable>(var edges: Dictionary<Node, Set<No
 		let lastNode = queue.removeLast()
 		sorted.append(lastNode)
 
-		for (node, inEdges) in edges {
-			guard inEdges.contains(lastNode) else { continue }
+		for (node, incomingEdges) in graph where incomingEdges.contains(lastNode) {
+			let filteredIncomingEdges = incomingEdges.subtract([lastNode])
 
-			let filteredInEdges = inEdges.subtract([lastNode])
-			edges[node] = filteredInEdges
+			graph[node] = filteredIncomingEdges
 
-			guard filteredInEdges.isEmpty else { continue }
-			queue.append(node)
-			edges.removeValueForKey(node)
+			if filteredIncomingEdges.isEmpty {
+				queue.append(node)
+				graph.removeValueForKey(node)
+			}
 		}
 	}
 
-	return edges.isEmpty ? sorted : nil
+	return graph.isEmpty ? sorted : nil
 }
