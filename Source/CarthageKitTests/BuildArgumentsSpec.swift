@@ -51,6 +51,14 @@ class BuildArgumentsSpec: QuickSpec {
 			itCreatesBuildArguments("includes the configuration if one is given", arguments: ["-configuration", "exampleConfiguration"]) { (inout subject: BuildArguments) in
 				subject.configuration = "exampleConfiguration"
 			}
+			
+			itCreatesBuildArguments("includes the derived data path", arguments: ["-derivedDataPath", "/path/to/derivedDataPath"]) { (inout subject: BuildArguments) in
+				subject.derivedDataPath = "/path/to/derivedDataPath"
+			}
+			
+			itCreatesBuildArguments("includes empty derived data path", arguments: []) { (inout subject: BuildArguments) in
+				subject.derivedDataPath = ""
+			}
 
 			describe("specifying the sdk") {
 				for sdk in SDK.allSDKs.subtract([.MacOSX]) {
