@@ -250,7 +250,7 @@ extension CarthageError: CustomStringConvertible {
 				}
 				.joinWithSeparator("\n")
 
-			return "The dependency graph contained a cycle :\(prettyGraph)"
+			return "The dependency graph contained a cycle:\n\(prettyGraph)"
 
 		case let .GitHubAPIRequestFailed(message):
 			return "GitHub API request failed: \(message)"
