@@ -212,7 +212,7 @@ public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 }
 
 public func <(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
-	return lhs.name < rhs.name
+	return lhs.name.caseInsensitiveCompare(rhs.name) == NSComparisonResult.OrderedAscending
 }
 
 extension ProjectIdentifier: Hashable {
