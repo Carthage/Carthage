@@ -50,11 +50,11 @@ public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>
 		let lastNode = queue.removeLast()
 		sorted.append(lastNode)
 
-		for (node, incomingEdges) in workingGraph where incomingEdges.contains(lastNode) {
-			let filteredIncomingEdges = incomingEdges.subtract([lastNode])
-			workingGraph[node] = filteredIncomingEdges
+		for (node, var incomingEdges) in workingGraph where incomingEdges.contains(lastNode) {
+			incomingEdges.remove(lastNode)
+			workingGraph[node] = incomingEdges
 
-			if filteredIncomingEdges.isEmpty {
+			if incomingEdges.isEmpty {
 				queue.append(node)
 				workingGraph.removeValueForKey(node)
 			}
