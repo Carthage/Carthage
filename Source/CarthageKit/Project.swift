@@ -540,38 +540,23 @@ public final class Project {
 					.map { (cartfile: Cartfile) -> DependencyGraph in
 						return [ dependency.project: Set(cartfile.dependencies.map { $0.project }) ]
 					}
+					.concat(SignalProducer(value: [ dependency.project: Set() ]))
+					.take(1)
 			}
-			.collect()
-			.flatMap(.Latest) { (graphs: [DependencyGraph]) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				let graph = graphs.reduce([:]) { (graph: DependencyGraph, item: DependencyGraph) -> DependencyGraph in
-					var result = graph
-					for (dependency, projects) in item {
-						var recursive = projects
-						for project in projects {
-							if let projects = result[project] {
-								recursive.unionInPlace(projects)
-							}
-						}
-						
-						result.updateValue(recursive, forKey: dependency)
-						
-						for (project, projects) in result {
-							if projects.contains(dependency) {
-								result.updateValue(projects.union(recursive), forKey: project)
-							}
-						}
-					}
-					return result
+			.reduce([:]) { (working: DependencyGraph, next: DependencyGraph) in
+				var result = working
+				next.forEach { result.updateValue($1, forKey: $0) }
+				return result
+			}
+			.flatMap(.Latest) { (graph: DependencyGraph) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+				guard let sortedProjects = topologicalSort(graph) else {
+					return SignalProducer(error: .DependencyCycle(graph))
 				}
 
 				let sorted = cartfile.dependencies.sort { left, right in
-					if let deps = graph[right.project] where deps.contains(left.project) {
-						return true
-					}
-					if let deps = graph[left.project] where deps.contains(right.project) {
-						return false
-					}
-					return left.project.name.caseInsensitiveCompare(right.project.name) == .OrderedAscending
+					let leftIndex = sortedProjects.indexOf(left.project)
+					let rightIndex = sortedProjects.indexOf(right.project)
+					return leftIndex < rightIndex
 				}
 
 				guard let dependenciesToInclude = dependenciesToInclude where !dependenciesToInclude.isEmpty else {
