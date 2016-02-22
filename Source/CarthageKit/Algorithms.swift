@@ -35,27 +35,29 @@
 /// Nodes that are equal from a topological perspective are sorted by the
 /// strict total order as defined by `Comparable`.
 public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>) -> [Node]? {
-	var queue = graph
+	// Maintain a list of nodes with no incoming edges (sources).
+	var sources = graph
 		.filter { _, incomingEdges in incomingEdges.isEmpty }
 		.map { node, _ in node }
 
+	// Maintain a working graph with all sources removed.
 	var workingGraph = graph
-	queue.forEach { node in workingGraph.removeValueForKey(node) }
+	sources.forEach { node in workingGraph.removeValueForKey(node) }
 
 	var sorted: [Node] = []
 
-	while !queue.isEmpty {
-		queue.sortInPlace(>)
+	while !sources.isEmpty {
+		sources.sortInPlace(>)
 
-		let lastNode = queue.removeLast()
-		sorted.append(lastNode)
+		let lastSource = sources.removeLast()
+		sorted.append(lastSource)
 
-		for (node, var incomingEdges) in workingGraph where incomingEdges.contains(lastNode) {
-			incomingEdges.remove(lastNode)
+		for (node, var incomingEdges) in workingGraph where incomingEdges.contains(lastSource) {
+			incomingEdges.remove(lastSource)
 			workingGraph[node] = incomingEdges
 
 			if incomingEdges.isEmpty {
-				queue.append(node)
+				sources.append(node)
 				workingGraph.removeValueForKey(node)
 			}
 		}
