@@ -540,6 +540,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D0E7B64919E9C64600EDBA4D /* Build configuration list for PBXNativeTarget "carthage" */;
 			buildPhases = (
+				89539B3B1C6BE36C00632A1B /* Update CLI version */,
 				C2265FAB1A4B86AC00158358 /* Check Xcode Version */,
 				D0E7B62E19E9C64500EDBA4D /* Sources */,
 				D0E7B62F19E9C64500EDBA4D /* Frameworks */,
@@ -631,6 +632,21 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		89539B3B1C6BE36C00632A1B /* Update CLI version */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Update CLI version";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = ". script/update-cli-version";
+			showEnvVarsInLog = 0;
+		};
 		C2265FAB1A4B86AC00158358 /* Check Xcode Version */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
