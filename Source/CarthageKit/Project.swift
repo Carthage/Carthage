@@ -428,7 +428,8 @@ public final class Project {
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
 	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withAuthorizationHeaderValue authorizationHeaderValue: String?) -> SignalProducer<NSURL, CarthageError> {
-		return releaseForTag(revision, repository, authorizationHeaderValue)
+		let urlSession = NSURLSession.sharedSession()
+		return releaseForTag(revision, repository, authorizationHeaderValue, urlSession)
 			.filter(binaryFrameworksCanBeProvidedByRelease)
 			.flatMapError { error in
 				switch error {
@@ -454,7 +455,7 @@ public final class Project {
 						if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!) {
 							return SignalProducer(value: fileURL)
 						} else {
-							return downloadAsset(asset, authorizationHeaderValue)
+							return downloadAsset(asset, authorizationHeaderValue, urlSession)
 								.flatMap(.Concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
 						}
 					}
