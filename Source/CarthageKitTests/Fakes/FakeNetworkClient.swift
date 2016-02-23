@@ -9,20 +9,22 @@ final class FakeNetworkClient : NetworkClient {
 	}
 
 	private(set) var executeDataRequestCallCount : Int = 0
-	var executeDataRequestStub : ((NSURLRequest) -> (SignalProducer<NSData, CarthageError>))?
 	private var executeDataRequestArgs : Array<(NSURLRequest)> = []
-	func executeDataRequestReturns(stubbedValues: (SignalProducer<NSData, CarthageError>)) {
-		self.executeDataRequestStub = {(request: NSURLRequest) -> (SignalProducer<NSData, CarthageError>) in
-			return stubbedValues
-		}
-	}
+	private var executeDataRequestObservers: [Int: Observer<NSData, CarthageError>] = [:]
 	func executeDataRequestArgsForCall(callIndex: Int) -> (NSURLRequest) {
 		return self.executeDataRequestArgs[callIndex]
 	}
+	func executeDataRequestObserverForCall(callIndex: Int) -> Observer<NSData, CarthageError> {
+		return self.executeDataRequestObservers[callIndex]!
+	}
 	func executeDataRequest(request: NSURLRequest) -> (SignalProducer<NSData, CarthageError>) {
+		let currentCallCount = self.executeDataRequestCallCount
+		let signalProducer = SignalProducer<NSData, CarthageError> { observer, _ in
+			self.executeDataRequestObservers[currentCallCount] = observer
+		}
 		self.executeDataRequestCallCount++
 		self.executeDataRequestArgs.append((request))
-		return self.executeDataRequestStub!(request)
+		return signalProducer
 	}
 
 	private(set) var executeDownloadRequestCallCount : Int = 0

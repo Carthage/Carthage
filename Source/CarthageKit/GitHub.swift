@@ -520,8 +520,9 @@ private func fetchAllPages(URL: NSURL, _ authorizationHeaderValue: String?, _ ur
 /// Fetches the release corresponding to the given tag on the given repository,
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
-public func releaseForTag(tag: String, _ repository: GitHubRepository, _ authorizationHeaderValue: String?, _ urlSession: NSURLSession) -> SignalProducer<GitHubRelease, CarthageError> {
-	return fetchAllPages(NSURL(string: "\(repository.server.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue, urlSession)
+public func releaseForTag(tag: String, _ repository: GitHubRepository, _ authorizationHeaderValue: String?, _ networkClient: NetworkClient) -> SignalProducer<GitHubRelease, CarthageError> {
+	let request = createGitHubRequest(NSURL(string: "\(repository.server.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
+	return networkClient.executeDataRequest(request)
 		.attemptMap { data -> Result<AnyObject, CarthageError> in
 			if let object = try? NSJSONSerialization.JSONObjectWithData(data, options: []) {
 				return .Success(object)
