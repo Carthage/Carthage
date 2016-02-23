@@ -464,59 +464,6 @@ private func parseLinkHeader(linkValue: String) -> [(NSURL, [String])] {
 	}
 }
 
-/// Fetches the given GitHub URL, automatically paginating to the end.
-///
-/// Returns a signal that will send one `NSData` for each page fetched.
-private func fetchAllPages(URL: NSURL, _ authorizationHeaderValue: String?, _ urlSession: NSURLSession) -> SignalProducer<NSData, CarthageError> {
-	let request = createGitHubRequest(URL, authorizationHeaderValue)
-
-	return urlSession.rac_dataWithRequest(request)
-		.mapError(CarthageError.NetworkError)
-		.flatMap(.Concat) { data, response -> SignalProducer<NSData, CarthageError> in
-			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
-
-			if let HTTPResponse = response as? NSHTTPURLResponse {
-				let statusCode = HTTPResponse.statusCode
-				if statusCode > 400 && statusCode < 600 && statusCode != 404 {
-					return thisData
-						.attemptMap { data -> Result<AnyObject, CarthageError> in
-							if let object = try? NSJSONSerialization.JSONObjectWithData(data, options: []) {
-								return .Success(object)
-							} else {
-								let message = String(data: data, encoding: NSUTF8StringEncoding) ?? data
-								return .Failure(.ParseError(description: "Invalid JSON in API error response '\(message)'"))
-							}
-						}
-						.map { (dictionary: AnyObject) -> String in
-							if let error: GitHubError = decode(dictionary) {
-								return error.message
-							} else {
-								return (NSString(data: data, encoding: NSUTF8StringEncoding) ?? NSHTTPURLResponse.localizedStringForStatusCode(statusCode)) as String
-							}
-						}
-						.flatMapError { (error: CarthageError) in
-							return SignalProducer(value: error.description)
-						}
-						.attemptMap { message -> Result<NSData, CarthageError> in
-							return Result.Failure(CarthageError.GitHubAPIRequestFailed(message))
-						}
-				}
-				
-				if let linkHeader = HTTPResponse.allHeaderFields["Link"] as? String {
-					let links = parseLinkHeader(linkHeader)
-					for (URL, parameters) in links {
-						if parameters.contains("rel=\"next\"") {
-							// Automatically fetch the next page too.
-							return thisData.concat(fetchAllPages(URL, authorizationHeaderValue, urlSession))
-						}
-					}
-				}
-			}
-
-			return thisData
-		}
-}
-
 /// Fetches the release corresponding to the given tag on the given repository,
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
