@@ -424,16 +424,17 @@ internal func loadGitHubAuthorization(forServer server: GitHubRepository.Server)
 
 /// Creates a request to fetch the given GitHub URL, optionally authenticating
 /// with the given credentials and content type.
-private func createGitHubRequest(URL: NSURL, _ authorizationHeaderValue: String?, contentType: String = APIContentType) -> NSURLRequest {
-	let request = NSMutableURLRequest(URL: URL)
-	request.setValue(contentType, forHTTPHeaderField: "Accept")
-	request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+public func createGitHubRequest(URL: NSURL, _ authorizationHeaderValue: String?, contentType: String = APIContentType) -> NSURLRequest {
+	var headers = [
+		"Accept": contentType,
+		"User-Agent": userAgent,
+	]
 
 	if let authorizationHeaderValue = authorizationHeaderValue {
-		request.setValue(authorizationHeaderValue, forHTTPHeaderField: "Authorization")
+		headers["Authorization"] = authorizationHeaderValue
 	}
 
-	return request
+	return createURLRequest(URL, headers)
 }
 
 /// Parses the value of a `Link` header field into a list of URLs and their
@@ -544,10 +545,8 @@ public func releaseForTag(tag: String, _ repository: GitHubRepository, _ authori
 ///
 /// The downloaded file will be deleted after the URL has been sent upon the
 /// signal.
-public func downloadAsset(asset: GitHubRelease.Asset, _ authorizationHeaderValue: String?, _ urlSession: NSURLSession) -> SignalProducer<NSURL, CarthageError> {
+public func downloadAsset(asset: GitHubRelease.Asset, _ authorizationHeaderValue: String?, _ networkClient: NetworkClient) -> SignalProducer<NSURL, CarthageError> {
 	let request = createGitHubRequest(asset.URL, authorizationHeaderValue, contentType: APIAssetDownloadContentType)
 
-	return urlSession.carthage_downloadWithRequest(request)
-		.mapError(CarthageError.NetworkError)
-		.map { URL, _ in URL }
+	return networkClient.executeDownloadRequest(request)
 }

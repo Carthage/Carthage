@@ -22,6 +22,7 @@
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
 		8955645B1C7B99CF00FC1AAD /* Network.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8955645A1C7B99CF00FC1AAD /* Network.swift */; };
 		8955645D1C7B9C1800FC1AAD /* NetworkSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8955645C1C7B9C1800FC1AAD /* NetworkSpec.swift */; };
+		895564851C7BD19000FC1AAD /* FakeNetworkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895564841C7BD19000FC1AAD /* FakeNetworkClient.swift */; };
 		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
 		89E80E621C755002000F8DCB /* BuildArguments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E601C754FFD000F8DCB /* BuildArguments.swift */; };
 		89E80E641C755059000F8DCB /* BuildArgumentsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E631C755059000F8DCB /* BuildArgumentsSpec.swift */; };
@@ -169,6 +170,7 @@
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
 		8955645A1C7B99CF00FC1AAD /* Network.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Network.swift; sourceTree = "<group>"; };
 		8955645C1C7B9C1800FC1AAD /* NetworkSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkSpec.swift; sourceTree = "<group>"; };
+		895564841C7BD19000FC1AAD /* FakeNetworkClient.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FakeNetworkClient.swift; sourceTree = "<group>"; };
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
 		89E80E601C754FFD000F8DCB /* BuildArguments.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArguments.swift; sourceTree = "<group>"; };
 		89E80E631C755059000F8DCB /* BuildArgumentsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArgumentsSpec.swift; sourceTree = "<group>"; };
@@ -300,6 +302,7 @@
 		89E80E671C755BEB000F8DCB /* Fakes */ = {
 			isa = PBXGroup;
 			children = (
+				895564841C7BD19000FC1AAD /* FakeNetworkClient.swift */,
 				89E80E681C755C1B000F8DCB /* FakeURLSession.swift */,
 			);
 			path = Fakes;
@@ -758,6 +761,7 @@
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,
 				549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */,
 				D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */,
+				895564851C7BD19000FC1AAD /* FakeNetworkClient.swift in Sources */,
 				CDA0B6CA1C468E67006C499C /* GitSpec.swift in Sources */,
 				89E80E641C755059000F8DCB /* BuildArgumentsSpec.swift in Sources */,
 				89E80E691C755C1B000F8DCB /* FakeURLSession.swift in Sources */,

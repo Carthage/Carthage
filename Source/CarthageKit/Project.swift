@@ -429,6 +429,7 @@ public final class Project {
 	/// less temporary location.
 	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withAuthorizationHeaderValue authorizationHeaderValue: String?) -> SignalProducer<NSURL, CarthageError> {
 		let urlSession = NSURLSession.sharedSession()
+		let networkClient = URLSessionNetworkClient(urlSession: urlSession)
 		return releaseForTag(revision, repository, authorizationHeaderValue, urlSession)
 			.filter(binaryFrameworksCanBeProvidedByRelease)
 			.flatMapError { error in
@@ -455,7 +456,7 @@ public final class Project {
 						if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!) {
 							return SignalProducer(value: fileURL)
 						} else {
-							return downloadAsset(asset, authorizationHeaderValue, urlSession)
+							return downloadAsset(asset, authorizationHeaderValue, networkClient)
 								.flatMap(.Concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
 						}
 					}

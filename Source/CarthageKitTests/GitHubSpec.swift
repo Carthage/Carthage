@@ -6,6 +6,34 @@ import CarthageKit
 
 class GitHubSpec: QuickSpec {
 	override func spec() {
+		describe("createGitHubRequest:") {
+			it("uses the githubv3 json api content type by default") {
+				let request = createGitHubRequest(NSURL(string: "https://example.com")!, nil)
+
+				expect(request.URL) == NSURL(string: "https://example.com")
+				expect(request.valueForHTTPHeaderField("Accept")) == "application/vnd.github.v3+json"
+				expect(request.valueForHTTPHeaderField("User-Agent")) == "CarthageKit-unknown/unknown"
+				expect(request.valueForHTTPHeaderField("Authorization")).to(beNil())
+			}
+
+			it("allows a user-set content-type") {
+				let request = createGitHubRequest(NSURL(string: "https://example.com")!, nil, contentType: "example")
+
+				expect(request.URL) == NSURL(string: "https://example.com")
+				expect(request.valueForHTTPHeaderField("Accept")) == "example"
+				expect(request.valueForHTTPHeaderField("User-Agent")) == "CarthageKit-unknown/unknown"
+				expect(request.valueForHTTPHeaderField("Authorization")).to(beNil())
+			}
+
+			it("passes in the authorization if non-nil") {
+				let request = createGitHubRequest(NSURL(string: "https://example.com")!, "example authorization")
+
+				expect(request.URL) == NSURL(string: "https://example.com")
+				expect(request.valueForHTTPHeaderField("Accept")) == "application/vnd.github.v3+json"
+				expect(request.valueForHTTPHeaderField("User-Agent")) == "CarthageKit-unknown/unknown"
+				expect(request.valueForHTTPHeaderField("Authorization")) == "example authorization"
+			}
+		}
 
 		describe("releaseForTag:repository:authorizationHeaderValue:urlSession:") {
 			it("makes a request to the specified server") {
@@ -154,16 +182,17 @@ class GitHubSpec: QuickSpec {
 		}
 
 		describe("downloadAsset:authorizationHeaderValue:urlSession:") {
+			// basically, the only special thing it does is create the request data
 			var releaseProducer: SignalProducer<NSURL, CarthageError>!
-			var urlSession: FakeURLSession!
+			var networkClient: FakeNetworkClient!
 			var events: [Event<NSURL, CarthageError>] = []
 
 			let URL = NSURL(string: "https://example.com/asset")!
 
 			beforeEach {
-				urlSession = FakeURLSession()
+				networkClient = FakeNetworkClient()
 				let asset = GitHubRelease.Asset(ID: 0, name: "example", contentType: "text/text", URL: URL)
-				releaseProducer = downloadAsset(asset, "example", urlSession)
+				releaseProducer = downloadAsset(asset, "example", networkClient)
 
 				events = []
 				releaseProducer.on(event: { event in
@@ -172,10 +201,9 @@ class GitHubSpec: QuickSpec {
 			}
 
 			it("makes a download request to the url") {
-				expect(urlSession.downloadTaskWithRequestArgs.count) == 1
-				let (request, _, task) = urlSession.downloadTaskWithRequestArgs[0]
+				expect(networkClient.executeDownloadRequestCallCount) == 1
+				let request = networkClient.executeDownloadRequestArgsForCall(0)
 
-				expect(task.started) == true
 				expect(request.URL) == URL
 				expect(request.valueForHTTPHeaderField("Accept")) == "application/octet-stream"
 				expect(request.valueForHTTPHeaderField("User-Agent")) == "CarthageKit-unknown/unknown"
@@ -184,12 +212,11 @@ class GitHubSpec: QuickSpec {
 
 			context("when the download succeeds") {
 				it("successfully returns a local URL that was downloaded") {
-					let (request, completion, _) = urlSession.downloadTaskWithRequestArgs[0]
+					let observer = networkClient.executeDownloadRequestObserverForCall(0)
 
-					let response = NSHTTPURLResponse(URL: request.URL!, statusCode: 404, HTTPVersion: nil, headerFields: nil)
 					let downloadedURL = NSURL(string: "file:///Foo/Bar/file")!
-
-					completion(downloadedURL, response, nil)
+					observer.sendNext(downloadedURL)
+					observer.sendCompleted()
 
 					expect(events.count) == 2
 					expect(events[0].error).to(beNil())
@@ -200,11 +227,10 @@ class GitHubSpec: QuickSpec {
 
 			context("when the download fails") {
 				it("returns a network error") {
-					let (request, completion, _) = urlSession.downloadTaskWithRequestArgs[0]
+					let observer = networkClient.executeDownloadRequestObserverForCall(0)
 
-					let response = NSHTTPURLResponse(URL: request.URL!, statusCode: 404, HTTPVersion: nil, headerFields: nil)
 					let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown, userInfo: nil)
-					completion(nil, response, error)
+					observer.sendFailed(CarthageError.NetworkError(error))
 
 					expect(events.count) == 1
 					expect(events[0].value).to(beNil())
