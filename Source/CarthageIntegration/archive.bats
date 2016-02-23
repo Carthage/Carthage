@@ -24,9 +24,3 @@ teardown() {
     [ "$status" -eq 0 ]
     [ -e Ra.framework.zip ]
 }
-
-build_carthage() {
-    make installables >&2
-}
-
-build_carthage
