@@ -12,6 +12,8 @@ import ReactiveTask
 
 /// Possible errors that can originate from Carthage.
 public enum CarthageError: ErrorType, Equatable {
+	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: ProjectIdentifier?)
+
 	/// One or more arguments was invalid.
 	case InvalidArgument(description: String)
 
@@ -19,7 +21,7 @@ public enum CarthageError: ErrorType, Equatable {
 	case MissingBuildSetting(String)
 
 	/// Incompatible version specifiers were given for a dependency.
-	case IncompatibleRequirements(ProjectIdentifier, VersionSpecifier, VersionSpecifier)
+	case IncompatibleRequirements(ProjectIdentifier, VersionRequirement, VersionRequirement)
 
 	/// No tagged versions could be found for the dependency.
 	case TaggedVersionNotFound(ProjectIdentifier)
@@ -49,9 +51,6 @@ public enum CarthageError: ErrorType, Equatable {
 	// An error occurred reading a dSYM or framework's UUIDs.
 	case InvalidUUIDs(description: String)
 
-	/// An error occurred when parsing the contents of a framework's Info.plist.
-	case InfoPlistParseFailed(plistURL: NSURL, reason: String)
-
 	/// The project is not sharing any framework schemes, so Carthage cannot
 	/// discover them.
 	case NoSharedFrameworkSchemes(ProjectIdentifier, Set<Platform>)
@@ -60,12 +59,15 @@ public enum CarthageError: ErrorType, Equatable {
 	/// them.
 	case NoSharedSchemes(ProjectLocator, GitHubRepository?)
 
-	/// Timeout whilst running `xcodebuild list` to enumerate shared schemes.
-	case XcodebuildListTimeout(ProjectLocator, GitHubRepository?)
+	/// Timeout whilst running `xcodebuild`
+	case XcodebuildTimeout(ProjectLocator)
 
 	/// A cartfile contains duplicate dependencies, either in itself or across
 	/// other cartfiles.
 	case DuplicateDependencies([DuplicateDependency])
+
+	// There was a cycle between dependencies in the associated graph.
+	case DependencyCycle([ProjectIdentifier: Set<ProjectIdentifier>])
 	
 	/// A request to the GitHub API failed due to authentication or rate-limiting.
 	case GitHubAPIRequestFailed(String)
@@ -75,6 +77,10 @@ public enum CarthageError: ErrorType, Equatable {
 
 	/// An error occurred in a network operation.
 	case NetworkError(NSError)
+}
+
+private func == (lhs: CarthageError.VersionRequirement, rhs: CarthageError.VersionRequirement) -> Bool {
+	return lhs.specifier == rhs.specifier && lhs.fromProject == rhs.fromProject
 }
 
 public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
@@ -112,9 +118,6 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	
 	case let (.InvalidArchitectures(left), .InvalidArchitectures(right)):
 		return left == right
-
-	case let (.InfoPlistParseFailed(la, lb), .InfoPlistParseFailed(ra, rb)):
-		return la == ra && lb == rb
 
 	case let (.NoSharedFrameworkSchemes(la, lb), .NoSharedFrameworkSchemes(ra, rb)):
 		return la == ra && lb == rb
@@ -168,7 +171,10 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case let .IncompatibleRequirements(dependency, first, second):
-			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(first)\n\t\(second)"
+			let requirement: VersionRequirement -> String = { specifier, fromProject in
+				return "\(specifier)" + (fromProject.map { " (\($0))" } ?? "")
+			}
+			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(requirement(first))\n\t\(requirement(second))"
 
 		case let .TaggedVersionNotFound(dependency):
 			return "No tagged versions found for \(dependency)"
@@ -193,9 +199,6 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .InvalidUUIDs(description):
 			return "Invalid architecture UUIDs: \(description)"
-
-		case let .InfoPlistParseFailed(plistURL, reason):
-			return "Failed to parse the framework Info.plist file at \(plistURL.path!): \(reason)"
 
 		case let .MissingEnvironmentVariable(variable):
 			return "Environment variable not set: \(variable)"
@@ -225,13 +228,8 @@ extension CarthageError: CustomStringConvertible {
 
 			return description
 
-		case let .XcodebuildListTimeout(project, repository):
-			var description = "Failed to discover shared schemes in project \(project)—either the project does not have any shared schemes, or xcodebuild never returned"
-			if let repository = repository {
-				description += "\n\nIf you believe this to be a project configuration error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
-			}
-
-			return description
+		case let .XcodebuildTimeout(project):
+			return "xcodebuild timed out while trying to read \(project) 😭"
 			
 		case let .DuplicateDependencies(duplicateDeps):
 			let deps = duplicateDeps.sort() // important to match expected order in test cases
@@ -240,7 +238,20 @@ extension CarthageError: CustomStringConvertible {
 				}
 
 			return "The following dependencies are duplicates:\(deps)"
-		
+
+		case let .DependencyCycle(graph):
+			let prettyGraph = graph
+				.map { (project, dependencies) in
+					let prettyDependencies = dependencies
+						.map { $0.name }
+						.joinWithSeparator(", ")
+
+					return "\(project.name): \(prettyDependencies)"
+				}
+				.joinWithSeparator("\n")
+
+			return "The dependency graph contained a cycle:\n\(prettyGraph)"
+
 		case let .GitHubAPIRequestFailed(message):
 			return "GitHub API request failed: \(message)"
 

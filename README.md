@@ -50,6 +50,12 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one.
 1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 
+Additionally, you'll need to copy debug symbols for debugging and crash reporting on OS X.
+
+1. On your application target’s “Build Phases” settings tab, click the “+” icon and choose “New Copy Files Phase”.
+1. Click the “Destination” drop-down menu and select “Products Directory”.
+1. For each framework you’re using, drag and drop its corresponding dSYM file.
+
 ##### If you're building for iOS, tvOS, or watchOS
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
@@ -68,14 +74,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
   $(SRCROOT)/Carthage/Build/iOS/Result.framework
   $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
   ```
-
-  This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files are copied when archiving.
-
-##### Copying debug symbols for debugging and crash reporting
-
-1. On your application target’s “Build Phases” settings tab, click the “+” icon and choose “New Copy Files Phase”.
-1. Click the “Destination” drop-down menu and select “Products Directory”.
-1. For each framework you’re using, drag and drop its corresponding dSYM file.
+  This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files and dSYMs are copied when archiving.
 
 With the debug information copied into the built products directory, Xcode will be able to symbolicate the stack trace whenever you stop at a breakpoint. This will also enable you to step through third-party code in the debugger.
 
@@ -98,6 +97,18 @@ In rare cases, you may want to also copy each dependency into the build product 
 ### Upgrading frameworks
 
 If you’ve modified your [Cartfile][], or you want to update to the newest versions of each framework (subject to the requirements you’ve specified), simply run the `carthage update` command again.
+
+If you only want to update one , or specific, dependencies, pass them as a space-separated list to the `update` command. e.g.
+
+```
+carthage update Box
+```
+
+or 
+
+```
+carthage update Box Result
+```
 
 ### Nested dependencies
 
@@ -246,7 +257,7 @@ Want to advertise that your project can be used with Carthage? You can add a com
 ```
 ## Known issues
 
-See [Carthage issue #924](https://github.com/Carthage/Carthage/issues/924) for background on the reasons, but as at Xcode 7.2, Apple recommends that ["Frameworks written in Swift should be compiled from source as part of the same project that depends on them to guarantee a single, consistent compilation environment. (22492040)"](https://developer.apple.com/library/ios/releasenotes/DeveloperTools/RN-Xcode/Chapters/Introduction.html). Using Swift frameworks built on other machines will cause Xcode's [debugger](https://github.com/Carthage/Carthage/issues/832) to [crash](https://github.com/Carthage/Carthage/issues/924) and other [strange build errors](https://github.com/Carthage/Carthage/issues/785). To avoid this, do not check your `Carthage/Build` directory into source control or use .framework release binaries. Instead, create a Run Script build phase in your Xcode project which calls `carthage build --no-use-binaries` (optionally wrap this in a check for the existence of the `Carthage/Build/` directory to avoid long build times due to recompiling dependencies unnecessarily.)
+See [Carthage issue #924](https://github.com/Carthage/Carthage/issues/924) for background on the reasons, but as at Xcode 7.2, Apple recommends that ["Frameworks written in Swift should be compiled from source as part of the same project that depends on them to guarantee a single, consistent compilation environment. (22492040)"](https://developer.apple.com/library/ios/releasenotes/DeveloperTools/RN-Xcode/Chapters/Introduction.html). Using Swift frameworks built on other machines will cause Xcode's [debugger](https://github.com/Carthage/Carthage/issues/832) to [crash](https://github.com/Carthage/Carthage/issues/924) and other [strange build errors](https://github.com/Carthage/Carthage/issues/785). To avoid this, do not check your `Carthage/Build` directory into source control or use .framework release binaries. Instead, create a Run Script build phase in your Xcode project which calls `carthage build` (optionally wrap this in a check for the existence of the `Carthage/Build/` directory to avoid long build times due to recompiling dependencies unnecessarily.)
 
 Dupe [rdar://23551273](http://www.openradar.me/23551273) if you want Apple to fix the root cause of this problem.
 

@@ -5,13 +5,13 @@ class FrameworkExtensionsSpec: QuickSpec {
 	override func spec() {
 		describe("NSURL Extensions") {
 			it("should figure out if a is a subdirectory of b") {
-				guard let subject = NSURL(string: "file:///foo/bar") else { return }
+				let subject = NSURL(string: "file:///foo/bar")!
 
-				guard let unrelatedScheme = NSURL(string: "http:///foo/bar/baz") else { return }
-				guard let parentDir = NSURL(string: "file:///foo") else { return }
-				guard let immediateSub = NSURL(string: "file:///foo/bar/baz") else { return }
-				guard let distantSub = NSURL(string: "file:///foo/bar/baz/qux") else { return }
-				guard let unrelatedDirectory = NSURL(string: "file:///bar/bar/baz") else { return }
+				let unrelatedScheme = NSURL(string: "http:///foo/bar/baz")!
+				let parentDir = NSURL(string: "file:///foo")!
+				let immediateSub = NSURL(string: "file:///foo/bar/baz")!
+				let distantSub = NSURL(string: "file:///foo/bar/baz/qux")!
+				let unrelatedDirectory = NSURL(string: "file:///bar/bar/baz")!
 
 				expect(subject.hasSubdirectory(subject)) == true
 				expect(subject.hasSubdirectory(unrelatedScheme)) == false

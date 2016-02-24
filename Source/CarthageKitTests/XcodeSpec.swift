@@ -72,7 +72,7 @@ class XcodeSpec: QuickSpec {
 			it("should not find anything in the Carthage Subdirectory") {
 				let relativePaths = relativePathsForProjectsInDirectory(directoryURL)
 				expect(relativePaths).toNot(beEmpty())
-				let pathsStartingWithCarthage = relativePaths.filter { return $0.hasPrefix("Carthage/") }
+				let pathsStartingWithCarthage = relativePaths.filter { $0.hasPrefix("\(CarthageProjectCheckoutsPath)/") }
 				expect(pathsStartingWithCarthage).to(beEmpty())
 			}
 
@@ -140,7 +140,7 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
-			let architectures = architecturesInFramework(frameworkFolderURL)
+			let architectures = architecturesInPackage(frameworkFolderURL)
 				.collect()
 				.single()
 
@@ -167,7 +167,7 @@ class XcodeSpec: QuickSpec {
 			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
 			expect(strippingResult.value).notTo(beNil())
 			
-			let strippedArchitectures = architecturesInFramework(targetURL)
+			let strippedArchitectures = architecturesInPackage(targetURL)
 				.collect()
 				.single()
 			

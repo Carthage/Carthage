@@ -14,9 +14,10 @@
 #include <string.h>
 #include <unistd.h>
 
-static const char * const exceptionMessage = "\n"
-	"Caught signal triggered by the Swift runtime!\n"
-	"%s\n"
+static const char exceptionPrelude[] = "\n"
+	"Caught signal triggered by the Swift runtime!\n";
+
+static const char exceptionExplanation[] = "\n"
 	"\n"
 	"Unfortunately, this is probably a bug in Swift and not Carthage. If\n"
 	"this is preventing you from doing work, please file an issue and we'll\n"
@@ -28,9 +29,15 @@ static const char * const exceptionMessage = "\n"
 	"\n";
 
 static void uncaughtSignal(int zig, siginfo_t *info, void *context) {
-	const char *signalName = strsignal(zig);
-	fprintf(stderr, exceptionMessage, signalName);
-
+	const size_t preludeLength = sizeof exceptionPrelude;
+	const size_t explanationLength = sizeof exceptionExplanation;
+	const char *signalName = zig < NSIG ? sys_siglist[zig] : "Unknown signal";
+	const size_t signalNameLength = strlen(signalName);
+	
+	write(STDERR_FILENO, exceptionPrelude, preludeLength);
+	write(STDERR_FILENO, signalName, signalNameLength);
+	write(STDERR_FILENO, exceptionExplanation, explanationLength);
+	
 	raise(zig); // for great justice
 }
 
