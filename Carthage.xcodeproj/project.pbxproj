@@ -20,8 +20,8 @@
 		67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		67C870081A7A04E100F6647C /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C870071A7A04E100F6647C /* Formatting.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
-		8955645B1C7B99CF00FC1AAD /* Network.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8955645A1C7B99CF00FC1AAD /* Network.swift */; };
-		8955645D1C7B9C1800FC1AAD /* NetworkSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8955645C1C7B9C1800FC1AAD /* NetworkSpec.swift */; };
+		8955645B1C7B99CF00FC1AAD /* NetworkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8955645A1C7B99CF00FC1AAD /* NetworkClient.swift */; };
+		8955645D1C7B9C1800FC1AAD /* NetworkClientSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8955645C1C7B9C1800FC1AAD /* NetworkClientSpec.swift */; };
 		895564851C7BD19000FC1AAD /* FakeNetworkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895564841C7BD19000FC1AAD /* FakeNetworkClient.swift */; };
 		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
 		89E80E621C755002000F8DCB /* BuildArguments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E601C754FFD000F8DCB /* BuildArguments.swift */; };
@@ -168,8 +168,8 @@
 		67AFA9891A79430B00B7DA78 /* PrettyColors.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PrettyColors.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		67C870071A7A04E100F6647C /* Formatting.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
-		8955645A1C7B99CF00FC1AAD /* Network.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Network.swift; sourceTree = "<group>"; };
-		8955645C1C7B9C1800FC1AAD /* NetworkSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkSpec.swift; sourceTree = "<group>"; };
+		8955645A1C7B99CF00FC1AAD /* NetworkClient.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkClient.swift; sourceTree = "<group>"; };
+		8955645C1C7B9C1800FC1AAD /* NetworkClientSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkClientSpec.swift; sourceTree = "<group>"; };
 		895564841C7BD19000FC1AAD /* FakeNetworkClient.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FakeNetworkClient.swift; sourceTree = "<group>"; };
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
 		89E80E601C754FFD000F8DCB /* BuildArguments.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArguments.swift; sourceTree = "<group>"; };
@@ -443,7 +443,7 @@
 				D074EDC41A049283001DE082 /* FrameworkExtensions.swift */,
 				88ED56D519ECE34900CBF5C4 /* Git.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
-				8955645A1C7B99CF00FC1AAD /* Network.swift */,
+				8955645A1C7B99CF00FC1AAD /* NetworkClient.swift */,
 				D0A2025D1B114D1000C71375 /* ProducerQueue.swift */,
 				F603929819EA29F80050A6AF /* Project.swift */,
 				D01D82D61A10160700F0DD94 /* Resolver.swift */,
@@ -480,7 +480,7 @@
 				89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */,
 				CDA0B6C91C468E67006C499C /* GitSpec.swift */,
 				89E80E651C755B3D000F8DCB /* GitHubSpec.swift */,
-				8955645C1C7B9C1800FC1AAD /* NetworkSpec.swift */,
+				8955645C1C7B9C1800FC1AAD /* NetworkClientSpec.swift */,
 				549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */,
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
 				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
@@ -734,7 +734,7 @@
 				D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */,
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
-				8955645B1C7B99CF00FC1AAD /* Network.swift in Sources */,
+				8955645B1C7B99CF00FC1AAD /* NetworkClient.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */,
 				89E80E621C755002000F8DCB /* BuildArguments.swift in Sources */,
@@ -754,7 +754,7 @@
 				D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */,
 				D0DE89421A0F2D450030A3EC /* VersionSpec.swift in Sources */,
 				89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */,
-				8955645D1C7B9C1800FC1AAD /* NetworkSpec.swift in Sources */,
+				8955645D1C7B9C1800FC1AAD /* NetworkClientSpec.swift in Sources */,
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
 				3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */,
 				89E80E661C755B3D000F8DCB /* GitHubSpec.swift in Sources */,

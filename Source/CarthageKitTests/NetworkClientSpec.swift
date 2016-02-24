@@ -3,7 +3,7 @@ import Nimble
 import ReactiveCocoa
 import CarthageKit
 
-class NetworkSpec: QuickSpec {
+class NetworkClientSpec: QuickSpec {
 	override func spec() {
 		describe("createURLRequest") {
 			let url = NSURL(string: "https://example.com")!
