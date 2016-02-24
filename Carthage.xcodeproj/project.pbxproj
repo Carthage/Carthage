@@ -24,10 +24,10 @@
 		8955645D1C7B9C1800FC1AAD /* NetworkClientSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8955645C1C7B9C1800FC1AAD /* NetworkClientSpec.swift */; };
 		895564851C7BD19000FC1AAD /* FakeNetworkClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895564841C7BD19000FC1AAD /* FakeNetworkClient.swift */; };
 		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
+		89CBDC2A1C7E3503006B70F5 /* OHHTTPStubs.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 89CBDC291C7E3503006B70F5 /* OHHTTPStubs.framework */; };
 		89E80E621C755002000F8DCB /* BuildArguments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E601C754FFD000F8DCB /* BuildArguments.swift */; };
 		89E80E641C755059000F8DCB /* BuildArgumentsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E631C755059000F8DCB /* BuildArgumentsSpec.swift */; };
 		89E80E661C755B3D000F8DCB /* GitHubSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E651C755B3D000F8DCB /* GitHubSpec.swift */; };
-		89E80E691C755C1B000F8DCB /* FakeURLSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E681C755C1B000F8DCB /* FakeURLSession.swift */; };
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
 		CD7F22441C67649F00B018A9 /* TestCartfileProposedVersion in Resources */ = {isa = PBXBuildFile; fileRef = CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */; };
@@ -172,10 +172,10 @@
 		8955645C1C7B9C1800FC1AAD /* NetworkClientSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NetworkClientSpec.swift; sourceTree = "<group>"; };
 		895564841C7BD19000FC1AAD /* FakeNetworkClient.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FakeNetworkClient.swift; sourceTree = "<group>"; };
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
+		89CBDC291C7E3503006B70F5 /* OHHTTPStubs.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OHHTTPStubs.framework; path = ../../Carthage/Checkouts/OHHTTPStubs/OHHTTPStubs/build/Debug/OHHTTPStubs.framework; sourceTree = "<group>"; };
 		89E80E601C754FFD000F8DCB /* BuildArguments.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArguments.swift; sourceTree = "<group>"; };
 		89E80E631C755059000F8DCB /* BuildArgumentsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArgumentsSpec.swift; sourceTree = "<group>"; };
 		89E80E651C755B3D000F8DCB /* GitHubSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitHubSpec.swift; sourceTree = "<group>"; };
-		89E80E681C755C1B000F8DCB /* FakeURLSession.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FakeURLSession.swift; sourceTree = "<group>"; };
 		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
 		CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfileProposedVersion; sourceTree = "<group>"; };
@@ -264,6 +264,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				89CBDC2A1C7E3503006B70F5 /* OHHTTPStubs.framework in Frameworks */,
 				D01F8A4C19EA28FE00643E7C /* Nimble.framework in Frameworks */,
 				D01F8A4A19EA28FE00643E7C /* Quick.framework in Frameworks */,
 				D0D1217819E87B05005E4BAA /* CarthageKit.framework in Frameworks */,
@@ -303,7 +304,6 @@
 			isa = PBXGroup;
 			children = (
 				895564841C7BD19000FC1AAD /* FakeNetworkClient.swift */,
-				89E80E681C755C1B000F8DCB /* FakeURLSession.swift */,
 			);
 			path = Fakes;
 			sourceTree = "<group>";
@@ -497,6 +497,7 @@
 			children = (
 				14A7BF461AA810A300C70ABB /* DuplicateDependencies */,
 				D0C6E5751A57042100A5E3E7 /* CartfilePrivateOnly.zip */,
+				89CBDC291C7E3503006B70F5 /* OHHTTPStubs.framework */,
 				D01F8A4B19EA28FE00643E7C /* Nimble.framework */,
 				D01F8A4619EA28F600643E7C /* Nimble.framework */,
 				D01F8A4719EA28F600643E7C /* Quick.framework */,
@@ -764,7 +765,6 @@
 				895564851C7BD19000FC1AAD /* FakeNetworkClient.swift in Sources */,
 				CDA0B6CA1C468E67006C499C /* GitSpec.swift in Sources */,
 				89E80E641C755059000F8DCB /* BuildArgumentsSpec.swift in Sources */,
-				89E80E691C755C1B000F8DCB /* FakeURLSession.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

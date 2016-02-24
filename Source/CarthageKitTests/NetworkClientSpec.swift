@@ -2,6 +2,7 @@ import Quick
 import Nimble
 import ReactiveCocoa
 import CarthageKit
+import OHHTTPStubs
 
 class NetworkClientSpec: QuickSpec {
 	override func spec() {
@@ -23,42 +24,55 @@ class NetworkClientSpec: QuickSpec {
 		}
 
 		describe("URLSessionNetworkClient") {
-			var subject: URLSessionNetworkClient!
-			var urlSession: FakeURLSession!
-
 			let urlRequest = createURLRequest(NSURL(string: "https://example.com")!)
 
+			var subject: URLSessionNetworkClient!
+			var urlSession: NSURLSession!
+
+			var receivedRequest: NSURLRequest?
+
 			beforeEach {
-				urlSession = FakeURLSession()
+				urlSession = NSURLSession(configuration: NSURLSessionConfiguration.ephemeralSessionConfiguration())
 				subject = URLSessionNetworkClient(urlSession: urlSession)
+			}
+
+			afterEach {
+				OHHTTPStubs.removeAllStubs()
+			}
+
+			func makeRequest(response: OHHTTPStubsResponse, request requestBlock: NSURLRequest -> Void) {
+				stub(isHost(urlRequest.URL!.host!)) { request in
+					receivedRequest = request
+					return response
+				}
+
+				requestBlock(urlRequest)
 			}
 
 			describe("executeDataRequest") {
 				var producer: SignalProducer<NSData, CarthageError>!
 				var events: [Event<NSData, CarthageError>] = []
 
-				beforeEach {
+				func requestFunction(request: NSURLRequest) {
 					events = []
 					producer = subject.executeDataRequest(urlRequest)
-					producer.on(event: { event in
+					_ = producer.on(event: { event in
 						events.append(event)
-					}).start()
+					}).wait()
 				}
 
 				it("makes a data request to an NSURLSession") {
-					expect(urlSession.dataTaskWithRequestArgs.count) == 1
-					let (request, _, task) = urlSession.dataTaskWithRequestArgs[0]
+					let response = OHHTTPStubsResponse(JSONObject: [:], statusCode: 200, headers: nil)
+					makeRequest(response, request: requestFunction)
 
-					expect(task.started) == true
-					expect(request) == urlRequest
+					expect(receivedRequest) == urlRequest
 				}
 
 				context("when the download succeeds") {
 					it("returns the data for the file downloaded") {
 						let data = "Example response".dataUsingEncoding(NSUTF8StringEncoding)!
-						let (request, completion, _) = urlSession.dataTaskWithRequestArgs[0]
-						let response = NSHTTPURLResponse(URL: request.URL!, statusCode: 200, HTTPVersion: nil, headerFields: nil)
-						completion(data, response, nil)
+						let response = OHHTTPStubsResponse(data: data, statusCode: 200, headers: nil)
+						makeRequest(response, request: requestFunction)
 
 						expect(events.count) == 2
 						expect(events[0].error).to(beNil())
@@ -69,11 +83,10 @@ class NetworkClientSpec: QuickSpec {
 
 				context("when the download fails") {
 					it("returns a network error") {
-						let (request, completion, _) = urlSession.dataTaskWithRequestArgs[0]
-
-						let response = NSHTTPURLResponse(URL: request.URL!, statusCode: 401, HTTPVersion: nil, headerFields: nil)
 						let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown, userInfo: nil)
-						completion(nil, response, error)
+
+						let response = OHHTTPStubsResponse(error: error)
+						makeRequest(response, request: requestFunction)
 
 						expect(events.count) == 1
 						expect(events[0].value).to(beNil())
@@ -86,45 +99,44 @@ class NetworkClientSpec: QuickSpec {
 				var producer: SignalProducer<NSURL, CarthageError>!
 				var events: [Event<NSURL, CarthageError>] = []
 
-				beforeEach {
+				func requestFunction(request: NSURLRequest) {
 					events = []
-					producer = subject.executeDownloadRequest(urlRequest)
-					producer.on(event: { event in
+					producer = subject.executeDownloadRequest(request)
+					_ = producer.on(event: { event in
 						events.append(event)
-					}).start()
+					}).wait()
 				}
 
 				it("makes a download request to an NSURLSession") {
-					expect(urlSession.downloadTaskWithRequestArgs.count) == 1
-					let (request, _, task) = urlSession.downloadTaskWithRequestArgs[0]
+					let response = OHHTTPStubsResponse(JSONObject: [:], statusCode: 200, headers: nil)
+					makeRequest(response, request: requestFunction)
 
-					expect(task.started) == true
-					expect(request) == urlRequest
+					expect(receivedRequest) == urlRequest
 				}
 
 				context("when the download succeeds") {
 					it("returns a local URL for the file downloaded") {
-						let (request, completion, _) = urlSession.downloadTaskWithRequestArgs[0]
-
-						let response = NSHTTPURLResponse(URL: request.URL!, statusCode: 404, HTTPVersion: nil, headerFields: nil)
-						let downloadedURL = NSURL(string: "file:///Foo/Bar/file")!
-
-						completion(downloadedURL, response, nil)
+						let data = "Hello world".dataUsingEncoding(NSUTF8StringEncoding)!
+						let response = OHHTTPStubsResponse(data: data, statusCode: 200, headers: nil)
+						makeRequest(response, request: requestFunction)
 
 						expect(events.count) == 2
 						expect(events[0].error).to(beNil())
 						expect(events[0].value?.fileURL) == true
+
+						let fileData = NSData(contentsOfURL: events[0].value!)
+						expect(fileData) == data
+
 						expect(events[1] == Event.Completed) == true
 					}
 				}
 
 				context("when the download fails") {
 					it("returns a network error") {
-						let (request, completion, _) = urlSession.downloadTaskWithRequestArgs[0]
-
-						let response = NSHTTPURLResponse(URL: request.URL!, statusCode: 404, HTTPVersion: nil, headerFields: nil)
 						let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown, userInfo: nil)
-						completion(nil, response, error)
+
+						let response = OHHTTPStubsResponse(error: error)
+						makeRequest(response, request: requestFunction)
 
 						expect(events.count) == 1
 						expect(events[0].value).to(beNil())
