@@ -49,9 +49,9 @@ public struct CheckoutCommand: CommandType {
 
 		/// Attempts to load the project referenced by the options, and configure it
 		/// accordingly.
-		public func loadProject() -> SignalProducer<Project, CarthageError> {
+		public func loadProject(networkClient: NetworkClient) -> SignalProducer<Project, CarthageError> {
 			let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true)
-			let project = Project(directoryURL: directoryURL)
+			let project = Project(directoryURL: directoryURL, networkClient: networkClient)
 			project.preferHTTPS = !self.useSSH
 			project.useSubmodules = self.useSubmodules
 			project.useBinaries = self.useBinaries
@@ -66,6 +66,12 @@ public struct CheckoutCommand: CommandType {
 	public let verb = "checkout"
 	public let function = "Check out the project's dependencies"
 
+	private let networkClient: NetworkClient
+
+	public init(networkClient: NetworkClient) {
+		self.networkClient = networkClient
+	}
+
 	public func run(options: Options) -> Result<(), CarthageError> {
 		return self.checkoutWithOptions(options)
 			.waitOnCommand()
@@ -73,7 +79,7 @@ public struct CheckoutCommand: CommandType {
 
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
-		return options.loadProject()
+		return options.loadProject(self.networkClient)
 			.flatMap(.Merge) { $0.checkoutResolvedDependencies(options.dependenciesToCheckout) }
 	}
 }

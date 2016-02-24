@@ -45,6 +45,12 @@ public struct BuildCommand: CommandType {
 	public let verb = "build"
 	public let function = "Build the project's dependencies"
 
+	private let networkClient: NetworkClient
+
+	public init(networkClient: NetworkClient) {
+		self.networkClient = networkClient
+	}
+
 	public func run(options: Options) -> Result<(), CarthageError> {
 		return self.buildWithOptions(options)
 			.waitOnCommand()
@@ -128,7 +134,7 @@ public struct BuildCommand: CommandType {
 	///
 	/// Returns a producer of producers, representing each scheme being built.
 	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: Options) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-		let project = Project(directoryURL: directoryURL)
+		let project = Project(directoryURL: directoryURL, networkClient: self.networkClient)
 
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeNext { eventSink.put($0) }

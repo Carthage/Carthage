@@ -31,9 +31,9 @@ public struct UpdateCommand: CommandType {
 		/// be a producer representing the work necessary to build the project.
 		///
 		/// Otherwise, this producer will be empty.
-		public var buildProducer: SignalProducer<(), CarthageError> {
+		public func buildProducer(networkClient: NetworkClient) -> SignalProducer<(), CarthageError> {
 			if checkoutAfterUpdate && buildAfterUpdate {
-				return BuildCommand().buildWithOptions(buildOptions)
+				return BuildCommand(networkClient: networkClient).buildWithOptions(buildOptions)
 			} else {
 				return .empty
 			}
@@ -57,8 +57,8 @@ public struct UpdateCommand: CommandType {
 
 		/// Attempts to load the project referenced by the options, and configure it
 		/// accordingly.
-		public func loadProject() -> SignalProducer<Project, CarthageError> {
-			return checkoutOptions.loadProject()
+		public func loadProject(networkClient: NetworkClient) -> SignalProducer<Project, CarthageError> {
+			return checkoutOptions.loadProject(networkClient)
 				.on(next: { project in
 					// Never check out binaries if we're skipping the build step,
 					// because that means users may need the repository checkout.
@@ -72,15 +72,21 @@ public struct UpdateCommand: CommandType {
 	public let verb = "update"
 	public let function = "Update and rebuild the project's dependencies"
 
+	private let networkClient: NetworkClient
+
+	public init(networkClient: NetworkClient) {
+		self.networkClient = networkClient
+	}
+
 	public func run(options: Options) -> Result<(), CarthageError> {
-		return options.loadProject()
+		return options.loadProject(self.networkClient)
 			.flatMap(.Merge) {
 				$0.updateDependencies(
 					shouldCheckout: options.checkoutAfterUpdate,
 					dependenciesToUpdate: options.dependenciesToUpdate
 				)
 			}
-			.then(options.buildProducer)
+			.then(options.buildProducer(self.networkClient))
 			.waitOnCommand()
 	}
 }

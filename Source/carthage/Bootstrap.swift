@@ -16,10 +16,16 @@ public struct BootstrapCommand: CommandType {
 	public let verb = "bootstrap"
 	public let function = "Check out and build the project's dependencies"
 
+	private let networkClient: NetworkClient
+
+	public init(networkClient: NetworkClient) {
+		self.networkClient = networkClient
+	}
+
 	public func run(options: UpdateCommand.Options) -> Result<(), CarthageError> {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
 		// `update` flags.
-		return options.loadProject()
+		return options.loadProject(self.networkClient)
 			.flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
 				if !NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
 					let formatting = options.checkoutOptions.colorOptions.formatting
@@ -33,7 +39,7 @@ public struct BootstrapCommand: CommandType {
 					return .empty
 				}
 			}
-			.then(options.buildProducer)
+			.then(options.buildProducer(self.networkClient))
 			.waitOnCommand()
 	}
 }

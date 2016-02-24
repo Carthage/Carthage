@@ -18,14 +18,16 @@ guard ensureGitVersion().first()?.value == true else {
 	exit(EXIT_FAILURE)
 }
 
+let networkClient = URLSessionNetworkClient(urlSession: NSURLSession.sharedSession())
+
 let registry = CommandRegistry<CarthageError>()
 registry.register(ArchiveCommand())
-registry.register(BootstrapCommand())
-registry.register(BuildCommand())
-registry.register(CheckoutCommand())
+registry.register(BootstrapCommand(networkClient: networkClient))
+registry.register(BuildCommand(networkClient: networkClient))
+registry.register(CheckoutCommand(networkClient: networkClient))
 registry.register(CopyFrameworksCommand())
 registry.register(FetchCommand())
-registry.register(UpdateCommand())
+registry.register(UpdateCommand(networkClient: networkClient))
 registry.register(VersionCommand())
 
 let helpCommand = HelpCommand(registry: registry)

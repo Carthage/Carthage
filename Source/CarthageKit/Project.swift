@@ -148,7 +148,9 @@ public final class Project {
 	public let projectEvents: Signal<ProjectEvent, NoError>
 	private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
 
-	public init(directoryURL: NSURL) {
+	private let networkClient: NetworkClient
+
+	public init(directoryURL: NSURL, networkClient: NetworkClient) {
 		precondition(directoryURL.fileURL)
 
 		let (signal, observer) = Signal<ProjectEvent, NoError>.pipe()
@@ -156,6 +158,7 @@ public final class Project {
 		_projectEventsObserver = observer
 
 		self.directoryURL = directoryURL
+		self.networkClient = networkClient
 	}
 
 	deinit {
@@ -428,8 +431,7 @@ public final class Project {
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
 	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withAuthorizationHeaderValue authorizationHeaderValue: String?) -> SignalProducer<NSURL, CarthageError> {
-		let networkClient = URLSessionNetworkClient(urlSession: NSURLSession.sharedSession())
-		return releaseForTag(revision, repository, authorizationHeaderValue, networkClient)
+		return releaseForTag(revision, repository, authorizationHeaderValue, self.networkClient)
 			.filter(binaryFrameworksCanBeProvidedByRelease)
 			.flatMapError { error in
 				switch error {
@@ -455,7 +457,7 @@ public final class Project {
 						if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!) {
 							return SignalProducer(value: fileURL)
 						} else {
-							return downloadAsset(asset, authorizationHeaderValue, networkClient)
+							return downloadAsset(asset, authorizationHeaderValue, self.networkClient)
 								.flatMap(.Concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
 						}
 					}
