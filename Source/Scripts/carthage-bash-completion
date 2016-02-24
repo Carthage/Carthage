@@ -28,17 +28,18 @@ _carthage() {
                 ;;
             bootstrap|update)
                 COMPREPLY=($(compgen -W '--configuration --platform --verbose --no-checkout \
-                	--no-build --use-ssh --use-submodules --no-use-binaries --color' -- ${cur}))
+                    --no-build --use-ssh --use-submodules --no-use-binaries --color \
+                    --project-directory' -- ${cur}))
                 return 0
                 ;;
             build)
                 COMPREPLY=($(compgen -W '--configuration --platform --no-skip-current \
-                    --color --verbose' -- ${cur}))
+                    --color --verbose --project-directory' -- ${cur}))
                 return 0
                 ;;
             checkout)
                 COMPREPLY=($(compgen -W '--use-ssh --use-submodules --no-use-binaries \
-                    --color' -- ${cur}))
+                    --color --project-directory' -- ${cur}))
                 return 0
                 ;;
             fetch)
@@ -51,6 +52,10 @@ _carthage() {
     case "${prev}" in
         --output)
             _filedir
+            return 0
+            ;;
+        --project-directory)
+            _filedir -d
             return 0
             ;;
         --color)

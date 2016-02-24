@@ -27,21 +27,41 @@ public struct CopyFrameworksCommand: CommandType {
 
 				return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
 					.flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
-						return combineLatest(copyProduct(source, target), codeSigningIdentity())
-							.flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
-								let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
-								if buildActionIsArchiveOrInstall() {
-									return strip
-										.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.URLByDeletingLastPathComponent!))
-										.then(.empty)
-								} else {
-									return strip
-								}
-							}
+						let copyFrameworks = copyFramework(source, target: target, validArchitectures: validArchitectures)
+						let copydSYMs = copyDebugSymbolsForFramework(source, validArchitectures: validArchitectures)
+						return combineLatest(copyFrameworks, copydSYMs)
+							.then(.empty)
 					}
 			}
 			.waitOnCommand()
 	}
+}
+
+private func copyFramework(source: NSURL, target: NSURL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+	return combineLatest(copyProduct(source, target), codeSigningIdentity())
+		.flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
+			let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
+			if buildActionIsArchiveOrInstall() {
+				return strip
+					.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.URLByDeletingLastPathComponent!))
+					.then(.empty)
+			} else {
+				return strip
+			}
+	}
+}
+
+private func copyDebugSymbolsForFramework(source: NSURL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+	return SignalProducer(result: builtProductsFolder())
+		.flatMap(.Merge) { builtProductsURL in
+			return SignalProducer(value: source)
+				.map { return $0.URLByAppendingPathExtension("dSYM") }
+				.copyFileURLsIntoDirectory(builtProductsURL)
+				.flatMap(.Merge) { dSYMURL in
+					return stripDSYM(dSYMURL, keepingArchitectures: validArchitectures)
+				}
+	    }
+
 }
 
 private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {

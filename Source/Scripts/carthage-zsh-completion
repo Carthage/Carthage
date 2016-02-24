@@ -48,6 +48,7 @@ _carthage() {
                         '--no-build' \
                         '--color: :(auto always never)' \
                         '--verbose' \
+                        '--project-directory: :_directories' \
                         '(-)*:: :->null_state' \
                         && ret=0
                         ;;
@@ -58,6 +59,7 @@ _carthage() {
                         '--no-skip-current' \
                         '--color: :(auto always never)' \
                         '--verbose' \
+                        '--project-directory: :_directories' \
                         '(-)*:: :->null_state' \
                         && ret=0
                         ;;
@@ -67,6 +69,7 @@ _carthage() {
                         '--use-submodules' \
                         '--no-use-binaries' \
                         '--color: :(auto always never)' \
+                        '--project-directory: :_directories' \
                         '(-)*:: :->null_state' \
                         && ret=0
                         ;;

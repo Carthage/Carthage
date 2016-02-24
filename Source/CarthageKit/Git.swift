@@ -25,9 +25,8 @@ public struct GitURL: Equatable {
 	private var normalizedURLString: String {
 		let parsedURL: NSURL? = NSURL(string: URLString)
 
-		if let parsedURL = parsedURL {
+		if let parsedURL = parsedURL, host = parsedURL.host {
 			// Normal, valid URL.
-			let host = parsedURL.host ?? ""
 			let path = stripGitSuffix(parsedURL.path ?? "")
 			return "\(host)\(path)"
 		} else if URLString.hasPrefix("/") {
@@ -38,16 +37,16 @@ public struct GitURL: Equatable {
 			var strippedURLString = URLString
 
 			if let index = strippedURLString.characters.indexOf("@") {
-				strippedURLString.removeRange(Range(start: strippedURLString.startIndex, end: index))
+				strippedURLString.removeRange(strippedURLString.startIndex...index)
 			}
 
 			var host = ""
 			if let index = strippedURLString.characters.indexOf(":") {
-				host = strippedURLString[Range(start: strippedURLString.startIndex, end: index.predecessor())]
-				strippedURLString.removeRange(Range(start: strippedURLString.startIndex, end: index))
+				host = strippedURLString[strippedURLString.startIndex..<index]
+				strippedURLString.removeRange(strippedURLString.startIndex...index)
 			}
 
-			var path = strippedURLString
+			var path = stripGitSuffix(strippedURLString)
 			if !path.hasPrefix("/") {
 				// This probably isn't strictly legit, but we'll have a forward
 				// slash for other URL types.
@@ -188,10 +187,14 @@ public func cloneRepository(cloneURL: GitURL, _ destinationURL: NSURL, bare: Boo
 public func fetchRepository(repositoryFileURL: NSURL, remoteURL: GitURL? = nil, refspec: String? = nil) -> SignalProducer<String, CarthageError> {
 	precondition(repositoryFileURL.fileURL)
 
-	var arguments = [ "fetch", "--tags", "--prune", "--quiet" ]
+	var arguments = [ "fetch", "--prune", "--quiet" ]
 	if let remoteURL = remoteURL {
 		arguments.append(remoteURL.URLString)
 	}
+
+	// Specify an explict refspec that fetches tags for pruning.
+	// See https://github.com/Carthage/Carthage/issues/1027 and `man git-fetch`.
+	arguments.append("refs/tags/*:refs/tags/*")
 
 	if let refspec = refspec {
 		arguments.append(refspec)
@@ -375,21 +378,59 @@ public func submoduleSHAForPath(repositoryFileURL: NSURL, _ path: String, revisi
 		}
 }
 
-/// Returns each submodule found in the given repository revision, or an empty
-/// signal if none exist.
-public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = "HEAD") -> SignalProducer<Submodule, CarthageError> {
-	let modulesObject = "\(revision):.gitmodules"
-	let baseArguments = [ "config", "--blob", modulesObject, "-z" ]
+/// Returns each entry of `.gitmodules` found in the given repository revision,
+/// or an empty signal if none exist.
+internal func gitmodulesEntriesInRepository(repositoryFileURL: NSURL, revision: String?) -> SignalProducer<(name: String, path: String, URL: GitURL), CarthageError> {
+	var baseArguments = [ "config", "-z" ]
+	let modulesFile = ".gitmodules"
+
+	if let revision = revision {
+		let modulesObject = "\(revision):\(modulesFile)"
+		baseArguments += [ "--blob", modulesObject ]
+	} else {
+		// This is required to support `--no-use-submodules` checkouts.
+		// See https://github.com/Carthage/Carthage/issues/1029.
+		baseArguments += [ "--file", modulesFile ]
+	}
 
 	return launchGitTask(baseArguments + [ "--get-regexp", "submodule\\..*\\.path" ], repositoryFileURL: repositoryFileURL)
 		.flatMapError { _ in SignalProducer<String, NoError>.empty }
 		.flatMap(.Concat) { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
 		.promoteErrors(CarthageError.self)
-		.flatMap(.Concat) { name, path -> SignalProducer<Submodule, CarthageError> in
+		.flatMap(.Concat) { name, path -> SignalProducer<(name: String, path: String, URL: GitURL), CarthageError> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
-				.map { GitURL($0) }
-				.zipWith(submoduleSHAForPath(repositoryFileURL, path, revision: revision))
-				.map { URL, SHA in Submodule(name: name, path: path, URL: URL, SHA: SHA) }
+				.map { URLString in (name: name, path: path, URL: GitURL(URLString)) }
+		}
+}
+
+/// Returns the root directory of the given repository
+///
+/// If in bare repository, return the passed repo path as the root
+/// else, return the path given by "git rev-parse --show-toplevel"
+public func gitRootDirectoryForRepository(repositoryFileURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+	return launchGitTask([ "rev-parse", "--is-bare-repository" ], repositoryFileURL: repositoryFileURL)
+		.map { $0.stringByTrimmingCharactersInSet(.newlineCharacterSet()) }
+		.flatMap(.Concat) { isBareRepository -> SignalProducer<NSURL, CarthageError> in
+			if isBareRepository == "true" {
+				return SignalProducer(value: repositoryFileURL)
+			} else {
+				return launchGitTask([ "rev-parse", "--show-toplevel" ], repositoryFileURL: repositoryFileURL)
+					.map { $0.stringByTrimmingCharactersInSet(.newlineCharacterSet()) }
+					.map(NSURL.init)
+			}
+		}
+}
+
+/// Returns each submodule found in the given repository revision, or an empty
+/// signal if none exist.
+public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = "HEAD") -> SignalProducer<Submodule, CarthageError> {
+	return gitmodulesEntriesInRepository(repositoryFileURL, revision: revision)
+		.flatMap(.Concat) { name, path, URL in
+			return gitRootDirectoryForRepository(repositoryFileURL)
+				.flatMap(.Concat) { actualRepoURL in
+					return submoduleSHAForPath(actualRepoURL, path, revision: revision)
+						.map { SHA in Submodule(name: name, path: path, URL: URL, SHA: SHA) }
+			}
 		}
 }
 
