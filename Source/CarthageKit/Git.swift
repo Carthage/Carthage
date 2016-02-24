@@ -404,11 +404,21 @@ internal func gitmodulesEntriesInRepository(repositoryFileURL: NSURL, revision: 
 }
 
 /// Returns the root directory of the given repository
+///
+/// If in bare repository, return the passed repo path as the root
+/// else, return the path given by "git rev-parse --show-toplevel"
 public func gitRootDirectoryForRepository(repositoryFileURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	let task = [ "rev-parse", "--show-toplevel" ]
-	return launchGitTask(task, repositoryFileURL: repositoryFileURL)
+	return launchGitTask([ "rev-parse", "--is-bare-repository" ], repositoryFileURL: repositoryFileURL)
 		.map { $0.stringByTrimmingCharactersInSet(.newlineCharacterSet()) }
-		.map(NSURL.init)
+		.flatMap(.Concat) { isBareRepository -> SignalProducer<NSURL, CarthageError> in
+			if isBareRepository == "true" {
+				return SignalProducer(value: repositoryFileURL)
+			} else {
+				return launchGitTask([ "rev-parse", "--show-toplevel" ], repositoryFileURL: repositoryFileURL)
+					.map { $0.stringByTrimmingCharactersInSet(.newlineCharacterSet()) }
+					.map(NSURL.init)
+			}
+		}
 }
 
 /// Returns each submodule found in the given repository revision, or an empty
