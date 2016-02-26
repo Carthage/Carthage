@@ -33,7 +33,29 @@ class AlgorithmsSpec: QuickSpec {
 					"Commandant",
 					"ReactiveCocoa",
 					"ReactiveTask",
-					"Carthage"
+					"Carthage",
+				]
+			}
+		}
+
+		describe("filtered sorting") {
+			it("should only include the provided nodes and their dependencies") {
+				var graph: [String: Set<String>] = [:]
+
+				graph["Argo"] = Set([])
+				graph["Commandant"] = Set(["Result"])
+				graph["PrettyColors"] = Set([])
+				graph["Carthage"] = Set(["Argo", "Commandant", "ReactiveCocoa", "ReactiveTask"])
+				graph["ReactiveCocoa"] = Set(["Result"])
+				graph["ReactiveTask"] = Set(["ReactiveCocoa"])
+				graph["Result"] = Set()
+
+				let sorted = topologicalSort(graph, nodes: Set(["ReactiveTask"]))
+
+				expect(sorted) == [
+					"Result",
+					"ReactiveCocoa",
+					"ReactiveTask",
 				]
 			}
 		}

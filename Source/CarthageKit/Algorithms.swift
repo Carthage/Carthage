@@ -65,3 +65,32 @@ public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>
 
 	return workingGraph.isEmpty ? sorted : nil
 }
+
+/// Performs a topological sort on the provided graph with its output sorted to
+/// include only the provided set of nodes and their transitively incoming 
+/// nodes (dependencies).
+public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>, nodes: Set<Node>) -> [Node]? {
+	if nodes.isEmpty { return topologicalSort(graph) }
+
+	guard nodes.isSubsetOf(Set(graph.keys)) else { return nil }
+
+	// Ensure that the graph has no cycles, otherwise determining the set of 
+	// incoming nodes could infinitely recurse.
+	guard let _ = topologicalSort(graph) else { return nil }
+
+	func transitiveIncomingNodes(graph: Dictionary<Node, Set<Node>>, node: Node) -> Set<Node> {
+		guard let nodes = graph[node] else { return Set() }
+		return nodes.union(Set(nodes.flatMap { transitiveIncomingNodes(graph, node: $0) }))
+	}
+
+	let relevantNodes = Set(nodes.flatMap { node in Set([node]).union(transitiveIncomingNodes(graph, node: node)) })
+
+	let irrelevantNodes = graph
+		.filter { node, _ in return !relevantNodes.contains(node) }
+		.map { node, _ in node }
+
+	var filteredGraph = graph
+	irrelevantNodes.forEach { node in filteredGraph.removeValueForKey(node) }
+
+	return topologicalSort(filteredGraph)
+}
