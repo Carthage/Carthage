@@ -1269,7 +1269,13 @@ private func stripBinary(binaryURL: NSURL, keepingArchitectures: [String]) -> Si
 public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return SignalProducer<NSURL, CarthageError>.attempt {
 		let manager = NSFileManager.defaultManager()
-
+		
+		if let path = to.path where
+			manager.fileExistsAtPath(path) &&
+			from.absoluteURL == to.absoluteURL {
+				return .Success(to)
+		}
+		
 		do {
 			try manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil)
 		} catch let error as NSError {
