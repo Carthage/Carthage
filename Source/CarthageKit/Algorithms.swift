@@ -69,28 +69,34 @@ public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>
 /// Performs a topological sort on the provided graph with its output sorted to
 /// include only the provided set of nodes and their transitively incoming 
 /// nodes (dependencies).
+///
+/// Returns nil if the provided node is contained within the provided graph or
+/// if the provided graph has a cycle.
 public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>, nodes: Set<Node>) -> [Node]? {
-	if nodes.isEmpty { return topologicalSort(graph) }
+	guard !nodes.isEmpty else { return topologicalSort(graph) }
 
 	guard nodes.isSubsetOf(Set(graph.keys)) else { return nil }
 
 	// Ensure that the graph has no cycles, otherwise determining the set of 
-	// incoming nodes could infinitely recurse.
+	// transitive incoming nodes could infinitely recurse.
 	guard let _ = topologicalSort(graph) else { return nil }
 
-	func transitiveIncomingNodes(graph: Dictionary<Node, Set<Node>>, node: Node) -> Set<Node> {
-		guard let nodes = graph[node] else { return Set() }
-		return nodes.union(Set(nodes.flatMap { transitiveIncomingNodes(graph, node: $0) }))
-	}
-
-	let relevantNodes = Set(nodes.flatMap { node in Set([node]).union(transitiveIncomingNodes(graph, node: node)) })
-
-	let irrelevantNodes = graph
-		.filter { node, _ in return !relevantNodes.contains(node) }
-		.map { node, _ in node }
+	let relevantNodes = Set(nodes.flatMap { Set([$0]).union(transitiveIncomingNodes(graph, node: $0)) })
+	let irrelevantNodes = Set(graph.keys).subtract(relevantNodes)
 
 	var filteredGraph = graph
 	irrelevantNodes.forEach { node in filteredGraph.removeValueForKey(node) }
-
+	
 	return topologicalSort(filteredGraph)
 }
+
+/// Returns the set of nodes that the given node in the provided graph has as
+/// its incoming nodes, both directly and transitively.
+private func transitiveIncomingNodes<Node: Equatable>(graph: Dictionary<Node, Set<Node>>, node: Node) -> Set<Node> {
+	guard let nodes = graph[node] else { return Set() }
+
+	let incomingNodes = Set(nodes.flatMap { transitiveIncomingNodes(graph, node: $0) })
+
+	return nodes.union(incomingNodes)
+}
+
