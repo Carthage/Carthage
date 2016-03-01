@@ -1267,7 +1267,7 @@ private func stripBinary(binaryURL: NSURL, keepingArchitectures: [String]) -> Si
 /// destination folder will be deleted before the copy of the new version.
 ///
 /// If the `from` URL has the same path as the `to` URL, and there is a resource
-/// at the given path, no operation is needed an the returned signal will just
+/// at the given path, no operation is needed and the returned signal will just
 /// send `.success`.
 ///
 /// Returns a signal that will send the URL after copying upon .success.
