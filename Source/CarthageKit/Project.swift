@@ -319,19 +319,18 @@ public final class Project {
 
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
-		return versionsForProject(project)
-			.collect()
-			.flatMap(.Concat) { (versions: [PinnedVersion]) -> SignalProducer<PinnedVersion, CarthageError> in
-				let referencedVersion = PinnedVersion(reference)
-
-				if versions.contains(referencedVersion) {
-					// If the reference is an exact tag, resolves it to the tag.
-					return SignalProducer(value: referencedVersion)
-				} else {
-					// Otherwise, it is resolved to an object SHA.
-					return resolveReferenceInRepository(repositoryFileURLForProject(project), reference)
-						.map(PinnedVersion.init)
-				}
+		let repositoryURL = repositoryFileURLForProject(project)
+		return cloneOrFetchDependency(project, commitish: reference)
+			.flatMap(.Concat) { _ in
+				return resolveTagInRepository(repositoryURL, reference)
+			}
+			.map { _ in
+				// If the reference is an exact tag, resolves it to the tag.
+				return PinnedVersion(reference)
+			}
+			.flatMapError { _ in
+				return resolveReferenceInRepository(repositoryURL, reference)
+					.map(PinnedVersion.init)
 			}
 	}
 

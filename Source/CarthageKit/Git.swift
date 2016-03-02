@@ -466,6 +466,13 @@ public func resolveReferenceInRepository(repositoryFileURL: NSURL, _ reference: 
 		.mapError { _ in CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists", underlyingError: nil) }
 }
 
+/// Attempts to resolve the given tag into an object SHA.
+internal func resolveTagInRepository(repositoryFileURL: NSURL, _ tag: String) -> SignalProducer<String, CarthageError> {
+	return launchGitTask([ "show-ref", "--tags", "--hash", tag ], repositoryFileURL: repositoryFileURL)
+		.map { string in string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
+		.mapError { _ in CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No tag named \"\(tag)\" exists", underlyingError: nil) }
+}
+
 /// Attempts to determine whether the given directory represents a Git
 /// repository.
 public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError> {
