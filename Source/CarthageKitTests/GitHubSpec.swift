@@ -6,35 +6,6 @@ import CarthageKit
 
 class GitHubSpec: QuickSpec {
 	override func spec() {
-		describe("createGitHubRequest:") {
-			it("uses the githubv3 json api content type by default") {
-				let request = createGitHubRequest(NSURL(string: "https://example.com")!, nil)
-
-				expect(request.URL) == NSURL(string: "https://example.com")
-				expect(request.valueForHTTPHeaderField("Accept")) == "application/vnd.github.v3+json"
-				expect(request.valueForHTTPHeaderField("User-Agent")) == "CarthageKit-unknown/unknown"
-				expect(request.valueForHTTPHeaderField("Authorization")).to(beNil())
-			}
-
-			it("allows a user-set content-type") {
-				let request = createGitHubRequest(NSURL(string: "https://example.com")!, nil, contentType: "example")
-
-				expect(request.URL) == NSURL(string: "https://example.com")
-				expect(request.valueForHTTPHeaderField("Accept")) == "example"
-				expect(request.valueForHTTPHeaderField("User-Agent")) == "CarthageKit-unknown/unknown"
-				expect(request.valueForHTTPHeaderField("Authorization")).to(beNil())
-			}
-
-			it("passes in the authorization if non-nil") {
-				let request = createGitHubRequest(NSURL(string: "https://example.com")!, "example authorization")
-
-				expect(request.URL) == NSURL(string: "https://example.com")
-				expect(request.valueForHTTPHeaderField("Accept")) == "application/vnd.github.v3+json"
-				expect(request.valueForHTTPHeaderField("User-Agent")) == "CarthageKit-unknown/unknown"
-				expect(request.valueForHTTPHeaderField("Authorization")) == "example authorization"
-			}
-		}
-
 		describe("releaseForTag:repository:authorizationHeaderValue:urlSession:") {
 			it("makes a request to the specified server") {
 				let gitHubEnterpriseRepository = GitHubRepository(server: GitHubRepository.Server.Enterprise(scheme: "https", hostname: "example.com"), owner: "Carthage", name: "Carthage")

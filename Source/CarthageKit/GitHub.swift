@@ -424,7 +424,7 @@ internal func loadGitHubAuthorization(forServer server: GitHubRepository.Server)
 
 /// Creates a request to fetch the given GitHub URL, optionally authenticating
 /// with the given credentials and content type.
-public func createGitHubRequest(URL: NSURL, _ authorizationHeaderValue: String?, contentType: String = APIContentType) -> NSURLRequest {
+private func createGitHubRequest(URL: NSURL, _ authorizationHeaderValue: String?, contentType: String = APIContentType) -> NSURLRequest {
 	var headers = [
 		"Accept": contentType,
 		"User-Agent": userAgent,
