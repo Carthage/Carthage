@@ -6,6 +6,19 @@ import CarthageKit
 
 class GitHubSpec: QuickSpec {
 	override func spec() {
+		it("NSURLRequest has no default headers") {
+			let URL = NSURL(string: "https://example.com")!
+
+			let control = NSMutableURLRequest(URL: URL)
+			let testing = NSMutableURLRequest(URL: URL)
+
+			control.setValue("testValue", forHTTPHeaderField: "testKey")
+			testing.allHTTPHeaderFields = ["testKey": "testValue"]
+
+			expect(testing.allHTTPHeaderFields) == control.allHTTPHeaderFields
+
+		}
+
 		describe("releaseForTag:repository:authorizationHeaderValue:urlSession:") {
 			it("makes a request to the specified server") {
 				let gitHubEnterpriseRepository = GitHubRepository(server: GitHubRepository.Server.Enterprise(scheme: "https", hostname: "example.com"), owner: "Carthage", name: "Carthage")
