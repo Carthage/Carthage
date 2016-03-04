@@ -8,6 +8,9 @@
       location = "group:Carthage/Checkouts/Commandant/Commandant.xcodeproj">
    </FileRef>
    <FileRef
+      location = "group:Carthage/Checkouts/Curry/Curry.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:Carthage/Checkouts/ReactiveCocoa/ReactiveCocoa.xcodeproj">
    </FileRef>
    <FileRef
@@ -27,5 +30,8 @@
    </FileRef>
    <FileRef
       location = "group:Carthage/Checkouts/Result/Result.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Carthage/Checkouts/Tentacle/Tentacle.xcodeproj">
    </FileRef>
 </Workspace>

@@ -277,14 +277,6 @@ extension NSURL {
 	}
 }
 
-extension NSURL: Decodable {
-	public class func decode(json: JSON) -> Decoded<NSURL> {
-		return String.decode(json).flatMap { URLString in
-			return .fromOptional(self.init(string: URLString))
-		}
-	}
-}
-
 extension NSFileManager {
 	/// Creates a directory enumerator at the given URL. Sends each URL
 	/// enumerated, along with the enumerator itself (so it can be introspected
