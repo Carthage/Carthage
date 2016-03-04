@@ -200,7 +200,7 @@ public func ==(lhs: GitHubRepository.Server, rhs: GitHubRepository.Server) -> Bo
 
 extension GitHubRepository: Hashable {
 	public var hashValue: Int {
-		return server.hashValue ^ owner.hashValue ^ name.hashValue
+		return server.hashValue ^ owner.lowercaseString.hashValue ^ name.lowercaseString.hashValue
 	}
 }
 
