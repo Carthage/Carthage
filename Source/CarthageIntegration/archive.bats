@@ -3,7 +3,7 @@
 setup() {
     cd $BATS_TMPDIR
     rm -rf Ra
-    git clone https://github.com/younata/Ra.git
+    git clone -b v1.0.0 https://github.com/younata/Ra.git
     cd Ra
 }
 
