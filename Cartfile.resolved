@@ -1,5 +1,6 @@
 github "thoughtbot/Argo" "v2.2.0"
 github "Quick/Nimble" "v3.1.0"
+github "AliSoftware/OHHTTPStubs" "4.7.1"
 github "jdhealy/PrettyColors" "v3.0.0"
 github "Quick/Quick" "v0.9.1"
 github "antitypical/Result" "1.0.2"

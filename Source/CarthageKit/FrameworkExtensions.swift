@@ -218,37 +218,6 @@ extension NSScanner {
 	}
 }
 
-private let defaultSessionError = NSError(domain: "org.carthage.CarthageKit.carthage_downloadWithRequest", code: 1, userInfo: nil)
-
-extension NSURLSession {
-	/// Returns a producer that will download a file using the given request. The
-	/// file will be deleted after the producer terminates.
-	internal func carthage_downloadWithRequest(request: NSURLRequest) -> SignalProducer<(NSURL, NSURLResponse), NSError> {
-		return SignalProducer { observer, disposable in
-			let serialDisposable = SerialDisposable()
-			let handle = disposable.addDisposable(serialDisposable)
-
-			let task = self.downloadTaskWithRequest(request) { (URL, response, error) in
-				// Avoid invoking cancel(), or the download may be deleted.
-				handle.remove()
-
-				if let URL = URL, response = response {
-					observer.sendNext((URL, response))
-					observer.sendCompleted()
-				} else {
-					observer.sendFailed(error ?? defaultSessionError)
-				}
-			}
-
-			serialDisposable.innerDisposable = ActionDisposable {
-				task.cancel()
-			}
-
-			task.resume()
-		}
-	}
-}
-
 extension NSURL {
 	/// The type identifier of the receiver, or an error if it was unable to be
 	/// determined.

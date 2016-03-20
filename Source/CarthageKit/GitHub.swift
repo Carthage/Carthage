@@ -425,15 +425,16 @@ internal func loadGitHubAuthorization(forServer server: GitHubRepository.Server)
 /// Creates a request to fetch the given GitHub URL, optionally authenticating
 /// with the given credentials and content type.
 private func createGitHubRequest(URL: NSURL, _ authorizationHeaderValue: String?, contentType: String = APIContentType) -> NSURLRequest {
-	let request = NSMutableURLRequest(URL: URL)
-	request.setValue(contentType, forHTTPHeaderField: "Accept")
-	request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+	var headers = [
+		"Accept": contentType,
+		"User-Agent": userAgent,
+	]
 
 	if let authorizationHeaderValue = authorizationHeaderValue {
-		request.setValue(authorizationHeaderValue, forHTTPHeaderField: "Authorization")
+		headers["Authorization"] = authorizationHeaderValue
 	}
 
-	return request
+	return createURLRequest(URL, headers)
 }
 
 /// Parses the value of a `Link` header field into a list of URLs and their
@@ -463,64 +464,12 @@ private func parseLinkHeader(linkValue: String) -> [(NSURL, [String])] {
 	}
 }
 
-/// Fetches the given GitHub URL, automatically paginating to the end.
-///
-/// Returns a signal that will send one `NSData` for each page fetched.
-private func fetchAllPages(URL: NSURL, _ authorizationHeaderValue: String?, _ urlSession: NSURLSession) -> SignalProducer<NSData, CarthageError> {
-	let request = createGitHubRequest(URL, authorizationHeaderValue)
-
-	return urlSession.rac_dataWithRequest(request)
-		.mapError(CarthageError.NetworkError)
-		.flatMap(.Concat) { data, response -> SignalProducer<NSData, CarthageError> in
-			let thisData: SignalProducer<NSData, CarthageError> = SignalProducer(value: data)
-
-			if let HTTPResponse = response as? NSHTTPURLResponse {
-				let statusCode = HTTPResponse.statusCode
-				if statusCode > 400 && statusCode < 600 && statusCode != 404 {
-					return thisData
-						.attemptMap { data -> Result<AnyObject, CarthageError> in
-							if let object = try? NSJSONSerialization.JSONObjectWithData(data, options: []) {
-								return .Success(object)
-							} else {
-								let message = String(data: data, encoding: NSUTF8StringEncoding) ?? data
-								return .Failure(.ParseError(description: "Invalid JSON in API error response '\(message)'"))
-							}
-						}
-						.map { (dictionary: AnyObject) -> String in
-							if let error: GitHubError = decode(dictionary) {
-								return error.message
-							} else {
-								return (NSString(data: data, encoding: NSUTF8StringEncoding) ?? NSHTTPURLResponse.localizedStringForStatusCode(statusCode)) as String
-							}
-						}
-						.flatMapError { (error: CarthageError) in
-							return SignalProducer(value: error.description)
-						}
-						.attemptMap { message -> Result<NSData, CarthageError> in
-							return Result.Failure(CarthageError.GitHubAPIRequestFailed(message))
-						}
-				}
-				
-				if let linkHeader = HTTPResponse.allHeaderFields["Link"] as? String {
-					let links = parseLinkHeader(linkHeader)
-					for (URL, parameters) in links {
-						if parameters.contains("rel=\"next\"") {
-							// Automatically fetch the next page too.
-							return thisData.concat(fetchAllPages(URL, authorizationHeaderValue, urlSession))
-						}
-					}
-				}
-			}
-
-			return thisData
-		}
-}
-
 /// Fetches the release corresponding to the given tag on the given repository,
 /// sending it along the returned signal. If no release matches, the signal will
 /// complete without sending any values.
-public func releaseForTag(tag: String, _ repository: GitHubRepository, _ authorizationHeaderValue: String?, _ urlSession: NSURLSession) -> SignalProducer<GitHubRelease, CarthageError> {
-	return fetchAllPages(NSURL(string: "\(repository.server.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue, urlSession)
+public func releaseForTag(tag: String, _ repository: GitHubRepository, _ authorizationHeaderValue: String?, _ networkClient: NetworkClient) -> SignalProducer<GitHubRelease, CarthageError> {
+	let request = createGitHubRequest(NSURL(string: "\(repository.server.APIEndpoint)/repos/\(repository.owner)/\(repository.name)/releases/tags/\(tag)")!, authorizationHeaderValue)
+	return networkClient.executeDataRequest(request)
 		.attemptMap { data -> Result<AnyObject, CarthageError> in
 			if let object = try? NSJSONSerialization.JSONObjectWithData(data, options: []) {
 				return .Success(object)
@@ -544,10 +493,8 @@ public func releaseForTag(tag: String, _ repository: GitHubRepository, _ authori
 ///
 /// The downloaded file will be deleted after the URL has been sent upon the
 /// signal.
-public func downloadAsset(asset: GitHubRelease.Asset, _ authorizationHeaderValue: String?, _ urlSession: NSURLSession) -> SignalProducer<NSURL, CarthageError> {
+public func downloadAsset(asset: GitHubRelease.Asset, _ authorizationHeaderValue: String?, _ networkClient: NetworkClient) -> SignalProducer<NSURL, CarthageError> {
 	let request = createGitHubRequest(asset.URL, authorizationHeaderValue, contentType: APIAssetDownloadContentType)
 
-	return urlSession.carthage_downloadWithRequest(request)
-		.mapError(CarthageError.NetworkError)
-		.map { URL, _ in URL }
+	return networkClient.executeDownloadRequest(request)
 }
