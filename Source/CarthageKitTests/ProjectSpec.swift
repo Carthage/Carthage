@@ -11,6 +11,7 @@ import Foundation
 import Nimble
 import Quick
 import ReactiveCocoa
+import Tentacle
 
 class ProjectSpec: QuickSpec {
 	override func spec() {
@@ -35,7 +36,7 @@ class ProjectSpec: QuickSpec {
 			expect(resultError).notTo(beNil())
 
 			let makeDependency: (String, String, [String]) -> DuplicateDependency = { (repoOwner, repoName, locations) in
-				let project = ProjectIdentifier.GitHub(GitHubRepository(owner: repoOwner, name: repoName))
+				let project = ProjectIdentifier.GitHub(Repository(owner: repoOwner, name: repoName))
 				return DuplicateDependency(project: project, locations: locations)
 			}
 
