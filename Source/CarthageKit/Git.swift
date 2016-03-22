@@ -434,28 +434,39 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = 
 		}
 }
 
+/// Determines whether any reference exists for the given pattern in the given
+/// repository.
+///
+/// If the specified file URL does not represent a valid Git repository, `false`
+/// will be sent.
+public func referenceExistsInRepository(repositoryFileURL: NSURL, pattern: String) -> SignalProducer<Bool, NoError> {
+	return ensureDirectoryExistsAtURL(repositoryFileURL)
+		.then(launchGitTask([ "show-ref", pattern ], repositoryFileURL: repositoryFileURL))
+		.then(.init(value: true))
+		.flatMapError { _ in .init(value: false) }
+}
+
 /// Determines whether the specified revision identifies a valid commit.
 ///
 /// If the specified file URL does not represent a valid Git repository, `false`
 /// will be sent.
 public func commitExistsInRepository(repositoryFileURL: NSURL, revision: String = "HEAD") -> SignalProducer<Bool, NoError> {
-	return SignalProducer { observer, disposable in
-		// NSTask throws a hissy fit (a.k.a. exception) if the working directory
-		// doesn't exist, so pre-emptively check for that.
-		var isDirectory: ObjCBool = false
-		if !NSFileManager.defaultManager().fileExistsAtPath(repositoryFileURL.path!, isDirectory: &isDirectory) || !isDirectory {
-			observer.sendNext(false)
-			observer.sendCompleted()
-			return
-		}
+	return ensureDirectoryExistsAtURL(repositoryFileURL)
+		.then(launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL))
+		.then(.init(value: true))
+		.flatMapError { _ in .init(value: false) }
+}
 
-		launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL)
-			.then(SignalProducer<Bool, CarthageError>(value: true))
-			.flatMapError { _ in SignalProducer<Bool, NoError>(value: false) }
-			.startWithSignal { signal, signalDisposable in
-				disposable.addDisposable(signalDisposable)
-				signal.observe(observer)
-			}
+/// NSTask throws a hissy fit (a.k.a. exception) if the working directory
+/// doesn't exist, so pre-emptively check for that.
+private func ensureDirectoryExistsAtURL(fileURL: NSURL) -> SignalProducer<(), CarthageError> {
+	return SignalProducer { observer, disposable in
+		var isDirectory: ObjCBool = false
+		if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!, isDirectory: &isDirectory) && isDirectory {
+			observer.sendCompleted()
+		} else {
+			observer.sendFailed(.ReadFailed(fileURL, nil))
+		}
 	}
 }
 
