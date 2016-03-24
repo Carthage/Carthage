@@ -439,7 +439,7 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = 
 ///
 /// If the specified file URL does not represent a valid Git repository, `false`
 /// will be sent.
-public func referenceExistsInRepository(repositoryFileURL: NSURL, pattern: String) -> SignalProducer<Bool, NoError> {
+internal func referenceExistsInRepository(repositoryFileURL: NSURL, pattern: String) -> SignalProducer<Bool, NoError> {
 	return ensureDirectoryExistsAtURL(repositoryFileURL)
 		.then(launchGitTask([ "show-ref", pattern ], repositoryFileURL: repositoryFileURL))
 		.then(.init(value: true))
