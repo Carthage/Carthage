@@ -887,8 +887,10 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, c
 
 						// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
 						if let commitish = commitish {
-							return referenceExistsInRepository(repositoryURL, pattern: commitish)
-								.zipWith(commitExistsInRepository(repositoryURL, revision: commitish))
+							return zip(
+									referenceExistsInRepository(repositoryURL, pattern: commitish),
+									commitExistsInRepository(repositoryURL, revision: commitish)
+								)
 								.promoteErrors(CarthageError.self)
 								.flatMap(.Concat) { referenceExists, commitExists -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 									// If the given commitish is a reference to branches or tags, we should fetch.
