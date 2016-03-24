@@ -6,7 +6,6 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
-import Argo
 import Foundation
 import Result
 import ReactiveCocoa
@@ -274,14 +273,6 @@ extension NSURL {
 			return Array(otherPath[path.indices]) == path
 		}
 		return false
-	}
-}
-
-extension NSURL: Decodable {
-	public class func decode(json: JSON) -> Decoded<NSURL> {
-		return String.decode(json).flatMap { URLString in
-			return .fromOptional(self.init(string: URLString))
-		}
 	}
 }
 
