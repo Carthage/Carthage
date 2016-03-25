@@ -490,7 +490,7 @@ public struct BuildSettings {
 			// can sometimes hang indefinitely on projects that don't
 			// share any schemes, so automatically bail out if it looks
 			// like that's happening.
-			.timeoutWithError(.XcodebuildTimeout(arguments.project), afterInterval: 15, onScheduler: QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)))
+			.timeoutWithError(.XcodebuildTimeout(arguments.project), afterInterval: 30, onScheduler: QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)))
 			.retry(5)
 			.map { (data: NSData) -> String in
 				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
@@ -1263,13 +1263,30 @@ private func stripBinary(binaryURL: NSURL, keepingArchitectures: [String]) -> Si
 }
 
 /// Copies a product into the given folder. The folder will be created if it
-/// does not already exist.
+/// does not already exist, and any pre-existing version of the product in the
+/// destination folder will be deleted before the copy of the new version.
+///
+/// If the `from` URL has the same path as the `to` URL, and there is a resource
+/// at the given path, no operation is needed and the returned signal will just
+/// send `.success`.
 ///
 /// Returns a signal that will send the URL after copying upon .success.
 public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return SignalProducer<NSURL, CarthageError>.attempt {
 		let manager = NSFileManager.defaultManager()
-
+		
+		// This signal deletes `to` before it copies `from` over it.
+		// If `from` and `to` point to the same resource, there's no need to perform a copy at all
+		// and deleting `to` will also result in deleting the original resource without copying it.
+		// When `from` and `to` are the same, we can just return success immediately.
+		//
+		// See https://github.com/Carthage/Carthage/pull/1160
+		if let path = to.path where
+			manager.fileExistsAtPath(path) &&
+			from.absoluteURL == to.absoluteURL {
+				return .Success(to)
+		}
+		
 		do {
 			try manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil)
 		} catch let error as NSError {
@@ -1278,7 +1295,7 @@ public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, Carth
 			// returns NO and NSFileWriteFileExistsError error. So we should
 			// ignore that specific error.
 			//
-			// See https://github.com/Carthage/Carthage/issues/591.
+			// See https://github.com/Carthage/Carthage/issues/591
 			if error.code != NSFileWriteFileExistsError {
 				return .Failure(.WriteFailed(to.URLByDeletingLastPathComponent!, error))
 			}

@@ -9,6 +9,7 @@
 import Foundation
 import Result
 import ReactiveCocoa
+import Tentacle
 
 /// The relative path to a project's checked out dependencies.
 public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
@@ -175,7 +176,7 @@ extension ResolvedCartfile: CustomStringConvertible {
 /// Uniquely identifies a project that can be used as a dependency.
 public enum ProjectIdentifier: Comparable {
 	/// A repository hosted on GitHub.com.
-	case GitHub(GitHubRepository)
+	case GitHub(Repository)
 
 	/// An arbitrary Git repository.
 	case Git(GitURL)
@@ -234,7 +235,7 @@ extension ProjectIdentifier: Scannable {
 
 		if scanner.scanString("github", intoString: nil) {
 			parser = { repoIdentifier in
-				return GitHubRepository.fromIdentifier(repoIdentifier).map { self.GitHub($0) }
+				return Repository.fromIdentifier(repoIdentifier).map { self.GitHub($0) }
 			}
 		} else if scanner.scanString("git", intoString: nil) {
 			parser = { URLString in
