@@ -61,7 +61,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one.
 1. On your application targets’ “General” settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
-1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script with the following contents:
+1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script in which you specify your shell (ex: `bin/sh`), add the following contents to the script area below the shell:
 
   ```sh
   /usr/local/bin/carthage copy-frameworks
@@ -90,7 +90,7 @@ After you’ve finished the above steps and pushed your changes, other users of 
 
 Using Carthage for the dependencies of any arbitrary target is fairly similar to [using Carthage for an application](#adding-frameworks-to-an-application). The main difference lies in how the frameworks are actually set up and linked in Xcode.
 
-Because non-application targets are missing the “Embedded Binaries” section in their build settings, you must instead drag the [built frameworks][Carthage/Build] to the “Link Binaries With Libraries” build phase.
+Because unit test targets are missing the “Linked Frameworks and Libraries” section in their “General” settings tab, you must instead drag the [built frameworks][Carthage/Build] to the “Link Binaries With Libraries” build phase.
 
 In rare cases, you may want to also copy each dependency into the build product (e.g., to embed dependencies within the outer framework, or make sure dependencies are present in a test bundle). To do this, create a new “Copy Files” build phase with the “Frameworks” destination, then add the framework reference there as well.
 

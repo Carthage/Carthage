@@ -13,6 +13,7 @@ import Nimble
 import Quick
 import ReactiveCocoa
 import ReactiveTask
+import Tentacle
 
 class XcodeSpec: QuickSpec {
 	override func spec() {
@@ -87,8 +88,8 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for all platforms") {
 			let dependencies = [
-				ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes")),
-				ProjectIdentifier.GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
+				ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes")),
+				ProjectIdentifier.GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
 			]
 
 			for project in dependencies {
@@ -293,7 +294,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for one platform") {
-			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
+			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac ])
 				.flatten(.Concat)
 				.ignoreTaskData()
@@ -316,7 +317,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for multiple platforms") {
-			let project = ProjectIdentifier.GitHub(GitHubRepository(owner: "github", name: "Archimedes"))
+			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac, .iOS ])
 				.flatten(.Concat)
 				.ignoreTaskData()

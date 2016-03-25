@@ -25,3 +25,9 @@
 [submodule "Carthage/Checkouts/Result"]
 	path = Carthage/Checkouts/Result
 	url = https://github.com/antitypical/Result.git
+[submodule "Carthage/Checkouts/Curry"]
+	path = Carthage/Checkouts/Curry
+	url = https://github.com/thoughtbot/Curry.git
+[submodule "Carthage/Checkouts/Tentacle"]
+	path = Carthage/Checkouts/Tentacle
+	url = https://github.com/mdiep/Tentacle.git

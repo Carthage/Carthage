@@ -12,6 +12,7 @@ import Nimble
 import Quick
 import ReactiveCocoa
 import Result
+import Tentacle
 
 class ResolverSpec: QuickSpec {
 	private func loadTestCartfile<T: CartfileType>(name: String, withExtension: String = "") -> T {
@@ -22,7 +23,7 @@ class ResolverSpec: QuickSpec {
 	}
 
 	private func dependencyForOwner(owner: String, name: String, version: String) -> CarthageKit.Dependency<PinnedVersion> {
-		return CarthageKit.Dependency(project: .GitHub(GitHubRepository(owner: owner, name: name)), version: PinnedVersion(version))
+		return CarthageKit.Dependency(project: .GitHub(Repository(owner: owner, name: name)), version: PinnedVersion(version))
 	}
 
 	private func orderedDependencies(producer: SignalProducer<CarthageKit.Dependency<PinnedVersion>, CarthageError>) -> [Dependency] {
@@ -172,10 +173,10 @@ class ResolverSpec: QuickSpec {
 		let cartfile: Result<Cartfile, CarthageError>
 
 		switch dependency.project {
-		case .GitHub(GitHubRepository(owner: "ReactiveCocoa", name: "ReactiveCocoa")):
+		case .GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")):
 			cartfile = Cartfile.fromString("github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0")
 
-		case .GitHub(GitHubRepository(owner: "jspahrsummers", name: "objc-build-scripts")):
+		case .GitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")):
 			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0")
 
 		case .Git(GitURL("/tmp/TestCartfileBranch")):

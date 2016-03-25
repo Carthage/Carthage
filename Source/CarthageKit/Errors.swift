@@ -9,6 +9,7 @@
 import Foundation
 import ReactiveCocoa
 import ReactiveTask
+import Tentacle
 
 /// Possible errors that can originate from Carthage.
 public enum CarthageError: ErrorType, Equatable {
@@ -57,7 +58,7 @@ public enum CarthageError: ErrorType, Equatable {
 
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
-	case NoSharedSchemes(ProjectLocator, GitHubRepository?)
+	case NoSharedSchemes(ProjectLocator, Repository?)
 
 	/// Timeout whilst running `xcodebuild`
 	case XcodebuildTimeout(ProjectLocator)
@@ -69,14 +70,11 @@ public enum CarthageError: ErrorType, Equatable {
 	// There was a cycle between dependencies in the associated graph.
 	case DependencyCycle([ProjectIdentifier: Set<ProjectIdentifier>])
 	
-	/// A request to the GitHub API failed due to authentication or rate-limiting.
-	case GitHubAPIRequestFailed(String)
+	/// A request to the GitHub API failed.
+	case GitHubAPIRequestFailed(Client.Error)
 
 	/// An error occurred while shelling out.
 	case TaskError(ReactiveTask.TaskError)
-
-	/// An error occurred in a network operation.
-	case NetworkError(NSError)
 }
 
 private func == (lhs: CarthageError.VersionRequirement, rhs: CarthageError.VersionRequirement) -> Bool {
@@ -134,9 +132,6 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	case (.TaskError, .TaskError):
 		// TODO: Implement Equatable in ReactiveTask.
 		return false
-	
-	case let (.NetworkError(left), .NetworkError(right)):
-		return left == right
 	
 	default:
 		return false
@@ -257,9 +252,6 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .TaskError(taskError):
 			return taskError.description
-
-		case let .NetworkError(error):
-			return error.description
 		}
 	}
 }

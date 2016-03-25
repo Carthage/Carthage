@@ -9,6 +9,7 @@
 import Foundation
 import Result
 import ReactiveCocoa
+import Tentacle
 
 /// Carthage’s bundle identifier.
 public let CarthageKitBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
@@ -319,19 +320,18 @@ public final class Project {
 
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
-		return versionsForProject(project)
-			.collect()
-			.flatMap(.Concat) { (versions: [PinnedVersion]) -> SignalProducer<PinnedVersion, CarthageError> in
-				let referencedVersion = PinnedVersion(reference)
-
-				if versions.contains(referencedVersion) {
-					// If the reference is an exact tag, resolves it to the tag.
-					return SignalProducer(value: referencedVersion)
-				} else {
-					// Otherwise, it is resolved to an object SHA.
-					return resolveReferenceInRepository(repositoryFileURLForProject(project), reference)
-						.map(PinnedVersion.init)
-				}
+		let repositoryURL = repositoryFileURLForProject(project)
+		return cloneOrFetchDependency(project, commitish: reference)
+			.flatMap(.Concat) { _ in
+				return resolveTagInRepository(repositoryURL, reference)
+			}
+			.map { _ in
+				// If the reference is an exact tag, resolves it to the tag.
+				return PinnedVersion(reference)
+			}
+			.flatMapError { _ in
+				return resolveReferenceInRepository(repositoryURL, reference)
+					.map(PinnedVersion.init)
 			}
 	}
 
@@ -421,15 +421,13 @@ public final class Project {
 
 				switch project {
 				case let .GitHub(repository):
-					return loadGitHubAuthorization(forServer: repository.server)
-						.flatMap(.Concat) { authorizationHeaderValue in
-							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withAuthorizationHeaderValue: authorizationHeaderValue)
-								.flatMapError { error in
-									if authorizationHeaderValue == nil {
-										return SignalProducer(error: error)
-									}
-									return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, withAuthorizationHeaderValue: nil)
-								}
+					let client = Client(repository: repository)
+					return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: client)
+						.flatMapError { error in
+							if !client.authenticated {
+								return SignalProducer(error: error)
+							}
+							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, authenticated: false))
 						}
 						.flatMap(.Concat, transform: unzipArchiveToTemporaryDirectory)
 						.flatMap(.Concat) { directoryURL in
@@ -466,20 +464,22 @@ public final class Project {
 	///
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
-	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: GitHubRepository, withAuthorizationHeaderValue authorizationHeaderValue: String?) -> SignalProducer<NSURL, CarthageError> {
-		let urlSession = NSURLSession.sharedSession()
-		return releaseForTag(revision, repository, authorizationHeaderValue, urlSession)
-			.filter(binaryFrameworksCanBeProvidedByRelease)
-			.flatMapError { error in
+	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: Repository, client: Client) -> SignalProducer<NSURL, CarthageError> {
+		return client.releaseForTag(revision, inRepository: repository)
+			.map { _, release in release }
+			.filter { release in
+				return !release.draft && !release.assets.isEmpty
+			}
+			.flatMapError { error -> SignalProducer<Release, CarthageError> in
 				switch error {
-				case .GitHubAPIRequestFailed:
+				case let .APIError(_, _, error):
 					// Log the GitHub API request failure, not to error out,
 					// because that should not be fatal error.
-					self._projectEventsObserver.sendNext(.SkippedDownloadingBinaries(project, error.description))
+					self._projectEventsObserver.sendNext(.SkippedDownloadingBinaries(project, error.message))
 					return .empty
 
 				default:
-					return SignalProducer(error: error)
+					return SignalProducer(error: .GitHubAPIRequestFailed(error))
 				}
 			}
 			.on(next: { release in
@@ -487,14 +487,21 @@ public final class Project {
 			})
 			.flatMap(.Concat) { release -> SignalProducer<NSURL, CarthageError> in
 				return SignalProducer(values: release.assets)
-					.filter(binaryFrameworksCanBeProvidedByAsset)
+					.filter { asset in
+						let name = asset.name as NSString
+						if name.rangeOfString(CarthageProjectBinaryAssetPattern).location == NSNotFound {
+							return false
+						}
+						return CarthageProjectBinaryAssetContentTypes.contains(asset.contentType)
+					}
 					.flatMap(.Concat) { asset -> SignalProducer<NSURL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(project, release, asset)
 
 						if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!) {
 							return SignalProducer(value: fileURL)
 						} else {
-							return downloadAsset(asset, authorizationHeaderValue, urlSession)
+							return client.downloadAsset(asset)
+								.mapError(CarthageError.GitHubAPIRequestFailed)
 								.flatMap(.Concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
 						}
 					}
@@ -700,7 +707,7 @@ public final class Project {
 
 /// Constructs a file URL to where the binary corresponding to the given
 /// arguments should live.
-private func fileURLToCachedBinary(project: ProjectIdentifier, _ release: GitHubRelease, _ asset: GitHubRelease.Asset) -> NSURL {
+private func fileURLToCachedBinary(project: ProjectIdentifier, _ release: Release, _ asset: Release.Asset) -> NSURL {
 	// ~/Library/Caches/org.carthage.CarthageKit/binaries/ReactiveCocoa/v2.3.1/1234-ReactiveCocoa.framework.zip
 	return CarthageDependencyAssetsURL.URLByAppendingPathComponent("\(project.name)/\(release.tag)/\(asset.ID)-\(asset.name)", isDirectory: false)
 }
@@ -855,22 +862,6 @@ private func BCSymbolMapsForFramework(frameworkURL: NSURL, inDirectoryURL direct
 			return BCSymbolMapsInDirectory(directoryURL)
 				.lift(filterUUIDs)
 	}
-}
-
-/// Determines whether a Release is a suitable candidate for binary frameworks.
-private func binaryFrameworksCanBeProvidedByRelease(release: GitHubRelease) -> Bool {
-	return !release.draft && !release.assets.isEmpty
-}
-
-/// Determines whether a release asset is a suitable candidate for binary
-/// frameworks.
-private func binaryFrameworksCanBeProvidedByAsset(asset: GitHubRelease.Asset) -> Bool {
-	let name = asset.name as NSString
-	if name.rangeOfString(CarthageProjectBinaryAssetPattern).location == NSNotFound {
-		return false
-	}
-
-	return CarthageProjectBinaryAssetContentTypes.contains(asset.contentType)
 }
 
 /// Returns the file URL at which the given project's repository will be

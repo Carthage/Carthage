@@ -11,7 +11,8 @@ class BuildArgumentsSpec: QuickSpec {
 
 				let codeSignArguments = [
 					"CODE_SIGNING_REQUIRED=NO",
-					"CODE_SIGN_IDENTITY="
+					"CODE_SIGN_IDENTITY=",
+					"CARTHAGE=YES"
 				]
 
 				context("when configured with a workspace") {
