@@ -52,5 +52,119 @@ class ProjectSpec: QuickSpec {
 
 			expect(resultError) == expectedError
         }
+
+		describe("cloneOrFetchProject") {
+			// https://github.com/Carthage/Carthage/issues/1191
+			let repositoryName = "carthage1191"
+			let temporaryPath = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString)
+			let temporaryURL = NSURL(fileURLWithPath: temporaryPath, isDirectory: true)
+			let repositoryURL = temporaryURL.URLByAppendingPathComponent(repositoryName, isDirectory: true)
+			let cacheDirectoryURL = temporaryURL.URLByAppendingPathComponent("cache", isDirectory: true)
+			let projectIdentifier = ProjectIdentifier.Git(GitURL(repositoryURL.absoluteString))
+
+			func initRepository() {
+				_ = launchGitTask([ "init" ], repositoryFileURL: repositoryURL).wait()
+			}
+
+			func addCommit() -> String {
+				_ = launchGitTask([ "commit", "--allow-empty", "-m \"Empty commit\"" ], repositoryFileURL: repositoryURL).wait()
+				return launchGitTask([ "rev-parse", "--short", "HEAD" ], repositoryFileURL: repositoryURL)
+					.last()!
+					.value!
+					.stringByTrimmingCharactersInSet(.newlineCharacterSet())
+			}
+
+			func cloneOrFetch(commitish commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {
+				return cloneOrFetchProject(projectIdentifier, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
+			}
+
+			beforeSuite {
+				expect { try NSFileManager.defaultManager().createDirectoryAtPath(temporaryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+			}
+
+			beforeEach {
+				[ repositoryURL, cacheDirectoryURL ].forEach { URL in
+					expect { try NSFileManager.defaultManager().createDirectoryAtPath(URL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+				}
+				initRepository()
+			}
+
+			afterEach {
+				[ repositoryURL, cacheDirectoryURL ].forEach { URL in
+					_ = try? NSFileManager.defaultManager().removeItemAtURL(URL)
+				}
+			}
+
+			afterSuite {
+				_ = try? NSFileManager.defaultManager().removeItemAtURL(temporaryURL)
+			}
+
+			it("should clone a project if it is not cloned yet") {
+				waitUntil { done in
+					cloneOrFetch().start(Observer(
+						completed: { done() },
+						next: { event, _ in expect(event?.isCloning).to(beTruthy()) }
+					))
+				}
+			}
+
+			it("should fetch a project if no commitish is given") {
+				// Clone first
+				expect(cloneOrFetch().wait().error).to(beNil())
+
+				waitUntil { done in
+					cloneOrFetch().start(Observer(
+						completed: { done() },
+						next: { event, _ in expect(event?.isFetching).to(beTruthy()) }
+					))
+				}
+			}
+
+			it("should fetch a project if the given commitish exists but that is a reference") {
+				// Clone first
+				addCommit()
+				expect(cloneOrFetch().wait().error).to(beNil())
+
+				addCommit()
+
+				waitUntil { done in
+					cloneOrFetch(commitish: "master").start(Observer(
+						completed: { done() },
+						next: { event, _ in expect(event?.isFetching).to(beTruthy()) }
+					))
+				}
+			}
+
+			it("should not fetch a project if the given commitish exists but that is not a reference") {
+				// Clone first
+				let commitish = addCommit()
+				expect(cloneOrFetch().wait().error).to(beNil())
+
+				addCommit()
+
+				waitUntil { done in
+					cloneOrFetch(commitish: commitish).start(Observer(
+						completed: { done() },
+						next: { event, _ in expect(event).to(beNil()) }
+					))
+				}
+			}
+		}
+	}
+}
+
+private extension ProjectEvent {
+	var isCloning: Bool {
+		if case .Cloning = self {
+			return true
+		}
+		return false
+	}
+
+	var isFetching: Bool {
+		if case .Fetching = self {
+			return true
+		}
+		return false
 	}
 }

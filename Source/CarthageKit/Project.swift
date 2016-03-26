@@ -835,8 +835,8 @@ private func binaryFrameworksCanBeProvidedByAsset(asset: GitHubRelease.Asset) ->
 
 /// Returns the file URL at which the given project's repository will be
 /// located.
-private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
-	return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
+private func repositoryFileURLForProject(project: ProjectIdentifier, baseURL: NSURL = CarthageDependencyRepositoriesURL) -> NSURL {
+	return baseURL.URLByAppendingPathComponent(project.name, isDirectory: true)
 }
 
 
@@ -855,22 +855,22 @@ private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bo
 	}
 }
 
-/// Clones the given project to the global repositories folder, or fetches
-/// inside it if it has already been cloned. Optionally takes a commitish to 
-/// check for prior to fetching.
+/// Clones the given project to the given destination URL (defaults to the global
+/// repositories folder), or fetches inside it if it has already been cloned.
+/// Optionally takes a commitish to check for prior to fetching.
 ///
 /// Returns a signal which will send the operation type once started, and
 /// the URL to where the repository's folder will exist on disk, then complete
 /// when the operation completes.
-public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {
+public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, destinationURL: NSURL = CarthageDependencyRepositoriesURL, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {
 	let fileManager = NSFileManager.defaultManager()
-	let repositoryURL = repositoryFileURLForProject(project)
+	let repositoryURL = repositoryFileURLForProject(project, baseURL: destinationURL)
 
 	return SignalProducer.attempt { () -> Result<GitURL, CarthageError> in
 			do {
-				try fileManager.createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil)
+				try fileManager.createDirectoryAtURL(destinationURL, withIntermediateDirectories: true, attributes: nil)
 			} catch let error as NSError {
-				return .Failure(.WriteFailed(CarthageDependencyRepositoriesURL, error))
+				return .Failure(.WriteFailed(destinationURL, error))
 			}
 
 			return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
