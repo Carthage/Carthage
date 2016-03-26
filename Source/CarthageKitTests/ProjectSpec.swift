@@ -63,6 +63,7 @@ class ProjectSpec: QuickSpec {
 			let projectIdentifier = ProjectIdentifier.Git(GitURL(repositoryURL.absoluteString))
 
 			func initRepository() {
+				expect { try NSFileManager.defaultManager().createDirectoryAtPath(repositoryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
 				_ = launchGitTask([ "init" ], repositoryFileURL: repositoryURL).wait()
 			}
 
@@ -78,46 +79,33 @@ class ProjectSpec: QuickSpec {
 				return cloneOrFetchProject(projectIdentifier, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
 			}
 
-			beforeSuite {
-				expect { try NSFileManager.defaultManager().createDirectoryAtPath(temporaryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+			func assertProjectEvent(commitish commitish: String? = nil, action: ProjectEvent? -> ()) {
+				waitUntil { done in
+					cloneOrFetch(commitish: commitish).start(Observer(
+						completed: done,
+						next: { event, _ in action(event) }
+					))
+				}
 			}
 
 			beforeEach {
-				[ repositoryURL, cacheDirectoryURL ].forEach { URL in
-					expect { try NSFileManager.defaultManager().createDirectoryAtPath(URL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
-				}
+				expect { try NSFileManager.defaultManager().createDirectoryAtPath(temporaryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
 				initRepository()
 			}
 
 			afterEach {
-				[ repositoryURL, cacheDirectoryURL ].forEach { URL in
-					_ = try? NSFileManager.defaultManager().removeItemAtURL(URL)
-				}
-			}
-
-			afterSuite {
 				_ = try? NSFileManager.defaultManager().removeItemAtURL(temporaryURL)
 			}
 
 			it("should clone a project if it is not cloned yet") {
-				waitUntil { done in
-					cloneOrFetch().start(Observer(
-						completed: { done() },
-						next: { event, _ in expect(event?.isCloning).to(beTruthy()) }
-					))
-				}
+				assertProjectEvent { expect($0?.isCloning).to(beTruthy()) }
 			}
 
 			it("should fetch a project if no commitish is given") {
 				// Clone first
 				expect(cloneOrFetch().wait().error).to(beNil())
 
-				waitUntil { done in
-					cloneOrFetch().start(Observer(
-						completed: { done() },
-						next: { event, _ in expect(event?.isFetching).to(beTruthy()) }
-					))
-				}
+				assertProjectEvent { expect($0?.isFetching).to(beTruthy()) }
 			}
 
 			it("should fetch a project if the given commitish exists but that is a reference") {
@@ -127,12 +115,7 @@ class ProjectSpec: QuickSpec {
 
 				addCommit()
 
-				waitUntil { done in
-					cloneOrFetch(commitish: "master").start(Observer(
-						completed: { done() },
-						next: { event, _ in expect(event?.isFetching).to(beTruthy()) }
-					))
-				}
+				assertProjectEvent(commitish: "master") { expect($0?.isFetching).to(beTruthy()) }
 			}
 
 			it("should not fetch a project if the given commitish exists but that is not a reference") {
@@ -142,12 +125,7 @@ class ProjectSpec: QuickSpec {
 
 				addCommit()
 
-				waitUntil { done in
-					cloneOrFetch(commitish: commitish).start(Observer(
-						completed: { done() },
-						next: { event, _ in expect(event).to(beNil()) }
-					))
-				}
+				assertProjectEvent(commitish: commitish) { expect($0).to(beNil()) }
 			}
 		}
 	}
