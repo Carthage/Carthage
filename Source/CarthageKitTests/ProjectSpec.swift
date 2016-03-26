@@ -53,5 +53,96 @@ class ProjectSpec: QuickSpec {
 
 			expect(resultError) == expectedError
         }
+
+		describe("cloneOrFetchProject") {
+			// https://github.com/Carthage/Carthage/issues/1191
+			let temporaryPath = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString)
+			let temporaryURL = NSURL(fileURLWithPath: temporaryPath, isDirectory: true)
+			let repositoryURL = temporaryURL.URLByAppendingPathComponent("carthage1191", isDirectory: true)
+			let cacheDirectoryURL = temporaryURL.URLByAppendingPathComponent("cache", isDirectory: true)
+			let projectIdentifier = ProjectIdentifier.Git(GitURL(repositoryURL.absoluteString))
+
+			func initRepository() {
+				expect { try NSFileManager.defaultManager().createDirectoryAtPath(repositoryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+				_ = launchGitTask([ "init" ], repositoryFileURL: repositoryURL).wait()
+			}
+
+			func addCommit() -> String {
+				_ = launchGitTask([ "commit", "--allow-empty", "-m \"Empty commit\"" ], repositoryFileURL: repositoryURL).wait()
+				return launchGitTask([ "rev-parse", "--short", "HEAD" ], repositoryFileURL: repositoryURL)
+					.last()!
+					.value!
+					.stringByTrimmingCharactersInSet(.newlineCharacterSet())
+			}
+
+			func cloneOrFetch(commitish commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {
+				return cloneOrFetchProject(projectIdentifier, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
+			}
+
+			func assertProjectEvent(commitish commitish: String? = nil, action: ProjectEvent? -> ()) {
+				waitUntil { done in
+					cloneOrFetch(commitish: commitish).start(Observer(
+						completed: done,
+						next: { event, _ in action(event) }
+					))
+				}
+			}
+
+			beforeEach {
+				expect { try NSFileManager.defaultManager().createDirectoryAtPath(temporaryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+				initRepository()
+			}
+
+			afterEach {
+				_ = try? NSFileManager.defaultManager().removeItemAtURL(temporaryURL)
+			}
+
+			it("should clone a project if it is not cloned yet") {
+				assertProjectEvent { expect($0?.isCloning) == true }
+			}
+
+			it("should fetch a project if no commitish is given") {
+				// Clone first
+				expect(cloneOrFetch().wait().error).to(beNil())
+
+				assertProjectEvent { expect($0?.isFetching) == true }
+			}
+
+			it("should fetch a project if the given commitish exists but that is a reference") {
+				// Clone first
+				addCommit()
+				expect(cloneOrFetch().wait().error).to(beNil())
+
+				addCommit()
+
+				assertProjectEvent(commitish: "master") { expect($0?.isFetching) == true }
+			}
+
+			it("should not fetch a project if the given commitish exists but that is not a reference") {
+				// Clone first
+				let commitish = addCommit()
+				expect(cloneOrFetch().wait().error).to(beNil())
+
+				addCommit()
+
+				assertProjectEvent(commitish: commitish) { expect($0).to(beNil()) }
+			}
+		}
+	}
+}
+
+private extension ProjectEvent {
+	var isCloning: Bool {
+		if case .Cloning = self {
+			return true
+		}
+		return false
+	}
+
+	var isFetching: Bool {
+		if case .Fetching = self {
+			return true
+		}
+		return false
 	}
 }
