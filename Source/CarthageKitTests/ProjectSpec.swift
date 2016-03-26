@@ -55,10 +55,9 @@ class ProjectSpec: QuickSpec {
 
 		describe("cloneOrFetchProject") {
 			// https://github.com/Carthage/Carthage/issues/1191
-			let repositoryName = "carthage1191"
 			let temporaryPath = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString)
 			let temporaryURL = NSURL(fileURLWithPath: temporaryPath, isDirectory: true)
-			let repositoryURL = temporaryURL.URLByAppendingPathComponent(repositoryName, isDirectory: true)
+			let repositoryURL = temporaryURL.URLByAppendingPathComponent("carthage1191", isDirectory: true)
 			let cacheDirectoryURL = temporaryURL.URLByAppendingPathComponent("cache", isDirectory: true)
 			let projectIdentifier = ProjectIdentifier.Git(GitURL(repositoryURL.absoluteString))
 
@@ -98,14 +97,14 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should clone a project if it is not cloned yet") {
-				assertProjectEvent { expect($0?.isCloning).to(beTruthy()) }
+				assertProjectEvent { expect($0?.isCloning) == true }
 			}
 
 			it("should fetch a project if no commitish is given") {
 				// Clone first
 				expect(cloneOrFetch().wait().error).to(beNil())
 
-				assertProjectEvent { expect($0?.isFetching).to(beTruthy()) }
+				assertProjectEvent { expect($0?.isFetching) == true }
 			}
 
 			it("should fetch a project if the given commitish exists but that is a reference") {
@@ -115,7 +114,7 @@ class ProjectSpec: QuickSpec {
 
 				addCommit()
 
-				assertProjectEvent(commitish: "master") { expect($0?.isFetching).to(beTruthy()) }
+				assertProjectEvent(commitish: "master") { expect($0?.isFetching) == true }
 			}
 
 			it("should not fetch a project if the given commitish exists but that is not a reference") {
