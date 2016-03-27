@@ -108,6 +108,16 @@ class ProjectSpec: QuickSpec {
 				assertProjectEvent { expect($0?.isFetching) == true }
 			}
 
+			it("should fetch a project if the given commitish does not exist in the cloned repository") {
+				// Clone first
+				addCommit()
+				expect(cloneOrFetch().wait().error).to(beNil())
+
+				let commitish = addCommit()
+
+				assertProjectEvent(commitish: commitish) { expect($0?.isFetching) == true }
+			}
+
 			it("should fetch a project if the given commitish exists but that is a reference") {
 				// Clone first
 				addCommit()
