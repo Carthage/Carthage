@@ -29,12 +29,12 @@ _carthage() {
             bootstrap|update)
                 COMPREPLY=($(compgen -W '--configuration --platform --verbose --no-checkout \
                     --no-build --use-ssh --use-submodules --no-use-binaries --color \
-                    --project-directory' -- ${cur}))
+                    --project-directory --derived-data' -- ${cur}))
                 return 0
                 ;;
             build)
                 COMPREPLY=($(compgen -W '--configuration --platform --no-skip-current \
-                    --color --verbose --project-directory' -- ${cur}))
+                    --color --verbose --project-directory --derived-data' -- ${cur}))
                 return 0
                 ;;
             checkout)
@@ -68,6 +68,10 @@ _carthage() {
             ;;
         --platform)
             COMPREPLY=($(compgen -W 'all iOS Mac watchOS tvOS' -- ${cur}))
+            return 0
+            ;;
+        --derived-data)
+            _filedir -d
             return 0
             ;;
     esac

@@ -8,6 +8,9 @@ public struct BuildArguments {
 
 	/// The configuration to use when building the project.
 	public var configuration: String?
+	
+	/// The path to the derived data.
+	public var derivedDataPath: String?
 
 	/// The platform SDK to build for.
 	public var sdk: SDK?
@@ -25,10 +28,11 @@ public struct BuildArguments {
 	/// The build setting whether full bitcode should be embedded in the binary.
 	public var bitcodeGenerationMode: BitcodeGenerationMode? = nil
 
-	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, sdk: SDK? = nil) {
+	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, derivedDataPath: String? = nil, sdk: SDK? = nil) {
 		self.project = project
 		self.scheme = scheme
 		self.configuration = configuration
+		self.derivedDataPath = derivedDataPath
 		self.sdk = sdk
 	}
 
@@ -50,6 +54,10 @@ public struct BuildArguments {
 
 		if let configuration = configuration {
 			args += [ "-configuration", configuration ]
+		}
+		
+		if let derivedDataPath = derivedDataPath, let standarizedPath = NSURL(fileURLWithPath: (derivedDataPath as NSString).stringByExpandingTildeInPath).URLByStandardizingPath?.path where !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
+			args += [ "-derivedDataPath", standarizedPath ]
 		}
 
 		if let sdk = sdk {
