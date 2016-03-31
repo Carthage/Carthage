@@ -52,11 +52,11 @@ private func copyFramework(source: NSURL, target: NSURL, validArchitectures: [St
 }
 
 private func copyDebugSymbolsForFramework(source: NSURL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-	return SignalProducer(result: builtProductsFolder())
-		.flatMap(.Merge) { builtProductsURL in
+	return SignalProducer(result: targetBuildFolder())
+		.flatMap(.Merge) { targetBuildURL in
 			return SignalProducer(value: source)
 				.map { return $0.URLByAppendingPathExtension("dSYM") }
-				.copyFileURLsIntoDirectory(builtProductsURL)
+				.copyFileURLsIntoDirectory(targetBuildURL)
 				.flatMap(.Merge) { dSYMURL in
 					return stripDSYM(dSYMURL, keepingArchitectures: validArchitectures)
 				}
@@ -65,11 +65,11 @@ private func copyDebugSymbolsForFramework(source: NSURL, validArchitectures: [St
 }
 
 private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	return SignalProducer(result: builtProductsFolder())
-		.flatMap(.Merge) { builtProductsURL in
+	return SignalProducer(result: targetBuildFolder())
+		.flatMap(.Merge) { targetBuildURL in
 			return BCSymbolMapsForFramework(frameworkURL)
 				.map { URL in directoryURL.URLByAppendingPathComponent(URL.lastPathComponent!, isDirectory: false) }
-				.copyFileURLsIntoDirectory(builtProductsURL)
+				.copyFileURLsIntoDirectory(targetBuildURL)
 		}
 }
 
@@ -88,13 +88,13 @@ private func codeSigningAllowed() -> Bool {
 		.map { $0 == "YES" }.value ?? false
 }
 
-private func builtProductsFolder() -> Result<NSURL, CarthageError> {
-	return getEnvironmentVariable("BUILT_PRODUCTS_DIR")
+private func targetBuildFolder() -> Result<NSURL, CarthageError> {
+	return getEnvironmentVariable("TARGET_BUILD_DIR")
 		.map { NSURL(fileURLWithPath: $0, isDirectory: true) }
 }
 
 private func frameworksFolder() -> Result<NSURL, CarthageError> {
-	return builtProductsFolder()
+	return targetBuildFolder()
 		.flatMap { url -> Result<NSURL, CarthageError> in
 			getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH")
 				.map { url.URLByAppendingPathComponent($0, isDirectory: true) }

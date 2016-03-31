@@ -676,7 +676,7 @@ public final class Project {
 	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, derivedDataPath: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
@@ -687,7 +687,7 @@ public final class Project {
 					return .empty
 				}
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, sdkFilter: sdkFilter)
+				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, derivedDataPath: derivedDataPath, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:
@@ -866,8 +866,8 @@ private func BCSymbolMapsForFramework(frameworkURL: NSURL, inDirectoryURL direct
 
 /// Returns the file URL at which the given project's repository will be
 /// located.
-private func repositoryFileURLForProject(project: ProjectIdentifier) -> NSURL {
-	return CarthageDependencyRepositoriesURL.URLByAppendingPathComponent(project.name, isDirectory: true)
+private func repositoryFileURLForProject(project: ProjectIdentifier, baseURL: NSURL = CarthageDependencyRepositoriesURL) -> NSURL {
+	return baseURL.URLByAppendingPathComponent(project.name, isDirectory: true)
 }
 
 
@@ -886,22 +886,22 @@ private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bo
 	}
 }
 
-/// Clones the given project to the global repositories folder, or fetches
-/// inside it if it has already been cloned. Optionally takes a commitish to 
-/// check for prior to fetching.
+/// Clones the given project to the given destination URL (defaults to the global
+/// repositories folder), or fetches inside it if it has already been cloned.
+/// Optionally takes a commitish to check for prior to fetching.
 ///
 /// Returns a signal which will send the operation type once started, and
 /// the URL to where the repository's folder will exist on disk, then complete
 /// when the operation completes.
-public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {
+public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, destinationURL: NSURL = CarthageDependencyRepositoriesURL, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {
 	let fileManager = NSFileManager.defaultManager()
-	let repositoryURL = repositoryFileURLForProject(project)
+	let repositoryURL = repositoryFileURLForProject(project, baseURL: destinationURL)
 
 	return SignalProducer.attempt { () -> Result<GitURL, CarthageError> in
 			do {
-				try fileManager.createDirectoryAtURL(CarthageDependencyRepositoriesURL, withIntermediateDirectories: true, attributes: nil)
+				try fileManager.createDirectoryAtURL(destinationURL, withIntermediateDirectories: true, attributes: nil)
 			} catch let error as NSError {
-				return .Failure(.WriteFailed(CarthageDependencyRepositoriesURL, error))
+				return .Failure(.WriteFailed(destinationURL, error))
 			}
 
 			return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
@@ -915,17 +915,22 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, c
 							return SignalProducer(value: (.Fetching(project), repositoryURL))
 								.concat(fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*").then(.empty))
 						}
+
 						// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
 						if let commitish = commitish {
-							return commitExistsInRepository(repositoryURL, revision: commitish)
+							return zip(
+									referenceExistsInRepository(repositoryURL, pattern: commitish),
+									commitExistsInRepository(repositoryURL, revision: commitish)
+								)
 								.promoteErrors(CarthageError.self)
-								.flatMap(.Merge) { exists -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
-									if exists {
-										return SignalProducer(value: (nil, repositoryURL))
-									} else {
+								.flatMap(.Concat) { referenceExists, commitExists -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
+									// If the given commitish is a reference to branches or tags, we should fetch.
+									if referenceExists || !commitExists {
 										return fetchProducer()
+									} else {
+										return SignalProducer(value: (nil, repositoryURL))
 									}
-							}
+								}
 						} else {
 							return fetchProducer()
 						}
