@@ -70,24 +70,25 @@ public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>
 /// include only the provided set of nodes and their transitively incoming 
 /// nodes (dependencies).
 ///
-/// Returns nil if the provided node is contained within the provided graph or
-/// if the provided graph has a cycle.
+/// If the provided `nodes` set is empty, returns the result of invoking
+/// `topologicalSort()` with the provided graph.
+///
+/// Throws an exception if the provided node(s) are not contained within the 
+/// given graph.
+///
+/// Returns nil if the provided graph has a cycle or is malformed.
 public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>, nodes: Set<Node>) -> [Node]? {
 	guard !nodes.isEmpty else { return topologicalSort(graph) }
 
-	guard nodes.isSubsetOf(Set(graph.keys)) else { return nil }
+	precondition(nodes.isSubsetOf(Set(graph.keys)))
 
 	// Ensure that the graph has no cycles, otherwise determining the set of 
 	// transitive incoming nodes could infinitely recurse.
-	guard let _ = topologicalSort(graph) else { return nil }
+	guard let sorted = topologicalSort(graph) else { return nil }
 
 	let relevantNodes = Set(nodes.flatMap { Set([$0]).union(transitiveIncomingNodes(graph, node: $0)) })
-	let irrelevantNodes = Set(graph.keys).subtract(relevantNodes)
 
-	var filteredGraph = graph
-	irrelevantNodes.forEach { node in filteredGraph.removeValueForKey(node) }
-	
-	return topologicalSort(filteredGraph)
+	return sorted.filter { node in !relevantNodes.contains(node) }
 }
 
 /// Returns the set of nodes that the given node in the provided graph has as
