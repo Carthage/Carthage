@@ -130,12 +130,6 @@ class AlgorithmsSpec: QuickSpec {
 
 					expect(sorted).to(beNil())
 				}
-
-				it("should fail when the proivded nodes are not within the graph") {
-					let sorted = topologicalSort(validGraph, nodes: Set(["Unknown Dependency"]))
-
-					expect(sorted).to(beNil())
-				}
 			}
 		}
 	}
