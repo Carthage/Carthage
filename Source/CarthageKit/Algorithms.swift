@@ -88,7 +88,7 @@ public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>
 
 	let relevantNodes = Set(nodes.flatMap { Set([$0]).union(transitiveIncomingNodes(graph, node: $0)) })
 
-	return sorted.filter { node in !relevantNodes.contains(node) }
+	return sorted.filter { node in relevantNodes.contains(node) }
 }
 
 /// Returns the set of nodes that the given node in the provided graph has as
