@@ -38,7 +38,7 @@ public struct Resolver {
 	public func resolveDependenciesInCartfile(cartfile: Cartfile, lastResolved: ResolvedCartfile? = nil, dependenciesToUpdate: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return graphsForCartfile(cartfile, dependencyOf: nil, basedOnGraph: DependencyGraph())
 			.take(1)
-			.observeOn(QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
+			.observeOn(QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
 			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				let orderedNodes = graph.orderedNodes.map { node -> DependencyNode in
 					node.dependencies = graph.edges[node] ?? []
@@ -89,7 +89,7 @@ public struct Resolver {
 	/// of those dependencies (chosen from among the versions that actually
 	/// exist for each).
 	private func nodePermutationsForCartfile(cartfile: Cartfile) -> SignalProducer<[DependencyNode], CarthageError> {
-		let scheduler = QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.nodePermutationsForCartfile")
+		let scheduler = QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.nodePermutationsForCartfile")
 
 		return SignalProducer(values: cartfile.dependencies)
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
@@ -127,7 +127,7 @@ public struct Resolver {
 	/// possible permutation of the dependencies for the given node (chosen from
 	/// among the verisons that actually exist for each).
 	private func graphsForDependenciesOfNode(node: DependencyNode, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
-		let scheduler = QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.graphsForDependenciesOfNode")
+		let scheduler = QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.graphsForDependenciesOfNode")
 
 		return cartfileForDependency(node.dependencyVersion)
 			.startOn(scheduler)
@@ -163,7 +163,7 @@ public struct Resolver {
 	///
 	/// This is a helper method, and not meant to be called from outside.
 	private func graphsForNodes(nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
-		let scheduler = QueueScheduler(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), name: "org.carthage.CarthageKit.Resolver.graphsForNodes")
+		let scheduler = QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.graphsForNodes")
 		
 		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError>
 			.attempt {

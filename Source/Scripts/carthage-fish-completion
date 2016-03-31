@@ -31,6 +31,7 @@ complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l use-submodul
 complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l no-use-binaries
 complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l color -a "auto always never" -x
 complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l project-directory -x -a '(__fish_complete_directories (commandline -ct))'
+complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l derived-data -x -a '(__fish_complete_directories (commandline -ct))'
 
 complete -c carthage -n '__fish_prog_using_subcommand build' -l configuration -x -a "Release Debug"
 complete -c carthage -n '__fish_prog_using_subcommand build' -l platform -x -a "all Mac OSX iOS watchOS tvOS"
@@ -38,6 +39,7 @@ complete -c carthage -n '__fish_prog_using_subcommand build' -l no-skip-current
 complete -c carthage -n '__fish_prog_using_subcommand build' -l color -a "auto always never" -x
 complete -c carthage -n '__fish_prog_using_subcommand build' -l verbose
 complete -c carthage -n '__fish_prog_using_subcommand build' -l project-directory -x -a '(__fish_complete_directories (commandline -ct))'
+complete -c carthage -n '__fish_prog_using_subcommand build' -l derived-data -x -a '(__fish_complete_directories (commandline -ct))'
 
 complete -c carthage -n '__fish_prog_using_subcommand checkout' -l use-ssh
 complete -c carthage -n '__fish_prog_using_subcommand checkout' -l use-submodules
@@ -59,3 +61,4 @@ complete -c carthage -n '__fish_prog_using_subcommand update' -l use-submodules
 complete -c carthage -n '__fish_prog_using_subcommand update' -l no-use-binaries
 complete -c carthage -n '__fish_prog_using_subcommand update' -l color -a "auto always never" -x
 complete -c carthage -n '__fish_prog_using_subcommand update' -l project-directory -x -a '(__fish_complete_directories (commandline -ct))'
+complete -c carthage -n '__fish_prog_using_subcommand update' -l derived-data -x -a '(__fish_complete_directories (commandline -ct))'
