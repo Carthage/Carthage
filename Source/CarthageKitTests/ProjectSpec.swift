@@ -137,6 +137,40 @@ class ProjectSpec: QuickSpec {
 
 				assertProjectEvent(commitish: commitish) { expect($0).to(beNil()) }
 			}
+
+			context("when the version file does not exist") {
+				it("should build the framework") {
+					//TODO
+				}
+
+				it("should create a version file with the commitish") {
+					//TODO
+				}
+
+				it("should create a version file with the sha of the built framework") {
+					//TODO
+				}
+			}
+
+			context("when the version file exists") {
+				context("when the commitish and framework sha matches the content of the version file") {
+					it("should not rebuild the framework") {
+						//TODO
+					}
+				}
+
+				context("when the commitish does not match the commitish in the version file") {
+					it("should build the framework") {
+						//TODO
+					}
+				}
+
+				context("when the framework's sha does not match the sha in the version file") {
+					it("should build the framework") {
+						//TODO
+					}
+				}
+			}
 		}
 	}
 }
