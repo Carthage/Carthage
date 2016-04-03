@@ -65,3 +65,39 @@ public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>
 
 	return workingGraph.isEmpty ? sorted : nil
 }
+
+/// Performs a topological sort on the provided graph with its output sorted to
+/// include only the provided set of nodes and their transitively incoming 
+/// nodes (dependencies).
+///
+/// If the provided `nodes` set is empty, returns the result of invoking
+/// `topologicalSort()` with the provided graph.
+///
+/// Throws an exception if the provided node(s) are not contained within the 
+/// given graph.
+///
+/// Returns nil if the provided graph has a cycle or is malformed.
+public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>, nodes: Set<Node>) -> [Node]? {
+	guard !nodes.isEmpty else { return topologicalSort(graph) }
+
+	precondition(nodes.isSubsetOf(Set(graph.keys)))
+
+	// Ensure that the graph has no cycles, otherwise determining the set of 
+	// transitive incoming nodes could infinitely recurse.
+	guard let sorted = topologicalSort(graph) else { return nil }
+
+	let relevantNodes = Set(nodes.flatMap { Set([$0]).union(transitiveIncomingNodes(graph, node: $0)) })
+
+	return sorted.filter { node in relevantNodes.contains(node) }
+}
+
+/// Returns the set of nodes that the given node in the provided graph has as
+/// its incoming nodes, both directly and transitively.
+private func transitiveIncomingNodes<Node: Equatable>(graph: Dictionary<Node, Set<Node>>, node: Node) -> Set<Node> {
+	guard let nodes = graph[node] else { return Set() }
+
+	let incomingNodes = Set(nodes.flatMap { transitiveIncomingNodes(graph, node: $0) })
+
+	return nodes.union(incomingNodes)
+}
+

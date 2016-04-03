@@ -596,32 +596,19 @@ public final class Project {
 				return result
 			}
 			.flatMap(.Latest) { (graph: DependencyGraph) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				guard let sortedProjects = topologicalSort(graph) else {
+				let projectsToInclude = Set(graph
+					.map { project, _ in project }
+					.filter { project in dependenciesToInclude?.contains(project.name) ?? false })
+
+				guard let sortedProjects = topologicalSort(graph, nodes: projectsToInclude) else {
 					return SignalProducer(error: .DependencyCycle(graph))
 				}
 
-				let sorted = cartfile.dependencies.sort { left, right in
-					let leftIndex = sortedProjects.indexOf(left.project)
-					let rightIndex = sortedProjects.indexOf(right.project)
-					return leftIndex < rightIndex
-				}
+				let sortedDependencies = cartfile.dependencies
+					.filter { dependency in sortedProjects.contains(dependency.project) }
+					.sort { left, right in sortedProjects.indexOf(left.project) < sortedProjects.indexOf(right.project) }
 
-				guard let dependenciesToInclude = dependenciesToInclude where !dependenciesToInclude.isEmpty else {
-					return SignalProducer(values: sorted)
-				}
-
-				var toInclude = Set(dependenciesToInclude)
-
-				sorted
-					.filter { toInclude.contains($0.project.name) }
-					.forEach { dependency in
-						if let deps = graph[dependency.project] {
-							toInclude.unionInPlace(deps.map { $0.name })
-						}
-					}
-
-				let filtered = sorted.filter { toInclude.contains($0.project.name) }
-				return SignalProducer(values: filtered)
+				return SignalProducer(values: sortedDependencies)
 			}
 	}
 
