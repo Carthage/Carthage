@@ -1,5 +1,5 @@
-github "Carthage/ReactiveTask" ~> 0.9
-github "Carthage/Commandant" ~> 0.9.0
-github "jdhealy/PrettyColors" ~> 3.0
-github "ReactiveCocoa/ReactiveCocoa" ~> 4.0.1
-github "mdiep/Tentacle" ~> 0.1.1
+github "Carthage/ReactiveTask" "master"
+github "Carthage/Commandant" ~> 0.10.0
+github "jdhealy/PrettyColors" ~> 3.0.1
+github "ReactiveCocoa/ReactiveCocoa" ~> 4.1
+github "ikesyo/Tentacle" "swift-2.2"
