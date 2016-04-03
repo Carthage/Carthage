@@ -1,4 +1,4 @@
-github "Carthage/ReactiveTask" "master"
+github "Carthage/ReactiveTask" ~> 0.10
 github "Carthage/Commandant" ~> 0.10.0
 github "jdhealy/PrettyColors" ~> 3.0.1
 github "ReactiveCocoa/ReactiveCocoa" ~> 4.1
