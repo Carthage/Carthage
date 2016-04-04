@@ -28,7 +28,7 @@ public struct OutdatedCommand: CommandType {
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
-				<*> m <| Option(key: "verbose", defaultValue: false, usage: "include transient dependencies")
+				<*> m <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> ColorOptions.evaluate(m)
 				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 		}
@@ -48,23 +48,23 @@ public struct OutdatedCommand: CommandType {
 	}
 	
 	public let verb = "outdated"
-	public let function = "Check for updates to the project's dependencies"
+	public let function = "Check for compatible updates to the project's dependencies"
 
 	public func run(options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
-		.flatMap(.Merge) { $0.outdatedDependencies(options.verbose) }
-		.on(next: { outdatedDependencies in
-			let formatting = options.colorOptions.formatting
+			.flatMap(.Merge) { $0.outdatedDependencies(options.verbose) }
+			.on(next: { outdatedDependencies in
+				let formatting = options.colorOptions.formatting
 
-			if outdatedDependencies.count > 0 {
-				carthage.println(formatting.bullets + formatting.path(string: "The following dependencies are outdated:"))
-				for dependency in outdatedDependencies {
-					carthage.println(formatting.bullets + formatting.projectName(string: dependency.project.name) + " \(dependency.version)")
+				if outdatedDependencies.count > 0 {
+					carthage.println(formatting.path(string: "The following dependencies are outdated:"))
+					for (currentDependency, updatedDependency) in outdatedDependencies {
+						carthage.println(formatting.projectName(string: currentDependency.project.name) + " \(currentDependency.version) -> \(updatedDependency.version)")
+					}
+				} else {
+					carthage.println("All dependencies are up to date.")
 				}
-			} else {
-				carthage.println(formatting.bullets + "All dependencies are up to date.")
-			}
-		})
-		.waitOnCommand()
+			})
+			.waitOnCommand()
 	}
 }

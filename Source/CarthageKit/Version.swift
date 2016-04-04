@@ -160,33 +160,6 @@ extension PinnedVersion: CustomStringConvertible {
 	}
 }
 
-/// A compound version constiting of a project's current version,
-/// and a proposed version to update to.
-public struct OutdatedVersion: Equatable {
-	/// The current checked out version.
-	public let currentVersion: PinnedVersion
-
-	/// The proposed update version.
-	public let proposedVersion: PinnedVersion
-
-	public init(currentVersion: PinnedVersion, proposedVersion: PinnedVersion) {
-		self.currentVersion = currentVersion
-		self.proposedVersion = proposedVersion
-	}
-}
-
-public func ==(lhs: OutdatedVersion, rhs: OutdatedVersion) -> Bool {
-	return lhs.currentVersion == rhs.currentVersion && lhs.proposedVersion == rhs.proposedVersion
-}
-
-extension OutdatedVersion: VersionType {}
-
-extension OutdatedVersion: CustomStringConvertible {
-	public var description: String {
-		return "\(currentVersion) -> \(proposedVersion)"
-	}
-}
-
 /// Describes which versions are acceptable for satisfying a dependency
 /// requirement.
 public enum VersionSpecifier: VersionType {
