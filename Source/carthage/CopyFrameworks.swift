@@ -27,11 +27,19 @@ public struct CopyFrameworksCommand: CommandType {
 
 				return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
 					.flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
-						let copyFrameworks = copyFramework(source, target: target, validArchitectures: validArchitectures)
-						let copydSYMs = copyDebugSymbolsForFramework(source, validArchitectures: validArchitectures)
-						return combineLatest(copyFrameworks, copydSYMs)
-							.then(.empty)
-					}
+						return shouldIgnoreFramework(source, validArchitectures: validArchitectures)
+							.flatMap(.Concat) { shouldIgnore -> SignalProducer<(), CarthageError> in
+								if shouldIgnore {
+									carthage.println("warning: Ignoring \(frameworkName) because it does not support the current architecture\n")
+									return .empty
+								} else {
+									let copyFrameworks = copyFramework(source, target: target, validArchitectures: validArchitectures)
+									let copydSYMs = copyDebugSymbolsForFramework(source, validArchitectures: validArchitectures)
+									return combineLatest(copyFrameworks, copydSYMs)
+										.then(.empty)
+								}
+						}
+				}
 			}
 			.waitOnCommand()
 	}
@@ -49,6 +57,19 @@ private func copyFramework(source: NSURL, target: NSURL, validArchitectures: [St
 				return strip
 			}
 	}
+}
+
+private func shouldIgnoreFramework(framework: NSURL, validArchitectures: [String]) -> SignalProducer<Bool, CarthageError> {
+	return architecturesInPackage(framework)
+		.collect()
+		.map { architectures in
+			// Return all the architectures, present in the framework, that are valid.
+			validArchitectures.filter(architectures.contains)
+		}
+		.map { remainingArchitectures in
+			// If removing the useless architectures results in an empty fat file, wat means that the framework does not have a binary for the given architecture, ignore the framework.
+			remainingArchitectures.count == 0
+		}
 }
 
 private func copyDebugSymbolsForFramework(source: NSURL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
