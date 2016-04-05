@@ -84,9 +84,6 @@ class XcodeSpec: QuickSpec {
 		}
 
 		describe("build cache") {
-//			context("when the Cartfile.resolved has commitish for a repository and not built framework") {
-//
-//			}
 			context("when the Cartfile.resolved has commitish for a repository and built framework") {
 				beforeEach {
 					//setup a directory with a Cartfile.resolved and a Carthage/Build folder with a built framework
@@ -95,7 +92,7 @@ class XcodeSpec: QuickSpec {
 					]
 
 					for project in dependencies {
-						let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
+						let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac ])
 							.flatten(.Concat)
 							.ignoreTaskData()
 							.on(next: { (project, scheme) in
@@ -145,27 +142,42 @@ class XcodeSpec: QuickSpec {
 							//keep track of the existing framework's sha
 							let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/Archimedes.framework/Archimedes").path!
 
-
 							let taskDescription = Task("/usr/bin/env", arguments: ["openssl", "sha1", macPath])
 
 							// Run the task, ignoring the output, and do something with the final result.
-							let result: Result<String, TaskError>? = launchTask(taskDescription)
-								.ignoreTaskData()
-								.map { String(data: $0, encoding: NSUTF8StringEncoding) }
-								.ignoreNil()
-								.single()
-							print("Output of `\(taskDescription)`: \(result?.value ?? "")")
-							let output = result?.value ?? ""
-							let range = output.rangeOfString(" ")!
-							let distance = output.startIndex.distanceTo(range.startIndex)
-							let startIndex = output.startIndex.successor().advancedBy(distance)
-							let range2 = startIndex..<output.endIndex
-							let oldSHA1 = output[range2]
+							func getSHA1(taskDescription: Task) -> String {
+								let result: Result<String, TaskError>? = launchTask(taskDescription)
+									.ignoreTaskData()
+									.map { String(data: $0, encoding: NSUTF8StringEncoding) }
+									.ignoreNil()
+									.single()
+								let output = result?.value ?? ""
+								let range = output.rangeOfString(" ")!
+								let distance = output.startIndex.distanceTo(range.startIndex)
+								let startIndex = output.startIndex.successor().advancedBy(distance)
+								let range2 = startIndex..<output.endIndex
+								return output[range2]
+							}
+							let oldSHA1 = getSHA1(taskDescription)
 
-							//method under test
+							let dependencies = [
+								ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
+							]
 
+							for project in dependencies {
+								//method under test
+								let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac ])
+									.flatten(.Concat)
+									.ignoreTaskData()
+									.on(next: { (project, scheme) in
+										NSLog("Building scheme \"\(scheme)\" in \(project)")
+									})
+									.wait()
+
+								expect(result.error).to(beNil())
+							}
+							let newSHA1 = getSHA1(taskDescription)
 							//check the sha
-							let newSHA1 = "somethingElse"
 							expect(oldSHA1).to(equal(newSHA1))
 						}
 					}
