@@ -434,16 +434,24 @@ public func submodulesInRepository(repositoryFileURL: NSURL, revision: String = 
 		}
 }
 
-/// Determines whether any reference exists for the given pattern in the given
+/// Determines whether a branch exists for the given pattern in the given
 /// repository.
 ///
 /// If the specified file URL does not represent a valid Git repository, `false`
 /// will be sent.
-internal func referenceExistsInRepository(repositoryFileURL: NSURL, pattern: String) -> SignalProducer<Bool, NoError> {
+internal func branchExistsInRepository(repositoryFileURL: NSURL, pattern: String) -> SignalProducer<Bool, NoError> {
 	return ensureDirectoryExistsAtURL(repositoryFileURL)
-		.then(launchGitTask([ "show-ref", pattern ], repositoryFileURL: repositoryFileURL))
-		.then(.init(value: true))
-		.flatMapError { _ in .init(value: false) }
+		.succeeded()
+		.flatMap(.Concat) { exists -> SignalProducer<Bool, NoError> in
+			if !exists { return .init(value: false) }
+			return zip(
+					launchGitTask([ "show-ref", pattern ], repositoryFileURL: repositoryFileURL).succeeded(),
+					launchGitTask([ "show-ref", "--tags", pattern ], repositoryFileURL: repositoryFileURL).succeeded()
+				)
+				.map { branch, tag in
+					return branch && !tag
+				}
+		}
 }
 
 /// Determines whether the specified revision identifies a valid commit.

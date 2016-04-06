@@ -146,7 +146,7 @@ public struct Resolver {
 	/// This is a helper method, and not meant to be called from outside.
 	private func graphsForCartfile(cartfile: Cartfile, dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		return nodePermutationsForCartfile(cartfile)
-			.flatMap(.Concat) { (nodes: [DependencyNode]) in
+			.flatMap(.Concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
 				return self
 					.graphsForNodes(nodes, dependencyOf: dependencyOf, basedOnGraph: inputGraph)
 					.materialize()

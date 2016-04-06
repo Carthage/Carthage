@@ -124,6 +124,13 @@ extension SignalProducerType {
 	private func permuteWith<U>(otherProducer: SignalProducer<U, Error>) -> SignalProducer<(Value, U), Error> {
 		return lift(Signal.permuteWith)(otherProducer)
 	}
+	
+	/// Sends a boolean of whether the producer succeeded or failed.
+	internal func succeeded() -> SignalProducer<Bool, NoError> {
+		return self
+			.then(.init(value: true))
+			.flatMapError { _ in .init(value: false) }
+	}
 }
 
 extension SignalProducerType where Value: SignalProducerType, Error == Value.Error {
