@@ -83,26 +83,42 @@ class XcodeSpec: QuickSpec {
 			}
 		}
 
+		func somethingThatBuilds(project: Project) {
+			//setup a directory with a Cartfile.resolved and a Carthage/Build folder with a built framework
+			_ = project.buildCheckedOutDependenciesWithConfiguration("Debug", dependenciesToBuild: ["Archimedes"], forPlatforms: [Platform.Mac], derivedDataPath: nil)
+				.flatten(.Concat)
+				.wait()
+//			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac ])
+//				.flatten(.Concat)
+//				.ignoreTaskData()
+//				.on(next: { (project, scheme) in
+//					NSLog("Building scheme \"\(scheme)\" in \(project)")
+//				})
+//				.wait()
+
+			Task.waitForAllTaskTermination()
+		}
+
 		describe("build cache") {
 			context("when the Cartfile.resolved has commitish for a repository and built framework") {
+				let project1 = Project(directoryURL: directoryURL)
+				let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/Archimedes.framework").path!
+
 				beforeEach {
-					//setup a directory with a Cartfile.resolved and a Carthage/Build folder with a built framework
-					let dependencies = [
-						ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
-					]
-
-					for project in dependencies {
-						let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac ])
-							.flatten(.Concat)
-							.ignoreTaskData()
-							.on(next: { (project, scheme) in
-								NSLog("Building scheme \"\(scheme)\" in \(project)")
-							})
-							.wait()
-
-						expect(result.error).to(beNil())
+					var isDirectory: ObjCBool = true
+					if NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory) {
+						try! NSFileManager.defaultManager().removeItemAtPath(macPath)
 					}
+					somethingThatBuilds(project1)
+					print(macPath)
+				}
 
+				afterEach {
+					//delete the Build folder
+					var isDirectory: ObjCBool = true
+					if NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory) {
+						try! NSFileManager.defaultManager().removeItemAtPath(macPath)
+					}
 				}
 
 				context("when the version file does not exist") {
@@ -138,11 +154,9 @@ class XcodeSpec: QuickSpec {
 
 					context("when the commitish and framework sha matches the content of the version file") {
 						fit("should not rebuild the framework") {
-							//TODO
 							//keep track of the existing framework's sha
-							let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/Archimedes.framework/Archimedes").path!
-
-							let taskDescription = Task("/usr/bin/env", arguments: ["openssl", "sha1", macPath])
+							let archimedesBinaryPath = buildFolderURL.URLByAppendingPathComponent("Mac/Archimedes.framework/Archimedes").path!
+							let taskDescription = Task("/usr/bin/env", arguments: ["openssl", "sha1", archimedesBinaryPath])
 
 							// Run the task, ignoring the output, and do something with the final result.
 							func getSHA1(taskDescription: Task) -> String {
@@ -158,26 +172,12 @@ class XcodeSpec: QuickSpec {
 								let range2 = startIndex..<output.endIndex
 								return output[range2]
 							}
+
 							let oldSHA1 = getSHA1(taskDescription)
 
-							let dependencies = [
-								ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
-							]
+							somethingThatBuilds(project1)
 
-							for project in dependencies {
-								//method under test
-								let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac ])
-									.flatten(.Concat)
-									.ignoreTaskData()
-									.on(next: { (project, scheme) in
-										NSLog("Building scheme \"\(scheme)\" in \(project)")
-									})
-									.wait()
-
-								expect(result.error).to(beNil())
-							}
 							let newSHA1 = getSHA1(taskDescription)
-							//check the sha
 							expect(oldSHA1).to(equal(newSHA1))
 						}
 					}
@@ -375,6 +375,7 @@ class XcodeSpec: QuickSpec {
 			expect(expectedError) == true
 		}
 
+		//x
 		it("should build for one platform") {
 			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac ])
