@@ -1,6 +1,7 @@
 github "thoughtbot/Argo" "v3.0.1"
+github "krzyzanowskim/CryptoSwift" "0.3.1"
 github "thoughtbot/Curry" "v2.2.0"
-github "Quick/Nimble" "v4.0.0"
+github "Quick/Nimble" "v4.0.1"
 github "jdhealy/PrettyColors" "v3.0.2"
 github "Quick/Quick" "v0.9.2"
 github "antitypical/Result" "2.0.0"
