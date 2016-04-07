@@ -124,5 +124,22 @@ class CartfileSpec: QuickSpec {
 			let dupe5 = dupes[2]
 			expect(dupe5) == ProjectIdentifier.GitHub(Repository(owner: "5", name: "5"))
 		}
+
+		describe("ResolvedCartfile") {
+			it("should output GitHub dependencies as expected") {
+				let project = ProjectIdentifier.GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
+				let version = PinnedVersion("v2.3.1")
+				let dependency = Dependency(project: project, version: version)
+
+				let resolvedCartfile = ResolvedCartfile(dependencies: [ dependency ])
+				let outputs = resolvedCartfile
+					.description
+					.characters
+					.split("\n")
+					.map(String.init)
+
+				expect(outputs).to(contain("github \"ReactiveCocoa/ReactiveCocoa\" \"v2.3.1\""))
+			}
+		}
 	}
 }
