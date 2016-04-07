@@ -31,6 +31,12 @@ registry.register(VersionCommand())
 let helpCommand = HelpCommand(registry: registry)
 registry.register(helpCommand)
 
+if let executableURL = NSBundle.mainBundle().executableURL
+	where executableURL.lastPathComponent?.caseInsensitiveCompare("carthage") == .OrderedSame,
+	let carthagePath = executableURL.path {
+	setenv("CARTHAGE_PATH", "\(carthagePath)",0)
+}
+
 registry.main(defaultVerb: helpCommand.verb) { error in
 	fputs(error.description + "\n", stderr)
 }
