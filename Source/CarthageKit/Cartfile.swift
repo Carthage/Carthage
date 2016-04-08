@@ -266,7 +266,15 @@ extension ProjectIdentifier: CustomStringConvertible {
 	public var description: String {
 		switch self {
 		case let .GitHub(repo):
-			return "github \"\(repo)\""
+			let repoDescription: String
+			switch repo.server {
+			case .DotCom:
+				repoDescription = "\(repo.owner)/\(repo.name)"
+
+			case .Enterprise:
+				repoDescription = "\(repo.URL)"
+			}
+			return "github \"\(repoDescription)\""
 
 		case let .Git(URL):
 			return "git \"\(URL)\""
