@@ -129,9 +129,8 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	case let (.GitHubAPIRequestFailed(left), .GitHubAPIRequestFailed(right)):
 		return left == right
 	
-	case (.TaskError, .TaskError):
-		// TODO: Implement Equatable in ReactiveTask.
-		return false
+	case let (.TaskError(left), .TaskError(right)):
+		return left == right
 	
 	default:
 		return false
