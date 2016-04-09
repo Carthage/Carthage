@@ -23,9 +23,7 @@ class ArchiveSpec: QuickSpec {
 				expect(result?.error).to(beNil())
 
 				let directoryPath = result?.value?.path ?? NSFileManager.defaultManager().currentDirectoryPath
-				var isDirectory: ObjCBool = false
-				expect(NSFileManager.defaultManager().fileExistsAtPath(directoryPath, isDirectory: &isDirectory)) == true
-				expect(isDirectory) == true
+				expect(directoryPath).to(beExistingDirectory())
 
 				let contents = (try? NSFileManager.defaultManager().contentsOfDirectoryAtPath(directoryPath)) ?? []
 				let innerFolderName = "CartfilePrivateOnly"

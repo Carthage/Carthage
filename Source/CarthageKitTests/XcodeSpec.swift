@@ -122,9 +122,7 @@ class XcodeSpec: QuickSpec {
 				let iOSdSYMPath = (iOSPath as NSString).stringByAppendingPathExtension("dSYM")!
 
 				for path in [ macPath, macdSYMPath, iOSPath, iOSdSYMPath ] {
-					var isDirectory: ObjCBool = false
-					expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
-					expect(isDirectory) == true
+					expect(path).to(beExistingDirectory())
 				}
 			}
 			let frameworkFolderURL = buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework")
@@ -140,18 +138,14 @@ class XcodeSpec: QuickSpec {
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
 			let auxiliaryFrameworkPath = buildFolderURL.URLByAppendingPathComponent("iOS/AuxiliaryFramework.framework").path!
-			var isDirectory: ObjCBool = false
-			expect(NSFileManager.defaultManager().fileExistsAtPath(auxiliaryFrameworkPath, isDirectory: &isDirectory)) == true
-			expect(isDirectory) == true
+			expect(auxiliaryFrameworkPath).to(beExistingDirectory())
 
 			// Copy ReactiveCocoaLayout.framework to the temporary folder.
 			let targetURL = targetFolderURL.URLByAppendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
 
 			let resultURL = copyProduct(frameworkFolderURL, targetURL).single()
 			expect(resultURL?.value) == targetURL
-
-			expect(NSFileManager.defaultManager().fileExistsAtPath(targetURL.path!, isDirectory: &isDirectory)) == true
-			expect(isDirectory) == true
+			expect(targetURL.path).to(beExistingDirectory())
 
 			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
 			expect(strippingResult.value).notTo(beNil())
@@ -211,10 +205,7 @@ class XcodeSpec: QuickSpec {
 
 			for (platform, framework) in expectedPlatformsFrameworks {
 				let path = _buildFolderURL.URLByAppendingPathComponent("\(platform)/\(framework).framework").path!
-
-				var isDirectory: ObjCBool = false
-				expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
-				expect(isDirectory) == true
+				expect(path).to(beExistingDirectory())
 			}
 		}
 
@@ -239,9 +230,7 @@ class XcodeSpec: QuickSpec {
 			let iOSPath = _buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
 
 			for path in [ macPath, iOSPath ] {
-				var isDirectory: ObjCBool = false
-				expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
-				expect(isDirectory) == true
+				expect(path).to(beExistingDirectory())
 			}
 		}
 
@@ -285,9 +274,7 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the build product exists at the top level.
 			let path = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
-			var isDirectory: ObjCBool = false
-			expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
-			expect(isDirectory) == true
+			expect(path).to(beExistingDirectory())
 
 			// Verify that the other platform wasn't built.
 			let incorrectPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
@@ -312,9 +299,7 @@ class XcodeSpec: QuickSpec {
 			let iosPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
 
 			for path in [ macPath, iosPath ] {
-				var isDirectory: ObjCBool = false
-				expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
-				expect(isDirectory) == true
+				expect(path).to(beExistingDirectory())
 			}
 		}
 
@@ -340,10 +325,26 @@ class XcodeSpec: QuickSpec {
 	}
 }
 
-// MARK: Helpers
+// MARK: Matcher
 
-extension ObjCBool: Equatable {}
+internal func beExistingDirectory() -> MatcherFunc<String> {
+	return MatcherFunc { actualExpression, failureMessage in
+		failureMessage.postfixMessage = "exist and be a directory"
+		let actualPath = try actualExpression.evaluate()
 
-public func == (lhs: ObjCBool, rhs: ObjCBool) -> Bool {
-	return lhs.boolValue == rhs.boolValue
+		guard let path = actualPath else {
+			return false
+		}
+
+		var isDirectory: ObjCBool = false
+		let exists = NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)
+
+		if !exists {
+			failureMessage.postfixMessage += ", but does not exist"
+		} else if !isDirectory {
+			failureMessage.postfixMessage += ", but is not a directory"
+		}
+
+		return exists && isDirectory
+	}
 }
