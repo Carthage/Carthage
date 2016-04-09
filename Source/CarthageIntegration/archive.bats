@@ -18,9 +18,36 @@ teardown() {
 }
 
 @test "carthage archive after carthage build --no-skip-current produces a zipped framework of all frameworks" {
-    run carthage build --no-skip-current
+    run carthage build --platform mac --no-skip-current
     [ "$status" -eq 0 ]
     run carthage archive
     [ "$status" -eq 0 ]
     [ -e Ra.framework.zip ]
+}
+
+@test "carthage archive --output with a non-existing path ends with '/' should produce a zip file into the specified directory" {
+    run carthage build --platform mac --no-skip-current
+    [ "$status" -eq 0 ]
+    rm -rf FooBar
+    run carthage archive --output FooBar/
+    [ "$status" -eq 0 ]
+    [ -e FooBar/Ra.framework.zip ]
+}
+
+@test "carthage archive --output with an existing directory path should produce a zip file into the specified directory" {
+    run carthage build --platform mac --no-skip-current
+    [ "$status" -eq 0 ]
+    mkdir FooBar
+    run carthage archive --output FooBar
+    [ "$status" -eq 0 ]
+    [ -e FooBar/Ra.framework.zip ]
+}
+
+@test "carthage archive --output with a file path should produce a zip file at the given path" {
+    run carthage build --platform mac --no-skip-current
+    [ "$status" -eq 0 ]
+    rm -rf FooBar
+    run carthage archive --output FooBar/GreatName.framework.zip
+    [ "$status" -eq 0 ]
+    [ -e FooBar/GreatName.framework.zip ]
 }
