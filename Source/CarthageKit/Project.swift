@@ -361,15 +361,17 @@ public final class Project {
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
 	public func outdatedDependencies(includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], CarthageError> {
+		typealias PinnedDependency = Dependency<PinnedVersion>
+
 		let currentDependenciesProducer = loadResolvedCartfile()
 			.map { $0.dependencies }
 		let updatedDependenciesProducer = updatedResolvedCartfile()
 			.map { $0.dependencies }
 		let outdatedDependenciesProducer = combineLatest(currentDependenciesProducer, updatedDependenciesProducer)
-			.map { (currentDependencies, updatedDependencies) -> [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)] in
-				var outdatedDependencies: [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)] = []
+			.map { (currentDependencies, updatedDependencies) -> [(PinnedDependency, PinnedDependency)] in
+				var outdatedDependencies: [(PinnedDependency, PinnedDependency)] = []
 				
-				var currentDependenciesDictionary = [ProjectIdentifier: Dependency<PinnedVersion>]()
+				var currentDependenciesDictionary = [ProjectIdentifier: PinnedDependency]()
 				for dependency in currentDependencies {
 					currentDependenciesDictionary[dependency.project] = dependency
 				}
@@ -389,7 +391,7 @@ public final class Project {
 
 			return outdatedDependenciesProducer
 				.combineLatestWith(explicitDependencyIdentifiersProducer)
-				.map { (oudatedDependencies: [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], explicitDependencyIdentifiers: [ProjectIdentifier]) -> [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)] in
+				.map { (oudatedDependencies: [(PinnedDependency, PinnedDependency)], explicitDependencyIdentifiers: [ProjectIdentifier]) -> [(PinnedDependency, PinnedDependency)] in
 					return oudatedDependencies.filter { explicitDependencyIdentifiers.contains($0.0.project) }
 				}
 		}
