@@ -22,7 +22,7 @@ public struct OutdatedCommand: CommandType {
 		public static func create(useSSH: Bool) -> Bool -> ColorOptions -> String -> Options {
 			return { verbose in { colorOptions in { directoryPath in
 				return self.init(useSSH: useSSH, verbose: verbose, colorOptions: colorOptions, directoryPath: directoryPath)
-				} } }
+			} } }
 		}
 		
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
