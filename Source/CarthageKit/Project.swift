@@ -354,6 +354,48 @@ public final class Project {
 			.collect()
 			.map(ResolvedCartfile.init)
 	}
+	
+	/// Attempts to determine which of the project's Carthage
+	/// dependencies are out of date.
+	///
+	/// This will fetch dependency repositories as necessary, but will not check
+	/// them out into the project's working directory.
+	public func outdatedDependencies(includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], CarthageError> {
+		let currentDependenciesProducer = loadResolvedCartfile()
+			.map { $0.dependencies }
+		let updatedDependenciesProducer = updatedResolvedCartfile()
+			.map { $0.dependencies }
+		let outdatedDependenciesProducer = combineLatest(currentDependenciesProducer, updatedDependenciesProducer)
+			.map { (currentDependencies, updatedDependencies) -> [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)] in
+				var outdatedDependencies: [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)] = []
+				
+				var currentDependenciesDictionary = [ProjectIdentifier: Dependency<PinnedVersion>]()
+				for dependency in currentDependencies {
+					currentDependenciesDictionary[dependency.project] = dependency
+				}
+				
+				for updatedDependency in updatedDependencies {
+					if let resolvedDependency = currentDependenciesDictionary[updatedDependency.project] where resolvedDependency.version != updatedDependency.version {
+						outdatedDependencies.append((resolvedDependency, updatedDependency))
+					}
+				}
+
+				return outdatedDependencies
+			}
+
+		if !includeNestedDependencies {
+			let explicitDependencyIdentifiersProducer = loadCombinedCartfile()
+				.map { $0.dependencies.map { $0.project } }
+
+			return outdatedDependenciesProducer
+				.combineLatestWith(explicitDependencyIdentifiersProducer)
+				.map { (oudatedDependencies: [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], explicitDependencyIdentifiers: [ProjectIdentifier]) -> [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)] in
+					return oudatedDependencies.filter { explicitDependencyIdentifiers.contains($0.0.project) }
+				}
+		}
+
+		return outdatedDependenciesProducer
+	}
 
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in Cartfile.resolved, and also in the working
