@@ -362,19 +362,20 @@ public final class Project {
 	/// them out into the project's working directory.
 	public func outdatedDependencies(includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], CarthageError> {
 		typealias PinnedDependency = Dependency<PinnedVersion>
+		typealias OutdatedDependency = (PinnedDependency, PinnedDependency)
 
 		let currentDependencies = loadResolvedCartfile()
 			.map { $0.dependencies }
 		let updatedDependencies = updatedResolvedCartfile()
 			.map { $0.dependencies }
 		let outdatedDependencies = combineLatest(currentDependencies, updatedDependencies)
-			.map { (currentDependencies, updatedDependencies) -> [(PinnedDependency, PinnedDependency)] in
+			.map { (currentDependencies, updatedDependencies) -> [OutdatedDependency] in
 				var currentDependenciesDictionary = [ProjectIdentifier: PinnedDependency]()
 				for dependency in currentDependencies {
 					currentDependenciesDictionary[dependency.project] = dependency
 				}
 
-				return updatedDependencies.flatMap { updated -> (PinnedDependency, PinnedDependency)? in
+				return updatedDependencies.flatMap { updated -> OutdatedDependency? in
 					if let resolved = currentDependenciesDictionary[updated.project] where resolved.version != updated.version {
 						return (resolved, updated)
 					} else {
@@ -391,7 +392,7 @@ public final class Project {
 			.map { $0.dependencies.map { $0.project } }
 
 		return combineLatest(outdatedDependencies, explicitDependencyProjects)
-			.map { (oudatedDependencies, explicitDependencyProjects) -> [(PinnedDependency, PinnedDependency)] in
+			.map { (oudatedDependencies, explicitDependencyProjects) -> [OutdatedDependency] in
 				return oudatedDependencies.filter { resolved, updated in
 					return explicitDependencyProjects.contains(resolved.project)
 				}
