@@ -24,14 +24,11 @@ class XcodeSpec: QuickSpec {
 
 		beforeEach {
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(buildFolderURL)
-
 			expect { try NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
-			return
 		}
 		
 		afterEach {
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(targetFolderURL)
-			return
 		}
 		
 		describe("\(ProjectLocator.self)") {
@@ -124,18 +121,11 @@ class XcodeSpec: QuickSpec {
 				let iOSPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
 				let iOSdSYMPath = (iOSPath as NSString).stringByAppendingPathExtension("dSYM")!
 
-				var isDirectory: ObjCBool = false
-				expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
-				expect(isDirectory) == true
-
-				expect(NSFileManager.defaultManager().fileExistsAtPath(macdSYMPath, isDirectory: &isDirectory)) == true
-				expect(isDirectory) == true
-
-				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)) == true
-				expect(isDirectory) == true
-
-				expect(NSFileManager.defaultManager().fileExistsAtPath(iOSdSYMPath, isDirectory: &isDirectory)) == true
-				expect(isDirectory) == true
+				for path in [ macPath, macdSYMPath, iOSPath, iOSdSYMPath ] {
+					var isDirectory: ObjCBool = false
+					expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
+					expect(isDirectory) == true
+				}
 			}
 			let frameworkFolderURL = buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework")
 
@@ -145,9 +135,7 @@ class XcodeSpec: QuickSpec {
 				.collect()
 				.single()
 
-			expect(architectures?.value).to(contain("i386"))
-			expect(architectures?.value).to(contain("armv7"))
-			expect(architectures?.value).to(contain("arm64"))
+			expect(architectures?.value).to(contain("i386", "armv7", "arm64"))
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
@@ -173,8 +161,7 @@ class XcodeSpec: QuickSpec {
 				.single()
 			
 			expect(strippedArchitectures?.value).notTo(contain("i386"))
-			expect(strippedArchitectures?.value).to(contain("armv7"))
-			expect(strippedArchitectures?.value).to(contain("arm64"))
+			expect(strippedArchitectures?.value).to(contain("armv7", "arm64"))
 
 			let modulesDirectoryURL = targetURL.URLByAppendingPathComponent("Modules", isDirectory: true)
 			expect(NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!)) == false
@@ -223,17 +210,11 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for (platform, framework) in expectedPlatformsFrameworks {
-				var isDirectory: ObjCBool = false
-
 				let path = _buildFolderURL.URLByAppendingPathComponent("\(platform)/\(framework).framework").path!
 
-				let fileExists = NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)
-				expect(fileExists) == true
-				if fileExists {
-					expect(isDirectory) == true
-				} else {
-					print("failed to build \(platform)/\(framework).framework")
-				}
+				var isDirectory: ObjCBool = false
+				expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
+				expect(isDirectory) == true
 			}
 		}
 
@@ -257,12 +238,11 @@ class XcodeSpec: QuickSpec {
 			let macPath = _buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
 			let iOSPath = _buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
 
-			var isDirectory: ObjCBool = false
-			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
-			expect(isDirectory) == true
-
-			expect(NSFileManager.defaultManager().fileExistsAtPath(iOSPath, isDirectory: &isDirectory)) == true
-			expect(isDirectory) == true
+			for path in [ macPath, iOSPath ] {
+				var isDirectory: ObjCBool = false
+				expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
+				expect(isDirectory) == true
+			}
 		}
 
 		it("should error out with .NoSharedFrameworkSchemes if there is no shared framework schemes") {
@@ -282,11 +262,9 @@ class XcodeSpec: QuickSpec {
 			expect(result.error).notTo(beNil())
 
 			let expectedError: Bool
-			switch result.error {
-			case .Some(.NoSharedFrameworkSchemes):
+			if case .NoSharedFrameworkSchemes? = result.error {
 				expectedError = true
-
-			default:
+			} else {
 				expectedError = false
 			}
 
@@ -328,35 +306,30 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).to(beNil())
 
-			var isDirectory: ObjCBool = false
-
-			// Verify that the one build product exists at the top level.
+			// Verify that the build products of all specified platforms exist 
+			// at the top level.
 			let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
-			expect(NSFileManager.defaultManager().fileExistsAtPath(macPath, isDirectory: &isDirectory)) == true
-			expect(isDirectory) == true
-
-			// Verify that the other build product exists at the top level.
 			let iosPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
-			expect(NSFileManager.defaultManager().fileExistsAtPath(iosPath, isDirectory: &isDirectory)) == true
-			expect(isDirectory) == true
+
+			for path in [ macPath, iosPath ] {
+				var isDirectory: ObjCBool = false
+				expect(NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)) == true
+				expect(isDirectory) == true
+			}
 		}
 
 		it("should locate the project") {
 			let result = locateProjectsInDirectory(directoryURL).first()
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
-
-			let locator = result?.value!
-			expect(locator) == ProjectLocator.ProjectFile(projectURL)
+			expect(result?.value) == .ProjectFile(projectURL)
 		}
 
 		it("should locate the project from the parent directory") {
 			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!).collect().first()
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
-
-			let locators = result?.value!
-			expect(locators).to(contain(ProjectLocator.ProjectFile(projectURL)))
+			expect(result?.value).to(contain(.ProjectFile(projectURL)))
 		}
 
 		it("should not locate the project from a directory not containing it") {
