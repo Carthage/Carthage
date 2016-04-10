@@ -14,12 +14,12 @@ import ReactiveCocoa
 
 public struct ArchiveCommand: CommandType {
 	public struct Options: OptionsType {
-		public let outputPath: String
+		public let outputPath: String?
 		public let directoryPath: String
 		public let colorOptions: ColorOptions
 		public let frameworkNames: [String]
 
-		static func create(outputPath: String) -> String -> ColorOptions -> [String] -> Options {
+		static func create(outputPath: String?) -> String -> ColorOptions -> [String] -> Options {
 			return { directoryPath in { colorOptions in { frameworkNames in
 				return self.init(outputPath: outputPath, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: frameworkNames)
 			} } }
@@ -27,7 +27,7 @@ public struct ArchiveCommand: CommandType {
 
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
-				<*> m <| Option(key: "output", defaultValue: "", usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)")
+				<*> m <| Option(key: "output", defaultValue: nil, usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)")
 				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> ColorOptions.evaluate(m)
 				<*> m <| Argument(defaultValue: [], usage: "the names of the built frameworks to archive without any extension (or blank to pick up the frameworks in the current project built by `--no-skip-current`)")
@@ -108,8 +108,12 @@ public struct ArchiveCommand: CommandType {
 						return SignalProducer(error: error)
 					}
 
-					let outputPath = (options.outputPath.isEmpty ? "\(frameworks.first!).zip" : options.outputPath)
+					let outputPath = self.outputPathWithOptions(options, frameworks: frameworks)
 					let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
+
+					if let directory = outputURL.URLByDeletingLastPathComponent {
+						_ = try? NSFileManager.defaultManager().createDirectoryAtURL(directory, withIntermediateDirectories: true, attributes: nil)
+					}
 
 					return zipIntoArchive(outputURL, paths).on(completed: {
 						carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
@@ -117,5 +121,28 @@ public struct ArchiveCommand: CommandType {
 				}
 		}
 		.waitOnCommand()
+	}
+
+	/// Returns an appropriate output file path for the resulting zip file using
+	/// the given option and frameworks.
+	private func outputPathWithOptions(options: Options, frameworks: [String]) -> String {
+		let defaultOutputPath = "\(frameworks.first!).zip"
+
+		return options.outputPath.map { path -> String in
+			if path.hasSuffix("/") {
+				// The given path should be a directory.
+				return path + defaultOutputPath
+			}
+
+			var isDirectory: ObjCBool = false
+			if NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory) && isDirectory {
+				// If the given path is an existing directory, output a zip file
+				// into that directory.
+				return (path as NSString).stringByAppendingPathComponent(defaultOutputPath)
+			} else {
+				// Use the given path as the final output.
+				return path
+			}
+		} ?? defaultOutputPath
 	}
 }
