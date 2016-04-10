@@ -361,40 +361,42 @@ public final class Project {
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
 	public func outdatedDependencies(includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], CarthageError> {
-		let currentDependenciesProducer = loadResolvedCartfile()
+		typealias PinnedDependency = Dependency<PinnedVersion>
+		typealias OutdatedDependency = (PinnedDependency, PinnedDependency)
+
+		let currentDependencies = loadResolvedCartfile()
 			.map { $0.dependencies }
-		let updatedDependenciesProducer = updatedResolvedCartfile()
+		let updatedDependencies = updatedResolvedCartfile()
 			.map { $0.dependencies }
-		let outdatedDependenciesProducer = combineLatest(currentDependenciesProducer, updatedDependenciesProducer)
-			.map { (currentDependencies, updatedDependencies) -> [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)] in
-				var outdatedDependencies: [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)] = []
-				
-				var currentDependenciesDictionary = [ProjectIdentifier: Dependency<PinnedVersion>]()
+		let outdatedDependencies = combineLatest(currentDependencies, updatedDependencies)
+			.map { (currentDependencies, updatedDependencies) -> [OutdatedDependency] in
+				var currentDependenciesDictionary = [ProjectIdentifier: PinnedDependency]()
 				for dependency in currentDependencies {
 					currentDependenciesDictionary[dependency.project] = dependency
 				}
-				
-				for updatedDependency in updatedDependencies {
-					if let resolvedDependency = currentDependenciesDictionary[updatedDependency.project] where resolvedDependency.version != updatedDependency.version {
-						outdatedDependencies.append((resolvedDependency, updatedDependency))
+
+				return updatedDependencies.flatMap { updated -> OutdatedDependency? in
+					if let resolved = currentDependenciesDictionary[updated.project] where resolved.version != updated.version {
+						return (resolved, updated)
+					} else {
+						return nil
 					}
 				}
-
-				return outdatedDependencies
 			}
 
-		if !includeNestedDependencies {
-			let explicitDependencyIdentifiersProducer = loadCombinedCartfile()
-				.map { $0.dependencies.map { $0.project } }
-
-			return outdatedDependenciesProducer
-				.combineLatestWith(explicitDependencyIdentifiersProducer)
-				.map { (oudatedDependencies: [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], explicitDependencyIdentifiers: [ProjectIdentifier]) -> [(Dependency<PinnedVersion>, Dependency<PinnedVersion>)] in
-					return oudatedDependencies.filter { explicitDependencyIdentifiers.contains($0.0.project) }
-				}
+		if includeNestedDependencies {
+			return outdatedDependencies
 		}
 
-		return outdatedDependenciesProducer
+		let explicitDependencyProjects = loadCombinedCartfile()
+			.map { $0.dependencies.map { $0.project } }
+
+		return combineLatest(outdatedDependencies, explicitDependencyProjects)
+			.map { (oudatedDependencies, explicitDependencyProjects) -> [OutdatedDependency] in
+				return oudatedDependencies.filter { resolved, updated in
+					return explicitDependencyProjects.contains(resolved.project)
+				}
+		}
 	}
 
 	/// Updates the dependencies of the project to the latest version. The

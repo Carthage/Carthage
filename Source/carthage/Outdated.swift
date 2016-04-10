@@ -22,7 +22,7 @@ public struct OutdatedCommand: CommandType {
 		public static func create(useSSH: Bool) -> Bool -> ColorOptions -> String -> Options {
 			return { verbose in { colorOptions in { directoryPath in
 				return self.init(useSSH: useSSH, verbose: verbose, colorOptions: colorOptions, directoryPath: directoryPath)
-				} } }
+			} } }
 		}
 		
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
@@ -56,7 +56,7 @@ public struct OutdatedCommand: CommandType {
 			.on(next: { outdatedDependencies in
 				let formatting = options.colorOptions.formatting
 
-				if outdatedDependencies.count > 0 {
+				if !outdatedDependencies.isEmpty {
 					carthage.println(formatting.path(string: "The following dependencies are outdated:"))
 					for (currentDependency, updatedDependency) in outdatedDependencies {
 						carthage.println(formatting.projectName(string: currentDependency.project.name) + " \(currentDependency.version) -> \(updatedDependency.version)")
