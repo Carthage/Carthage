@@ -108,7 +108,7 @@ public struct ArchiveCommand: CommandType {
 						return SignalProducer(error: error)
 					}
 
-					let outputPath = self.outputPathWithOptions(options, frameworks: frameworks)
+					let outputPath = outputPathWithOptions(options, frameworks: frameworks)
 					let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
 
 					if let directory = outputURL.URLByDeletingLastPathComponent {
@@ -122,27 +122,27 @@ public struct ArchiveCommand: CommandType {
 		}
 		.waitOnCommand()
 	}
+}
 
-	/// Returns an appropriate output file path for the resulting zip file using
-	/// the given option and frameworks.
-	private func outputPathWithOptions(options: Options, frameworks: [String]) -> String {
-		let defaultOutputPath = "\(frameworks.first!).zip"
+/// Returns an appropriate output file path for the resulting zip file using
+/// the given option and frameworks.
+private func outputPathWithOptions(options: ArchiveCommand.Options, frameworks: [String]) -> String {
+	let defaultOutputPath = "\(frameworks.first!).zip"
 
-		return options.outputPath.map { path -> String in
-			if path.hasSuffix("/") {
-				// The given path should be a directory.
-				return path + defaultOutputPath
-			}
+	return options.outputPath.map { path -> String in
+		if path.hasSuffix("/") {
+			// The given path should be a directory.
+			return path + defaultOutputPath
+		}
 
-			var isDirectory: ObjCBool = false
-			if NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory) && isDirectory {
-				// If the given path is an existing directory, output a zip file
-				// into that directory.
-				return (path as NSString).stringByAppendingPathComponent(defaultOutputPath)
-			} else {
-				// Use the given path as the final output.
-				return path
-			}
-		} ?? defaultOutputPath
-	}
+		var isDirectory: ObjCBool = false
+		if NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory) && isDirectory {
+			// If the given path is an existing directory, output a zip file
+			// into that directory.
+			return (path as NSString).stringByAppendingPathComponent(defaultOutputPath)
+		} else {
+			// Use the given path as the final output.
+			return path
+		}
+	} ?? defaultOutputPath
 }
