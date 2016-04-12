@@ -477,6 +477,9 @@ public final class Project {
 			}
 			.flatMapError { error -> SignalProducer<Release, CarthageError> in
 				switch error {
+				case .DoesNotExist:
+					return .empty
+					
 				case let .APIError(_, _, error):
 					// Log the GitHub API request failure, not to error out,
 					// because that should not be fatal error.
