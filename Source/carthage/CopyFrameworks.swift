@@ -68,7 +68,7 @@ private func shouldIgnoreFramework(framework: NSURL, validArchitectures: [String
 		}
 		.map { remainingArchitectures in
 			// If removing the useless architectures results in an empty fat file, wat means that the framework does not have a binary for the given architecture, ignore the framework.
-			remainingArchitectures.count == 0
+			remainingArchitectures.isEmpty
 		}
 }
 
