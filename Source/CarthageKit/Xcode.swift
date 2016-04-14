@@ -36,7 +36,7 @@ public enum ProjectLocator: Comparable {
 			return URL
 		}
 	}
-	
+
 	/// The number of levels deep the current object is in the directory hierarchy.
 	public var level: Int {
 		return fileURL.pathComponents!.count - 1
@@ -63,7 +63,7 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 	guard leftLevel == rightLevel else {
 		return leftLevel < rightLevel
 	}
-	
+
 	// Prefer workspaces over projects.
 	switch (lhs, rhs) {
 	case (.Workspace, .ProjectFile):
@@ -523,7 +523,7 @@ public struct BuildSettings {
 							currentTarget = (line as NSString).substringWithRange(targetRange)
 							return
 						}
-						
+
 						let trimSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
 						let components = line.characters
 							.split(1) { $0 == "=" }
@@ -950,6 +950,25 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
+		.flatMap(.Concat) { sdk -> SignalProducer<(SDK, BuildSettings), CarthageError> in
+			var argsForLoading = buildArgs
+			argsForLoading.sdk = sdk
+
+			return SignalProducer(value: sdk)
+				.zipWith(BuildSettings.loadWithArguments(argsForLoading))
+		}
+		.filter { sdk, settings in
+			// Filter out SDKs that require bitcode when bitcode is disabled in
+			// project settings. This is necessary for testing frameworks, which
+			// must add a User-Defined setting of ENABLE_BITCODE=NO.
+			if settings.bitcodeEnabled.value != true && [.tvOS, .watchOS].contains(sdk) {
+				return false
+			}
+			return true
+		}
+		.flatMap(.Concat) { sdk, _ -> SignalProducer<SDK, CarthageError> in
+			return SignalProducer(value: sdk)
+		}
 		.reduce([:]) { (sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
 			var sdksByPlatform = sdksByPlatform
 			let platform = sdk.platform
@@ -1274,7 +1293,7 @@ private func stripBinary(binaryURL: NSURL, keepingArchitectures: [String]) -> Si
 public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return SignalProducer<NSURL, CarthageError>.attempt {
 		let manager = NSFileManager.defaultManager()
-		
+
 		// This signal deletes `to` before it copies `from` over it.
 		// If `from` and `to` point to the same resource, there's no need to perform a copy at all
 		// and deleting `to` will also result in deleting the original resource without copying it.
@@ -1286,7 +1305,7 @@ public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, Carth
 			from.absoluteURL == to.absoluteURL {
 				return .Success(to)
 		}
-		
+
 		do {
 			try manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil)
 		} catch let error as NSError {
