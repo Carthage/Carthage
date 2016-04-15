@@ -4,7 +4,7 @@ xcode_scheme: carthage
 osx_image: xcode7.3
 before_install:
   - brew update
-  - brew uninstall xctool && brew install --HEAD xctool
+  - brew outdated xctool || brew upgrade xctool
   - brew install bats
   - make install
 install: true
