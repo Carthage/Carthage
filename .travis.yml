@@ -1,23 +1,32 @@
-language: objective-c
-xcode_workspace: Carthage.xcworkspace
-xcode_scheme: carthage
-osx_image: xcode7.3
 before_install:
   - brew update
   - brew outdated xctool || brew upgrade xctool
-  - brew install bats
-  - make install
 install: true
 git:
   submodules: false
-script: BUILD_TOOL=xctool script/cibuild
+matrix:
+  include:
+    - os: osx
+      language: objective-c
+      osx_image: xcode7.3
+      script: script/cibuild
+      env: JOB=CI_BUILD
+    - os: osx
+      language: objective-c
+      osx_image: xcode7.3
+      script:
+        - brew install bats
+        - make install
+        - bats Source/CarthageIntegration
+      env: JOB=INTEGRATION_TESTS
 notifications:
   email: false
   slack:
     secure: lblNhCx6581hiPskQQnH663QY/HHqs6y8rMCLIff1Ryq0ngBaTwBJZ6E5tAR8oWTGWg3nMAAm/AaJPQGFC9jnKxtpWJhuEF58RY+EBe1Rz3gjKmacvEZS+PW+k3cRrRPZr6Vh6D8d0cb1gfM7BvGZar21ipBC/WcnNden3LxZ+0=
 env:
   global:
-    secure: DofNs+Ej7JblkkGMTHOl4XMBfv0EKVvzZU7OOm7U6Hyxu0J0SN6E3s61Q4HUWOBvM3Yrxf+8jpFKI29w69WArmRPpmK6GCaZar8ldUBHNmN3gaeOaGmGyrmnre4hxHjJzc0E3HAmJ03v94HW5JwQzKpIUjxg4dSttJMT6WOmnxE=
+    - BUILD_TOOL=xctool
+    - secure: DofNs+Ej7JblkkGMTHOl4XMBfv0EKVvzZU7OOm7U6Hyxu0J0SN6E3s61Q4HUWOBvM3Yrxf+8jpFKI29w69WArmRPpmK6GCaZar8ldUBHNmN3gaeOaGmGyrmnre4hxHjJzc0E3HAmJ03v94HW5JwQzKpIUjxg4dSttJMT6WOmnxE=
 deploy:
   provider: releases
   api-key:
@@ -28,3 +37,4 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
+    condition: $JOB = CI_BUILD
