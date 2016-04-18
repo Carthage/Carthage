@@ -210,7 +210,7 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	    - FRAMEWORK_NAME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
 	before_install:
 	  - brew update
-	  - brew install carthage
+	  - brew outdated carthage || brew upgrade carthage
 	before_script:
 	  # bootstrap the dependencies for the project
 	  # you can remove if you don't have dependencies
