@@ -132,8 +132,21 @@ class XcodeSpec: QuickSpec {
 					expect(versionFile?.frameworkSHA1).to(equal(getSHA1()))
 				}
 
-				context("when the version file does not exist") {
+				context("when cache-build flag is turned off") {
+					beforeEach {
+						//add a parameter to pass in the flag
+						_ = project.buildCheckedOutDependenciesWithConfiguration("Debug", dependenciesToBuild: ["Archimedes"], forPlatforms: platforms, derivedDataPath: nil)
+							.flatten(.Concat)
+							.wait()
 
+						Task.waitForAllTaskTermination()
+					}
+
+					it("should build again even if the SHA1 and commitish matches") {
+					}
+				}
+
+				context("when the version file does not exist") {
 					beforeEach {
 						//remove the .version if it exists
 						//						let builtDirectoryParentURL = builtProductURL.URLByDeletingLastPathComponent
