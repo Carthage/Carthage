@@ -123,7 +123,7 @@ class XcodeSpec: QuickSpec {
 					cleanUp()
 				}
 
-				fit("it creates the version file when the build is created") {
+				it("it creates the version file when the build is created") {
 					let macArchimedesVersionFileURL = buildFolderURL.URLByAppendingPathComponent("Mac/.Archimedes.version")
 					let versionFileData = NSData(contentsOfURL: macArchimedesVersionFileURL)!
 					let jsonObject: AnyObject = try! NSJSONSerialization.JSONObjectWithData(versionFileData, options: .AllowFragments)
@@ -151,8 +151,7 @@ class XcodeSpec: QuickSpec {
 				}
 
 				context("when the commitish and framework sha matches the content of the version file") {
-					//x
-					it("should not rebuild the framework") {
+					xit("should not rebuild the framework") {
 						let oldSHA1 = getSHA1()
 
 						//method under test

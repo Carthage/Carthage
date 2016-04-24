@@ -883,7 +883,7 @@ public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-	public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: NSURL, derivedDataPath: String?, toolchain: String?, dependency: Dependency<PinnedVersion>? = nil, rootDirectoryURL: NSURL? = nil,  sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: NSURL, derivedDataPath: String?, toolchain: String?, dependency: Dependency<PinnedVersion>? = nil,  sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
 	//x
@@ -1020,7 +1020,7 @@ public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration
 			print("project: \(project)")
 			print("sdks: \(sdks)")
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
-			print("folderURL: \(folderURL)")
+//			print("folderURL: \(folderURL)")
 
 			func getSHA1(taskDescription: Task) -> String {
 				let result: Result<String, TaskError>? = launchTask(taskDescription)
@@ -1037,25 +1037,25 @@ public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration
 			}
 			//x
 			//get the path to the framework folder
-			let platformFrameworkFolderURL = folderURL.URLByAppendingPathComponent("\(dependency!.project.name).framework", isDirectory: true)
-			let platformBuildVersionURL = folderURL.URLByAppendingPathComponent(".\(dependency!.project.name).version", isDirectory: false)
-			print("platformFrameworkFolderURL: \(platformFrameworkFolderURL)")
-			print("platformBuildVersionURL: \(platformBuildVersionURL)")
-			print("platformFrameworkFolderURL: \(platformFrameworkFolderURL)")
-			if let versionFileData = NSData(contentsOfFile: platformBuildVersionURL.path!) {
-				let versionFileJSON = try? NSJSONSerialization.JSONObjectWithData(versionFileData, options: .AllowFragments)
-				if let j: AnyObject = versionFileJSON {
-					let versionFile: VersionFile? = decode(j)
-					if dependency?.version.commitish == versionFile?.commitish {
+//			let platformFrameworkFolderURL = folderURL.URLByAppendingPathComponent("\(dependency?.project.name).framework", isDirectory: true)
+//			let platformBuildVersionURL = folderURL.URLByAppendingPathComponent(".\(dependency?.project.name).version", isDirectory: false)
+//			print("platformFrameworkFolderURL: \(platformFrameworkFolderURL)")
+//			print("platformBuildVersionURL: \(platformBuildVersionURL)")
+//			print("platformFrameworkFolderURL: \(platformFrameworkFolderURL)")
+//			if let versionFileData = NSData(contentsOfFile: platformBuildVersionURL.path!) {
+//				let versionFileJSON = try? NSJSONSerialization.JSONObjectWithData(versionFileData, options: .AllowFragments)
+//				if let j: AnyObject = versionFileJSON {
+//					let versionFile: VersionFile? = decode(j)
+//					if dependency?.version.commitish == versionFile?.commitish {
 //						let frameworkSHA1 = getSHA1()
 //						if frameworkSHA1 == versionFile?.frameworkSHA1 {
 //							//return and don't build
 //							let error = CarthageError.FrameworkAlreadyBuilt(platformFrameworkFolderURL)
 //							return SignalProducer(error: error)
 //						}
-					}
-				}
-			}
+//					}
+//				}
+//			}
 			//get the framework folder's sha1
 
 
@@ -1121,11 +1121,12 @@ public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration
 		}
 }
 
-public func createVersionFile(builtProductURL: NSURL, dependency: Dependency<PinnedVersion>?) {
+private func createVersionFile(builtProductURL: NSURL, dependency: Dependency<PinnedVersion>?) {
 	guard let commitish = dependency?.version.commitish,
 		let projectName = dependency?.project.name,
-		let builtDirectoryParentURL = builtProductURL.URLByDeletingLastPathComponent else {
-			return
+		let builtDirectoryParentURL = builtProductURL.URLByDeletingLastPathComponent else
+	{
+		return
 	}
 
 	let versionFileURL = builtDirectoryParentURL.URLByAppendingPathComponent(".\(projectName).version")
@@ -1138,12 +1139,15 @@ public func createVersionFile(builtProductURL: NSURL, dependency: Dependency<Pin
 	{
 		return
 	}
-	print("the frameworkSHA1: \(frameworkSHA1)")
 
 	let dictionary = NSDictionary(dictionaryLiteral: (VersionFile.commitishKeyName, commitish), (VersionFile.frameworkSHA1KeyName, frameworkSHA1))
 	let jsonData = try! NSJSONSerialization.dataWithJSONObject(dictionary, options: .PrettyPrinted)
 	print("the version file path: \(versionFileURL)")
-	try! jsonData.writeToURL(versionFileURL, options: .DataWritingAtomic)
+	do {
+		try jsonData.writeToURL(versionFileURL, options: .DataWritingAtomic)
+	} catch {
+		print(error)
+	}
 }
 
 public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
@@ -1180,7 +1184,7 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(projectIdentifier.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
-	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platforms: platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, dependency: dependency, rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
+	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platforms: platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, dependency: dependency, sdkFilter: sdkFilter)
 	return SignalProducer.attempt { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil)
@@ -1267,7 +1271,7 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-	public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil, dependency: Dependency<PinnedVersion>? = nil, rootDirectoryURL: NSURL? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil, dependency: Dependency<PinnedVersion>? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
 	return SignalProducer { observer, disposable in
@@ -1330,7 +1334,7 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 				}
 
 				print("directory URL: \(directoryURL)")
-				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, derivedDataPath: derivedDataPath, toolchain: toolchain, dependency: dependency, rootDirectoryURL: rootDirectoryURL,  sdkFilter: wrappedSDKFilter)
+				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, derivedDataPath: derivedDataPath, toolchain: toolchain, dependency: dependency, sdkFilter: wrappedSDKFilter)
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for
 					// completion.
