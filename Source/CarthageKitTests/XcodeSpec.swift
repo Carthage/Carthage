@@ -14,6 +14,8 @@ import Quick
 import ReactiveCocoa
 import ReactiveTask
 import Tentacle
+import Argo
+import CryptoSwift
 
 class XcodeSpec: QuickSpec {
 	override func spec() {
@@ -83,7 +85,99 @@ class XcodeSpec: QuickSpec {
 			}
 		}
 
-		xit("should build for all platforms") {
+		describe("build cache") {
+			let dependenciesToBuild = ["Archimedes"]
+			let platformsToBuild: Set<Platform> = [Platform.Mac]
+			let project1 = Project(directoryURL: directoryURL)
+			let macArchimedesBinaryPath = buildFolderURL.URLByAppendingPathComponent("Mac/Archimedes.framework").path!
+			let archimedesBinaryURL = buildFolderURL.URLByAppendingPathComponent("Mac/Archimedes.framework/Archimedes")
+
+			func build(project: Project, dependencies: [String], platforms: Set<Platform>) {
+				_ = project.buildCheckedOutDependenciesWithConfiguration("Debug", dependenciesToBuild: ["Archimedes"], forPlatforms: platforms, derivedDataPath: nil)
+					.flatten(.Concat)
+					.wait()
+
+				Task.waitForAllTaskTermination()
+			}
+
+			func cleanUp() {
+				var isDirectory: ObjCBool = true
+				if NSFileManager.defaultManager().fileExistsAtPath(macArchimedesBinaryPath, isDirectory: &isDirectory) {
+					try! NSFileManager.defaultManager().removeItemAtPath(macArchimedesBinaryPath)
+				}
+			}
+
+			func getSHA1() -> String {
+				let frameworkData = NSData(contentsOfURL: archimedesBinaryURL)!
+				return frameworkData.sha1()!.toHexString()
+			}
+
+			context("when the Cartfile.resolved has commitish for a repository and built framework") {
+
+				beforeEach {
+					cleanUp()
+					build(project1, dependencies: dependenciesToBuild, platforms: platformsToBuild)
+				}
+
+				afterEach {
+					cleanUp()
+				}
+
+				fit("it creates the version file when the build is created") {
+					let macArchimedesVersionFileURL = buildFolderURL.URLByAppendingPathComponent("Mac/.Archimedes.version")
+					let versionFileData = NSData(contentsOfURL: macArchimedesVersionFileURL)!
+					let jsonObject: AnyObject = try! NSJSONSerialization.JSONObjectWithData(versionFileData, options: .AllowFragments)
+					let versionFile: VersionFile? = decode(jsonObject)
+					expect(versionFile?.commitish).to(equal("1.1.1"))
+					expect(versionFile?.frameworkSHA1).to(equal(getSHA1()))
+				}
+
+				context("when the version file does not exist") {
+
+					beforeEach {
+						//remove the .version if it exists
+						//						let builtDirectoryParentURL = builtProductURL.URLByDeletingLastPathComponent
+						//						let versionFileURL = builtDirectoryParentURL.URLByAppendingPathComponent(".\(projectName).version")
+					}
+
+					it("should build the framework again") {
+						//TODO
+						//keep track of the existing framework's sha
+
+						// build it again
+
+						//assert that the built framework's sha is different
+					}
+				}
+
+				context("when the commitish and framework sha matches the content of the version file") {
+					//x
+					it("should not rebuild the framework") {
+						let oldSHA1 = getSHA1()
+
+						//method under test
+						build(project1, dependencies: dependenciesToBuild, platforms: platformsToBuild)
+
+						let newSHA1 = getSHA1()
+						expect(oldSHA1).to(equal(newSHA1))
+					}
+				}
+
+				context("when the commitish does not match the commitish in the version file") {
+					it("should build the framework") {
+						//TODO
+					}
+				}
+
+				context("when the framework's sha does not match the sha in the version file") {
+					it("should build the framework") {
+						//TODO
+					}
+				}
+			}
+		}
+
+		it("should build for all platforms") {
 			let dependencies = [
 				ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes")),
 				ProjectIdentifier.GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
@@ -262,8 +356,7 @@ class XcodeSpec: QuickSpec {
 			expect(expectedError) == true
 		}
 
-		//x
-		xit("should build for one platform") {
+		it("should build for one platform") {
 			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 			let dependency = Dependency<PinnedVersion>(project: project, version: version)
@@ -286,7 +379,7 @@ class XcodeSpec: QuickSpec {
 			expect(NSFileManager.defaultManager().fileExistsAtPath(incorrectPath, isDirectory: nil)) == false
 		}
 
-		xit("should build for multiple platforms") {
+		it("should build for multiple platforms") {
 			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 			let dependency = Dependency<PinnedVersion>(project: project, version: version)
