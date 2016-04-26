@@ -950,24 +950,19 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		.flatMap(.Concat) { sdk -> SignalProducer<(SDK, BuildSettings), CarthageError> in
+		.flatMap(.Concat) { sdk -> SignalProducer<SDK, CarthageError> in
 			var argsForLoading = buildArgs
 			argsForLoading.sdk = sdk
 
-			return SignalProducer(value: sdk)
-				.zipWith(BuildSettings.loadWithArguments(argsForLoading))
-		}
-		.filter { sdk, settings in
-			// Filter out SDKs that require bitcode when bitcode is disabled in
-			// project settings. This is necessary for testing frameworks, which
-			// must add a User-Defined setting of ENABLE_BITCODE=NO.
-			if settings.bitcodeEnabled.value != true && [.tvOS, .watchOS].contains(sdk) {
-				return false
-			}
-			return true
-		}
-		.flatMap(.Concat) { sdk, _ -> SignalProducer<SDK, CarthageError> in
-			return SignalProducer(value: sdk)
+			return BuildSettings
+				.loadWithArguments(argsForLoading)
+                .filter { settings in
+                    // Filter out SDKs that require bitcode when bitcode is disabled in
+                    // project settings. This is necessary for testing frameworks, which
+                    // must add a User-Defined setting of ENABLE_BITCODE=NO.
+					return settings.bitcodeEnabled.value == true || ![.tvOS, .watchOS].contains(sdk)
+				}
+				.map { _ in sdk }
 		}
 		.reduce([:]) { (sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
 			var sdksByPlatform = sdksByPlatform
