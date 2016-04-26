@@ -969,8 +969,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			let platform = sdk.platform
 
 			if var sdks = sdksByPlatform[platform] {
-				sdks.append(sdk)
-				sdksByPlatform.updateValue(sdks, forKey: platform)
+				if sdks.indexOf(sdk) == nil {
+					sdks.append(sdk)
+					sdksByPlatform.updateValue(sdks, forKey: platform)
+				}
 			} else {
 				sdksByPlatform[platform] = [ sdk ]
 			}
