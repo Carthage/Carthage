@@ -964,17 +964,15 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				}
 				.map { _ in sdk }
 		}
-		.reduce([:]) { (sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
+		.reduce([:]) { (sdksByPlatform: [Platform: Set<SDK>], sdk: SDK) in
 			var sdksByPlatform = sdksByPlatform
 			let platform = sdk.platform
 
 			if var sdks = sdksByPlatform[platform] {
-				if sdks.indexOf(sdk) == nil {
-					sdks.append(sdk)
-					sdksByPlatform.updateValue(sdks, forKey: platform)
-				}
+				sdks.insert(sdk)
+				sdksByPlatform.updateValue(sdks, forKey: platform)
 			} else {
-				sdksByPlatform[platform] = [ sdk ]
+				sdksByPlatform[platform] = Set(arrayLiteral: sdk)
 			}
 
 			return sdksByPlatform
@@ -984,7 +982,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				fatalError("No SDKs found for scheme \(scheme)")
 			}
 
-			let values = sdksByPlatform.map { ($0, $1) }
+			let values = sdksByPlatform.map { ($0, Array($1)) }
 			return SignalProducer(values: values)
 		}
 		.flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
