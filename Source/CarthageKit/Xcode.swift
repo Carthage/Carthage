@@ -956,10 +956,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 			return BuildSettings
 				.loadWithArguments(argsForLoading)
-                .filter { settings in
-                    // Filter out SDKs that require bitcode when bitcode is disabled in
-                    // project settings. This is necessary for testing frameworks, which
-                    // must add a User-Defined setting of ENABLE_BITCODE=NO.
+				.filter { settings in
+					// Filter out SDKs that require bitcode when bitcode is disabled in
+					// project settings. This is necessary for testing frameworks, which
+					// must add a User-Defined setting of ENABLE_BITCODE=NO.
 					return settings.bitcodeEnabled.value == true || ![.tvOS, .watchOS].contains(sdk)
 				}
 				.map { _ in sdk }
