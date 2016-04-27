@@ -36,7 +36,7 @@ public enum ProjectLocator: Comparable {
 			return URL
 		}
 	}
-	
+
 	/// The number of levels deep the current object is in the directory hierarchy.
 	public var level: Int {
 		return fileURL.pathComponents!.count - 1
@@ -63,7 +63,7 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 	guard leftLevel == rightLevel else {
 		return leftLevel < rightLevel
 	}
-	
+
 	// Prefer workspaces over projects.
 	switch (lhs, rhs) {
 	case (.Workspace, .ProjectFile):
@@ -523,7 +523,7 @@ public struct BuildSettings {
 							currentTarget = (line as NSString).substringWithRange(targetRange)
 							return
 						}
-						
+
 						let trimSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
 						let components = line.characters
 							.split(1) { $0 == "=" }
@@ -950,15 +950,29 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 	}
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		.reduce([:]) { (sdksByPlatform: [Platform: [SDK]], sdk: SDK) in
+		.flatMap(.Concat) { sdk -> SignalProducer<SDK, CarthageError> in
+			var argsForLoading = buildArgs
+			argsForLoading.sdk = sdk
+
+			return BuildSettings
+				.loadWithArguments(argsForLoading)
+				.filter { settings in
+					// Filter out SDKs that require bitcode when bitcode is disabled in
+					// project settings. This is necessary for testing frameworks, which
+					// must add a User-Defined setting of ENABLE_BITCODE=NO.
+					return settings.bitcodeEnabled.value == true || ![.tvOS, .watchOS].contains(sdk)
+				}
+				.map { _ in sdk }
+		}
+		.reduce([:]) { (sdksByPlatform: [Platform: Set<SDK>], sdk: SDK) in
 			var sdksByPlatform = sdksByPlatform
 			let platform = sdk.platform
 
 			if var sdks = sdksByPlatform[platform] {
-				sdks.append(sdk)
+				sdks.insert(sdk)
 				sdksByPlatform.updateValue(sdks, forKey: platform)
 			} else {
-				sdksByPlatform[platform] = [ sdk ]
+				sdksByPlatform[platform] = Set(arrayLiteral: sdk)
 			}
 
 			return sdksByPlatform
@@ -968,7 +982,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				fatalError("No SDKs found for scheme \(scheme)")
 			}
 
-			let values = sdksByPlatform.map { ($0, $1) }
+			let values = sdksByPlatform.map { ($0, Array($1)) }
 			return SignalProducer(values: values)
 		}
 		.flatMap(.Concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
@@ -1274,7 +1288,7 @@ private func stripBinary(binaryURL: NSURL, keepingArchitectures: [String]) -> Si
 public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return SignalProducer<NSURL, CarthageError>.attempt {
 		let manager = NSFileManager.defaultManager()
-		
+
 		// This signal deletes `to` before it copies `from` over it.
 		// If `from` and `to` point to the same resource, there's no need to perform a copy at all
 		// and deleting `to` will also result in deleting the original resource without copying it.
@@ -1286,7 +1300,7 @@ public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, Carth
 			from.absoluteURL == to.absoluteURL {
 				return .Success(to)
 		}
-		
+
 		do {
 			try manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil)
 		} catch let error as NSError {
