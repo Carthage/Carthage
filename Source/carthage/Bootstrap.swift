@@ -26,7 +26,19 @@ public struct BootstrapCommand: CommandType {
 					carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
 					return project.updateDependencies(shouldCheckout: options.checkoutAfterUpdate)
 				}
-
+				
+				if let depsToUpdate = options.dependenciesToUpdate {
+					let resolvedCartfileContents = try! String(contentsOfURL: project.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
+					let resolvedCartfile = ResolvedCartfile.fromString(resolvedCartfileContents).value!
+					let resolvedDependencyNames = Set<String>(resolvedCartfile.dependencies.map { $0.project.name })
+					
+					for dep in depsToUpdate {
+						if !resolvedDependencyNames.contains(dep) {
+							return SignalProducer<(), CarthageError>(error:CarthageError.UnresolvedDependency(dep))
+						}
+					}
+				}
+				
 				if options.checkoutAfterUpdate {
 					return project.checkoutResolvedDependencies(options.dependenciesToUpdate)
 				} else {
