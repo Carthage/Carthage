@@ -27,21 +27,34 @@ public struct BootstrapCommand: CommandType {
 					return project.updateDependencies(shouldCheckout: options.checkoutAfterUpdate)
 				}
 				
+				let checkDependencies: SignalProducer<(), CarthageError>
 				if let depsToUpdate = options.dependenciesToUpdate {
-					let resolvedCartfileContents = try! String(contentsOfURL: project.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
-					let resolvedCartfile = ResolvedCartfile.fromString(resolvedCartfileContents).value!
-					
-					let resolvedDependencyNames = resolvedCartfile.dependencies.map { $0.project.name }
-					if !Set(depsToUpdate).subtract(resolvedDependencyNames).isEmpty {
-						return SignalProducer<(), CarthageError>(error: CarthageError.UnresolvedDependencies([String](unresolvedDependencyNames).sort())
+					checkDependencies =
+						project
+						.loadResolvedCartfile()
+						.flatMap(.Concat) { resolvedCartfile -> SignalProducer<(), CarthageError> in
+							let resolvedDependencyNames = resolvedCartfile.dependencies.map { $0.project.name }
+							let unresolvedDependencyNames = Set(depsToUpdate).subtract(resolvedDependencyNames)
+							
+							if !unresolvedDependencyNames.isEmpty {
+								return SignalProducer<(), CarthageError>(error:.UnresolvedDependencies([String](unresolvedDependencyNames).sort()))
+							}
+							
+							return .empty
+						}
 					}
+					else {
+						checkDependencies = .empty
+					}
+				
+				let checkoutDependencies: SignalProducer<(), CarthageError>
+				if options.checkoutAfterUpdate {
+					checkoutDependencies = project.checkoutResolvedDependencies(options.dependenciesToUpdate)
+				} else {
+					checkoutDependencies = .empty
 				}
 				
-				if options.checkoutAfterUpdate {
-					return project.checkoutResolvedDependencies(options.dependenciesToUpdate)
-				} else {
-					return .empty
-				}
+				return checkDependencies.then(checkoutDependencies)
 			}
 			.then(options.buildProducer)
 			.waitOnCommand()

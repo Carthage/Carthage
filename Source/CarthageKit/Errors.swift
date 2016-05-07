@@ -253,7 +253,7 @@ extension CarthageError: CustomStringConvertible {
 			return "GitHub API request failed: \(message)"
 			
 		case let .UnresolvedDependencies(names):
-			return "No entry found for dependencies \(names.joinWithSeparator(", ")) in Cartfile.resolved – please run `carthage update` if the dependency is contained in the project's Cartfile."
+			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joinWithSeparator(", ")) in Cartfile.resolved – please run `carthage update` if the dependency is contained in the project's Cartfile."
 
 		case let .TaskError(taskError):
 			return taskError.description
