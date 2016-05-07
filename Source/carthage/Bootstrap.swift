@@ -31,12 +31,9 @@ public struct BootstrapCommand: CommandType {
 					let resolvedCartfileContents = try! String(contentsOfURL: project.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
 					let resolvedCartfile = ResolvedCartfile.fromString(resolvedCartfileContents).value!
 					
-					let resolvedDependencyNames = Set<String>(resolvedCartfile.dependencies.map { $0.project.name })
-					let updatedDependencyNames = Set<String>(depsToUpdate)
-					let unresolvedDependencyNames = updatedDependencyNames.subtract(resolvedDependencyNames)
-					
-					if unresolvedDependencyNames.count > 0 {
-						return SignalProducer<(), CarthageError>(error: CarthageError.UnresolvedDependencies([String](unresolvedDependencyNames).sort()))
+					let resolvedDependencyNames = resolvedCartfile.dependencies.map { $0.project.name }
+					if !Set(depsToUpdate).subtract(resolvedDependencyNames).isEmpty {
+						return SignalProducer<(), CarthageError>(error: CarthageError.UnresolvedDependencies([String](unresolvedDependencyNames).sort())
 					}
 				}
 				
