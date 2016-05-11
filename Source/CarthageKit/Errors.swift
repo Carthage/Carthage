@@ -30,6 +30,9 @@ public enum CarthageError: ErrorType, Equatable {
 	/// No existent version could be found to satisfy the version specifier for
 	/// a dependency.
 	case RequiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
+	
+	// No entry could be found in Cartfile.resolved for a dependency with this name.
+	case UnresolvedDependencies([String])
 
 	/// Failed to check out a repository.
 	case RepositoryCheckoutFailed(workingDirectoryURL: NSURL, reason: String, underlyingError: NSError?)
@@ -248,6 +251,9 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .GitHubAPIRequestFailed(message):
 			return "GitHub API request failed: \(message)"
+			
+		case let .UnresolvedDependencies(names):
+			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joinWithSeparator(", ")) in Cartfile.resolved – please run `carthage update` if the dependency is contained in the project's Cartfile."
 
 		case let .TaskError(taskError):
 			return taskError.description
