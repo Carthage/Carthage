@@ -31,7 +31,7 @@ public enum CarthageError: ErrorType, Equatable {
 	/// a dependency.
 	case RequiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
 	
-	// No entry could be found in Cartfile.resolved for a dependency with this name.
+	/// No entry could be found in Cartfile.resolved for a dependency with this name.
 	case UnresolvedDependencies([String])
 
 	/// Failed to check out a repository.
