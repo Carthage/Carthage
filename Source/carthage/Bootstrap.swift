@@ -29,23 +29,21 @@ public struct BootstrapCommand: CommandType {
 				
 				let checkDependencies: SignalProducer<(), CarthageError>
 				if let depsToUpdate = options.dependenciesToUpdate {
-					checkDependencies =
-						project
+					checkDependencies = project
 						.loadResolvedCartfile()
 						.flatMap(.Concat) { resolvedCartfile -> SignalProducer<(), CarthageError> in
-							let resolvedDependencyNames = resolvedCartfile.dependencies.map { $0.project.name }
-							let unresolvedDependencyNames = Set(depsToUpdate).subtract(resolvedDependencyNames)
+							let resolvedDependencyNames = resolvedCartfile.dependencies.map { $0.project.name.lowercaseString }
+							let unresolvedDependencyNames = Set(depsToUpdate.map { $0.lowercaseString }).subtract(resolvedDependencyNames)
 							
 							if !unresolvedDependencyNames.isEmpty {
-								return SignalProducer<(), CarthageError>(error:.UnresolvedDependencies([String](unresolvedDependencyNames).sort()))
+								return SignalProducer(error: .UnresolvedDependencies(unresolvedDependencyNames.sort()))
 							}
-							
 							return .empty
 						}
-					}
-					else {
-						checkDependencies = .empty
-					}
+				}
+				else {
+					checkDependencies = .empty
+				}
 				
 				let checkoutDependencies: SignalProducer<(), CarthageError>
 				if options.checkoutAfterUpdate {
