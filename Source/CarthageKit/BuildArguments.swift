@@ -14,6 +14,9 @@ public struct BuildArguments {
 
 	/// The platform SDK to build for.
 	public var sdk: SDK?
+	
+	/// The Swift toolchain to use.
+	public var toolchain: String?
 
 	/// The run destination to try building for.
 	public var destination: String?
@@ -28,12 +31,13 @@ public struct BuildArguments {
 	/// The build setting whether full bitcode should be embedded in the binary.
 	public var bitcodeGenerationMode: BitcodeGenerationMode? = nil
 
-	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, derivedDataPath: String? = nil, sdk: SDK? = nil) {
+	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, derivedDataPath: String? = nil, sdk: SDK? = nil, toolchain: String?) {
 		self.project = project
 		self.scheme = scheme
 		self.configuration = configuration
 		self.derivedDataPath = derivedDataPath
 		self.sdk = sdk
+		self.toolchain = toolchain
 	}
 
 	/// The `xcodebuild` invocation corresponding to the receiver.
@@ -70,6 +74,10 @@ public struct BuildArguments {
 			if sdk != .MacOSX {
 				args += [ "-sdk", sdk.rawValue ]
 			}
+		}
+		
+		if let toolchain = toolchain {
+			args += [ "-toolchain", toolchain ]
 		}
 
 		if let destination = destination {

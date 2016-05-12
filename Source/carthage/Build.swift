@@ -17,6 +17,7 @@ public struct BuildCommand: CommandType {
 	public struct Options: OptionsType {
 		public let configuration: String
 		public let buildPlatform: BuildPlatform
+		public let toolchain: String?
 		public let derivedDataPath: String?
 		public let skipCurrent: Bool
 		public let colorOptions: ColorOptions
@@ -24,17 +25,18 @@ public struct BuildCommand: CommandType {
 		public let directoryPath: String
 		public let dependenciesToBuild: [String]?
 
-		public static func create(configuration: String) -> BuildPlatform -> String? -> Bool -> ColorOptions -> Bool -> String -> [String] -> Options {
-			return { buildPlatform in { derivedDataPath in { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
+		public static func create(configuration: String) -> BuildPlatform -> String? -> String? -> Bool -> ColorOptions -> Bool -> String -> [String] -> Options {
+			return { buildPlatform in { toolchain in { derivedDataPath in { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
 				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
-				return self.init(configuration: configuration, buildPlatform: buildPlatform, derivedDataPath: derivedDataPath, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
-			} } } } } } }
+				return self.init(configuration: configuration, buildPlatform: buildPlatform, toolchain: toolchain, derivedDataPath: derivedDataPath, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
+			} } } } } } } }
 		}
 
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
 				<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)")
+				<*> m <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 				<*> m <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 				<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 				<*> ColorOptions.evaluate(m)
@@ -147,13 +149,13 @@ public struct BuildCommand: CommandType {
 				}
 			}
 			.flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, dependenciesToBuild: options.dependenciesToBuild, forPlatforms: options.buildPlatform.platforms, derivedDataPath: options.derivedDataPath)
+				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, dependenciesToBuild: options.dependenciesToBuild, forPlatforms: options.buildPlatform.platforms, toolchain: options.toolchain, derivedDataPath: options.derivedDataPath)
 			}
 
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms, derivedDataPath: options.derivedDataPath)
+			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms, toolchain: options.toolchain, derivedDataPath: options.derivedDataPath)
 				.flatMapError { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
 					switch error {
 					case let .NoSharedFrameworkSchemes(project, _):
