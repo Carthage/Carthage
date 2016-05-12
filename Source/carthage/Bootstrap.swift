@@ -40,8 +40,7 @@ public struct BootstrapCommand: CommandType {
 							}
 							return .empty
 						}
-				}
-				else {
+				} else {
 					checkDependencies = .empty
 				}
 				
