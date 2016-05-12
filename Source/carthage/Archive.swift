@@ -71,7 +71,7 @@ public struct ArchiveCommand: CommandType {
 					}
 				}
 				.collect()
-				.map { Array(Set($0)).sort() }
+				.map { Array(Set($0.filter{ $0.hasSuffix(".framework") })).sort() }
 		}
 
 		return frameworks.flatMap(.Merge) { frameworks -> SignalProducer<(), CarthageError> in
