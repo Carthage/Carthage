@@ -14,21 +14,19 @@ import ReactiveCocoa
 
 public struct ArchiveCommand: CommandType {
 	public struct Options: OptionsType {
-		public let toolchain: String?
 		public let outputPath: String?
 		public let directoryPath: String
 		public let colorOptions: ColorOptions
 		public let frameworkNames: [String]
 
-		static func create(outputPath: String?) -> String? -> String -> ColorOptions -> [String] -> Options {
-			return { toolchain in { directoryPath in { colorOptions in { frameworkNames in
-				return self.init(toolchain: toolchain, outputPath: outputPath, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: frameworkNames)
-			} } } }
+		static func create(outputPath: String?) -> String -> ColorOptions -> [String] -> Options {
+			return { directoryPath in { colorOptions in { frameworkNames in
+				return self.init(outputPath: outputPath, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: frameworkNames)
+			} } }
 		}
 
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
-				<*> m <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 				<*> m <| Option(key: "output", defaultValue: nil, usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)")
 				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> ColorOptions.evaluate(m)
@@ -49,7 +47,7 @@ public struct ArchiveCommand: CommandType {
 			})
 		} else {
 			let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
-			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [], toolchain: options.toolchain)
+			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
 				.collect()
 				.flatMap(.Merge) { projects in
 					return schemesInProjects(projects)
@@ -62,7 +60,7 @@ public struct ArchiveCommand: CommandType {
 						}
 				}
 				.flatMap(.Merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
-					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release", toolchain: nil)
+					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 					return BuildSettings.loadWithArguments(buildArguments)
 				}
 				.flatMap(.Concat) { settings -> SignalProducer<String, CarthageError> in
