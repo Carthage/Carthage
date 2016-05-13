@@ -865,10 +865,10 @@ public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: NSURL, derivedDataPath: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: NSURL, derivedDataPath: String?, toolchain: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
-	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration, derivedDataPath: derivedDataPath)
+	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration, derivedDataPath: derivedDataPath, toolchain: toolchain)
 
 	let buildSDK = { (sdk: SDK) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 		var argsForLoading = buildArgs
@@ -1084,12 +1084,12 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirectoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], derivedDataPath: String? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirectoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
-	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platforms: platforms, derivedDataPath: derivedDataPath, sdkFilter: sdkFilter)
+	let schemeProducers = buildInDirectory(dependencyURL, withConfiguration: configuration, platforms: platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, sdkFilter: sdkFilter)
 	return SignalProducer.attempt { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil)
@@ -1171,7 +1171,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], derivedDataPath: String? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildInDirectory(directoryURL: NSURL, withConfiguration configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.fileURL)
 
 	return SignalProducer { observer, disposable in
@@ -1230,7 +1230,7 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 					return sdkFilter(sdks: filteredSDKs, scheme: scheme, configuration: configuration, project: project)
 				}
 
-				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, derivedDataPath: derivedDataPath, sdkFilter: wrappedSDKFilter)
+				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, derivedDataPath: derivedDataPath, toolchain: toolchain, sdkFilter: wrappedSDKFilter)
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for
 					// completion.

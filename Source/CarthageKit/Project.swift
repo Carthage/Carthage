@@ -671,7 +671,7 @@ public final class Project {
 	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, derivedDataPath: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, toolchain: String?, derivedDataPath: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
@@ -682,7 +682,7 @@ public final class Project {
 					return .empty
 				}
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, derivedDataPath: derivedDataPath, sdkFilter: sdkFilter)
+				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:
