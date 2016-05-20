@@ -64,14 +64,14 @@ public struct ArchiveCommand: CommandType {
 					return BuildSettings.loadWithArguments(buildArguments)
 				}
 				.flatMap(.Concat) { settings -> SignalProducer<String, CarthageError> in
-					if let wrapperName = settings.wrapperName.value {
+					if let wrapperName = settings.wrapperName.value where settings.productType.value == .Framework {
 						return .init(value: wrapperName)
 					} else {
 						return .empty
 					}
 				}
 				.collect()
-				.map { Array(Set($0.filter{ $0.hasSuffix(".framework") })).sort() }
+				.map { Array(Set($0)).sort() }
 		}
 
 		return frameworks.flatMap(.Merge) { frameworks -> SignalProducer<(), CarthageError> in
