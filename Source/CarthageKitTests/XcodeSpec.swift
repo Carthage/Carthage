@@ -86,16 +86,24 @@ class XcodeSpec: QuickSpec {
 		}
 
 		describe("build cache") {
-			let dependenciesToBuild = ["Archimedes"]
+			let version = PinnedVersion("0.1")
+			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
+			let dependency = Dependency<PinnedVersion>(project: project, version: version)
 			let platformsToBuild: Set<Platform> = [Platform.Mac]
-			let project1 = Project(directoryURL: directoryURL)
 			let macArchimedesBinaryPath = buildFolderURL.URLByAppendingPathComponent("Mac/Archimedes.framework").path!
 			let archimedesBinaryURL = buildFolderURL.URLByAppendingPathComponent("Mac/Archimedes.framework/Archimedes")
 
-			func build(project: Project, dependencies: [String], platforms: Set<Platform>) {
-				_ = project.buildCheckedOutDependenciesWithConfiguration("Debug", dependenciesToBuild: ["Archimedes"], forPlatforms: platforms, derivedDataPath: nil)
+			func build(dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, buildCache: Bool) {
+				//TODO pass in buildCache
+				let result = buildDependencyProject(dependency, directoryURL, withConfiguration: "Debug", platforms: platforms)
 					.flatten(.Concat)
+					.ignoreTaskData()
+					.on(next: { (project, scheme) in
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					})
 					.wait()
+
+				expect(result.error).to(beNil())
 
 				Task.waitForAllTaskTermination()
 			}
@@ -116,7 +124,7 @@ class XcodeSpec: QuickSpec {
 
 				beforeEach {
 					cleanUp()
-					build(project1, dependencies: dependenciesToBuild, platforms: platformsToBuild)
+					build(dependency, platforms: platformsToBuild, buildCache: true)
 				}
 
 				afterEach {
@@ -134,12 +142,7 @@ class XcodeSpec: QuickSpec {
 
 				context("when cache-build flag is turned off") {
 					beforeEach {
-						//add a parameter to pass in the flag
-						_ = project.buildCheckedOutDependenciesWithConfiguration("Debug", dependenciesToBuild: ["Archimedes"], forPlatforms: platforms, derivedDataPath: nil)
-							.flatten(.Concat)
-							.wait()
-
-						Task.waitForAllTaskTermination()
+						build(dependency, platforms: platformsToBuild, buildCache: false)
 					}
 
 					it("should build again even if the SHA1 and commitish matches") {
@@ -168,7 +171,7 @@ class XcodeSpec: QuickSpec {
 						let oldSHA1 = getSHA1()
 
 						//method under test
-						build(project1, dependencies: dependenciesToBuild, platforms: platformsToBuild)
+						build(dependency, platforms: platformsToBuild, buildCache: true)
 
 						let newSHA1 = getSHA1()
 						expect(oldSHA1).to(equal(newSHA1))
