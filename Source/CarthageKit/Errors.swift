@@ -18,6 +18,9 @@ public enum CarthageError: ErrorType, Equatable {
 	/// Build already exists
 	case FrameworkAlreadyBuilt(NSURL)
 
+	/// Can not build version file
+	case CanNotBuildVersionFile(NSURL)
+
 	/// One or more arguments was invalid.
 	case InvalidArgument(description: String)
 
@@ -91,7 +94,13 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	switch (lhs, rhs) {
 	case let (.InvalidArgument(left), .InvalidArgument(right)):
 		return left == right
-	
+
+	case let (.CanNotBuildVersionFile(left), .CanNotBuildVersionFile(right)):
+		return left == right
+
+	case let (.FrameworkAlreadyBuilt(left), .FrameworkAlreadyBuilt(right)):
+		return left == right
+
 	case let (.MissingBuildSetting(left), .MissingBuildSetting(right)):
 		return left == right
 	
@@ -148,6 +157,9 @@ extension CarthageError: CustomStringConvertible {
 		switch self {
 		case let .FrameworkAlreadyBuilt(frameworkURL):
 			return "Framework already built in \(frameworkURL.description)"
+
+		case let .CanNotBuildVersionFile(frameworkURL):
+			return "Can not build version file at \(frameworkURL.description)"
 
 		case let .InvalidArgument(description):
 			return description

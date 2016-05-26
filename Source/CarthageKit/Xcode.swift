@@ -886,10 +886,7 @@ public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration
 public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: NSURL, derivedDataPath: String?, toolchain: String?, dependency: Dependency<PinnedVersion>? = nil,  sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
-	//x
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration, derivedDataPath: derivedDataPath, toolchain: toolchain)
-
-	print("project: \(project), scheme: \(scheme), configuration: \(configuration)")
 
 	let buildSDK = { (sdk: SDK) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 		var argsForLoading = buildArgs
@@ -959,7 +956,6 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						}
 
 						var buildScheme = xcodebuildTask(["clean", "build"], argsForBuilding)
-						print(workingDirectoryURL)
 						buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 						return launchTask(buildScheme)
@@ -1015,27 +1011,8 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			return !sdks.isEmpty
 		}
 		.flatMap(.Concat) { platform, sdks -> SignalProducer<TaskEvent<NSURL>, CarthageError> in
-			print("platform :\(platform)")
-			print("platform.relativePath: \(platform.relativePath)")
-			print("project: \(project)")
-			print("sdks: \(sdks)")
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
-//			print("folderURL: \(folderURL)")
 
-			func getSHA1(taskDescription: Task) -> String {
-				let result: Result<String, TaskError>? = launchTask(taskDescription)
-					.ignoreTaskData()
-					.map { String(data: $0, encoding: NSUTF8StringEncoding) }
-					.ignoreNil()
-					.single()
-				let output = result?.value ?? ""
-				let rangeOfFirstSpace = output.rangeOfString(" ")!
-				let distanceToFirstSpace = output.startIndex.distanceTo(rangeOfFirstSpace.startIndex)
-				let startIndex = output.startIndex.successor().advancedBy(distanceToFirstSpace)
-				let rangeOfSHA1 = startIndex..<output.endIndex
-				return output[rangeOfSHA1]
-			}
-			//x
 			//get the path to the framework folder
 //			let platformFrameworkFolderURL = folderURL.URLByAppendingPathComponent("\(dependency?.project.name).framework", isDirectory: true)
 //			let platformBuildVersionURL = folderURL.URLByAppendingPathComponent(".\(dependency?.project.name).version", isDirectory: false)
@@ -1056,7 +1033,6 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 //					}
 //				}
 //			}
-			//get the framework folder's sha1
 
 
 			// TODO: Generalize this further?
@@ -1115,38 +1091,46 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			}
 		}
 		.flatMapTaskEvents(.Concat) { builtProductURL -> SignalProducer<NSURL, CarthageError> in
-			createVersionFile(builtProductURL, dependency: dependency)
 			return createDebugInformation(builtProductURL)
 				.then(SignalProducer(value: builtProductURL))
 		}
+//		.flatMap(.Concat) { builtProductURL -> SignalProducer<NSURL, CarthageError> in
+//			return createVersionFile(builtProductURL, dependency: dependency)
+//		}
 }
 
-private func createVersionFile(builtProductURL: NSURL, dependency: Dependency<PinnedVersion>?) {
-	guard let commitish = dependency?.version.commitish,
-		let projectName = dependency?.project.name,
-		let builtDirectoryParentURL = builtProductURL.URLByDeletingLastPathComponent else
-	{
-		return
-	}
+private func createVersionFile(builtProductURL: NSURL, dependency: Dependency<PinnedVersion>?) -> SignalProducer<NSURL, CarthageError> {
+	return SignalProducer { observer, disposable in
+		guard let commitish = dependency?.version.commitish,
+			let projectName = dependency?.project.name,
+			let builtDirectoryParentURL = builtProductURL.URLByDeletingLastPathComponent else
+		{
+			observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
+			return
+		}
 
-	let versionFileURL = builtDirectoryParentURL.URLByAppendingPathComponent(".\(projectName).version")
+		let versionFileURL = builtDirectoryParentURL.URLByAppendingPathComponent(".\(projectName).version")
 
-	// Get framework SHA1
-	let frameworkFileURL = builtProductURL.URLByAppendingPathComponent("\(projectName)")
-	guard NSFileManager.defaultManager().fileExistsAtPath(frameworkFileURL.path!),
-		let frameworkData = NSData(contentsOfURL: frameworkFileURL),
-		let frameworkSHA1 = frameworkData.sha1()?.toHexString() else
-	{
-		return
-	}
+		// Get framework SHA1
+		let frameworkFileURL = builtProductURL.URLByAppendingPathComponent("\(projectName)")
+		guard NSFileManager.defaultManager().fileExistsAtPath(frameworkFileURL.path!),
+			let frameworkData = NSData(contentsOfURL: frameworkFileURL),
+			let frameworkSHA1 = frameworkData.sha1()?.toHexString() else
+		{
+			observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
+			return
+		}
 
-	let dictionary = NSDictionary(dictionaryLiteral: (VersionFile.commitishKeyName, commitish), (VersionFile.frameworkSHA1KeyName, frameworkSHA1))
-	let jsonData = try! NSJSONSerialization.dataWithJSONObject(dictionary, options: .PrettyPrinted)
-	print("the version file path: \(versionFileURL)")
-	do {
-		try jsonData.writeToURL(versionFileURL, options: .DataWritingAtomic)
-	} catch {
-		print(error)
+		let dictionary = NSDictionary(dictionaryLiteral: (VersionFile.commitishKeyName, commitish), (VersionFile.frameworkSHA1KeyName, frameworkSHA1))
+		let jsonData = try! NSJSONSerialization.dataWithJSONObject(dictionary, options: .PrettyPrinted)
+		do {
+			try jsonData.writeToURL(versionFileURL, options: .DataWritingAtomic)
+		} catch {
+			observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
+			return
+		}
+		observer.sendNext(builtProductURL)
+		observer.sendCompleted()
 	}
 }
 
@@ -1234,11 +1218,6 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 				let linkDestinationPath = componentsForGettingTheHellOutOfThisRelativePath.reduce(CarthageBinariesFolderPath) { trailingPath, pathComponent in
 					return (pathComponent as NSString).stringByAppendingPathComponent(trailingPath)
 				}
-				print("dependency.relativePath: \(projectIdentifier.relativePath)")
-				print("dependencyBinariesRelativePath: \(dependencyBinariesRelativePath)")
-				print("componentsForGettingTheHellOutOfThisRelativePath: \(componentsForGettingTheHellOutOfThisRelativePath)")
-				print("linkDestinationPath: \(linkDestinationPath)")
-				print("linkDestinationPath: \(linkDestinationPath)")
 
 				do {
 					try NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath)
@@ -1277,7 +1256,6 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 	return SignalProducer { observer, disposable in
 		// Use SignalProducer.replayLazily to avoid enumerating the given directory
 		// multiple times.
-		//x
 		let locator = buildableSchemesInDirectory(directoryURL, withConfiguration: configuration, forPlatforms: platforms)
 			.replayLazily(Int.max)
 
@@ -1319,8 +1297,6 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 			}
 			.map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
 				let initialValue = (project, scheme)
-				print("project: \(project)")
-				print("scheme: \(scheme)")
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
 					let filteredSDKs: [SDK]
@@ -1333,7 +1309,6 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 					return sdkFilter(sdks: filteredSDKs, scheme: scheme, configuration: configuration, project: project)
 				}
 
-				print("directory URL: \(directoryURL)")
 				let buildProgress = buildScheme(scheme, withConfiguration: configuration, inProject: project, workingDirectoryURL: directoryURL, derivedDataPath: derivedDataPath, toolchain: toolchain, dependency: dependency, sdkFilter: wrappedSDKFilter)
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for
@@ -1406,7 +1381,6 @@ public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, Carth
 		}
 
 		do {
-			print("create directory at: \(to)")
 			try manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil)
 		} catch let error as NSError {
 			// Although the method's documentation says: “YES if createIntermediates

@@ -620,7 +620,6 @@ public final class Project {
 			}
 	}
 
-	//x
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
 	/// optionally they are limited by the given list of dependency names.
 	public func checkoutResolvedDependencies(dependenciesToCheckout: [String]? = nil) -> SignalProducer<(), CarthageError> {
@@ -680,14 +679,6 @@ public final class Project {
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
 
-				print(dependency.dynamicType)
-				//x
-//				let rootBinariesURL = self.directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
-//				let versionFilePath = rootBinariesURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
-//				let dependencyBinariesURL = self.directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
-//				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
-//				if dependency.version.commitish ==  {
-//				}
 				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
 					return .empty
 				}
