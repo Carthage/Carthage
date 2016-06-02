@@ -149,8 +149,8 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
-		.flatMap(.Merge) { (string: String) -> SignalProducer<String, CarthageError> in
-			return string.linesProducer.promoteErrors(CarthageError.self)
+		.flatMap(.Merge) { string in
+			return string.linesProducer
 		}
 		.flatMap(.Merge) { line -> SignalProducer<String, CarthageError> in
 			// Matches one of these two possible messages:

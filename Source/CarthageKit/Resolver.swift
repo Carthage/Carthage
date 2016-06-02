@@ -146,11 +146,10 @@ public struct Resolver {
 	/// This is a helper method, and not meant to be called from outside.
 	private func graphsForCartfile(cartfile: Cartfile, dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		return nodePermutationsForCartfile(cartfile)
-			.flatMap(.Concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
+			.flatMap(.Concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
 				return self
 					.graphsForNodes(nodes, dependencyOf: dependencyOf, basedOnGraph: inputGraph)
 					.materialize()
-					.promoteErrors(CarthageError.self)
 			}
 			// Pass through resolution errors only if we never got
 			// a valid graph.
@@ -180,13 +179,12 @@ public struct Resolver {
 					.map { node in self.graphsForDependenciesOfNode(node, basedOnGraph: graph) }
 					.observeOn(scheduler)
 					.permute()
-					.flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, CarthageError> in
+					.flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
 						return SignalProducer<DependencyGraph, CarthageError>
 							.attempt {
 								mergeGraphs([ inputGraph ] + graphs)
 							}
 							.materialize()
-							.promoteErrors(CarthageError.self)
 					}
 					// Pass through resolution errors only if we never got
 					// a valid graph.
