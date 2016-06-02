@@ -234,7 +234,7 @@ public func contentsOfFileInRepository(repositoryFileURL: NSURL, _ path: String,
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
 public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
-	return SignalProducer.attempt {
+	return SignalProducer.attempt { () -> Result<[String: String], CarthageError> in
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil)
 			} catch let error as NSError {
@@ -302,7 +302,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 			}
 		}
 
-	return SignalProducer.attempt {
+	return SignalProducer.attempt { () -> Result<NSURL, CarthageError> in
 			do {
 				try NSFileManager.defaultManager().removeItemAtURL(submoduleDirectoryURL)
 			} catch let error as NSError {

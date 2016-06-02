@@ -38,7 +38,7 @@ public func unzipArchiveToDirectory(fileURL: NSURL, _ destinationDirectoryURL: N
 /// Unzips the archive at the given file URL into a temporary directory, then
 /// sends the file URL to that directory.
 public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	return SignalProducer.attempt {
+	return SignalProducer.attempt { () -> Result<String, CarthageError> in
 			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("carthage-archive.XXXXXX").nulTerminatedUTF8.map { CChar($0) }
 			let result = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> UnsafeMutablePointer<CChar> in
 				return mkdtemp(template.baseAddress)

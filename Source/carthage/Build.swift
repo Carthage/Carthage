@@ -99,7 +99,7 @@ public struct BuildCommand: CommandType {
 							stdoutObserver.sendInterrupted()
 						})
 
-					buildProgress = SignalProducer(values: [ grepTask, buildProgress ])
+					buildProgress = SignalProducer<BuildSchemeProducer, CarthageError>(values: [ grepTask, buildProgress ])
 						.flatten(.Merge)
 				}
 
@@ -140,7 +140,7 @@ public struct BuildCommand: CommandType {
 
 		let buildProducer = project.loadCombinedCartfile()
 			.map { _ in project }
-			.flatMapError { error in
+			.flatMapError { error -> SignalProducer<Project, CarthageError> in
 				if options.skipCurrent {
 					return SignalProducer(error: error)
 				} else {

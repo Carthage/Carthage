@@ -119,7 +119,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 			return matches
 		}
 		.map { $0.sort() }
-		.flatMap(.Merge) { SignalProducer(values: $0) }
+		.flatMap(.Merge) { SignalProducer<ProjectLocator, CarthageError>(values: $0) }
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
@@ -702,7 +702,7 @@ private func copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL: NSURL, _
 private func mergeExecutables(executableURLs: [NSURL], _ outputURL: NSURL) -> SignalProducer<(), CarthageError> {
 	precondition(outputURL.fileURL)
 
-	return SignalProducer(values: executableURLs)
+	return SignalProducer<NSURL, CarthageError>(values: executableURLs)
 		.attemptMap { URL -> Result<String, CarthageError> in
 			if let path = URL.path {
 				return .Success(path)
@@ -1149,7 +1149,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 
 			return .Success(schemeProducers)
 		}
-		.flatMap(.Merge) { schemeProducers in
+		.flatMap(.Merge) { schemeProducers -> SignalProducer<BuildSchemeProducer, CarthageError> in
 			return schemeProducers
 				.mapError { error in
 					switch (dependency, error) {
@@ -1463,7 +1463,7 @@ public func UUIDsForDSYM(dSYMURL: NSURL) -> SignalProducer<Set<NSUUID>, Carthage
 public func BCSymbolMapsForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	let directoryURL = frameworkURL.URLByDeletingLastPathComponent!
 	return UUIDsForFramework(frameworkURL)
-		.flatMap(.Merge) { UUIDs in SignalProducer(values: UUIDs) }
+		.flatMap(.Merge) { UUIDs in SignalProducer<NSUUID, CarthageError>(values: UUIDs) }
 		.map { UUID in
 			return directoryURL.URLByAppendingPathComponent(UUID.UUIDString, isDirectory: false).URLByAppendingPathExtension("bcsymbolmap")
 		}
