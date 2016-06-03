@@ -81,8 +81,7 @@ public struct BuildCommand: CommandType {
 							}
 						})
 						.flatMapError { _ in .empty }
-						.then(SignalProducer<TaskEvent<(ProjectLocator, String)>, NoError>.empty)
-						.promoteErrors(CarthageError.self)
+						.then(.empty)
 
 					buildProgress = buildProgress
 						.on(next: { taskEvent in

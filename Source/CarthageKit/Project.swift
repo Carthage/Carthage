@@ -288,7 +288,6 @@ public final class Project {
 		return SignalProducer.attempt {
 				return .Success(self.cachedVersions)
 			}
-			.promoteErrors(CarthageError.self)
 			.flatMap(.Merge) { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
 				if let versions = versionsByProject[project] {
 					return SignalProducer(values: versions)
@@ -903,7 +902,6 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 		}
 		.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 			return isGitRepository(repositoryURL)
-				.promoteErrors(CarthageError.self)
 				.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 					if isRepository {
 						let fetchProducer: () -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> = {
@@ -917,7 +915,6 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 									branchExistsInRepository(repositoryURL, pattern: commitish),
 									commitExistsInRepository(repositoryURL, revision: commitish)
 								)
-								.promoteErrors(CarthageError.self)
 								.flatMap(.Concat) { branchExists, commitExists -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 									// If the given commitish is a branch, we should fetch.
 									if branchExists || !commitExists {
