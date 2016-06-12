@@ -97,12 +97,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 			return NSFileManager.defaultManager()
 				.carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
 				.filter { _, URL in
-					for directory in directoriesToSkip {
-						if directory.hasSubdirectory(URL) {
-							return false
-						}
-					}
-					return true
+					return !directoriesToSkip.contains { $0.hasSubdirectory(URL) }
 				}
 		}
 		.reduce([]) { (matches: [ProjectLocator], tuple) -> [ProjectLocator] in
