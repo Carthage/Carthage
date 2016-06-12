@@ -724,15 +724,15 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, _ destinatio
 	precondition(destinationModuleDirectoryURL.fileURL)
 
 	return NSFileManager.defaultManager().carthage_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants, .SkipsHiddenFiles ], catchErrors: true)
-		.flatMap(.Merge) { enumerator, URL -> SignalProducer<NSURL, CarthageError> in
+		.attemptMap { _, URL -> Result<NSURL, CarthageError> in
 			let lastComponent: String? = URL.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!).URLByResolvingSymlinksInPath!
 
 			do {
 				try NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL)
-				return SignalProducer(value: destinationURL)
+				return .Success(destinationURL)
 			} catch let error as NSError {
-				return SignalProducer(error: .WriteFailed(destinationURL, error))
+				return .Failure(.WriteFailed(destinationURL, error))
 			}
 		}
 }
