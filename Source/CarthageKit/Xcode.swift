@@ -96,13 +96,13 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 		.flatMap(.Merge) { directoriesToSkip in
 			return NSFileManager.defaultManager()
 				.carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-				.filter { _, URL in
+				.map { _, URL in URL }
+				.filter { URL in
 					return !directoriesToSkip.contains { $0.hasSubdirectory(URL) }
 				}
 		}
-		.reduce([]) { (matches: [ProjectLocator], tuple) -> [ProjectLocator] in
+		.reduce([]) { (matches: [ProjectLocator], URL) -> [ProjectLocator] in
 			var matches = matches
-			let (_, URL) = tuple
 
 			if let UTI = URL.typeIdentifier.value {
 				if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
