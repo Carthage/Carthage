@@ -176,7 +176,7 @@ public final class Project {
 		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
 		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
-		let isNoSuchFileError = { (error: CarthageError) -> Bool in
+		func isNoSuchFileError(error: CarthageError) -> Bool {
 			switch error {
 			case let .ReadFailed(_, underlyingError):
 				if let underlyingError = underlyingError {
