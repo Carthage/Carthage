@@ -764,7 +764,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments, _ forPlatforms: S
 		// If we find any dynamic framework target, we should indeed build this scheme.
 		.map { _ in true }
 		// Otherwise, nope.
-		.concat(SignalProducer(value: false))
+		.concat(value: false)
 		.take(1)
 }
 
