@@ -101,19 +101,18 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 					return !directoriesToSkip.contains { $0.hasSubdirectory(URL) }
 				}
 		}
-		.reduce([]) { (matches: [ProjectLocator], URL) -> [ProjectLocator] in
-			var matches = matches
-
+		.map { URL -> ProjectLocator? in
 			if let UTI = URL.typeIdentifier.value {
 				if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
-					matches.append(.Workspace(URL))
+					return .Workspace(URL)
 				} else if (UTTypeConformsTo(UTI, "com.apple.xcode.project")) {
-					matches.append(.ProjectFile(URL))
+					return .ProjectFile(URL)
 				}
 			}
-
-			return matches
+			return nil
 		}
+		.ignoreNil()
+		.collect()
 		.map { $0.sort() }
 		.flatMap(.Merge) { SignalProducer<ProjectLocator, CarthageError>(values: $0) }
 }
