@@ -91,7 +91,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 
 	return gitmodulesEntriesInRepository(directoryURL, revision: nil)
 		.map { directoryURL.URLByAppendingPathComponent($0.path) }
-		.concat(SignalProducer(value: directoryURL.URLByAppendingPathComponent(CarthageProjectCheckoutsPath)))
+		.concat(value: directoryURL.URLByAppendingPathComponent(CarthageProjectCheckoutsPath))
 		.collect()
 		.flatMap(.Merge) { directoriesToSkip in
 			return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
