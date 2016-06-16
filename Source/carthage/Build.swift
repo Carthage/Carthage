@@ -81,8 +81,7 @@ public struct BuildCommand: CommandType {
 							}
 						})
 						.flatMapError { _ in .empty }
-						.then(SignalProducer<TaskEvent<(ProjectLocator, String)>, NoError>.empty)
-						.promoteErrors(CarthageError.self)
+						.then(.empty)
 
 					buildProgress = buildProgress
 						.on(next: { taskEvent in
@@ -99,7 +98,7 @@ public struct BuildCommand: CommandType {
 							stdoutObserver.sendInterrupted()
 						})
 
-					buildProgress = SignalProducer(values: [ grepTask, buildProgress ])
+					buildProgress = SignalProducer<BuildSchemeProducer, CarthageError>(values: [ grepTask, buildProgress ])
 						.flatten(.Merge)
 				}
 
@@ -140,7 +139,7 @@ public struct BuildCommand: CommandType {
 
 		let buildProducer = project.loadCombinedCartfile()
 			.map { _ in project }
-			.flatMapError { error in
+			.flatMapError { error -> SignalProducer<Project, CarthageError> in
 				if options.skipCurrent {
 					return SignalProducer(error: error)
 				} else {

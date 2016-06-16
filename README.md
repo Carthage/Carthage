@@ -127,7 +127,7 @@ When run this way, Carthage will write to your repository’s `.gitmodules` and 
 If you want to work on your dependencies during development, and want them to be automatically rebuilt when you build your parent project, you can add a Run Script build phase that invokes Carthage like so:
 
 ```sh
-/usr/local/bin/carthage build --platform "$PLATFORM_NAME" "$SRCROOT"
+/usr/local/bin/carthage build --platform "$PLATFORM_NAME" --project-directory "$SRCROOT"
 ```
 
 Note that you should be [using submodules](#using-submodules-for-dependencies) before doing this, because plain checkouts [should not be modified][Carthage/Checkouts] directly.

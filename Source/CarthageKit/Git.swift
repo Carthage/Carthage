@@ -234,7 +234,7 @@ public func contentsOfFileInRepository(repositoryFileURL: NSURL, _ path: String,
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
 public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
-	return SignalProducer.attempt {
+	return SignalProducer.attempt { () -> Result<[String: String], CarthageError> in
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil)
 			} catch let error as NSError {
@@ -302,7 +302,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 			}
 		}
 
-	return SignalProducer.attempt {
+	return SignalProducer.attempt { () -> Result<NSURL, CarthageError> in
 			do {
 				try NSFileManager.defaultManager().removeItemAtURL(submoduleDirectoryURL)
 			} catch let error as NSError {
@@ -396,7 +396,6 @@ internal func gitmodulesEntriesInRepository(repositoryFileURL: NSURL, revision: 
 	return launchGitTask(baseArguments + [ "--get-regexp", "submodule\\..*\\.path" ], repositoryFileURL: repositoryFileURL)
 		.flatMapError { _ in SignalProducer<String, NoError>.empty }
 		.flatMap(.Concat) { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
-		.promoteErrors(CarthageError.self)
 		.flatMap(.Concat) { name, path -> SignalProducer<(name: String, path: String, URL: GitURL), CarthageError> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
 				.map { URLString in (name: name, path: path, URL: GitURL(URLString)) }
@@ -525,7 +524,6 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, _ submodule: Subm
 			// Check if the submodule is initialized/updated already.
 			return isRepository && NSFileManager.defaultManager().fileExistsAtPath(submoduleDirectoryURL.URLByAppendingPathComponent(".git").path!)
 		}
-		.promoteErrors(CarthageError.self)
 		.flatMap(.Merge) { submoduleExists -> SignalProducer<(), CarthageError> in
 			if submoduleExists {
 				// Just check out and stage the correct revision.
