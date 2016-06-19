@@ -78,11 +78,31 @@ public struct UpdateCommand: CommandType {
 
 	public func run(options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
-			.flatMap(.Merge) {
-				$0.updateDependencies(
+			.flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
+				
+				let checkDependencies: SignalProducer<(), CarthageError>
+				if let depsToUpdate = options.dependenciesToUpdate {
+					checkDependencies = project
+						.loadCombinedCartfile()
+						.flatMap(.Concat) { cartfile -> SignalProducer<(), CarthageError> in
+							let dependencyNames = cartfile.dependencies.map { $0.project.name.lowercaseString }
+							let unknownDependencyNames = Set(depsToUpdate.map { $0.lowercaseString }).subtract(dependencyNames)
+							
+							if !unknownDependencyNames.isEmpty {
+								return SignalProducer(error: .UnknownDependencies(unknownDependencyNames.sort()))
+							}
+							return .empty
+						}
+				} else {
+					checkDependencies = .empty
+				}
+				
+				let updateDependencies = project.updateDependencies(
 					shouldCheckout: options.checkoutAfterUpdate,
 					dependenciesToUpdate: options.dependenciesToUpdate
 				)
+				
+				return checkDependencies.then(updateDependencies)
 			}
 			.then(options.buildProducer)
 			.waitOnCommand()
