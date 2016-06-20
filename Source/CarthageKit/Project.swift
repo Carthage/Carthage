@@ -176,7 +176,7 @@ public final class Project {
 		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
 		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
-		let isNoSuchFileError = { (error: CarthageError) -> Bool in
+		func isNoSuchFileError(error: CarthageError) -> Bool {
 			switch error {
 			case let .ReadFailed(_, underlyingError):
 				if let underlyingError = underlyingError {
@@ -189,31 +189,20 @@ public final class Project {
 				return false
 			}
 		}
-
-		let cartfile = SignalProducer.attempt {
-				return Cartfile.fromFile(cartfileURL)
-			}
-			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
-				if isNoSuchFileError(error) && NSFileManager.defaultManager().fileExistsAtPath(privateCartfileURL.path!) {
-					return SignalProducer(value: Cartfile())
+		
+		func loadCartfile(URL: NSURL) -> SignalProducer<Cartfile, CarthageError> {
+			return SignalProducer
+				.attempt { Cartfile.fromFile(URL) }
+				.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
+					if isNoSuchFileError(error) {
+						return SignalProducer(value: Cartfile())
+					}
+					
+					return SignalProducer(error: error)
 				}
+		}
 
-				return SignalProducer(error: error)
-			}
-
-		let privateCartfile = SignalProducer.attempt {
-				return Cartfile.fromFile(privateCartfileURL)
-			}
-			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
-				if isNoSuchFileError(error) {
-					return SignalProducer(value: Cartfile())
-				}
-
-				return SignalProducer(error: error)
-			}
-
-		return cartfile
-			.zipWith(privateCartfile)
+		return zip(loadCartfile(cartfileURL), loadCartfile(privateCartfileURL))
 			.attemptMap { cartfile, privateCartfile -> Result<Cartfile, CarthageError> in
 				var cartfile = cartfile
 
