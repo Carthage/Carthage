@@ -91,33 +91,28 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 
 	return gitmodulesEntriesInRepository(directoryURL, revision: nil)
 		.map { directoryURL.URLByAppendingPathComponent($0.path) }
-		.concat(SignalProducer(value: directoryURL.URLByAppendingPathComponent(CarthageProjectCheckoutsPath)))
+		.concat(value: directoryURL.URLByAppendingPathComponent(CarthageProjectCheckoutsPath))
 		.collect()
 		.flatMap(.Merge) { directoriesToSkip in
-			return NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-				.filter { _, URL in
-					for directory in directoriesToSkip {
-						if directory.hasSubdirectory(URL) {
-							return false
-						}
-					}
-					return true
+			return NSFileManager.defaultManager()
+				.carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+				.map { _, URL in URL }
+				.filter { URL in
+					return !directoriesToSkip.contains { $0.hasSubdirectory(URL) }
 				}
 		}
-		.reduce([]) { (matches: [ProjectLocator], tuple) -> [ProjectLocator] in
-			var matches = matches
-			let (_, URL) = tuple
-
+		.map { URL -> ProjectLocator? in
 			if let UTI = URL.typeIdentifier.value {
 				if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
-					matches.append(.Workspace(URL))
+					return .Workspace(URL)
 				} else if (UTTypeConformsTo(UTI, "com.apple.xcode.project")) {
-					matches.append(.ProjectFile(URL))
+					return .ProjectFile(URL)
 				}
 			}
-
-			return matches
+			return nil
 		}
+		.ignoreNil()
+		.collect()
 		.map { $0.sort() }
 		.flatMap(.Merge) { SignalProducer<ProjectLocator, CarthageError>(values: $0) }
 }
@@ -729,15 +724,15 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, _ destinatio
 	precondition(destinationModuleDirectoryURL.fileURL)
 
 	return NSFileManager.defaultManager().carthage_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants, .SkipsHiddenFiles ], catchErrors: true)
-		.flatMap(.Merge) { enumerator, URL -> SignalProducer<NSURL, CarthageError> in
+		.attemptMap { _, URL -> Result<NSURL, CarthageError> in
 			let lastComponent: String? = URL.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.URLByAppendingPathComponent(lastComponent!).URLByResolvingSymlinksInPath!
 
 			do {
 				try NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL)
-				return SignalProducer(value: destinationURL)
+				return .Success(destinationURL)
 			} catch let error as NSError {
-				return SignalProducer(error: .WriteFailed(destinationURL, error))
+				return .Failure(.WriteFailed(destinationURL, error))
 			}
 		}
 }
@@ -769,7 +764,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments, _ forPlatforms: S
 		// If we find any dynamic framework target, we should indeed build this scheme.
 		.map { _ in true }
 		// Otherwise, nope.
-		.concat(SignalProducer(value: false))
+		.concat(value: false)
 		.take(1)
 }
 
