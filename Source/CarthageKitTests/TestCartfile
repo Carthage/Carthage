@@ -12,3 +12,5 @@ github "danielgindi/ios-charts.git"
 github "https://enterprise.local/ghe/desktop/git-error-translations"
 
 git "https://enterprise.local/desktop/git-error-translations2.git" "development"
+
+http "https://enterprise.local/releases/0.0.1/MyFramework.zip"

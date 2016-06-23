@@ -1,3 +1,4 @@
+http "https://enterprise.local/releases/0.0.1/MyFramework.zip" ""
 github "https://enterprise.local/ghe/desktop/git-error-translations" "3.0.0"
 git "https://enterprise.local/desktop/git-error-translations2.git" "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"
 github "danielgindi/ios-charts.git" "3.0.0"

@@ -415,37 +415,24 @@ public final class Project {
 				switch project {
 				case let .GitHub(repository):
 					let client = Client(repository: repository)
-					return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: client)
-						.flatMapError { error -> SignalProducer<NSURL, CarthageError> in
-							if !client.authenticated {
-								return SignalProducer(error: error)
-							}
-							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, authenticated: false))
-						}
-						.flatMap(.Concat, transform: unzipArchiveToTemporaryDirectory)
-						.flatMap(.Concat) { directoryURL in
-							return frameworksInDirectory(directoryURL)
-								.flatMap(.Merge, transform: self.copyFrameworkToBuildFolder)
-								.flatMap(.Merge) { frameworkURL in
-									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
-										.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
+					return self.completeFrameworkDownload(checkoutDirectoryURL) {
+						self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: client)
+							.flatMapError { error -> SignalProducer<NSURL, CarthageError> in
+								if !client.authenticated {
+									return SignalProducer(error: error)
 								}
-								.on(completed: {
-									_ = try? NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil)
-								})
-								.then(SignalProducer(value: directoryURL))
+								return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, authenticated: false))
 						}
-						.attemptMap { (temporaryDirectoryURL: NSURL) -> Result<Bool, CarthageError> in
-							do {
-								try NSFileManager.defaultManager().removeItemAtURL(temporaryDirectoryURL)
-								return .Success(true)
-							} catch let error as NSError {
-								return .Failure(.WriteFailed(temporaryDirectoryURL, error))
-							}
-						}
-						.concat(SignalProducer(value: false))
-						.take(1)
-
+					}
+				case let .HTTP(url):
+					let fileURL = CarthageDependencyAssetsURL.URLByAppendingPathComponent("\(project.name)/\(url.lastPathComponent!)", isDirectory: false)
+					return self.completeFrameworkDownload(checkoutDirectoryURL) {
+						NSURLSession
+							.sharedSession()
+							.downloadFile(NSURLRequest(URL: url))
+							.mapError(CarthageError.GenericError)
+							.flatMap(.Concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
+					}
 				case .Git:
 					return SignalProducer(value: false)
 				}
@@ -570,7 +557,35 @@ public final class Project {
 				self._projectEventsObserver.sendNext(.CheckingOut(project, revision))
 			})
 	}
-	
+
+	/// Extacts, copy and cleans up after a framework download
+	private func completeFrameworkDownload(checkoutDirectoryURL: NSURL, downloader: Void -> SignalProducer<NSURL, CarthageError>) -> SignalProducer<Bool, CarthageError> {
+		return downloader()
+			.flatMap(.Concat, transform: unzipArchiveToTemporaryDirectory)
+			.flatMap(.Concat) { directoryURL in
+				return frameworksInDirectory(directoryURL)
+					.flatMap(.Merge, transform: self.copyFrameworkToBuildFolder)
+					.flatMap(.Merge) { frameworkURL in
+						return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
+							.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
+					}
+					.on(completed: {
+						_ = try? NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil)
+					})
+					.then(SignalProducer(value: directoryURL))
+			}
+			.attemptMap { (temporaryDirectoryURL: NSURL) -> Result<Bool, CarthageError> in
+				do {
+					try NSFileManager.defaultManager().removeItemAtURL(temporaryDirectoryURL)
+					return .Success(true)
+				} catch let error as NSError {
+					return .Failure(.WriteFailed(temporaryDirectoryURL, error))
+				}
+			}
+			.concat(SignalProducer(value: false))
+			.take(1)
+	}
+
 	public func buildOrderForResolvedCartfile(cartfile: ResolvedCartfile, dependenciesToInclude: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		typealias DependencyGraph = [ProjectIdentifier: Set<ProjectIdentifier>]
 		// A resolved cartfile already has all the recursive dependencies. All we need to do is sort
@@ -866,6 +881,8 @@ private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bo
 
 	case let .Git(URL):
 		return URL
+	case let .HTTP(URL):
+		return GitURL(URL.absoluteString)
 	}
 }
 
@@ -925,4 +942,36 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 					}
 			}
 		}
+}
+
+// Useful extensions from Tentacle
+extension NSURLSession {
+	/// Returns a producer that will download a file using the given request. The file will be
+	/// deleted after the producer terminates.
+	internal func downloadFile(request: NSURLRequest) -> SignalProducer<NSURL, NSError> {
+		return SignalProducer { observer, disposable in
+			let serialDisposable = SerialDisposable()
+			let handle = disposable.addDisposable(serialDisposable)
+
+			let task = self.downloadTaskWithRequest(request) { (URL, response, error) in
+				// Avoid invoking cancel(), or the download may be deleted.
+				handle.remove()
+
+				if let URL = URL {
+					observer.sendNext(URL)
+					observer.sendCompleted()
+				} else if let error = error {
+					observer.sendFailed(error)
+				} else {
+					fatalError("Request neither succeeded nor failed: \(request.URL)")
+				}
+			}
+
+			serialDisposable.innerDisposable = ActionDisposable {
+				task.cancel()
+			}
+
+			task.resume()
+		}
+	}
 }

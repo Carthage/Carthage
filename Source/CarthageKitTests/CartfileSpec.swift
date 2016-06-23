@@ -23,7 +23,7 @@ class CartfileSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			let cartfile = result.value!
-			expect(cartfile.dependencies.count) == 7
+			expect(cartfile.dependencies.count) == 8
 
 			let depReactiveCocoa = cartfile.dependencies[0]
 			expect(depReactiveCocoa.project) == ProjectIdentifier.GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
@@ -52,6 +52,10 @@ class CartfileSpec: QuickSpec {
 			let depErrorTranslations = cartfile.dependencies[6]
 			expect(depErrorTranslations.project) == ProjectIdentifier.Git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))
 			expect(depErrorTranslations.version) == VersionSpecifier.GitReference("development")
+
+			let depHttpTranslation = cartfile.dependencies[7]
+			expect(depHttpTranslation.project) == ProjectIdentifier.HTTP(NSURL(string: "https://enterprise.local/releases/0.0.1/MyFramework.zip")!)
+			expect(depHttpTranslation.version) == VersionSpecifier.Any
 		}
 
 		it("should parse a Cartfile.resolved") {

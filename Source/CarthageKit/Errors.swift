@@ -81,6 +81,9 @@ public enum CarthageError: ErrorType, Equatable {
 
 	/// An error occurred while shelling out.
 	case TaskError(ReactiveTask.TaskError)
+
+	// A carthage error for a generic NSError
+	case GenericError(NSError)
 }
 
 private func == (lhs: CarthageError.VersionRequirement, rhs: CarthageError.VersionRequirement) -> Bool {
@@ -216,6 +219,8 @@ extension CarthageError: CustomStringConvertible {
 
 			case .Git:
 				break
+			case .HTTP:
+				break
 			}
 
 			return description
@@ -263,6 +268,9 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .TaskError(taskError):
 			return taskError.description
+
+		case let .GenericError(error):
+			return error.localizedDescription
 		}
 	}
 }

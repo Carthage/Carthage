@@ -53,12 +53,13 @@ class ResolverSpec: QuickSpec {
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
 			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
 			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count) == 8
+			expect(dependencies.count) == 9
 
 			var generator = dependencies.generate()
 
 			// Dependencies should be listed in build order.
 			expect(generator.next()) == Dependency("Mantle", "1.3.0")
+			expect(generator.next()) == Dependency("MyFramework", "3.0.0")
 			expect(generator.next()) == Dependency("git-error-translations", "3.0.0")
 			expect(generator.next()) == Dependency("git-error-translations2", "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9")
 			expect(generator.next()) == Dependency("ios-charts", "3.0.0")
