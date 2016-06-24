@@ -353,23 +353,14 @@ public final class Project {
 			.map(ResolvedCartfile.init)
 	}
 	
-	/// Attempts to determine which of the project's Carthage
-	/// dependencies are out of date.
+	/// Attempts to determine the latest version, whether satisfiable or not,
+	/// of the project's Carthage dependencies.
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func outdatedDependencies(includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>, Dependency<SemanticVersion>)], CarthageError> {
-		typealias PinnedDependency = Dependency<PinnedVersion>
-		typealias SemanticDependency = Dependency<SemanticVersion>
-		typealias OutdatedDependency = (PinnedDependency, PinnedDependency)
-		typealias LatestDependency = (PinnedDependency, SemanticDependency)
-		typealias OutdatedAndLatestDependency = (PinnedDependency, PinnedDependency, SemanticDependency)
-
-		let currentDependencies = loadResolvedCartfile()
+	private func latestDependencies() -> SignalProducer<[Dependency<SemanticVersion>], CarthageError> {
+		return loadResolvedCartfile()
 			.map { $0.dependencies }
-		let updatedDependencies = updatedResolvedCartfile()
-			.map { $0.dependencies }
-		let latestDependencies = currentDependencies
 			.map { (currentDependencies: [Dependency<PinnedVersion>]) -> SignalProducer<[Dependency<SemanticVersion>], CarthageError> in
 				let projectIdentifiers = currentDependencies.map { $0.project }
 				let producers = projectIdentifiers.map { (projectIdentifier: ProjectIdentifier) -> SignalProducer<Dependency<SemanticVersion>, CarthageError> in
@@ -386,11 +377,30 @@ public final class Project {
 					
 					return dependencies.ignoreNil()
 				}
-			
-				return SignalProducer(values: producers).flatten(.Merge).collect()
+				
+				let producerOfProducers: SignalProducer<SignalProducer<Dependency<SemanticVersion>, CarthageError>, CarthageError> = SignalProducer(values: producers)
+				return producerOfProducers.flatten(.Merge).collect()
 			}.flatten(.Merge)
+	}
+	
+	/// Attempts to determine which of the project's Carthage
+	/// dependencies are out of date.
+	///
+	/// This will fetch dependency repositories as necessary, but will not check
+	/// them out into the project's working directory.
+	public func outdatedDependencies(includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>, Dependency<SemanticVersion>)], CarthageError> {
+		typealias PinnedDependency = Dependency<PinnedVersion>
+		typealias SemanticDependency = Dependency<SemanticVersion>
+		typealias OutdatedDependency = (PinnedDependency, PinnedDependency)
+		typealias LatestDependency = (PinnedDependency, SemanticDependency)
+		typealias OutdatedAndLatestDependency = (PinnedDependency, PinnedDependency, SemanticDependency)
+
+		let currentDependencies = loadResolvedCartfile()
+			.map { $0.dependencies }
+		let updatedDependencies = updatedResolvedCartfile()
+			.map { $0.dependencies }
 		
-		let outdatedDependencies = combineLatest(currentDependencies, updatedDependencies, latestDependencies)
+		let outdatedDependencies = combineLatest(currentDependencies, updatedDependencies, latestDependencies())
 			.map { (currentDependencies, updatedDependencies, latestDependencies) -> [OutdatedAndLatestDependency] in
 				var currentDependenciesDictionary = [ProjectIdentifier: PinnedDependency]()
 				for dependency in currentDependencies {
@@ -403,15 +413,6 @@ public final class Project {
 						latestDependenciesDictionary[latest.project] = (resolved, latest)
 					}
 				}
-				
-				
-//				let blah: [LatestDependency] = latestDependencies.flatMap { latest -> LatestDependency? in
-//					if let latestVersion = latest.version.pinnedVersion, resolved = currentDependenciesDictionary[latest.project] where resolved.version != latestVersion {
-//						return (resolved, latest)
-//					} else {
-//						return nil
-//					}
-//				}
 				
 				return updatedDependencies.flatMap { updated -> OutdatedAndLatestDependency? in
 					if let (resolved, latest) = latestDependenciesDictionary[updated.project] {
