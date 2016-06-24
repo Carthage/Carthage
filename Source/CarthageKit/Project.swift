@@ -353,34 +353,37 @@ public final class Project {
 			.map(ResolvedCartfile.init)
 	}
 	
-	/// Attempts to determine the latest version, whether satisfiable or not,
+	/// Attempts to determine the latest version (whether satisfiable or not)
 	/// of the project's Carthage dependencies.
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
 	private func latestDependencies() -> SignalProducer<[Dependency<SemanticVersion>], CarthageError> {
 		return loadResolvedCartfile()
-			.map { $0.dependencies }
-			.map { (currentDependencies: [Dependency<PinnedVersion>]) -> SignalProducer<[Dependency<SemanticVersion>], CarthageError> in
-				let projectIdentifiers = currentDependencies.map { $0.project }
-				let producers = projectIdentifiers.map { (projectIdentifier: ProjectIdentifier) -> SignalProducer<Dependency<SemanticVersion>, CarthageError> in
-					let versions = self.versionsForProject(projectIdentifier).collect().map { (pinnedVersions: [PinnedVersion]) -> [SemanticVersion] in
-						return pinnedVersions.flatMap { SemanticVersion.fromPinnedVersion($0).value }
+			.map {
+				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: $0.dependencies)
+					.map {dependency in
+						return dependency.project
 					}
-					let dependencies = versions.map { (versions: [SemanticVersion]) -> Dependency<SemanticVersion>? in
+			}
+			.flatten(.Merge)
+			.map { (projectIdentifier: ProjectIdentifier) -> SignalProducer<Dependency<SemanticVersion>, CarthageError> in
+				let versions = self.versionsForProject(projectIdentifier).collect().map { (pinnedVersions: [PinnedVersion]) -> [SemanticVersion] in
+					return pinnedVersions.flatMap { SemanticVersion.fromPinnedVersion($0).value }
+				}
+				
+				return versions
+					.map {(versions: [SemanticVersion]) -> Dependency<SemanticVersion>? in
 						if let latestVersion = versions.maxElement() {
 							return Dependency(project: projectIdentifier, version: latestVersion)
 						} else {
 							return nil
 						}
 					}
-					
-					return dependencies.ignoreNil()
-				}
-				
-				let producerOfProducers: SignalProducer<SignalProducer<Dependency<SemanticVersion>, CarthageError>, CarthageError> = SignalProducer(values: producers)
-				return producerOfProducers.flatten(.Merge).collect()
-			}.flatten(.Merge)
+					.ignoreNil()
+			}
+			.flatten(.Merge)
+			.collect()
 	}
 	
 	/// Attempts to determine which of the project's Carthage
