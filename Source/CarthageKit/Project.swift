@@ -394,32 +394,30 @@ public final class Project {
 	public func outdatedDependencies(includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>, Dependency<SemanticVersion>)], CarthageError> {
 		typealias PinnedDependency = Dependency<PinnedVersion>
 		typealias SemanticDependency = Dependency<SemanticVersion>
-		typealias OutdatedDependency = (PinnedDependency, PinnedDependency)
-		typealias LatestDependency = (PinnedDependency, SemanticDependency)
-		typealias OutdatedAndLatestDependency = (PinnedDependency, PinnedDependency, SemanticDependency)
+		typealias OutdatedDependency = (PinnedDependency, PinnedDependency, SemanticDependency)
 
 		let currentDependencies = loadResolvedCartfile()
 			.map { $0.dependencies }
-		let updatedDependencies = updatedResolvedCartfile()
+		let satisfiableDependencies = updatedResolvedCartfile()
 			.map { $0.dependencies }
 		
-		let outdatedDependencies = combineLatest(currentDependencies, updatedDependencies, latestDependencies())
-			.map { (currentDependencies, updatedDependencies, latestDependencies) -> [OutdatedAndLatestDependency] in
+		let outdatedDependencies = combineLatest(currentDependencies, satisfiableDependencies, latestDependencies())
+			.map { (currentDependencies, satisfiableDependencies, latestDependencies) -> [OutdatedDependency] in
 				var currentDependenciesDictionary = [ProjectIdentifier: PinnedDependency]()
 				for dependency in currentDependencies {
 					currentDependenciesDictionary[dependency.project] = dependency
 				}
 				
-				var latestDependenciesDictionary = [ProjectIdentifier: LatestDependency]()
-				for latest in latestDependencies {
-					if let latestVersion = latest.version.pinnedVersion, resolved = currentDependenciesDictionary[latest.project] where resolved.version != latestVersion {
-						latestDependenciesDictionary[latest.project] = (resolved, latest)
+				var latestDependenciesDictionary = [ProjectIdentifier: SemanticDependency]()
+				for latestDependency in latestDependencies {
+					if let latestVersion = latestDependency.version.pinnedVersion, currentVersion = currentDependenciesDictionary[latestDependency.project] where currentVersion.version != latestVersion {
+						latestDependenciesDictionary[latestDependency.project] = (latestDependency)
 					}
 				}
 				
-				return updatedDependencies.flatMap { updated -> OutdatedAndLatestDependency? in
-					if let (resolved, latest) = latestDependenciesDictionary[updated.project] {
-						return (resolved, updated, latest)
+				return satisfiableDependencies.flatMap { satisfiableDependency -> OutdatedDependency? in
+					if let latestDependency = latestDependenciesDictionary[satisfiableDependency.project], currentDependency = currentDependenciesDictionary[satisfiableDependency.project] {
+						return (currentDependency, satisfiableDependency, latestDependency)
 					} else {
 						return nil
 					}
@@ -435,7 +433,7 @@ public final class Project {
 			.map { $0.dependencies.map { $0.project } }
 
 		return combineLatest(outdatedDependencies, explicitDependencyProjects)
-			.map { (oudatedDependencies, explicitDependencyProjects) -> [OutdatedAndLatestDependency] in
+			.map { (oudatedDependencies, explicitDependencyProjects) -> [OutdatedDependency] in
 				return oudatedDependencies.filter { resolved, _, _ in
 					return explicitDependencyProjects.contains(resolved.project)
 				}
