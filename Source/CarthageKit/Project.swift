@@ -190,19 +190,29 @@ public final class Project {
 			}
 		}
 		
-		func loadCartfile(URL: NSURL) -> SignalProducer<Cartfile, CarthageError> {
-			return SignalProducer
-				.attempt { Cartfile.fromFile(URL) }
-				.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
-					if isNoSuchFileError(error) {
-						return SignalProducer(value: Cartfile())
-					}
-					
-					return SignalProducer(error: error)
+		let cartfile = SignalProducer.attempt {
+				return Cartfile.fromFile(cartfileURL)
+			}
+			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
+				if isNoSuchFileError(error) && NSFileManager.defaultManager().fileExistsAtPath(privateCartfileURL.path!) {
+					return SignalProducer(value: Cartfile())
 				}
-		}
 
-		return zip(loadCartfile(cartfileURL), loadCartfile(privateCartfileURL))
+				return SignalProducer(error: error)
+			}
+
+		let privateCartfile = SignalProducer.attempt {
+				return Cartfile.fromFile(privateCartfileURL)
+			}
+			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
+				if isNoSuchFileError(error) {
+					return SignalProducer(value: Cartfile())
+				}
+
+				return SignalProducer(error: error)
+			}
+
+		return zip(cartfile, privateCartfile)
 			.attemptMap { cartfile, privateCartfile -> Result<Cartfile, CarthageError> in
 				var cartfile = cartfile
 
