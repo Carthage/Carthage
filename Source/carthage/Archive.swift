@@ -78,7 +78,7 @@ public struct ArchiveCommand: CommandType {
 			return SignalProducer(values: Platform.supportedPlatforms)
 				.flatMap(.Merge) { platform -> SignalProducer<String, CarthageError> in
 					return SignalProducer(values: frameworks).map { framework in
-						return (platform.relativePath as NSString).stringByAppendingPathComponent(framework)
+						return (options.directoryPath as NSString).stringByAppendingPathComponent((platform.relativePath as NSString).stringByAppendingPathComponent(framework))
 					}
 				}
 				.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
