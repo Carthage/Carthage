@@ -367,21 +367,15 @@ public final class Project {
 					}
 			}
 			.flatMap(.Merge) { (projectIdentifier: ProjectIdentifier) -> SignalProducer<Dependency<SemanticVersion>, CarthageError> in
-				let versions = self.versionsForProject(projectIdentifier)
+				return self.versionsForProject(projectIdentifier)
 					.collect()
-					.map { (pinnedVersions: [PinnedVersion]) -> [SemanticVersion] in
-						return pinnedVersions.flatMap { SemanticVersion.fromPinnedVersion($0).value }
-					}
-				
-				return versions
-					.map { (versions: [SemanticVersion]) -> Dependency<SemanticVersion>? in
-						if let latestVersion = versions.maxElement() {
-							return Dependency(project: projectIdentifier, version: latestVersion)
-						} else {
-							return nil
-						}
+					.map { (pinnedVersions: [PinnedVersion]) -> SemanticVersion? in
+						return pinnedVersions
+							.flatMap { SemanticVersion.fromPinnedVersion($0).value }
+							.maxElement()
 					}
 					.ignoreNil()
+					.map { Dependency(project: projectIdentifier, version: $0) }
 			}
 			.collect()
 	}
