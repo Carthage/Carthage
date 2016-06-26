@@ -360,20 +360,21 @@ public final class Project {
 	/// them out into the project's working directory.
 	private func latestDependencies() -> SignalProducer<[Dependency<SemanticVersion>], CarthageError> {
 		return loadResolvedCartfile()
-			.map {
+			.flatMap(.Merge) {
 				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: $0.dependencies)
-					.map {dependency in
+					.map { dependency in
 						return dependency.project
 					}
 			}
-			.flatten(.Merge)
-			.map { (projectIdentifier: ProjectIdentifier) -> SignalProducer<Dependency<SemanticVersion>, CarthageError> in
-				let versions = self.versionsForProject(projectIdentifier).collect().map { (pinnedVersions: [PinnedVersion]) -> [SemanticVersion] in
-					return pinnedVersions.flatMap { SemanticVersion.fromPinnedVersion($0).value }
-				}
+			.flatMap(.Merge) { (projectIdentifier: ProjectIdentifier) -> SignalProducer<Dependency<SemanticVersion>, CarthageError> in
+				let versions = self.versionsForProject(projectIdentifier)
+					.collect()
+					.map { (pinnedVersions: [PinnedVersion]) -> [SemanticVersion] in
+						return pinnedVersions.flatMap { SemanticVersion.fromPinnedVersion($0).value }
+					}
 				
 				return versions
-					.map {(versions: [SemanticVersion]) -> Dependency<SemanticVersion>? in
+					.map { (versions: [SemanticVersion]) -> Dependency<SemanticVersion>? in
 						if let latestVersion = versions.maxElement() {
 							return Dependency(project: projectIdentifier, version: latestVersion)
 						} else {
@@ -382,7 +383,6 @@ public final class Project {
 					}
 					.ignoreNil()
 			}
-			.flatten(.Merge)
 			.collect()
 	}
 	
