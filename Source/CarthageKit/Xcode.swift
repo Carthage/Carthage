@@ -1249,12 +1249,14 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 public func stripFramework(frameworkURL: NSURL, keepingArchitectures: [String], codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
 	let stripArchitectures = stripBinary(frameworkURL, keepingArchitectures: keepingArchitectures)
 
-	// Xcode doesn't copy `Modules` directory at all.
+	// Xcode doesn't copy `Headers` and `Modules` directory at all.
+	let stripHeaders = stripHeadersDirectory(frameworkURL)
 	let stripModules = stripModulesDirectory(frameworkURL)
 
 	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty
 
 	return stripArchitectures
+		.concat(stripHeaders)
 		.concat(stripModules)
 		.concat(sign)
 }
@@ -1418,20 +1420,29 @@ public func architecturesInPackage(packageURL: NSURL) -> SignalProducer<String, 
 		}
 }
 
+/// Strips `Headers` directory from the given framework.
+public func stripHeadersDirectory(frameworkURL: NSURL) -> SignalProducer<(), CarthageError> {
+	return stripDirectory(named: "Headers", of: frameworkURL)
+}
+
 /// Strips `Modules` directory from the given framework.
 public func stripModulesDirectory(frameworkURL: NSURL) -> SignalProducer<(), CarthageError> {
+	return stripDirectory(named: "Modules", of: frameworkURL)
+}
+
+private func stripDirectory(named directory: String, of frameworkURL: NSURL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt {
-		let modulesDirectoryURL = frameworkURL.URLByAppendingPathComponent("Modules", isDirectory: true)
+		let directoryURLToStrip = frameworkURL.URLByAppendingPathComponent(directory, isDirectory: true)
 
 		var isDirectory: ObjCBool = false
-		if !NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!, isDirectory: &isDirectory) || !isDirectory {
+		if !NSFileManager.defaultManager().fileExistsAtPath(directoryURLToStrip.path!, isDirectory: &isDirectory) || !isDirectory {
 			return .Success(())
 		}
 
 		do {
-			try NSFileManager.defaultManager().removeItemAtURL(modulesDirectoryURL)
+			try NSFileManager.defaultManager().removeItemAtURL(directoryURLToStrip)
 		} catch let error as NSError {
-			return .Failure(.WriteFailed(modulesDirectoryURL, error))
+			return .Failure(.WriteFailed(directoryURLToStrip, error))
 		}
 
 		return .Success(())
