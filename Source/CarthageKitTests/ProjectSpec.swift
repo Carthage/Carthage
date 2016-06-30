@@ -15,8 +15,6 @@ import Tentacle
 
 class ProjectSpec: QuickSpec {
 	override func spec() {
-		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("CartfilePrivateOnly", withExtension: nil)!
-		
 		describe("loadCombinedCartfile") {
 			it("should load a combined Cartfile when only a Cartfile is present") {
 				let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("CartfileOnly", withExtension: nil)!
@@ -30,6 +28,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should load a combined Cartfile when only a Cartfile.private is present") {
+				let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("CartfilePrivateOnly", withExtension: nil)!
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 				expect(result?.value).notTo(beNil())
