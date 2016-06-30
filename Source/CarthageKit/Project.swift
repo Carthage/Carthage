@@ -368,12 +368,10 @@ public final class Project {
 			}
 			.flatMap(.Merge) { (projectIdentifier: ProjectIdentifier) -> SignalProducer<Dependency<SemanticVersion>, CarthageError> in
 				return self.versionsForProject(projectIdentifier)
+					.map { SemanticVersion.fromPinnedVersion($0).value }
+					.ignoreNil()
 					.collect()
-					.map { (pinnedVersions: [PinnedVersion]) -> SemanticVersion? in
-						return pinnedVersions
-							.flatMap { SemanticVersion.fromPinnedVersion($0).value }
-							.maxElement()
-					}
+					.map { $0.maxElement() }
 					.ignoreNil()
 					.map { Dependency(project: projectIdentifier, version: $0) }
 			}
@@ -398,19 +396,17 @@ public final class Project {
 		let outdatedDependencies = combineLatest(currentDependencies, satisfiableDependencies, latestDependencies())
 			.map { (currentDependencies, satisfiableDependencies, latestDependencies) -> [OutdatedDependency] in
 				var currentDependenciesDictionary = [ProjectIdentifier: PinnedDependency]()
-				for dependency in currentDependencies {
-					currentDependenciesDictionary[dependency.project] = dependency
+				for currentDependency in currentDependencies {
+					currentDependenciesDictionary[currentDependency.project] = currentDependency
 				}
 				
 				var latestDependenciesDictionary = [ProjectIdentifier: SemanticDependency]()
 				for latestDependency in latestDependencies {
-					if let latestVersion = latestDependency.version.pinnedVersion, currentVersion = currentDependenciesDictionary[latestDependency.project] where currentVersion.version != latestVersion {
-						latestDependenciesDictionary[latestDependency.project] = (latestDependency)
-					}
+					latestDependenciesDictionary[latestDependency.project] = latestDependency
 				}
 				
 				return satisfiableDependencies.flatMap { satisfiableDependency -> OutdatedDependency? in
-					if let latestDependency = latestDependenciesDictionary[satisfiableDependency.project], currentDependency = currentDependenciesDictionary[satisfiableDependency.project] {
+					if let latestDependency = latestDependenciesDictionary[satisfiableDependency.project], latestVersion = latestDependency.version.pinnedVersion, currentDependency = currentDependenciesDictionary[satisfiableDependency.project] where currentDependency.version != latestVersion {
 						return (currentDependency, satisfiableDependency, latestDependency)
 					} else {
 						return nil
