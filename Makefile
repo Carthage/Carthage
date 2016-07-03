@@ -24,7 +24,7 @@ all: bootstrap
 	$(BUILD_TOOL) $(XCODEFLAGS) build
 
 bootstrap:
-	script/bootstrap
+	git submodule update --init --recursive
 
 test: clean bootstrap
 	$(BUILD_TOOL) $(XCODEFLAGS) test
