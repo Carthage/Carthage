@@ -1249,14 +1249,17 @@ public func buildInDirectory(directoryURL: NSURL, withConfiguration configuratio
 public func stripFramework(frameworkURL: NSURL, keepingArchitectures: [String], codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
 	let stripArchitectures = stripBinary(frameworkURL, keepingArchitectures: keepingArchitectures)
 
-	// Xcode doesn't copy `Headers` and `Modules` directory at all.
+	// Xcode doesn't copy `Headers`, `PrivateHeaders` and `Modules` directory at
+	// all.
 	let stripHeaders = stripHeadersDirectory(frameworkURL)
+	let stripPrivateHeaders = stripPrivateHeadersDirectory(frameworkURL)
 	let stripModules = stripModulesDirectory(frameworkURL)
 
 	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty
 
 	return stripArchitectures
 		.concat(stripHeaders)
+		.concat(stripPrivateHeaders)
 		.concat(stripModules)
 		.concat(sign)
 }
@@ -1423,6 +1426,11 @@ public func architecturesInPackage(packageURL: NSURL) -> SignalProducer<String, 
 /// Strips `Headers` directory from the given framework.
 public func stripHeadersDirectory(frameworkURL: NSURL) -> SignalProducer<(), CarthageError> {
 	return stripDirectory(named: "Headers", of: frameworkURL)
+}
+
+/// Strips `PrivateHeaders` directory from the given framework.
+public func stripPrivateHeadersDirectory(frameworkURL: NSURL) -> SignalProducer<(), CarthageError> {
+	return stripDirectory(named: "PrivateHeaders", of: frameworkURL)
 }
 
 /// Strips `Modules` directory from the given framework.
