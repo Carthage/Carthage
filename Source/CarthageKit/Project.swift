@@ -30,13 +30,13 @@ private let fallbackDependenciesURL: NSURL = {
 /// ~/Library/Caches/org.carthage.CarthageKit/
 private let CarthageUserCachesURL: NSURL = {
 	let fileManager = NSFileManager.defaultManager()
-	
+
 	let URLResult: Result<NSURL, NSError> = `try` { (error: NSErrorPointer) -> NSURL? in
 		return try? fileManager.URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true)
 	}.flatMap { cachesURL in
 		let dependenciesURL = cachesURL.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
 		let dependenciesPath = dependenciesURL.absoluteString
-		
+
 		if fileManager.fileExistsAtPath(dependenciesPath, isDirectory:nil) {
 			if fileManager.isWritableFileAtPath(dependenciesPath) {
 				return Result(value: dependenciesURL)
@@ -99,7 +99,7 @@ public enum ProjectEvent {
 
 	/// The project is beginning a fetch.
 	case Fetching(ProjectIdentifier)
-	
+
 	/// The project is being checked out to the specified revision.
 	case CheckingOut(ProjectIdentifier, String)
 
@@ -143,7 +143,7 @@ public final class Project {
 	/// Whether to download binaries for dependencies, or just check out their
 	/// repositories.
 	public var useBinaries = false
-	
+
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
 	public let projectEvents: Signal<ProjectEvent, NoError>
@@ -189,7 +189,7 @@ public final class Project {
 				return false
 			}
 		}
-		
+
 		let cartfile = SignalProducer.attempt {
 				return Cartfile.fromFile(cartfileURL)
 			}
@@ -300,11 +300,11 @@ public final class Project {
 				if versions.isEmpty {
 					return SignalProducer(error: .TaggedVersionNotFound(project))
 				}
-				
+
 				return SignalProducer(values: versions)
 			}
 	}
-	
+
 	/// Loads the Cartfile for the given dependency, at the given version.
 	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
 		let revision = dependency.version.commitish
@@ -352,7 +352,7 @@ public final class Project {
 			.collect()
 			.map(ResolvedCartfile.init)
 	}
-	
+
 	/// Attempts to determine which of the project's Carthage
 	/// dependencies are out of date.
 	///
@@ -462,7 +462,7 @@ public final class Project {
 			}
 	}
 
-	/// Downloads any binaries and debug symbols that may be able to be used 
+	/// Downloads any binaries and debug symbols that may be able to be used
 	/// instead of a repository checkout.
 	///
 	/// Sends the URL to each downloaded zip, after it has been moved to a
@@ -477,7 +477,7 @@ public final class Project {
 				switch error {
 				case .DoesNotExist:
 					return .empty
-					
+
 				case let .APIError(_, _, error):
 					// Log the GitHub API request failure, not to error out,
 					// because that should not be fatal error.
@@ -538,7 +538,7 @@ public final class Project {
 		return dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
 	}
-	
+
 	/// Copies any *.bcsymbolmap files matching the given framework and contained
 	/// within the given directory URL to the directory that the framework
 	/// resides within.
@@ -560,7 +560,7 @@ public final class Project {
 			.flatMap(.Merge) { repositoryURL -> SignalProducer<(), CarthageError> in
 				let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
 				var submodule: Submodule?
-				
+
 				if var foundSubmodule = submodulesByPath[project.relativePath] {
 					foundSubmodule.URL = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
 					foundSubmodule.SHA = revision
@@ -568,7 +568,7 @@ public final class Project {
 				} else if self.useSubmodules {
 					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), SHA: revision)
 				}
-				
+
 				if let submodule = submodule {
 					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!))
 						.startOnQueue(self.gitOperationQueue)
@@ -580,7 +580,7 @@ public final class Project {
 				self._projectEventsObserver.sendNext(.CheckingOut(project, revision))
 			})
 	}
-	
+
 	public func buildOrderForResolvedCartfile(cartfile: ResolvedCartfile, dependenciesToInclude: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		typealias DependencyGraph = [ProjectIdentifier: Set<ProjectIdentifier>]
 		// A resolved cartfile already has all the recursive dependencies. All we need to do is sort
@@ -629,7 +629,7 @@ public final class Project {
 				submodulesByPath[submodule.path] = submodule
 				return submodulesByPath
 			}
-		
+
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in
 				return self
@@ -665,11 +665,11 @@ public final class Project {
 			.then(.empty)
 	}
 
-	/// Attempts to build each Carthage dependency that has been checked out, 
+	/// Attempts to build each Carthage dependency that has been checked out,
 	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, toolchain: String?, derivedDataPath: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, toolchain: String?, clean: Bool = true, derivedDataPath: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
@@ -680,7 +680,7 @@ public final class Project {
 					return .empty
 				}
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, sdkFilter: sdkFilter)
+				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, toolchain: toolchain, clean: clean, derivedDataPath: derivedDataPath, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:
