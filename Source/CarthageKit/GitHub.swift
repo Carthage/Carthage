@@ -101,8 +101,8 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 	let data = "url=\(server)".dataUsingEncoding(NSUTF8StringEncoding)!
 	
 	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
-		.flatMap(.Concat) { string -> SignalProducer<String, CarthageError> in
-			return string.linesProducer.promoteErrors(CarthageError.self)
+		.flatMap(.Concat) { string in
+			return string.linesProducer
 		}
 		.reduce([:]) { (values: [String: String], line: String) -> [String: String] in
 			var values = values

@@ -59,6 +59,10 @@ class BuildArgumentsSpec: QuickSpec {
 			itCreatesBuildArguments("includes empty derived data path", arguments: []) { (inout subject: BuildArguments) in
 				subject.derivedDataPath = ""
 			}
+			
+			itCreatesBuildArguments("includes the the toolchain", arguments: ["-toolchain", "org.swift.3020160509a"]) { (inout subject: BuildArguments) in
+				subject.toolchain = "org.swift.3020160509a"
+			}
 
 			describe("specifying the sdk") {
 				for sdk in SDK.allSDKs.subtract([.MacOSX]) {

@@ -92,6 +92,8 @@ Using Carthage for the dependencies of any arbitrary target is fairly similar to
 
 Because unit test targets are missing the “Linked Frameworks and Libraries” section in their “General” settings tab, you must instead drag the [built frameworks][Carthage/Build] to the “Link Binaries With Libraries” build phase.
 
+In the Test target under the "Build Settings" tab, add `@loader_path/Frameworks` to the "Runpath Search Paths" if it isn't already present.
+
 In rare cases, you may want to also copy each dependency into the build product (e.g., to embed dependencies within the outer framework, or make sure dependencies are present in a test bundle). To do this, create a new “Copy Files” build phase with the “Frameworks” destination, then add the framework reference there as well.
 
 ### Upgrading frameworks
@@ -125,7 +127,7 @@ When run this way, Carthage will write to your repository’s `.gitmodules` and 
 If you want to work on your dependencies during development, and want them to be automatically rebuilt when you build your parent project, you can add a Run Script build phase that invokes Carthage like so:
 
 ```sh
-/usr/local/bin/carthage build --platform "$PLATFORM_NAME" "$SRCROOT"
+/usr/local/bin/carthage build --platform "$PLATFORM_NAME" --project-directory "$SRCROOT"
 ```
 
 Note that you should be [using submodules](#using-submodules-for-dependencies) before doing this, because plain checkouts [should not be modified][Carthage/Checkouts] directly.

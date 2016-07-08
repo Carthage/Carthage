@@ -163,7 +163,7 @@ private func inputFiles() -> SignalProducer<String, CarthageError> {
 				return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
 			}
 
-			return SignalProducer(values: variables)
+			return SignalProducer<SignalProducer<String, CarthageError>, CarthageError>(values: variables)
 				.flatten(.Concat)
 		}
 }

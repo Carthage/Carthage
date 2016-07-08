@@ -176,7 +176,7 @@ public final class Project {
 		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
 		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
-		let isNoSuchFileError = { (error: CarthageError) -> Bool in
+		func isNoSuchFileError(error: CarthageError) -> Bool {
 			switch error {
 			case let .ReadFailed(_, underlyingError):
 				if let underlyingError = underlyingError {
@@ -189,7 +189,7 @@ public final class Project {
 				return false
 			}
 		}
-
+		
 		let cartfile = SignalProducer.attempt {
 				return Cartfile.fromFile(cartfileURL)
 			}
@@ -212,8 +212,7 @@ public final class Project {
 				return SignalProducer(error: error)
 			}
 
-		return cartfile
-			.zipWith(privateCartfile)
+		return zip(cartfile, privateCartfile)
 			.attemptMap { cartfile, privateCartfile -> Result<Cartfile, CarthageError> in
 				var cartfile = cartfile
 
@@ -283,12 +282,11 @@ public final class Project {
 			.on(next: { newVersions in
 				self.cachedVersions[project] = newVersions
 			})
-			.flatMap(.Concat) { versions in SignalProducer(values: versions) }
+			.flatMap(.Concat) { versions in SignalProducer<PinnedVersion, CarthageError>(values: versions) }
 
 		return SignalProducer.attempt {
 				return .Success(self.cachedVersions)
 			}
-			.promoteErrors(CarthageError.self)
 			.flatMap(.Merge) { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
 				if let versions = versionsByProject[project] {
 					return SignalProducer(values: versions)
@@ -428,7 +426,7 @@ public final class Project {
 				case let .GitHub(repository):
 					let client = Client(repository: repository)
 					return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: client)
-						.flatMapError { error in
+						.flatMapError { error -> SignalProducer<NSURL, CarthageError> in
 							if !client.authenticated {
 								return SignalProducer(error: error)
 							}
@@ -494,7 +492,7 @@ public final class Project {
 				self._projectEventsObserver.sendNext(.DownloadingBinaries(project, release.nameWithFallback))
 			})
 			.flatMap(.Concat) { release -> SignalProducer<NSURL, CarthageError> in
-				return SignalProducer(values: release.assets)
+				return SignalProducer<Release.Asset, CarthageError>(values: release.assets)
 					.filter { asset in
 						let name = asset.name as NSString
 						if name.rangeOfString(CarthageProjectBinaryAssetPattern).location == NSNotFound {
@@ -640,7 +638,7 @@ public final class Project {
 			}
 			.zipWith(submodulesSignal)
 			.flatMap(.Merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
-				return SignalProducer(values: dependencies)
+				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: dependencies)
 					.flatMap(.Merge) { dependency -> SignalProducer<(), CarthageError> in
 						let project = dependency.project
 						let revision = dependency.version.commitish
@@ -671,7 +669,7 @@ public final class Project {
 	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, derivedDataPath: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, toolchain: String?, derivedDataPath: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
@@ -682,7 +680,7 @@ public final class Project {
 					return .empty
 				}
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, derivedDataPath: derivedDataPath, sdkFilter: sdkFilter)
+				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:
@@ -903,7 +901,6 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 		}
 		.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 			return isGitRepository(repositoryURL)
-				.promoteErrors(CarthageError.self)
 				.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 					if isRepository {
 						let fetchProducer: () -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> = {
@@ -917,7 +914,6 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 									branchExistsInRepository(repositoryURL, pattern: commitish),
 									commitExistsInRepository(repositoryURL, revision: commitish)
 								)
-								.promoteErrors(CarthageError.self)
 								.flatMap(.Concat) { branchExists, commitExists -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 									// If the given commitish is a branch, we should fetch.
 									if branchExists || !commitExists {
