@@ -103,6 +103,8 @@ public struct ArchiveCommand: CommandType {
 						.map { ($0 as NSString).lastPathComponent }
 						.filter { $0.hasSuffix(".framework") }
 
+					let relativePaths = paths.map { $0.stringByReplacingOccurrencesOfString(options.directoryPath, withString: ".") }
+					
 					if Set(foundFrameworks) != Set(frameworks) {
 						let error = CarthageError.InvalidArgument(description: "Could not find any copies of \(frameworks.joinWithSeparator(", ")). Make sure you're in the project’s root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
 						return SignalProducer(error: error)
@@ -114,8 +116,8 @@ public struct ArchiveCommand: CommandType {
 					if let directory = outputURL.URLByDeletingLastPathComponent {
 						_ = try? NSFileManager.defaultManager().createDirectoryAtURL(directory, withIntermediateDirectories: true, attributes: nil)
 					}
-
-					return zipIntoArchive(outputURL, paths).on(completed: {
+					
+					return zipIntoArchive(outputURL, workingDirectory: options.directoryPath, inputPaths: relativePaths).on(completed: {
 						carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
 					})
 				}
