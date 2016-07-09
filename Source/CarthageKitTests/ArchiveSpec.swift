@@ -63,7 +63,7 @@ class ArchiveSpec: QuickSpec {
 				let outerFilePath = "outer"
 				expect { try "foobar".writeToFile(outerFilePath, atomically: true, encoding: NSUTF8StringEncoding) }.notTo(throwError())
 
-				let result = zipIntoArchive(archiveURL, [ innerFilePath, outerFilePath ]).wait()
+				let result = zipIntoArchive(archiveURL, workingDirectory: temporaryURL.path!, inputPaths: [ innerFilePath, outerFilePath ]).wait()
 				expect(result.error).to(beNil())
 
 				let unzipResult = unzipArchiveToTemporaryDirectory(archiveURL).single()
@@ -92,8 +92,8 @@ class ArchiveSpec: QuickSpec {
 				let symlinkPath = "symlink"
 				expect { try NSFileManager.defaultManager().createSymbolicLinkAtPath(symlinkPath, withDestinationPath: destinationPath) }.notTo(throwError())
 				expect { try NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(symlinkPath) } == destinationPath
-
-				let result = zipIntoArchive(archiveURL, [ symlinkPath, destinationPath ]).wait()
+				
+				let result = zipIntoArchive(archiveURL, workingDirectory: temporaryURL.path!, inputPaths: [ symlinkPath, destinationPath ]).wait()
 				expect(result.error).to(beNil())
 
 				let unzipResult = unzipArchiveToTemporaryDirectory(archiveURL).single()
