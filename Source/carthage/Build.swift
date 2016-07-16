@@ -298,7 +298,7 @@ extension BuildPlatform: ArgumentType {
 	public static let name = "platform"
 
 	private static let acceptedStrings: [String: BuildPlatform] = [
-		"Mac": .Mac, "OSX": .Mac, "macosx": .Mac,
+		"macOS": .Mac, "Mac": .Mac, "OSX": .Mac, "macosx": .Mac,
 		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
 		"watchOS": .watchOS, "watchsimulator": .watchOS,
 		"tvOS": .tvOS, "tvsimulator": .tvOS,
