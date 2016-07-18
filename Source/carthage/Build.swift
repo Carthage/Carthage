@@ -301,7 +301,7 @@ extension BuildPlatform: ArgumentType {
 		"macOS": .Mac, "Mac": .Mac, "OSX": .Mac, "macosx": .Mac,
 		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
 		"watchOS": .watchOS, "watchsimulator": .watchOS,
-		"tvOS": .tvOS, "tvsimulator": .tvOS,
+		"tvOS": .tvOS, "tvsimulator": .tvOS, "appletvos": .tvOS, "appletvsimulator": .tvOS,
 		"all": .All
 	]
 
