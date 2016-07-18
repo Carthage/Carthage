@@ -9,8 +9,13 @@ matrix:
     - os: osx
       language: objective-c
       osx_image: xcode7.3
-      script: script/cibuild
-      env: JOB=CI_BUILD
+      script: make test
+      env: JOB=CI_BUILD_TEST
+    - os: osx
+      language: objective-c
+      osx_image: xcode7.3
+      script: make package
+      env: JOB=CI_BUILD_PACKAGE
     - os: osx
       language: objective-c
       osx_image: xcode7.3
@@ -37,4 +42,4 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
-    condition: $JOB = CI_BUILD
+    condition: $JOB = CI_BUILD_PACKAGE
