@@ -1,6 +1,5 @@
 TEMPORARY_FOLDER?=/tmp/Carthage.dst
 PREFIX?=/usr/local
-BUILD_TOOL?=xcodebuild
 
 XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage' DSTROOT=$(TEMPORARY_FOLDER)
 
@@ -21,19 +20,19 @@ COMPONENTS_PLIST=Source/carthage/Components.plist
 .PHONY: all bootstrap clean install package test uninstall
 
 all: bootstrap
-	$(BUILD_TOOL) $(XCODEFLAGS) build
+	xcodebuild $(XCODEFLAGS) build
 
 bootstrap:
 	git submodule update --init --recursive
 
 test: clean bootstrap
-	$(BUILD_TOOL) $(XCODEFLAGS) test
+	xcodebuild $(XCODEFLAGS) test
 
 clean:
 	rm -f "$(OUTPUT_PACKAGE)"
 	rm -f "$(OUTPUT_FRAMEWORK_ZIP)"
 	rm -rf "$(TEMPORARY_FOLDER)"
-	$(BUILD_TOOL) $(XCODEFLAGS) clean
+	xcodebuild $(XCODEFLAGS) clean
 
 install: package
 	sudo installer -pkg Carthage.pkg -target /
@@ -43,7 +42,7 @@ uninstall:
 	rm -f "$(BINARIES_FOLDER)/carthage"
 
 installables: clean bootstrap
-	$(BUILD_TOOL) $(XCODEFLAGS) install
+	xcodebuild $(XCODEFLAGS) install
 
 	mkdir -p "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)"
 	mv -f "$(CARTHAGEKIT_BUNDLE)" "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)"
