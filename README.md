@@ -263,6 +263,12 @@ See [Carthage issue #924](https://github.com/Carthage/Carthage/issues/924) for b
 
 Dupe [rdar://23551273](http://www.openradar.me/23551273) if you want Apple to fix the root cause of this problem.
 
+##### Compile Errors
+
+If, having built & imported the dependencies into the project, you get an error which begins: ```Module file was created by an older (newer) version of the compiler``` ... it may be that Carthage downloaded and used an existing compiled binary from the remote repo which is not compatible with the local machine.
+
+To force Carthage to compile from source itself for those libraries, append the flag ```--no-use-binaries``` to the ```carthage bootstrap/build/update``` command.  For example: ```carthage bootstrap --no-use-binaries```
+
 ## CarthageKit
 
 Most of the functionality of the `carthage` command line tool is actually encapsulated in a framework named CarthageKit.
