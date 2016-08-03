@@ -932,7 +932,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							argsForBuilding.bitcodeGenerationMode = .Bitcode
 						}
 
-						var buildScheme = xcodebuildTask(["clean", "build"], argsForBuilding)
+						var buildScheme = xcodebuildTask("build", argsForBuilding)
 						buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 						return launchTask(buildScheme)

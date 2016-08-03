@@ -73,6 +73,12 @@ public let CarthageDependencyAssetsURL = CarthageUserCachesURL.URLByAppendingPat
 /// ~/Library/Caches/org.carthage.CarthageKit/dependencies/
 public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppendingPathComponent("dependencies", isDirectory: true)
 
+/// The file URL to the directory in which per-project derived data directories
+/// will be stored.
+///
+/// ~/Library/Caches/org.carthage.CarthageKit/DerivedData/
+public let CarthageDependencyDerivedDataURL = CarthageUserCachesURL.URLByAppendingPathComponent("DerivedData", isDirectory: true)
+
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
 
@@ -675,19 +681,47 @@ public final class Project {
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
 			}
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
-				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
+				let project = dependency.project
+				let version = dependency.version.commitish
+
+				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true).path!
 				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
 					return .empty
 				}
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, sdkFilter: sdkFilter)
+				let derivedData: String?
+				let cleanDerivedDataIfNeeded: SignalProducer<(), CarthageError>
+
+				if let path = derivedDataPath {
+					derivedData = path
+					cleanDerivedDataIfNeeded = .empty
+				} else {
+					let derivedDataPerDependency = CarthageDependencyDerivedDataURL
+						.URLByAppendingPathComponent(self.directoryURL.lastPathComponent!, isDirectory: true)
+						.URLByAppendingPathComponent(project.name, isDirectory: true)
+					let derivedDataVersioned = derivedDataPerDependency.URLByAppendingPathComponent(version, isDirectory: true)
+					derivedData = derivedDataVersioned.URLByResolvingSymlinksInPath?.path
+
+					let fileManager = NSFileManager.defaultManager()
+					cleanDerivedDataIfNeeded = fileManager
+						.carthage_enumeratorAtURL(derivedDataPerDependency, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants ], catchErrors: true)
+						.flatMap(.Concat) { _, URL -> SignalProducer<(), CarthageError> in
+							if URL != derivedDataVersioned {
+								_ = try? fileManager.removeItemAtURL(URL)
+							}
+							return .empty
+						}
+				}
+
+				return cleanDerivedDataIfNeeded
+					.then(buildDependencyProject(project, self.directoryURL, withConfiguration: configuration, platforms: platforms, toolchain: toolchain, derivedDataPath: derivedData, sdkFilter: sdkFilter))
 					.flatMapError { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:
 							// Log that building the dependency is being skipped,
 							// not to error out with `.NoSharedFrameworkSchemes`
 							// to continue building other dependencies.
-							self._projectEventsObserver.sendNext(.SkippedBuilding(dependency.project, error.description))
+							self._projectEventsObserver.sendNext(.SkippedBuilding(project, error.description))
 							return .empty
 
 						default:
