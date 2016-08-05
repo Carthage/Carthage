@@ -16,17 +16,14 @@ public struct UpdateCommand: CommandType {
 	public struct Options: OptionsType {
 		public let checkoutAfterUpdate: Bool
 		public let buildAfterUpdate: Bool
-		public let configuration: String
-		public let buildPlatform: BuildPlatform
-		public let toolchain: String?
-		public let derivedDataPath: String?
 		public let verbose: Bool
+		public let buildOptions: CarthageKit.BuildOptions
 		public let checkoutOptions: CheckoutCommand.Options
 		public let dependenciesToUpdate: [String]?
 
 		/// The build options corresponding to these options.
-		public var buildOptions: BuildCommand.Options {
-			return BuildCommand.Options(configuration: configuration, buildPlatform: buildPlatform, toolchain: toolchain, derivedDataPath: derivedDataPath, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath, dependenciesToBuild: dependenciesToUpdate)
+		public var buildCommandOptions: BuildCommand.Options {
+			return BuildCommand.Options(buildOptions: buildOptions, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath, dependenciesToBuild: dependenciesToUpdate)
 		}
 
 		/// If `checkoutAfterUpdate` and `buildAfterUpdate` are both true, this will
@@ -35,28 +32,25 @@ public struct UpdateCommand: CommandType {
 		/// Otherwise, this producer will be empty.
 		public var buildProducer: SignalProducer<(), CarthageError> {
 			if checkoutAfterUpdate && buildAfterUpdate {
-				return BuildCommand().buildWithOptions(buildOptions)
+				return BuildCommand().buildWithOptions(buildCommandOptions)
 			} else {
 				return .empty
 			}
 		}
 
-		public static func create(configuration: String) -> BuildPlatform -> String? -> String? -> Bool -> Bool -> Bool -> CheckoutCommand.Options -> Options {
-			return { buildPlatform in { toolchain in { derivedDataPath in { verbose in { checkoutAfterUpdate in { buildAfterUpdate in { checkoutOptions in
-				return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, configuration: configuration, buildPlatform: buildPlatform, toolchain: toolchain, derivedDataPath: derivedDataPath, verbose: verbose, checkoutOptions: checkoutOptions, dependenciesToUpdate: checkoutOptions.dependenciesToCheckout)
-			} } } } } } }
+		public static func create(checkoutAfterUpdate: Bool) -> Bool -> Bool -> BuildOptions -> CheckoutCommand.Options -> Options {
+			return { buildAfterUpdate in { verbose in {  buildOptions in { checkoutOptions in
+				return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, verbose: verbose, buildOptions: buildOptions, checkoutOptions: checkoutOptions, dependenciesToUpdate: checkoutOptions.dependenciesToCheckout)
+			} } } }
 		}
 
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
-				<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build (ignored if --no-build option is present)")
-				<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)\n(ignored if --no-build option is present)")
-				<*> m <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
-				<*> m <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
-				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 				<*> m <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
-				<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating (ignored if --no-checkout option is present)")
-				<*> CheckoutCommand.Options.evaluate(m, useBinariesAddendum: " (ignored if --no-build option is present)", dependenciesUsage: "the dependency names to update, checkout and build")
+				<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)")
+				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
+				<*> BuildOptions.evaluate(m, addendum: "\n(ignored if --no-build option is present)")
+				<*> CheckoutCommand.Options.evaluate(m, useBinariesAddendum: "\n(ignored if --no-build option is present)", dependenciesUsage: "the dependency names to update, checkout and build")
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it
