@@ -47,10 +47,10 @@ public struct UpdateCommand: CommandType {
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
-				<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating (ignored if --no-checkout option is present)")
+				<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)")
 				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
-				<*> BuildOptions.evaluate(m)
-				<*> CheckoutCommand.Options.evaluate(m, useBinariesAddendum: " (ignored if --no-build option is present)", dependenciesUsage: "the dependency names to update, checkout and build")
+				<*> BuildOptions.evaluate(m, addendum: "\n(ignored if --no-build option is present)")
+				<*> CheckoutCommand.Options.evaluate(m, useBinariesAddendum: "\n(ignored if --no-build option is present)", dependenciesUsage: "the dependency names to update, checkout and build")
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it
