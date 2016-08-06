@@ -675,7 +675,7 @@ public final class Project {
 	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, toolchain: String?, derivedDataPath: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithOptions(options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
@@ -689,18 +689,17 @@ public final class Project {
 					return .empty
 				}
 
-				let derivedData: String?
+				var options = options
 				let cleanDerivedDataIfNeeded: SignalProducer<(), CarthageError>
 
-				if let path = derivedDataPath {
-					derivedData = path
+				if options.derivedDataPath != nil {
 					cleanDerivedDataIfNeeded = .empty
 				} else {
 					let derivedDataPerDependency = CarthageDependencyDerivedDataURL
 						.URLByAppendingPathComponent(self.directoryURL.lastPathComponent!, isDirectory: true)
 						.URLByAppendingPathComponent(project.name, isDirectory: true)
 					let derivedDataVersioned = derivedDataPerDependency.URLByAppendingPathComponent(version, isDirectory: true)
-					derivedData = derivedDataVersioned.URLByResolvingSymlinksInPath?.path
+					options.derivedDataPath = derivedDataVersioned.URLByResolvingSymlinksInPath?.path
 
 					let fileManager = NSFileManager.defaultManager()
 					cleanDerivedDataIfNeeded = fileManager
@@ -714,7 +713,7 @@ public final class Project {
 				}
 
 				return cleanDerivedDataIfNeeded
-					.then(buildDependencyProject(project, self.directoryURL, withConfiguration: configuration, platforms: platforms, toolchain: toolchain, derivedDataPath: derivedData, sdkFilter: sdkFilter))
+					.then(buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter))
 					.flatMapError { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:
