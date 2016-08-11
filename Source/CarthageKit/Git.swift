@@ -136,6 +136,34 @@ extension Submodule: CustomStringConvertible {
 	}
 }
 
+/// Struct to encapsulate global fetch interval cache
+public struct FetchCache {
+	/// Amount of time before a git repository is fetched again. Defaults to 1 minute
+	public static var fetchCacheInterval: NSTimeInterval = 60.0
+
+	private static var lastFetchTimes: [GitURL : NSTimeInterval] = [:]
+
+	internal static func clearFetchTimes() {
+		lastFetchTimes.removeAll()
+	}
+
+	internal static func needsFetch(forURL url: GitURL) -> Bool {
+		guard let lastFetch = lastFetchTimes[url] else {
+			return true
+		}
+
+		let difference = NSDate().timeIntervalSince1970 - lastFetch
+
+		return !(0...fetchCacheInterval).contains(difference)
+	}
+
+	private static func updateLastFetchTime(forURL url: GitURL?) {
+		if let url = url {
+			lastFetchTimes[url] = NSDate().timeIntervalSince1970
+		}
+	}
+}
+
 /// Shells out to `git` with the given arguments, optionally in the directory
 /// of an existing repository.
 public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, standardInput: SignalProducer<NSData, NoError>? = nil, environment: [String: String]? = nil) -> SignalProducer<String, CarthageError> {
@@ -181,6 +209,7 @@ public func cloneRepository(cloneURL: GitURL, _ destinationURL: NSURL, bare: Boo
 	}
 
 	return launchGitTask(arguments + [ "--quiet", cloneURL.URLString, destinationURL.path! ])
+		.on(completed: { FetchCache.updateLastFetchTime(forURL: cloneURL) })
 }
 
 /// Returns a signal that completes when the fetch completes successfully.
@@ -201,6 +230,7 @@ public func fetchRepository(repositoryFileURL: NSURL, remoteURL: GitURL? = nil, 
 	}
 
 	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
+		.on(completed: { FetchCache.updateLastFetchTime(forURL: remoteURL) })
 }
 
 /// Sends each tag found in the given Git repository.
