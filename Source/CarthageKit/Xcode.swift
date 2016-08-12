@@ -88,17 +88,20 @@ extension ProjectLocator: CustomStringConvertible {
 /// Sends all matches in preferential order.
 public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<ProjectLocator, CarthageError> {
 	let enumerationOptions: NSDirectoryEnumerationOptions = [ .SkipsHiddenFiles, .SkipsPackageDescendants ]
+	let defaultNSFileManager = NSFileManager.defaultManager();
 
 	return gitmodulesEntriesInRepository(directoryURL, revision: nil)
 		.map { directoryURL.URLByAppendingPathComponent($0.path) }
 		.concat(value: directoryURL.URLByAppendingPathComponent(CarthageProjectCheckoutsPath))
 		.collect()
 		.flatMap(.Merge) { directoriesToSkip in
-			return NSFileManager.defaultManager()
+			return defaultNSFileManager
 				.carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
 				.map { _, URL in URL }
 				.filter { URL in
-					return !directoriesToSkip.contains { $0.hasSubdirectory(URL) }
+					return !directoriesToSkip.contains {
+						return defaultNSFileManager.carthage_hasSubdirectory($0, otherURL: URL).value == true;
+					}
 				}
 		}
 		.map { URL -> ProjectLocator? in

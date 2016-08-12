@@ -297,6 +297,37 @@ extension NSFileManager {
 			observer.sendCompleted()
 		}
 	}
+	
+	/// Handle the case where the otherURL is actually a symlink and the directoryURL is not.
+	/// For example, on OSX, the /tmp directory is a symlink to /private/tmp.
+	/// Any usage of NSFileManager enumeration operations will return /private/tmp,
+	/// while many commands used by carthage to determine directory paths will return /tmp.
+	/// Simply using hasSubDirectory will not work in these instances.
+	public func carthage_hasSubdirectory(directoryURL:NSURL, otherURL:NSURL) -> Result<Bool, CarthageError> {
+		let nsURLRelationshipPtr = UnsafeMutablePointer<NSURLRelationship>.alloc(1)
+		defer { nsURLRelationshipPtr.destroy() }
+		
+		// getRelationship will produce an NSError if either of the paths does not exist
+		// If that's the case, we default to the old behavior
+		if (!self.fileExistsAtPath(directoryURL.path!) || !self.fileExistsAtPath(otherURL.path!)) {
+			return .Success(directoryURL.hasSubdirectory(otherURL));
+		}
+		
+		do {
+			try self.getRelationship(nsURLRelationshipPtr,
+			   ofDirectoryAtURL: directoryURL,
+			   toItemAtURL: otherURL)
+		} catch let error as NSError {
+			return .Failure(.ReadFailed(otherURL, error));
+		}
+		
+		switch nsURLRelationshipPtr.memory {
+		case NSURLRelationship.Contains, NSURLRelationship.Same:
+			return .Success(true);
+		default:
+			return .Success(false);
+		}
+	}
 }
 
 /// Creates a counted set from a sequence. The counted set is represented as a
