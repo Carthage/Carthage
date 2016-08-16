@@ -15,7 +15,6 @@ import ReactiveCocoa
 import ReactiveTask
 import Tentacle
 import Argo
-import CryptoSwift
 
 class XcodeSpec: QuickSpec {
 	override func spec() {
@@ -84,110 +83,105 @@ class XcodeSpec: QuickSpec {
 				expect(relativePaths) == [ "SampleGitSubmodule.xcodeproj/" ]
 			}
 		}
-
-		describe("build cache") {
+		
+		describe("build caching with VersionFile") {
 			let version = PinnedVersion("0.1")
 			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
 			let dependency = Dependency<PinnedVersion>(project: project, version: version)
 			let platformsToBuild: Set<Platform> = [Platform.Mac]
-			let macArchimedesBinaryPath = buildFolderURL.URLByAppendingPathComponent("Mac/Archimedes.framework").path!
-			let archimedesBinaryURL = buildFolderURL.URLByAppendingPathComponent("Mac/Archimedes.framework/Archimedes")
-
-			func build(dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, buildCache: Bool) {
-				//TODO pass in buildCache
-				let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: platformsToBuild))
+			
+			let archimedesFolderURL = buildFolderURL.URLByAppendingPathComponent("Mac", isDirectory: true)
+			let archimedesFrameworkURL = archimedesFolderURL.URLByAppendingPathComponent("Archimedes.framework")
+			let archimedesBinaryURL = archimedesFolderURL.URLByAppendingPathComponent("Archimedes.framework/Archimedes")
+			let archimedesVersionFileURL = buildFolderURL.URLByAppendingPathComponent("Mac/.Archimedes.version")
+			
+			func build(dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, ignoreCachedBuilds: Bool = false, expectFailure: Bool = false) {
+				let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: platforms, ignoreCachedBuilds: ignoreCachedBuilds))
 					.flatten(.Concat)
 					.ignoreTaskData()
 					.on(next: { (project, scheme) in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 					})
 					.wait()
-
-				expect(result.error).to(beNil())
-
+				
+				if expectFailure {
+					expect(result.error).notTo(beNil())
+				}
+				else {
+					expect(result.error).to(beNil())
+				}
+				
 				Task.waitForAllTaskTermination()
 			}
-
+			
 			func cleanUp() {
 				var isDirectory: ObjCBool = true
-				if NSFileManager.defaultManager().fileExistsAtPath(macArchimedesBinaryPath, isDirectory: &isDirectory) {
-					try! NSFileManager.defaultManager().removeItemAtPath(macArchimedesBinaryPath)
+				let archimedesFrameworkPath = archimedesFrameworkURL.path!
+				if NSFileManager.defaultManager().fileExistsAtPath(archimedesFrameworkPath, isDirectory: &isDirectory) {
+					try! NSFileManager.defaultManager().removeItemAtPath(archimedesFrameworkPath)
 				}
 			}
-
+			
 			func getSHA1() -> String {
 				let frameworkData = NSData(contentsOfURL: archimedesBinaryURL)!
 				return frameworkData.sha1()!.toHexString()
 			}
-
-			context("when the Cartfile.resolved has commitish for a repository and built framework") {
-
-				beforeEach {
-					cleanUp()
-					build(dependency, platforms: platformsToBuild, buildCache: true)
+			
+			beforeEach {
+				cleanUp()
+				build(dependency, platforms: platformsToBuild)
+			}
+			
+			afterEach {
+				cleanUp()
+			}
+			
+			it("creates the version file when the build is created") {
+				let versionFileData = NSData(contentsOfURL: archimedesVersionFileURL)!
+				let jsonObject: AnyObject = try! NSJSONSerialization.JSONObjectWithData(versionFileData, options: .AllowFragments)
+				let versionFile: VersionFile? = decode(jsonObject)
+				expect(versionFile?.commitish).to(equal("0.1"))
+				expect(versionFile?.buildProductSHA1).to(equal(getSHA1()))
+			}
+			
+			context("when cache-build flag is turned off") {
+				it("should rebuild the framework even if the commitish and SHA1 matches") {
+					build(dependency, platforms: platformsToBuild, ignoreCachedBuilds: true, expectFailure: false)
 				}
-
-				afterEach {
-					cleanUp()
+			}
+			
+			context("when the version file does not exist") {
+				it("should build the framework again") {
+					// Delete the version file
+					var isDirectory: ObjCBool = true
+					let exists = NSFileManager.defaultManager().fileExistsAtPath(archimedesVersionFileURL.path!, isDirectory: &isDirectory)
+					if exists  && !isDirectory.boolValue {
+						try! NSFileManager.defaultManager().removeItemAtURL(archimedesVersionFileURL)
+					}
+					
+					build(dependency, platforms: platformsToBuild)
 				}
-
-				it("it creates the version file when the build is created") {
-					let macArchimedesVersionFileURL = buildFolderURL.URLByAppendingPathComponent("Mac/.Archimedes.version")
-					let versionFileData = NSData(contentsOfURL: macArchimedesVersionFileURL)!
-					let jsonObject: AnyObject = try! NSJSONSerialization.JSONObjectWithData(versionFileData, options: .AllowFragments)
-					let versionFile: VersionFile? = decode(jsonObject)
-					expect(versionFile?.commitish).to(equal("1.1.1"))
-					expect(versionFile?.frameworkSHA1).to(equal(getSHA1()))
+			}
+			
+			context("when the commitish and framework sha matches the content of the version file") {
+				it("should not rebuild the framework") {
+					build(dependency, platforms: platformsToBuild, expectFailure: true)
 				}
-
-				context("when cache-build flag is turned off") {
-					beforeEach {
-						build(dependency, platforms: platformsToBuild, buildCache: false)
-					}
-
-					it("should build again even if the SHA1 and commitish matches") {
-					}
+			}
+			
+			context("when the commitish does not match the commitish in the version file") {
+				it("should build the framework") {
+					VersionFile.createVersionFileForProjectNamed(dependency.project.name, commitish: "2.0", buildProductSHA1: getSHA1(), folderURL: archimedesFolderURL)
+					
+					build(dependency, platforms: platformsToBuild)
 				}
-
-				context("when the version file does not exist") {
-					beforeEach {
-						//remove the .version if it exists
-						//						let builtDirectoryParentURL = builtProductURL.URLByDeletingLastPathComponent
-						//						let versionFileURL = builtDirectoryParentURL.URLByAppendingPathComponent(".\(projectName).version")
-					}
-
-					it("should build the framework again") {
-						//TODO
-						//keep track of the existing framework's sha
-
-						// build it again
-
-						//assert that the built framework's sha is different
-					}
-				}
-
-				context("when the commitish and framework sha matches the content of the version file") {
-					xit("should not rebuild the framework") {
-						let oldSHA1 = getSHA1()
-
-						//method under test
-						build(dependency, platforms: platformsToBuild, buildCache: true)
-
-						let newSHA1 = getSHA1()
-						expect(oldSHA1).to(equal(newSHA1))
-					}
-				}
-
-				context("when the commitish does not match the commitish in the version file") {
-					it("should build the framework") {
-						//TODO
-					}
-				}
-
-				context("when the framework's sha does not match the sha in the version file") {
-					it("should build the framework") {
-						//TODO
-					}
+			}
+			
+			context("when the framework's sha does not match the sha in the version file") {
+				it("should build the framework") {
+					VersionFile.createVersionFileForProjectNamed(dependency.project.name, commitish: dependency.version.commitish, buildProductSHA1: "0", folderURL: archimedesFolderURL)
+					
+					build(dependency, platforms: platformsToBuild)
 				}
 			}
 		}
@@ -196,7 +190,7 @@ class XcodeSpec: QuickSpec {
 			let dependencies = [
 				ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes")),
 				ProjectIdentifier.GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
-			]
+				]
 			let version = PinnedVersion("0.1")
 
 			for project in dependencies {
@@ -260,32 +254,32 @@ class XcodeSpec: QuickSpec {
 
 			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
 			expect(strippingResult.value).notTo(beNil())
-
+			
 			let strippedArchitectures = architecturesInPackage(targetURL)
 				.collect()
 				.single()
-
+			
 			expect(strippedArchitectures?.value).notTo(contain("i386"))
 			expect(strippedArchitectures?.value).to(contain("armv7", "arm64"))
 
 			let modulesDirectoryURL = targetURL.URLByAppendingPathComponent("Modules", isDirectory: true)
 			expect(NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!)) == false
-
+			
 			var output: String = ""
 			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
-
+			
 			let codesignResult = launchTask(codeSign)
 				.on(next: { taskEvent in
 					switch taskEvent {
 					case let .StandardError(data):
 						output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
-
+						
 					default:
 						break
 					}
 				})
 				.wait()
-
+			
 			expect(codesignResult.value).notTo(beNil())
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
@@ -398,7 +392,6 @@ class XcodeSpec: QuickSpec {
 			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 			let dependency = Dependency<PinnedVersion>(project: project, version: version)
-
 			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .Mac, .iOS ]))
 				.flatten(.Concat)
 				.ignoreTaskData()
@@ -432,12 +425,12 @@ class XcodeSpec: QuickSpec {
 			expect(result?.error).to(beNil())
 			expect(result?.value).to(contain(.ProjectFile(projectURL)))
 		}
-		
+
 		it("should not locate the project from a directory not containing it") {
 			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")).first()
 			expect(result).to(beNil())
 		}
-		
+
 	}
 }
 
