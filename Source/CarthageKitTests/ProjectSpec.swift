@@ -83,9 +83,9 @@ class ProjectSpec: QuickSpec {
 			// https://github.com/Carthage/Carthage/issues/1191
 			let temporaryPath = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString)
 			let temporaryURL = NSURL(fileURLWithPath: temporaryPath, isDirectory: true)
-			let repositoryURL = temporaryURL.URLByAppendingPathComponent("carthage1191", isDirectory: true)
-			let cacheDirectoryURL = temporaryURL.URLByAppendingPathComponent("cache", isDirectory: true)
-			let projectIdentifier = ProjectIdentifier.Git(GitURL(repositoryURL.absoluteString))
+			let repositoryURL = temporaryURL.appendingPathComponent("carthage1191", isDirectory: true)
+			let cacheDirectoryURL = temporaryURL.appendingPathComponent("cache", isDirectory: true)
+			let projectIdentifier = ProjectIdentifier.Git(GitURL(repositoryURL.carthage_absoluteString))
 
 			func initRepository() {
 				expect { try NSFileManager.defaultManager().createDirectoryAtPath(repositoryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
