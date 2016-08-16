@@ -12,6 +12,8 @@ import Nimble
 import Quick
 import ReactiveCocoa
 import Tentacle
+import Result
+import ReactiveTask
 
 class ProjectSpec: QuickSpec {
 	override func spec() {

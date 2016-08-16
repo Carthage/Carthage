@@ -676,11 +676,12 @@ public final class Project {
 			}
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
+
 				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
 					return .empty
 				}
-
-				return buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+                
+				return buildDependencyProject(dependency, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:

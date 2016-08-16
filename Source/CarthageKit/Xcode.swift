@@ -10,6 +10,9 @@ import Foundation
 import Result
 import ReactiveCocoa
 import ReactiveTask
+import Argo
+import Curry
+import CryptoSwift
 
 /// The name of the folder into which Carthage puts binaries it builds (relative
 /// to the working directory).
@@ -852,6 +855,21 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 		}
 }
 
+public struct VersionFile {
+	public let commitish: String
+	public let frameworkSHA1: String
+
+	public static let commitishKeyName = "commitish"
+	public static let frameworkSHA1KeyName = "frameworkSHA1"
+}
+
+extension VersionFile: Decodable {
+	public static func decode(j: JSON) -> Decoded<VersionFile> {
+    return curry(self.init)
+      <^> j <| VersionFile.commitishKeyName
+      <*> j <| VersionFile.frameworkSHA1KeyName
+	}
+}
 
 /// A callback function used to determine whether or not an SDK should be built
 public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration: String, project: ProjectLocator) -> Result<[SDK], CarthageError>
@@ -860,7 +878,7 @@ public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: NSURL, derivedDataPath: String?, toolchain: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: NSURL, derivedDataPath: String?, toolchain: String?, dependency: Dependency<PinnedVersion>? = nil,  sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
 	precondition(workingDirectoryURL.fileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration, derivedDataPath: derivedDataPath, toolchain: toolchain)
@@ -990,6 +1008,28 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 		.flatMap(.Concat) { platform, sdks -> SignalProducer<TaskEvent<NSURL>, CarthageError> in
 			let folderURL = workingDirectoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 
+			//get the path to the framework folder
+//			let platformFrameworkFolderURL = folderURL.URLByAppendingPathComponent("\(dependency?.project.name).framework", isDirectory: true)
+//			let platformBuildVersionURL = folderURL.URLByAppendingPathComponent(".\(dependency?.project.name).version", isDirectory: false)
+//			print("platformFrameworkFolderURL: \(platformFrameworkFolderURL)")
+//			print("platformBuildVersionURL: \(platformBuildVersionURL)")
+//			print("platformFrameworkFolderURL: \(platformFrameworkFolderURL)")
+//			if let versionFileData = NSData(contentsOfFile: platformBuildVersionURL.path!) {
+//				let versionFileJSON = try? NSJSONSerialization.JSONObjectWithData(versionFileData, options: .AllowFragments)
+//				if let j: AnyObject = versionFileJSON {
+//					let versionFile: VersionFile? = decode(j)
+//					if dependency?.version.commitish == versionFile?.commitish {
+//						let frameworkSHA1 = getSHA1()
+//						if frameworkSHA1 == versionFile?.frameworkSHA1 {
+//							//return and don't build
+//							let error = CarthageError.FrameworkAlreadyBuilt(platformFrameworkFolderURL)
+//							return SignalProducer(error: error)
+//						}
+//					}
+//				}
+//			}
+
+
 			// TODO: Generalize this further?
 			switch sdks.count {
 			case 1:
@@ -1049,6 +1089,44 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			return createDebugInformation(builtProductURL)
 				.then(SignalProducer(value: builtProductURL))
 		}
+//		.flatMap(.Concat) { builtProductURL -> SignalProducer<NSURL, CarthageError> in
+//			return createVersionFile(builtProductURL, dependency: dependency)
+//		}
+}
+
+private func createVersionFile(builtProductURL: NSURL, dependency: Dependency<PinnedVersion>?) -> SignalProducer<NSURL, CarthageError> {
+	return SignalProducer { observer, disposable in
+		guard let commitish = dependency?.version.commitish,
+			let projectName = dependency?.project.name,
+			let builtDirectoryParentURL = builtProductURL.URLByDeletingLastPathComponent else
+		{
+			observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
+			return
+		}
+
+		let versionFileURL = builtDirectoryParentURL.URLByAppendingPathComponent(".\(projectName).version")
+
+		// Get framework SHA1
+		let frameworkFileURL = builtProductURL.URLByAppendingPathComponent("\(projectName)")
+		guard NSFileManager.defaultManager().fileExistsAtPath(frameworkFileURL.path!),
+			let frameworkData = NSData(contentsOfURL: frameworkFileURL),
+			let frameworkSHA1 = frameworkData.sha1()?.toHexString() else
+		{
+			observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
+			return
+		}
+
+		let dictionary = NSDictionary(dictionaryLiteral: (VersionFile.commitishKeyName, commitish), (VersionFile.frameworkSHA1KeyName, frameworkSHA1))
+		let jsonData = try! NSJSONSerialization.dataWithJSONObject(dictionary, options: .PrettyPrinted)
+		do {
+			try jsonData.writeToURL(versionFileURL, options: .DataWritingAtomic)
+		} catch {
+			observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
+			return
+		}
+		observer.sendNext(builtProductURL)
+		observer.sendCompleted()
+	}
 }
 
 public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
@@ -1079,12 +1157,13 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirectoryURL: NSURL, withOptions options: BuildOptions, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(dependency: Dependency<PinnedVersion>, _ rootDirectoryURL: NSURL, withOptions options: BuildOptions, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	let projectIdentifier = dependency.project
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
-	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
+	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(projectIdentifier.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
-
 	let schemeProducers = buildInDirectory(dependencyURL, withOptions: options, sdkFilter: sdkFilter)
+    
 	return SignalProducer.attempt { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil)
@@ -1127,7 +1206,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 			} else {
 				// The relative path to this dependency's Carthage/Build folder, from
 				// the root.
-				let dependencyBinariesRelativePath = (dependency.relativePath as NSString).stringByAppendingPathComponent(CarthageBinariesFolderPath)
+				let dependencyBinariesRelativePath = (projectIdentifier.relativePath as NSString).stringByAppendingPathComponent(CarthageBinariesFolderPath)
 				let componentsForGettingTheHellOutOfThisRelativePath = Array(count: (dependencyBinariesRelativePath as NSString).pathComponents.count - 1, repeatedValue: "..")
 
 				// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
@@ -1147,9 +1226,9 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 		.flatMap(.Merge) { schemeProducers -> SignalProducer<BuildSchemeProducer, CarthageError> in
 			return schemeProducers
 				.mapError { error in
-					switch (dependency, error) {
+					switch (projectIdentifier, error) {
 					case let (_, .NoSharedFrameworkSchemes(_, platforms)):
-						return .NoSharedFrameworkSchemes(dependency, platforms)
+						return .NoSharedFrameworkSchemes(projectIdentifier, platforms)
 
 					case let (.GitHub(repo), .NoSharedSchemes(project, _)):
 						return .NoSharedSchemes(project, repo)
@@ -1224,7 +1303,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 
 					return sdkFilter(sdks: filteredSDKs, scheme: scheme, configuration: configuration, project: project)
 				}
-
+                
 				let buildProgress = buildScheme(scheme, withConfiguration: options.configuration, inProject: project, workingDirectoryURL: directoryURL, derivedDataPath: options.derivedDataPath, toolchain: options.toolchain, sdkFilter: wrappedSDKFilter)
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for

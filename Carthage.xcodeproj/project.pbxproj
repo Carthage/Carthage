@@ -11,6 +11,8 @@
 		14A7BF4D1AA811E600C70ABB /* Cartfile.private in Copy Bundle Resources/DuplicateDependencies */ = {isa = PBXBuildFile; fileRef = 14A7BF481AA810B200C70ABB /* Cartfile.private */; };
 		3A0472F31C782B4000097EC7 /* Algorithms.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0472F21C782B4000097EC7 /* Algorithms.swift */; };
 		3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0472F41C782D1D00097EC7 /* AlgorithmsSpec.swift */; };
+		3C85D7601CCCDE6C0098F294 /* CryptoSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3C85D75D1CCCD7F10098F294 /* CryptoSwift.framework */; };
+		3C85D7611CCCDE8B0098F294 /* CryptoSwift.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 3C85D75D1CCCD7F10098F294 /* CryptoSwift.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5482DAF11A3849D700197FB8 /* CopyFrameworks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */; };
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */; };
@@ -139,6 +141,7 @@
 				67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */,
 				D0F648831A4DD3EA00BCF808 /* Argo.framework in Copy Frameworks */,
 				D012AD111AF9844D00EE91DA /* Result.framework in Copy Frameworks */,
+				3C85D7611CCCDE8B0098F294 /* CryptoSwift.framework in Copy Frameworks */,
 			);
 			name = "Copy Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -161,6 +164,7 @@
 		14A7BF481AA810B200C70ABB /* Cartfile.private */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Cartfile.private; path = DuplicateDependencies/Cartfile.private; sourceTree = "<group>"; };
 		3A0472F21C782B4000097EC7 /* Algorithms.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Algorithms.swift; sourceTree = "<group>"; };
 		3A0472F41C782D1D00097EC7 /* AlgorithmsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlgorithmsSpec.swift; sourceTree = "<group>"; };
+		3C85D75D1CCCD7F10098F294 /* CryptoSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CryptoSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CopyFrameworks.swift; sourceTree = "<group>"; };
 		54911EF21A1D34EC00FFAE5F /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
 		5499CA961A2394B700783309 /* Components.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Components.plist; sourceTree = "<group>"; };
@@ -256,6 +260,7 @@
 				BEB076661C8A1FD800ABD373 /* Curry.framework in Frameworks */,
 				BEB076671C8A1FD800ABD373 /* Tentacle.framework in Frameworks */,
 				D0E0E1B01A2D28AC0097BE2B /* ReactiveTask.framework in Frameworks */,
+				3C85D7601CCCDE6C0098F294 /* CryptoSwift.framework in Frameworks */,
 				D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */,
 				D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */,
 				67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */,
@@ -455,6 +460,7 @@
 		D0D1216F19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				3C85D75D1CCCD7F10098F294 /* CryptoSwift.framework */,
 				D012AD0F1AF9843700EE91DA /* Result.framework */,
 				D0F648811A4DD3D900BCF808 /* Argo.framework */,
 				BEB076641C8A1FD800ABD373 /* Curry.framework */,
