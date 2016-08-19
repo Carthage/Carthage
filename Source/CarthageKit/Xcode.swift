@@ -476,7 +476,8 @@ public struct BuildSettings {
 	/// Upon .success, sends one BuildSettings value for each target included in
 	/// the referenced scheme.
 	public static func loadWithArguments(arguments: BuildArguments) -> SignalProducer<BuildSettings, CarthageError> {
-		let task = xcodebuildTask("-showBuildSettings", arguments)
+		// Including build action "clean" here, because otherwise Xcode 8 (at least in betas) will hang
+		let task = xcodebuildTask(["clean", "-showBuildSettings"], arguments)
 
 		return launchTask(task)
 			.ignoreTaskData()
