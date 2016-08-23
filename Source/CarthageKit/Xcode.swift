@@ -1051,22 +1051,6 @@ public func buildScheme(scheme: String, withOptions options: BuildOptions, inPro
 			return createDebugInformation(builtProductURL)
 				.then(SignalProducer(value: builtProductURL))
 		}
-//		.flatMapTaskEvents(.Concat) { builtProductURL -> SignalProducer<NSURL, CarthageError> in
-//			return SignalProducer { observer, disposable in
-//				if let dependency = dependency {
-//					guard let folderURL = builtProductURL.URLByDeletingLastPathComponent else {
-//						observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
-//						return
-//					}
-//					guard VersionFile.createVersionFileForDependency(dependency, folderURL: folderURL) else {
-//						observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
-//						return
-//					}
-//				}
-//				observer.sendNext(builtProductURL)
-//				observer.sendCompleted()
-//			}
-//		}
 }
 
 public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
@@ -1163,17 +1147,17 @@ public func buildDependencyProject(dependency: Dependency<PinnedVersion>, _ root
 			return .Success(schemeProducers)
 		}
 		.mapError { error in
-					switch (dependency.project, error) {
-					case let (_, .NoSharedFrameworkSchemes(_, platforms)):
-						return .NoSharedFrameworkSchemes(dependency.project, platforms)
+				switch (dependency.project, error) {
+				case let (_, .NoSharedFrameworkSchemes(_, platforms)):
+					return .NoSharedFrameworkSchemes(dependency.project, platforms)
 
-					case let (.GitHub(repo), .NoSharedSchemes(project, _)):
-						return .NoSharedSchemes(project, repo)
+				case let (.GitHub(repo), .NoSharedSchemes(project, _)):
+					return .NoSharedSchemes(project, repo)
 
-					default:
-						return error
-					}
+				default:
+					return error
 				}
+			}
 
 }
 
@@ -1196,6 +1180,11 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 			.collect()
 			// Allow dependencies which have no projects, not to error out with
 			// `.NoSharedFrameworkSchemes`.
+			.on(next: { projects in
+				if let dependency = dependency where projects.isEmpty {
+					createVersionFilesForDependencyWithNoBuildProducts(dependency, directoryURL: directoryURL, platforms: options.platforms)
+				}
+			})
 			.filter { projects in !projects.isEmpty }
 			.flatMap(.Merge) { (projects: [(ProjectLocator, [String])]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 				return schemesInProjects(projects)
@@ -1260,7 +1249,11 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 					.concat(buildProgress)
 			}
 			.on(completed: {
-				print(urls)
+				if let dependency = dependency {
+					if !createVersionFilesForDependency(dependency, buildProductURLs: urls) {
+						observer.sendFailed(CarthageError.CanNotBuildVersionFile(dependency.project))
+					}
+				}
 			})
 			.startWithSignal { signal, signalDisposable in
 				disposable += signalDisposable

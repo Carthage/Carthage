@@ -667,12 +667,29 @@ public final class Project {
 
 	/// Attempts to build each Carthage dependency that has been checked out, 
 	/// optionally they are limited by the given list of dependency names.
+	/// Cached dependencies whose dependency trees are also cached will not
+	/// be rebuilt unless otherwise specified via build options.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
 	public func buildCheckedOutDependenciesWithOptions(options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+		var skippedProjects: [ProjectIdentifier] = [] // TODO: Use reference type
 		return loadResolvedCartfile()
-			.flatMap(.Merge) { resolvedCartfile in
+			.flatMap(.Merge) { resolvedCartfile -> SignalProducer<(ResolvedCartfile, Dependency<PinnedVersion>), CarthageError> in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
+					.map { (dependency: Dependency<PinnedVersion>) -> (ResolvedCartfile, Dependency<PinnedVersion>) in
+						return (resolvedCartfile, dependency)
+				}
+			}
+			.flatMap(.Concat) { (resolvedCartfile, dependency) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+				return self.shouldSkipBuildForDependency(dependency, platforms: options.platforms, resolvedDependencies: resolvedCartfile.dependencies, skippedProjects: skippedProjects, ignoreCached: options.ignoreCachedBuilds)
+					.flatMap(.Concat) { shouldSkip -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+						if shouldSkip {
+							print("Skipped building \(dependency.project)") // TODO: Log properly
+							skippedProjects.append(dependency.project)
+							return .empty
+						}
+						return SignalProducer(value: dependency)
+					}
 			}
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
@@ -696,6 +713,26 @@ public final class Project {
 						}
 					}
 			}
+	}
+	
+	/// Checks the version files for the dependency and each of the dependencies
+	/// listed in its Cartfile.
+	///
+	/// Returns true if the dependency does not need to be rebuilt.
+	private func shouldSkipBuildForDependency(dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, resolvedDependencies: [Dependency<PinnedVersion>], skippedProjects: [ProjectIdentifier], ignoreCached: Bool) -> SignalProducer<Bool, CarthageError> {
+		if ignoreCached {
+			return SignalProducer(value: false)
+		}
+		return cartfileForDependency(dependency)
+			.flatMap(.Concat) { cartfile -> SignalProducer<ProjectIdentifier, CarthageError> in
+				return SignalProducer(values: cartfile.dependencies.map { $0.project })
+			}
+			.concat(value: dependency.project)
+			.filter { project in !skippedProjects.contains(project) }
+			.filter { project in !versionFilesMatchDependency(dependency, forPlatforms: platforms, directoryURL: self.directoryURL) }
+			.map { _ in false }
+			.concat(value: true)
+			.take(1)
 	}
 }
 

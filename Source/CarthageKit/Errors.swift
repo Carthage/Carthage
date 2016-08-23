@@ -19,7 +19,7 @@ public enum CarthageError: ErrorType, Equatable {
 	case FrameworkAlreadyBuilt(NSURL)
 
 	/// Can not build version file
-	case CanNotBuildVersionFile(NSURL)
+	case CanNotBuildVersionFile(ProjectIdentifier)
 
 	/// One or more arguments was invalid.
 	case InvalidArgument(description: String)
@@ -161,8 +161,8 @@ extension CarthageError: CustomStringConvertible {
 		case let .FrameworkAlreadyBuilt(frameworkURL):
 			return "Framework already built in \(frameworkURL.description)"
 
-		case let .CanNotBuildVersionFile(frameworkURL):
-			return "Can not build version file at \(frameworkURL.description)"
+		case let .CanNotBuildVersionFile(project):
+			return "Could not create version file for \(project.name)"
 
 		case let .InvalidArgument(description):
 			return description
