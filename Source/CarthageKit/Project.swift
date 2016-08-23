@@ -322,14 +322,14 @@ public final class Project {
 		return cloneOrFetchDependency(project, commitish: reference)
 			.flatMap(.Concat) { _ in
 				return resolveTagInRepository(repositoryURL, reference)
-			}
-			.map { _ in
-				// If the reference is an exact tag, resolves it to the tag.
-				return PinnedVersion(reference)
-			}
-			.flatMapError { _ in
-				return resolveReferenceInRepository(repositoryURL, reference)
-					.map(PinnedVersion.init)
+					.map { _ in
+						// If the reference is an exact tag, resolves it to the tag.
+						return PinnedVersion(reference)
+					}
+					.flatMapError { _ in
+						return resolveReferenceInRepository(repositoryURL, reference)
+							.map(PinnedVersion.init)
+					}
 			}
 	}
 
