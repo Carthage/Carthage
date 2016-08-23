@@ -1051,22 +1051,22 @@ public func buildScheme(scheme: String, withOptions options: BuildOptions, inPro
 			return createDebugInformation(builtProductURL)
 				.then(SignalProducer(value: builtProductURL))
 		}
-		.flatMapTaskEvents(.Concat) { builtProductURL -> SignalProducer<NSURL, CarthageError> in
-			return SignalProducer { observer, disposable in
-				if let dependency = dependency {
-					guard let folderURL = builtProductURL.URLByDeletingLastPathComponent else {
-						observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
-						return
-					}
-					guard VersionFile.createVersionFileForDependency(dependency, folderURL: folderURL) else {
-						observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
-						return
-					}
-				}
-				observer.sendNext(builtProductURL)
-				observer.sendCompleted()
-			}
-		}
+//		.flatMapTaskEvents(.Concat) { builtProductURL -> SignalProducer<NSURL, CarthageError> in
+//			return SignalProducer { observer, disposable in
+//				if let dependency = dependency {
+//					guard let folderURL = builtProductURL.URLByDeletingLastPathComponent else {
+//						observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
+//						return
+//					}
+//					guard VersionFile.createVersionFileForDependency(dependency, folderURL: folderURL) else {
+//						observer.sendFailed(CarthageError.CanNotBuildVersionFile(builtProductURL))
+//						return
+//					}
+//				}
+//				observer.sendNext(builtProductURL)
+//				observer.sendCompleted()
+//			}
+//		}
 }
 
 public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<TaskEvent<NSURL>, CarthageError> {
@@ -1103,7 +1103,7 @@ public func buildDependencyProject(dependency: Dependency<PinnedVersion>, _ root
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 	let schemeProducers = buildInDirectory(dependencyURL, withOptions: options, dependency: dependency, sdkFilter: sdkFilter)
     
-	return SignalProducer.attempt { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
+	return SignalProducer.attempt { () -> Result<BuildSchemeProducer, CarthageError> in
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil)
 			} catch let error as NSError {
@@ -1162,9 +1162,7 @@ public func buildDependencyProject(dependency: Dependency<PinnedVersion>, _ root
 
 			return .Success(schemeProducers)
 		}
-		.flatMap(.Merge) { schemeProducers -> SignalProducer<BuildSchemeProducer, CarthageError> in
-			return schemeProducers
-				.mapError { error in
+		.mapError { error in
 					switch (dependency.project, error) {
 					case let (_, .NoSharedFrameworkSchemes(_, platforms)):
 						return .NoSharedFrameworkSchemes(dependency.project, platforms)
@@ -1176,15 +1174,14 @@ public func buildDependencyProject(dependency: Dependency<PinnedVersion>, _ root
 						return error
 					}
 				}
-		}
+
 }
 
-/// Builds the first project or workspace found within the given directory which
+/// Builds all the projects or workspaces found within the given directory which
 /// has at least one shared framework scheme.
 ///
-/// Returns a signal of all standard output from `xcodebuild`, and a
-/// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOptions, dependency: Dependency<PinnedVersion>? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+/// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
+public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOptions, dependency: Dependency<PinnedVersion>? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> BuildSchemeProducer {
 	precondition(directoryURL.fileURL)
 
 	return SignalProducer { observer, disposable in
@@ -1192,6 +1189,8 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 		// multiple times.
 		let locator = buildableSchemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms)
 			.replayLazily(Int.max)
+
+		var urls: [NSURL] = []
 
 		locator
 			.collect()
@@ -1229,7 +1228,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 					.take(1)
 					.map { project, _ in (scheme, project) }
 			}
-			.map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
+			.flatMap(.Concat) { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
 				let initialValue = (project, scheme)
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
@@ -1247,6 +1246,11 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for
 					// completion.
+					.on(next: { taskEvent in
+						if let url = taskEvent.value {
+							urls.append(url)
+						}
+					})
 					.map { taskEvent in
 						return taskEvent.map { _ in initialValue }
 					}
@@ -1255,6 +1259,9 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 				return BuildSchemeProducer(value: .Success(initialValue))
 					.concat(buildProgress)
 			}
+			.on(completed: {
+				print(urls)
+			})
 			.startWithSignal { signal, signalDisposable in
 				disposable += signalDisposable
 				signal.observe(observer)

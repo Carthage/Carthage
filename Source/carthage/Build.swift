@@ -171,7 +171,7 @@ public struct BuildCommand: CommandType {
 			return buildProducer
 		} else {
 			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions)
-				.flatMapError { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
+				.flatMapError { error -> BuildSchemeProducer in
 					switch error {
 					case let .NoSharedFrameworkSchemes(project, _):
 						// Log that building the current project is being skipped.
@@ -182,7 +182,7 @@ public struct BuildCommand: CommandType {
 						return SignalProducer(error: error)
 					}
 				}
-			return buildProducer.concat(currentProducers)
+			return buildProducer.concat(value: currentProducers)
 		}
 	}
 
