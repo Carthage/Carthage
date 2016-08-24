@@ -904,6 +904,10 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 				.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 					if isRepository {
 						let fetchProducer: () -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> = {
+							guard FetchCache.needsFetch(forURL: remoteURL) else {
+								return SignalProducer(value: (nil, repositoryURL))
+							}
+
 							return SignalProducer(value: (.Fetching(project), repositoryURL))
 								.concat(fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*").then(.empty))
 						}
