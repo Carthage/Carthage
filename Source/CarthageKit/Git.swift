@@ -479,7 +479,8 @@ private func ensureDirectoryExistsAtURL(fileURL: NSURL) -> SignalProducer<(), Ca
 
 /// Attempts to resolve the given reference into an object SHA.
 public func resolveReferenceInRepository(repositoryFileURL: NSURL, _ reference: String) -> SignalProducer<String, CarthageError> {
-	return launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL)
+	return ensureDirectoryExistsAtURL(repositoryFileURL)
+		.then(launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL))
 		.map { string in string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
 		.mapError { _ in CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists", underlyingError: nil) }
 }
@@ -494,11 +495,8 @@ internal func resolveTagInRepository(repositoryFileURL: NSURL, _ tag: String) ->
 /// Attempts to determine whether the given directory represents a Git
 /// repository.
 public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError> {
-	if !NSFileManager.defaultManager().fileExistsAtPath(directoryURL.path!) {
-		return SignalProducer(value: false)
-	}
-
-	return launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: directoryURL)
+	return ensureDirectoryExistsAtURL(directoryURL)
+		.then(launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: directoryURL))
 		.map { outputIncludingLineEndings in
 			let relativeOrAbsoluteGitDirectory = outputIncludingLineEndings.stringByTrimmingCharactersInSet(.newlineCharacterSet())
 			var absoluteGitDirectory: String?
