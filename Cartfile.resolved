@@ -1,7 +1,7 @@
 github "thoughtbot/Argo" "v3.0.3"
 github "thoughtbot/Curry" "v2.3.3"
 github "Quick/Nimble" "188caeb094bc342614d8a5c706cd8bb9a6c355eb"
-github "jdhealy/PrettyColors" "04de021009911d0060087b2f33b04fd6b2f9e121"
+github "jdhealy/PrettyColors" "v4.0.0"
 github "Quick/Quick" "v0.9.3"
 github "antitypical/Result" "2.1.3"
 github "jspahrsummers/xcconfigs" "0.9"
