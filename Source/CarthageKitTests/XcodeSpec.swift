@@ -14,7 +14,6 @@ import Quick
 import ReactiveCocoa
 import ReactiveTask
 import Tentacle
-import Argo
 
 class XcodeSpec: QuickSpec {
 	override func spec() {

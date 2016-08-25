@@ -116,6 +116,9 @@ public enum ProjectEvent {
 	/// Building the project is being skipped, since the project is not sharing
 	/// any framework schemes.
 	case SkippedBuilding(ProjectIdentifier, String)
+	
+	/// Building the project is being skipped because it is cached.
+	case SkippedBuildingCached(ProjectIdentifier)
 }
 
 /// Represents a project that is using Carthage.
@@ -677,19 +680,16 @@ public final class Project {
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
 					.flatMap(.Concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>), CarthageError> in
 						self.cartfileForDependency(dependency)
-							.map{ cartfile in Set(cartfile.dependencies.map { $0.project }) }
+							.map { cartfile in Set(cartfile.dependencies.map { $0.project }) }
 							.concat(value: [])
 							.take(1)
-							.map { dependencies in
-								return (dependency, dependencies)
-							}
+							.map { dependencies in (dependency, dependencies) }
 					}
 					.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
 						let (nextDependency, dependencies) = nextGroup
-						if !options.ignoreCachedBuilds && self.shouldSkipBuildForDependency(nextDependency, dependencies: dependencies, platforms: options.platforms, projectsToBeBuilt: includedDependencies) {
+						if !options.ignoreCachedBuilds && self.shouldSkipBuildForDependency(nextDependency, dependencies: dependencies, dependenciesToBeBuilt: includedDependencies, platforms: options.platforms) {
 							return includedDependencies
 						}
-
 						return includedDependencies + [nextDependency]
 					}
 					.flatMap(.Concat) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
@@ -724,17 +724,16 @@ public final class Project {
 	/// listed in its Cartfile.
 	///
 	/// Returns true if the dependency does not need to be rebuilt.
-	private func shouldSkipBuildForDependency(dependency: Dependency<PinnedVersion>, dependencies: Set<ProjectIdentifier>, platforms: Set<Platform>, projectsToBeBuilt: [Dependency<PinnedVersion>]) -> Bool {
-		let builtIdentifiers = Set(projectsToBeBuilt.map { $0.project })
-		guard dependencies.intersect(builtIdentifiers).isEmpty else {
+	private func shouldSkipBuildForDependency(dependency: Dependency<PinnedVersion>, dependencies: Set<ProjectIdentifier>, dependenciesToBeBuilt: [Dependency<PinnedVersion>], platforms: Set<Platform>) -> Bool {
+		let projectsToBeBuilt = Set(dependenciesToBeBuilt.map { $0.project })
+		guard dependencies.intersect(projectsToBeBuilt).isEmpty else {
 			return false
 		}
-
-		let result =  versionFilesMatchDependency(dependency, forPlatforms: platforms, directoryURL: self.directoryURL)
-		if result {
-			print("Skipping \(dependency.project.name)") // TODO: Log
+		let versionFilesMatch = versionFileMatchesDependency(dependency, forPlatforms: platforms, rootDirectoryURL: self.directoryURL)
+		if versionFilesMatch {
+			self._projectEventsObserver.sendNext(.SkippedBuildingCached(dependency.project))
 		}
-		return result
+		return versionFilesMatch
 	}
 }
 

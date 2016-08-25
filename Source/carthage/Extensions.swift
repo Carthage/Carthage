@@ -106,6 +106,9 @@ internal struct ProjectEventSink {
 
 		case let .SkippedBuilding(project, message):
 			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(string: project.name) + " due to the error:\n" + message)
+			
+		case let .SkippedBuildingCached(project):
+			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(string: project.name))
 		}
 	}
 }

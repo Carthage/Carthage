@@ -10,9 +10,6 @@ import Foundation
 import Result
 import ReactiveCocoa
 import ReactiveTask
-import Argo
-import Curry
-import CryptoSwift
 
 /// The name of the folder into which Carthage puts binaries it builds (relative
 /// to the working directory).
@@ -1085,7 +1082,7 @@ public func buildDependencyProject(dependency: Dependency<PinnedVersion>, _ root
 	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
-	let schemeProducers = buildInDirectory(dependencyURL, withOptions: options, dependency: dependency, sdkFilter: sdkFilter)
+	let schemeProducers = buildInDirectory(dependencyURL, withOptions: options, dependency: dependency, rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
     
 	return SignalProducer.attempt { () -> Result<BuildSchemeProducer, CarthageError> in
 			do {
@@ -1165,7 +1162,7 @@ public func buildDependencyProject(dependency: Dependency<PinnedVersion>, _ root
 /// has at least one shared framework scheme.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
-public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOptions, dependency: Dependency<PinnedVersion>? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> BuildSchemeProducer {
+public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOptions, dependency: Dependency<PinnedVersion>? = nil, rootDirectoryURL: NSURL? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> BuildSchemeProducer {
 	precondition(directoryURL.fileURL)
 
 	return SignalProducer { observer, disposable in
@@ -1180,11 +1177,6 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 			.collect()
 			// Allow dependencies which have no projects, not to error out with
 			// `.NoSharedFrameworkSchemes`.
-			.on(next: { projects in
-				if let dependency = dependency where projects.isEmpty {
-					createVersionFilesForDependencyWithNoBuildProducts(dependency, directoryURL: directoryURL, platforms: options.platforms)
-				}
-			})
 			.filter { projects in !projects.isEmpty }
 			.flatMap(.Merge) { (projects: [(ProjectLocator, [String])]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 				return schemesInProjects(projects)
@@ -1249,8 +1241,8 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 					.concat(buildProgress)
 			}
 			.on(completed: {
-				if let dependency = dependency {
-					if !createVersionFilesForDependency(dependency, buildProductURLs: urls) {
+				if let dependency = dependency, rootDirectoryURL = rootDirectoryURL {
+					if !createVersionFileForDependency(dependency, forPlatforms: options.platforms, buildProductURLs: urls, rootDirectoryURL: rootDirectoryURL) {
 						observer.sendFailed(CarthageError.CanNotBuildVersionFile(dependency.project))
 					}
 				}

@@ -7,138 +7,97 @@
 //
 
 import Foundation
-import Argo
-import Curry
 import CryptoSwift
 
+private let commitishKeyName = "commitish"
+private let cachedFrameworksKeyName = "cachedFrameworks"
+private let frameworkNameKeyName = "frameworkName"
+private let frameworkSha1KeyName = "frameworkSha1"
 
-public struct CachedFramework {
-	public let frameworkName: String
-	public let frameworkSHA1: String
+private typealias VersionFile = [String: [String: AnyObject]]
+
+public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, buildProductURLs: [NSURL], rootDirectoryURL: NSURL) -> Bool {
+	var cachedPlatformFrameworks: [String: [[String: String]]] = [:]
 	
-	public static let frameworkNameKeyName = "frameworkName"
-	public static let frameworkSHA1KeyName = "frameworkSHA1"
-	
-	public init(frameworkName: String, frameworkSHA1: String) {
-		self.frameworkName = frameworkName
-		self.frameworkSHA1 = frameworkSHA1
-	}
-}
-
-extension CachedFramework: Decodable {
-	public static func decode(j: JSON) -> Decoded<CachedFramework> {
-		return curry(self.init)
-			<^> j <| CachedFramework.frameworkNameKeyName
-			<*> j <| CachedFramework.frameworkSHA1KeyName
-	}
-}
-
-
-public struct CachedFrameworks {
-	public let commitish: String
-	public let cachedFrameworks: [CachedFramework]
-	
-	public static let commitishKeyName = "commitish"
-	public static let cachedFrameworksKeyName = "cachedFrameworks"
-	
-	public init(commitish: String, cachedFrameworks: [CachedFramework]) {
-		self.commitish = commitish
-		self.cachedFrameworks = cachedFrameworks
-	}
-}
-
-extension CachedFrameworks: Decodable {
-	public static func decode(j: JSON) -> Decoded<CachedFrameworks> {
-		return curry(self.init)
-			<^> j <| CachedFrameworks.commitishKeyName
-			<*> j <|| CachedFrameworks.cachedFrameworksKeyName
-	}
-}
-
-
-private func sha1ForFileAtURL(frameworkFileURL: NSURL) -> String? {
-	guard let path = frameworkFileURL.path where NSFileManager.defaultManager().fileExistsAtPath(path) else {
-		return nil
-	}
-	let frameworkData = try? NSData(contentsOfFile: path, options: .DataReadingMappedAlways)
-	return frameworkData?.sha1()?.toHexString()
-}
-
-public func createVersionFilesForDependency(dependency: Dependency<PinnedVersion>, buildProductURLs: [NSURL]) -> Bool {
-	var dataByPlatform: [NSURL: [[String: String]]] = [:]
 	for url in buildProductURLs {
-		guard let platformURL = url.URLByDeletingLastPathComponent else { return false }
+		guard let platformName = url.URLByDeletingLastPathComponent?.lastPathComponent else { return false }
 		guard let frameworkName = url.URLByDeletingPathExtension?.lastPathComponent else { return false }
+		
 		let frameworkURL = url.URLByAppendingPathComponent(frameworkName, isDirectory: false)
+		guard NSFileManager.defaultManager().fileExistsAtPath(frameworkURL.path!) else { return false }
 		guard let sha1 = sha1ForFileAtURL(frameworkURL) else { return false }
 		
-		var platformData: [[String: String]] = dataByPlatform[platformURL] ?? []
-		platformData.append([CachedFramework.frameworkNameKeyName: frameworkName, CachedFramework.frameworkSHA1KeyName: sha1])
-		dataByPlatform[platformURL] = platformData
+		let frameworkInfo = [frameworkNameKeyName: frameworkName, frameworkSha1KeyName: sha1]
+		
+		var frameworks = cachedPlatformFrameworks[platformName] ?? []
+		frameworks.append(frameworkInfo)
+		cachedPlatformFrameworks[platformName] = frameworks
 	}
-	do {
-		for (platformURL, platformData) in dataByPlatform {
-			let versionFileURL = platformURL.URLByAppendingPathComponent(".\(dependency.project.name).version")
-			let versionData = [CachedFrameworks.commitishKeyName: dependency.version.commitish, CachedFrameworks.cachedFrameworksKeyName: platformData]
-			
-			let jsonData = try NSJSONSerialization.dataWithJSONObject(versionData, options: .PrettyPrinted)
-			try jsonData.writeToURL(versionFileURL, options: .DataWritingAtomic)
-		}
+	
+	var versionInfo: VersionFile = [:]
+	
+	let platformSet = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
+	for platform in platformSet {
+		let cachedFrameworks: [[String: String]] = cachedPlatformFrameworks[platform.rawValue] ?? []
+		versionInfo[platform.rawValue] = [commitishKeyName: dependency.version.commitish, cachedFrameworksKeyName: cachedFrameworks]
 	}
-	catch {
-		return false
-	}
-	return true
-}
-
-public func createVersionFilesForDependencyWithNoBuildProducts(dependency: Dependency<PinnedVersion>, directoryURL: NSURL, platforms: Set<Platform>) -> Bool {
-	do {
-		for platform in platforms {
-			let platformURL = directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
-			
-			let versionFileURL = platformURL.URLByAppendingPathComponent(".\(dependency.project.name).version")
-			let versionData = [CachedFrameworks.commitishKeyName: dependency.version.commitish, CachedFrameworks.cachedFrameworksKeyName: []]
-			
-			let jsonData = try NSJSONSerialization.dataWithJSONObject(versionData, options: .PrettyPrinted)
-			try jsonData.writeToURL(versionFileURL, options: .DataWritingAtomic)
-		}
-	}
-	catch {
-		return false
-	}
-	return true
-}
-
-public func versionFilesMatchDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, directoryURL: NSURL) -> Bool {
-	let dependencyURL = directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
-	print("Starting version check for \(dependency.project.name) :\(NSDate())")
-	defer { print("Ending version check \(dependency.project.name):\(NSDate())") }
-	for platform in platforms {
-		let platformURL = dependencyURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
-		let versionFileURL = platformURL.URLByAppendingPathComponent(".\(dependency.project.name).version")
-		if !NSFileManager.defaultManager().fileExistsAtPath(versionFileURL.path!) {
-			return false
-		}
-		guard let jsonData = NSData(contentsOfFile: versionFileURL.path!) else {
-			return false
-		}
-		guard let json = try? NSJSONSerialization.JSONObjectWithData(jsonData, options: .AllowFragments) else {
-			return false
-		}
-		guard let cachedFrameworks: CachedFrameworks = Argo.decode(json) else {
-			return false
-		}
-		guard cachedFrameworks.commitish == dependency.version.commitish else {
-			return false
-		}
-		for cachedFramework in cachedFrameworks.cachedFrameworks {
-			let frameworkURL = platformURL.URLByAppendingPathComponent("\(cachedFramework.frameworkName).framework", isDirectory: true)
-			let frameworkBinaryURL = frameworkURL.URLByAppendingPathComponent("\(cachedFramework.frameworkName)", isDirectory: false)
-			guard let frameworkSHA1 = sha1ForFileAtURL(frameworkBinaryURL) where frameworkSHA1 == cachedFramework.frameworkSHA1 else {
-				return false
+	
+	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+	let versionFileURL = rootBinariesURL.URLByAppendingPathComponent(".\(dependency.project.name).version")
+	
+	if let oldVersionFile: VersionFile = readVersionFileAtURL(versionFileURL) {
+		for platformName in oldVersionFile.keys {
+			if versionInfo[platformName] == nil {
+				versionInfo[platformName] = oldVersionFile[platformName]
 			}
 		}
 	}
-	print("We gonna skip!")
+
+	do {
+		let jsonData = try NSJSONSerialization.dataWithJSONObject(versionInfo, options: .PrettyPrinted)
+		try jsonData.writeToURL(versionFileURL, options: .DataWritingAtomic)
+	}
+	catch { return false }
+	
 	return true
+}
+
+public func versionFileMatchesDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, rootDirectoryURL: NSURL) -> Bool {
+	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+	let versionFileURL = rootBinariesURL.URLByAppendingPathComponent(".\(dependency.project.name).version")
+	guard let versionInfo = readVersionFileAtURL(versionFileURL) else { return false }
+	
+	let platformNames: [String] = !platforms.isEmpty ? platforms.map { $0.rawValue } : Array(versionInfo.keys)
+	guard platformNames.count > 0 else { return false }
+	
+	for platformName in platformNames {
+		guard let platformInfo: [String: AnyObject] = versionInfo[platformName] else { return false }
+		guard let commitish = platformInfo[commitishKeyName] as? String where commitish == dependency.version.commitish	else { return false }
+		guard let cachedFrameworks = platformInfo[cachedFrameworksKeyName] as? [[String: String]] else { return false }
+		
+		for frameworkInfo in cachedFrameworks {
+			guard let frameworkName = frameworkInfo[frameworkNameKeyName] else { return false }
+			guard let frameworkSha1 = frameworkInfo[frameworkSha1KeyName] else { return false }
+			
+			let platformURL = rootBinariesURL.URLByAppendingPathComponent(platformName, isDirectory: true).URLByResolvingSymlinksInPath!
+			let frameworkURL = platformURL.URLByAppendingPathComponent("\(frameworkName).framework", isDirectory: true)
+			let frameworkBinaryURL = frameworkURL.URLByAppendingPathComponent("\(frameworkName)", isDirectory: false)
+			guard let sha1 = sha1ForFileAtURL(frameworkBinaryURL) where sha1 == frameworkSha1 else { return false }
+		}
+	}
+	
+	return true
+}
+
+private func sha1ForFileAtURL(frameworkFileURL: NSURL) -> String? {
+	guard let path = frameworkFileURL.path where NSFileManager.defaultManager().fileExistsAtPath(path) else { return nil }
+	let frameworkData = try? NSData(contentsOfFile: path, options: .DataReadingMappedAlways)
+	return frameworkData?.sha1()?.toHexString() // shasum
+}
+
+private func readVersionFileAtURL(url: NSURL) -> VersionFile? {
+	guard NSFileManager.defaultManager().fileExistsAtPath(url.path!) else { return nil }
+	guard let jsonData = NSData(contentsOfFile: url.path!) else { return nil }
+	guard let json = try? NSJSONSerialization.JSONObjectWithData(jsonData, options: .AllowFragments) else { return nil }
+	return json as? VersionFile
 }
