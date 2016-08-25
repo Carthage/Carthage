@@ -690,30 +690,15 @@ public final class Project {
 				}
 
 				var options = options
-				let cleanDerivedDataIfNeeded: SignalProducer<(), CarthageError>
-
-				if options.derivedDataPath != nil {
-					cleanDerivedDataIfNeeded = .empty
-				} else {
+				if options.derivedDataPath == nil {
 					let derivedDataPerDependency = CarthageDependencyDerivedDataURL
 						.URLByAppendingPathComponent(self.directoryURL.lastPathComponent!, isDirectory: true)
 						.URLByAppendingPathComponent(project.name, isDirectory: true)
 					let derivedDataVersioned = derivedDataPerDependency.URLByAppendingPathComponent(version, isDirectory: true)
 					options.derivedDataPath = derivedDataVersioned.URLByResolvingSymlinksInPath?.path
-
-					let fileManager = NSFileManager.defaultManager()
-					cleanDerivedDataIfNeeded = fileManager
-						.carthage_enumeratorAtURL(derivedDataPerDependency, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants ], catchErrors: true)
-						.flatMap(.Concat) { _, URL -> SignalProducer<(), CarthageError> in
-							if URL != derivedDataVersioned {
-								_ = try? fileManager.removeItemAtURL(URL)
-							}
-							return .empty
-						}
 				}
 
-				return cleanDerivedDataIfNeeded
-					.then(buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter))
+				return buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:
