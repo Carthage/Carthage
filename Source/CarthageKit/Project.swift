@@ -690,13 +690,12 @@ public final class Project {
 				}
 
 				var options = options
-				if options.derivedDataPath == nil {
-					let derivedDataPerDependency = CarthageDependencyDerivedDataURL
-						.URLByAppendingPathComponent(self.directoryURL.lastPathComponent!, isDirectory: true)
-						.URLByAppendingPathComponent(project.name, isDirectory: true)
-					let derivedDataVersioned = derivedDataPerDependency.URLByAppendingPathComponent(version, isDirectory: true)
-					options.derivedDataPath = derivedDataVersioned.URLByResolvingSymlinksInPath?.path
-				}
+				let baseUrl = options.derivedDataPath.flatMap(NSURL.init(string:)) ?? CarthageDependencyDerivedDataURL
+				let derivedDataPerDependency = baseUrl
+					.URLByAppendingPathComponent(self.directoryURL.lastPathComponent!, isDirectory: true)
+					.URLByAppendingPathComponent(project.name, isDirectory: true)
+				let derivedDataVersioned = derivedDataPerDependency.URLByAppendingPathComponent(version, isDirectory: true)
+				options.derivedDataPath = derivedDataVersioned.URLByResolvingSymlinksInPath?.path
 
 				return buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
