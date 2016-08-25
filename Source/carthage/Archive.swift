@@ -28,7 +28,7 @@ public struct ArchiveCommand: CommandType {
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "output", defaultValue: nil, usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)")
-				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: ".", usage: "the directory containing the Carthage project")
 				<*> ColorOptions.evaluate(m)
 				<*> m <| Argument(defaultValue: [], usage: "the names of the built frameworks to archive without any extension (or blank to pick up the frameworks in the current project built by `--no-skip-current`)")
 		}
