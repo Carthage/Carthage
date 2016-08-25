@@ -73,8 +73,8 @@ public let CarthageDependencyAssetsURL = CarthageUserCachesURL.URLByAppendingPat
 /// ~/Library/Caches/org.carthage.CarthageKit/dependencies/
 public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppendingPathComponent("dependencies", isDirectory: true)
 
-/// The file URL to the directory in which per-project derived data directories
-/// will be stored.
+/// The file URL to the directory in which per-dependency derived data
+/// directories will be stored.
 ///
 /// ~/Library/Caches/org.carthage.CarthageKit/DerivedData/
 public let CarthageDependencyDerivedDataURL = CarthageUserCachesURL.URLByAppendingPathComponent("DerivedData", isDirectory: true)
