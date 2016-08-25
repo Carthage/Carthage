@@ -476,7 +476,12 @@ public struct BuildSettings {
 	/// Upon .success, sends one BuildSettings value for each target included in
 	/// the referenced scheme.
 	public static func loadWithArguments(arguments: BuildArguments) -> SignalProducer<BuildSettings, CarthageError> {
-		let task = xcodebuildTask("-showBuildSettings", arguments)
+		// xcodebuild (in Xcode 8) has a bug where xcodebuild -showBuildSettings
+		// can hang indefinitely on projects that contain core data models.
+		// rdar://27052195
+		// Including the action "clean" works around this issue, which is further
+		// discussed here: https://forums.developer.apple.com/thread/50372
+		let task = xcodebuildTask(["clean", "-showBuildSettings"], arguments)
 
 		return launchTask(task)
 			.ignoreTaskData()
