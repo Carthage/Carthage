@@ -691,9 +691,7 @@ public final class Project {
 
 				var options = options
 				let baseUrl = options.derivedDataPath.flatMap(NSURL.init(string:)) ?? CarthageDependencyDerivedDataURL
-				let derivedDataPerDependency = baseUrl
-					.URLByAppendingPathComponent(self.directoryURL.lastPathComponent!, isDirectory: true)
-					.URLByAppendingPathComponent(project.name, isDirectory: true)
+				let derivedDataPerDependency = baseUrl.URLByAppendingPathComponent(project.name, isDirectory: true)
 				let derivedDataVersioned = derivedDataPerDependency.URLByAppendingPathComponent(version, isDirectory: true)
 				options.derivedDataPath = derivedDataVersioned.URLByResolvingSymlinksInPath?.path
 
