@@ -672,23 +672,28 @@ public final class Project {
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
 	public func buildCheckedOutDependenciesWithOptions(options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-		var skippedProjects: [ProjectIdentifier] = [] // TODO: Use reference type
 		return loadResolvedCartfile()
-			.flatMap(.Merge) { resolvedCartfile -> SignalProducer<(ResolvedCartfile, Dependency<PinnedVersion>), CarthageError> in
+			.flatMap(.Merge) { resolvedCartfile -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
-					.map { (dependency: Dependency<PinnedVersion>) -> (ResolvedCartfile, Dependency<PinnedVersion>) in
-						return (resolvedCartfile, dependency)
-				}
-			}
-			.flatMap(.Concat) { (resolvedCartfile, dependency) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				return self.shouldSkipBuildForDependency(dependency, platforms: options.platforms, resolvedDependencies: resolvedCartfile.dependencies, skippedProjects: skippedProjects, ignoreCached: options.ignoreCachedBuilds)
-					.flatMap(.Concat) { shouldSkip -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-						if shouldSkip {
-							print("Skipped building \(dependency.project)") // TODO: Log properly
-							skippedProjects.append(dependency.project)
-							return .empty
+					.flatMap(.Concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>), CarthageError> in
+						self.cartfileForDependency(dependency)
+							.map{ cartfile in Set(cartfile.dependencies.map { $0.project }) }
+							.concat(value: [])
+							.take(1)
+							.map { dependencies in
+								return (dependency, dependencies)
+							}
+					}
+					.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
+						let (nextDependency, dependencies) = nextGroup
+						if !options.ignoreCachedBuilds && self.shouldSkipBuildForDependency(nextDependency, dependencies: dependencies, platforms: options.platforms, projectsToBeBuilt: includedDependencies) {
+							return includedDependencies
 						}
-						return SignalProducer(value: dependency)
+
+						return includedDependencies + [nextDependency]
+					}
+					.flatMap(.Concat) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+						SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: dependencies)
 					}
 			}
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
@@ -719,20 +724,17 @@ public final class Project {
 	/// listed in its Cartfile.
 	///
 	/// Returns true if the dependency does not need to be rebuilt.
-	private func shouldSkipBuildForDependency(dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, resolvedDependencies: [Dependency<PinnedVersion>], skippedProjects: [ProjectIdentifier], ignoreCached: Bool) -> SignalProducer<Bool, CarthageError> {
-		if ignoreCached {
-			return SignalProducer(value: false)
+	private func shouldSkipBuildForDependency(dependency: Dependency<PinnedVersion>, dependencies: Set<ProjectIdentifier>, platforms: Set<Platform>, projectsToBeBuilt: [Dependency<PinnedVersion>]) -> Bool {
+		let builtIdentifiers = Set(projectsToBeBuilt.map { $0.project })
+		guard dependencies.intersect(builtIdentifiers).isEmpty else {
+			return false
 		}
-		return cartfileForDependency(dependency)
-			.flatMap(.Concat) { cartfile -> SignalProducer<ProjectIdentifier, CarthageError> in
-				return SignalProducer(values: cartfile.dependencies.map { $0.project })
-			}
-			.concat(value: dependency.project)
-			.filter { project in !skippedProjects.contains(project) }
-			.filter { project in !versionFilesMatchDependency(dependency, forPlatforms: platforms, directoryURL: self.directoryURL) }
-			.map { _ in false }
-			.concat(value: true)
-			.take(1)
+
+		let result =  versionFilesMatchDependency(dependency, forPlatforms: platforms, directoryURL: self.directoryURL)
+		if result {
+			print("Skipping \(dependency.project.name)") // TODO: Log
+		}
+		return result
 	}
 }
 

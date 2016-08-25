@@ -60,7 +60,7 @@ private func sha1ForFileAtURL(frameworkFileURL: NSURL) -> String? {
 	guard let path = frameworkFileURL.path where NSFileManager.defaultManager().fileExistsAtPath(path) else {
 		return nil
 	}
-	let frameworkData = NSData(contentsOfURL: frameworkFileURL)
+	let frameworkData = try? NSData(contentsOfFile: path, options: .DataReadingMappedAlways)
 	return frameworkData?.sha1()?.toHexString()
 }
 
@@ -111,6 +111,8 @@ public func createVersionFilesForDependencyWithNoBuildProducts(dependency: Depen
 
 public func versionFilesMatchDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, directoryURL: NSURL) -> Bool {
 	let dependencyURL = directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
+	print("Starting version check for \(dependency.project.name) :\(NSDate())")
+	defer { print("Ending version check \(dependency.project.name):\(NSDate())") }
 	for platform in platforms {
 		let platformURL = dependencyURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
 		let versionFileURL = platformURL.URLByAppendingPathComponent(".\(dependency.project.name).version")
@@ -137,5 +139,6 @@ public func versionFilesMatchDependency(dependency: Dependency<PinnedVersion>, f
 			}
 		}
 	}
+	print("We gonna skip!")
 	return true
 }
