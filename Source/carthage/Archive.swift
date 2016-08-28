@@ -81,6 +81,7 @@ public struct ArchiveCommand: CommandType {
 						return (platform.relativePath as NSString).stringByAppendingPathComponent(framework)
 					}
 				}
+				.collect()
 				.flatMap(.Merge) { relativePaths -> SignalProducer<(relativePath: String, absolutePath: String), CarthageError> in
 					return SignalProducer(values: relativePaths).map { relativePath in
 						let absolutePath = (options.directoryPath as NSString).stringByAppendingPathComponent(relativePath)
