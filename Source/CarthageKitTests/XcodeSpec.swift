@@ -17,7 +17,8 @@ import Tentacle
 
 class XcodeSpec: QuickSpec {
 	override func spec() {
-		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("ReactiveCocoaLayout", withExtension: nil)!
+		// The fixture is maintained at https://github.com/ikesyo/carthage-fixtures-ReactiveCocoaLayout
+		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
 		let projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
 		let buildFolderURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
