@@ -32,6 +32,7 @@
 		CD7F22441C67649F00B018A9 /* TestCartfileProposedVersion in Resources */ = {isa = PBXBuildFile; fileRef = CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */; };
 		CDA0B6CA1C468E67006C499C /* GitSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA0B6C91C468E67006C499C /* GitSpec.swift */; };
 		CDCE1CC41C170E8A00B2ED88 /* TestResolvedCartfile.resolved in Resources */ = {isa = PBXBuildFile; fileRef = CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */; };
+		CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF9D3701CF1E54200DF5A6F /* BuildOptions.swift */; };
 		D00105061A8EA74E0059D0A0 /* Archive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00105051A8EA74E0059D0A0 /* Archive.swift */; };
 		D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00CCE311A20783A00109F8C /* Commandant.framework */; };
 		D00CCE331A20784800109F8C /* Commandant.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D00CCE311A20783A00109F8C /* Commandant.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -180,6 +181,7 @@
 		CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfileProposedVersion; sourceTree = "<group>"; };
 		CDA0B6C91C468E67006C499C /* GitSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitSpec.swift; sourceTree = "<group>"; };
 		CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestResolvedCartfile.resolved; sourceTree = "<group>"; };
+		CDF9D3701CF1E54200DF5A6F /* BuildOptions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildOptions.swift; sourceTree = "<group>"; };
 		D00105051A8EA74E0059D0A0 /* Archive.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Archive.swift; sourceTree = "<group>"; };
 		D00CCE311A20783A00109F8C /* Commandant.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Commandant.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D012AD0F1AF9843700EE91DA /* Result.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Result.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -432,6 +434,7 @@
 				3A0472F21C782B4000097EC7 /* Algorithms.swift */,
 				D069CA231A4E3B2700314A85 /* Archive.swift */,
 				89E80E601C754FFD000F8DCB /* BuildArguments.swift */,
+				CDF9D3701CF1E54200DF5A6F /* BuildOptions.swift */,
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
 				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
 				D074EDC41A049283001DE082 /* FrameworkExtensions.swift */,
@@ -592,12 +595,15 @@
 				TargetAttributes = {
 					D0D1216C19E87B05005E4BAA = {
 						CreatedOnToolsVersion = 6.1;
+						LastSwiftMigration = 0800;
 					};
 					D0D1217619E87B05005E4BAA = {
 						CreatedOnToolsVersion = 6.1;
+						LastSwiftMigration = 0800;
 					};
 					D0E7B63119E9C64500EDBA4D = {
 						CreatedOnToolsVersion = 6.1;
+						LastSwiftMigration = 0800;
 					};
 				};
 			};
@@ -727,6 +733,7 @@
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
+				CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */,
 				D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */,
 				89E80E621C755002000F8DCB /* BuildArguments.swift in Sources */,
 				D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */,
@@ -800,6 +807,7 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_VERSION = 2.3;
 			};
 			name = Debug;
 		};
@@ -809,6 +817,7 @@
 			buildSettings = {
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				SWIFT_VERSION = 2.3;
 			};
 			name = Release;
 		};
@@ -880,6 +889,7 @@
 			buildSettings = {
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				SWIFT_VERSION = 2.3;
 			};
 			name = Profile;
 		};
@@ -920,6 +930,7 @@
 			buildSettings = {
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				SWIFT_VERSION = 2.3;
 			};
 			name = Test;
 		};

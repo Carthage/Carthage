@@ -67,7 +67,7 @@ _carthage() {
             return 0
             ;;
         --platform)
-            COMPREPLY=($(compgen -W 'all iOS Mac watchOS tvOS' -- ${cur}))
+            COMPREPLY=($(compgen -W 'all macOS iOS watchOS tvOS' -- ${cur}))
             return 0
             ;;
         --derived-data)

@@ -34,8 +34,8 @@ private let CarthageUserCachesURL: NSURL = {
 	let URLResult: Result<NSURL, NSError> = `try` { (error: NSErrorPointer) -> NSURL? in
 		return try? fileManager.URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true)
 	}.flatMap { cachesURL in
-		let dependenciesURL = cachesURL.URLByAppendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
-		let dependenciesPath = dependenciesURL.absoluteString
+		let dependenciesURL = cachesURL.appendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
+		let dependenciesPath = dependenciesURL.carthage_absoluteString
 		
 		if fileManager.fileExistsAtPath(dependenciesPath, isDirectory:nil) {
 			if fileManager.isWritableFileAtPath(dependenciesPath) {
@@ -66,12 +66,12 @@ private let CarthageUserCachesURL: NSURL = {
 /// stored.
 ///
 /// ~/Library/Caches/org.carthage.CarthageKit/binaries/
-public let CarthageDependencyAssetsURL = CarthageUserCachesURL.URLByAppendingPathComponent("binaries", isDirectory: true)
+public let CarthageDependencyAssetsURL: NSURL = CarthageUserCachesURL.appendingPathComponent("binaries", isDirectory: true)
 
 /// The file URL to the directory in which cloned dependencies will be stored.
 ///
 /// ~/Library/Caches/org.carthage.CarthageKit/dependencies/
-public let CarthageDependencyRepositoriesURL = CarthageUserCachesURL.URLByAppendingPathComponent("dependencies", isDirectory: true)
+public let CarthageDependencyRepositoriesURL: NSURL = CarthageUserCachesURL.appendingPathComponent("dependencies", isDirectory: true)
 
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
@@ -125,12 +125,12 @@ public final class Project {
 
 	/// The file URL to the project's Cartfile.
 	public var cartfileURL: NSURL {
-		return directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
+		return directoryURL.appendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
 	}
 
 	/// The file URL to the project's Cartfile.resolved.
 	public var resolvedCartfileURL: NSURL {
-		return directoryURL.URLByAppendingPathComponent(CarthageProjectResolvedCartfilePath, isDirectory: false)
+		return directoryURL.appendingPathComponent(CarthageProjectResolvedCartfilePath, isDirectory: false)
 	}
 
 	/// Whether to prefer HTTPS for cloning (vs. SSH).
@@ -173,8 +173,8 @@ public final class Project {
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.
 	public func loadCombinedCartfile() -> SignalProducer<Cartfile, CarthageError> {
-		let cartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
-		let privateCartfileURL = directoryURL.URLByAppendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
+		let cartfileURL = directoryURL.appendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
+		let privateCartfileURL = directoryURL.appendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
 		func isNoSuchFileError(error: CarthageError) -> Bool {
 			switch error {
@@ -322,14 +322,14 @@ public final class Project {
 		return cloneOrFetchDependency(project, commitish: reference)
 			.flatMap(.Concat) { _ in
 				return resolveTagInRepository(repositoryURL, reference)
-			}
-			.map { _ in
-				// If the reference is an exact tag, resolves it to the tag.
-				return PinnedVersion(reference)
-			}
-			.flatMapError { _ in
-				return resolveReferenceInRepository(repositoryURL, reference)
-					.map(PinnedVersion.init)
+					.map { _ in
+						// If the reference is an exact tag, resolves it to the tag.
+						return PinnedVersion(reference)
+					}
+					.flatMapError { _ in
+						return resolveReferenceInRepository(repositoryURL, reference)
+							.map(PinnedVersion.init)
+					}
 			}
 	}
 
@@ -420,7 +420,7 @@ public final class Project {
 					return SignalProducer(value: false)
 				}
 
-				let checkoutDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
+				let checkoutDirectoryURL = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true)
 
 				switch project {
 				case let .GitHub(repository):
@@ -521,7 +521,7 @@ public final class Project {
 	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 		return platformForFramework(frameworkURL)
 			.flatMap(.Merge) { platform -> SignalProducer<NSURL, CarthageError> in
-				let platformFolderURL = self.directoryURL.URLByAppendingPathComponent(platform.relativePath, isDirectory: true)
+				let platformFolderURL = self.directoryURL.appendingPathComponent(platform.relativePath, isDirectory: true)
 				return SignalProducer(value: frameworkURL)
 					.copyFileURLsIntoDirectory(platformFolderURL)
 			}
@@ -558,7 +558,7 @@ public final class Project {
 	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> SignalProducer<(), CarthageError> {
 		return cloneOrFetchDependency(project, commitish: revision)
 			.flatMap(.Merge) { repositoryURL -> SignalProducer<(), CarthageError> in
-				let workingDirectoryURL = self.directoryURL.URLByAppendingPathComponent(project.relativePath, isDirectory: true)
+				let workingDirectoryURL = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true)
 				var submodule: Submodule?
 				
 				if var foundSubmodule = submodulesByPath[project.relativePath] {
@@ -669,18 +669,18 @@ public final class Project {
 	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithConfiguration(configuration: String, dependenciesToBuild: [String]? = nil, forPlatforms platforms: Set<Platform>, toolchain: String?, derivedDataPath: String?, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithOptions(options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
 			}
 			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
-				let dependencyPath = self.directoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
+				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
 				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
 					return .empty
 				}
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withConfiguration: configuration, platforms: platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, sdkFilter: sdkFilter)
+				return buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
 						case .NoSharedFrameworkSchemes:
@@ -702,7 +702,7 @@ public final class Project {
 /// arguments should live.
 private func fileURLToCachedBinary(project: ProjectIdentifier, _ release: Release, _ asset: Release.Asset) -> NSURL {
 	// ~/Library/Caches/org.carthage.CarthageKit/binaries/ReactiveCocoa/v2.3.1/1234-ReactiveCocoa.framework.zip
-	return CarthageDependencyAssetsURL.URLByAppendingPathComponent("\(project.name)/\(release.tag)/\(asset.ID)-\(asset.name)", isDirectory: false)
+	return CarthageDependencyAssetsURL.appendingPathComponent("\(project.name)/\(release.tag)/\(asset.ID)-\(asset.name)", isDirectory: false)
 }
 
 /// Caches the downloaded binary at the given URL, moving it to the other URL
@@ -860,7 +860,7 @@ private func BCSymbolMapsForFramework(frameworkURL: NSURL, inDirectoryURL direct
 /// Returns the file URL at which the given project's repository will be
 /// located.
 private func repositoryFileURLForProject(project: ProjectIdentifier, baseURL: NSURL = CarthageDependencyRepositoriesURL) -> NSURL {
-	return baseURL.URLByAppendingPathComponent(project.name, isDirectory: true)
+	return baseURL.appendingPathComponent(project.name, isDirectory: true)
 }
 
 
@@ -904,6 +904,10 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 				.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 					if isRepository {
 						let fetchProducer: () -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> = {
+							guard FetchCache.needsFetch(forURL: remoteURL) else {
+								return SignalProducer(value: (nil, repositoryURL))
+							}
+
 							return SignalProducer(value: (.Fetching(project), repositoryURL))
 								.concat(fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*").then(.empty))
 						}

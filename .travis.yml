@@ -1,6 +1,3 @@
-before_install:
-  - brew update
-  - brew outdated xctool || brew upgrade xctool
 install: true
 git:
   submodules: false
@@ -9,8 +6,18 @@ matrix:
     - os: osx
       language: objective-c
       osx_image: xcode7.3
-      script: script/cibuild
-      env: JOB=CI_BUILD
+      script: make test
+      env: JOB=CI_BUILD_TEST
+    - os: osx
+      language: objective-c
+      osx_image: xcode8
+      script: make test
+      env: JOB=CI_BUILD_TEST
+    - os: osx
+      language: objective-c
+      osx_image: xcode7.3
+      script: make package
+      env: JOB=CI_BUILD_PACKAGE
     - os: osx
       language: objective-c
       osx_image: xcode7.3
@@ -19,13 +26,22 @@ matrix:
         - make install
         - bats Source/CarthageIntegration
       env: JOB=INTEGRATION_TESTS
+    - os: osx
+      language: objective-c
+      osx_image: xcode8
+      script:
+        - brew install bats
+        - make install
+        - bats Source/CarthageIntegration
+      env:
+        - JOB=INTEGRATION_TESTS
+        - XCODE_ACTION=build-for-testing
 notifications:
   email: false
   slack:
     secure: lblNhCx6581hiPskQQnH663QY/HHqs6y8rMCLIff1Ryq0ngBaTwBJZ6E5tAR8oWTGWg3nMAAm/AaJPQGFC9jnKxtpWJhuEF58RY+EBe1Rz3gjKmacvEZS+PW+k3cRrRPZr6Vh6D8d0cb1gfM7BvGZar21ipBC/WcnNden3LxZ+0=
 env:
   global:
-    - BUILD_TOOL=xctool
     - secure: DofNs+Ej7JblkkGMTHOl4XMBfv0EKVvzZU7OOm7U6Hyxu0J0SN6E3s61Q4HUWOBvM3Yrxf+8jpFKI29w69WArmRPpmK6GCaZar8ldUBHNmN3gaeOaGmGyrmnre4hxHjJzc0E3HAmJ03v94HW5JwQzKpIUjxg4dSttJMT6WOmnxE=
 deploy:
   provider: releases
@@ -37,4 +53,4 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
-    condition: $JOB = CI_BUILD
+    condition: $JOB = CI_BUILD_PACKAGE

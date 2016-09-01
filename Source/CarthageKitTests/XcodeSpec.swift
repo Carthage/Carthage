@@ -17,9 +17,10 @@ import Tentacle
 
 class XcodeSpec: QuickSpec {
 	override func spec() {
-		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("ReactiveCocoaLayout", withExtension: nil)!
-		let projectURL = directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout.xcodeproj")
-		let buildFolderURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+		// The fixture is maintained at https://github.com/ikesyo/carthage-fixtures-ReactiveCocoaLayout
+		let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
+		let projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
+		let buildFolderURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
 
 		beforeEach {
@@ -60,7 +61,7 @@ class XcodeSpec: QuickSpec {
 		describe("locateProjectsInDirectory:") {
 			func relativePathsForProjectsInDirectory(directoryURL: NSURL) -> [String] {
 				let result = locateProjectsInDirectory(directoryURL)
-					.map { $0.fileURL.absoluteString.substringFromIndex(directoryURL.absoluteString.endIndex) }
+					.map { $0.fileURL.carthage_absoluteString.substringFromIndex(directoryURL.carthage_absoluteString.endIndex) }
 					.collect()
 					.first()
 				expect(result?.error).to(beNil())
@@ -90,7 +91,7 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for project in dependencies {
-				let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug")
+				let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 					.flatten(.Concat)
 					.ignoreTaskData()
 					.on(next: { (project, scheme) in
@@ -101,7 +102,7 @@ class XcodeSpec: QuickSpec {
 				expect(result.error).to(beNil())
 			}
 
-			let result = buildInDirectory(directoryURL, withConfiguration: "Debug")
+			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -116,16 +117,16 @@ class XcodeSpec: QuickSpec {
 			projectNames.append("ReactiveCocoaLayout")
 
 			for dependency in projectNames {
-				let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
+				let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path!
 				let macdSYMPath = (macPath as NSString).stringByAppendingPathExtension("dSYM")!
-				let iOSPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
+				let iOSPath = buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path!
 				let iOSdSYMPath = (iOSPath as NSString).stringByAppendingPathExtension("dSYM")!
 
 				for path in [ macPath, macdSYMPath, iOSPath, iOSdSYMPath ] {
 					expect(path).to(beExistingDirectory())
 				}
 			}
-			let frameworkFolderURL = buildFolderURL.URLByAppendingPathComponent("iOS/ReactiveCocoaLayout.framework")
+			let frameworkFolderURL = buildFolderURL.appendingPathComponent("iOS/ReactiveCocoaLayout.framework")
 
 			// Verify that the iOS framework is a universal binary for device
 			// and simulator.
@@ -137,11 +138,11 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
-			let auxiliaryFrameworkPath = buildFolderURL.URLByAppendingPathComponent("iOS/AuxiliaryFramework.framework").path!
+			let auxiliaryFrameworkPath = buildFolderURL.appendingPathComponent("iOS/AuxiliaryFramework.framework").path!
 			expect(auxiliaryFrameworkPath).to(beExistingDirectory())
 
 			// Copy ReactiveCocoaLayout.framework to the temporary folder.
-			let targetURL = targetFolderURL.URLByAppendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
+			let targetURL = targetFolderURL.appendingPathComponent("ReactiveCocoaLayout.framework", isDirectory: true)
 
 			let resultURL = copyProduct(frameworkFolderURL, targetURL).single()
 			expect(resultURL?.value) == targetURL
@@ -157,7 +158,7 @@ class XcodeSpec: QuickSpec {
 			expect(strippedArchitectures?.value).notTo(contain("i386"))
 			expect(strippedArchitectures?.value).to(contain("armv7", "arm64"))
 
-			let modulesDirectoryURL = targetURL.URLByAppendingPathComponent("Modules", isDirectory: true)
+			let modulesDirectoryURL = targetURL.appendingPathComponent("Modules", isDirectory: true)
 			expect(NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!)) == false
 			
 			var output: String = ""
@@ -182,11 +183,11 @@ class XcodeSpec: QuickSpec {
 		it("should build all subprojects for all platforms by default") {
 			let multipleSubprojects = "SampleMultipleSubprojects"
 			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource(multipleSubprojects, withExtension: nil)!
-			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -204,7 +205,7 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for (platform, framework) in expectedPlatformsFrameworks {
-				let path = _buildFolderURL.URLByAppendingPathComponent("\(platform)/\(framework).framework").path!
+				let path = _buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path!
 				expect(path).to(beExistingDirectory())
 			}
 		}
@@ -212,11 +213,11 @@ class XcodeSpec: QuickSpec {
 		it("should skip projects without shared dynamic framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
 			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("\(dependency)-0.2", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -226,8 +227,8 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).to(beNil())
 
-			let macPath = _buildFolderURL.URLByAppendingPathComponent("Mac/\(dependency).framework").path!
-			let iOSPath = _buildFolderURL.URLByAppendingPathComponent("iOS/\(dependency).framework").path!
+			let macPath = _buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path!
+			let iOSPath = _buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path!
 
 			for path in [ macPath, iOSPath ] {
 				expect(path).to(beExistingDirectory())
@@ -236,11 +237,11 @@ class XcodeSpec: QuickSpec {
 
 		it("should error out with .NoSharedFrameworkSchemes if there is no shared framework schemes") {
 			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("Swell-0.5.0", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withConfiguration: "Debug")
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -262,7 +263,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for one platform") {
 			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
-			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac ])
+			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .Mac ]))
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -273,17 +274,17 @@ class XcodeSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			// Verify that the build product exists at the top level.
-			let path = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
+			let path = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").path!
 			expect(path).to(beExistingDirectory())
 
 			// Verify that the other platform wasn't built.
-			let incorrectPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
+			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").path!
 			expect(NSFileManager.defaultManager().fileExistsAtPath(incorrectPath, isDirectory: nil)) == false
 		}
 
 		it("should build for multiple platforms") {
 			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
-			let result = buildDependencyProject(project, directoryURL, withConfiguration: "Debug", platforms: [ .Mac, .iOS ])
+			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .Mac, .iOS ]))
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -295,8 +296,8 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the build products of all specified platforms exist 
 			// at the top level.
-			let macPath = buildFolderURL.URLByAppendingPathComponent("Mac/\(project.name).framework").path!
-			let iosPath = buildFolderURL.URLByAppendingPathComponent("iOS/\(project.name).framework").path!
+			let macPath = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").path!
+			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").path!
 
 			for path in [ macPath, iosPath ] {
 				expect(path).to(beExistingDirectory())
@@ -318,7 +319,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should not locate the project from a directory not containing it") {
-			let result = locateProjectsInDirectory(directoryURL.URLByAppendingPathComponent("ReactiveCocoaLayout")).first()
+			let result = locateProjectsInDirectory(directoryURL.appendingPathComponent("ReactiveCocoaLayout")).first()
 			expect(result).to(beNil())
 		}
 

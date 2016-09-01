@@ -23,7 +23,7 @@ public struct CopyFrameworksCommand: CommandType {
 				let frameworkName = (frameworkPath as NSString).lastPathComponent
 
 				let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.InvalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
-				let target = frameworksFolder().map { $0.URLByAppendingPathComponent(frameworkName, isDirectory: true) }
+				let target = frameworksFolder().map { $0.appendingPathComponent(frameworkName, isDirectory: true) }
 
 				return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
 					.flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
@@ -76,7 +76,7 @@ private func copyDebugSymbolsForFramework(source: NSURL, validArchitectures: [St
 	return SignalProducer(result: appropriateDestinationFolder())
 		.flatMap(.Merge) { destinationURL in
 			return SignalProducer(value: source)
-				.map { return $0.URLByAppendingPathExtension("dSYM") }
+				.map { return $0.appendingPathExtension("dSYM") }
 				.copyFileURLsIntoDirectory(destinationURL)
 				.flatMap(.Merge) { dSYMURL in
 					return stripDSYM(dSYMURL, keepingArchitectures: validArchitectures)
@@ -90,7 +90,7 @@ private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory dir
 	return SignalProducer(result: builtProductsFolder())
 		.flatMap(.Merge) { builtProductsURL in
 			return BCSymbolMapsForFramework(frameworkURL)
-				.map { URL in directoryURL.URLByAppendingPathComponent(URL.lastPathComponent!, isDirectory: false) }
+				.map { URL in directoryURL.appendingPathComponent(URL.lastPathComponent!, isDirectory: false) }
 				.copyFileURLsIntoDirectory(builtProductsURL)
 		}
 }
@@ -133,7 +133,7 @@ private func frameworksFolder() -> Result<NSURL, CarthageError> {
 	return appropriateDestinationFolder()
 		.flatMap { url -> Result<NSURL, CarthageError> in
 			getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH")
-				.map { url.URLByAppendingPathComponent($0, isDirectory: true) }
+				.map { url.appendingPathComponent($0, isDirectory: true) }
 		}
 }
 

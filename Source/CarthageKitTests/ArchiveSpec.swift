@@ -39,7 +39,7 @@ class ArchiveSpec: QuickSpec {
 		describe("zipping") {
 			let originalCurrentDirectory = NSFileManager.defaultManager().currentDirectoryPath
 			let temporaryURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
-			let archiveURL = temporaryURL.URLByAppendingPathComponent("archive.zip", isDirectory: false)
+			let archiveURL = temporaryURL.appendingPathComponent("archive.zip", isDirectory: false)
 
 			beforeEach {
 				expect { try NSFileManager.defaultManager().createDirectoryAtPath(temporaryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
@@ -100,7 +100,7 @@ class ArchiveSpec: QuickSpec {
 				expect(unzipResult).notTo(beNil())
 				expect(unzipResult?.error).to(beNil())
 
-				let unzippedSymlinkURL = (unzipResult?.value ?? temporaryURL).URLByAppendingPathComponent(symlinkPath)
+				let unzippedSymlinkURL = (unzipResult?.value ?? temporaryURL).appendingPathComponent(symlinkPath)
 				expect(NSFileManager.defaultManager().fileExistsAtPath(unzippedSymlinkURL.path!)) == true
 				expect { try NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(unzippedSymlinkURL.path!) } == destinationPath
 			}

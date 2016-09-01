@@ -13,31 +13,45 @@ import Result
 import ReactiveCocoa
 import ReactiveTask
 
+extension BuildOptions: OptionsType {
+	public static func create(configuration: String) -> BuildPlatform -> String? -> String? -> BuildOptions {
+		return { buildPlatform in { toolchain in { derivedDataPath in
+			return self.init(configuration: configuration, platforms: buildPlatform.platforms, toolchain: toolchain, derivedDataPath: derivedDataPath)
+		} } }
+	}
+
+	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
+		return evaluate(m, addendum: "")
+	}
+
+	public static func evaluate(m: CommandMode, addendum: String) -> Result<BuildOptions, CommandantError<CarthageError>> {
+		return create
+			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
+			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)" + addendum)
+			<*> m <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
+			<*> m <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
+	}
+}
+
 public struct BuildCommand: CommandType {
 	public struct Options: OptionsType {
-		public let configuration: String
-		public let buildPlatform: BuildPlatform
-		public let toolchain: String?
-		public let derivedDataPath: String?
+		public let buildOptions: BuildOptions
 		public let skipCurrent: Bool
 		public let colorOptions: ColorOptions
 		public let verbose: Bool
 		public let directoryPath: String
 		public let dependenciesToBuild: [String]?
 
-		public static func create(configuration: String) -> BuildPlatform -> String? -> String? -> Bool -> ColorOptions -> Bool -> String -> [String] -> Options {
-			return { buildPlatform in { toolchain in { derivedDataPath in { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
+		public static func create(buildOptions: BuildOptions) -> Bool -> ColorOptions -> Bool -> String -> [String] -> Options {
+			return { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
 				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
-				return self.init(configuration: configuration, buildPlatform: buildPlatform, toolchain: toolchain, derivedDataPath: derivedDataPath, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
-			} } } } } } } }
+				return self.init(buildOptions: buildOptions, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
+			} } } } }
 		}
 
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
-				<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build")
-				<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)")
-				<*> m <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
-				<*> m <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
+				<*> BuildOptions.evaluate(m)
 				<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 				<*> ColorOptions.evaluate(m)
 				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
@@ -45,7 +59,7 @@ public struct BuildCommand: CommandType {
 				<*> m <| Argument(defaultValue: [], usage: "the dependency names to build")
 		}
 	}
-	
+
 	public let verb = "build"
 	public let function = "Build the project's dependencies"
 
@@ -149,13 +163,13 @@ public struct BuildCommand: CommandType {
 				}
 			}
 			.flatMap(.Merge) { project in
-				return project.buildCheckedOutDependenciesWithConfiguration(options.configuration, dependenciesToBuild: options.dependenciesToBuild, forPlatforms: options.buildPlatform.platforms, toolchain: options.toolchain, derivedDataPath: options.derivedDataPath)
+				return project.buildCheckedOutDependenciesWithOptions(options.buildOptions, dependenciesToBuild: options.dependenciesToBuild)
 			}
 
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withConfiguration: options.configuration, platforms: options.buildPlatform.platforms, toolchain: options.toolchain, derivedDataPath: options.derivedDataPath)
+			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions)
 				.flatMapError { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
 					switch error {
 					case let .NoSharedFrameworkSchemes(project, _):
@@ -298,10 +312,10 @@ extension BuildPlatform: ArgumentType {
 	public static let name = "platform"
 
 	private static let acceptedStrings: [String: BuildPlatform] = [
-		"Mac": .Mac, "OSX": .Mac, "macosx": .Mac,
+		"macOS": .Mac, "Mac": .Mac, "OSX": .Mac, "macosx": .Mac,
 		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
 		"watchOS": .watchOS, "watchsimulator": .watchOS,
-		"tvOS": .tvOS, "tvsimulator": .tvOS,
+		"tvOS": .tvOS, "tvsimulator": .tvOS, "appletvos": .tvOS, "appletvsimulator": .tvOS,
 		"all": .All
 	]
 

@@ -116,6 +116,8 @@ carthage update Box Result
 
 If the framework you want to add to your project has dependencies explicitly listed in a [Cartfile][], Carthage will automatically retrieve them for you. You will then have to **drag them yourself into your project** from the [Carthage/Build] folder.
 
+If the embedded framework in your project has dependencies to other frameworks you must  **link them to application target** (even if application target does not have dependency to that frameworks and never uses them).
+
 ### Using submodules for dependencies
 
 By default, Carthage will directly [check out][Carthage/Checkouts] dependencies’ source files into your project folder, leaving you to commit or ignore them as you choose. If you’d like to have dependencies available as Git submodules instead (perhaps so you can commit and push changes within them), you can run `carthage update` or `carthage checkout` with the `--use-submodules` flag.
@@ -262,6 +264,12 @@ Want to advertise that your project can be used with Carthage? You can add a com
 See [Carthage issue #924](https://github.com/Carthage/Carthage/issues/924) for background on the reasons, but as at Xcode 7.2, Apple recommends that ["Frameworks written in Swift should be compiled from source as part of the same project that depends on them to guarantee a single, consistent compilation environment. (22492040)"](https://developer.apple.com/library/ios/releasenotes/DeveloperTools/RN-Xcode/Chapters/Introduction.html). Using Swift frameworks built on other machines will cause Xcode's [debugger](https://github.com/Carthage/Carthage/issues/832) to [crash](https://github.com/Carthage/Carthage/issues/924) and other [strange build errors](https://github.com/Carthage/Carthage/issues/785). To avoid this, do not check your `Carthage/Build` directory into source control or use .framework release binaries. Instead, create a Run Script build phase in your Xcode project which calls `carthage build` (optionally wrap this in a check for the existence of the `Carthage/Build/` directory to avoid long build times due to recompiling dependencies unnecessarily.)
 
 Dupe [rdar://23551273](http://www.openradar.me/23551273) if you want Apple to fix the root cause of this problem.
+
+##### Compile Errors
+
+If, having built & imported the dependencies into the project, you get an error which begins: ```Module file was created by an older (newer) version of the compiler``` ... it may be that Carthage downloaded and used an existing compiled binary from the remote repo which is not compatible with the local machine.
+
+To force Carthage to compile from source itself for those libraries, append the flag ```--no-use-binaries``` to the ```carthage bootstrap/build/update``` command.  For example: ```carthage bootstrap --no-use-binaries```
 
 ## CarthageKit
 
