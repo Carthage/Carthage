@@ -27,7 +27,7 @@ public struct Cartfile {
 	/// Returns the location where Cartfile should exist within the given
 	/// directory.
 	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
-		return directoryURL.URLByAppendingPathComponent("Cartfile")
+		return directoryURL.appendingPathComponent("Cartfile")
 	}
 
 	/// Attempts to parse Cartfile information from a string.
@@ -134,7 +134,7 @@ public struct ResolvedCartfile {
 	/// Returns the location where Cartfile.resolved should exist within the given
 	/// directory.
 	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
-		return directoryURL.URLByAppendingPathComponent("Cartfile.resolved")
+		return directoryURL.appendingPathComponent("Cartfile.resolved")
 	}
 
 	/// Attempts to parse Cartfile.resolved information from a string.

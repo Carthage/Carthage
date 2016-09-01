@@ -2,9 +2,9 @@
 
 setup() {
     cd $BATS_TMPDIR
-    rm -rf Ra
-    git clone -b v1.0.0 https://github.com/younata/Ra.git
-    cd Ra
+    rm -rf Result
+    git clone -b 2.1.3 https://github.com/antitypical/Result.git
+    cd Result
 }
 
 teardown() {
@@ -14,7 +14,7 @@ teardown() {
 @test "carthage archive errors unless carthage build --no-skip-current has been run" {
     run carthage archive
     [ "$status" -eq 1 ]
-    [ "$output" = "Could not find any copies of Ra.framework. Make sure you're in the project’s root and that the frameworks have already been built using 'carthage build --no-skip-current'." ]
+    [ "$output" = "Could not find any copies of Result.framework. Make sure you're in the project’s root and that the frameworks have already been built using 'carthage build --no-skip-current'." ]
 }
 
 @test "carthage archive after carthage build --no-skip-current produces a zipped framework of all frameworks" {
@@ -22,7 +22,7 @@ teardown() {
     [ "$status" -eq 0 ]
     run carthage archive
     [ "$status" -eq 0 ]
-    [ -e Ra.framework.zip ]
+    [ -e Result.framework.zip ]
 }
 
 @test "carthage archive --output with a non-existing path ends with '/' should produce a zip file into the specified directory" {
@@ -31,7 +31,7 @@ teardown() {
     rm -rf FooBar
     run carthage archive --output FooBar/
     [ "$status" -eq 0 ]
-    [ -e FooBar/Ra.framework.zip ]
+    [ -e FooBar/Result.framework.zip ]
 }
 
 @test "carthage archive --output with an existing directory path should produce a zip file into the specified directory" {
@@ -40,7 +40,7 @@ teardown() {
     mkdir FooBar
     run carthage archive --output FooBar
     [ "$status" -eq 0 ]
-    [ -e FooBar/Ra.framework.zip ]
+    [ -e FooBar/Result.framework.zip ]
 }
 
 @test "carthage archive --output with a file path should produce a zip file at the given path" {

@@ -296,7 +296,7 @@ public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, _ workingDire
 /// Clones the given submodule into the working directory of its parent
 /// repository, but without any Git metadata.
 public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
-	let submoduleDirectoryURL = workingDirectoryURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
+	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
 	let purgeGitDirectories = NSFileManager.defaultManager().carthage_enumeratorAtURL(submoduleDirectoryURL, includingPropertiesForKeys: [ NSURLIsDirectoryKey, NSURLNameKey ], options: [], catchErrors: true)
 		.flatMap(.Merge) { enumerator, URL -> SignalProducer<(), CarthageError> in
 			var name: AnyObject?
@@ -339,7 +339,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 				return .Failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout", underlyingError: error))
 			}
 
-			return .Success(workingDirectoryURL.URLByAppendingPathComponent(submodule.path))
+			return .Success(workingDirectoryURL.appendingPathComponent(submodule.path))
 		}
 		.flatMap(.Concat) { submoduleDirectoryURL in cloneRepository(submodule.URL, submoduleDirectoryURL, bare: false) }
 		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
@@ -533,7 +533,7 @@ public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError
 			if (relativeOrAbsoluteGitDirectory as NSString).absolutePath {
 				absoluteGitDirectory = relativeOrAbsoluteGitDirectory
 			} else {
-				absoluteGitDirectory = directoryURL.URLByAppendingPathComponent(relativeOrAbsoluteGitDirectory).path
+				absoluteGitDirectory = directoryURL.appendingPathComponent(relativeOrAbsoluteGitDirectory).path
 			}
 			var isDirectory: ObjCBool = false
 			let directoryExists = absoluteGitDirectory.map { NSFileManager.defaultManager().fileExistsAtPath($0, isDirectory: &isDirectory) } ?? false
@@ -545,12 +545,12 @@ public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if
 /// the desired revision does not exist or the submodule needs to be cloned.
 public func addSubmoduleToRepository(repositoryFileURL: NSURL, _ submodule: Submodule, _ fetchURL: GitURL) -> SignalProducer<(), CarthageError> {
-	let submoduleDirectoryURL = repositoryFileURL.URLByAppendingPathComponent(submodule.path, isDirectory: true)
+	let submoduleDirectoryURL = repositoryFileURL.appendingPathComponent(submodule.path, isDirectory: true)
 
 	return isGitRepository(submoduleDirectoryURL)
 		.map { isRepository in
 			// Check if the submodule is initialized/updated already.
-			return isRepository && NSFileManager.defaultManager().fileExistsAtPath(submoduleDirectoryURL.URLByAppendingPathComponent(".git").path!)
+			return isRepository && NSFileManager.defaultManager().fileExistsAtPath(submoduleDirectoryURL.appendingPathComponent(".git").path!)
 		}
 		.flatMap(.Merge) { submoduleExists -> SignalProducer<(), CarthageError> in
 			if submoduleExists {
@@ -584,7 +584,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, _ submodule: Subm
 ///
 /// Sends the new URL of the item after moving.
 public func moveItemInPossibleRepository(repositoryFileURL: NSURL, fromPath: String, toPath: String) -> SignalProducer<NSURL, CarthageError> {
-	let toURL = repositoryFileURL.URLByAppendingPathComponent(toPath)
+	let toURL = repositoryFileURL.appendingPathComponent(toPath)
 	let parentDirectoryURL = toURL.URLByDeletingLastPathComponent!
 
 	return SignalProducer<(), CarthageError>.attempt {
@@ -603,7 +603,7 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, fromPath: Str
 				return launchGitTask([ "mv", "-k", fromPath, toPath ], repositoryFileURL: repositoryFileURL)
 					.then(SignalProducer(value: toURL))
 			} else {
-				let fromURL = repositoryFileURL.URLByAppendingPathComponent(fromPath)
+				let fromURL = repositoryFileURL.appendingPathComponent(fromPath)
 
 				do {
 					try NSFileManager.defaultManager().moveItemAtURL(fromURL, toURL: toURL)
