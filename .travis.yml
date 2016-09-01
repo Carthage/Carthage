@@ -33,7 +33,9 @@ matrix:
         - brew install bats
         - make install
         - bats Source/CarthageIntegration
-      env: JOB=INTEGRATION_TESTS
+      env:
+        - JOB=INTEGRATION_TESTS
+        - XCODE_ACTION=build-for-testing
 notifications:
   email: false
   slack:
