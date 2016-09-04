@@ -20,6 +20,26 @@ class FrameworkExtensionsSpec: QuickSpec {
 				expect(subject.hasSubdirectory(distantSub)) == true
 				expect(subject.hasSubdirectory(unrelatedDirectory)) == false
 			}
+
+			context("`hasSubdirectory` with /tmp and /private/tmp") {
+				let baseName = "/tmp/CarthageKitTests-NSURL-hasSubdirectory"
+				let parentDirUnderTmp = NSURL(fileURLWithPath: baseName)
+				let childDirUnderPrivateTmp = NSURL(fileURLWithPath: "/private\(baseName)/foo")
+
+				beforeEach {
+					_ = try? NSFileManager.defaultManager()
+						.createDirectoryAtURL(childDirUnderPrivateTmp, withIntermediateDirectories: true, attributes: nil)
+				}
+
+				afterEach {
+					_ = try? NSFileManager.defaultManager()
+						.removeItemAtURL(parentDirUnderTmp)
+				}
+
+				it("should resolve the difference between /tmp and /private/tmp") {
+					expect(parentDirUnderTmp.hasSubdirectory(childDirUnderPrivateTmp)) == true
+				}
+			}
 		}
 	}
 }
