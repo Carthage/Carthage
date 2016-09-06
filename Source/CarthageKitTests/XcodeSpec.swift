@@ -90,7 +90,7 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for project in dependencies {
-				let result = buildDependencyProject(project, directoryURL, subDependencies: [], withOptions: BuildOptions(configuration: "Debug"))
+				let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 					.flatten(.Concat)
 					.ignoreTaskData()
 					.on(next: { (project, scheme) in
@@ -262,7 +262,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for one platform") {
 			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
-			let result = buildDependencyProject(project, directoryURL, subDependencies: [], withOptions: BuildOptions(configuration: "Debug", platforms: [ .Mac ]))
+			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .Mac ]))
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -283,7 +283,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for multiple platforms") {
 			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
-			let result = buildDependencyProject(project, directoryURL, subDependencies: [], withOptions: BuildOptions(configuration: "Debug", platforms: [ .Mac, .iOS ]))
+			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .Mac, .iOS ]))
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -330,7 +330,7 @@ class XcodeSpec: QuickSpec {
 			let buildURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 			let dependencyBuildURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
 
-			let result = buildDependencyProject(dependency, directoryURL, subDependencies: [], withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in

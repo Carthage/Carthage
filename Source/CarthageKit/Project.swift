@@ -748,22 +748,19 @@ public final class Project {
 					return .empty
 				}
 
-				return self.dependenciesForDependency(dependency)
-					.flatMap(.Merge) { subDependencies -> SignalProducer<BuildSchemeProducer, CarthageError> in
-						return buildDependencyProject(dependency.project, self.directoryURL, subDependencies: subDependencies, withOptions: options, sdkFilter: sdkFilter)
-							.flatMapError { error in
-								switch error {
-								case .NoSharedFrameworkSchemes:
-									// Log that building the dependency is being skipped,
-									// not to error out with `.NoSharedFrameworkSchemes`
-									// to continue building other dependencies.
-									self._projectEventsObserver.sendNext(.SkippedBuilding(dependency.project, error.description))
-									return .empty
+				return buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+					.flatMapError { error in
+						switch error {
+						case .NoSharedFrameworkSchemes:
+							// Log that building the dependency is being skipped,
+							// not to error out with `.NoSharedFrameworkSchemes`
+							// to continue building other dependencies.
+							self._projectEventsObserver.sendNext(.SkippedBuilding(dependency.project, error.description))
+							return .empty
 
-								default:
-									return SignalProducer(error: error)
-								}
-							}
+						default:
+							return SignalProducer(error: error)
+						}
 					}
 			}
 	}
