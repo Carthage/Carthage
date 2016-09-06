@@ -39,7 +39,7 @@ class ArchiveSpec: QuickSpec {
 		describe("zipping") {
 			let originalCurrentDirectory = NSFileManager.defaultManager().currentDirectoryPath
 			let temporaryURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
-			let archiveURL = temporaryURL.URLByAppendingPathComponent("archive.zip", isDirectory: false)
+			let archiveURL = temporaryURL.appendingPathComponent("archive.zip", isDirectory: false)
 
 			beforeEach {
 				expect { try NSFileManager.defaultManager().createDirectoryAtPath(temporaryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
@@ -63,7 +63,7 @@ class ArchiveSpec: QuickSpec {
 				let outerFilePath = "outer"
 				expect { try "foobar".writeToFile(outerFilePath, atomically: true, encoding: NSUTF8StringEncoding) }.notTo(throwError())
 
-				let result = zipIntoArchive(archiveURL, [ innerFilePath, outerFilePath ]).wait()
+				let result = zipIntoArchive(archiveURL, workingDirectory: temporaryURL.path!, inputPaths: [ innerFilePath, outerFilePath ]).wait()
 				expect(result.error).to(beNil())
 
 				let unzipResult = unzipArchiveToTemporaryDirectory(archiveURL).single()
@@ -92,15 +92,15 @@ class ArchiveSpec: QuickSpec {
 				let symlinkPath = "symlink"
 				expect { try NSFileManager.defaultManager().createSymbolicLinkAtPath(symlinkPath, withDestinationPath: destinationPath) }.notTo(throwError())
 				expect { try NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(symlinkPath) } == destinationPath
-
-				let result = zipIntoArchive(archiveURL, [ symlinkPath, destinationPath ]).wait()
+				
+				let result = zipIntoArchive(archiveURL, workingDirectory: temporaryURL.path!, inputPaths: [ symlinkPath, destinationPath ]).wait()
 				expect(result.error).to(beNil())
 
 				let unzipResult = unzipArchiveToTemporaryDirectory(archiveURL).single()
 				expect(unzipResult).notTo(beNil())
 				expect(unzipResult?.error).to(beNil())
 
-				let unzippedSymlinkURL = (unzipResult?.value ?? temporaryURL).URLByAppendingPathComponent(symlinkPath)
+				let unzippedSymlinkURL = (unzipResult?.value ?? temporaryURL).appendingPathComponent(symlinkPath)
 				expect(NSFileManager.defaultManager().fileExistsAtPath(unzippedSymlinkURL.path!)) == true
 				expect { try NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(unzippedSymlinkURL.path!) } == destinationPath
 			}

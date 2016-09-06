@@ -78,19 +78,23 @@ public struct ArchiveCommand: CommandType {
 			return SignalProducer(values: Platform.supportedPlatforms)
 				.flatMap(.Merge) { platform -> SignalProducer<String, CarthageError> in
 					return SignalProducer(values: frameworks).map { framework in
-						return (options.directoryPath as NSString).stringByAppendingPathComponent((platform.relativePath as NSString).stringByAppendingPathComponent(framework))
+						return (platform.relativePath as NSString).stringByAppendingPathComponent(framework)
 					}
 				}
-				.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
+				.map { relativePath -> (relativePath: String, absolutePath: String) in
+					let absolutePath = (options.directoryPath as NSString).stringByAppendingPathComponent(relativePath)
+					return (relativePath, absolutePath)
+				}
+				.filter { filePath in NSFileManager.defaultManager().fileExistsAtPath(filePath.absolutePath) }
 				.flatMap(.Merge) { framework -> SignalProducer<String, CarthageError> in
-					let dSYM = (framework as NSString).stringByAppendingPathExtension("dSYM")!
-					let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework))
+					let dSYM = (framework.relativePath as NSString).stringByAppendingPathExtension("dSYM")!
+					let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework.absolutePath))
 						// generate relative paths for the bcsymbolmaps so they print nicely
-						.map { url in ((framework as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.lastPathComponent!) }
+						.map { url in ((framework.relativePath as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.lastPathComponent!) }
 					let extraFilesProducer = SignalProducer(value: dSYM)
 						.concat(bcsymbolmapsProducer)
-						.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(relativePath) }
-					return SignalProducer(value: framework)
+						.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(framework.absolutePath) }
+					return SignalProducer(value: framework.relativePath)
 						.concat(extraFilesProducer)
 				}
 				.on(next: { path in
@@ -98,11 +102,12 @@ public struct ArchiveCommand: CommandType {
 				})
 				.collect()
 				.flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
+					
 					let foundFrameworks = paths
 						.lazy
 						.map { ($0 as NSString).lastPathComponent }
 						.filter { $0.hasSuffix(".framework") }
-
+					
 					if Set(foundFrameworks) != Set(frameworks) {
 						let error = CarthageError.InvalidArgument(description: "Could not find any copies of \(frameworks.joinWithSeparator(", ")). Make sure you're in the project’s root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
 						return SignalProducer(error: error)
@@ -114,8 +119,8 @@ public struct ArchiveCommand: CommandType {
 					if let directory = outputURL.URLByDeletingLastPathComponent {
 						_ = try? NSFileManager.defaultManager().createDirectoryAtURL(directory, withIntermediateDirectories: true, attributes: nil)
 					}
-
-					return zipIntoArchive(outputURL, paths).on(completed: {
+					
+					return zipIntoArchive(outputURL, workingDirectory: options.directoryPath, inputPaths: paths).on(completed: {
 						carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
 					})
 				}

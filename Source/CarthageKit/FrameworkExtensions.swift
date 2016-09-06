@@ -262,8 +262,48 @@ extension NSURL {
 		return .Failure(.ReadFailed(self, error))
 	}
 
+	public var carthage_absoluteString: String {
+		#if swift(>=2.3)
+			return absoluteString!
+		#else
+			return absoluteString
+		#endif
+	}
+
+	public func appendingPathExtension(pathExtension: String) -> NSURL {
+		#if swift(>=2.3)
+			return URLByAppendingPathExtension(pathExtension)!
+		#else
+			return URLByAppendingPathExtension(pathExtension)
+		#endif
+	}
+
+	public func appendingPathComponent(pathComponent: String) -> NSURL {
+		#if swift(>=2.3)
+			return URLByAppendingPathComponent(pathComponent)!
+		#else
+			return URLByAppendingPathComponent(pathComponent)
+		#endif
+	}
+
+	public func appendingPathComponent(pathComponent: String, isDirectory: Bool) -> NSURL {
+		#if swift(>=2.3)
+			return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)!
+		#else
+			return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)
+		#endif
+	}
+
 	public func hasSubdirectory(possibleSubdirectory: NSURL) -> Bool {
-		if scheme == possibleSubdirectory.scheme, let path = self.pathComponents, otherPath = possibleSubdirectory.pathComponents where path.count <= otherPath.count {
+		let standardizedSelf = self.URLByStandardizingPath ?? self
+		let standardizedOther = possibleSubdirectory.URLByStandardizingPath ?? possibleSubdirectory
+
+		if
+			scheme == standardizedOther.scheme,
+			let path = standardizedSelf.pathComponents,
+			let otherPath = standardizedOther.pathComponents
+			where path.count <= otherPath.count
+		{
 			return Array(otherPath[path.indices]) == path
 		}
 		return false

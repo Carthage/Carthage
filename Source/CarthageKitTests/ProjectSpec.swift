@@ -6,7 +6,7 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
-import CarthageKit
+@testable import CarthageKit
 import Foundation
 import Nimble
 import Quick
@@ -83,9 +83,9 @@ class ProjectSpec: QuickSpec {
 			// https://github.com/Carthage/Carthage/issues/1191
 			let temporaryPath = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString)
 			let temporaryURL = NSURL(fileURLWithPath: temporaryPath, isDirectory: true)
-			let repositoryURL = temporaryURL.URLByAppendingPathComponent("carthage1191", isDirectory: true)
-			let cacheDirectoryURL = temporaryURL.URLByAppendingPathComponent("cache", isDirectory: true)
-			let projectIdentifier = ProjectIdentifier.Git(GitURL(repositoryURL.absoluteString))
+			let repositoryURL = temporaryURL.appendingPathComponent("carthage1191", isDirectory: true)
+			let cacheDirectoryURL = temporaryURL.appendingPathComponent("cache", isDirectory: true)
+			let projectIdentifier = ProjectIdentifier.Git(GitURL(repositoryURL.carthage_absoluteString))
 
 			func initRepository() {
 				expect { try NSFileManager.defaultManager().createDirectoryAtPath(repositoryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
@@ -104,8 +104,11 @@ class ProjectSpec: QuickSpec {
 				return cloneOrFetchProject(projectIdentifier, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
 			}
 
-			func assertProjectEvent(commitish commitish: String? = nil, action: ProjectEvent? -> ()) {
+			func assertProjectEvent(commitish commitish: String? = nil, clearFetchTime: Bool = true, action: ProjectEvent? -> ()) {
 				waitUntil { done in
+					if clearFetchTime {
+						FetchCache.clearFetchTimes()
+					}
 					cloneOrFetch(commitish: commitish).start(Observer(
 						completed: done,
 						next: { event, _ in action(event) }
@@ -161,6 +164,14 @@ class ProjectSpec: QuickSpec {
 				addCommit()
 
 				assertProjectEvent(commitish: commitish) { expect($0).to(beNil()) }
+			}
+
+			it ("should not fetch twice in a row, even if no commitish is given") {
+				// Clone first
+				expect(cloneOrFetch().wait().error).to(beNil())
+
+				assertProjectEvent { expect($0?.isFetching) == true }
+				assertProjectEvent(clearFetchTime: false) { expect($0).to(beNil())}
 			}
 		}
 	}
