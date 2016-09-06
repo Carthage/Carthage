@@ -326,10 +326,10 @@ class XcodeSpec: QuickSpec {
 		it("should symlink the build directory") {
 			let dependency = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
 
-			let dependencyURL =	directoryURL.URLByAppendingPathComponent(dependency.relativePath)
+			let dependencyURL =	directoryURL.appendingPathComponent(dependency.relativePath)
 			// Build
-			let buildURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
-			let dependencyBuildURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+			let buildURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
+			let dependencyBuildURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.Concat)

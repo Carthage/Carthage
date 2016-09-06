@@ -680,16 +680,16 @@ public final class Project {
 
 	/// Creates symlink between the dependency checkouts and the root checkouts
 	private func symlinkCheckoutPathsForDependencyProject(dependency: ProjectIdentifier, subDependencies: Set<ProjectIdentifier>, rootDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
-		let rootCheckoutsURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).URLByResolvingSymlinksInPath!
-		let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
+		let rootCheckoutsURL = rootDirectoryURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).URLByResolvingSymlinksInPath!
+		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
-		let dependencyCheckoutsURL = dependencyURL.URLByAppendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).URLByResolvingSymlinksInPath!
+		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).URLByResolvingSymlinksInPath!
 		let subDependencyNames = subDependencies.map { $0.name }
 		let fileManager = NSFileManager.defaultManager()
 
 		let symlinksProducer = SignalProducer(values: subDependencyNames)
 			.filter { name in
-				let checkoutURL = rootCheckoutsURL.URLByAppendingPathComponent(name)
+				let checkoutURL = rootCheckoutsURL.appendingPathComponent(name)
 				let isDirectory: Bool
 				do {
 					var value: AnyObject?
@@ -705,7 +705,7 @@ public final class Project {
 				return isDirectory
 			}
 			.attemptMap { name -> Result<(), CarthageError> in
-				let dependencyCheckoutURL = dependencyCheckoutsURL.URLByAppendingPathComponent(name)
+				let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
 				let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).stringByAppendingPathComponent(name)
 				let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: subdirectoryPath)
 				do {

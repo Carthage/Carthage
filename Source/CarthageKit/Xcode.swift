@@ -1085,7 +1085,7 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 ///
 /// Returns producers in the same format as buildInDirectory().
 public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirectoryURL: NSURL, withOptions options: BuildOptions, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
+	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
 	return symlinkBuildPathForDependencyProject(dependency, rootDirectoryURL: rootDirectoryURL)
@@ -1111,8 +1111,8 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 /// Returns a signal indicating success
 private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt {
-		let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
-		let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.relativePath, isDirectory: true)
+		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 		let fileManager = NSFileManager.defaultManager()
 
@@ -1125,7 +1125,7 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 		// Link this dependency's Carthage/Build folder to that of the root
 		// project, so it can see all products built already, and so we can
 		// automatically drop this dependency's product in the right place.
-		let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
+		let dependencyBinariesURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 
 		do {
 			try fileManager.removeItemAtURL(dependencyBinariesURL)
