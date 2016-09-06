@@ -295,7 +295,15 @@ extension NSURL {
 	}
 
 	public func hasSubdirectory(possibleSubdirectory: NSURL) -> Bool {
-		if scheme == possibleSubdirectory.scheme, let path = self.pathComponents, otherPath = possibleSubdirectory.pathComponents where path.count <= otherPath.count {
+		let standardizedSelf = self.URLByStandardizingPath ?? self
+		let standardizedOther = possibleSubdirectory.URLByStandardizingPath ?? possibleSubdirectory
+
+		if
+			scheme == standardizedOther.scheme,
+			let path = standardizedSelf.pathComponents,
+			let otherPath = standardizedOther.pathComponents
+			where path.count <= otherPath.count
+		{
 			return Array(otherPath[path.indices]) == path
 		}
 		return false
