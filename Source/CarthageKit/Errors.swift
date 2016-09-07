@@ -73,8 +73,8 @@ public enum CarthageError: ErrorType, Equatable {
 	/// other cartfiles.
 	case DuplicateDependencies([DuplicateDependency])
 
-	// There was a cycle between dependencies in the associated graph.
-	case DependencyCycle([ProjectIdentifier: Set<ProjectIdentifier>])
+	/// The associated graph was either malformed or contained a cycle.
+	case MalformedDependencyGraph([ProjectIdentifier: Set<ProjectIdentifier>])
 	
 	/// A request to the GitHub API failed.
 	case GitHubAPIRequestFailed(Client.Error)
@@ -239,7 +239,7 @@ extension CarthageError: CustomStringConvertible {
 
 			return "The following dependencies are duplicates:\(deps)"
 
-		case let .DependencyCycle(graph):
+		case let .MalformedDependencyGraph(graph):
 			let prettyGraph = graph
 				.map { (project, dependencies) in
 					let prettyDependencies = dependencies
@@ -250,7 +250,7 @@ extension CarthageError: CustomStringConvertible {
 				}
 				.joinWithSeparator("\n")
 
-			return "The dependency graph contained a cycle:\n\(prettyGraph)"
+			return "The dependency graph was either malformed or contained a cycle:\n\(prettyGraph)"
 
 		case let .GitHubAPIRequestFailed(message):
 			return "GitHub API request failed: \(message)"

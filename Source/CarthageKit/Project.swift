@@ -621,7 +621,7 @@ public final class Project {
 					.filter { project in dependenciesToInclude?.contains(project.name) ?? false })
 
 				guard let sortedProjects = topologicalSort(graph, nodes: projectsToInclude) else {
-					return SignalProducer(error: .DependencyCycle(graph))
+					return SignalProducer(error: .MalformedDependencyGraph(graph))
 				}
 
 				let sortedDependencies = cartfile.dependencies
