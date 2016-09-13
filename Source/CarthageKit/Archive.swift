@@ -13,11 +13,12 @@ import ReactiveTask
 
 /// Zips the given input items (recursively) into an archive that will be
 /// located at the given URL.
-public func zipIntoArchive(destinationArchiveURL: NSURL, _ inputPaths: [String]) -> SignalProducer<(), CarthageError> {
+public func zipIntoArchive(destinationArchiveURL: NSURL, workingDirectory: String, inputPaths: [String]) -> SignalProducer<(), CarthageError> {
 	precondition(destinationArchiveURL.fileURL)
 	precondition(!inputPaths.isEmpty)
-
-	let task = Task("/usr/bin/env", arguments: [ "zip", "-q", "-r", "--symlinks", destinationArchiveURL.path! ] + inputPaths)
+	
+	let task = Task("/usr/bin/env", workingDirectoryPath: workingDirectory, arguments: [ "zip", "-q", "-r", "--symlinks", destinationArchiveURL.path! ] + inputPaths)
+	
 	return launchTask(task)
 		.mapError(CarthageError.TaskError)
 		.then(.empty)

@@ -33,7 +33,15 @@ extension Repository {
 		} else {
 			auth = ""
 		}
-		return GitURL("\(server.URL.scheme)://\(auth)\(server.URL.host!)/\(owner)/\(name).git")
+
+		let scheme: String
+		#if swift(>=2.3)
+			scheme = server.URL.scheme!
+		#else
+			scheme = server.URL.scheme
+		#endif
+
+		return GitURL("\(scheme)://\(auth)\(server.URL.host!)/\(owner)/\(name).git")
 	}
 
 	/// The URL that should be used for cloning this repository over SSH.

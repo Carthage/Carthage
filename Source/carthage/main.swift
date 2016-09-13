@@ -13,6 +13,8 @@ import ReactiveCocoa
 import ReactiveTask
 import Result
 
+setlinebuf(stdout)
+
 guard ensureGitVersion().first()?.value == true else {
 	fputs("Carthage requires git \(CarthageRequiredGitVersion) or later.\n", stderr)
 	exit(EXIT_FAILURE)
