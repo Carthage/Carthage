@@ -34,7 +34,4 @@
    <FileRef
       location = "group:Carthage/Checkouts/Tentacle/Tentacle.xcodeproj">
    </FileRef>
-   <FileRef
-      location = "group:Carthage/Checkouts/CryptoSwift/CryptoSwift.xcodeproj">
-   </FileRef>
 </Workspace>
