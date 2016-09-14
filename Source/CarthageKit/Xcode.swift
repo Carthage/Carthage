@@ -1084,8 +1084,8 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 ///
 /// Returns producers in the same format as buildInDirectory().
 public func buildDependencyProject(dependency: Dependency<PinnedVersion>, _ rootDirectoryURL: NSURL, withOptions options: BuildOptions, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
-	let rawDependencyURL = rootDirectoryURL.URLByAppendingPathComponent(dependency.project.relativePath, isDirectory: true)
+	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
     
 	let schemeProducers = symlinkBuildPathForDependencyProject(dependency.project, rootDirectoryURL: rootDirectoryURL)
@@ -1103,7 +1103,7 @@ public func buildDependencyProject(dependency: Dependency<PinnedVersion>, _ root
 			// Link this dependency's Carthage/Build folder to that of the root
 			// project, so it can see all products built already, and so we can
 			// automatically drop this dependency's product in the right place.
-			let dependencyBinariesURL = dependencyURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
+			let dependencyBinariesURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 
 			do {
 				try NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL)

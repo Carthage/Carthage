@@ -23,7 +23,7 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 		guard let platformName = url.URLByDeletingLastPathComponent?.lastPathComponent else { return false }
 		guard let frameworkName = url.URLByDeletingPathExtension?.lastPathComponent else { return false }
 		
-		let frameworkURL = url.URLByAppendingPathComponent(frameworkName, isDirectory: false)
+		let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
 		guard NSFileManager.defaultManager().fileExistsAtPath(frameworkURL.path!) else { return false }
 		guard let sha1 = sha1ForFileAtURL(frameworkURL) else { return false }
 		
@@ -42,8 +42,8 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 		versionInfo[platform.rawValue] = [commitishKeyName: dependency.version.commitish, cachedFrameworksKeyName: cachedFrameworks]
 	}
 	
-	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
-	let versionFileURL = rootBinariesURL.URLByAppendingPathComponent(".\(dependency.project.name).version")
+	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
 	
 	if let oldVersionFile: VersionFile = readVersionFileAtURL(versionFileURL) {
 		for platformName in oldVersionFile.keys {
@@ -63,8 +63,8 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 }
 
 public func versionFileMatchesDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, rootDirectoryURL: NSURL) -> Bool {
-	let rootBinariesURL = rootDirectoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
-	let versionFileURL = rootBinariesURL.URLByAppendingPathComponent(".\(dependency.project.name).version")
+	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
 	guard let versionInfo = readVersionFileAtURL(versionFileURL) else { return false }
 	
 	let platformNames: [String] = !platforms.isEmpty ? platforms.map { $0.rawValue } : Array(versionInfo.keys)
@@ -79,9 +79,9 @@ public func versionFileMatchesDependency(dependency: Dependency<PinnedVersion>, 
 			guard let frameworkName = frameworkInfo[frameworkNameKeyName] else { return false }
 			guard let frameworkSha1 = frameworkInfo[frameworkSha1KeyName] else { return false }
 			
-			let platformURL = rootBinariesURL.URLByAppendingPathComponent(platformName, isDirectory: true).URLByResolvingSymlinksInPath!
-			let frameworkURL = platformURL.URLByAppendingPathComponent("\(frameworkName).framework", isDirectory: true)
-			let frameworkBinaryURL = frameworkURL.URLByAppendingPathComponent("\(frameworkName)", isDirectory: false)
+			let platformURL = rootBinariesURL.appendingPathComponent(platformName, isDirectory: true).URLByResolvingSymlinksInPath!
+			let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: true)
+			let frameworkBinaryURL = frameworkURL.appendingPathComponent("\(frameworkName)", isDirectory: false)
 			guard let sha1 = sha1ForFileAtURL(frameworkBinaryURL) where sha1 == frameworkSha1 else { return false }
 		}
 	}
