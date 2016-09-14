@@ -19,7 +19,7 @@ Unless you’re specifically improving something about the command-line experien
 After checkout, you can run the following command from the cloned directory, and then open the workspace in Xcode:
 
 ```bash
-./script/bootstrap
+make bootstrap
 ```
 
 Then, to install your development copy of Carthage (and any local changes you've made) on your system, and test with your own repos:
