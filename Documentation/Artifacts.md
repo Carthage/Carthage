@@ -4,7 +4,7 @@ This document lists all files and folders used or created by Carthage, and the p
 
 ## Cartfile
 
-A `Cartfile` describes your project’s dependencies to Carthage, allowing it to resolve and build them for you. Cartfiles are a restricted subset of the [Ordered Graph Data Language](http://ogdl.org/), and any standard OGDL tool should be able to parse them.
+A `Cartfile` describes your project's dependencies to Carthage, allowing it to resolve and build them for you. Cartfiles are a restricted subset of the [Ordered Graph Data Language](http://ogdl.org/), and any standard OGDL tool should be able to parse them.
 
 Dependency specifications consist of two main parts: the [origin](#origin), and the [version requirement](#version-requirement).
 
@@ -23,7 +23,7 @@ github "https://enterprise.local/ghe/desktop/git-error-translations" # GitHub En
 git "https://enterprise.local/desktop/git-error-translations2.git"
 ```
 
-Other possible origins may be added in the future. If there’s something specific you’d like to see, please [file an issue](https://github.com/Carthage/Carthage/issues/new).
+Other possible origins may be added in the future. If there's something specific you'd like to see, please [file an issue](https://github.com/Carthage/Carthage/issues/new).
 
 #### Version requirement
 
@@ -86,13 +86,13 @@ Although the `Cartfile.resolved` file is meant to be human-readable and diffable
 
 ## Carthage/Build
 
-This folder is created by `carthage build` in the project’s working directory, and contains the binary frameworks and debug information for each dependency (whether built from scratch or downloaded).
+This folder is created by `carthage build` in the project's working directory, and contains the binary frameworks and debug information for each dependency (whether built from scratch or downloaded).
 
 You are not required to commit this folder to your repository, but you may wish to, if you want to guarantee that the built versions of each dependency will _always_ be accessible at a later date.
 
 ## Carthage/Checkouts
 
-This folder is created by `carthage checkout` in the application project’s working directory, and contains your dependencies’ source code (when prebuilt binaries are not available). The project folders inside `Carthage/Checkouts` are later used for the `carthage build` command.
+This folder is created by `carthage checkout` in the application project's working directory, and contains your dependencies' source code (when prebuilt binaries are not available). The project folders inside `Carthage/Checkouts` are later used for the `carthage build` command.
 
 You are not required to commit this folder to your repository, but you may wish to, if you want to guarantee that the source checkouts of each dependency will _always_ be accessible at a later date.
 
@@ -100,7 +100,7 @@ Unless you are [using submodules](#with-submodules), the contents of **this dire
 
 ### With submodules
 
-If the `--use-submodules` flag was given when a project’s dependencies were bootstrapped, updated, or checked out, the dependencies inside `Carthage/Checkouts` will be available as Git submodules. This allows you to make changes in the dependencies, and commit and push those changes upstream.
+If the `--use-submodules` flag was given when a project's dependencies were bootstrapped, updated, or checked out, the dependencies inside `Carthage/Checkouts` will be available as Git submodules. This allows you to make changes in the dependencies, and commit and push those changes upstream.
 
 ## ~/Library/Caches/org.carthage.CarthageKit
 

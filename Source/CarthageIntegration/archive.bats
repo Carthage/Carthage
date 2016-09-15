@@ -14,7 +14,7 @@ teardown() {
 @test "carthage archive errors unless carthage build --no-skip-current has been run" {
     run carthage archive
     [ "$status" -eq 1 ]
-    [ "$output" = "Could not find any copies of Result.framework. Make sure you're in the project’s root and that the frameworks have already been built using 'carthage build --no-skip-current'." ]
+    [ "$output" = "Could not find any copies of Result.framework. Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'." ]
 }
 
 @test "carthage archive after carthage build --no-skip-current produces a zipped framework of all frameworks" {
