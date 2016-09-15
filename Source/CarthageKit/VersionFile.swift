@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import CryptoSwift
 
 private let commitishKeyName = "commitish"
 private let cachedFrameworksKeyName = "cachedFrameworks"
