@@ -225,7 +225,7 @@ public struct BuildCommand: CommandType {
 	}
 }
 
-/// Represents the user’s chosen platform to build for.
+/// Represents the user's chosen platform to build for.
 public enum BuildPlatform: Equatable {
 	/// Build for all available platforms.
 	case All
