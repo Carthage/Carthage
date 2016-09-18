@@ -323,6 +323,27 @@ class XcodeSpec: QuickSpec {
 			expect(result).to(beNil())
 		}
 
+		it("should symlink the build directory") {
+			let dependency = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
+
+			let dependencyURL =	directoryURL.appendingPathComponent(dependency.relativePath)
+			// Build
+			let buildURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
+			let dependencyBuildURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath)
+
+			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+				.flatten(.Concat)
+				.ignoreTaskData()
+				.on(next: { (project, scheme) in
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+
+			expect(result.error).to(beNil())
+
+			expect(dependencyBuildURL).to(beRelativeSymlinkToDirectory(buildURL))
+		}
+
 	}
 }
 
@@ -347,5 +368,48 @@ internal func beExistingDirectory() -> MatcherFunc<String> {
 		}
 
 		return exists && isDirectory
+	}
+}
+
+internal func beRelativeSymlinkToDirectory(directory: NSURL) -> MatcherFunc<NSURL> {
+	return MatcherFunc { actualExpression, failureMessage in
+		failureMessage.postfixMessage = "be a relative symlink to \(directory)"
+		let actualURL = try actualExpression.evaluate()
+
+		guard let URL = actualURL else {
+			return false
+		}
+		var isSymlink: Bool = false
+		do {
+			var isSymlinkObj: AnyObject?
+			URL.removeCachedResourceValueForKey(NSURLIsSymbolicLinkKey)
+			try URL.getResourceValue(&isSymlinkObj, forKey: NSURLIsSymbolicLinkKey)
+			if isSymlinkObj != nil {
+				isSymlink = isSymlinkObj!.boolValue
+			}
+		} catch {}
+
+		guard isSymlink else {
+			failureMessage.postfixMessage += ", but is not a symlink"
+			return false
+		}
+
+		let destination: NSString = try! NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(URL.path!)
+
+		guard !destination.absolutePath else {
+			failureMessage.postfixMessage += ", but is not a relative symlink"
+			return false
+		}
+
+		let standardDestination = URL.URLByResolvingSymlinksInPath?.URLByStandardizingPath
+		let desiredDestination = directory.URLByStandardizingPath
+
+		let urlsEqual = standardDestination != nil && desiredDestination != nil && standardDestination == desiredDestination
+
+		if !urlsEqual {
+			failureMessage.postfixMessage += ", but does not point to the correct destination. Instead it points to \(standardDestination)"
+		}
+
+		return urlsEqual
 	}
 }

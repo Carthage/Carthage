@@ -27,7 +27,7 @@ extension BuildOptions: OptionsType {
 	public static func evaluate(m: CommandMode, addendum: String) -> Result<BuildOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
-			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)" + addendum)
+			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of 'all', 'Mac', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')" + addendum)
 			<*> m <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 			<*> m <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 	}
@@ -225,7 +225,7 @@ public struct BuildCommand: CommandType {
 	}
 }
 
-/// Represents the user’s chosen platform to build for.
+/// Represents the user's chosen platform to build for.
 public enum BuildPlatform: Equatable {
 	/// Build for all available platforms.
 	case All

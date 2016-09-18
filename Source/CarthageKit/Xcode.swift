@@ -1085,72 +1085,12 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 ///
 /// Returns producers in the same format as buildInDirectory().
 public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirectoryURL: NSURL, withOptions options: BuildOptions, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 
-	let schemeProducers = buildInDirectory(dependencyURL, withOptions: options, sdkFilter: sdkFilter)
-	return SignalProducer.attempt { () -> Result<SignalProducer<BuildSchemeProducer, CarthageError>, CarthageError> in
-			do {
-				try NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil)
-			} catch let error as NSError {
-				return .Failure(.WriteFailed(rootBinariesURL, error))
-			}
-
-			// Link this dependency's Carthage/Build folder to that of the root
-			// project, so it can see all products built already, and so we can
-			// automatically drop this dependency's product in the right place.
-			let dependencyBinariesURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
-
-			do {
-				try NSFileManager.defaultManager().removeItemAtURL(dependencyBinariesURL)
-			} catch {
-				let dependencyParentURL = dependencyBinariesURL.URLByDeletingLastPathComponent!
-
-				do {
-					try NSFileManager.defaultManager().createDirectoryAtURL(dependencyParentURL, withIntermediateDirectories: true, attributes: nil)
-				} catch let error as NSError {
-					return .Failure(.WriteFailed(dependencyParentURL, error))
-				}
-			}
-
-			var isSymlink: AnyObject?
-			do {
-				try rawDependencyURL.getResourceValue(&isSymlink, forKey: NSURLIsSymbolicLinkKey)
-			} catch let error as NSError {
-				return .Failure(.ReadFailed(rawDependencyURL, error))
-			}
-
-			if isSymlink as? Bool == true {
-				// Since this dependency is itself a symlink, we'll create an
-				// absolute link back to the project's Build folder.
-				do {
-					try NSFileManager.defaultManager().createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL)
-				} catch let error as NSError {
-					return .Failure(.WriteFailed(dependencyBinariesURL, error))
-				}
-			} else {
-				// The relative path to this dependency's Carthage/Build folder, from
-				// the root.
-				let dependencyBinariesRelativePath = (dependency.relativePath as NSString).stringByAppendingPathComponent(CarthageBinariesFolderPath)
-				let componentsForGettingTheHellOutOfThisRelativePath = Array(count: (dependencyBinariesRelativePath as NSString).pathComponents.count - 1, repeatedValue: "..")
-
-				// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
-				let linkDestinationPath = componentsForGettingTheHellOutOfThisRelativePath.reduce(CarthageBinariesFolderPath) { trailingPath, pathComponent in
-					return (pathComponent as NSString).stringByAppendingPathComponent(trailingPath)
-				}
-
-				do {
-					try NSFileManager.defaultManager().createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath)
-				} catch let error as NSError {
-					return .Failure(.WriteFailed(dependencyBinariesURL, error))
-				}
-			}
-
-			return .Success(schemeProducers)
-		}
-		.flatMap(.Merge) { schemeProducers -> SignalProducer<BuildSchemeProducer, CarthageError> in
-			return schemeProducers
+	return symlinkBuildPathForDependencyProject(dependency, rootDirectoryURL: rootDirectoryURL)
+		.flatMap(.Merge) { _ -> SignalProducer<BuildSchemeProducer, CarthageError> in
+			return buildInDirectory(dependencyURL, withOptions: options, sdkFilter: sdkFilter)
 				.mapError { error in
 					switch (dependency, error) {
 					case let (_, .NoSharedFrameworkSchemes(_, platforms)):
@@ -1164,6 +1104,66 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 					}
 				}
 		}
+}
+
+/// Creates symlink between the dependency build folder and the root build folder
+///
+/// Returns a signal indicating success
+private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
+	return SignalProducer.attempt {
+		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
+		let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
+		let fileManager = NSFileManager.defaultManager()
+
+		do {
+			try fileManager.createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil)
+		} catch let error as NSError {
+			return .Failure(.WriteFailed(rootBinariesURL, error))
+		}
+
+		// Link this dependency's Carthage/Build folder to that of the root
+		// project, so it can see all products built already, and so we can
+		// automatically drop this dependency's product in the right place.
+		let dependencyBinariesURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
+
+		do {
+			try fileManager.removeItemAtURL(dependencyBinariesURL)
+		} catch {
+			let dependencyParentURL = dependencyBinariesURL.URLByDeletingLastPathComponent!
+
+			do {
+				try fileManager.createDirectoryAtURL(dependencyParentURL, withIntermediateDirectories: true, attributes: nil)
+			} catch let error as NSError {
+				return .Failure(.WriteFailed(dependencyParentURL, error))
+			}
+		}
+
+		var isSymlink: AnyObject?
+		do {
+			try rawDependencyURL.getResourceValue(&isSymlink, forKey: NSURLIsSymbolicLinkKey)
+		} catch let error as NSError {
+			return .Failure(.ReadFailed(rawDependencyURL, error))
+		}
+
+		if isSymlink as? Bool == true {
+			// Since this dependency is itself a symlink, we'll create an
+			// absolute link back to the project's Build folder.
+			do {
+				try fileManager.createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL)
+			} catch let error as NSError {
+				return .Failure(.WriteFailed(dependencyBinariesURL, error))
+			}
+		} else {
+			let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: CarthageBinariesFolderPath)
+			do {
+				try fileManager.createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath)
+			} catch let error as NSError {
+				return .Failure(.WriteFailed(dependencyBinariesURL, error))
+			}
+		}
+		return .Success()
+	}
 }
 
 /// Builds the first project or workspace found within the given directory which

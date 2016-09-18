@@ -235,7 +235,7 @@ public func fetchRepository(repositoryFileURL: NSURL, remoteURL: GitURL? = nil, 
 
 /// Sends each tag found in the given Git repository.
 public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, CarthageError> {
-	return launchGitTask([ "tag" ], repositoryFileURL: repositoryFileURL)
+	return launchGitTask([ "tag", "--column=never" ], repositoryFileURL: repositoryFileURL)
 		.flatMap(.Concat) { (allTags: String) -> SignalProducer<String, CarthageError> in
 			return SignalProducer { observer, disposable in
 				allTags.enumerateSubstringsInRange(allTags.characters.indices, options: [ .ByLines, .Reverse ]) { line, substringRange, enclosingRange, stop in

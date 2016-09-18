@@ -11,7 +11,7 @@ import Result
 import ReactiveCocoa
 import Tentacle
 
-/// Carthage’s bundle identifier.
+/// Carthage's bundle identifier.
 public let CarthageKitBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
 
 /// The fallback dependencies URL to be used in case
@@ -255,6 +255,16 @@ public final class Project {
 		} catch let error as NSError {
 			return .Failure(.WriteFailed(resolvedCartfileURL, error))
 		}
+	}
+
+	/// Produces the sub dependencies of the given dependency
+	func dependenciesForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Set<ProjectIdentifier>, CarthageError> {
+		return self.cartfileForDependency(dependency)
+			.map { (cartfile: Cartfile) -> Set<ProjectIdentifier> in
+				return Set(cartfile.dependencies.map { $0.project })
+			}
+			.concat(SignalProducer(value: Set()))
+			.take(1)
 	}
 
 	private let gitOperationQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.gitOperationQueue")
@@ -559,9 +569,11 @@ public final class Project {
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
 	}
 
-	/// Checks out the given project into its intended working directory,
+	/// Checks out the given dependency into its intended working directory,
 	/// cloning it first if need be.
-	private func checkoutOrCloneProject(project: ProjectIdentifier, atRevision revision: String, submodulesByPath: [String: Submodule]) -> SignalProducer<(), CarthageError> {
+	private func checkoutOrCloneDependency(dependency: Dependency<PinnedVersion>, submodulesByPath: [String: Submodule]) -> SignalProducer<(), CarthageError> {
+		let project = dependency.project
+		let revision = dependency.version.commitish
 		return cloneOrFetchDependency(project, commitish: revision)
 			.flatMap(.Merge) { repositoryURL -> SignalProducer<(), CarthageError> in
 				let workingDirectoryURL = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true)
@@ -580,6 +592,10 @@ public final class Project {
 						.startOnQueue(self.gitOperationQueue)
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
+						.then(self.dependenciesForDependency(dependency))
+						.flatMap(.Merge) { dependencies in
+							return self.symlinkCheckoutPathsForDependencyProject(dependency.project, subDependencies: dependencies, rootDirectoryURL: self.directoryURL)
+						}
 				}
 			}
 			.on(started: {
@@ -595,12 +611,10 @@ public final class Project {
 		// dependencies before the projects that depend on them.
 		return SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: cartfile.dependencies)
 			.flatMap(.Merge) { (dependency: Dependency<PinnedVersion>) -> SignalProducer<DependencyGraph, CarthageError> in
-				return self.cartfileForDependency(dependency)
-					.map { (cartfile: Cartfile) -> DependencyGraph in
-						return [ dependency.project: Set(cartfile.dependencies.map { $0.project }) ]
+				return self.dependenciesForDependency(dependency)
+					.map { dependencies in
+						[dependency.project: dependencies]
 					}
-					.concat(SignalProducer(value: [ dependency.project: Set() ]))
-					.take(1)
 			}
 			.reduce([:]) { (working: DependencyGraph, next: DependencyGraph) in
 				var result = working
@@ -645,25 +659,24 @@ public final class Project {
 			.zipWith(submodulesSignal)
 			.flatMap(.Merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
 				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: dependencies)
-					.flatMap(.Merge) { dependency -> SignalProducer<(), CarthageError> in
+					.flatMap(.Concat) { dependency -> SignalProducer<(), CarthageError> in
 						let project = dependency.project
-						let revision = dependency.version.commitish
 
 						let submoduleFound = submodulesByPath[project.relativePath] != nil
-						let checkoutOrCloneProject = self.checkoutOrCloneProject(project, atRevision: revision, submodulesByPath: submodulesByPath)
+						let checkoutOrCloneDependency = self.checkoutOrCloneDependency(dependency, submodulesByPath: submodulesByPath)
 
 						// Disable binary downloads for the dependency if that
 						// is already checked out as a submodule.
 						if submoduleFound {
-							return checkoutOrCloneProject
+							return checkoutOrCloneDependency
 						}
 
-						return self.installBinariesForProject(project, atRevision: revision)
+						return self.installBinariesForProject(project, atRevision: dependency.version.commitish)
 							.flatMap(.Merge) { installed -> SignalProducer<(), CarthageError> in
 								if installed {
 									return .empty
 								} else {
-									return checkoutOrCloneProject
+									return checkoutOrCloneDependency
 								}
 							}
 					}
@@ -671,7 +684,62 @@ public final class Project {
 			.then(.empty)
 	}
 
-	/// Attempts to build each Carthage dependency that has been checked out, 
+	/// Creates symlink between the dependency checkouts and the root checkouts
+	private func symlinkCheckoutPathsForDependencyProject(dependency: ProjectIdentifier, subDependencies: Set<ProjectIdentifier>, rootDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
+		let rootCheckoutsURL = rootDirectoryURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).URLByResolvingSymlinksInPath!
+		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
+		let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
+		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).URLByResolvingSymlinksInPath!
+		let subDependencyNames = subDependencies.map { $0.name }
+		let fileManager = NSFileManager.defaultManager()
+
+		let symlinksProducer = SignalProducer(values: subDependencyNames)
+			.filter { name in
+				let checkoutURL = rootCheckoutsURL.appendingPathComponent(name)
+				let isDirectory: Bool
+				do {
+					var value: AnyObject?
+					try checkoutURL.getResourceValue(&value, forKey: NSURLIsDirectoryKey)
+					if let value = value {
+						isDirectory = value.boolValue
+					} else {
+						return false
+					}
+				} catch {
+					return false
+				}
+				return isDirectory
+			}
+			.attemptMap { name -> Result<(), CarthageError> in
+				let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
+				let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).stringByAppendingPathComponent(name)
+				let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: subdirectoryPath)
+				do {
+					try fileManager.createSymbolicLinkAtPath(dependencyCheckoutURL.path!, withDestinationPath: linkDestinationPath)
+				} catch let error as NSError {
+					if !(error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError) {
+						return .Failure(.WriteFailed(dependencyCheckoutURL, error))
+					}
+				}
+				return .Success()
+		}
+
+
+		return SignalProducer<(), CarthageError>
+			.attempt {
+				do {
+					try fileManager.createDirectoryAtURL(dependencyCheckoutsURL, withIntermediateDirectories: true, attributes: nil)
+				} catch let error as NSError {
+					if !(error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError) {
+						return .Failure(.WriteFailed(dependencyCheckoutsURL, error))
+					}
+				}
+				return .Success()
+			}
+			.then(symlinksProducer)
+	}
+
+	/// Attempts to build each Carthage dependency that has been checked out,
 	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
@@ -892,6 +960,19 @@ private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bo
 	case let .Git(URL):
 		return URL
 	}
+}
+
+/// Returns the string representing a relative path from a dependency project back to the root
+internal func relativeLinkDestinationForDependencyProject(dependency: ProjectIdentifier, subdirectory: String) -> String {
+	let dependencySubdirectoryPath = (dependency.relativePath as NSString).stringByAppendingPathComponent(subdirectory)
+	let componentsForGettingTheHellOutOfThisRelativePath = Array(count: (dependencySubdirectoryPath as NSString).pathComponents.count - 1, repeatedValue: "..")
+
+	// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
+	let linkDestinationPath = componentsForGettingTheHellOutOfThisRelativePath.reduce(subdirectory) { trailingPath, pathComponent in
+		return (pathComponent as NSString).stringByAppendingPathComponent(trailingPath)
+	}
+
+	return linkDestinationPath
 }
 
 /// Clones the given project to the given destination URL (defaults to the global
