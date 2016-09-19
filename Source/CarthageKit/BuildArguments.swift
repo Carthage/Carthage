@@ -53,7 +53,7 @@ public struct BuildArguments {
 		}
 
 		if let scheme = scheme {
-			args += [ "-scheme", scheme ]
+			args += [ "-scheme", "\"\(scheme)\"" ]
 		}
 
 		if let configuration = configuration {
