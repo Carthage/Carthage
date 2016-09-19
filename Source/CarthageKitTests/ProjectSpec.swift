@@ -19,7 +19,7 @@ class ProjectSpec: QuickSpec {
 	override func spec() {
 		describe("createAndCheckVersionFiles") {
 			let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("DependencyTest", withExtension: nil)!
-			let buildDirectoryURL = directoryURL.URLByAppendingPathComponent(CarthageBinariesFolderPath)
+			let buildDirectoryURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 			
 			func buildDependencyTest(platforms platforms: Set<Platform> = [], ignoreCached: Bool = false) -> Set<String> {
 				var builtSchemes: [String] = []
@@ -39,9 +39,9 @@ class ProjectSpec: QuickSpec {
 			}
 			
 			func overwriteFramework(frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: NSURL) {
-				let platformURL = buildDirectoryURL.URLByAppendingPathComponent(platformName, isDirectory: true)
-				let frameworkURL = platformURL.URLByAppendingPathComponent("\(frameworkName).framework", isDirectory: false)
-				let binaryURL = frameworkURL.URLByAppendingPathComponent(frameworkName, isDirectory: false)
+				let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
+				let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
+				let binaryURL = frameworkURL.appendingPathComponent(frameworkName, isDirectory: false)
 				let binaryPath = binaryURL.path!
 				
 				let data = "junkdata".dataUsingEncoding(NSUTF8StringEncoding)!
@@ -84,7 +84,7 @@ class ProjectSpec: QuickSpec {
 				let result1 = buildDependencyTest(platforms: [.Mac])
 				expect(result1).to(equal(expected))
 				
-				let preludeVersionFileURL = buildDirectoryURL.URLByAppendingPathComponent(".Prelude.version", isDirectory: false)
+				let preludeVersionFileURL = buildDirectoryURL.appendingPathComponent(".Prelude.version", isDirectory: false)
 				let preludeVersionFilePath = preludeVersionFileURL.path!
 				
 				let json = try! NSString(contentsOfURL: preludeVersionFileURL, encoding: NSUTF8StringEncoding)

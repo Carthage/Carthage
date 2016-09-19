@@ -142,25 +142,25 @@ private final class SHA1 {
 		}
 		return result
 	}
-    
-    func prepare(len:Int) -> Array<UInt8> {
-        var tmpMessage = message
-        
-        // Step 1. Append Padding Bits
-        tmpMessage.append(0x80) // append one bit (UInt8 with one bit) to message
-        
-        // append "0" bit until message length in bits ≡ 448 (mod 512)
-        var msgLength = tmpMessage.count
-        var counter = 0
-        
-        while msgLength % len != (len - 8) {
-            counter += 1
-            msgLength += 1
-        }
-        
-        tmpMessage += Array<UInt8>(count: counter, repeatedValue: 0)
-        return tmpMessage
-    }
+	
+	func prepare(len:Int) -> Array<UInt8> {
+		var tmpMessage = message
+		
+		// Step 1. Append Padding Bits
+		tmpMessage.append(0x80) // append one bit (UInt8 with one bit) to message
+		
+		// append "0" bit until message length in bits ≡ 448 (mod 512)
+		var msgLength = tmpMessage.count
+		var counter = 0
+		
+		while msgLength % len != (len - 8) {
+			counter += 1
+			msgLength += 1
+		}
+		
+		tmpMessage += Array<UInt8>(count: counter, repeatedValue: 0)
+		return tmpMessage
+	}
 }
 
 private func rotateLeft(v:UInt32, _ n:UInt32) -> UInt32 {
@@ -204,10 +204,10 @@ private func arrayOfBytes<T>(value:T, length:Int? = nil) -> Array<UInt8> {
 
 /* array of bytes */
 private extension Int {
-    /** Array of bytes with optional padding (little-endian) */
-    func bytes(totalBytes: Int = sizeof(Int)) -> Array<UInt8> {
-        return arrayOfBytes(self, length: totalBytes)
-    }
+	/** Array of bytes with optional padding (little-endian) */
+	func bytes(totalBytes: Int = sizeof(Int)) -> Array<UInt8> {
+		return arrayOfBytes(self, length: totalBytes)
+	}
 }
 
 private extension NSData {

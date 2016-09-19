@@ -993,7 +993,7 @@ public func buildScheme(scheme: String, withOptions options: BuildOptions, inPro
 		}
 		.flatMap(.Concat) { platform, sdks -> SignalProducer<TaskEvent<NSURL>, CarthageError> in
 			let folderURL = workingDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
-            
+
 			// TODO: Generalize this further?
 			switch sdks.count {
 			case 1:
@@ -1087,12 +1087,12 @@ public func buildDependencyProject(dependency: Dependency<PinnedVersion>, _ root
 	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
-    
+	
 	let schemeProducers = symlinkBuildPathForDependencyProject(dependency.project, rootDirectoryURL: rootDirectoryURL)
 		.flatMap(.Merge) { _ -> BuildSchemeProducer in
 			return buildInDirectory(dependencyURL, withOptions: options, dependency: dependency, rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
-        }
-    
+		}
+	
 	return SignalProducer.attempt { () -> Result<BuildSchemeProducer, CarthageError> in
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil)
@@ -1291,7 +1291,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 
 					return sdkFilter(sdks: filteredSDKs, scheme: scheme, configuration: configuration, project: project)
 				}
-                
+				
 				let buildProgress = buildScheme(scheme, withOptions: options, inProject: project, workingDirectoryURL: directoryURL, dependency: dependency, sdkFilter: wrappedSDKFilter)
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for

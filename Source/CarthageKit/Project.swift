@@ -769,7 +769,7 @@ public final class Project {
 				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
 					return .empty
 				}
-                
+				
 				return buildDependencyProject(dependency, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
