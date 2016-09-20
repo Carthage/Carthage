@@ -15,8 +15,8 @@ import ReactiveTask
 
 extension BuildOptions: OptionsType {
 	public static func create(configuration: String) -> BuildPlatform -> String? -> String? -> Bool -> BuildOptions {
-		return { buildPlatform in { toolchain in { derivedDataPath in { ignoreCachedBuilds in
-			return self.init(configuration: configuration, platforms: buildPlatform.platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, ignoreCachedBuilds: ignoreCachedBuilds)
+		return { buildPlatform in { toolchain in { derivedDataPath in { cacheBuilds in
+			return self.init(configuration: configuration, platforms: buildPlatform.platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, cacheBuilds: cacheBuilds)
 		} } } }
 	}
 
@@ -30,7 +30,7 @@ extension BuildOptions: OptionsType {
 			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of ‘all’, ‘Mac’, ‘iOS’, ‘watchOS’, 'tvOS', or comma-separated values of the formers except for ‘all’)" + addendum)
 			<*> m <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 			<*> m <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
-			<*> m <| Option(key: "ignore-cached-builds", defaultValue: false, usage: "ignore cached build products")
+			<*> m <| Option(key: "cache-builds", defaultValue: true, usage: "use cached builds when possible")
 	}
 }
 

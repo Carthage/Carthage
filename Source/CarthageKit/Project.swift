@@ -755,7 +755,7 @@ public final class Project {
 					}
 					.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
 						let (nextDependency, dependencies) = nextGroup
-						if !options.ignoreCachedBuilds && self.shouldSkipBuildForDependency(nextDependency, dependencies: dependencies, dependenciesToBeBuilt: includedDependencies, platforms: options.platforms) {
+						if options.cacheBuilds && self.shouldSkipBuildForDependency(nextDependency, dependencies: dependencies, dependenciesToBeBuilt: includedDependencies, platforms: options.platforms) {
 							return includedDependencies
 						}
 						return includedDependencies + [nextDependency]

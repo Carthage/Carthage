@@ -17,13 +17,13 @@ public struct BuildOptions {
 	/// The path to the custom derived data folder.
 	public let derivedDataPath: String?
 	/// Rebuild even if cached builds exist.
-	public let ignoreCachedBuilds: Bool
+	public let cacheBuilds: Bool
 
-	public init(configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil, ignoreCachedBuilds: Bool = false) {
+	public init(configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil, cacheBuilds: Bool = true) {
 		self.configuration = configuration
 		self.platforms = platforms
 		self.toolchain = toolchain
 		self.derivedDataPath = derivedDataPath
-		self.ignoreCachedBuilds = ignoreCachedBuilds
+		self.cacheBuilds = cacheBuilds
 	}
 }

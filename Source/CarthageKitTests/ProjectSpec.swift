@@ -21,11 +21,11 @@ class ProjectSpec: QuickSpec {
 			let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("DependencyTest", withExtension: nil)!
 			let buildDirectoryURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 			
-			func buildDependencyTest(platforms platforms: Set<Platform> = [], ignoreCached: Bool = false) -> Set<String> {
+			func buildDependencyTest(platforms platforms: Set<Platform> = [], cacheBuilds: Bool = true) -> Set<String> {
 				var builtSchemes: [String] = []
 				
 				let project = Project(directoryURL: directoryURL)
-				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, ignoreCachedBuilds: ignoreCached))
+				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds))
 					.flatten(.Concat)
 					.ignoreTaskData()
 					.on(next: { (project, scheme) in
@@ -62,7 +62,7 @@ class ProjectSpec: QuickSpec {
 				let result2 = buildDependencyTest(platforms: [.Mac])
 				expect(result2).to(equal(Set<String>()))
 				
-				let result3 = buildDependencyTest(platforms: [.Mac], ignoreCached: true)
+				let result3 = buildDependencyTest(platforms: [.Mac], cacheBuilds: false)
 				expect(result3).to(equal(expected))
 			}
 			
