@@ -15,6 +15,12 @@ private let frameworkSha1KeyName = "frameworkSha1"
 
 private typealias VersionFile = [String: [String: AnyObject]]
 
+/// Creates a version file for the current dependency in the
+/// Carthage/Build directory which associates its commitish with
+/// the SHA1s of the built frameworks for each platform in order 
+/// to allow those frameworks to be skipped in future builds.
+///
+/// Returns true if the version file was successfully created.
 public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, buildProductURLs: [NSURL], rootDirectoryURL: NSURL) -> Bool {
 	var cachedPlatformFrameworks: [String: [[String: String]]] = [:]
 	
@@ -61,6 +67,16 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 	return true
 }
 
+/// Determines whether a dependency can be skipped.  If a version file
+/// for the dependency project exists, and its commitish matches, and 
+/// the recorded SHA1s are the same as the computed SHA1s of each
+/// framework in the Carthage/Build directory for the given platforms,
+/// the dependency can be skipped.
+///
+/// If a set of platforms is not provided and a version file exists,
+/// the platforms listed in the version file are used instead.
+///
+/// Returns true if the the dependency can be skipped.
 public func versionFileMatchesDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, rootDirectoryURL: NSURL) -> Bool {
 	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
