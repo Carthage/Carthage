@@ -21,12 +21,12 @@
 
 public extension NSData {
 	func sha1() -> NSData? {
-		let result = SHA1(self.arrayOfBytes()).calculate()
+		let result = SHA1(arrayOfBytes()).calculate()
 		return NSData.withBytes(result)
 	}
 	
 	func toHexString() -> String {
-		return self.arrayOfBytes().toHexString()
+		return arrayOfBytes().toHexString()
 	}
 }
 
@@ -36,7 +36,7 @@ private struct BytesSequence: SequenceType {
 	
 	func generate() -> AnyGenerator<ArraySlice<UInt8>> {
 		
-		var offset:Int = 0
+		var offset: Int = 0
 		
 		return AnyGenerator {
 			let end = min(self.chunkSize, self.data.count - offset)
@@ -48,30 +48,30 @@ private struct BytesSequence: SequenceType {
 }
 
 private final class SHA1 {
-	static let size:Int = 20 // 160 / 8
+	static let size: Int = 20 // 160 / 8
 	let message: Array<UInt8>
 	
 	init(_ message: Array<UInt8>) {
 		self.message = message
 	}
 	
-	private let h:Array<UInt32> = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0]
+	private let h: Array<UInt32> = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0]
 	
 	func calculate() -> Array<UInt8> {
-		var tmpMessage = self.prepare(64)
+		var tmpMessage = prepare(64)
 		
 		// hash values
 		var hh = h
 		
 		// append message length, in a 64-bit big-endian integer. So now the message length is a multiple of 512 bits.
-		tmpMessage += (self.message.count * 8).bytes(64 / 8)
+		tmpMessage += (message.count * 8).bytes(64 / 8)
 		
 		// Process the message in successive 512-bit chunks:
 		let chunkSizeBytes = 512 / 8 // 64
 		for chunk in BytesSequence(chunkSize: chunkSizeBytes, data: tmpMessage) {
 			// break chunk into sixteen 32-bit words M[j], 0 ≤ j ≤ 15, big-endian
 			// Extend the sixteen 32-bit words into eighty 32-bit words:
-			var M:Array<UInt32> = Array<UInt32>(count: 80, repeatedValue: 0)
+			var M: Array<UInt32> = Array<UInt32>(count: 80, repeatedValue: 0)
 			for x in 0..<M.count {
 				switch (x) {
 				case 0...15:
@@ -143,7 +143,7 @@ private final class SHA1 {
 		return result
 	}
 	
-	func prepare(len:Int) -> Array<UInt8> {
+	func prepare(len: Int) -> Array<UInt8> {
 		var tmpMessage = message
 		
 		// Step 1. Append Padding Bits
@@ -163,7 +163,7 @@ private final class SHA1 {
 	}
 }
 
-private func rotateLeft(v:UInt32, _ n:UInt32) -> UInt32 {
+private func rotateLeft(v: UInt32, _ n: UInt32) -> UInt32 {
 	return ((v << n) & 0xFFFFFFFF) | (v >> (32 - n))
 }
 
@@ -172,11 +172,11 @@ private func toUInt32Array(slice: ArraySlice<UInt8>) -> Array<UInt32> {
 	result.reserveCapacity(16)
 	
 	for idx in slice.startIndex.stride(to: slice.endIndex, by: sizeof(UInt32)) {
-		let val1:UInt32 = (UInt32(slice[idx.advancedBy(3)]) << 24)
-		let val2:UInt32 = (UInt32(slice[idx.advancedBy(2)]) << 16)
-		let val3:UInt32 = (UInt32(slice[idx.advancedBy(1)]) << 8)
-		let val4:UInt32 = UInt32(slice[idx])
-		let val:UInt32 = val1 | val2 | val3 | val4
+		let val1: UInt32 = (UInt32(slice[idx.advancedBy(3)]) << 24)
+		let val2: UInt32 = (UInt32(slice[idx.advancedBy(2)]) << 16)
+		let val3: UInt32 = (UInt32(slice[idx.advancedBy(1)]) << 8)
+		let val4: UInt32 = UInt32(slice[idx])
+		let val: UInt32 = val1 | val2 | val3 | val4
 		result.append(val)
 	}
 	return result
@@ -184,7 +184,7 @@ private func toUInt32Array(slice: ArraySlice<UInt8>) -> Array<UInt32> {
 
 /// Array of bytes, little-endian representation. Don't use if not necessary.
 /// I found this method slow
-private func arrayOfBytes<T>(value:T, length:Int? = nil) -> Array<UInt8> {
+private func arrayOfBytes<T>(value: T, length: Int? = nil) -> Array<UInt8> {
 	let totalBytes = length ?? sizeof(T)
 	
 	let valuePointer = UnsafeMutablePointer<T>.alloc(1)
@@ -212,9 +212,9 @@ private extension Int {
 
 private extension NSData {
 	private func arrayOfBytes() -> Array<UInt8> {
-		let count = self.length / sizeof(UInt8)
+		let count = length / sizeof(UInt8)
 		var bytesArray = Array<UInt8>(count: count, repeatedValue: 0)
-		self.getBytes(&bytesArray, length:count * sizeof(UInt8))
+		getBytes(&bytesArray, length: count * sizeof(UInt8))
 		return bytesArray
 	}
 	
@@ -225,6 +225,6 @@ private extension NSData {
 
 private extension _ArrayType where Generator.Element == UInt8 {
 	func toHexString() -> String {
-		return self.lazy.reduce("") { $0 + String(format:"%02x", $1) }
+		return lazy.reduce("") { $0 + String(format: "%02x", $1) }
 	}
 }
