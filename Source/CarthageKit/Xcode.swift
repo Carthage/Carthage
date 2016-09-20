@@ -1312,7 +1312,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 			.on(completed: {
 				if let dependency = dependency, rootDirectoryURL = rootDirectoryURL {
 					if !createVersionFileForDependency(dependency, forPlatforms: options.platforms, buildProductURLs: urls, rootDirectoryURL: rootDirectoryURL) {
-						observer.sendFailed(CarthageError.CanNotBuildVersionFile(dependency.project))
+						NSLog("Warning: Version file could not be created for \(dependency.project.name)")
 					}
 				}
 			})

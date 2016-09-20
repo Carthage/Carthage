@@ -15,12 +15,6 @@ import Tentacle
 public enum CarthageError: ErrorType, Equatable {
 	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: ProjectIdentifier?)
 
-	/// Build already exists
-	case FrameworkAlreadyBuilt(NSURL)
-
-	/// Can not build version file
-	case CanNotBuildVersionFile(ProjectIdentifier)
-
 	/// One or more arguments was invalid.
 	case InvalidArgument(description: String)
 
@@ -98,12 +92,6 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	case let (.InvalidArgument(left), .InvalidArgument(right)):
 		return left == right
 
-	case let (.CanNotBuildVersionFile(left), .CanNotBuildVersionFile(right)):
-		return left == right
-
-	case let (.FrameworkAlreadyBuilt(left), .FrameworkAlreadyBuilt(right)):
-		return left == right
-
 	case let (.MissingBuildSetting(left), .MissingBuildSetting(right)):
 		return left == right
 	
@@ -158,12 +146,6 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 extension CarthageError: CustomStringConvertible {
 	public var description: String {
 		switch self {
-		case let .FrameworkAlreadyBuilt(frameworkURL):
-			return "Framework already built in \(frameworkURL.description)"
-
-		case let .CanNotBuildVersionFile(project):
-			return "Could not create version file for \(project.name)"
-
 		case let .InvalidArgument(description):
 			return description
 
