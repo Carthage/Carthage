@@ -3,3 +3,4 @@ github "Carthage/Commandant" ~> 0.10.1
 github "jdhealy/PrettyColors" ~> 4.0
 github "ReactiveCocoa/ReactiveCocoa" ~> 4.2.2
 github "mdiep/Tentacle" ~> 0.4
+github "thoughtbot/Argo" ~> 3.0.3
