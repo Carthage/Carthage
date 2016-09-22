@@ -1234,13 +1234,11 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOptions, dependency: Dependency<PinnedVersion>? = nil, rootDirectoryURL: NSURL? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> BuildSchemeProducer {
 	precondition(directoryURL.fileURL)
 
-	return SignalProducer { observer, disposable in
+	return BuildSchemeProducer { observer, disposable in
 		// Use SignalProducer.replayLazily to avoid enumerating the given directory
 		// multiple times.
 		let locator = buildableSchemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms)
 			.replayLazily(Int.max)
-
-		var urls: [NSURL] = []
 
 		locator
 			.collect()
@@ -1278,7 +1276,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 					.take(1)
 					.map { project, _ in (scheme, project) }
 			}
-			.flatMap(.Concat) { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
+			.flatMap(.Concat) { (scheme: String, project: ProjectLocator) -> SignalProducer<TaskEvent<NSURL>, CarthageError> in
 				let initialValue = (project, scheme)
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
@@ -1288,38 +1286,50 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 					} else {
 						filteredSDKs = sdks.filter { options.platforms.contains($0.platform) }
 					}
-
 					return sdkFilter(sdks: filteredSDKs, scheme: scheme, configuration: configuration, project: project)
 				}
 				
-				let buildProgress = buildScheme(scheme, withOptions: options, inProject: project, workingDirectoryURL: directoryURL, dependency: dependency, sdkFilter: wrappedSDKFilter)
-					// Discard any existing Success values, since we want to
+				return buildScheme(scheme, withOptions: options, inProject: project, workingDirectoryURL: directoryURL, dependency: dependency, sdkFilter: wrappedSDKFilter)
+					.on(started: {
+						observer.sendNext(.Success(initialValue))
+					})
+			}
+			.startWithSignal({ (signal, signalDisposable) in
+				disposable += signalDisposable
+				
+				let ignoredValue = (ProjectLocator.Workspace(NSURL(string: "")!), "")
+				
+				let eventSignal: Signal<TaskEvent<(ProjectLocator, String)>, CarthageError> = signal
+					// Discard any Success values, since we want to
 					// use our initial value instead of waiting for
 					// completion.
-					.on(next: { taskEvent in
-						if let url = taskEvent.value {
-							urls.append(url)
+					.map { (taskEvent: TaskEvent<NSURL>) -> TaskEvent<(ProjectLocator, String)> in
+						return .Success(ignoredValue)
+					}
+					.filter { taskEvent in
+						return taskEvent.value == nil
+					}
+				
+				let versionFileSignal: Signal<TaskEvent<(ProjectLocator, String)>, CarthageError> = signal
+						.ignoreTaskData()
+						.collect()
+						.on(next: { (urls: [NSURL]) in
+							guard let dependency = dependency, rootDirectoryURL = rootDirectoryURL else {
+								return
+							}
+							if !createVersionFileForDependency(dependency, forPlatforms: options.platforms, buildProductURLs: urls, rootDirectoryURL: rootDirectoryURL) {
+								NSLog("Warning: Version file could not be created for \(dependency.project.name)")
+							}
+						})
+						.map { (urls: [NSURL]) -> TaskEvent<(ProjectLocator, String)> in
+							return .Success(ignoredValue)
 						}
-					})
-					.map { taskEvent in
-						return taskEvent.map { _ in initialValue }
-					}
-					.filter { taskEvent in taskEvent.value == nil }
-
-				return BuildSchemeProducer(value: .Success(initialValue))
-					.concat(buildProgress)
-			}
-			.on(completed: {
-				if let dependency = dependency, rootDirectoryURL = rootDirectoryURL {
-					if !createVersionFileForDependency(dependency, forPlatforms: options.platforms, buildProductURLs: urls, rootDirectoryURL: rootDirectoryURL) {
-						NSLog("Warning: Version file could not be created for \(dependency.project.name)")
-					}
-				}
+						.filter { taskEvent in
+							return false
+						}
+				
+				Signal.merge([eventSignal, versionFileSignal]).observe(observer)
 			})
-			.startWithSignal { signal, signalDisposable in
-				disposable += signalDisposable
-				signal.observe(observer)
-			}
 	}
 }
 
