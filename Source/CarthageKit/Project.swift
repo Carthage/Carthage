@@ -571,8 +571,6 @@ public final class Project {
 		return cloneOrFetchDependency(project, commitish: revision)
 			.flatMap(.Merge) { repositoryURL -> SignalProducer<(), CarthageError> in
 				let workingDirectoryURL = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true)
-				/// The submodule for an already existing submodule at dependency project’s path
-				/// or the submodule to be added at this path given the `--use-submodules` flag.
 				var submodule: Submodule?
 				
 				if var foundSubmodule = submodulesByPath[project.relativePath] {
@@ -583,41 +581,16 @@ public final class Project {
 					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), SHA: revision)
 				}
 				
-				/// Filter out submodules in `CarthageProjectCheckoutsPath` which would conflict with dependencies.
-				func filter(dependencies: Set<ProjectIdentifier>, by submodules: [Submodule]) -> [ProjectIdentifier] {
-					return dependencies.filter { identifier in
-						!(submodules.filter { (submodule: Submodule) -> Bool in
-							submodule.path.characters.prefix(9).last == .Some("/") && String(
-								submodule.path.characters.prefix(CarthageProjectCheckoutsPath.characters.count)
-							).caseInsensitiveCompare(CarthageProjectCheckoutsPath) == .OrderedSame
-						}.map { $0.name } as [String]).contains(identifier.name)
-					}
-				}
-				
-				let (checkoutOrClone, potentiallyCloneSubmoduleInWorkingDirectory): (
-					SignalProducer<(), CarthageError>,
-					(Submodule) -> SignalProducer<(), CarthageError>
-				) = submodule.map {
-					(
-						addSubmoduleToRepository(self.directoryURL, $0, GitURL(repositoryURL.path!)).startOnQueue(self.gitOperationQueue),
-						{ _ in return .empty } // No-op — submodules are recursed through and initialized by git, in above call
-					)
-				} ?? /* Otherwise, for checkouts of “ideally bare” depositories, we clone submodules ourselves. */ (
-					checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision),
-					{ return cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL) }
-				)
-				
-				return checkoutOrClone.then(
-					submodulesInRepository(self.directoryURL, revision: revision)
-						.attempt /* just for side effects */ {
-							potentiallyCloneSubmoduleInWorkingDirectory($0).single()!
-						}.collect().flatMap(.Merge) { submodules in
-							// Symlink dependencies which do not match submodules.
-							self.dependenciesForDependency(dependency).flatMap(.Merge) { dependencies in
-								self.symlinkCheckoutPathsForDependencyProject(dependency.project, subDependencies: filter(dependencies, by: submodules), rootDirectoryURL: self.directoryURL)
-							}
+				if let submodule = submodule {
+					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!))
+						.startOnQueue(self.gitOperationQueue)
+				} else {
+					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
+						.then(self.dependenciesForDependency(dependency))
+						.flatMap(.Merge) { dependencies in
+							return self.symlinkCheckoutPathsForDependencyProject(dependency.project, subDependencies: dependencies, rootDirectoryURL: self.directoryURL)
 						}
-				).then(.empty)
+				}
 			}
 			.on(started: {
 				self._projectEventsObserver.sendNext(.CheckingOut(project, revision))
@@ -706,7 +679,7 @@ public final class Project {
 	}
 
 	/// Creates symlink between the dependency checkouts and the root checkouts
-	private func symlinkCheckoutPathsForDependencyProject(dependency: ProjectIdentifier, subDependencies: [ProjectIdentifier], rootDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
+	private func symlinkCheckoutPathsForDependencyProject(dependency: ProjectIdentifier, subDependencies: Set<ProjectIdentifier>, rootDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
 		let rootCheckoutsURL = rootDirectoryURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).URLByResolvingSymlinksInPath!
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
