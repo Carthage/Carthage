@@ -79,7 +79,7 @@ private struct VersionFile {
 	func cachedPlatforms() -> Set<Platform> {
 		return Set(Platform.supportedPlatforms
 			.flatMap { platform in
-				return cacheForPlatform(platform) != nil ? [platform] : []
+				return self.cacheForPlatform(platform) != nil ? [platform] : []
 			})
 	}
 	
