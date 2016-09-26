@@ -138,7 +138,7 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
 	
 	if let oldVersionFile: VersionFile = readVersionFileAtURL(versionFileURL) {
-		for platform in Platform.supportedPlatforms	{
+		for platform in Platform.supportedPlatforms {
 			if let oldCachedPlatform = oldVersionFile.cacheForPlatform(platform) where cachedPlatforms[platform.rawValue] == nil {
 				cachedPlatforms[platform.rawValue] = oldCachedPlatform
 			}

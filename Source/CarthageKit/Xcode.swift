@@ -1304,7 +1304,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 					// use our initial value instead of waiting for
 					// completion.
 					.map { (taskEvent: TaskEvent<NSURL>) -> TaskEvent<(ProjectLocator, String)> in
-						return .Success(ignoredValue)
+						return taskEvent.map { _ in ignoredValue }
 					}
 					.filter { taskEvent in
 						return taskEvent.value == nil
