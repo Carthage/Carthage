@@ -263,9 +263,7 @@ public func contentsOfFileInRepository(repositoryFileURL: NSURL, _ path: String,
 /// Checks out the working tree of the given (ideally bare) repository, at the
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
-///
-/// Submodules of the working tree must be handled seperately.
-public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD") -> SignalProducer<(), CarthageError> {
+public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt { () -> Result<[String: String], CarthageError> in
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil)
@@ -278,7 +276,21 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDir
 			return .Success(environment)
 		}
 		.flatMap(.Concat) { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
-		.then(.empty)
+		.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision, shouldCloneSubmodule: shouldCloneSubmodule))
+}
+
+/// Clones matching submodules for the given repository at the specified
+/// revision, into the given working directory.
+public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
+	return submodulesInRepository(repositoryFileURL, revision: revision)
+		.flatMap(.Concat) { submodule -> SignalProducer<(), CarthageError> in
+			if shouldCloneSubmodule(submodule) {
+				return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
+			} else {
+				return .empty
+			}
+		}
+		.filter { _ in false }
 }
 
 /// Clones the given submodule into the working directory of its parent
