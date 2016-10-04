@@ -932,8 +932,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 							return false
 						}
 					}
+					.collect()
 					.flatMap(.Concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
-						if settings.bitcodeEnabled.value == true {
+						let bitcodeEnabled = settings.reduce(true) { $0 && ($1.bitcodeEnabled.value ?? false) }
+						if bitcodeEnabled {
 							argsForBuilding.bitcodeGenerationMode = .Bitcode
 						}
 
@@ -941,9 +943,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 						return launchTask(buildScheme)
-							.map { taskEvent in
-								taskEvent.map { _ in settings }
-							}
+							.flatMapTaskEvents(.Concat) { _ in SignalProducer(values: settings) }
 							.mapError(CarthageError.TaskError)
 					}
 			}
@@ -1166,8 +1166,7 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 	}
 }
 
-/// Builds the first project or workspace found within the given directory which
-/// has at least one shared framework scheme.
+/// Builds the any shared framework schemes found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
