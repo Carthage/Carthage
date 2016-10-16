@@ -20,6 +20,12 @@ guard ensureGitVersion().first()?.value == true else {
 	exit(EXIT_FAILURE)
 }
 
+let carthageVersion = fetchLatestCarthageVersion()
+
+if carthageVersion.shouldUpgrade() == true {
+	print("Please update to the latest Carthage version: \(carthageVersion.remoteVersion). You currently are on \(carthageVersion.localVersion)")
+}
+
 if let carthagePath = NSBundle.mainBundle().executablePath {
 	setenv("CARTHAGE_PATH", carthagePath, 0)
 }
