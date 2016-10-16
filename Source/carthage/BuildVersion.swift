@@ -6,9 +6,8 @@
 //  Copyright © 2016 Carthage. All rights reserved.
 //
 
-import CarthageKit
-import Commandant
 import Foundation
+import CarthageKit
 import ReactiveCocoa
 import ReactiveTask
 import Result
@@ -35,10 +34,18 @@ public struct CarthageVersion{
 }
 
 func fetchLatestCarthageVersion() -> CarthageVersion{
+	return CarthageVersion(localVersion: localVersion(), remoteVersion: remoteVersion())
+}
+
+func localVersion() -> SemanticVersion {
 	
 	let versionString = NSBundle(identifier: CarthageKitBundleIdentifier)?.objectForInfoDictionaryKey("CFBundleShortVersionString") as! String
+	return SemanticVersion.fromString(versionString).value!
+}
+
+func remoteVersion() -> SemanticVersion {
 	
-	let latestVersion = Client(.DotCom)
+	let latestRemoteVersion = Client(.DotCom)
 		.releasesInRepository(Repository(owner: "Carthage", name: "Carthage"), perPage: 1)
 		.map { (_, releases) in
 			return releases.first!
@@ -50,5 +57,5 @@ func fetchLatestCarthageVersion() -> CarthageVersion{
 		.timeoutWithError(CarthageError.GitHubAPITimeout, afterInterval: 0.1, onScheduler: QueueScheduler.mainQueueScheduler)
 		.first()
 	
-	return CarthageVersion(localVersion: SemanticVersion.fromString(versionString).value!, remoteVersion: latestVersion!.value!)
+	return latestRemoteVersion!.value!
 }
