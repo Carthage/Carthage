@@ -27,13 +27,7 @@ private func gitHubUserAgent() -> String {
 extension Repository {
 	/// The URL that should be used for cloning this repository over HTTPS.
 	public var HTTPSURL: GitURL {
-		let auth: String
-		if let token = tokenFromEnvironment(forServer: server) {
-			auth = "\(token)@"
-		} else {
-			auth = ""
-		}
-
+		let auth = tokenFromEnvironment(forServer: server).map { "\($0)@" } ?? ""
 		let scheme: String
 		#if swift(>=2.3)
 			scheme = server.URL.scheme!
