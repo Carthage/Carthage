@@ -22,8 +22,7 @@ extension Scannable {
 	
 	/// Attempts to create an instance of NSScanner and then use the convenience
 	/// function specified in the protocol
-	static public func fromString(string: String) -> Result<Self, CarthageError>
-	{
+	static public func fromString(string: String) -> Result<Self, CarthageError> {
 		return Self.fromScanner(NSScanner(string: string))
 	}
 

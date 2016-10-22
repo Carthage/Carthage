@@ -13,27 +13,22 @@ import ReactiveTask
 import Result
 import Tentacle
 
-public struct CarthageVersion{
+public struct CarthageVersion {
 	
-	public let localVersion:SemanticVersion
-	public let remoteVersion:SemanticVersion
+	public let localVersion: SemanticVersion
+	public let remoteVersion: SemanticVersion
 	
-	public init (localVersion: SemanticVersion, remoteVersion:SemanticVersion){
+	public init(localVersion: SemanticVersion, remoteVersion: SemanticVersion) {
 		self.localVersion = localVersion
 		self.remoteVersion = remoteVersion
 	}
 	
-	func shouldUpgrade() ->Bool {
-		
-		if localVersion < remoteVersion {
-			return true
-		}
-		
-		return false
+	func shouldUpgrade() -> Bool {
+		return localVersion < remoteVersion
 	}
 }
 
-func fetchLatestCarthageVersion() -> CarthageVersion{
+func fetchLatestCarthageVersion() -> CarthageVersion {
 	return CarthageVersion(localVersion: localVersion(), remoteVersion: remoteVersion())
 }
 
@@ -54,7 +49,7 @@ func remoteVersion() -> SemanticVersion {
 		.attemptMap { (release) -> Result<SemanticVersion, CarthageError> in
 			return SemanticVersion.fromString(release.tag)
 		}
-		.timeoutWithError(CarthageError.GitHubAPITimeout, afterInterval: 0.1, onScheduler: QueueScheduler.mainQueueScheduler)
+		.timeoutWithError(CarthageError.GitHubAPITimeout, afterInterval: 3, onScheduler: QueueScheduler.mainQueueScheduler)
 		.first()
 	
 	return latestRemoteVersion!.value!
