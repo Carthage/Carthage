@@ -43,14 +43,3 @@ notifications:
 env:
   global:
     - secure: DofNs+Ej7JblkkGMTHOl4XMBfv0EKVvzZU7OOm7U6Hyxu0J0SN6E3s61Q4HUWOBvM3Yrxf+8jpFKI29w69WArmRPpmK6GCaZar8ldUBHNmN3gaeOaGmGyrmnre4hxHjJzc0E3HAmJ03v94HW5JwQzKpIUjxg4dSttJMT6WOmnxE=
-deploy:
-  provider: releases
-  api-key:
-    secure: c1fMI4p8oUVGi7SkDLqXpZDhrVVnLWU8J6+rWc3pTMmeNmEGopZpCiiQupHoHXx+Fq3+8R4M2iG0IgfcVTb6q5HD2RH0+q57/p9vcYIlCS8E/1o2BPUHUfH1Poc1vs7VdFpjWFmbm6Twnnffbz3AsELjv3mJyRxR6fUAliwfnWk=
-  file:
-    - Carthage.pkg
-    - CarthageKit.framework.zip
-  skip_cleanup: true
-  on:
-    tags: true
-    condition: $JOB = CI_BUILD_PACKAGE
