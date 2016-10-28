@@ -32,11 +32,16 @@ class SemanticVersionSpec: QuickSpec {
 		it("should parse semantic versions") {
 			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("1.4")).value) == SemanticVersion(major: 1, minor: 4, patch: 0)
 			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.9")).value) == SemanticVersion(major: 2, minor: 8, patch: 9)
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("2.8.2-alpha")).value) == SemanticVersion(major: 2, minor: 8, patch: 2, preRelease: "alpha")
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("2.8.2-alpha+build234")).value) == SemanticVersion(major: 2, minor: 8, patch: 2, preRelease: "alpha", buildMetadata: "build234")
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("2.8.2+build234")).value) == SemanticVersion(major: 2, minor: 8, patch: 2, buildMetadata: "build234")
+
 		}
 
 		it("should fail on invalid semantic versions") {
 			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v1")).value).to(beNil())
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8-alpha")).value).to(beNil())
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8-alpha")).value).to(beNil()) // pre-release should be after patch
+			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8+build345")).value).to(beNil()) // build should be after patch
 			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("null-string-beta-2")).value).to(beNil())
 		}
 	}

@@ -14,6 +14,7 @@ import ReactiveCocoa
 public protocol VersionType: Equatable {}
 
 /// A semantic version.
+/// - Note: See <http://semver.org/>
 public struct SemanticVersion: VersionType, Comparable {
 	/// The major version.
 	///
@@ -30,7 +31,17 @@ public struct SemanticVersion: VersionType, Comparable {
 	///
 	/// Increments to this component represent backwards-compatible bug fixes.
 	public let patch: Int
-
+	
+	/// The pre-release identifier
+	///
+	/// Indicates that the version is unstable
+	public let preRelease : String?
+	
+	/// The build metadata
+	///
+	/// Build metadata is ignored when comparing versions
+	public let buildMetadata : String?
+	
 	/// The pin from which this semantic version was derived.
 	public var pinnedVersion: PinnedVersion?
 
@@ -40,10 +51,12 @@ public struct SemanticVersion: VersionType, Comparable {
 		return [ major, minor, patch ]
 	}
 
-	public init(major: Int, minor: Int, patch: Int) {
+	public init(major: Int, minor: Int, patch: Int, preRelease: String? = nil, buildMetadata: String? = nil) {
 		self.major = major
 		self.minor = minor
 		self.patch = patch
+		self.preRelease = preRelease
+		self.buildMetadata = buildMetadata
 	}
 
 	/// The set of all characters present in valid semantic versions.
@@ -63,8 +76,6 @@ public struct SemanticVersion: VersionType, Comparable {
 				version.pinnedVersion = pinnedVersion
 				return .Success(version)
 			} else {
-				// Disallow versions like "1.0a5", because we only support
-				// SemVer right now.
 				return .Failure(CarthageError.ParseError(description: "syntax of version \"\(version)\" is unsupported"))
 			}
 		}
@@ -75,31 +86,64 @@ extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
 	static public func fromScanner(scanner: NSScanner) -> Result<SemanticVersion, CarthageError> {
-		var version: NSString? = nil
-		if !scanner.scanCharactersFromSet(versionCharacterSet, intoString: &version) || version == nil {
+		var versionBuffer: NSString? = nil
+		guard scanner.scanCharactersFromSet(versionCharacterSet, intoString: &versionBuffer), let version = versionBuffer as? String else {
 			return .Failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
-
-		let components = (version! as String).characters.split(allowEmptySlices: false) { $0 == "." }.map(String.init)
+		
+		let components = version.characters.split(allowEmptySlices: false) { $0 == "." }.map(String.init)
 		if components.count == 0 {
 			return .Failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
 
 		let major = Int(components[0])
 		if major == nil {
-			return .Failure(CarthageError.ParseError(description: "expected major version number in \"\(version!)\""))
+			return .Failure(CarthageError.ParseError(description: "expected major version number in \"\(version)\""))
 		}
 
 		let minor = (components.count > 1 ? Int(components[1]) : nil)
 		if minor == nil {
-			return .Failure(CarthageError.ParseError(description: "expected minor version number in \"\(version!)\""))
+			return .Failure(CarthageError.ParseError(description: "expected minor version number in \"\(version)\""))
 		}
 
-		let patch = (components.count > 2 ? Int(components[2]) : 0)
+		let hasPatchComponent = components.count > 2
+		let patch = (hasPatchComponent ? Int(components[2]) : 0)
 
-		return .Success(self.init(major: major!, minor: minor ?? 0, patch: patch ?? 0))
+		let preRelease = scanner.scanStringWithPrefix("-", until: "+")
+		let buildMetadata = scanner.scanStringWithPrefix("+", until: "")
+
+		guard (preRelease == nil && buildMetadata == nil) || hasPatchComponent else {
+			return .Failure(CarthageError.ParseError(description: "can not have pre-release or build metadata without patch, in \"\(version)\""))
+		}
+		
+		return .Success(self.init(major: major!,
+			minor: minor ?? 0,
+			patch: patch ?? 0,
+			preRelease: preRelease,
+			buildMetadata: buildMetadata))
 	}
 }
+
+extension NSScanner {
+	
+	/// Scans a string that is supposed to start with the given prefix, until the given
+	/// string is encountered.
+	/// - returns: the scanned string without the prefix. If the string does not start with the prefix,
+	/// or the scanner is at the end, it returns `nil`.
+	private func scanStringWithPrefix(prefix: String, until: String) -> String? {
+		if !self.atEnd {
+			var buffer : NSString? = nil
+			self.scanUpToString(until, intoString: &buffer)
+			guard let stringWithPrefix = buffer as? String where stringWithPrefix.hasPrefix(prefix) else {
+				return nil
+			}
+			return stringWithPrefix.substringFromIndex(stringWithPrefix.startIndex.advancedBy(prefix.characters.count))
+		} else {
+			return nil
+		}
+	}
+}
+
 
 public func <(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
 	return lhs.components.lexicographicalCompare(rhs.components)
