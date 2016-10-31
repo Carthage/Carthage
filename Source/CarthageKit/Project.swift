@@ -11,7 +11,7 @@ import Result
 import ReactiveCocoa
 import Tentacle
 
-/// Carthage’s bundle identifier.
+/// Carthage's bundle identifier.
 public let CarthageKitBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
 
 /// The fallback dependencies URL to be used in case

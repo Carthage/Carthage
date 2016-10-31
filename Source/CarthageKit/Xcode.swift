@@ -490,7 +490,7 @@ public struct BuildSettings {
 			// can sometimes hang indefinitely on projects that don't
 			// share any schemes, so automatically bail out if it looks
 			// like that's happening.
-			.timeoutWithError(.XcodebuildTimeout(arguments.project), afterInterval: 30, onScheduler: QueueScheduler(qos: QOS_CLASS_DEFAULT))
+			.timeoutWithError(.XcodebuildTimeout(arguments.project), afterInterval: 60, onScheduler: QueueScheduler(qos: QOS_CLASS_DEFAULT))
 			.retry(5)
 			.map { (data: NSData) -> String in
 				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
@@ -931,8 +931,10 @@ public func buildScheme(scheme: String, withOptions options: BuildOptions, inPro
 							return false
 						}
 					}
+					.collect()
 					.flatMap(.Concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
-						if settings.bitcodeEnabled.value == true {
+						let bitcodeEnabled = settings.reduce(true) { $0 && ($1.bitcodeEnabled.value ?? false) }
+						if bitcodeEnabled {
 							argsForBuilding.bitcodeGenerationMode = .Bitcode
 						}
 
@@ -940,9 +942,7 @@ public func buildScheme(scheme: String, withOptions options: BuildOptions, inPro
 						buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
 						return launchTask(buildScheme)
-							.map { taskEvent in
-								taskEvent.map { _ in settings }
-							}
+							.flatMapTaskEvents(.Concat) { _ in SignalProducer(values: settings) }
 							.mapError(CarthageError.TaskError)
 					}
 			}
@@ -1227,8 +1227,7 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 	}
 }
 
-/// Builds the first project or workspace found within the given directory which
-/// has at least one shared framework scheme.
+/// Builds the any shared framework schemes found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
 public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOptions, dependency: Dependency<PinnedVersion>? = nil, rootDirectoryURL: NSURL? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> BuildSchemeProducer {

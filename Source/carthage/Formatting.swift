@@ -92,6 +92,6 @@ public struct ColorOptions: OptionsType {
 	
 	public static func evaluate(m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
 		return create
-			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "whether to apply color and terminal formatting (one of ‘auto’, ‘always’, or ‘never’)")
+			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')")
 	}
 }
