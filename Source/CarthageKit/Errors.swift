@@ -78,6 +78,8 @@ public enum CarthageError: ErrorType, Equatable {
 	
 	/// A request to the GitHub API failed.
 	case GitHubAPIRequestFailed(Client.Error)
+	
+	case GitHubAPITimeout
 
 	/// An error occurred while shelling out.
 	case TaskError(ReactiveTask.TaskError)
@@ -134,6 +136,9 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 	
 	case let (.GitHubAPIRequestFailed(left), .GitHubAPIRequestFailed(right)):
 		return left == right
+		
+	case (.GitHubAPITimeout, .GitHubAPITimeout):
+		return true
 	
 	case let (.TaskError(left), .TaskError(right)):
 		return left == right
@@ -254,6 +259,9 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .GitHubAPIRequestFailed(message):
 			return "GitHub API request failed: \(message)"
+			
+		case .GitHubAPITimeout:
+			return "GitHub API timed out"
 			
 		case let .UnknownDependencies(names):
 			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joinWithSeparator(", ")) in Cartfile."

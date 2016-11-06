@@ -17,3 +17,13 @@ public protocol Scannable {
 	/// character (with any partially valid input already consumed).
 	static func fromScanner(scanner: NSScanner) -> Result<Self, CarthageError>
 }
+
+extension Scannable {
+	
+	/// Attempts to create an instance of NSScanner and then use the convenience
+	/// function specified in the protocol
+	static public func fromString(string: String) -> Result<Self, CarthageError> {
+		return Self.fromScanner(NSScanner(string: string))
+	}
+
+}
