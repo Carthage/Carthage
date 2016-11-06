@@ -181,6 +181,9 @@ public enum ProjectIdentifier: Comparable {
 	/// An arbitrary Git repository.
 	case Git(GitURL)
 
+	/// An arbitrary HTTP url
+	case HTTP(NSURL)
+
 	/// The unique, user-visible name for this project.
 	public var name: String {
 		switch self {
@@ -189,6 +192,9 @@ public enum ProjectIdentifier: Comparable {
 
 		case let .Git(URL):
 			return URL.name ?? URL.URLString
+
+		case let .HTTP(URL):
+			return URL.projectName
 		}
 	}
 
@@ -207,6 +213,8 @@ public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 	case let (.Git(left), .Git(right)):
 		return left == right
 
+	case let (.HTTP(left), .HTTP(right)):
+		return left == right
 	default:
 		return false
 	}
@@ -224,6 +232,8 @@ extension ProjectIdentifier: Hashable {
 
 		case let .Git(URL):
 			return URL.hashValue
+		case let .HTTP(URL):
+			return URL.hashValue
 		}
 	}
 }
@@ -240,6 +250,13 @@ extension ProjectIdentifier: Scannable {
 		} else if scanner.scanString("git", intoString: nil) {
 			parser = { URLString in
 				return .Success(self.Git(GitURL(URLString)))
+			}
+		} else if scanner.scanString("http", intoString: nil) {
+			parser = { URLString in
+				guard let url = NSURL(string:URLString) where url.isValidFrameworkURL else {
+					return .Failure(CarthageError.ParseError(description: "invalid URL in line: \(scanner.currentLine)"))
+				}
+				return .Success(self.HTTP(url))
 			}
 		} else {
 			return .Failure(CarthageError.ParseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
@@ -278,6 +295,9 @@ extension ProjectIdentifier: CustomStringConvertible {
 
 		case let .Git(URL):
 			return "git \"\(URL)\""
+
+		case let .HTTP(URL):
+			return "http \"\(URL.absoluteString)\""
 		}
 	}
 }
@@ -312,5 +332,17 @@ extension Dependency where V: Scannable {
 extension Dependency: CustomStringConvertible {
 	public var description: String {
 		return "\(project) \(version)"
+	}
+}
+
+private extension NSURL {
+	var isValidFrameworkURL: Bool {
+		guard let lastPathComponent = lastPathComponent else { return false }
+		return lastPathComponent.lowercaseString.hasSuffix(".zip")
+	}
+
+	var projectName: String {
+		guard let lastPathComponent = lastPathComponent else { fatalError() }
+		return lastPathComponent.stringByReplacingOccurrencesOfString(".zip", withString: "", options: .CaseInsensitiveSearch, range: nil)
 	}
 }
