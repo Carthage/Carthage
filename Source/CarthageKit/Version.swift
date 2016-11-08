@@ -42,6 +42,11 @@ public struct SemanticVersion: VersionType {
 	public var components: [Int] {
 		return [ major, minor, patch ]
 	}
+	
+	/// Whether this is a prerelease version
+	public var isPreRelease : Bool {
+		return self.preRelease != nil
+	}
 
 	public init(major: Int, minor: Int, patch: Int, preRelease: String? = nil, buildMetadata: String? = nil) {
 		self.major = major
@@ -69,6 +74,14 @@ public struct SemanticVersion: VersionType {
 				return .failure(ScannableError(message: "syntax of version \"\(version)\" is unsupported", currentLine: scanner.currentLine))
 			}
 		}
+	}
+	
+	/// The same SemanticVersion as self, except that the build metadata is discarded
+	public var discardingBuildMetadata: SemanticVersion {
+		return SemanticVersion(major: self.major,
+		                       minor: self.minor,
+		                       patch: self.patch,
+		                       preRelease: self.preRelease)
 	}
 }
 
@@ -139,15 +152,18 @@ extension Scanner {
 	}
 }
 
-
-
 extension SemanticVersion: Comparable {
 	public static func < (_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
+		if lhs.components == rhs.components {
+			return lhs.isPreReleaseLesser(preRelease: rhs.preRelease)
+		}
 		return lhs.components.lexicographicallyPrecedes(rhs.components)
 	}
 
 	public static func == (_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
 		return lhs.components == rhs.components
+			&& lhs.preRelease == rhs.preRelease
+			&& lhs.buildMetadata == rhs.buildMetadata
 	}
 }
 
@@ -159,9 +175,104 @@ extension SemanticVersion: Hashable {
 
 extension SemanticVersion: CustomStringConvertible {
 	public var description: String {
-		return components.map { $0.description }.joined(separator: ".")
+		var description = components.map { $0.description }.joined(separator: ".")
+		if let preRelease = self.preRelease {
+			description += "-\(preRelease)"
+		}
+		if let buildMetadata = self.buildMetadata {
+			description += "+\(buildMetadata)"
+		}
+		return description
 	}
 }
+
+extension SemanticVersion {
+	
+	/// Compares the pre-release component with the given pre-release
+	/// assuming that the other components (major, minor, patch) are the same
+	private func isPreReleaseLesser(preRelease: String?) -> Bool {
+		
+		// a non-pre-release is not lesser
+		guard let selfPreRelease = self.preRelease else {
+			return false
+		}
+		
+		// a pre-release version is lesser than a non-pre-release
+		guard let otherPreRelease = preRelease else {
+			return true
+		}
+		
+		// same pre-release version has no precedence. Build metadata could differ,
+		// but there is no ordering defined on build metadata
+		guard selfPreRelease != otherPreRelease else {
+			return false // undefined ordering
+		}
+		
+		// Compare dot separated components one by one
+		// From http://semver.org/:
+		// "Precedence for two pre-release versions with the same major, minor, and patch
+		// version MUST be determined by comparing each dot separated identifier from left
+		// to right until a difference is found [...]. A larger set of pre-release fields
+		// has a higher precedence than a smaller set, if all of the preceding
+		// identifiers are equal."
+
+		let selfComponents = selfPreRelease.components(separatedBy: ".")
+		let otherComponents = otherPreRelease.components(separatedBy: ".")
+		let nonEqualComponents = zip(selfComponents, otherComponents)
+			.filter { $0.0 != $0.1 }
+		
+		for (selfComponent, otherComponent) in nonEqualComponents {
+			return selfComponent.lesserThanPreReleaseVersionComponent(other: otherComponent)
+		}
+		
+		// if I got here, the two pre-release are not the same, but there are not non-equal
+		// components, so one must have move pre-components than the other
+		return selfComponents.count < otherComponents.count
+	}
+	
+	/// Returns whether a version has the same numeric components (major, minor, patch)
+	func hasSameNumericComponents(version: SemanticVersion) -> Bool {
+		return self.components == version.components
+	}
+}
+
+extension String {
+	
+	/// Returns the Int value of the string, if the string is only composed of digits
+	private var numericValue : Int? {
+		if !self.isEmpty && self.rangeOfCharacter(from: CharacterSet.decimalDigits.inverted) == nil {
+			return Int(self)
+		}
+		return nil
+	}
+	
+	/// Returns whether the string, considered a pre-release version component, should be
+	/// considered lesser than another pre-release version component
+	fileprivate func lesserThanPreReleaseVersionComponent(other: String) -> Bool {
+		// From http://semver.org/:
+		// "[the order is defined] as follows: identifiers consisting of only
+		// digits are compared numerically and identifiers with letters or hyphens are
+		// compared lexically in ASCII sort order. Numeric identifiers always have lower
+		// precedence than non-numeric identifiers"
+		
+		guard let numericSelf = self.numericValue else {
+			guard let _ = other.numericValue else {
+				// other is not numeric, self is not numeric, compare strings
+				return self.compare(other) == .orderedAscending
+			}
+			// other is numeric, self is not numeric, other is lower
+			return false
+		}
+		
+		guard let numericOther = other.numericValue else {
+			// other is not numeric, self is numeric, self is lower
+			return true
+		}
+		
+		return numericSelf < numericOther
+	}
+}
+
 
 /// An immutable version that a project can be pinned to.
 public struct PinnedVersion: VersionType {
@@ -221,34 +332,54 @@ public enum VersionSpecifier: VersionType {
 			if let semanticVersion = SemanticVersion.from(version).value {
 				return predicate(semanticVersion)
 			} else {
-				// Consider non-semantic versions (e.g., branches) to meet every
-				// version range requirement.
-				return true
+				// Consider non-semantic versions (e.g., branches) not to meet
+				// any requirement as we can't guarantee any ordering nor
+				// compatibility
+				return false
 			}
 		}
 
 		switch self {
-		case .any, .gitReference:
+		case .any:
+			return withSemanticVersion { !$0.isPreRelease }
+		case .gitReference:
 			return true
-
 		case let .exactly(requirement):
 			return withSemanticVersion { $0 == requirement }
 
 		case let .atLeast(requirement):
-			return withSemanticVersion { $0 >= requirement }
-
+			return withSemanticVersion { version in
+				let versionIsNewer = version >= requirement
+				
+				// Only pick a pre-release version if the requirement is also
+				// a pre-release of the same version
+				let notPreReleaseOrSameComponents =	!version.isPreRelease
+					|| (requirement.isPreRelease && version.hasSameNumericComponents(version: requirement))
+				return notPreReleaseOrSameComponents && versionIsNewer
+			}
 		case let .compatibleWith(requirement):
 			return withSemanticVersion { version in
+				
+				let versionIsNewer = version >= requirement
+				let notPreReleaseOrSameComponents =	!version.isPreRelease
+					|| (requirement.isPreRelease && version.hasSameNumericComponents(version: requirement))
+				
+				// Only pick a pre-release version if the requirement is also 
+				// a pre-release of the same version
+				guard notPreReleaseOrSameComponents else {
+					return false
+				}
+				
 				// According to SemVer, any 0.x.y release may completely break the
 				// exported API, so it's not safe to consider them compatible with one
 				// another. Only patch versions are compatible under 0.x, meaning 0.1.1 is
 				// compatible with 0.1.2, but not 0.2. This isn't according to the SemVer
 				// spec but keeps ~> useful for 0.x.y versions.
 				if version.major == 0 {
-					return version.minor == requirement.minor && version >= requirement
+					return version.minor == requirement.minor && versionIsNewer
 				}
 
-				return version.major == requirement.major && version >= requirement
+				return version.major == requirement.major && versionIsNewer
 			}
 		}
 	}
@@ -377,11 +508,23 @@ public func intersection(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Ve
 	switch (lhs, rhs) {
 	// Unfortunately, patterns with a wildcard _ are not considered exhaustive,
 	// so do the same thing manually. – swiftlint:disable:this vertical_whitespace_between_cases
-	case (.any, .any), (.any, .atLeast), (.any, .compatibleWith), (.any, .exactly):
+	case (.any, .any), (.any, .exactly):
 		return rhs
-
-	case (.atLeast, .any), (.compatibleWith, .any), (.exactly, .any):
+		
+	case let (.any, .atLeast(rv)):
+		return .atLeast(rv.discardingBuildMetadata)
+		
+	case let (.any, .compatibleWith(rv)):
+		return .compatibleWith(rv.discardingBuildMetadata)
+		
+	case (.exactly, .any):
 		return lhs
+		
+	case let (.compatibleWith(lv), .any):
+		return .compatibleWith(lv.discardingBuildMetadata)
+		
+	case let (.atLeast(lv), .any):
+		return .atLeast(lv.discardingBuildMetadata)
 
 	case (.gitReference, .any), (.gitReference, .atLeast), (.gitReference, .compatibleWith), (.gitReference, .exactly):
 		return lhs
@@ -397,16 +540,16 @@ public func intersection(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Ve
 		return lhs
 
 	case let (.atLeast(lv), .atLeast(rv)):
-		return .atLeast(max(lv, rv))
+		return .atLeast(max(lv.discardingBuildMetadata, rv.discardingBuildMetadata))
 
 	case let (.atLeast(lv), .compatibleWith(rv)):
-		return intersection(atLeast: lv, compatibleWith: rv)
+		return intersection(atLeast: lv.discardingBuildMetadata, compatibleWith: rv.discardingBuildMetadata)
 
 	case let (.atLeast(lv), .exactly(rv)):
-		return intersection(atLeast: lv, exactly: rv)
+		return intersection(atLeast: lv.discardingBuildMetadata, exactly: rv)
 
 	case let (.compatibleWith(lv), .atLeast(rv)):
-		return intersection(atLeast: rv, compatibleWith: lv)
+		return intersection(atLeast: rv.discardingBuildMetadata, compatibleWith: lv.discardingBuildMetadata)
 
 	case let (.compatibleWith(lv), .compatibleWith(rv)):
 		if lv.major != rv.major {
@@ -424,16 +567,16 @@ public func intersection(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Ve
 			}
 		}
 
-		return .compatibleWith(max(lv, rv))
+		return .compatibleWith(max(lv.discardingBuildMetadata, rv.discardingBuildMetadata))
 
 	case let (.compatibleWith(lv), .exactly(rv)):
-		return intersection(compatibleWith: lv, exactly: rv)
+		return intersection(compatibleWith: lv.discardingBuildMetadata, exactly: rv)
 
 	case let (.exactly(lv), .atLeast(rv)):
-		return intersection(atLeast: rv, exactly: lv)
+		return intersection(atLeast: rv.discardingBuildMetadata, exactly: lv)
 
 	case let (.exactly(lv), .compatibleWith(rv)):
-		return intersection(compatibleWith: rv, exactly: lv)
+		return intersection(compatibleWith: rv.discardingBuildMetadata, exactly: lv)
 
 	case let (.exactly(lv), .exactly(rv)):
 		if lv != rv {
