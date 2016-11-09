@@ -35,26 +35,26 @@ sudo make uninstall
 brew install carthage
 ```
 
-## Run Carthage from XCode
+## Run Carthage from Xcode
 
-It may be useful to run Carthage on different `Cartfile`s or in "real" project for debugging purpouse or to learn how Carthage works. Carthage is a regular macOS application so you can run it inside XCode and set breakpoints! To do so you may want to change the arguments passed to Carthage's command line tool and probably also change the working directory.
+It may be useful to run Carthage on different `Cartfile`s or in "real" project for debugging purpouse or to learn how Carthage works. Carthage is a regular macOS application so you can run it inside Xcode and set breakpoints! To do so you may want to change the arguments passed to Carthage's command line tool and probably also change the working directory.
 
  1. Select the `carthage` scheme in the Scheme chooser.
- ![step01](./Documentation/Resources/Contributing/RunCarthageFromXCode/step01.png)
+ ![step01](./Documentation/Resources/Contributing/RunCarthageFromXcode/step01.png)
 
  2. The go to `Product > Scheme > Edit current scheme` or press ⌘ + <.
- ![step02](./Documentation/Resources/Contributing/RunCarthageFromXCode/step02.png)
+ ![step02](./Documentation/Resources/Contributing/RunCarthageFromXcode/step02.png)
 
  3. On the edit scheme sheet, on the left column select `Run`.
 
  4. On the Info tab you may want to change the `Build Configuration` to `Debug`.
- ![step04](./Documentation/Resources/Contributing/RunCarthageFromXCode/step04.png)
+ ![step04](./Documentation/Resources/Contributing/RunCarthageFromXcode/step04.png)
 
  5. You can set the arguments you want to pass to Carthage's command line tool in the `Arguments` tab.
- ![step05](./Documentation/Resources/Contributing/RunCarthageFromXCode/step05.png)
+ ![step05](./Documentation/Resources/Contributing/RunCarthageFromXcode/step05.png)
 
  6. You can change the `Working Directory` on the `Options` tab. Choose a absolute path where a `Cartfile` is located.
- ![step06](./Documentation/Resources/Contributing/RunCarthageFromXCode/step06.png)
+ ![step06](./Documentation/Resources/Contributing/RunCarthageFromXcode/step06.png)
 
  7. Run the application by going to `Product > Run` or ⌘ + R.
 
