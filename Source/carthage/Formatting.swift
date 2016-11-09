@@ -58,7 +58,7 @@ public struct ColorOptions: OptionsType {
 		let isColorful: Bool
 		let bullets: String
 		let bulletin: Wrap
-		let URL: Wrap
+		let url: Wrap
 		let projectName: Wrap
 		let path: Wrap
 		
@@ -70,7 +70,7 @@ public struct ColorOptions: OptionsType {
 			self.isColorful = isColorful
 			bulletin      = wrap(isColorful, wrap: Color.Wrap(foreground: .Blue, style: .Bold))
 			bullets       = bulletin(string: "***") + " "
-			URL           = wrap(isColorful, wrap: Color.Wrap(styles: .Underlined))
+			url           = wrap(isColorful, wrap: Color.Wrap(styles: .Underlined))
 			projectName   = wrap(isColorful, wrap: Color.Wrap(styles: .Bold))
 			path          = wrap(isColorful, wrap: Color.Wrap(foreground: .Yellow))
 		}

@@ -216,7 +216,7 @@ public struct BuildCommand: CommandType {
 			return SignalProducer(value: out)
 		} else {
 			return openTemporaryFile()
-				.map { handle, URL in (handle, .Some(URL)) }
+				.map { handle, url in (handle, Optional(url)) }
 				.mapError { error in
 					let temporaryDirectoryURL = NSURL.fileURLWithPath(NSTemporaryDirectory(), isDirectory: true)
 					return .writeFailed(temporaryDirectoryURL, error)

@@ -45,11 +45,11 @@ public struct BuildArguments {
 		var args = [ "xcodebuild" ]
 
 		switch project {
-		case let .workspace(URL):
-			args += [ "-workspace", URL.path! ]
+		case let .workspace(url):
+			args += [ "-workspace", url.path! ]
 
-		case let .projectFile(URL):
-			args += [ "-project", URL.path! ]
+		case let .projectFile(url):
+			args += [ "-project", url.path! ]
 		}
 
 		if let scheme = scheme {
