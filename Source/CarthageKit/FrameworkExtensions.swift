@@ -263,35 +263,19 @@ extension NSURL {
 	}
 
 	public var carthage_absoluteString: String {
-		#if swift(>=2.3)
-			return absoluteString!
-		#else
-			return absoluteString
-		#endif
+		return absoluteString!
 	}
 
 	public func appendingPathExtension(pathExtension: String) -> NSURL {
-		#if swift(>=2.3)
-			return URLByAppendingPathExtension(pathExtension)!
-		#else
-			return URLByAppendingPathExtension(pathExtension)
-		#endif
+		return URLByAppendingPathExtension(pathExtension)!
 	}
 
 	public func appendingPathComponent(pathComponent: String) -> NSURL {
-		#if swift(>=2.3)
-			return URLByAppendingPathComponent(pathComponent)!
-		#else
-			return URLByAppendingPathComponent(pathComponent)
-		#endif
+		return URLByAppendingPathComponent(pathComponent)!
 	}
 
 	public func appendingPathComponent(pathComponent: String, isDirectory: Bool) -> NSURL {
-		#if swift(>=2.3)
-			return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)!
-		#else
-			return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)
-		#endif
+		return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)!
 	}
 
 	public func hasSubdirectory(possibleSubdirectory: NSURL) -> Bool {

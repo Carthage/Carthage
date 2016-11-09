@@ -28,12 +28,7 @@ extension Repository {
 	/// The URL that should be used for cloning this repository over HTTPS.
 	public var HTTPSURL: GitURL {
 		let auth = tokenFromEnvironment(forServer: server).map { "\($0)@" } ?? ""
-		let scheme: String
-		#if swift(>=2.3)
-			scheme = server.URL.scheme!
-		#else
-			scheme = server.URL.scheme
-		#endif
+		let scheme = server.URL.scheme!
 
 		return GitURL("\(scheme)://\(auth)\(server.URL.host!)/\(owner)/\(name).git")
 	}
