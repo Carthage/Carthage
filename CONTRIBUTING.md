@@ -37,7 +37,7 @@ brew install carthage
 
 ## Run Carthage from XCode
 
-I may be useful to run Carthage on different `Cartfile`s or in "real" project for debugging purpouse or to learn how Carthage works. Carthage is a regular macOS application so you can run it inside XCode and set breakpoints! To do so you may want to change the arguments passed to Carthage's command line tool and probably also change the working directory.
+It may be useful to run Carthage on different `Cartfile`s or in "real" project for debugging purpouse or to learn how Carthage works. Carthage is a regular macOS application so you can run it inside XCode and set breakpoints! To do so you may want to change the arguments passed to Carthage's command line tool and probably also change the working directory.
 
  1. Select the `carthage` scheme in the Scheme chooser.
  ![step01](./Documentation/Resources/Contributing/RunCarthageFromXCode/step01.png)
