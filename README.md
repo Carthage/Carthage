@@ -261,9 +261,8 @@ Want to advertise that your project can be used with Carthage? You can add a com
 ```
 ## Known issues
 
-See [Carthage issue #924](https://github.com/Carthage/Carthage/issues/924) for background on the reasons, but as at Xcode 7.2, Apple recommends that ["Frameworks written in Swift should be compiled from source as part of the same project that depends on them to guarantee a single, consistent compilation environment. (22492040)"](https://developer.apple.com/library/ios/releasenotes/DeveloperTools/RN-Xcode/Chapters/Introduction.html). Using Swift frameworks built on other machines will cause Xcode's [debugger](https://github.com/Carthage/Carthage/issues/832) to [crash](https://github.com/Carthage/Carthage/issues/924) and other [strange build errors](https://github.com/Carthage/Carthage/issues/785). To avoid this, do not check your `Carthage/Build` directory into source control or use .framework release binaries. Instead, create a Run Script build phase in your Xcode project which calls `carthage build` (optionally wrap this in a check for the existence of the `Carthage/Build/` directory to avoid long build times due to recompiling dependencies unnecessarily.)
-
-Dupe [rdar://23551273](http://www.openradar.me/23551273) if you want Apple to fix the root cause of this problem.
+##### DWARFs symbol problem
+Pre-built framework cannot be debugged using step execution on other machine than on which the framework was built. Simply `carthage bootstrap/build/update --no-use-binaries` should fix this, but for more automated workaround, see [#924](https://github.com/Carthage/Carthage/issues/924). Dupe [rdar://23551273](http://www.openradar.me/23551273) if you want Apple to fix the root cause of this problem.
 
 ##### Compile Errors
 
