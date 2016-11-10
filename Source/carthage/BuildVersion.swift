@@ -26,11 +26,11 @@ public func remoteVersion() -> SemanticVersion? {
 		.map { (_, releases) in
 			return releases.first!
 		}
-		.mapError(CarthageError.GitHubAPIRequestFailed)
+		.mapError(CarthageError.gitHubAPIRequestFailed)
 		.attemptMap { (release) -> Result<SemanticVersion, CarthageError> in
 			return SemanticVersion.fromString(release.tag)
 		}
-		.timeoutWithError(CarthageError.GitHubAPITimeout, afterInterval: 0.5, onScheduler: QueueScheduler.mainQueueScheduler)
+		.timeoutWithError(CarthageError.gitHubAPITimeout, afterInterval: 0.5, onScheduler: QueueScheduler.mainQueueScheduler)
 		.first()
 	
 	return latestRemoteVersion?.value

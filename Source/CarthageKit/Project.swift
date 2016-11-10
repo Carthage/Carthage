@@ -178,7 +178,7 @@ public final class Project {
 
 		func isNoSuchFileError(error: CarthageError) -> Bool {
 			switch error {
-			case let .ReadFailed(_, underlyingError):
+			case let .readFailed(_, underlyingError):
 				if let underlyingError = underlyingError {
 					return underlyingError.domain == NSCocoaErrorDomain && underlyingError.code == NSFileReadNoSuchFileError
 				} else {
@@ -225,7 +225,7 @@ public final class Project {
 					return .Success(cartfile)
 				}
 
-				return .Failure(.DuplicateDependencies(duplicateDeps))
+				return .Failure(.duplicateDependencies(duplicateDeps))
 			}
 	}
 
@@ -236,7 +236,7 @@ public final class Project {
 				let resolvedCartfileContents = try NSString(contentsOfURL: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
 				return ResolvedCartfile.fromString(resolvedCartfileContents as String)
 			} catch let error as NSError {
-				return .Failure(.ReadFailed(self.resolvedCartfileURL, error))
+				return .Failure(.readFailed(self.resolvedCartfileURL, error))
 			}
 		}
 	}
@@ -247,7 +247,7 @@ public final class Project {
 			try resolvedCartfile.description.writeToURL(resolvedCartfileURL, atomically: true, encoding: NSUTF8StringEncoding)
 			return .Success(())
 		} catch let error as NSError {
-			return .Failure(.WriteFailed(resolvedCartfileURL, error))
+			return .Failure(.writeFailed(resolvedCartfileURL, error))
 		}
 	}
 
@@ -308,7 +308,7 @@ public final class Project {
 			.collect()
 			.flatMap(.Concat) { versions -> SignalProducer<PinnedVersion, CarthageError> in
 				if versions.isEmpty {
-					return SignalProducer(error: .TaggedVersionNotFound(project))
+					return SignalProducer(error: .taggedVersionNotFound(project))
 				}
 				
 				return SignalProducer(values: versions)
@@ -460,7 +460,7 @@ public final class Project {
 								try NSFileManager.defaultManager().removeItemAtURL(temporaryDirectoryURL)
 								return .Success(true)
 							} catch let error as NSError {
-								return .Failure(.WriteFailed(temporaryDirectoryURL, error))
+								return .Failure(.writeFailed(temporaryDirectoryURL, error))
 							}
 						}
 						.concat(SignalProducer(value: false))
@@ -495,7 +495,7 @@ public final class Project {
 					return .empty
 
 				default:
-					return SignalProducer(error: .GitHubAPIRequestFailed(error))
+					return SignalProducer(error: .gitHubAPIRequestFailed(error))
 				}
 			}
 			.on(next: { release in
@@ -517,7 +517,7 @@ public final class Project {
 							return SignalProducer(value: fileURL)
 						} else {
 							return client.downloadAsset(asset)
-								.mapError(CarthageError.GitHubAPIRequestFailed)
+								.mapError(CarthageError.gitHubAPIRequestFailed)
 								.flatMap(.Concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
 						}
 					}
@@ -621,7 +621,7 @@ public final class Project {
 					.filter { project in dependenciesToInclude?.contains(project.name) ?? false })
 
 				guard let sortedProjects = topologicalSort(graph, nodes: projectsToInclude) else {
-					return SignalProducer(error: .DependencyCycle(graph))
+					return SignalProducer(error: .dependencyCycle(graph))
 				}
 
 				let sortedDependencies = cartfile.dependencies
@@ -712,7 +712,7 @@ public final class Project {
 					try fileManager.createSymbolicLinkAtPath(dependencyCheckoutURL.path!, withDestinationPath: linkDestinationPath)
 				} catch let error as NSError {
 					if !(error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError) {
-						return .Failure(.WriteFailed(dependencyCheckoutURL, error))
+						return .Failure(.writeFailed(dependencyCheckoutURL, error))
 					}
 				}
 				return .Success()
@@ -725,7 +725,7 @@ public final class Project {
 					try fileManager.createDirectoryAtURL(dependencyCheckoutsURL, withIntermediateDirectories: true, attributes: nil)
 				} catch let error as NSError {
 					if !(error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError) {
-						return .Failure(.WriteFailed(dependencyCheckoutsURL, error))
+						return .Failure(.writeFailed(dependencyCheckoutsURL, error))
 					}
 				}
 				return .Success()
@@ -751,9 +751,9 @@ public final class Project {
 				return buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
-						case .NoSharedFrameworkSchemes:
+						case .noSharedFrameworkSchemes:
 							// Log that building the dependency is being skipped,
-							// not to error out with `.NoSharedFrameworkSchemes`
+							// not to error out with `.noSharedFrameworkSchemes`
 							// to continue building other dependencies.
 							self._projectEventsObserver.sendNext(.SkippedBuilding(dependency.project, error.description))
 							return .empty
@@ -785,7 +785,7 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 				try NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil)
 				return .Success(())
 			} catch let error as NSError {
-				return .Failure(.WriteFailed(parentDirectoryURL, error))
+				return .Failure(.writeFailed(parentDirectoryURL, error))
 			}
 		}
 		.attempt { newDownloadURL in
@@ -795,7 +795,7 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			}
 
 			if errno != EXDEV {
-				return .Failure(.TaskError(.POSIXError(errno)))
+				return .Failure(.taskError(.POSIXError(errno)))
 			}
 
 			// If the “Cross-device link” error occurred, then falls back to
@@ -807,7 +807,7 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 				try NSFileManager.defaultManager().moveItemAtURL(downloadURL, toURL: newDownloadURL)
 				return .Success(())
 			} catch let error as NSError {
-				return .Failure(.WriteFailed(newDownloadURL, error))
+				return .Failure(.writeFailed(newDownloadURL, error))
 			}
 		}
 }
@@ -840,7 +840,7 @@ private func platformForFramework(frameworkURL: NSURL) -> SignalProducer<Platfor
 
 			func readFailed(message: String) -> CarthageError {
 				let error = Result<(), NSError>.error(message)
-				return .ReadFailed(frameworkURL, error)
+				return .readFailed(frameworkURL, error)
 			}
 
 			guard let sdkName = bundle?.objectForInfoDictionaryKey("DTSDKName") else {
@@ -975,7 +975,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 			do {
 				try fileManager.createDirectoryAtURL(destinationURL, withIntermediateDirectories: true, attributes: nil)
 			} catch let error as NSError {
-				return .Failure(.WriteFailed(destinationURL, error))
+				return .Failure(.writeFailed(destinationURL, error))
 			}
 
 			return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))

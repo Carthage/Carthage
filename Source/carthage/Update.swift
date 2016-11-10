@@ -83,7 +83,7 @@ public struct UpdateCommand: CommandType {
 							let unknownDependencyNames = Set(depsToUpdate.map { $0.lowercaseString }).subtract(dependencyNames)
 							
 							if !unknownDependencyNames.isEmpty {
-								return SignalProducer(error: .UnknownDependencies(unknownDependencyNames.sort()))
+								return SignalProducer(error: .unknownDependencies(unknownDependencyNames.sort()))
 							}
 							return .empty
 						}

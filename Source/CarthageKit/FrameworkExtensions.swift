@@ -259,7 +259,7 @@ extension NSURL {
 			error = err
 		}
 
-		return .Failure(.ReadFailed(self, error))
+		return .Failure(.readFailed(self, error))
 	}
 
 	public var carthage_absoluteString: String {
@@ -304,7 +304,7 @@ extension NSFileManager {
 				if catchErrors {
 					return true
 				} else {
-					observer.sendFailed(CarthageError.ReadFailed(URL, error))
+					observer.sendFailed(CarthageError.readFailed(URL, error))
 					return false
 				}
 			}!

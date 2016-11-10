@@ -36,7 +36,7 @@ public struct BootstrapCommand: CommandType {
 							let unresolvedDependencyNames = Set(depsToUpdate.map { $0.lowercaseString }).subtract(resolvedDependencyNames)
 							
 							if !unresolvedDependencyNames.isEmpty {
-								return SignalProducer(error: .UnresolvedDependencies(unresolvedDependencyNames.sort()))
+								return SignalProducer(error: .unresolvedDependencies(unresolvedDependencyNames.sort()))
 							}
 							return .empty
 						}

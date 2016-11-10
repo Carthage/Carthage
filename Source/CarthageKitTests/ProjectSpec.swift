@@ -54,7 +54,7 @@ class ProjectSpec: QuickSpec {
 				let mainLocation = ["\(CarthageProjectCartfilePath)"]
 				let bothLocations = ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]
 
-				let expectedError = CarthageError.DuplicateDependencies([
+				let expectedError = CarthageError.duplicateDependencies([
 					makeDependency("self2", "self2", mainLocation),
 					makeDependency("self3", "self3", mainLocation),
 					makeDependency("1", "1", bothLocations),
@@ -70,7 +70,7 @@ class ProjectSpec: QuickSpec {
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 				
-				if case let .ReadFailed(_, underlyingError)? = result?.error {
+				if case let .readFailed(_, underlyingError)? = result?.error {
 					expect(underlyingError?.domain) == NSCocoaErrorDomain
 					expect(underlyingError?.code) == NSFileReadNoSuchFileError
 				} else {

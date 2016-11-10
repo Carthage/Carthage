@@ -110,7 +110,7 @@ public struct Resolver {
 					.map { $0.sort() }
 					.flatMap(.Concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
 						if nodes.isEmpty {
-							return SignalProducer(error: CarthageError.RequiredVersionNotFound(dependency.project, dependency.version))
+							return SignalProducer(error: CarthageError.requiredVersionNotFound(dependency.project, dependency.version))
 						} else {
 							return SignalProducer(values: nodes)
 						}
@@ -272,7 +272,7 @@ private struct DependencyGraph: Equatable {
 					node = existingNode
 					node.versionSpecifier = newSpecifier
 				} else {
-					return .Failure(CarthageError.RequiredVersionNotFound(node.project, newSpecifier))
+					return .Failure(CarthageError.requiredVersionNotFound(node.project, newSpecifier))
 				}
 			} else if existingNode.proposedVersion != node.proposedVersion {
 				// The guard condition above is required for enabling to build a
@@ -289,7 +289,7 @@ private struct DependencyGraph: Equatable {
 					.first
 				let first = (existingNode.versionSpecifier, existingDependencyOf?.project)
 				let second = (node.versionSpecifier, dependencyOf?.project)
-				return .Failure(CarthageError.IncompatibleRequirements(node.project, first, second))
+				return .Failure(CarthageError.incompatibleRequirements(node.project, first, second))
 			}
 		} else {
 			allNodes.insert(node)

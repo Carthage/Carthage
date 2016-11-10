@@ -64,7 +64,7 @@ public struct Cartfile {
 			}
 
 			if !scanner.atEnd {
-				result = .Failure(CarthageError.ParseError(description: "unexpected trailing characters in line: \(line)"))
+				result = .Failure(CarthageError.parseError(description: "unexpected trailing characters in line: \(line)"))
 				stop = true
 			}
 		}
@@ -78,7 +78,7 @@ public struct Cartfile {
 			let cartfileContents = try NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding)
 			return Cartfile.fromString(cartfileContents as String)
 		} catch let error as NSError {
-			return .Failure(CarthageError.ReadFailed(cartfileURL, error))
+			return .Failure(CarthageError.readFailed(cartfileURL, error))
 		}
 	}
 
@@ -242,22 +242,22 @@ extension ProjectIdentifier: Scannable {
 				return .Success(self.Git(GitURL(URLString)))
 			}
 		} else {
-			return .Failure(CarthageError.ParseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
+			return .Failure(CarthageError.parseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
 		}
 
 		if !scanner.scanString("\"", intoString: nil) {
-			return .Failure(CarthageError.ParseError(description: "expected string after dependency type in line: \(scanner.currentLine)"))
+			return .Failure(CarthageError.parseError(description: "expected string after dependency type in line: \(scanner.currentLine)"))
 		}
 
 		var address: NSString? = nil
 		if !scanner.scanUpToString("\"", intoString: &address) || !scanner.scanString("\"", intoString: nil) {
-			return .Failure(CarthageError.ParseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)"))
+			return .Failure(CarthageError.parseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)"))
 		}
 
 		if let address = address {
 			return parser(address as String)
 		} else {
-			return .Failure(CarthageError.ParseError(description: "empty string after dependency type in line: \(scanner.currentLine)"))
+			return .Failure(CarthageError.parseError(description: "empty string after dependency type in line: \(scanner.currentLine)"))
 		}
 	}
 }

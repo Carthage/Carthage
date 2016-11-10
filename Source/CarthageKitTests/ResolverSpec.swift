@@ -140,7 +140,7 @@ class ResolverSpec: QuickSpec {
 					return SignalProducer(value: Cartfile())
 				}
 			}, resolvedGitReference: { _ -> SignalProducer<PinnedVersion, CarthageError> in
-				return SignalProducer(error: .InvalidArgument(description: "unexpected test error"))
+				return SignalProducer(error: .invalidArgument(description: "unexpected test error"))
 			})
 
 			let testCartfile: Cartfile = self.loadTestCartfile("EmbeddedFrameworksContainerCartfile")
