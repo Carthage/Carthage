@@ -172,7 +172,7 @@ public struct BuildCommand: CommandType {
 			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions)
 				.flatMapError { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
 					switch error {
-					case let .NoSharedFrameworkSchemes(project, _):
+					case let .noSharedFrameworkSchemes(project, _):
 						// Log that building the current project is being skipped.
 						eventSink.put(.SkippedBuilding(project, error.description))
 						return .empty
@@ -219,7 +219,7 @@ public struct BuildCommand: CommandType {
 				.map { handle, URL in (handle, .Some(URL)) }
 				.mapError { error in
 					let temporaryDirectoryURL = NSURL.fileURLWithPath(NSTemporaryDirectory(), isDirectory: true)
-					return .WriteFailed(temporaryDirectoryURL, error)
+					return .writeFailed(temporaryDirectoryURL, error)
 				}
 		}
 	}

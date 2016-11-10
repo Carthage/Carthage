@@ -80,7 +80,7 @@ extension Repository {
 			}
 		}
 
-		return .Failure(CarthageError.ParseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
+		return .Failure(CarthageError.parseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
 	}
 }
 

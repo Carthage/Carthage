@@ -175,7 +175,7 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 
 	return launchTask(taskDescription, standardInput: standardInput)
 		.ignoreTaskData()
-		.mapError(CarthageError.TaskError)
+		.mapError(CarthageError.taskError)
 		.map { data in
 			return NSString(data: data, encoding: NSUTF8StringEncoding)! as String
 		}
@@ -268,7 +268,7 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDir
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil)
 			} catch let error as NSError {
-				return .Failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory", underlyingError: error))
+				return .Failure(CarthageError.repositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory", underlyingError: error))
 			}
 
 			var environment = NSProcessInfo.processInfo().environment
@@ -303,7 +303,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 			do {
 				try URL.getResourceValue(&name, forKey: NSURLNameKey)
 			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)", underlyingError: error))
+				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(URL.path!)", underlyingError: error))
 			}
 
 			if (name as? String) != ".git" {
@@ -314,10 +314,10 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 			do {
 				try URL.getResourceValue(&isDirectory, forKey: NSURLIsDirectoryKey)
 				if isDirectory == nil {
-					return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: nil))
+					return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: nil))
 				}
 			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: error))
+				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(URL.path!) is a directory", underlyingError: error))
 			}
 
 			if let directory = isDirectory?.boolValue where directory {
@@ -328,7 +328,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 				try NSFileManager.defaultManager().removeItemAtURL(URL)
 				return .empty
 			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)", underlyingError: error))
+				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(URL.path!)", underlyingError: error))
 			}
 		}
 
@@ -336,7 +336,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 			do {
 				try NSFileManager.defaultManager().removeItemAtURL(submoduleDirectoryURL)
 			} catch let error as NSError {
-				return .Failure(CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout", underlyingError: error))
+				return .Failure(CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout", underlyingError: error))
 			}
 
 			return .Success(workingDirectoryURL.appendingPathComponent(submodule.path))
@@ -403,7 +403,7 @@ public func submoduleSHAForPath(repositoryFileURL: NSURL, _ path: String, revisi
 			if components.count >= 3 {
 				return .Success(String(components[2]))
 			} else {
-				return .Failure(CarthageError.ParseError(description: "expected submodule commit SHA in output of task (\(task.joinWithSeparator(" "))) but encountered: \(string)"))
+				return .Failure(CarthageError.parseError(description: "expected submodule commit SHA in output of task (\(task.joinWithSeparator(" "))) but encountered: \(string)"))
 			}
 		}
 }
@@ -502,7 +502,7 @@ private func ensureDirectoryExistsAtURL(fileURL: NSURL) -> SignalProducer<(), Ca
 		if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!, isDirectory: &isDirectory) && isDirectory {
 			observer.sendCompleted()
 		} else {
-			observer.sendFailed(.ReadFailed(fileURL, nil))
+			observer.sendFailed(.readFailed(fileURL, nil))
 		}
 	}
 }
@@ -512,14 +512,14 @@ public func resolveReferenceInRepository(repositoryFileURL: NSURL, _ reference: 
 	return ensureDirectoryExistsAtURL(repositoryFileURL)
 		.then(launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL))
 		.map { string in string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
-		.mapError { error in CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists", underlyingError: error as NSError) }
+		.mapError { error in CarthageError.repositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists", underlyingError: error as NSError) }
 }
 
 /// Attempts to resolve the given tag into an object SHA.
 internal func resolveTagInRepository(repositoryFileURL: NSURL, _ tag: String) -> SignalProducer<String, CarthageError> {
 	return launchGitTask([ "show-ref", "--tags", "--hash", tag ], repositoryFileURL: repositoryFileURL)
 		.map { string in string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
-		.mapError { error in CarthageError.RepositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No tag named \"\(tag)\" exists", underlyingError: error as NSError) }
+		.mapError { error in CarthageError.repositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No tag named \"\(tag)\" exists", underlyingError: error as NSError) }
 }
 
 /// Attempts to determine whether the given directory represents a Git
@@ -591,7 +591,7 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, fromPath: Str
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil)
 			} catch let error as NSError {
-				return .Failure(CarthageError.WriteFailed(parentDirectoryURL, error))
+				return .Failure(CarthageError.writeFailed(parentDirectoryURL, error))
 			}
 
 			return .Success(())
@@ -609,7 +609,7 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, fromPath: Str
 					try NSFileManager.defaultManager().moveItemAtURL(fromURL, toURL: toURL)
 					return SignalProducer(value: toURL)
 				} catch let error as NSError {
-					return SignalProducer(error: .WriteFailed(toURL, error))
+					return SignalProducer(error: .writeFailed(toURL, error))
 				}
 			}
 		}

@@ -55,7 +55,7 @@ public struct ArchiveCommand: CommandType {
 							if !schemes.isEmpty {
 								return .init(values: schemes)
 							} else {
-								return .init(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), []))
+								return .init(error: .noSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), []))
 							}
 						}
 				}
@@ -109,7 +109,7 @@ public struct ArchiveCommand: CommandType {
 						.filter { $0.hasSuffix(".framework") }
 					
 					if Set(foundFrameworks) != Set(frameworks) {
-						let error = CarthageError.InvalidArgument(description: "Could not find any copies of \(frameworks.joinWithSeparator(", ")). Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
+						let error = CarthageError.invalidArgument(description: "Could not find any copies of \(frameworks.joinWithSeparator(", ")). Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
 						return SignalProducer(error: error)
 					}
 

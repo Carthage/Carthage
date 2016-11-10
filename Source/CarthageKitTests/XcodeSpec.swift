@@ -235,7 +235,7 @@ class XcodeSpec: QuickSpec {
 			}
 		}
 
-		it("should error out with .NoSharedFrameworkSchemes if there is no shared framework schemes") {
+		it("should error out with .noSharedFrameworkSchemes if there is no shared framework schemes") {
 			let _directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("Swell-0.5.0", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
@@ -252,7 +252,7 @@ class XcodeSpec: QuickSpec {
 			expect(result.error).notTo(beNil())
 
 			let expectedError: Bool
-			if case .NoSharedFrameworkSchemes? = result.error {
+			if case .noSharedFrameworkSchemes? = result.error {
 				expectedError = true
 			} else {
 				expectedError = false
