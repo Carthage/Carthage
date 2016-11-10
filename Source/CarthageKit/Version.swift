@@ -14,6 +14,7 @@ import ReactiveCocoa
 public protocol VersionType: Equatable {}
 
 /// A semantic version.
+/// - Note: See <http://semver.org/>
 public struct SemanticVersion: VersionType, Comparable {
 	/// The major version.
 	///
@@ -30,7 +31,17 @@ public struct SemanticVersion: VersionType, Comparable {
 	///
 	/// Increments to this component represent backwards-compatible bug fixes.
 	public let patch: Int
-
+	
+	/// The pre-release identifier
+	///
+	/// Indicates that the version is unstable
+	public let preRelease : String?
+	
+	/// The build metadata
+	///
+	/// Build metadata is ignored when comparing versions
+	public let buildMetadata : String?
+	
 	/// The pin from which this semantic version was derived.
 	public var pinnedVersion: PinnedVersion?
 
@@ -39,11 +50,18 @@ public struct SemanticVersion: VersionType, Comparable {
 	public var components: [Int] {
 		return [ major, minor, patch ]
 	}
+	
+	/// Whether this is a prerelease version
+	public var isPreRelease : Bool {
+		return self.preRelease != nil
+	}
 
-	public init(major: Int, minor: Int, patch: Int) {
+	public init(major: Int, minor: Int, patch: Int, preRelease: String? = nil, buildMetadata: String? = nil) {
 		self.major = major
 		self.minor = minor
 		self.patch = patch
+		self.preRelease = preRelease
+		self.buildMetadata = buildMetadata
 	}
 
 	/// The set of all characters present in valid semantic versions.
@@ -63,8 +81,6 @@ public struct SemanticVersion: VersionType, Comparable {
 				version.pinnedVersion = pinnedVersion
 				return .Success(version)
 			} else {
-				// Disallow versions like "1.0a5", because we only support
-				// SemVer right now.
 				return .Failure(CarthageError.ParseError(description: "syntax of version \"\(version)\" is unsupported"))
 			}
 		}
@@ -75,33 +91,68 @@ extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
 	static public func fromScanner(scanner: NSScanner) -> Result<SemanticVersion, CarthageError> {
-		var version: NSString? = nil
-		if !scanner.scanCharactersFromSet(versionCharacterSet, intoString: &version) || version == nil {
+		var versionBuffer: NSString? = nil
+		guard scanner.scanCharactersFromSet(versionCharacterSet, intoString: &versionBuffer), let version = versionBuffer as? String else {
 			return .Failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
-
-		let components = (version! as String).characters.split(allowEmptySlices: false) { $0 == "." }.map(String.init)
+		
+		let components = version.characters.split(allowEmptySlices: false) { $0 == "." }.map(String.init)
 		if components.count == 0 {
 			return .Failure(CarthageError.ParseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
 
 		let major = Int(components[0])
 		if major == nil {
-			return .Failure(CarthageError.ParseError(description: "expected major version number in \"\(version!)\""))
+			return .Failure(CarthageError.ParseError(description: "expected major version number in \"\(version)\""))
 		}
 
 		let minor = (components.count > 1 ? Int(components[1]) : nil)
 		if minor == nil {
-			return .Failure(CarthageError.ParseError(description: "expected minor version number in \"\(version!)\""))
+			return .Failure(CarthageError.ParseError(description: "expected minor version number in \"\(version)\""))
 		}
 
-		let patch = (components.count > 2 ? Int(components[2]) : 0)
+		let hasPatchComponent = components.count > 2
+		let patch = (hasPatchComponent ? Int(components[2]) : 0)
 
-		return .Success(self.init(major: major!, minor: minor ?? 0, patch: patch ?? 0))
+		let preRelease = scanner.scanStringWithPrefix("-", until: "+")
+		let buildMetadata = scanner.scanStringWithPrefix("+", until: "")
+
+		guard (preRelease == nil && buildMetadata == nil) || hasPatchComponent else {
+			return .Failure(CarthageError.ParseError(description: "can not have pre-release or build metadata without patch, in \"\(version)\""))
+		}
+		
+		return .Success(self.init(major: major!,
+			minor: minor ?? 0,
+			patch: patch ?? 0,
+			preRelease: preRelease,
+			buildMetadata: buildMetadata))
+	}
+}
+
+extension NSScanner {
+	
+	/// Scans a string that is supposed to start with the given prefix, until the given
+	/// string is encountered.
+	/// - returns: the scanned string without the prefix. If the string does not start with the prefix,
+	/// or the scanner is at the end, it returns `nil`.
+	private func scanStringWithPrefix(prefix: String, until: String) -> String? {
+		if !self.atEnd {
+			var buffer : NSString? = nil
+			self.scanUpToString(until, intoString: &buffer)
+			guard let stringWithPrefix = buffer as? String where stringWithPrefix.hasPrefix(prefix) else {
+				return nil
+			}
+			return stringWithPrefix.substringFromIndex(stringWithPrefix.startIndex.advancedBy(prefix.characters.count))
+		} else {
+			return nil
+		}
 	}
 }
 
 public func <(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
+	if lhs.components == rhs.components {
+		return lhs.isPreReleaseLesser(rhs.preRelease)
+	}
 	return lhs.components.lexicographicalCompare(rhs.components)
 }
 
@@ -120,6 +171,94 @@ extension SemanticVersion: CustomStringConvertible {
 		return components.map { $0.description }.joinWithSeparator(".")
 	}
 }
+
+extension SemanticVersion {
+	
+	/// Compares the pre-release component with the given pre-release
+	/// assuming that the other components (major, minor, patch) are the same
+	private func isPreReleaseLesser(preRelease: String?) -> Bool {
+		
+		// a non-pre-release is not lesser
+		guard let selfPreRelease = self.preRelease else {
+			return false
+		}
+		
+		// a pre-release version is lesser than a non-pre-release
+		guard let otherPreRelease = preRelease else {
+			return true
+		}
+		
+		// same pre-release version has no precedence. Build metadata could differ,
+		// but there is no ordering defined on build metadata
+		guard selfPreRelease != otherPreRelease else {
+			return false // undefined ordering
+		}
+		
+		// Compare dot separated components one by one
+		// From http://semver.org/:
+		// "Precedence for two pre-release versions with the same major, minor, and patch
+		// version MUST be determined by comparing each dot separated identifier from left
+		// to right until a difference is found [...]. A larger set of pre-release fields
+		// has a higher precedence than a smaller set, if all of the preceding
+		// identifiers are equal."
+
+		let selfComponents = selfPreRelease.componentsSeparatedByString(".")
+		let otherComponents = otherPreRelease.componentsSeparatedByString(".")
+		let nonEqualComponents = zip(selfComponents, otherComponents)
+			.filter { $0.0 != $0.1 }
+		
+		for (selfComponent, otherComponent) in nonEqualComponents {
+			return selfComponent.lesserThanPreReleaseVersionComponent(otherComponent)
+		}
+		
+		// if I got here, the two pre-release are not the same, but there are not non-equal
+		// components, so one must have move pre-components than the other
+		return selfComponents.count < otherComponents.count
+	}
+	
+	/// Returns whether a version has the same numeric components (major, minor, patch)
+	func hasSameNumericComponents(version: SemanticVersion) -> Bool {
+		return self.components == version.components
+	}
+}
+
+extension String {
+	
+	/// Returns the Int value of the string, if the string is only composed of digits
+	private var numericValue : Int? {
+		if !self.isEmpty && self.rangeOfCharacterFromSet(NSCharacterSet.decimalDigitCharacterSet().invertedSet) == nil {
+			return Int(self)
+		}
+		return nil
+	}
+	
+	/// Returns whether the string, considered a pre-release version component, should be
+	/// considered lesser than another pre-release version component
+	private func lesserThanPreReleaseVersionComponent(other: String) -> Bool {
+		// From http://semver.org/:
+		// "[the order is defined] as follows: identifiers consisting of only
+		// digits are compared numerically and identifiers with letters or hyphens are
+		// compared lexically in ASCII sort order. Numeric identifiers always have lower
+		// precedence than non-numeric identifiers"
+		
+		guard let numericSelf = self.numericValue else {
+			guard let _ = other.numericValue else {
+				// other is not numeric, self is not numeric, compare strings
+				return self.compare(other) == .OrderedAscending
+			}
+			// other is numeric, self is not numeric, other is lower
+			return false
+		}
+		
+		guard let numericOther = other.numericValue else {
+			// other is not numeric, self is numeric, self is lower
+			return true
+		}
+		
+		return numericSelf < numericOther
+	}
+}
+
 
 /// An immutable version that a project can be pinned to.
 public struct PinnedVersion: VersionType {
@@ -175,34 +314,54 @@ public enum VersionSpecifier: VersionType {
 			if let semanticVersion = SemanticVersion.fromPinnedVersion(version).value {
 				return predicate(semanticVersion)
 			} else {
-				// Consider non-semantic versions (e.g., branches) to meet every
-				// version range requirement.
-				return true
+				// Consider non-semantic versions (e.g., branches) not to meet
+				// any requirement as we can't guarantee any ordering nor
+				// compatibility
+				return false
 			}
 		}
 
 		switch self {
-		case .Any, .GitReference:
+		case .Any:
+			return withSemanticVersion { !$0.isPreRelease }
+		case .GitReference:
 			return true
-
 		case let .Exactly(requirement):
 			return withSemanticVersion { $0 == requirement }
 
 		case let .AtLeast(requirement):
-			return withSemanticVersion { $0 >= requirement }
-
+			return withSemanticVersion { version in
+				let versionIsNewer = version >= requirement
+				
+				// Only pick a pre-release version if the requirement is also
+				// a pre-release of the same version
+				let notPreReleaseOrSameComponents =	!version.isPreRelease
+					|| (requirement.isPreRelease && version.hasSameNumericComponents(requirement))
+				return notPreReleaseOrSameComponents && versionIsNewer
+			}
 		case let .CompatibleWith(requirement):
 			return withSemanticVersion { version in
+				
+				let versionIsNewer = version >= requirement
+				let notPreReleaseOrSameComponents =	!version.isPreRelease
+					|| (requirement.isPreRelease && version.hasSameNumericComponents(requirement))
+				
+				// Only pick a pre-release version if the requirement is also 
+				// a pre-release of the same version
+				guard notPreReleaseOrSameComponents else {
+					return false
+				}
+				
 				// According to SemVer, any 0.x.y release may completely break the
 				// exported API, so it's not safe to consider them compatible with one
 				// another. Only patch versions are compatible under 0.x, meaning 0.1.1 is
 				// compatible with 0.1.2, but not 0.2. This isn't according to the SemVer
 				// spec but keeps ~> useful for 0.x.y versions.
 				if version.major == 0 {
-					return version.minor == requirement.minor && version >= requirement
+					return version.minor == requirement.minor && versionIsNewer
 				}
 
-				return version.major == requirement.major && version >= requirement
+				return version.major == requirement.major && versionIsNewer
 			}
 		}
 	}
