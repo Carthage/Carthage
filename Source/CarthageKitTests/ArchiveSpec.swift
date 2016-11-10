@@ -12,10 +12,17 @@ import Nimble
 import Quick
 import ReactiveCocoa
 
+#if swift(>=3)
+#else
+	internal func type<T>(of t: T) -> T.Type {
+		return t.dynamicType
+	}
+#endif
+
 class ArchiveSpec: QuickSpec {
 	override func spec() {
 		describe("unzipping") {
-			let archiveURL = NSBundle(forClass: self.dynamicType).URLForResource("CartfilePrivateOnly", withExtension: "zip")!
+			let archiveURL = NSBundle(forClass: type(of: self)).URLForResource("CartfilePrivateOnly", withExtension: "zip")!
 
 			it("should unzip archive to a temporary directory") {
 				let result = unzipArchiveToTemporaryDirectory(archiveURL).single()
