@@ -834,7 +834,7 @@ private func filesInDirectory(directoryURL: NSURL, _ typeIdentifier: String? = n
 private func platformForFramework(frameworkURL: NSURL) -> SignalProducer<Platform, CarthageError> {
 	return SignalProducer(value: frameworkURL)
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used
-		// because Xcode 6 and below do not include either in Mac OSX frameworks.
+		// because Xcode 6 and below do not include either in macOS frameworks.
 		.attemptMap { URL -> Result<String, CarthageError> in
 			let bundle = NSBundle(URL: URL)
 

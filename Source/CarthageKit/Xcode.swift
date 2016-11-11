@@ -222,20 +222,20 @@ public func schemesInProjects(projects: [(ProjectLocator, [String])]) -> SignalP
 
 /// Represents a platform to build for.
 public enum Platform: String {
-	/// Mac OS X.
-	case Mac
+	/// macOS.
+	case macOS = "Mac"
 
 	/// iOS for device and simulator.
-	case iOS
+	case iOS = "iOS"
 
 	/// Apple Watch device and simulator.
-	case watchOS
+	case watchOS = "watchOS"
 
 	/// Apple TV device and simulator.
-	case tvOS
+	case tvOS = "tvOS"
 
 	/// All supported build platforms.
-	public static let supportedPlatforms: [Platform] = [ .Mac, .iOS, .watchOS, .tvOS ]
+	public static let supportedPlatforms: [Platform] = [ .macOS, .iOS, .watchOS, .tvOS ]
 
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
@@ -247,8 +247,8 @@ public enum Platform: String {
 	/// The SDKs that need to be built for this platform.
 	public var SDKs: [SDK] {
 		switch self {
-		case .Mac:
-			return [ .MacOSX ]
+		case .macOS:
+			return [ .macOSX ]
 
 		case .iOS:
 			return [ .iPhoneSimulator, .iPhoneOS ]
@@ -271,8 +271,8 @@ extension Platform: CustomStringConvertible {
 
 /// Represents an SDK buildable by Xcode.
 public enum SDK: String {
-	/// Mac OS X.
-	case MacOSX = "macosx"
+	/// macOS.
+	case macOSX = "macosx"
 
 	/// iOS, for device.
 	case iPhoneOS = "iphoneos"
@@ -292,7 +292,7 @@ public enum SDK: String {
 	/// tvSimulator, for the Apple TV simulator.
 	case tvSimulator = "appletvsimulator"
 
-	public static let allSDKs: Set<SDK> = [.MacOSX, .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator]
+	public static let allSDKs: Set<SDK> = [.macOSX, .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator]
 
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
@@ -330,8 +330,8 @@ public enum SDK: String {
 		case .tvOS, .tvSimulator:
 			return .tvOS
 
-		case .MacOSX:
-			return .Mac
+		case .macOSX:
+			return .macOS
 		}
 	}
 }
@@ -346,8 +346,8 @@ extension SDK: CustomStringConvertible {
 		case .iPhoneSimulator:
 			return "iOS Simulator"
 
-		case .MacOSX:
-			return "Mac OS X"
+		case .macOSX:
+			return "macOS"
 
 		case .watchOS:
 			return "watchOS"

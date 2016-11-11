@@ -65,7 +65,7 @@ class BuildArgumentsSpec: QuickSpec {
 			}
 
 			describe("specifying the sdk") {
-				for sdk in SDK.allSDKs.subtract([.MacOSX]) {
+				for sdk in SDK.allSDKs.subtract([.macOSX]) {
 					itCreatesBuildArguments("includes \(sdk) in the argument if specified", arguments: ["-sdk", sdk.rawValue]) { (inout subject: BuildArguments) in
 						subject.sdk = sdk
 					}
@@ -75,10 +75,10 @@ class BuildArgumentsSpec: QuickSpec {
 				// resolution (see Carthage/Carthage#347).
 				//
 				// Since we wouldn't be trying to build this target unless it were
-				// for OS X already, just let xcodebuild figure out the SDK on its
+				// for macOS already, just let xcodebuild figure out the SDK on its
 				// own.
-				itCreatesBuildArguments("does not include the sdk flag if .MacOSX is specified", arguments: []) { (inout subject: BuildArguments) in
-					subject.sdk = .MacOSX
+				itCreatesBuildArguments("does not include the sdk flag if .macOSX is specified", arguments: []) { (inout subject: BuildArguments) in
+					subject.sdk = .macOSX
 				}
 			}
 

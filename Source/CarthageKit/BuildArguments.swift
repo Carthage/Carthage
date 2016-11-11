@@ -69,9 +69,9 @@ public struct BuildArguments {
 			// resolution (see Carthage/Carthage#347).
 			//
 			// Since we wouldn't be trying to build this target unless it were
-			// for OS X already, just let xcodebuild figure out the SDK on its
+			// for macOS already, just let xcodebuild figure out the SDK on its
 			// own.
-			if sdk != .MacOSX {
+			if sdk != .macOSX {
 				args += [ "-sdk", sdk.rawValue ]
 			}
 		}

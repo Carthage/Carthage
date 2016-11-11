@@ -263,7 +263,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for one platform") {
 			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
-			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .Mac ]))
+			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -284,7 +284,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for multiple platforms") {
 			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
-			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .Mac, .iOS ]))
+			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
 				.flatten(.Concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
