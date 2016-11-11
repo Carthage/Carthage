@@ -174,7 +174,7 @@ public struct BuildCommand: CommandType {
 					switch error {
 					case let .noSharedFrameworkSchemes(project, _):
 						// Log that building the current project is being skipped.
-						eventSink.put(.SkippedBuilding(project, error.description))
+						eventSink.put(.skippedBuilding(project, error.description))
 						return .empty
 
 					default:
