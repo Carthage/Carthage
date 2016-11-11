@@ -27,7 +27,7 @@ extension BuildOptions: OptionsType {
 	public static func evaluate(m: CommandMode, addendum: String) -> Result<BuildOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
-			<*> m <| Option(key: "platform", defaultValue: .All, usage: "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')" + addendum)
+			<*> m <| Option(key: "platform", defaultValue: .all, usage: "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')" + addendum)
 			<*> m <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 			<*> m <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 	}
@@ -228,13 +228,13 @@ public struct BuildCommand: CommandType {
 /// Represents the user's chosen platform to build for.
 public enum BuildPlatform: Equatable {
 	/// Build for all available platforms.
-	case All
+	case all
 
 	/// Build only for iOS.
 	case iOS
 
-	/// Build only for OS X.
-	case Mac
+	/// Build only for macOS.
+	case macOS
 
 	/// Build only for watchOS.
 	case watchOS
@@ -243,19 +243,19 @@ public enum BuildPlatform: Equatable {
 	case tvOS
 
 	/// Build for multiple platforms within the list.
-	case Multiple([BuildPlatform])
+	case multiple([BuildPlatform])
 
 	/// The set of `Platform` corresponding to this setting.
 	public var platforms: Set<Platform> {
 		switch self {
-		case .All:
+		case .all:
 			return []
 
 		case .iOS:
 			return [ .iOS ]
 
-		case .Mac:
-			return [ .Mac ]
+		case .macOS:
+			return [ .macOS ]
 
 		case .watchOS:
 			return [ .watchOS ]
@@ -263,7 +263,7 @@ public enum BuildPlatform: Equatable {
 		case .tvOS:
 			return [ .tvOS ]
 
-		case let .Multiple(buildPlatforms):
+		case let .multiple(buildPlatforms):
 			return buildPlatforms.reduce([]) { (set, buildPlatform) in
 				return set.union(buildPlatform.platforms)
 			}
@@ -273,10 +273,10 @@ public enum BuildPlatform: Equatable {
 
 public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
 	switch (lhs, rhs) {
-	case let (.Multiple(left), .Multiple(right)):
+	case let (.multiple(left), .multiple(right)):
 		return left == right
 
-	case (.All, .All), (.iOS, .iOS), (.Mac, .Mac), (.watchOS, .watchOS), (.tvOS, .tvOS):
+	case (.all, .all), (.iOS, .iOS), (.macOS, .macOS), (.watchOS, .watchOS), (.tvOS, .tvOS):
 		return true
 
 	case _:
@@ -287,14 +287,14 @@ public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
 extension BuildPlatform: CustomStringConvertible {
 	public var description: String {
 		switch self {
-		case .All:
+		case .all:
 			return "all"
 
 		case .iOS:
 			return "iOS"
 
-		case .Mac:
-			return "Mac"
+		case .macOS:
+			return "macOS"
 
 		case .watchOS:
 			return "watchOS"
@@ -302,7 +302,7 @@ extension BuildPlatform: CustomStringConvertible {
 		case .tvOS:
 			return "tvOS"
 
-		case let .Multiple(buildPlatforms):
+		case let .multiple(buildPlatforms):
 			return buildPlatforms.map { $0.description }.joinWithSeparator(", ")
 		}
 	}
@@ -312,11 +312,11 @@ extension BuildPlatform: ArgumentType {
 	public static let name = "platform"
 
 	private static let acceptedStrings: [String: BuildPlatform] = [
-		"macOS": .Mac, "Mac": .Mac, "OSX": .Mac, "macosx": .Mac,
+		"macOS": .macOS, "Mac": .macOS, "OSX": .macOS, "macosx": .macOS,
 		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
 		"watchOS": .watchOS, "watchsimulator": .watchOS,
 		"tvOS": .tvOS, "tvsimulator": .tvOS, "appletvos": .tvOS, "appletvsimulator": .tvOS,
-		"all": .All
+		"all": .all
 	]
 
 	public static func fromString(string: String) -> BuildPlatform? {
@@ -339,7 +339,7 @@ extension BuildPlatform: ArgumentType {
 		default:
 			var buildPlatforms = [BuildPlatform]()
 			for token in tokens {
-				if let found = findBuildPlatform(token) where found != .All {
+				if let found = findBuildPlatform(token) where found != .all {
 					buildPlatforms.append(found)
 				} else {
 					// Reject if an invalid value is included in the comma-
@@ -347,7 +347,7 @@ extension BuildPlatform: ArgumentType {
 					return nil
 				}
 			}
-			return .Multiple(buildPlatforms)
+			return .multiple(buildPlatforms)
 		}
 	}
 }
