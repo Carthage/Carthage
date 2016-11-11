@@ -481,7 +481,7 @@ public struct BuildSettings {
 		// rdar://27052195
 		// Including the action "clean" works around this issue, which is further
 		// discussed here: https://forums.developer.apple.com/thread/50372
-		let task = xcodebuildTask(["clean", "-showBuildSettings"], arguments)
+		let task = xcodebuildTask(["clean", "-showBuildSettings", "-skipUnavailableActions"], arguments)
 
 		return launchTask(task)
 			.ignoreTaskData()
