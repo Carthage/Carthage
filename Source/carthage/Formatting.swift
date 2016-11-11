@@ -21,18 +21,18 @@ private func wrap(colorful: Bool, wrap: Color.Wrap) -> String -> String {
 
 /// Argument for whether to color and format terminal output.
 public enum ColorArgument: String, ArgumentType, CustomStringConvertible {
-	case Auto = "auto"
-	case Never = "never"
-	case Always = "always"
+	case auto = "auto"
+	case never = "never"
+	case always = "always"
 	
 	/// Whether to color and format.
 	public var isColorful: Bool {
 		switch self {
-		case .Always:
+		case .always:
 			return true
-		case .Never:
+		case .never:
 			return false
-		case .Auto:
+		case .auto:
 			return Terminal.isTTY && !Terminal.isDumb
 		}
 	}
@@ -92,6 +92,6 @@ public struct ColorOptions: OptionsType {
 	
 	public static func evaluate(m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
 		return create
-			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')")
+			<*> m <| Option(key: "color", defaultValue: ColorArgument.auto, usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')")
 	}
 }

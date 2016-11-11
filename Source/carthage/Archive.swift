@@ -64,7 +64,7 @@ public struct ArchiveCommand: CommandType {
 					return BuildSettings.loadWithArguments(buildArguments)
 				}
 				.flatMap(.Concat) { settings -> SignalProducer<String, CarthageError> in
-					if let wrapperName = settings.wrapperName.value where settings.productType.value == .Framework {
+					if let wrapperName = settings.wrapperName.value where settings.productType.value == .framework {
 						return .init(value: wrapperName)
 					} else {
 						return .empty

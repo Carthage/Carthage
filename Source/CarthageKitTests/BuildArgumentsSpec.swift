@@ -97,12 +97,12 @@ class BuildArgumentsSpec: QuickSpec {
 			}
 
 			describe("specifying the bitcode generation mode") {
-				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=marker if .Marker is set", arguments: ["BITCODE_GENERATION_MODE=marker"]) { (inout subject: BuildArguments) in
-					subject.bitcodeGenerationMode = .Marker
+				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=marker if .marker is set", arguments: ["BITCODE_GENERATION_MODE=marker"]) { (inout subject: BuildArguments) in
+					subject.bitcodeGenerationMode = .marker
 				}
 
-				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=bitcode if .Bitcode is set", arguments: ["BITCODE_GENERATION_MODE=bitcode"]) { (inout subject: BuildArguments) in
-					subject.bitcodeGenerationMode = .Bitcode
+				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=bitcode if .bitcode is set", arguments: ["BITCODE_GENERATION_MODE=bitcode"]) { (inout subject: BuildArguments) in
+					subject.bitcodeGenerationMode = .bitcode
 				}
 			}
 		}
