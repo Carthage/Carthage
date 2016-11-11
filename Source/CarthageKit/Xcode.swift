@@ -368,22 +368,22 @@ extension SDK: CustomStringConvertible {
 /// binary.
 public enum BitcodeGenerationMode: String {
 	/// Only bitcode marker will be embedded.
-	case Marker = "marker"
+	case marker = "marker"
 
 	/// Full bitcode will be embedded.
-	case Bitcode = "bitcode"
+	case bitcode = "bitcode"
 }
 
 /// Describes the type of product built by an Xcode target.
 public enum ProductType: String {
 	/// A framework bundle.
-	case Framework = "com.apple.product-type.framework"
+	case framework = "com.apple.product-type.framework"
 
 	/// A static library.
-	case StaticLibrary = "com.apple.product-type.library.static"
+	case staticLibrary = "com.apple.product-type.library.static"
 
 	/// A unit test bundle.
-	case TestBundle = "com.apple.product-type.bundle.unit-test"
+	case testBundle = "com.apple.product-type.bundle.unit-test"
 
 	/// Attempts to parse a product type from a string returned from
 	/// `xcodebuild`.
@@ -396,19 +396,19 @@ public enum ProductType: String {
 /// See https://developer.apple.com/library/mac/documentation/DeveloperTools/Reference/XcodeBuildSettingRef/1-Build_Setting_Reference/build_setting_ref.html#//apple_ref/doc/uid/TP40003931-CH3-SW73.
 public enum MachOType: String {
 	/// Executable binary.
-	case Executable = "mh_executable"
+	case executable = "mh_executable"
 
 	/// Bundle binary.
-	case Bundle = "mh_bundle"
+	case bundle = "mh_bundle"
 
 	/// Relocatable object file.
-	case Object = "mh_object"
+	case object = "mh_object"
 
 	/// Dynamic library binary.
-	case Dylib = "mh_dylib"
+	case dylib = "mh_dylib"
 
 	/// Static library binary.
-	case Staticlib = "staticlib"
+	case staticlib = "staticlib"
 
 	/// Attempts to parse a Mach-O type from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<MachOType, CarthageError> {
@@ -419,18 +419,18 @@ public enum MachOType: String {
 /// Describes the type of frameworks.
 private enum FrameworkType {
 	/// A dynamic framework.
-	case Dynamic
+	case dynamic
 
 	/// A static framework.
-	case Static
+	case `static`
 
 	init?(productType: ProductType, machOType: MachOType) {
 		switch (productType, machOType) {
-		case (.Framework, .Dylib):
-			self = .Dynamic
+		case (.framework, .dylib):
+			self = .dynamic
 
-		case (.Framework, .Staticlib):
-			self = .Static
+		case (.framework, .staticlib):
+			self = .`static`
 
 		case _:
 			return nil
@@ -441,11 +441,11 @@ private enum FrameworkType {
 /// Describes the type of packages, given their CFBundlePackageType.
 private enum PackageType: String {
 	/// A .framework package.
-	case Framework = "FMWK"
+	case framework = "FMWK"
 
 	/// A .bundle package. Some frameworks might have this package type code
 	/// (e.g. https://github.com/ResearchKit/ResearchKit/blob/1.3.0/ResearchKit/Info.plist#L15-L16).
-	case Bundle = "BNDL"
+	case bundle = "BNDL"
 
 	/// A .dSYM package.
 	case dSYM = "dSYM"
@@ -744,7 +744,7 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, _ destinatio
 
 /// Determines whether the specified framework type should be built automatically.
 private func shouldBuildFrameworkType(frameworkType: FrameworkType?) -> Bool {
-	return frameworkType == .Dynamic
+	return frameworkType == .dynamic
 }
 
 /// Determines whether the given scheme should be built automatically.
@@ -936,7 +936,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					.flatMap(.Concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 						let bitcodeEnabled = settings.reduce(true) { $0 && ($1.bitcodeEnabled.value ?? false) }
 						if bitcodeEnabled {
-							argsForBuilding.bitcodeGenerationMode = .Bitcode
+							argsForBuilding.bitcodeGenerationMode = .bitcode
 						}
 
 						var buildScheme = xcodebuildTask(["clean", "build"], argsForBuilding)
@@ -1538,7 +1538,7 @@ private func binaryURL(packageURL: NSURL) -> Result<NSURL, CarthageError> {
 	let packageType = (bundle?.objectForInfoDictionaryKey("CFBundlePackageType") as? String).flatMap(PackageType.init)
 
 	switch packageType {
-	case .Framework?, .Bundle?:
+	case .framework?, .bundle?:
 		if let binaryName = bundle?.objectForInfoDictionaryKey("CFBundleExecutable") as? String {
 			return .Success(packageURL.appendingPathComponent(binaryName))
 		}
