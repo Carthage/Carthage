@@ -19,19 +19,19 @@ public let CarthageBinariesFolderPath = "Carthage/Build"
 /// build.
 public enum ProjectLocator: Comparable {
 	/// The `xcworkspace` at the given file URL should be built.
-	case Workspace(NSURL)
+	case workspace(NSURL)
 
 	/// The `xcodeproj` at the given file URL should be built.
-	case ProjectFile(NSURL)
+	case projectFile(NSURL)
 
 	/// The file URL this locator refers to.
 	public var fileURL: NSURL {
 		switch self {
-		case let .Workspace(URL):
+		case let .workspace(URL):
 			assert(URL.fileURL)
 			return URL
 
-		case let .ProjectFile(URL):
+		case let .projectFile(URL):
 			assert(URL.fileURL)
 			return URL
 		}
@@ -45,10 +45,10 @@ public enum ProjectLocator: Comparable {
 
 public func ==(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 	switch (lhs, rhs) {
-	case let (.Workspace(left), .Workspace(right)):
+	case let (.workspace(left), .workspace(right)):
 		return left == right
 
-	case let (.ProjectFile(left), .ProjectFile(right)):
+	case let (.projectFile(left), .projectFile(right)):
 		return left == right
 
 	default:
@@ -66,10 +66,10 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 
 	// Prefer workspaces over projects.
 	switch (lhs, rhs) {
-	case (.Workspace, .ProjectFile):
+	case (.workspace, .projectFile):
 		return true
 
-	case (.ProjectFile, .Workspace):
+	case (.projectFile, .workspace):
 		return false
 
 	default:
@@ -104,9 +104,9 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 		.map { URL -> ProjectLocator? in
 			if let UTI = URL.typeIdentifier.value {
 				if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
-					return .Workspace(URL)
+					return .workspace(URL)
 				} else if (UTTypeConformsTo(UTI, "com.apple.xcode.project")) {
-					return .ProjectFile(URL)
+					return .projectFile(URL)
 				}
 			}
 			return nil
@@ -207,7 +207,7 @@ public func schemesInProjects(projects: [(ProjectLocator, [String])]) -> SignalP
 		}
 		.filter { (project: ProjectLocator, schemes: [String]) in
 			switch project {
-			case .ProjectFile where !schemes.isEmpty:
+			case .projectFile where !schemes.isEmpty:
 				return true
 
 			default:
@@ -1202,7 +1202,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 					// Pick up the first workspace which can build the scheme.
 					.filter { project, schemes in
 						switch project {
-						case .Workspace where schemes.contains(scheme):
+						case .workspace where schemes.contains(scheme):
 							return true
 
 						default:
