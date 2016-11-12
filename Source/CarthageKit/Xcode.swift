@@ -1096,7 +1096,7 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 					case let (_, .noSharedFrameworkSchemes(_, platforms)):
 						return .noSharedFrameworkSchemes(dependency, platforms)
 
-					case let (.GitHub(repo), .noSharedSchemes(project, _)):
+					case let (.gitHub(repo), .noSharedSchemes(project, _)):
 						return .noSharedSchemes(project, repo)
 
 					default:
@@ -1190,7 +1190,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 						if !schemes.isEmpty {
 							return .init(values: schemes)
 						} else {
-							return .init(error: .noSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), options.platforms))
+							return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path!)), options.platforms))
 						}
 					}
 			}

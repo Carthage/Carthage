@@ -47,7 +47,7 @@ class ProjectSpec: QuickSpec {
 				expect(resultError).notTo(beNil())
 
 				let makeDependency: (String, String, [String]) -> DuplicateDependency = { (repoOwner, repoName, locations) in
-					let project = ProjectIdentifier.GitHub(Repository(owner: repoOwner, name: repoName))
+					let project = ProjectIdentifier.gitHub(Repository(owner: repoOwner, name: repoName))
 					return DuplicateDependency(project: project, locations: locations)
 				}
 
@@ -85,7 +85,7 @@ class ProjectSpec: QuickSpec {
 			let temporaryURL = NSURL(fileURLWithPath: temporaryPath, isDirectory: true)
 			let repositoryURL = temporaryURL.appendingPathComponent("carthage1191", isDirectory: true)
 			let cacheDirectoryURL = temporaryURL.appendingPathComponent("cache", isDirectory: true)
-			let projectIdentifier = ProjectIdentifier.Git(GitURL(repositoryURL.carthage_absoluteString))
+			let projectIdentifier = ProjectIdentifier.git(GitURL(repositoryURL.carthage_absoluteString))
 
 			func initRepository() {
 				expect { try NSFileManager.defaultManager().createDirectoryAtPath(repositoryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())

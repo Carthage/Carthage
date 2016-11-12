@@ -176,18 +176,18 @@ extension ResolvedCartfile: CustomStringConvertible {
 /// Uniquely identifies a project that can be used as a dependency.
 public enum ProjectIdentifier: Comparable {
 	/// A repository hosted on GitHub.com.
-	case GitHub(Repository)
+	case gitHub(Repository)
 
 	/// An arbitrary Git repository.
-	case Git(GitURL)
+	case git(GitURL)
 
 	/// The unique, user-visible name for this project.
 	public var name: String {
 		switch self {
-		case let .GitHub(repo):
+		case let .gitHub(repo):
 			return repo.name
 
-		case let .Git(URL):
+		case let .git(URL):
 			return URL.name ?? URL.URLString
 		}
 	}
@@ -201,10 +201,10 @@ public enum ProjectIdentifier: Comparable {
 
 public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 	switch (lhs, rhs) {
-	case let (.GitHub(left), .GitHub(right)):
+	case let (.gitHub(left), .gitHub(right)):
 		return left == right
 
-	case let (.Git(left), .Git(right)):
+	case let (.git(left), .git(right)):
 		return left == right
 
 	default:
@@ -219,10 +219,10 @@ public func <(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 extension ProjectIdentifier: Hashable {
 	public var hashValue: Int {
 		switch self {
-		case let .GitHub(repo):
+		case let .gitHub(repo):
 			return repo.hashValue
 
-		case let .Git(URL):
+		case let .git(URL):
 			return URL.hashValue
 		}
 	}
@@ -235,11 +235,11 @@ extension ProjectIdentifier: Scannable {
 
 		if scanner.scanString("github", intoString: nil) {
 			parser = { repoIdentifier in
-				return Repository.fromIdentifier(repoIdentifier).map { self.GitHub($0) }
+				return Repository.fromIdentifier(repoIdentifier).map { self.gitHub($0) }
 			}
 		} else if scanner.scanString("git", intoString: nil) {
 			parser = { URLString in
-				return .Success(self.Git(GitURL(URLString)))
+				return .Success(self.git(GitURL(URLString)))
 			}
 		} else {
 			return .Failure(CarthageError.parseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
@@ -265,7 +265,7 @@ extension ProjectIdentifier: Scannable {
 extension ProjectIdentifier: CustomStringConvertible {
 	public var description: String {
 		switch self {
-		case let .GitHub(repo):
+		case let .gitHub(repo):
 			let repoDescription: String
 			switch repo.server {
 			case .DotCom:
@@ -276,7 +276,7 @@ extension ProjectIdentifier: CustomStringConvertible {
 			}
 			return "github \"\(repoDescription)\""
 
-		case let .Git(URL):
+		case let .git(URL):
 			return "git \"\(URL)\""
 		}
 	}

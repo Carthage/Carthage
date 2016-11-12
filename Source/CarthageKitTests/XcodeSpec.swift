@@ -86,8 +86,8 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for all platforms") {
 			let dependencies = [
-				ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes")),
-				ProjectIdentifier.GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
+				ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes")),
+				ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
 			]
 
 			for project in dependencies {
@@ -262,7 +262,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for one platform") {
-			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
+			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
 				.flatten(.Concat)
 				.ignoreTaskData()
@@ -283,7 +283,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for multiple platforms") {
-			let project = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
+			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
 				.flatten(.Concat)
 				.ignoreTaskData()
@@ -324,7 +324,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should symlink the build directory") {
-			let dependency = ProjectIdentifier.GitHub(Repository(owner: "github", name: "Archimedes"))
+			let dependency = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
 
 			let dependencyURL =	directoryURL.appendingPathComponent(dependency.relativePath)
 			// Build

@@ -34,7 +34,7 @@ public struct FetchCommand: CommandType {
 	public let function = "Clones or fetches a Git repository ahead of time"
 
 	public func run(options: Options) -> Result<(), CarthageError> {
-		let project = ProjectIdentifier.Git(options.repositoryURL)
+		let project = ProjectIdentifier.git(options.repositoryURL)
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
 		return cloneOrFetchProject(project, preferHTTPS: true)
