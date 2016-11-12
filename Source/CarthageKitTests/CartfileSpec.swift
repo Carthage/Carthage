@@ -27,31 +27,31 @@ class CartfileSpec: QuickSpec {
 
 			let depReactiveCocoa = cartfile.dependencies[0]
 			expect(depReactiveCocoa.project) == ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
-			expect(depReactiveCocoa.version) == VersionSpecifier.AtLeast(SemanticVersion(major: 2, minor: 3, patch: 1))
+			expect(depReactiveCocoa.version) == VersionSpecifier.atLeast(SemanticVersion(major: 2, minor: 3, patch: 1))
 
 			let depMantle = cartfile.dependencies[1]
 			expect(depMantle.project) == ProjectIdentifier.gitHub(Repository(owner: "Mantle", name: "Mantle"))
-			expect(depMantle.version) == VersionSpecifier.CompatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0))
+			expect(depMantle.version) == VersionSpecifier.compatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0))
 
 			let depLibextobjc = cartfile.dependencies[2]
 			expect(depLibextobjc.project) == ProjectIdentifier.gitHub(Repository(owner: "jspahrsummers", name: "libextobjc"))
-			expect(depLibextobjc.version) == VersionSpecifier.Exactly(SemanticVersion(major: 0, minor: 4, patch: 1))
+			expect(depLibextobjc.version) == VersionSpecifier.exactly(SemanticVersion(major: 0, minor: 4, patch: 1))
 
 			let depConfigs = cartfile.dependencies[3]
 			expect(depConfigs.project) == ProjectIdentifier.gitHub(Repository(owner: "jspahrsummers", name: "xcconfigs"))
-			expect(depConfigs.version) == VersionSpecifier.Any
+			expect(depConfigs.version) == VersionSpecifier.any
 
 			let depCharts = cartfile.dependencies[4]
 			expect(depCharts.project) == ProjectIdentifier.gitHub(Repository(owner: "danielgindi", name: "ios-charts"))
-			expect(depCharts.version) == VersionSpecifier.Any
+			expect(depCharts.version) == VersionSpecifier.any
 
 			let depErrorTranslations2 = cartfile.dependencies[5]
 			expect(depErrorTranslations2.project) == ProjectIdentifier.gitHub(Repository(server: .Enterprise(url: NSURL(string: "https://enterprise.local/ghe")!), owner: "desktop", name: "git-error-translations"))
-			expect(depErrorTranslations2.version) == VersionSpecifier.Any
+			expect(depErrorTranslations2.version) == VersionSpecifier.any
 
 			let depErrorTranslations = cartfile.dependencies[6]
 			expect(depErrorTranslations.project) == ProjectIdentifier.git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))
-			expect(depErrorTranslations.version) == VersionSpecifier.GitReference("development")
+			expect(depErrorTranslations.version) == VersionSpecifier.gitReference("development")
 		}
 
 		it("should parse a Cartfile.resolved") {

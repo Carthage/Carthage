@@ -95,7 +95,7 @@ public struct Resolver {
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
 				return SignalProducer(value: dependency)
 					.flatMap(.Concat) { dependency -> SignalProducer<PinnedVersion, CarthageError> in
-						if case let .GitReference(refName) = dependency.version {
+						if case let .gitReference(refName) = dependency.version {
 							return self.resolvedGitReference(dependency.project, refName)
 						}
 
@@ -277,8 +277,8 @@ private struct DependencyGraph: Equatable {
 			} else if existingNode.proposedVersion != node.proposedVersion {
 				// The guard condition above is required for enabling to build a
 				// dependency graph in the cases such as: one node has a
-				// `.GitReference` specifier of a branch name, and the other has
-				// a `.GitReference` of a SHA which is the HEAD of that branch.
+				// `.gitReference` specifier of a branch name, and the other has
+				// a `.gitReference` of a SHA which is the HEAD of that branch.
 				// If the specifiers are not the same but the nodes have the same
 				// proposed version, the graph should be valid.
 				//
