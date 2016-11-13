@@ -244,7 +244,7 @@ public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, Carthag
 					}
 
 					if let line = line {
-						observer.sendNext(line)
+						observer.send(value: line)
 					}
 				}
 
@@ -383,7 +383,7 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 			}
 
 			if let key = key as? String {
-				observer.sendNext((key, value))
+				observer.send(value: (key, value))
 			}
 		}
 
@@ -502,7 +502,7 @@ private func ensureDirectoryExistsAtURL(fileURL: NSURL) -> SignalProducer<(), Ca
 		if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!, isDirectory: &isDirectory) && isDirectory {
 			observer.sendCompleted()
 		} else {
-			observer.sendFailed(.readFailed(fileURL, nil))
+			observer.send(error: .readFailed(fileURL, nil))
 		}
 	}
 }

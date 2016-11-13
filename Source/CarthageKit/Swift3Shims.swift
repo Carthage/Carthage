@@ -17,6 +17,18 @@ import ReactiveTask
 		}
 	}
 
+	// MARK: - ReactiveSwift
+
+	internal extension Observer {
+		func send(value value: Value) {
+			sendNext(value)
+		}
+
+		func send(error error: Error) {
+			sendFailed(error)
+		}
+	}
+
 	// MARK: - ReactiveTask
 
 	internal extension TaskEvent {

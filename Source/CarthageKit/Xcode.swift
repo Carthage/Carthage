@@ -503,7 +503,7 @@ public struct BuildSettings {
 					let flushTarget = { () -> () in
 						if let currentTarget = currentTarget {
 							let buildSettings = self.init(target: currentTarget, settings: currentSettings)
-							observer.sendNext(buildSettings)
+							observer.send(value: buildSettings)
 						}
 
 						currentTarget = nil
@@ -793,14 +793,14 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 					if let transformed = transformedEvent.value {
 						settings = combineDictionaries(settings, rhs: transformed)
 					} else {
-						observer.sendNext(transformedEvent)
+						observer.send(value: transformedEvent)
 					}
 
 				case let .Failed(error):
-					observer.sendFailed(error)
+					observer.send(error: error)
 
 				case .Completed:
-					observer.sendNext(.success(settings))
+					observer.send(value: .success(settings))
 					observer.sendCompleted()
 
 				case .Interrupted:
@@ -1034,7 +1034,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 											let simulatorSettings = simulatorSettingsByTarget[target]
 											assert(simulatorSettings != nil, "No \(simulatorSDK) build settings found for target \"\(target)\"")
 
-											observer.sendNext((deviceSettings, simulatorSettings!))
+											observer.send(value: (deviceSettings, simulatorSettings!))
 										}
 
 										observer.sendCompleted()
