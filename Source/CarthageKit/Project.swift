@@ -222,10 +222,10 @@ public final class Project {
 
 				if duplicateDeps.count == 0 {
 					cartfile.appendCartfile(privateCartfile)
-					return .Success(cartfile)
+					return .success(cartfile)
 				}
 
-				return .Failure(.duplicateDependencies(duplicateDeps))
+				return .failure(.duplicateDependencies(duplicateDeps))
 			}
 	}
 
@@ -236,7 +236,7 @@ public final class Project {
 				let resolvedCartfileContents = try NSString(contentsOfURL: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
 				return ResolvedCartfile.fromString(resolvedCartfileContents as String)
 			} catch let error as NSError {
-				return .Failure(.readFailed(self.resolvedCartfileURL, error))
+				return .failure(.readFailed(self.resolvedCartfileURL, error))
 			}
 		}
 	}
@@ -245,9 +245,9 @@ public final class Project {
 	public func writeResolvedCartfile(resolvedCartfile: ResolvedCartfile) -> Result<(), CarthageError> {
 		do {
 			try resolvedCartfile.description.writeToURL(resolvedCartfileURL, atomically: true, encoding: NSUTF8StringEncoding)
-			return .Success(())
+			return .success(())
 		} catch let error as NSError {
-			return .Failure(.writeFailed(resolvedCartfileURL, error))
+			return .failure(.writeFailed(resolvedCartfileURL, error))
 		}
 	}
 
@@ -295,7 +295,7 @@ public final class Project {
 			.flatMap(.Concat) { versions in SignalProducer<PinnedVersion, CarthageError>(values: versions) }
 
 		return SignalProducer.attempt {
-				return .Success(self.cachedVersions)
+				return .success(self.cachedVersions)
 			}
 			.flatMap(.Merge) { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
 				if let versions = versionsByProject[project] {
@@ -423,7 +423,7 @@ public final class Project {
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer.attempt {
-				return .Success(self.useBinaries)
+				return .success(self.useBinaries)
 			}
 			.flatMap(.Merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
 				if !useBinaries {
@@ -458,9 +458,9 @@ public final class Project {
 						.attemptMap { (temporaryDirectoryURL: NSURL) -> Result<Bool, CarthageError> in
 							do {
 								try NSFileManager.defaultManager().removeItemAtURL(temporaryDirectoryURL)
-								return .Success(true)
+								return .success(true)
 							} catch let error as NSError {
-								return .Failure(.writeFailed(temporaryDirectoryURL, error))
+								return .failure(.writeFailed(temporaryDirectoryURL, error))
 							}
 						}
 						.concat(SignalProducer(value: false))
@@ -712,10 +712,10 @@ public final class Project {
 					try fileManager.createSymbolicLinkAtPath(dependencyCheckoutURL.path!, withDestinationPath: linkDestinationPath)
 				} catch let error as NSError {
 					if !(error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError) {
-						return .Failure(.writeFailed(dependencyCheckoutURL, error))
+						return .failure(.writeFailed(dependencyCheckoutURL, error))
 					}
 				}
-				return .Success()
+				return .success()
 		}
 
 
@@ -725,10 +725,10 @@ public final class Project {
 					try fileManager.createDirectoryAtURL(dependencyCheckoutsURL, withIntermediateDirectories: true, attributes: nil)
 				} catch let error as NSError {
 					if !(error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError) {
-						return .Failure(.writeFailed(dependencyCheckoutsURL, error))
+						return .failure(.writeFailed(dependencyCheckoutsURL, error))
 					}
 				}
-				return .Success()
+				return .success()
 			}
 			.then(symlinksProducer)
 	}
@@ -737,7 +737,7 @@ public final class Project {
 	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithOptions(options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithOptions(options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.Merge) { resolvedCartfile in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
@@ -783,19 +783,19 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			let parentDirectoryURL = fileURL.URLByDeletingLastPathComponent!
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil)
-				return .Success(())
+				return .success(())
 			} catch let error as NSError {
-				return .Failure(.writeFailed(parentDirectoryURL, error))
+				return .failure(.writeFailed(parentDirectoryURL, error))
 			}
 		}
 		.attempt { newDownloadURL in
 			// Tries `rename()` system call at first.
 			if rename(downloadURL.fileSystemRepresentation, newDownloadURL.fileSystemRepresentation) == 0 {
-				return .Success(())
+				return .success(())
 			}
 
 			if errno != EXDEV {
-				return .Failure(.taskError(.POSIXError(errno)))
+				return .failure(.taskError(.POSIXError(errno)))
 			}
 
 			// If the “Cross-device link” error occurred, then falls back to
@@ -805,9 +805,9 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			// https://github.com/Carthage/Carthage/issues/711.
 			do {
 				try NSFileManager.defaultManager().moveItemAtURL(downloadURL, toURL: newDownloadURL)
-				return .Success(())
+				return .success(())
 			} catch let error as NSError {
-				return .Failure(.writeFailed(newDownloadURL, error))
+				return .failure(.writeFailed(newDownloadURL, error))
 			}
 		}
 }
@@ -844,13 +844,13 @@ private func platformForFramework(frameworkURL: NSURL) -> SignalProducer<Platfor
 			}
 
 			guard let sdkName = bundle?.objectForInfoDictionaryKey("DTSDKName") else {
-				return .Failure(readFailed("the DTSDKName key in its plist file is missing"))
+				return .failure(readFailed("the DTSDKName key in its plist file is missing"))
 			}
 
 			if let sdkName = sdkName as? String {
-				return .Success(sdkName)
+				return .success(sdkName)
 			} else {
-				return .Failure(readFailed("the value for the DTSDKName key in its plist file is not a string"))
+				return .failure(readFailed("the value for the DTSDKName key in its plist file is not a string"))
 			}
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
@@ -975,10 +975,10 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 			do {
 				try fileManager.createDirectoryAtURL(destinationURL, withIntermediateDirectories: true, attributes: nil)
 			} catch let error as NSError {
-				return .Failure(.writeFailed(destinationURL, error))
+				return .failure(.writeFailed(destinationURL, error))
 			}
 
-			return .Success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
+			return .success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
 		}
 		.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 			return isGitRepository(repositoryURL)

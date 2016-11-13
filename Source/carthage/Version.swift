@@ -18,6 +18,6 @@ public struct VersionCommand: CommandType {
 	public func run(options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
 		let versionString = NSBundle(identifier: CarthageKitBundleIdentifier)?.objectForInfoDictionaryKey("CFBundleShortVersionString") as! String
 		carthage.println(versionString)
-		return .Success(())
+		return .success(())
 	}
 }

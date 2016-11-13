@@ -46,14 +46,14 @@ public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<N
 			}
 
 			if result == nil {
-				return .Failure(.taskError(.POSIXError(errno)))
+				return .failure(.taskError(.POSIXError(errno)))
 			}
 
 			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
 				return String.fromCString(ptr.baseAddress)!
 			}
 
-			return .Success(temporaryPath)
+			return .success(temporaryPath)
 		}
 		.map { NSURL.fileURLWithPath($0, isDirectory: true) }
 		.flatMap(.Merge) { directoryURL in

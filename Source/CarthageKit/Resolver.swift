@@ -272,7 +272,7 @@ private struct DependencyGraph: Equatable {
 					node = existingNode
 					node.versionSpecifier = newSpecifier
 				} else {
-					return .Failure(CarthageError.requiredVersionNotFound(node.project, newSpecifier))
+					return .failure(CarthageError.requiredVersionNotFound(node.project, newSpecifier))
 				}
 			} else if existingNode.proposedVersion != node.proposedVersion {
 				// The guard condition above is required for enabling to build a
@@ -289,7 +289,7 @@ private struct DependencyGraph: Equatable {
 					.first
 				let first = (existingNode.versionSpecifier, existingDependencyOf?.project)
 				let second = (node.versionSpecifier, dependencyOf?.project)
-				return .Failure(CarthageError.incompatibleRequirements(node.project, first, second))
+				return .failure(CarthageError.incompatibleRequirements(node.project, first, second))
 			}
 		} else {
 			allNodes.insert(node)
@@ -318,7 +318,7 @@ private struct DependencyGraph: Equatable {
 			roots.insert(node)
 		}
 
-		return .Success(node)
+		return .success(node)
 	}
 	
 	/// Attempts to add the given nodes to the graph, optionally as a dependency
@@ -421,7 +421,7 @@ private func mergeGraphs
 	(graphs: Collection) -> Result<DependencyGraph, CarthageError> {
 	precondition(!graphs.isEmpty)
 	
-	var result: Result<DependencyGraph, CarthageError> = .Success(graphs.first!)
+	var result: Result<DependencyGraph, CarthageError> = .success(graphs.first!)
 
 	for next in graphs {
 		for root in next.roots {

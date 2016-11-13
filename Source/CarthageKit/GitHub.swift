@@ -55,7 +55,7 @@ extension Repository {
 		if let match = NWORegex.firstMatchInString(identifier, options: [], range: range) {
 			let owner = (identifier as NSString).substringWithRange(match.rangeAtIndex(1))
 			let name = (identifier as NSString).substringWithRange(match.rangeAtIndex(2))
-			return .Success(self.init(owner: owner, name: stripGitSuffix(name)))
+			return .success(self.init(owner: owner, name: stripGitSuffix(name)))
 		}
 
 		// GitHub Enterprise
@@ -73,14 +73,14 @@ extension Repository {
 			// If the host name starts with “github.com”, that is not an enterprise
 			// one.
 			if host == "github.com" || host == "www.github.com" {
-				return .Success(self.init(owner: owner, name: stripGitSuffix(name)))
+				return .success(self.init(owner: owner, name: stripGitSuffix(name)))
 			} else {
 				let baseURL = URL.URLByDeletingLastPathComponent!.URLByDeletingLastPathComponent!
-				return .Success(self.init(server: .Enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
+				return .success(self.init(server: .Enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
 			}
 		}
 
-		return .Failure(CarthageError.parseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
+		return .failure(CarthageError.parseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
 	}
 }
 

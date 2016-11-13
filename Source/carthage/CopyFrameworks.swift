@@ -100,7 +100,7 @@ private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
 		if codeSigningAllowed() {
 			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY").map { $0.isEmpty ? nil : $0 }
 		} else {
-			return .Success(nil)
+			return .success(nil)
 		}
 	}
 }
@@ -151,9 +151,9 @@ private func buildActionIsArchiveOrInstall() -> Bool {
 private func inputFiles() -> SignalProducer<String, CarthageError> {
 	let count: Result<Int, CarthageError> = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT").flatMap { count in
 		if let i = Int(count) {
-			return .Success(i)
+			return .success(i)
 		} else {
-			return .Failure(.invalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
+			return .failure(.invalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
 		}
 	}
 

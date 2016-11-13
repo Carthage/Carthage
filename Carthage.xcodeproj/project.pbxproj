@@ -32,6 +32,9 @@
 		BEB076671C8A1FD800ABD373 /* Tentacle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076651C8A1FD800ABD373 /* Tentacle.framework */; };
 		CD1FE6531DD366620016639E /* Runes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; };
 		CD1FE6541DD367920016639E /* Runes.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		CD1FE6561DD857570016639E /* Swift3Shims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1FE6551DD857570016639E /* Swift3Shims.swift */; };
+		CD1FE6571DD857570016639E /* Swift3Shims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1FE6551DD857570016639E /* Swift3Shims.swift */; };
+		CD1FE6581DD85A140016639E /* Swift3Shims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1FE6551DD857570016639E /* Swift3Shims.swift */; };
 		CD7F22441C67649F00B018A9 /* TestCartfileProposedVersion in Resources */ = {isa = PBXBuildFile; fileRef = CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */; };
 		CDA0B6CA1C468E67006C499C /* GitSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA0B6C91C468E67006C499C /* GitSpec.swift */; };
 		CDCE1CC41C170E8A00B2ED88 /* TestResolvedCartfile.resolved in Resources */ = {isa = PBXBuildFile; fileRef = CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */; };
@@ -184,6 +187,7 @@
 		BEB076641C8A1FD800ABD373 /* Curry.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Curry.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEB076651C8A1FD800ABD373 /* Tentacle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Tentacle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD1FE6521DD366620016639E /* Runes.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Runes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		CD1FE6551DD857570016639E /* Swift3Shims.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Swift3Shims.swift; sourceTree = "<group>"; };
 		CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfileProposedVersion; sourceTree = "<group>"; };
 		CDA0B6C91C468E67006C499C /* GitSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitSpec.swift; sourceTree = "<group>"; };
 		CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestResolvedCartfile.resolved; sourceTree = "<group>"; };
@@ -452,6 +456,7 @@
 				F603929819EA29F80050A6AF /* Project.swift */,
 				D01D82D61A10160700F0DD94 /* Resolver.swift */,
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
+				CD1FE6551DD857570016639E /* Swift3Shims.swift */,
 				D0DE893F1A0F2CB00030A3EC /* Version.swift */,
 				D01F8A5319EA2F1700643E7C /* Xcode.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
@@ -743,6 +748,7 @@
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */,
+				CD1FE6571DD857570016639E /* Swift3Shims.swift in Sources */,
 				D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */,
 				89E80E621C755002000F8DCB /* BuildArguments.swift in Sources */,
 				D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */,
@@ -768,6 +774,7 @@
 				D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */,
 				CDA0B6CA1C468E67006C499C /* GitSpec.swift in Sources */,
 				89E80E641C755059000F8DCB /* BuildArgumentsSpec.swift in Sources */,
+				CD1FE6581DD85A140016639E /* Swift3Shims.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -782,6 +789,7 @@
 				D095BA3C1A187D40007F15D6 /* Bootstrap.swift in Sources */,
 				54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */,
 				D0AAC2401A14933100060F2E /* Update.swift in Sources */,
+				CD1FE6561DD857570016639E /* Swift3Shims.swift in Sources */,
 				D05BD1991A26864F00A36A0E /* Extensions.swift in Sources */,
 				6724C86A1A850A4600E47F00 /* Environment.swift in Sources */,
 				D03B32BF19EA49D8007788BE /* Build.swift in Sources */,

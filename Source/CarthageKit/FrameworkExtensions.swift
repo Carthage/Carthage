@@ -253,13 +253,13 @@ extension NSURL {
 			try getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey)
 
 			if let identifier = typeIdentifier as? String {
-				return .Success(identifier)
+				return .success(identifier)
 			}
 		} catch let err as NSError {
 			error = err
 		}
 
-		return .Failure(.readFailed(self, error))
+		return .failure(.readFailed(self, error))
 	}
 
 	public var carthage_absoluteString: String {
