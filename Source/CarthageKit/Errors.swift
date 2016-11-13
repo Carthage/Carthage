@@ -216,10 +216,10 @@ extension CarthageError: CustomStringConvertible {
 			}
 
 			switch projectIdentifier {
-			case let .GitHub(repository):
+			case let .gitHub(repository):
 				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
 
-			case .Git:
+			case .git:
 				break
 			}
 

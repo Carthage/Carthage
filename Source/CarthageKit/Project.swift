@@ -433,7 +433,7 @@ public final class Project {
 				let checkoutDirectoryURL = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true)
 
 				switch project {
-				case let .GitHub(repository):
+				case let .gitHub(repository):
 					let client = Client(repository: repository)
 					return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: client)
 						.flatMapError { error -> SignalProducer<NSURL, CarthageError> in
@@ -466,7 +466,7 @@ public final class Project {
 						.concat(SignalProducer(value: false))
 						.take(1)
 
-				case .Git:
+				case .git:
 					return SignalProducer(value: false)
 				}
 			}
@@ -935,14 +935,14 @@ private func repositoryFileURLForProject(project: ProjectIdentifier, baseURL: NS
 /// Returns the URL that the project's remote repository exists at.
 private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bool) -> GitURL {
 	switch project {
-	case let .GitHub(repository):
+	case let .gitHub(repository):
 		if preferHTTPS {
 			return repository.HTTPSURL
 		} else {
 			return repository.SSHURL
 		}
 
-	case let .Git(URL):
+	case let .git(URL):
 		return URL
 	}
 }

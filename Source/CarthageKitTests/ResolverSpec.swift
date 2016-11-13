@@ -23,7 +23,7 @@ class ResolverSpec: QuickSpec {
 	}
 
 	private func dependencyForOwner(owner: String, name: String, version: String) -> CarthageKit.Dependency<PinnedVersion> {
-		return CarthageKit.Dependency(project: .GitHub(Repository(owner: owner, name: name)), version: PinnedVersion(version))
+		return CarthageKit.Dependency(project: .gitHub(Repository(owner: owner, name: name)), version: PinnedVersion(version))
 	}
 
 	private func orderedDependencies(producer: SignalProducer<CarthageKit.Dependency<PinnedVersion>, CarthageError>) -> [Dependency] {
@@ -173,16 +173,16 @@ class ResolverSpec: QuickSpec {
 		let cartfile: Result<Cartfile, CarthageError>
 
 		switch dependency.project {
-		case .GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")):
+		case .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")):
 			cartfile = Cartfile.fromString("github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0")
 
-		case .GitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")):
+		case .gitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")):
 			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0")
 
-		case .Git(GitURL("/tmp/TestCartfileBranch")):
+		case .git(GitURL("/tmp/TestCartfileBranch")):
 			cartfile = Cartfile.fromString("git \"https://enterprise.local/desktop/git-error-translations2.git\" \"development\"")
 
-		case .Git(GitURL("/tmp/TestCartfileSHA")):
+		case .git(GitURL("/tmp/TestCartfileSHA")):
 			cartfile = Cartfile.fromString("git \"https://enterprise.local/desktop/git-error-translations2.git\" \"8ff4393ede2ca86d5a78edaf62b3a14d90bffab9\"")
 
 		default:
