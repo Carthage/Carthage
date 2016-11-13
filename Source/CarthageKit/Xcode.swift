@@ -800,7 +800,7 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 					observer.sendFailed(error)
 
 				case .Completed:
-					observer.sendNext(.Success(settings))
+					observer.sendNext(.success(settings))
 					observer.sendCompleted()
 
 				case .Interrupted:
@@ -1238,7 +1238,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 					}
 					.filter { taskEvent in taskEvent.value == nil }
 
-				return BuildSchemeProducer(value: .Success(initialValue))
+				return BuildSchemeProducer(value: .success(initialValue))
 					.concat(buildProgress)
 			}
 			.startWithSignal { signal, signalDisposable in
