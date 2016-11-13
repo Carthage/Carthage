@@ -173,7 +173,7 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 
 	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
 
-	return launchTask(taskDescription, standardInput: standardInput)
+	return taskDescription.launch(standardInput: standardInput)
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
 		.map { data in

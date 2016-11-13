@@ -84,7 +84,7 @@ public struct BuildCommand: CommandType {
 				if !options.verbose {
 					let (_stdoutSignal, stdoutObserver) = Signal<NSData, NoError>.pipe()
 					let stdoutProducer = SignalProducer(signal: _stdoutSignal)
-					let grepTask: BuildSchemeProducer = launchTask(Task("/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ]), standardInput: stdoutProducer)
+					let grepTask: BuildSchemeProducer = Task("/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ]).launch(standardInput: stdoutProducer)
 						.on(next: { taskEvent in
 							switch taskEvent {
 							case let .StandardOutput(data):

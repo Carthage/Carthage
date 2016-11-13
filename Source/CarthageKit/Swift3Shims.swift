@@ -1,5 +1,6 @@
 import Foundation
 import Result
+import ReactiveCocoa
 import ReactiveTask
 
 #if swift(>=3)
@@ -21,6 +22,12 @@ import ReactiveTask
 	internal extension TaskEvent {
 		static func success(value: T) -> TaskEvent<T> {
 			return .Success(value)
+		}
+	}
+
+	internal extension Task {
+		func launch(standardInput standardInput: SignalProducer<NSData, NoError>? = nil) -> SignalProducer<TaskEvent<NSData>, TaskError> {
+			return launchTask(self, standardInput: standardInput)
 		}
 	}
 #endif
