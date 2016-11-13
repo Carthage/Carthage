@@ -35,24 +35,24 @@ class XcodeSpec: QuickSpec {
 		describe("\(ProjectLocator.self)") {
 			describe("sorting") {
 				it("should put workspaces before projects") {
-					let workspace = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/Z.xcworkspace"))
-					let project = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
+					let workspace = ProjectLocator.workspace(NSURL(fileURLWithPath: "/Z.xcworkspace"))
+					let project = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
 					expect(workspace < project) == true
 				}
 				
 				it("should fall back to lexicographical sorting") {
-					let workspaceA = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/A.xcworkspace"))
-					let workspaceB = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/B.xcworkspace"))
+					let workspaceA = ProjectLocator.workspace(NSURL(fileURLWithPath: "/A.xcworkspace"))
+					let workspaceB = ProjectLocator.workspace(NSURL(fileURLWithPath: "/B.xcworkspace"))
 					expect(workspaceA < workspaceB) == true
 					
-					let projectA = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
-					let projectB = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/B.xcodeproj"))
+					let projectA = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
+					let projectB = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/B.xcodeproj"))
 					expect(projectA < projectB) == true
 				}
 				
 				it("should put top-level directories first") {
-					let top = ProjectLocator.ProjectFile(NSURL(fileURLWithPath: "/Z.xcodeproj"))
-					let bottom = ProjectLocator.Workspace(NSURL(fileURLWithPath: "/A/A.xcodeproj"))
+					let top = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/Z.xcodeproj"))
+					let bottom = ProjectLocator.workspace(NSURL(fileURLWithPath: "/A/A.xcodeproj"))
 					expect(top < bottom) == true
 				}
 			}
@@ -308,14 +308,14 @@ class XcodeSpec: QuickSpec {
 			let result = locateProjectsInDirectory(directoryURL).first()
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
-			expect(result?.value) == .ProjectFile(projectURL)
+			expect(result?.value) == .projectFile(projectURL)
 		}
 
 		it("should locate the project from the parent directory") {
 			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!).collect().first()
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
-			expect(result?.value).to(contain(.ProjectFile(projectURL)))
+			expect(result?.value).to(contain(.projectFile(projectURL)))
 		}
 
 		it("should not locate the project from a directory not containing it") {
