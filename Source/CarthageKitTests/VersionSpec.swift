@@ -64,8 +64,8 @@ class VersionSpecifierSpec: QuickSpec {
 		}
 
 		describe("satisfiedBy") {
-			it("should allow all versions for Any") {
-				let specifier = VersionSpecifier.Any
+			it("should allow all versions for .any") {
+				let specifier = VersionSpecifier.any
 				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == true
 				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == true
 				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
@@ -73,8 +73,8 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == true
 			}
 
-			it("should allow greater or equal versions for AtLeast") {
-				let specifier = VersionSpecifier.AtLeast(versionTwoOne)
+			it("should allow greater or equal versions for .atLeast") {
+				let specifier = VersionSpecifier.atLeast(versionTwoOne)
 				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
 				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
 				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
@@ -82,8 +82,8 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == true
 			}
 
-			it("should allow greater or equal minor and patch versions for CompatibleWith") {
-				let specifier = VersionSpecifier.CompatibleWith(versionTwoOne)
+			it("should allow greater or equal minor and patch versions for .compatibleWith") {
+				let specifier = VersionSpecifier.compatibleWith(versionTwoOne)
 				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
 				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
 				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
@@ -91,8 +91,8 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == false
 			}
 
-			it("should only allow exact versions for Exactly") {
-				let specifier = VersionSpecifier.Exactly(versionTwoTwo)
+			it("should only allow exact versions for .exactly") {
+				let specifier = VersionSpecifier.exactly(versionTwoTwo)
 				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
 				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
 				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == false
@@ -101,46 +101,46 @@ class VersionSpecifierSpec: QuickSpec {
 			}
 
 			it("should allow only greater patch versions to satisfy 0.x") {
-				let specifier = VersionSpecifier.CompatibleWith(versionZeroOne)
+				let specifier = VersionSpecifier.compatibleWith(versionZeroOne)
 				expect(specifier.satisfiedBy(versionZeroOneOne.pinnedVersion!)) == true
 				expect(specifier.satisfiedBy(versionZeroTwo.pinnedVersion!)) == false
 			}
 		}
 
 		describe("intersection") {
-			it("should return the tighter specifier when one is Any") {
-				testIntersection(VersionSpecifier.Any, VersionSpecifier.Any, expected: VersionSpecifier.Any)
-				testIntersection(VersionSpecifier.Any, VersionSpecifier.AtLeast(versionOne), expected: VersionSpecifier.AtLeast(versionOne))
-				testIntersection(VersionSpecifier.Any, VersionSpecifier.CompatibleWith(versionOne), expected: VersionSpecifier.CompatibleWith(versionOne))
-				testIntersection(VersionSpecifier.Any, VersionSpecifier.Exactly(versionOne), expected: VersionSpecifier.Exactly(versionOne))
+			it("should return the tighter specifier when one is .any") {
+				testIntersection(VersionSpecifier.any, VersionSpecifier.any, expected: VersionSpecifier.any)
+				testIntersection(VersionSpecifier.any, VersionSpecifier.atLeast(versionOne), expected: VersionSpecifier.atLeast(versionOne))
+				testIntersection(VersionSpecifier.any, VersionSpecifier.compatibleWith(versionOne), expected: VersionSpecifier.compatibleWith(versionOne))
+				testIntersection(VersionSpecifier.any, VersionSpecifier.exactly(versionOne), expected: VersionSpecifier.exactly(versionOne))
 			}
 
-			it("should return the higher specifier when one is AtLeast") {
-				testIntersection(VersionSpecifier.AtLeast(versionOne), VersionSpecifier.AtLeast(versionOne), expected: VersionSpecifier.AtLeast(versionOne))
-				testIntersection(VersionSpecifier.AtLeast(versionOne), VersionSpecifier.AtLeast(versionTwoOne), expected: VersionSpecifier.AtLeast(versionTwoOne))
-				testIntersection(VersionSpecifier.AtLeast(versionOne), VersionSpecifier.CompatibleWith(versionTwoOne), expected: VersionSpecifier.CompatibleWith(versionTwoOne))
-				testIntersection(VersionSpecifier.AtLeast(versionTwoOne), VersionSpecifier.CompatibleWith(versionTwoTwo), expected: VersionSpecifier.CompatibleWith(versionTwoTwo))
-				testIntersection(VersionSpecifier.AtLeast(versionOne), VersionSpecifier.Exactly(versionTwoTwo), expected: VersionSpecifier.Exactly(versionTwoTwo))
+			it("should return the higher specifier when one is .atLeast") {
+				testIntersection(VersionSpecifier.atLeast(versionOne), VersionSpecifier.atLeast(versionOne), expected: VersionSpecifier.atLeast(versionOne))
+				testIntersection(VersionSpecifier.atLeast(versionOne), VersionSpecifier.atLeast(versionTwoOne), expected: VersionSpecifier.atLeast(versionTwoOne))
+				testIntersection(VersionSpecifier.atLeast(versionOne), VersionSpecifier.compatibleWith(versionTwoOne), expected: VersionSpecifier.compatibleWith(versionTwoOne))
+				testIntersection(VersionSpecifier.atLeast(versionTwoOne), VersionSpecifier.compatibleWith(versionTwoTwo), expected: VersionSpecifier.compatibleWith(versionTwoTwo))
+				testIntersection(VersionSpecifier.atLeast(versionOne), VersionSpecifier.exactly(versionTwoTwo), expected: VersionSpecifier.exactly(versionTwoTwo))
 			}
 
-			it("should return the higher minor or patch version when one is CompatibleWith") {
-				testIntersection(VersionSpecifier.CompatibleWith(versionOne), VersionSpecifier.CompatibleWith(versionOne), expected: VersionSpecifier.CompatibleWith(versionOne))
-				testIntersection(VersionSpecifier.CompatibleWith(versionOne), VersionSpecifier.CompatibleWith(versionTwoOne), expected: nil)
-				testIntersection(VersionSpecifier.CompatibleWith(versionTwoOne), VersionSpecifier.CompatibleWith(versionTwoTwo), expected: VersionSpecifier.CompatibleWith(versionTwoTwo))
-				testIntersection(VersionSpecifier.CompatibleWith(versionTwoOne), VersionSpecifier.Exactly(versionTwoTwo), expected: VersionSpecifier.Exactly(versionTwoTwo))
+			it("should return the higher minor or patch version when one is .compatibleWith") {
+				testIntersection(VersionSpecifier.compatibleWith(versionOne), VersionSpecifier.compatibleWith(versionOne), expected: VersionSpecifier.compatibleWith(versionOne))
+				testIntersection(VersionSpecifier.compatibleWith(versionOne), VersionSpecifier.compatibleWith(versionTwoOne), expected: nil)
+				testIntersection(VersionSpecifier.compatibleWith(versionTwoOne), VersionSpecifier.compatibleWith(versionTwoTwo), expected: VersionSpecifier.compatibleWith(versionTwoTwo))
+				testIntersection(VersionSpecifier.compatibleWith(versionTwoOne), VersionSpecifier.exactly(versionTwoTwo), expected: VersionSpecifier.exactly(versionTwoTwo))
 			}
 
-			it("should only match exact specifiers for Exactly") {
-				testIntersection(VersionSpecifier.AtLeast(versionTwoOne), VersionSpecifier.Exactly(versionOne), expected: nil)
-				testIntersection(VersionSpecifier.CompatibleWith(versionOne), VersionSpecifier.Exactly(versionTwoOne), expected: nil)
-				testIntersection(VersionSpecifier.CompatibleWith(versionTwoTwo), VersionSpecifier.Exactly(versionTwoOne), expected: nil)
-				testIntersection(VersionSpecifier.Exactly(versionOne), VersionSpecifier.Exactly(versionOne), expected: VersionSpecifier.Exactly(versionOne))
-				testIntersection(VersionSpecifier.Exactly(versionTwoOne), VersionSpecifier.Exactly(versionOne), expected: nil)
+			it("should only match exact specifiers for .exactly") {
+				testIntersection(VersionSpecifier.atLeast(versionTwoOne), VersionSpecifier.exactly(versionOne), expected: nil)
+				testIntersection(VersionSpecifier.compatibleWith(versionOne), VersionSpecifier.exactly(versionTwoOne), expected: nil)
+				testIntersection(VersionSpecifier.compatibleWith(versionTwoTwo), VersionSpecifier.exactly(versionTwoOne), expected: nil)
+				testIntersection(VersionSpecifier.exactly(versionOne), VersionSpecifier.exactly(versionOne), expected: VersionSpecifier.exactly(versionOne))
+				testIntersection(VersionSpecifier.exactly(versionTwoOne), VersionSpecifier.exactly(versionOne), expected: nil)
 			}
 
 			it("should not let ~> 0.1.1 be compatible with 0.1.2, but not 0.2") {
-				testIntersection(VersionSpecifier.CompatibleWith(versionZeroOne), VersionSpecifier.CompatibleWith(versionZeroOneOne), expected: VersionSpecifier.CompatibleWith(versionZeroOneOne))
-				testIntersection(VersionSpecifier.CompatibleWith(versionZeroOne), VersionSpecifier.CompatibleWith(versionZeroTwo), expected: nil)
+				testIntersection(VersionSpecifier.compatibleWith(versionZeroOne), VersionSpecifier.compatibleWith(versionZeroOneOne), expected: VersionSpecifier.compatibleWith(versionZeroOneOne))
+				testIntersection(VersionSpecifier.compatibleWith(versionZeroOne), VersionSpecifier.compatibleWith(versionZeroTwo), expected: nil)
 			}
 		}
 	}

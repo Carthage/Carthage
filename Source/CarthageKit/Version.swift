@@ -163,11 +163,11 @@ extension PinnedVersion: CustomStringConvertible {
 /// Describes which versions are acceptable for satisfying a dependency
 /// requirement.
 public enum VersionSpecifier: VersionType {
-	case Any
-	case AtLeast(SemanticVersion)
-	case CompatibleWith(SemanticVersion)
-	case Exactly(SemanticVersion)
-	case GitReference(String)
+	case any
+	case atLeast(SemanticVersion)
+	case compatibleWith(SemanticVersion)
+	case exactly(SemanticVersion)
+	case gitReference(String)
 
 	/// Determines whether the given version satisfies this version specifier.
 	public func satisfiedBy(version: PinnedVersion) -> Bool {
@@ -182,16 +182,16 @@ public enum VersionSpecifier: VersionType {
 		}
 
 		switch self {
-		case .Any, .GitReference:
+		case .any, .gitReference:
 			return true
 
-		case let .Exactly(requirement):
+		case let .exactly(requirement):
 			return withSemanticVersion { $0 == requirement }
 
-		case let .AtLeast(requirement):
+		case let .atLeast(requirement):
 			return withSemanticVersion { $0 >= requirement }
 
-		case let .CompatibleWith(requirement):
+		case let .compatibleWith(requirement):
 			return withSemanticVersion { version in
 				// According to SemVer, any 0.x.y release may completely break the
 				// exported API, so it's not safe to consider them compatible with one
@@ -210,19 +210,19 @@ public enum VersionSpecifier: VersionType {
 
 public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 	switch (lhs, rhs) {
-	case (.Any, .Any):
+	case (.any, .any):
 		return true
 
-	case let (.Exactly(left), .Exactly(right)):
+	case let (.exactly(left), .exactly(right)):
 		return left == right
 
-	case let (.AtLeast(left), .AtLeast(right)):
+	case let (.atLeast(left), .atLeast(right)):
 		return left == right
 
-	case let (.CompatibleWith(left), .CompatibleWith(right)):
+	case let (.compatibleWith(left), .compatibleWith(right)):
 		return left == right
 
-	case let (.GitReference(left), .GitReference(right)):
+	case let (.gitReference(left), .gitReference(right)):
 		return left == right
 
 	default:
@@ -234,11 +234,11 @@ extension VersionSpecifier: Scannable {
 	/// Attempts to parse a VersionSpecifier.
 	public static func fromScanner(scanner: NSScanner) -> Result<VersionSpecifier, CarthageError> {
 		if scanner.scanString("==", intoString: nil) {
-			return SemanticVersion.fromScanner(scanner).map { Exactly($0) }
+			return SemanticVersion.fromScanner(scanner).map { .exactly($0) }
 		} else if scanner.scanString(">=", intoString: nil) {
-			return SemanticVersion.fromScanner(scanner).map { AtLeast($0) }
+			return SemanticVersion.fromScanner(scanner).map { .atLeast($0) }
 		} else if scanner.scanString("~>", intoString: nil) {
-			return SemanticVersion.fromScanner(scanner).map { CompatibleWith($0) }
+			return SemanticVersion.fromScanner(scanner).map { .compatibleWith($0) }
 		} else if scanner.scanString("\"", intoString: nil) {
 			var refName: NSString? = nil
 			if !scanner.scanUpToString("\"", intoString: &refName) || refName == nil {
@@ -249,9 +249,9 @@ extension VersionSpecifier: Scannable {
 				return .Failure(CarthageError.parseError(description: "unterminated Git reference name in line: \(scanner.currentLine)"))
 			}
 
-			return .Success(.GitReference(refName! as String))
+			return .Success(.gitReference(refName! as String))
 		} else {
-			return .Success(Any)
+			return .Success(.any)
 		}
 	}
 }
@@ -259,19 +259,19 @@ extension VersionSpecifier: Scannable {
 extension VersionSpecifier: CustomStringConvertible {
 	public var description: String {
 		switch self {
-		case .Any:
+		case .any:
 			return ""
 
-		case let .Exactly(version):
+		case let .exactly(version):
 			return "== \(version)"
 
-		case let .AtLeast(version):
+		case let .atLeast(version):
 			return ">= \(version)"
 
-		case let .CompatibleWith(version):
+		case let .compatibleWith(version):
 			return "~> \(version)"
 
-		case let .GitReference(refName):
+		case let .gitReference(refName):
 			return "\"\(refName)\""
 		}
 	}
@@ -281,9 +281,9 @@ private func intersection(atLeast atLeast: SemanticVersion, compatibleWith: Sema
 	if atLeast.major > compatibleWith.major {
 		return nil
 	} else if atLeast.major < compatibleWith.major {
-		return .CompatibleWith(compatibleWith)
+		return .compatibleWith(compatibleWith)
 	} else {
-		return .CompatibleWith(max(atLeast, compatibleWith))
+		return .compatibleWith(max(atLeast, compatibleWith))
 	}
 }
 
@@ -292,7 +292,7 @@ private func intersection(atLeast atLeast: SemanticVersion, exactly: SemanticVer
 		return nil
 	}
 
-	return .Exactly(exactly)
+	return .exactly(exactly)
 }
 
 private func intersection(compatibleWith compatibleWith: SemanticVersion, exactly: SemanticVersion) -> VersionSpecifier? {
@@ -300,7 +300,7 @@ private func intersection(compatibleWith compatibleWith: SemanticVersion, exactl
 		return nil
 	}
 
-	return .Exactly(exactly)
+	return .exactly(exactly)
 }
 
 /// Attempts to determine a version specifier that accurately describes the
@@ -312,38 +312,38 @@ public func intersection(lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Vers
 	switch (lhs, rhs) {
 	// Unfortunately, patterns with a wildcard _ are not considered exhaustive,
 	// so do the same thing manually.
-	case (.Any, .Any), (.Any, .AtLeast), (.Any, .CompatibleWith), (.Any, .Exactly):
+	case (.any, .any), (.any, .atLeast), (.any, .compatibleWith), (.any, .exactly):
 		return rhs
 
-	case (.AtLeast, .Any), (.CompatibleWith, .Any), (.Exactly, .Any):
+	case (.atLeast, .any), (.compatibleWith, .any), (.exactly, .any):
 		return lhs
 
-	case (.GitReference, .Any), (.GitReference, .AtLeast), (.GitReference, .CompatibleWith), (.GitReference, .Exactly):
+	case (.gitReference, .any), (.gitReference, .atLeast), (.gitReference, .compatibleWith), (.gitReference, .exactly):
 		return lhs
 
-	case (.Any, .GitReference), (.AtLeast, .GitReference), (.CompatibleWith, .GitReference), (.Exactly, .GitReference):
+	case (.any, .gitReference), (.atLeast, .gitReference), (.compatibleWith, .gitReference), (.exactly, .gitReference):
 		return rhs
 
-	case let (.GitReference(lv), .GitReference(rv)):
+	case let (.gitReference(lv), .gitReference(rv)):
 		if lv != rv {
 			return nil
 		}
 
 		return lhs
 
-	case let (.AtLeast(lv), .AtLeast(rv)):
-		return .AtLeast(max(lv, rv))
+	case let (.atLeast(lv), .atLeast(rv)):
+		return .atLeast(max(lv, rv))
 
-	case let (.AtLeast(lv), .CompatibleWith(rv)):
+	case let (.atLeast(lv), .compatibleWith(rv)):
 		return intersection(atLeast: lv, compatibleWith: rv)
 
-	case let (.AtLeast(lv), .Exactly(rv)):
+	case let (.atLeast(lv), .exactly(rv)):
 		return intersection(atLeast: lv, exactly: rv)
 
-	case let (.CompatibleWith(lv), .AtLeast(rv)):
+	case let (.compatibleWith(lv), .atLeast(rv)):
 		return intersection(atLeast: rv, compatibleWith: lv)
 
-	case let (.CompatibleWith(lv), .CompatibleWith(rv)):
+	case let (.compatibleWith(lv), .compatibleWith(rv)):
 		if lv.major != rv.major {
 			return nil
 		}
@@ -359,18 +359,18 @@ public func intersection(lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Vers
 			}
 		}
 
-		return .CompatibleWith(max(lv, rv))
+		return .compatibleWith(max(lv, rv))
 
-	case let (.CompatibleWith(lv), .Exactly(rv)):
+	case let (.compatibleWith(lv), .exactly(rv)):
 		return intersection(compatibleWith: lv, exactly: rv)
 
-	case let (.Exactly(lv), .AtLeast(rv)):
+	case let (.exactly(lv), .atLeast(rv)):
 		return intersection(atLeast: rv, exactly: lv)
 
-	case let (.Exactly(lv), .CompatibleWith(rv)):
+	case let (.exactly(lv), .compatibleWith(rv)):
 		return intersection(compatibleWith: rv, exactly: lv)
 
-	case let (.Exactly(lv), .Exactly(rv)):
+	case let (.exactly(lv), .exactly(rv)):
 		if lv != rv {
 			return nil
 		}
