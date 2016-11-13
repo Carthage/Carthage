@@ -95,27 +95,27 @@ public let CarthageProjectBinaryAssetContentTypes = [
 /// Describes an event occurring to or with a project.
 public enum ProjectEvent {
 	/// The project is beginning to clone.
-	case Cloning(ProjectIdentifier)
+	case cloning(ProjectIdentifier)
 
 	/// The project is beginning a fetch.
-	case Fetching(ProjectIdentifier)
+	case fetching(ProjectIdentifier)
 	
 	/// The project is being checked out to the specified revision.
-	case CheckingOut(ProjectIdentifier, String)
+	case checkingOut(ProjectIdentifier, String)
 
 	/// Any available binaries for the specified release of the project are
 	/// being downloaded. This may still be followed by `CheckingOut` event if
 	/// there weren't any viable binaries after all.
-	case DownloadingBinaries(ProjectIdentifier, String)
+	case downloadingBinaries(ProjectIdentifier, String)
 
 	/// Downloading any available binaries of the project is being skipped,
 	/// because of a GitHub API request failure which is due to authentication
 	/// or rate-limiting.
-	case SkippedDownloadingBinaries(ProjectIdentifier, String)
+	case skippedDownloadingBinaries(ProjectIdentifier, String)
 
 	/// Building the project is being skipped, since the project is not sharing
 	/// any framework schemes.
-	case SkippedBuilding(ProjectIdentifier, String)
+	case skippedBuilding(ProjectIdentifier, String)
 }
 
 /// Represents a project that is using Carthage.
@@ -491,7 +491,7 @@ public final class Project {
 				case let .APIError(_, _, error):
 					// Log the GitHub API request failure, not to error out,
 					// because that should not be fatal error.
-					self._projectEventsObserver.sendNext(.SkippedDownloadingBinaries(project, error.message))
+					self._projectEventsObserver.sendNext(.skippedDownloadingBinaries(project, error.message))
 					return .empty
 
 				default:
@@ -499,7 +499,7 @@ public final class Project {
 				}
 			}
 			.on(next: { release in
-				self._projectEventsObserver.sendNext(.DownloadingBinaries(project, release.nameWithFallback))
+				self._projectEventsObserver.sendNext(.downloadingBinaries(project, release.nameWithFallback))
 			})
 			.flatMap(.Concat) { release -> SignalProducer<NSURL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(values: release.assets)
@@ -593,7 +593,7 @@ public final class Project {
 				}
 			}
 			.on(started: {
-				self._projectEventsObserver.sendNext(.CheckingOut(project, revision))
+				self._projectEventsObserver.sendNext(.checkingOut(project, revision))
 			})
 	}
 	
@@ -755,7 +755,7 @@ public final class Project {
 							// Log that building the dependency is being skipped,
 							// not to error out with `.noSharedFrameworkSchemes`
 							// to continue building other dependencies.
-							self._projectEventsObserver.sendNext(.SkippedBuilding(dependency.project, error.description))
+							self._projectEventsObserver.sendNext(.skippedBuilding(dependency.project, error.description))
 							return .empty
 
 						default:
@@ -989,7 +989,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 								return SignalProducer(value: (nil, repositoryURL))
 							}
 
-							return SignalProducer(value: (.Fetching(project), repositoryURL))
+							return SignalProducer(value: (.fetching(project), repositoryURL))
 								.concat(fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*").then(.empty))
 						}
 
@@ -1015,7 +1015,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 						// (Could happen if the process is killed during a previous directory creation)
 						// So we remove it, then clone
 						_ = try? fileManager.removeItemAtURL(repositoryURL)
-						return SignalProducer(value: (.Cloning(project), repositoryURL))
+						return SignalProducer(value: (.cloning(project), repositoryURL))
 							.concat(cloneRepository(remoteURL, repositoryURL).then(.empty))
 					}
 			}

@@ -179,14 +179,14 @@ class ProjectSpec: QuickSpec {
 
 private extension ProjectEvent {
 	var isCloning: Bool {
-		if case .Cloning = self {
+		if case .cloning = self {
 			return true
 		}
 		return false
 	}
 
 	var isFetching: Bool {
-		if case .Fetching = self {
+		if case .fetching = self {
 			return true
 		}
 		return false
