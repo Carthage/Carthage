@@ -25,6 +25,12 @@ import ReactiveTask
 		}
 	}
 
+	internal extension TaskError {
+		static func posixError(code: Int32) -> TaskError {
+			return .POSIXError(code)
+		}
+	}
+
 	internal extension Task {
 		func launch(standardInput standardInput: SignalProducer<NSData, NoError>? = nil) -> SignalProducer<TaskEvent<NSData>, TaskError> {
 			return launchTask(self, standardInput: standardInput)

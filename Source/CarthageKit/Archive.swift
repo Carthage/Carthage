@@ -46,7 +46,7 @@ public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<N
 			}
 
 			if result == nil {
-				return .failure(.taskError(.POSIXError(errno)))
+				return .failure(.taskError(.posixError(errno)))
 			}
 
 			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
