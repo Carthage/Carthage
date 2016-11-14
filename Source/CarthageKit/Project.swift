@@ -363,34 +363,67 @@ public final class Project {
 			.map(ResolvedCartfile.init)
 	}
 	
+	/// Attempts to determine the latest version (whether satisfiable or not)
+	/// of the project's Carthage dependencies.
+	///
+	/// This will fetch dependency repositories as necessary, but will not check
+	/// them out into the project's working directory.
+	private func latestDependencies() -> SignalProducer<[Dependency<SemanticVersion>], CarthageError> {
+		return loadResolvedCartfile()
+			.flatMap(.Merge) {
+				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: $0.dependencies)
+					.map { dependency in
+						return dependency.project
+					}
+			}
+			.flatMap(.Merge) { (projectIdentifier: ProjectIdentifier) -> SignalProducer<Dependency<SemanticVersion>, CarthageError> in
+				return self.versionsForProject(projectIdentifier)
+					.map { SemanticVersion.fromPinnedVersion($0).value }
+					.ignoreNil()
+					.collect()
+					.map { $0.maxElement() }
+					.ignoreNil()
+					.map { Dependency(project: projectIdentifier, version: $0) }
+			}
+			.collect()
+	}
+	
 	/// Attempts to determine which of the project's Carthage
 	/// dependencies are out of date.
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func outdatedDependencies(includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], CarthageError> {
+	public func outdatedDependencies(includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>, Dependency<SemanticVersion>)], CarthageError> {
 		typealias PinnedDependency = Dependency<PinnedVersion>
-		typealias OutdatedDependency = (PinnedDependency, PinnedDependency)
+		typealias SemanticDependency = Dependency<SemanticVersion>
+		typealias OutdatedDependency = (PinnedDependency, PinnedDependency, SemanticDependency)
 
 		let currentDependencies = loadResolvedCartfile()
 			.map { $0.dependencies }
-		let updatedDependencies = updatedResolvedCartfile()
+		let satisfiableDependencies = updatedResolvedCartfile()
 			.map { $0.dependencies }
-		let outdatedDependencies = combineLatest(currentDependencies, updatedDependencies)
-			.map { (currentDependencies, updatedDependencies) -> [OutdatedDependency] in
+		
+		let outdatedDependencies = combineLatest(currentDependencies, satisfiableDependencies, latestDependencies())
+			.map { (currentDependencies, satisfiableDependencies, latestDependencies) -> [OutdatedDependency] in
 				var currentDependenciesDictionary = [ProjectIdentifier: PinnedDependency]()
-				for dependency in currentDependencies {
-					currentDependenciesDictionary[dependency.project] = dependency
+				for currentDependency in currentDependencies {
+					currentDependenciesDictionary[currentDependency.project] = currentDependency
 				}
-
-				return updatedDependencies.flatMap { updated -> OutdatedDependency? in
-					if let resolved = currentDependenciesDictionary[updated.project] where resolved.version != updated.version {
-						return (resolved, updated)
+				
+				var latestDependenciesDictionary = [ProjectIdentifier: SemanticDependency]()
+				for latestDependency in latestDependencies {
+					latestDependenciesDictionary[latestDependency.project] = latestDependency
+				}
+				
+				return satisfiableDependencies.flatMap { satisfiableDependency -> OutdatedDependency? in
+					if let latestDependency = latestDependenciesDictionary[satisfiableDependency.project], latestVersion = latestDependency.version.pinnedVersion, currentDependency = currentDependenciesDictionary[satisfiableDependency.project] where currentDependency.version != latestVersion {
+						return (currentDependency, satisfiableDependency, latestDependency)
 					} else {
 						return nil
 					}
 				}
 			}
+		
 
 		if includeNestedDependencies {
 			return outdatedDependencies
@@ -401,7 +434,7 @@ public final class Project {
 
 		return combineLatest(outdatedDependencies, explicitDependencyProjects)
 			.map { (oudatedDependencies, explicitDependencyProjects) -> [OutdatedDependency] in
-				return oudatedDependencies.filter { resolved, updated in
+				return oudatedDependencies.filter { resolved, _, _ in
 					return explicitDependencyProjects.contains(resolved.project)
 				}
 		}

@@ -58,8 +58,8 @@ public struct OutdatedCommand: CommandType {
 
 				if !outdatedDependencies.isEmpty {
 					carthage.println(formatting.path(string: "The following dependencies are outdated:"))
-					for (currentDependency, updatedDependency) in outdatedDependencies {
-						carthage.println(formatting.projectName(string: currentDependency.project.name) + " \(currentDependency.version) -> \(updatedDependency.version)")
+					for (currentDependency, updatedDependency, latestDependency) in outdatedDependencies {
+						carthage.println(formatting.projectName(string: currentDependency.project.name) + " \(currentDependency.version) -> \(updatedDependency.version) (Latest: \(latestDependency.version))")
 					}
 				} else {
 					carthage.println("All dependencies are up to date.")
