@@ -268,12 +268,12 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDir
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(workingDirectoryURL, withIntermediateDirectories: true, attributes: nil)
 			} catch let error as NSError {
-				return .Failure(CarthageError.repositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory", underlyingError: error))
+				return .failure(CarthageError.repositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory", underlyingError: error))
 			}
 
 			var environment = NSProcessInfo.processInfo().environment
 			environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
-			return .Success(environment)
+			return .success(environment)
 		}
 		.flatMap(.Concat) { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
 		.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision, shouldCloneSubmodule: shouldCloneSubmodule))
@@ -336,10 +336,10 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 			do {
 				try NSFileManager.defaultManager().removeItemAtURL(submoduleDirectoryURL)
 			} catch let error as NSError {
-				return .Failure(CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout", underlyingError: error))
+				return .failure(CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout", underlyingError: error))
 			}
 
-			return .Success(workingDirectoryURL.appendingPathComponent(submodule.path))
+			return .success(workingDirectoryURL.appendingPathComponent(submodule.path))
 		}
 		.flatMap(.Concat) { submoduleDirectoryURL in cloneRepository(submodule.URL, submoduleDirectoryURL, bare: false) }
 		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
@@ -401,9 +401,9 @@ public func submoduleSHAForPath(repositoryFileURL: NSURL, _ path: String, revisi
 			// 160000 commit 083fd81ecf00124cbdaa8f86ef10377737f6325a	External/ObjectiveGit
 			let components = string.characters.split(3, allowEmptySlices: false) { $0 == " " || $0 == "\t" }
 			if components.count >= 3 {
-				return .Success(String(components[2]))
+				return .success(String(components[2]))
 			} else {
-				return .Failure(CarthageError.parseError(description: "expected submodule commit SHA in output of task (\(task.joinWithSeparator(" "))) but encountered: \(string)"))
+				return .failure(CarthageError.parseError(description: "expected submodule commit SHA in output of task (\(task.joinWithSeparator(" "))) but encountered: \(string)"))
 			}
 		}
 }
@@ -591,10 +591,10 @@ public func moveItemInPossibleRepository(repositoryFileURL: NSURL, fromPath: Str
 			do {
 				try NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil)
 			} catch let error as NSError {
-				return .Failure(CarthageError.writeFailed(parentDirectoryURL, error))
+				return .failure(CarthageError.writeFailed(parentDirectoryURL, error))
 			}
 
-			return .Success(())
+			return .success(())
 		}
 		.then(isGitRepository(repositoryFileURL)
 			.promoteErrors(CarthageError.self))

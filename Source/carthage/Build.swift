@@ -195,7 +195,7 @@ public struct BuildCommand: CommandType {
 			}
 
 			if logFD < 0 {
-				return .Failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
+				return .failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
 			}
 
 			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
@@ -204,7 +204,7 @@ public struct BuildCommand: CommandType {
 
 			let handle = NSFileHandle(fileDescriptor: logFD, closeOnDealloc: true)
 			let fileURL = NSURL.fileURLWithPath(temporaryPath, isDirectory: false)
-			return .Success((handle, fileURL))
+			return .success((handle, fileURL))
 		}
 	}
 

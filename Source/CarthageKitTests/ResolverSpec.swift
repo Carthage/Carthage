@@ -186,7 +186,7 @@ class ResolverSpec: QuickSpec {
 			cartfile = Cartfile.fromString("git \"https://enterprise.local/desktop/git-error-translations2.git\" \"8ff4393ede2ca86d5a78edaf62b3a14d90bffab9\"")
 
 		default:
-			cartfile = .Success(Cartfile())
+			cartfile = .success(Cartfile())
 		}
 
 		return SignalProducer(value: cartfile.value!)

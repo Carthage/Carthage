@@ -33,7 +33,7 @@ public struct Cartfile {
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile, CarthageError> {
 		var cartfile = self.init()
-		var result: Result<(), CarthageError> = .Success(())
+		var result: Result<(), CarthageError> = .success(())
 
 		let commentIndicator = "#"
 		string.enumerateLines { (line, stop) in
@@ -54,7 +54,7 @@ public struct Cartfile {
 				cartfile.dependencies.append(dep)
 
 			case let .Failure(error):
-				result = .Failure(error)
+				result = .failure(error)
 				stop = true
 			}
 
@@ -64,7 +64,7 @@ public struct Cartfile {
 			}
 
 			if !scanner.atEnd {
-				result = .Failure(CarthageError.parseError(description: "unexpected trailing characters in line: \(line)"))
+				result = .failure(CarthageError.parseError(description: "unexpected trailing characters in line: \(line)"))
 				stop = true
 			}
 		}
@@ -78,7 +78,7 @@ public struct Cartfile {
 			let cartfileContents = try NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding)
 			return Cartfile.fromString(cartfileContents as String)
 		} catch let error as NSError {
-			return .Failure(CarthageError.readFailed(cartfileURL, error))
+			return .failure(CarthageError.readFailed(cartfileURL, error))
 		}
 	}
 
@@ -140,7 +140,7 @@ public struct ResolvedCartfile {
 	/// Attempts to parse Cartfile.resolved information from a string.
 	public static func fromString(string: String) -> Result<ResolvedCartfile, CarthageError> {
 		var cartfile = self.init(dependencies: [])
-		var result: Result<(), CarthageError> = .Success(())
+		var result: Result<(), CarthageError> = .success(())
 
 		let scanner = NSScanner(string: string)
 		scannerLoop: while !scanner.atEnd {
@@ -149,7 +149,7 @@ public struct ResolvedCartfile {
 				cartfile.dependencies.append(dep)
 
 			case let .Failure(error):
-				result = .Failure(error)
+				result = .failure(error)
 				break scannerLoop
 			}
 		}
@@ -239,25 +239,25 @@ extension ProjectIdentifier: Scannable {
 			}
 		} else if scanner.scanString("git", intoString: nil) {
 			parser = { URLString in
-				return .Success(self.git(GitURL(URLString)))
+				return .success(self.git(GitURL(URLString)))
 			}
 		} else {
-			return .Failure(CarthageError.parseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
+			return .failure(CarthageError.parseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
 		}
 
 		if !scanner.scanString("\"", intoString: nil) {
-			return .Failure(CarthageError.parseError(description: "expected string after dependency type in line: \(scanner.currentLine)"))
+			return .failure(CarthageError.parseError(description: "expected string after dependency type in line: \(scanner.currentLine)"))
 		}
 
 		var address: NSString? = nil
 		if !scanner.scanUpToString("\"", intoString: &address) || !scanner.scanString("\"", intoString: nil) {
-			return .Failure(CarthageError.parseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)"))
+			return .failure(CarthageError.parseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)"))
 		}
 
 		if let address = address {
 			return parser(address as String)
 		} else {
-			return .Failure(CarthageError.parseError(description: "empty string after dependency type in line: \(scanner.currentLine)"))
+			return .failure(CarthageError.parseError(description: "empty string after dependency type in line: \(scanner.currentLine)"))
 		}
 	}
 }

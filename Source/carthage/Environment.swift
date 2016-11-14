@@ -14,9 +14,9 @@ internal func getEnvironmentVariable(variable: String) -> Result<String, Carthag
 	let environment = NSProcessInfo.processInfo().environment
 
 	if let value = environment[variable] {
-		return .Success(value)
+		return .success(value)
 	} else {
-		return .Failure(CarthageError.missingEnvironmentVariable(variable: variable))
+		return .failure(CarthageError.missingEnvironmentVariable(variable: variable))
 	}
 }
 
