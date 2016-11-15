@@ -272,7 +272,7 @@ public final class Project {
 		return cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS, commitish: commitish)
 			.on(next: { event, _ in
 				if let event = event {
-					self._projectEventsObserver.sendNext(event)
+					self._projectEventsObserver.send(value: event)
 				}
 			})
 			.map { _, URL in URL }
@@ -491,7 +491,7 @@ public final class Project {
 				case let .APIError(_, _, error):
 					// Log the GitHub API request failure, not to error out,
 					// because that should not be fatal error.
-					self._projectEventsObserver.sendNext(.skippedDownloadingBinaries(project, error.message))
+					self._projectEventsObserver.send(value: .skippedDownloadingBinaries(project, error.message))
 					return .empty
 
 				default:
@@ -499,7 +499,7 @@ public final class Project {
 				}
 			}
 			.on(next: { release in
-				self._projectEventsObserver.sendNext(.downloadingBinaries(project, release.nameWithFallback))
+				self._projectEventsObserver.send(value: .downloadingBinaries(project, release.nameWithFallback))
 			})
 			.flatMap(.Concat) { release -> SignalProducer<NSURL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(values: release.assets)
@@ -593,7 +593,7 @@ public final class Project {
 				}
 			}
 			.on(started: {
-				self._projectEventsObserver.sendNext(.checkingOut(project, revision))
+				self._projectEventsObserver.send(value: .checkingOut(project, revision))
 			})
 	}
 	
@@ -755,7 +755,7 @@ public final class Project {
 							// Log that building the dependency is being skipped,
 							// not to error out with `.noSharedFrameworkSchemes`
 							// to continue building other dependencies.
-							self._projectEventsObserver.sendNext(.skippedBuilding(dependency.project, error.description))
+							self._projectEventsObserver.send(value: .skippedBuilding(dependency.project, error.description))
 							return .empty
 
 						default:

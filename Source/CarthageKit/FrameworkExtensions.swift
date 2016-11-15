@@ -16,7 +16,7 @@ extension String {
 	internal var linesProducer: SignalProducer<String, NoError> {
 		return SignalProducer { observer, disposable in
 			(self as NSString).enumerateLinesUsingBlock { (line, stop) in
-				observer.sendNext(line)
+				observer.send(value: line)
 
 				if disposable.disposed {
 					stop.memory = true
@@ -60,13 +60,13 @@ extension SignalType {
 
 					signalValues.append(value)
 					for otherValue in otherValues {
-						observer.sendNext((value, otherValue))
+						observer.send(value: (value, otherValue))
 					}
 
 					lock.unlock()
 
 				case let .Failed(error):
-					observer.sendFailed(error)
+					observer.send(error: error)
 
 				case .Completed:
 					lock.lock()
@@ -90,13 +90,13 @@ extension SignalType {
 
 					otherValues.append(value)
 					for signalValue in signalValues {
-						observer.sendNext((signalValue, value))
+						observer.send(value: (signalValue, value))
 					}
 
 					lock.unlock()
 
 				case let .Failed(error):
-					observer.sendFailed(error)
+					observer.send(error: error)
 
 				case .Completed:
 					lock.lock()
@@ -191,7 +191,7 @@ extension SignalType where Value: EventType, Value.Error == Error {
 					switch innerEvent.event {
 					case let .Next(value):
 						receivedValue = true
-						observer.sendNext(value)
+						observer.send(value: value)
 
 					case let .Failed(error):
 						receivedError = error
@@ -204,11 +204,11 @@ extension SignalType where Value: EventType, Value.Error == Error {
 					}
 
 				case let .Failed(error):
-					observer.sendFailed(error)
+					observer.send(error: error)
 
 				case .Completed:
 					if let receivedError = receivedError where !receivedValue {
-						observer.sendFailed(receivedError)
+						observer.send(error: receivedError)
 					}
 
 					observer.sendCompleted()
@@ -304,7 +304,7 @@ extension NSFileManager {
 				if catchErrors {
 					return true
 				} else {
-					observer.sendFailed(CarthageError.readFailed(URL, error))
+					observer.send(error: CarthageError.readFailed(URL, error))
 					return false
 				}
 			}!
@@ -312,7 +312,7 @@ extension NSFileManager {
 			while !disposable.disposed {
 				if let URL = enumerator.nextObject() as? NSURL {
 					let value = (enumerator, URL)
-					observer.sendNext(value)
+					observer.send(value: value)
 				} else {
 					break
 				}

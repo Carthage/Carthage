@@ -101,7 +101,7 @@ public struct BuildCommand: CommandType {
 						.on(next: { taskEvent in
 							switch taskEvent {
 							case let .StandardOutput(data):
-								stdoutObserver.sendNext(data)
+								stdoutObserver.send(value: data)
 
 							default:
 								break
