@@ -39,7 +39,7 @@ public struct Resolver {
 		return graphsForCartfile(cartfile, dependencyOf: nil, basedOnGraph: DependencyGraph())
 			.take(first: 1)
 			.observe(on: QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
-			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+			.flatMap(.merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				let orderedNodes = graph.orderedNodes.map { node -> DependencyNode in
 					node.dependencies = graph.edges[node] ?? []
 					return node
@@ -94,7 +94,7 @@ public struct Resolver {
 		return SignalProducer(values: cartfile.dependencies)
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
 				return SignalProducer(value: dependency)
-					.flatMap(.Concat) { dependency -> SignalProducer<PinnedVersion, CarthageError> in
+					.flatMap(.concat) { dependency -> SignalProducer<PinnedVersion, CarthageError> in
 						if case let .gitReference(refName) = dependency.version {
 							return self.resolvedGitReference(dependency.project, refName)
 						}
@@ -108,7 +108,7 @@ public struct Resolver {
 					.map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
 					.collect()
 					.map { $0.sort() }
-					.flatMap(.Concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
+					.flatMap(.concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
 						if nodes.isEmpty {
 							return SignalProducer(error: CarthageError.requiredVersionNotFound(dependency.project, dependency.version))
 						} else {
@@ -134,7 +134,7 @@ public struct Resolver {
 			.concat(SignalProducer(value: Cartfile(dependencies: [])))
 			.take(first: 1)
 			.observe(on: scheduler)
-			.flatMap(.Concat) { cartfile in
+			.flatMap(.concat) { cartfile in
 				return self.graphsForCartfile(cartfile, dependencyOf: node, basedOnGraph: inputGraph)
 			}
 	}
@@ -146,7 +146,7 @@ public struct Resolver {
 	/// This is a helper method, and not meant to be called from outside.
 	private func graphsForCartfile(cartfile: Cartfile, dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		return nodePermutationsForCartfile(cartfile)
-			.flatMap(.Concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
+			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
 				return self
 					.graphsForNodes(nodes, dependencyOf: dependencyOf, basedOnGraph: inputGraph)
 					.materialize()
@@ -173,13 +173,13 @@ public struct Resolver {
 						return (graph, newNodes)
 					}
 			}
-			.flatMap(.Concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
+			.flatMap(.concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
 				return SignalProducer(values: nodes)
 					// Each producer represents all evaluations of one subtree.
 					.map { node in self.graphsForDependenciesOfNode(node, basedOnGraph: graph) }
 					.observe(on: scheduler)
 					.permute()
-					.flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
+					.flatMap(.concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
 						return SignalProducer<DependencyGraph, CarthageError>
 							.attempt {
 								mergeGraphs([ inputGraph ] + graphs)

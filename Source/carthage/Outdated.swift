@@ -52,7 +52,7 @@ public struct OutdatedCommand: CommandType {
 
 	public func run(options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
-			.flatMap(.Merge) { $0.outdatedDependencies(options.verbose) }
+			.flatMap(.merge) { $0.outdatedDependencies(options.verbose) }
 			.on(next: { outdatedDependencies in
 				let formatting = options.colorOptions.formatting
 

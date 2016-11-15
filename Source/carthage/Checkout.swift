@@ -74,6 +74,6 @@ public struct CheckoutCommand: CommandType {
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
 		return options.loadProject()
-			.flatMap(.Merge) { $0.checkoutResolvedDependencies(options.dependenciesToCheckout) }
+			.flatMap(.merge) { $0.checkoutResolvedDependencies(options.dependenciesToCheckout) }
 	}
 }

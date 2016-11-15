@@ -92,7 +92,7 @@ class XcodeSpec: QuickSpec {
 
 			for project in dependencies {
 				let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-					.flatten(.Concat)
+					.flatten(.concat)
 					.ignoreTaskData()
 					.on(next: { (project, scheme) in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -103,7 +103,7 @@ class XcodeSpec: QuickSpec {
 			}
 
 			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-				.flatten(.Concat)
+				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -188,7 +188,7 @@ class XcodeSpec: QuickSpec {
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-				.flatten(.Concat)
+				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -218,7 +218,7 @@ class XcodeSpec: QuickSpec {
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-				.flatten(.Concat)
+				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -242,7 +242,7 @@ class XcodeSpec: QuickSpec {
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-				.flatten(.Concat)
+				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -264,7 +264,7 @@ class XcodeSpec: QuickSpec {
 		it("should build for one platform") {
 			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
-				.flatten(.Concat)
+				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -285,7 +285,7 @@ class XcodeSpec: QuickSpec {
 		it("should build for multiple platforms") {
 			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
-				.flatten(.Concat)
+				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -332,7 +332,7 @@ class XcodeSpec: QuickSpec {
 			let dependencyBuildURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-				.flatten(.Concat)
+				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")

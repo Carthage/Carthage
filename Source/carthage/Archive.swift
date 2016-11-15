@@ -49,9 +49,9 @@ public struct ArchiveCommand: CommandType {
 			let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
 			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
 				.collect()
-				.flatMap(.Merge) { projects in
+				.flatMap(.merge) { projects in
 					return schemesInProjects(projects)
-						.flatMap(.Merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+						.flatMap(.merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 							if !schemes.isEmpty {
 								return .init(values: schemes)
 							} else {
@@ -59,11 +59,11 @@ public struct ArchiveCommand: CommandType {
 							}
 						}
 				}
-				.flatMap(.Merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
+				.flatMap(.merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 					return BuildSettings.loadWithArguments(buildArguments)
 				}
-				.flatMap(.Concat) { settings -> SignalProducer<String, CarthageError> in
+				.flatMap(.concat) { settings -> SignalProducer<String, CarthageError> in
 					if let wrapperName = settings.wrapperName.value where settings.productType.value == .framework {
 						return .init(value: wrapperName)
 					} else {
@@ -74,9 +74,9 @@ public struct ArchiveCommand: CommandType {
 				.map { Array(Set($0)).sort() }
 		}
 
-		return frameworks.flatMap(.Merge) { frameworks -> SignalProducer<(), CarthageError> in
+		return frameworks.flatMap(.merge) { frameworks -> SignalProducer<(), CarthageError> in
 			return SignalProducer(values: Platform.supportedPlatforms)
-				.flatMap(.Merge) { platform -> SignalProducer<String, CarthageError> in
+				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
 					return SignalProducer(values: frameworks).map { framework in
 						return (platform.relativePath as NSString).stringByAppendingPathComponent(framework)
 					}
@@ -86,7 +86,7 @@ public struct ArchiveCommand: CommandType {
 					return (relativePath, absolutePath)
 				}
 				.filter { filePath in NSFileManager.defaultManager().fileExistsAtPath(filePath.absolutePath) }
-				.flatMap(.Merge) { framework -> SignalProducer<String, CarthageError> in
+				.flatMap(.merge) { framework -> SignalProducer<String, CarthageError> in
 					let dSYM = (framework.relativePath as NSString).stringByAppendingPathExtension("dSYM")!
 					let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework.absolutePath))
 						// generate relative paths for the bcsymbolmaps so they print nicely
@@ -101,7 +101,7 @@ public struct ArchiveCommand: CommandType {
 					carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
 				})
 				.collect()
-				.flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
+				.flatMap(.merge) { paths -> SignalProducer<(), CarthageError> in
 					
 					let foundFrameworks = paths
 						.lazy
