@@ -239,7 +239,7 @@ public func listTags(repositoryFileURL: NSURL) -> SignalProducer<String, Carthag
 		.flatMap(.Concat) { (allTags: String) -> SignalProducer<String, CarthageError> in
 			return SignalProducer { observer, disposable in
 				allTags.enumerateSubstringsInRange(allTags.characters.indices, options: [ .ByLines, .Reverse ]) { line, substringRange, enclosingRange, stop in
-					if disposable.disposed {
+					if disposable.isDisposed {
 						stop = true
 					}
 
@@ -361,7 +361,7 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 
 	return SignalProducer { observer, disposable in
 		for entry in entries {
-			if disposable.disposed {
+			if disposable.isDisposed {
 				break
 			}
 
@@ -473,7 +473,7 @@ internal func branchExistsInRepository(repositoryFileURL: NSURL, pattern: String
 		.succeeded()
 		.flatMap(.Concat) { exists -> SignalProducer<Bool, NoError> in
 			if !exists { return .init(value: false) }
-			return zip(
+			return SignalProducer.zip(
 					launchGitTask([ "show-ref", pattern ], repositoryFileURL: repositoryFileURL).succeeded(),
 					launchGitTask([ "show-ref", "--tags", pattern ], repositoryFileURL: repositoryFileURL).succeeded()
 				)

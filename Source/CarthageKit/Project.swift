@@ -212,7 +212,7 @@ public final class Project {
 				return SignalProducer(error: error)
 			}
 
-		return zip(cartfile, privateCartfile)
+		return SignalProducer.zip(cartfile, privateCartfile)
 			.attemptMap { cartfile, privateCartfile -> Result<Cartfile, CarthageError> in
 				var cartfile = cartfile
 
@@ -258,7 +258,7 @@ public final class Project {
 				return Set(cartfile.dependencies.map { $0.project })
 			}
 			.concat(SignalProducer(value: Set()))
-			.take(1)
+			.take(first: 1)
 	}
 
 	private let gitOperationQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.gitOperationQueue")
@@ -276,7 +276,7 @@ public final class Project {
 				}
 			})
 			.map { _, URL in URL }
-			.takeLast(1)
+			.take(last: 1)
 			.startOnQueue(gitOperationQueue)
 	}
 
@@ -355,7 +355,7 @@ public final class Project {
 			.map(Optional.init)
 			.flatMapError { _ in .init(value: nil) }
 
-		return zip(loadCombinedCartfile(), resolvedCartfile)
+		return SignalProducer.zip(loadCombinedCartfile(), resolvedCartfile)
 			.flatMap(.Merge) { cartfile, resolvedCartfile in
 				return resolver.resolveDependenciesInCartfile(cartfile, lastResolved: resolvedCartfile, dependenciesToUpdate: dependenciesToUpdate)
 			}
@@ -376,7 +376,7 @@ public final class Project {
 			.map { $0.dependencies }
 		let updatedDependencies = updatedResolvedCartfile()
 			.map { $0.dependencies }
-		let outdatedDependencies = combineLatest(currentDependencies, updatedDependencies)
+		let outdatedDependencies = SignalProducer.combineLatest(currentDependencies, updatedDependencies)
 			.map { (currentDependencies, updatedDependencies) -> [OutdatedDependency] in
 				var currentDependenciesDictionary = [ProjectIdentifier: PinnedDependency]()
 				for dependency in currentDependencies {
@@ -399,7 +399,7 @@ public final class Project {
 		let explicitDependencyProjects = loadCombinedCartfile()
 			.map { $0.dependencies.map { $0.project } }
 
-		return combineLatest(outdatedDependencies, explicitDependencyProjects)
+		return SignalProducer.combineLatest(outdatedDependencies, explicitDependencyProjects)
 			.map { (oudatedDependencies, explicitDependencyProjects) -> [OutdatedDependency] in
 				return oudatedDependencies.filter { resolved, updated in
 					return explicitDependencyProjects.contains(resolved.project)
@@ -464,7 +464,7 @@ public final class Project {
 							}
 						}
 						.concat(SignalProducer(value: false))
-						.take(1)
+						.take(first: 1)
 
 				case .git:
 					return SignalProducer(value: false)
@@ -650,7 +650,7 @@ public final class Project {
 					.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToCheckout)
 					.collect()
 			}
-			.zipWith(submodulesSignal)
+			.zip(with: submodulesSignal)
 			.flatMap(.Merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
 				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: dependencies)
 					.flatMap(.Concat) { dependency -> SignalProducer<(), CarthageError> in
@@ -890,7 +890,7 @@ private func dSYMForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: 
 						.map { _ in dSYMURL }
 				}
 		}
-		.take(1)
+		.take(first: 1)
 }
 
 /// Sends the URL to each bcsymbolmap found in the given directory.
@@ -918,7 +918,7 @@ private func BCSymbolMapsForFramework(frameworkURL: NSURL, inDirectoryURL direct
 							return false
 						}
 					}
-					.take(count)
+					.take(first: count)
 			}
 			return BCSymbolMapsInDirectory(directoryURL)
 				.lift(filterUUIDs)
@@ -995,7 +995,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 
 						// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
 						if let commitish = commitish {
-							return zip(
+							return SignalProducer.zip(
 									branchExistsInRepository(repositoryURL, pattern: commitish),
 									commitExistsInRepository(repositoryURL, revision: commitish)
 								)

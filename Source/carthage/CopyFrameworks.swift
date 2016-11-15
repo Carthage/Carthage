@@ -25,7 +25,7 @@ public struct CopyFrameworksCommand: CommandType {
 				let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.invalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
 				let target = frameworksFolder().map { $0.appendingPathComponent(frameworkName, isDirectory: true) }
 
-				return combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
+				return SignalProducer.combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
 					.flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
 						return shouldIgnoreFramework(source, validArchitectures: validArchitectures)
 							.flatMap(.Concat) { shouldIgnore -> SignalProducer<(), CarthageError> in
@@ -35,7 +35,7 @@ public struct CopyFrameworksCommand: CommandType {
 								} else {
 									let copyFrameworks = copyFramework(source, target: target, validArchitectures: validArchitectures)
 									let copydSYMs = copyDebugSymbolsForFramework(source, validArchitectures: validArchitectures)
-									return combineLatest(copyFrameworks, copydSYMs)
+									return SignalProducer.combineLatest(copyFrameworks, copydSYMs)
 										.then(.empty)
 								}
 						}
@@ -46,7 +46,7 @@ public struct CopyFrameworksCommand: CommandType {
 }
 
 private func copyFramework(source: NSURL, target: NSURL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-	return combineLatest(copyProduct(source, target), codeSigningIdentity())
+	return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
 		.flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
 			let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 			if buildActionIsArchiveOrInstall() {

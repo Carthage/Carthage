@@ -18,7 +18,7 @@ extension String {
 			(self as NSString).enumerateLinesUsingBlock { (line, stop) in
 				observer.send(value: line)
 
-				if disposable.disposed {
+				if disposable.isDisposed {
 					stop.memory = true
 				}
 			}
@@ -38,7 +38,7 @@ internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	return result
 }
 
-extension SignalType {
+extension SignalProtocol {
 	/// Sends each value that occurs on `signal` combined with each value that
 	/// occurs on `otherSignal` (repeats included).
 	private func permuteWith<U>(otherSignal: Signal<U, Error>) -> Signal<(Value, U), Error> {
@@ -118,7 +118,7 @@ extension SignalType {
 	}
 }
 
-extension SignalProducerType {
+extension SignalProducerProtocol {
 	/// Sends each value that occurs on `producer` combined with each value that
 	/// occurs on `otherProducer` (repeats included).
 	private func permuteWith<U>(otherProducer: SignalProducer<U, Error>) -> SignalProducer<(Value, U), Error> {
@@ -132,10 +132,10 @@ extension SignalProducerType {
 
 		return SignalProducer { observer, outerDisposable in
 			self.startWithSignal { signal, disposable in
-				outerDisposable.addDisposable(disposable)
+				outerDisposable.add(disposable)
 
 				otherProducer.startWithSignal { otherSignal, otherDisposable in
-					outerDisposable.addDisposable(otherDisposable)
+					outerDisposable.add(otherDisposable)
 
 					signal.permuteWith(otherSignal).observe(observer)
 				}
@@ -151,7 +151,7 @@ extension SignalProducerType {
 	}
 }
 
-extension SignalProducerType where Value: SignalProducerType, Error == Value.Error {
+extension SignalProducerProtocol where Value: SignalProducerProtocol, Error == Value.Error {
 	/// Sends all permutations of the values from the inner producers, as they arrive.
 	///
 	/// If no producers are received, sends a single empty array then completes.
@@ -177,7 +177,7 @@ extension SignalProducerType where Value: SignalProducerType, Error == Value.Err
 	}
 }
 
-extension SignalType where Value: EventType, Value.Error == Error {
+extension SignalProtocol where Value: EventProtocol, Value.Error == Error {
 	/// Dematerializes the signal, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> Signal<Value.Value, Error> {
@@ -221,7 +221,7 @@ extension SignalType where Value: EventType, Value.Error == Error {
 	}
 }
 
-extension SignalProducerType where Value: EventType, Value.Error == Error {
+extension SignalProducerProtocol where Value: EventProtocol, Value.Error == Error {
 	/// Dematerializes the producer, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> SignalProducer<Value.Value, Error> {
@@ -309,7 +309,7 @@ extension NSFileManager {
 				}
 			}!
 
-			while !disposable.disposed {
+			while !disposable.isDisposed {
 				if let URL = enumerator.nextObject() as? NSURL {
 					let value = (enumerator, URL)
 					observer.send(value: value)

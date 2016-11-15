@@ -57,7 +57,7 @@ public struct CheckoutCommand: CommandType {
 			project.useBinaries = self.useBinaries
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
-			project.projectEvents.observeNext { eventSink.put($0) }
+			project.projectEvents.observeValues { eventSink.put($0) }
 
 			return SignalProducer(value: project)
 		}
