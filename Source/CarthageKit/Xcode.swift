@@ -133,7 +133,7 @@ public func xcodebuildTask(task: String, _ buildArguments: BuildArguments) -> Ta
 public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, CarthageError> {
 	let task = xcodebuildTask("-list", BuildArguments(project: project))
 
-	return launchTask(task)
+	return task.launch()
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
 		// xcodebuild has a bug where xcodebuild -list can sometimes hang
@@ -483,7 +483,7 @@ public struct BuildSettings {
 		// discussed here: https://forums.developer.apple.com/thread/50372
 		let task = xcodebuildTask(["clean", "-showBuildSettings", "-skipUnavailableActions"], arguments)
 
-		return launchTask(task)
+		return task.launch()
 			.ignoreTaskData()
 			.mapError(CarthageError.taskError)
 			// xcodebuild has a bug where xcodebuild -showBuildSettings
@@ -714,7 +714,7 @@ private func mergeExecutables(executableURLs: [NSURL], _ outputURL: NSURL) -> Si
 		.flatMap(.Merge) { executablePaths -> SignalProducer<TaskEvent<NSData>, CarthageError> in
 			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
 
-			return launchTask(lipoTask)
+			return lipoTask.launch()
 				.mapError(CarthageError.taskError)
 		}
 		.then(.empty)
@@ -800,7 +800,7 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 					observer.sendFailed(error)
 
 				case .Completed:
-					observer.sendNext(.Success(settings))
+					observer.sendNext(.success(settings))
 					observer.sendCompleted()
 
 				case .Interrupted:
@@ -890,7 +890,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			// simulator SDKs since Xcode 7.2.
 			if sdk.isSimulator {
 				let destinationLookup = Task("/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
-				return launchTask(destinationLookup)
+				return destinationLookup.launch()
 					.ignoreTaskData()
 					.map { data in
 						let string = NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
@@ -942,7 +942,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						var buildScheme = xcodebuildTask(["clean", "build"], argsForBuilding)
 						buildScheme.workingDirectoryPath = workingDirectoryURL.path!
 
-						return launchTask(buildScheme)
+						return buildScheme.launch()
 							.flatMapTaskEvents(.Concat) { _ in SignalProducer(values: settings) }
 							.mapError(CarthageError.taskError)
 					}
@@ -1066,7 +1066,7 @@ public func createDebugInformation(builtProductURL: NSURL) -> SignalProducer<Tas
 	{
 		let dsymutilTask = Task("/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
 
-		return launchTask(dsymutilTask)
+		return dsymutilTask.launch()
 			.mapError(CarthageError.taskError)
 			.flatMapTaskEvents(.Concat) { _ in SignalProducer(value: dSYMURL) }
 	} else {
@@ -1238,7 +1238,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 					}
 					.filter { taskEvent in taskEvent.value == nil }
 
-				return BuildSchemeProducer(value: .Success(initialValue))
+				return BuildSchemeProducer(value: .success(initialValue))
 					.concat(buildProgress)
 			}
 			.startWithSignal { signal, signalDisposable in
@@ -1360,7 +1360,7 @@ private func stripArchitecture(frameworkURL: NSURL, _ architecture: String) -> S
 		}
 		.flatMap(.Merge) { binaryURL -> SignalProducer<TaskEvent<NSData>, CarthageError> in
 			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
-			return launchTask(lipoTask)
+			return lipoTask.launch()
 				.mapError(CarthageError.taskError)
 		}
 		.then(.empty)
@@ -1374,7 +1374,7 @@ public func architecturesInPackage(packageURL: NSURL) -> SignalProducer<String, 
 		.flatMap(.Merge) { binaryURL -> SignalProducer<String, CarthageError> in
 			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
 
-			return launchTask(lipoTask)
+			return lipoTask.launch()
 				.ignoreTaskData()
 				.mapError(CarthageError.taskError)
 				.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
@@ -1491,7 +1491,7 @@ public func BCSymbolMapsForFramework(frameworkURL: NSURL) -> SignalProducer<NSUR
 private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
 	let dwarfdumpTask = Task("/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", URL.path! ])
 
-	return launchTask(dwarfdumpTask)
+	return dwarfdumpTask.launch()
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
 		.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
@@ -1560,7 +1560,7 @@ private func binaryURL(packageURL: NSURL) -> Result<NSURL, CarthageError> {
 private func codesign(frameworkURL: NSURL, _ expandedIdentity: String) -> SignalProducer<(), CarthageError> {
 	let codesignTask = Task("/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
 
-	return launchTask(codesignTask)
+	return codesignTask.launch()
 		.mapError(CarthageError.taskError)
 		.then(.empty)
 }

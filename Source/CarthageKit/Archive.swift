@@ -19,7 +19,7 @@ public func zipIntoArchive(destinationArchiveURL: NSURL, workingDirectory: Strin
 	
 	let task = Task("/usr/bin/env", workingDirectoryPath: workingDirectory, arguments: [ "zip", "-q", "-r", "--symlinks", destinationArchiveURL.path! ] + inputPaths)
 	
-	return launchTask(task)
+	return task.launch()
 		.mapError(CarthageError.taskError)
 		.then(.empty)
 }
@@ -31,7 +31,7 @@ public func unzipArchiveToDirectory(fileURL: NSURL, _ destinationDirectoryURL: N
 	precondition(destinationDirectoryURL.fileURL)
 
 	let task = Task("/usr/bin/env", arguments: [ "unzip", "-qq", "-d", destinationDirectoryURL.path!, fileURL.path! ])
-	return launchTask(task)
+	return task.launch()
 		.mapError(CarthageError.taskError)
 		.then(.empty)
 }
@@ -46,7 +46,7 @@ public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<N
 			}
 
 			if result == nil {
-				return .failure(.taskError(.POSIXError(errno)))
+				return .failure(.taskError(.posixError(errno)))
 			}
 
 			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in

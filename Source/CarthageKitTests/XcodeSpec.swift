@@ -164,7 +164,7 @@ class XcodeSpec: QuickSpec {
 			var output: String = ""
 			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
 			
-			let codesignResult = launchTask(codeSign)
+			let codesignResult = codeSign.launch()
 				.on(next: { taskEvent in
 					switch taskEvent {
 					case let .StandardError(data):

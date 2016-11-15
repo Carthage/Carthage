@@ -795,7 +795,7 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			}
 
 			if errno != EXDEV {
-				return .failure(.taskError(.POSIXError(errno)))
+				return .failure(.taskError(.posixError(errno)))
 			}
 
 			// If the “Cross-device link” error occurred, then falls back to
