@@ -22,7 +22,7 @@ import ReactiveCocoa
 class ArchiveSpec: QuickSpec {
 	override func spec() {
 		describe("unzipping") {
-			let archiveURL = NSBundle(forClass: type(of: self)).URLForResource("CartfilePrivateOnly", withExtension: "zip")!
+			let archiveURL = Bundle(for: type(of: self)).url(forResource: "CartfilePrivateOnly", withExtension: "zip")!
 
 			it("should unzip archive to a temporary directory") {
 				let result = unzipArchiveToTemporaryDirectory(archiveURL).single()

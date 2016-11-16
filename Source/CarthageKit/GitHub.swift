@@ -13,11 +13,11 @@ import Tentacle
 
 /// The User-Agent to use for GitHub requests.
 private func gitHubUserAgent() -> String {
-	let bundle = NSBundle.mainBundle() ?? NSBundle(identifier: CarthageKitBundleIdentifier)
+	let bundle = Bundle.main ?? Bundle(identifier: CarthageKitBundleIdentifier)
 	
 	let version = bundle.flatMap {
-		($0.objectForInfoDictionaryKey("CFBundleShortVersionString") ??
-		 $0.objectForInfoDictionaryKey(kCFBundleVersionKey as String)) as? String
+		($0.object(forInfoDictionaryKey: "CFBundleShortVersionString") ??
+		 $0.object(forInfoDictionaryKey: kCFBundleVersionKey as String)) as? String
 	} ?? "unknown"
 
 	let identifier = bundle?.bundleIdentifier ?? "CarthageKit-unknown"

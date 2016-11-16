@@ -1534,12 +1534,12 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, Carth
 
 /// Returns the URL of a binary inside a given package.
 private func binaryURL(packageURL: NSURL) -> Result<NSURL, CarthageError> {
-	let bundle = NSBundle(path: packageURL.path!)
-	let packageType = (bundle?.objectForInfoDictionaryKey("CFBundlePackageType") as? String).flatMap(PackageType.init)
+	let bundle = Bundle(path: packageURL.path!)
+	let packageType = (bundle?.object(forInfoDictionaryKey: "CFBundlePackageType") as? String).flatMap(PackageType.init)
 
 	switch packageType {
 	case .framework?, .bundle?:
-		if let binaryName = bundle?.objectForInfoDictionaryKey("CFBundleExecutable") as? String {
+		if let binaryName = bundle?.object(forInfoDictionaryKey: "CFBundleExecutable") as? String {
 			return .success(packageURL.appendingPathComponent(binaryName))
 		}
 

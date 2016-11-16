@@ -16,7 +16,7 @@ import Tentacle
 
 class ResolverSpec: QuickSpec {
 	private func loadTestCartfile<T: CartfileType>(name: String, withExtension: String = "") -> T {
-		let testCartfileURL = NSBundle(forClass: type(of: self)).URLForResource(name, withExtension: withExtension)!
+		let testCartfileURL = Bundle(for: type(of: self)).url(forResource: name, withExtension: withExtension)!
 		let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
 
 		return T.fromString(testCartfile).value!
