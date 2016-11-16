@@ -111,7 +111,7 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 			}
 			return nil
 		}
-		.ignoreNil()
+		.skipNil()
 		.collect()
 		.map { $0.sort() }
 		.flatMap(.Merge) { SignalProducer<ProjectLocator, CarthageError>(values: $0) }
@@ -139,8 +139,8 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		// xcodebuild has a bug where xcodebuild -list can sometimes hang
 		// indefinitely on projects that don't share any schemes, so
 		// automatically bail out if it looks like that's happening.
-		.timeoutWithError(.xcodebuildTimeout(project), afterInterval: 60, onScheduler: QueueScheduler(qos: QOS_CLASS_DEFAULT))
-		.retry(2)
+		.timeout(after: 60, raising: .xcodebuildTimeout(project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
+		.retry(upTo: 2)
 		.map { (data: NSData) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
@@ -158,9 +158,9 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 				return SignalProducer(value: line)
 			}
 		}
-		.skipWhile { line in !line.hasSuffix("Schemes:") }
-		.skip(1)
-		.takeWhile { line in !line.isEmpty }
+		.skip { line in !line.hasSuffix("Schemes:") }
+		.skip(first: 1)
+		.take { line in !line.isEmpty }
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
 }
 
@@ -490,8 +490,8 @@ public struct BuildSettings {
 			// can sometimes hang indefinitely on projects that don't
 			// share any schemes, so automatically bail out if it looks
 			// like that's happening.
-			.timeoutWithError(.xcodebuildTimeout(arguments.project), afterInterval: 60, onScheduler: QueueScheduler(qos: QOS_CLASS_DEFAULT))
-			.retry(5)
+			.timeout(after: 60, raising: .xcodebuildTimeout(arguments.project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
+			.retry(upTo: 5)
 			.map { (data: NSData) -> String in
 				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 			}
@@ -511,7 +511,7 @@ public struct BuildSettings {
 					}
 
 					(string as NSString).enumerateLinesUsingBlock { (line, stop) in
-						if disposable.disposed {
+						if disposable.isDisposed {
 							stop.memory = true
 							return
 						}
@@ -546,7 +546,7 @@ public struct BuildSettings {
 	/// sent on the returned signal.
 	public static func SDKsForScheme(scheme: String, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
 		return loadWithArguments(BuildArguments(project: project, scheme: scheme))
-			.take(1)
+			.take(first: 1)
 			.flatMap(.Merge) { $0.buildSDKs }
 	}
 
@@ -770,7 +770,7 @@ private func shouldBuildScheme(buildArguments: BuildArguments, _ forPlatforms: S
 		.map { _ in true }
 		// Otherwise, nope.
 		.concat(value: false)
-		.take(1)
+		.take(first: 1)
 }
 
 /// Aggregates all of the build settings sent on the given signal, associating
@@ -845,7 +845,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 					return destinationFolderURL.appendingPathComponent(modulesPath!)
 				}
 
-			let mergeProductModules = zip(sourceModulesURL, destinationModulesURL)
+			let mergeProductModules = SignalProducer.zip(sourceModulesURL, destinationModulesURL)
 				.flatMap(.Merge) { (source: NSURL, destination: NSURL) -> SignalProducer<NSURL, CarthageError> in
 					return mergeModuleIntoModule(source, destination)
 				}
@@ -1027,7 +1027,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 
 									return SignalProducer { observer, disposable in
 										for (target, deviceSettings) in deviceSettingsByTarget {
-											if disposable.disposed {
+											if disposable.isDisposed {
 												break
 											}
 
@@ -1198,7 +1198,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 				return locator
 					// This scheduler hop is required to avoid disallowed recursive signals.
 					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
-					.startOn(QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
+					.start(on: QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
 					// Pick up the first workspace which can build the scheme.
 					.filter { project, schemes in
 						switch project {
@@ -1212,7 +1212,7 @@ public func buildInDirectory(directoryURL: NSURL, withOptions options: BuildOpti
 					// If there is no appropriate workspace, use the project in
 					// which the scheme is defined instead.
 					.concat(SignalProducer(value: (project, [])))
-					.take(1)
+					.take(first: 1)
 					.map { project, _ in (scheme, project) }
 			}
 			.map { (scheme: String, project: ProjectLocator) -> BuildSchemeProducer in
@@ -1336,7 +1336,7 @@ public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, Carth
 	}
 }
 
-extension SignalProducerType where Value == NSURL, Error == CarthageError {
+extension SignalProducerProtocol where Value == NSURL, Error == CarthageError {
 	/// Copies existing files sent from the producer into the given directory.
 	///
 	/// Returns a producer that will send locations where the copied files are.

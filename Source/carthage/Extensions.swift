@@ -57,7 +57,7 @@ extension String {
 	}
 }
 
-extension SignalProducerType where Error == CarthageError {
+extension SignalProducerProtocol where Error == CarthageError {
 	/// Waits on a SignalProducer that implements the behavior of a CommandType.
 	internal func waitOnCommand() -> Result<(), CarthageError> {
 		let result = producer
