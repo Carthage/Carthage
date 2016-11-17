@@ -47,7 +47,7 @@ public struct SemanticVersion: VersionType, Comparable {
 	}
 
 	/// The set of all characters present in valid semantic versions.
-	private static let versionCharacterSet = NSCharacterSet(charactersInString: "0123456789.")
+	private static let versionCharacterSet = CharacterSet(charactersIn: "0123456789.")
 
 	/// Attempts to parse a semantic version from a PinnedVersion.
 	public static func fromPinnedVersion(pinnedVersion: PinnedVersion) -> Result<SemanticVersion, CarthageError> {

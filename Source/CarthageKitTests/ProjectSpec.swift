@@ -97,7 +97,7 @@ class ProjectSpec: QuickSpec {
 				return launchGitTask([ "rev-parse", "--short", "HEAD" ], repositoryFileURL: repositoryURL)
 					.last()!
 					.value!
-					.stringByTrimmingCharactersInSet(.newlineCharacterSet())
+					.stringByTrimmingCharactersInSet(.newlines)
 			}
 
 			func cloneOrFetch(commitish commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {

@@ -161,7 +161,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.skip { line in !line.hasSuffix("Schemes:") }
 		.skip(first: 1)
 		.take { line in !line.isEmpty }
-		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceCharacterSet()) }
+		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(.whitespaces) }
 }
 
 /// Finds schemes of projects or workspaces, which Carthage should build, found
@@ -524,7 +524,7 @@ public struct BuildSettings {
 							return
 						}
 
-						let trimSet = NSCharacterSet.whitespaceAndNewlineCharacterSet()
+						let trimSet = CharacterSet.whitespacesAndNewlines
 						let components = line.characters
 							.split(1) { $0 == "=" }
 							.map { String($0).stringByTrimmingCharactersInSet(trimSet) }
@@ -1379,8 +1379,8 @@ public func architecturesInPackage(packageURL: NSURL) -> SignalProducer<String, 
 				.mapError(CarthageError.taskError)
 				.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
 				.flatMap(.merge) { output -> SignalProducer<String, CarthageError> in
-					let characterSet = NSMutableCharacterSet.alphanumericCharacterSet()
-					characterSet.addCharactersInString(" _-")
+					let characterSet = NSMutableCharacterSet.alphanumeric()
+					characterSet.addCharacters(in: " _-")
 
 					let scanner = NSScanner(string: output as String)
 
@@ -1497,13 +1497,13 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, Carth
 		.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
 		.flatMap(.merge) { output -> SignalProducer<Set<NSUUID>, CarthageError> in
 			// UUIDs are letters, decimals, or hyphens.
-			let UUIDCharacterSet = NSMutableCharacterSet()
-			UUIDCharacterSet.formUnionWithCharacterSet(NSCharacterSet.letterCharacterSet())
-			UUIDCharacterSet.formUnionWithCharacterSet(NSCharacterSet.decimalDigitCharacterSet())
-			UUIDCharacterSet.formUnionWithCharacterSet(NSCharacterSet(charactersInString: "-"))
+			let uuidCharacterSet = NSMutableCharacterSet()
+			uuidCharacterSet.formUnion(with: .letters)
+			uuidCharacterSet.formUnion(with: .decimalDigits)
+			uuidCharacterSet.formUnion(with: CharacterSet(charactersIn: "-"))
 
 			let scanner = NSScanner(string: output as String)
-			var UUIDs = Set<NSUUID>()
+			var uuids = Set<NSUUID>()
 
 			// The output of dwarfdump is a series of lines formatted as follows
 			// for each architecture:
@@ -1513,19 +1513,19 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, Carth
 			while !scanner.atEnd {
 				scanner.scanString("UUID: ", intoString: nil)
 
-				var UUIDString: NSString?
-				scanner.scanCharactersFromSet(UUIDCharacterSet, intoString: &UUIDString)
+				var uuidString: NSString?
+				scanner.scanCharactersFromSet(uuidCharacterSet, intoString: &uuidString)
 
-				if let UUIDString = UUIDString as? String, let UUID = NSUUID(UUIDString: UUIDString) {
-					UUIDs.insert(UUID)
+				if let uuidString = uuidString as? String, let uuid = NSUUID(UUIDString: uuidString) {
+					uuids.insert(uuid)
 				}
 
 				// Scan until a newline or end of file.
-				scanner.scanUpToCharactersFromSet(NSCharacterSet.newlineCharacterSet(), intoString: nil)
+				scanner.scanUpToCharactersFromSet(.newlines, intoString: nil)
 			}
 
-			if !UUIDs.isEmpty {
-				return SignalProducer(value: UUIDs)
+			if !uuids.isEmpty {
+				return SignalProducer(value: uuids)
 			} else {
 				return SignalProducer(error: .invalidUUIDs(description: "Could not parse UUIDs using dwarfdump from \(URL.path!)"))
 			}

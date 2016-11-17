@@ -855,7 +855,7 @@ private func platformForFramework(frameworkURL: NSURL) -> SignalProducer<Platfor
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
-		.map { sdkName in sdkName.stringByTrimmingCharactersInSet(NSCharacterSet.letterCharacterSet().invertedSet) }
+		.map { sdkName in sdkName.stringByTrimmingCharactersInSet(CharacterSet.letters.inverted) }
 		.attemptMap { platform in SDK.fromString(platform).map { $0.platform } }
 }
 
