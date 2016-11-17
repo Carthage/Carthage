@@ -26,7 +26,7 @@ if let remoteVersion = remoteVersion() where localVersion() < remoteVersion {
 	carthage.println(formatting.bullets + "Please update to the latest Carthage version: \(remoteVersion). You currently are on \(localVersion())")
 }
 
-if let carthagePath = NSBundle.mainBundle().executablePath {
+if let carthagePath = Bundle.main.executablePath {
 	setenv("CARTHAGE_PATH", carthagePath, 0)
 }
 

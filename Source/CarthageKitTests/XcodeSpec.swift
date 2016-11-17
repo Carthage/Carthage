@@ -18,7 +18,7 @@ import Tentacle
 class XcodeSpec: QuickSpec {
 	override func spec() {
 		// The fixture is maintained at https://github.com/ikesyo/carthage-fixtures-ReactiveCocoaLayout
-		let directoryURL = NSBundle(forClass: type(of: self)).URLForResource("carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
+		let directoryURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
 		let projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
 		let buildFolderURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
@@ -77,7 +77,7 @@ class XcodeSpec: QuickSpec {
 
 			it("should not find anything that's listed as a git submodule") {
 				let multipleSubprojects = "SampleGitSubmodule"
-				let _directoryURL = NSBundle(forClass: type(of: self)).URLForResource(multipleSubprojects, withExtension: nil)!
+				let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
 
 				let relativePaths = relativePathsForProjectsInDirectory(_directoryURL)
 				expect(relativePaths) == [ "SampleGitSubmodule.xcodeproj/" ]
@@ -182,7 +182,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should build all subprojects for all platforms by default") {
 			let multipleSubprojects = "SampleMultipleSubprojects"
-			let _directoryURL = NSBundle(forClass: type(of: self)).URLForResource(multipleSubprojects, withExtension: nil)!
+			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
@@ -212,7 +212,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should skip projects without shared dynamic framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
-			let _directoryURL = NSBundle(forClass: type(of: self)).URLForResource("\(dependency)-0.2", withExtension: nil)!
+			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
@@ -236,7 +236,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should error out with .noSharedFrameworkSchemes if there is no shared framework schemes") {
-			let _directoryURL = NSBundle(forClass: type(of: self)).URLForResource("Swell-0.5.0", withExtension: nil)!
+			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "Swell-0.5.0", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)

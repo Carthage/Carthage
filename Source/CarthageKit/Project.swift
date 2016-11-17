@@ -12,7 +12,7 @@ import ReactiveCocoa
 import Tentacle
 
 /// Carthage's bundle identifier.
-public let CarthageKitBundleIdentifier = NSBundle(forClass: Project.self).bundleIdentifier!
+public let CarthageKitBundleIdentifier = Bundle(for: Project.self).bundleIdentifier!
 
 /// The fallback dependencies URL to be used in case
 /// the intended ~/Library/Caches/org.carthage.CarthageKit cannot
@@ -836,14 +836,14 @@ private func platformForFramework(frameworkURL: NSURL) -> SignalProducer<Platfor
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used
 		// because Xcode 6 and below do not include either in macOS frameworks.
 		.attemptMap { URL -> Result<String, CarthageError> in
-			let bundle = NSBundle(URL: URL)
+			let bundle = Bundle(url: URL)
 
 			func readFailed(message: String) -> CarthageError {
 				let error = Result<(), NSError>.error(message)
 				return .readFailed(frameworkURL, error)
 			}
 
-			guard let sdkName = bundle?.objectForInfoDictionaryKey("DTSDKName") else {
+			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") else {
 				return .failure(readFailed("the DTSDKName key in its plist file is missing"))
 			}
 

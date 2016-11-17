@@ -15,7 +15,7 @@ import Tentacle
 
 public func localVersion() -> SemanticVersion {
 	
-	let versionString = NSBundle(identifier: CarthageKitBundleIdentifier)?.objectForInfoDictionaryKey("CFBundleShortVersionString") as! String
+	let versionString = Bundle(identifier: CarthageKitBundleIdentifier)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
 	return SemanticVersion.fromString(versionString).value!
 }
 

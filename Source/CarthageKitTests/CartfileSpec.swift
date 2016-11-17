@@ -16,7 +16,7 @@ import Quick
 class CartfileSpec: QuickSpec {
 	override func spec() {
 		it("should parse a Cartfile") {
-			let testCartfileURL = NSBundle(forClass: type(of: self)).URLForResource("TestCartfile", withExtension: "")!
+			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "")!
 			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
 
 			let result = Cartfile.fromString(testCartfile)
@@ -55,7 +55,7 @@ class CartfileSpec: QuickSpec {
 		}
 
 		it("should parse a Cartfile.resolved") {
-			let testCartfileURL = NSBundle(forClass: type(of: self)).URLForResource("TestCartfile", withExtension: "resolved")!
+			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "resolved")!
 			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
 
 			let result = ResolvedCartfile.fromString(testCartfile)
@@ -74,7 +74,7 @@ class CartfileSpec: QuickSpec {
 		}
 
 		it("should detect duplicate dependencies in a single Cartfile") {
-			let testCartfileURL = NSBundle(forClass: type(of: self)).URLForResource("DuplicateDependencies/Cartfile", withExtension: "")!
+			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile", withExtension: "")!
 			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
 
 			let result = Cartfile.fromString(testCartfile)
@@ -94,8 +94,8 @@ class CartfileSpec: QuickSpec {
 		}
 
 		it("should detect duplicate dependencies across two Cartfiles") {
-			let testCartfileURL = NSBundle(forClass: type(of: self)).URLForResource("DuplicateDependencies/Cartfile", withExtension: "")!
-			let testCartfile2URL = NSBundle(forClass: type(of: self)).URLForResource("DuplicateDependencies/Cartfile.private", withExtension: "")!
+			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile", withExtension: "")!
+			let testCartfile2URL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile.private", withExtension: "")!
 
 			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
 			let testCartfile2 = try! String(contentsOfURL: testCartfile2URL, encoding: NSUTF8StringEncoding)

@@ -1,10 +1,33 @@
-import Foundation
-import Result
-import ReactiveCocoa
-import ReactiveTask
-
 #if swift(>=3)
 #else
+	import Foundation
+	import Result
+	import ReactiveCocoa
+	import ReactiveTask
+
+	// MARK: - Foundation
+
+	internal typealias Bundle = NSBundle
+	internal extension Bundle {
+		convenience init(for aClass: AnyClass) {
+			self.init(forClass: aClass)
+		}
+
+		convenience init?(url: NSURL) {
+			self.init(URL: url)
+		}
+
+		func url(forResource name: String?, withExtension ext: String?) -> NSURL? {
+			return URLForResource(name, withExtension: ext)
+		}
+
+		func object(forInfoDictionaryKey key: String) -> Any? {
+			return objectForInfoDictionaryKey(key)
+		}
+
+		static var main: Bundle { return mainBundle() }
+	}
+
 	// MARK: - Result
 
 	internal extension Result {

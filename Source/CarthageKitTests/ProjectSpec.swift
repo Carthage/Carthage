@@ -17,7 +17,7 @@ class ProjectSpec: QuickSpec {
 	override func spec() {
 		describe("loadCombinedCartfile") {
 			it("should load a combined Cartfile when only a Cartfile is present") {
-				let directoryURL = NSBundle(forClass: type(of: self)).URLForResource("CartfileOnly", withExtension: nil)!
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfileOnly", withExtension: nil)!
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 				expect(result?.value).notTo(beNil())
@@ -28,7 +28,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should load a combined Cartfile when only a Cartfile.private is present") {
-				let directoryURL = NSBundle(forClass: type(of: self)).URLForResource("CartfilePrivateOnly", withExtension: nil)!
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfilePrivateOnly", withExtension: nil)!
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 				expect(result?.value).notTo(beNil())
@@ -39,7 +39,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should detect duplicate dependencies across Cartfile and Cartfile.private") {
-				let directoryURL = NSBundle(forClass: type(of: self)).URLForResource("DuplicateDependencies", withExtension: nil)!
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies", withExtension: nil)!
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 
@@ -66,7 +66,7 @@ class ProjectSpec: QuickSpec {
 			}
 			
 			it("should error when neither a Cartfile nor a Cartfile.private exists") {
-				let directoryURL = NSBundle(forClass: type(of: self)).URLForResource("NoCartfile", withExtension: nil)!
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "NoCartfile", withExtension: nil)!
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 				
