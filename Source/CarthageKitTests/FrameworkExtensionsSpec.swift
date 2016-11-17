@@ -27,13 +27,13 @@ class FrameworkExtensionsSpec: QuickSpec {
 				let childDirUnderPrivateTmp = NSURL(fileURLWithPath: "/private\(baseName)/foo")
 
 				beforeEach {
-					_ = try? NSFileManager.defaultManager()
-						.createDirectoryAtURL(childDirUnderPrivateTmp, withIntermediateDirectories: true, attributes: nil)
+					_ = try? FileManager.`default`
+						.createDirectory(at: childDirUnderPrivateTmp, withIntermediateDirectories: true)
 				}
 
 				afterEach {
-					_ = try? NSFileManager.defaultManager()
-						.removeItemAtURL(parentDirUnderTmp)
+					_ = try? FileManager.`default`
+						.removeItem(at: parentDirUnderTmp)
 				}
 
 				it("should resolve the difference between /tmp and /private/tmp") {

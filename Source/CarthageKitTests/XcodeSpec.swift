@@ -24,12 +24,12 @@ class XcodeSpec: QuickSpec {
 		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
 
 		beforeEach {
-			_ = try? NSFileManager.defaultManager().removeItemAtURL(buildFolderURL)
-			expect { try NSFileManager.defaultManager().createDirectoryAtPath(targetFolderURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+			_ = try? FileManager.`default`.removeItem(at: buildFolderURL)
+			expect { try FileManager.`default`.createDirectory(atPath: targetFolderURL.path!, withIntermediateDirectories: true) }.notTo(throwError())
 		}
 		
 		afterEach {
-			_ = try? NSFileManager.defaultManager().removeItemAtURL(targetFolderURL)
+			_ = try? FileManager.`default`.removeItem(at: targetFolderURL)
 		}
 		
 		describe("\(ProjectLocator.self)") {
@@ -159,7 +159,7 @@ class XcodeSpec: QuickSpec {
 			expect(strippedArchitectures?.value).to(contain("armv7", "arm64"))
 
 			let modulesDirectoryURL = targetURL.appendingPathComponent("Modules", isDirectory: true)
-			expect(NSFileManager.defaultManager().fileExistsAtPath(modulesDirectoryURL.path!)) == false
+			expect(FileManager.`default`.fileExists(atPath: modulesDirectoryURL.path!)) == false
 			
 			var output: String = ""
 			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
@@ -185,7 +185,7 @@ class XcodeSpec: QuickSpec {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
+			_ = try? FileManager.`default`.removeItem(at: _buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
@@ -215,7 +215,7 @@ class XcodeSpec: QuickSpec {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
+			_ = try? FileManager.`default`.removeItem(at: _buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
@@ -239,7 +239,7 @@ class XcodeSpec: QuickSpec {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "Swell-0.5.0", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			_ = try? NSFileManager.defaultManager().removeItemAtURL(_buildFolderURL)
+			_ = try? FileManager.`default`.removeItem(at: _buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
@@ -279,7 +279,7 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the other platform wasn't built.
 			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").path!
-			expect(NSFileManager.defaultManager().fileExistsAtPath(incorrectPath, isDirectory: nil)) == false
+			expect(FileManager.`default`.fileExists(atPath: incorrectPath, isDirectory: nil)) == false
 		}
 
 		it("should build for multiple platforms") {
@@ -359,7 +359,7 @@ internal func beExistingDirectory() -> MatcherFunc<String> {
 		}
 
 		var isDirectory: ObjCBool = false
-		let exists = NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory)
+		let exists = FileManager.`default`.fileExists(atPath: path, isDirectory: &isDirectory)
 
 		if !exists {
 			failureMessage.postfixMessage += ", but does not exist"
@@ -394,7 +394,7 @@ internal func beRelativeSymlinkToDirectory(directory: NSURL) -> MatcherFunc<NSUR
 			return false
 		}
 
-		let destination: NSString = try! NSFileManager.defaultManager().destinationOfSymbolicLinkAtPath(URL.path!)
+		let destination: NSString = try! FileManager.`default`.destinationOfSymbolicLink(atPath: URL.path!)
 
 		guard !destination.absolutePath else {
 			failureMessage.postfixMessage += ", but is not a relative symlink"

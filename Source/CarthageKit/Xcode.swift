@@ -94,8 +94,8 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 		.concat(value: directoryURL.appendingPathComponent(CarthageProjectCheckoutsPath))
 		.collect()
 		.flatMap(.merge) { directoriesToSkip in
-			return NSFileManager.defaultManager()
-				.carthage_enumeratorAtURL(directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+			return FileManager.`default`
+				.carthage_enumerator(at: directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
 				.map { _, URL in URL }
 				.filter { URL in
 					return !directoriesToSkip.contains { $0.hasSubdirectory(URL) }
@@ -199,7 +199,7 @@ public func schemesInProjects(projects: [(ProjectLocator, [String])]) -> SignalP
 			// Only look for schemes that actually reside in the project
 			let containedSchemes = schemes.filter { (scheme: String) -> Bool in
 				if let schemePath = project.fileURL.appendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").path {
-					return NSFileManager.defaultManager().fileExistsAtPath(schemePath)
+					return FileManager.`default`.fileExists(atPath: schemePath)
 				}
 				return false
 			}
@@ -728,13 +728,13 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, _ destinatio
 	precondition(sourceModuleDirectoryURL.fileURL)
 	precondition(destinationModuleDirectoryURL.fileURL)
 
-	return NSFileManager.defaultManager().carthage_enumeratorAtURL(sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants, .SkipsHiddenFiles ], catchErrors: true)
+	return FileManager.`default`.carthage_enumerator(at: sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants, .SkipsHiddenFiles ], catchErrors: true)
 		.attemptMap { _, URL -> Result<NSURL, CarthageError> in
 			let lastComponent: String? = URL.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.appendingPathComponent(lastComponent!).URLByResolvingSymlinksInPath!
 
 			do {
-				try NSFileManager.defaultManager().copyItemAtURL(URL, toURL: destinationURL)
+				try FileManager.`default`.copyItem(at: URL, to: destinationURL)
 				return .success(destinationURL)
 			} catch let error as NSError {
 				return .failure(.writeFailed(destinationURL, error))
@@ -1114,10 +1114,10 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
-		let fileManager = NSFileManager.defaultManager()
+		let fileManager = FileManager.`default`
 
 		do {
-			try fileManager.createDirectoryAtURL(rootBinariesURL, withIntermediateDirectories: true, attributes: nil)
+			try fileManager.createDirectory(at: rootBinariesURL, withIntermediateDirectories: true)
 		} catch let error as NSError {
 			return .failure(.writeFailed(rootBinariesURL, error))
 		}
@@ -1128,12 +1128,12 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 		let dependencyBinariesURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true)
 
 		do {
-			try fileManager.removeItemAtURL(dependencyBinariesURL)
+			try fileManager.removeItem(at: dependencyBinariesURL)
 		} catch {
 			let dependencyParentURL = dependencyBinariesURL.URLByDeletingLastPathComponent!
 
 			do {
-				try fileManager.createDirectoryAtURL(dependencyParentURL, withIntermediateDirectories: true, attributes: nil)
+				try fileManager.createDirectory(at: dependencyParentURL, withIntermediateDirectories: true)
 			} catch let error as NSError {
 				return .failure(.writeFailed(dependencyParentURL, error))
 			}
@@ -1150,14 +1150,14 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 			// Since this dependency is itself a symlink, we'll create an
 			// absolute link back to the project's Build folder.
 			do {
-				try fileManager.createSymbolicLinkAtURL(dependencyBinariesURL, withDestinationURL: rootBinariesURL)
+				try fileManager.createSymbolicLink(at: dependencyBinariesURL, withDestinationURL: rootBinariesURL)
 			} catch let error as NSError {
 				return .failure(.writeFailed(dependencyBinariesURL, error))
 			}
 		} else {
 			let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: CarthageBinariesFolderPath)
 			do {
-				try fileManager.createSymbolicLinkAtPath(dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath)
+				try fileManager.createSymbolicLink(atPath: dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath)
 			} catch let error as NSError {
 				return .failure(.writeFailed(dependencyBinariesURL, error))
 			}
@@ -1291,7 +1291,7 @@ private func stripBinary(binaryURL: NSURL, keepingArchitectures: [String]) -> Si
 /// Returns a signal that will send the URL after copying upon .success.
 public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return SignalProducer<NSURL, CarthageError>.attempt {
-		let manager = NSFileManager.defaultManager()
+		let manager = FileManager.`default`
 
 		// This signal deletes `to` before it copies `from` over it.
 		// If `from` and `to` point to the same resource, there's no need to perform a copy at all
@@ -1300,13 +1300,13 @@ public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, Carth
 		//
 		// See https://github.com/Carthage/Carthage/pull/1160
 		if let path = to.path where
-			manager.fileExistsAtPath(path) &&
+			manager.fileExists(atPath: path) &&
 			from.absoluteURL == to.absoluteURL {
 				return .success(to)
 		}
 
 		do {
-			try manager.createDirectoryAtURL(to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true, attributes: nil)
+			try manager.createDirectory(at: to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true)
 		} catch let error as NSError {
 			// Although the method's documentation says: “YES if createIntermediates
 			// is set and the directory already exists)”, it seems to rarely
@@ -1320,7 +1320,7 @@ public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, Carth
 		}
 
 		do {
-			try manager.removeItemAtURL(to)
+			try manager.removeItem(at: to)
 		} catch let error as NSError {
 			if error.code != NSFileNoSuchFileError {
 				return .failure(.writeFailed(to, error))
@@ -1328,7 +1328,7 @@ public func copyProduct(from: NSURL, _ to: NSURL) -> SignalProducer<NSURL, Carth
 		}
 
 		do {
-			try manager.copyItemAtURL(from, toURL: to)
+			try manager.copyItem(at: from, to: to)
 			return .success(to)
 		} catch let error as NSError {
 			return .failure(.writeFailed(to, error))
@@ -1447,12 +1447,12 @@ private func stripDirectory(named directory: String, of frameworkURL: NSURL) -> 
 		let directoryURLToStrip = frameworkURL.appendingPathComponent(directory, isDirectory: true)
 
 		var isDirectory: ObjCBool = false
-		if !NSFileManager.defaultManager().fileExistsAtPath(directoryURLToStrip.path!, isDirectory: &isDirectory) || !isDirectory {
+		if !FileManager.`default`.fileExists(atPath: directoryURLToStrip.path!, isDirectory: &isDirectory) || !isDirectory {
 			return .success(())
 		}
 
 		do {
-			try NSFileManager.defaultManager().removeItemAtURL(directoryURLToStrip)
+			try FileManager.`default`.removeItem(at: directoryURLToStrip)
 		} catch let error as NSError {
 			return .failure(.writeFailed(directoryURLToStrip, error))
 		}

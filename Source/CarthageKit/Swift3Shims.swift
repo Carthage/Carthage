@@ -28,6 +28,63 @@
 		static var main: Bundle { return mainBundle() }
 	}
 
+	internal typealias FileManager = NSFileManager
+	internal extension FileManager {
+		class var `default`: FileManager { return defaultManager() }
+
+		@nonobjc func contentsOfDirectory(atPath path: String) throws -> [String] {
+			return try contentsOfDirectoryAtPath(path)
+		}
+
+		func copyItem(at srcURL: NSURL, to dstURL: NSURL) throws {
+			try copyItemAtURL(srcURL, toURL: dstURL)
+		}
+
+		func createDirectory(at url: NSURL, withIntermediateDirectories createIntermediates: Bool, attributes: [String : AnyObject]? = nil) throws {
+			try createDirectoryAtURL(url, withIntermediateDirectories: createIntermediates, attributes: attributes)
+		}
+
+		@nonobjc func createDirectory(atPath path: String, withIntermediateDirectories createIntermediates: Bool, attributes: [String : AnyObject]? = nil) throws {
+			try createDirectoryAtPath(path, withIntermediateDirectories: createIntermediates, attributes: attributes)
+		}
+
+		func createSymbolicLink(at url: NSURL, withDestinationURL destURL: NSURL) throws {
+			try createSymbolicLinkAtURL(url, withDestinationURL: destURL)
+		}
+
+		@nonobjc func createSymbolicLink(atPath path: String, withDestinationPath destPath: String) throws {
+			try createSymbolicLinkAtPath(path, withDestinationPath: destPath)
+		}
+
+		@nonobjc func destinationOfSymbolicLink(atPath path: String) throws -> String {
+			return try destinationOfSymbolicLinkAtPath(path)
+		}
+
+		func enumerator(at url: NSURL, includingPropertiesForKeys keys: [String]?, options mask: NSDirectoryEnumerationOptions = [], errorHandler handler: ((NSURL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
+			return enumeratorAtURL(url, includingPropertiesForKeys: keys, options: mask, errorHandler: handler)
+		}
+
+		@nonobjc func fileExists(atPath path: String) -> Bool {
+			return fileExistsAtPath(path)
+		}
+
+		@nonobjc func fileExists(atPath path: String, isDirectory: UnsafeMutablePointer<ObjCBool>) -> Bool {
+			return fileExistsAtPath(path, isDirectory: isDirectory)
+		}
+
+		func moveItem(at srcURL: NSURL, to dstURL: NSURL) throws {
+			try moveItemAtURL(srcURL, toURL: dstURL)
+		}
+
+		func removeItem(at url: NSURL) throws {
+			try removeItemAtURL(url)
+		}
+
+		func trashItem(at url: NSURL, resultingItemURL outResultingURL: AutoreleasingUnsafeMutablePointer<NSURL?>) throws {
+			try trashItemAtURL(url, resultingItemURL: outResultingURL)
+		}
+	}
+
 	// MARK: - Result
 
 	internal extension Result {

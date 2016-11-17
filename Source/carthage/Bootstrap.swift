@@ -21,7 +21,7 @@ public struct BootstrapCommand: CommandType {
 		// `update` flags.
 		return options.loadProject()
 			.flatMap(.merge) { project -> SignalProducer<(), CarthageError> in
-				if !NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
+				if !FileManager.`default`.fileExists(atPath: project.resolvedCartfileURL.path!) {
 					let formatting = options.checkoutOptions.colorOptions.formatting
 					carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
 					return project.updateDependencies(shouldCheckout: options.checkoutAfterUpdate)

@@ -88,7 +88,7 @@ class ProjectSpec: QuickSpec {
 			let projectIdentifier = ProjectIdentifier.git(GitURL(repositoryURL.carthage_absoluteString))
 
 			func initRepository() {
-				expect { try NSFileManager.defaultManager().createDirectoryAtPath(repositoryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+				expect { try FileManager.`default`.createDirectory(atPath: repositoryURL.path!, withIntermediateDirectories: true) }.notTo(throwError())
 				_ = launchGitTask([ "init" ], repositoryFileURL: repositoryURL).wait()
 			}
 
@@ -117,12 +117,12 @@ class ProjectSpec: QuickSpec {
 			}
 
 			beforeEach {
-				expect { try NSFileManager.defaultManager().createDirectoryAtPath(temporaryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+				expect { try FileManager.`default`.createDirectory(atPath: temporaryURL.path!, withIntermediateDirectories: true) }.notTo(throwError())
 				initRepository()
 			}
 
 			afterEach {
-				_ = try? NSFileManager.defaultManager().removeItemAtURL(temporaryURL)
+				_ = try? FileManager.`default`.removeItem(at: temporaryURL)
 			}
 
 			it("should clone a project if it is not cloned yet") {

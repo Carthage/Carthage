@@ -29,7 +29,7 @@ private let fallbackDependenciesURL: NSURL = {
 
 /// ~/Library/Caches/org.carthage.CarthageKit/
 private let CarthageUserCachesURL: NSURL = {
-	let fileManager = NSFileManager.defaultManager()
+	let fileManager = FileManager.`default`
 	
 	let URLResult: Result<NSURL, NSError> = `try` { (error: NSErrorPointer) -> NSURL? in
 		return try? fileManager.URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true)
@@ -37,7 +37,7 @@ private let CarthageUserCachesURL: NSURL = {
 		let dependenciesURL = cachesURL.appendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
 		let dependenciesPath = dependenciesURL.carthage_absoluteString
 		
-		if fileManager.fileExistsAtPath(dependenciesPath, isDirectory:nil) {
+		if fileManager.fileExists(atPath: dependenciesPath, isDirectory:nil) {
 			if fileManager.isWritableFileAtPath(dependenciesPath) {
 				return Result(value: dependenciesURL)
 			} else {
@@ -46,7 +46,7 @@ private let CarthageUserCachesURL: NSURL = {
 			}
 		} else {
 			return Result(attempt: {
-				try fileManager.createDirectoryAtURL(dependenciesURL, withIntermediateDirectories: true, attributes: [NSFilePosixPermissions : 0o755])
+				try fileManager.createDirectory(at: dependenciesURL, withIntermediateDirectories: true, attributes: [NSFilePosixPermissions : 0o755])
 				return dependenciesURL
 			})
 		}
@@ -54,7 +54,7 @@ private let CarthageUserCachesURL: NSURL = {
 
 	switch URLResult {
 	case let .Success(URL):
-		_ = try? NSFileManager.defaultManager().removeItemAtURL(fallbackDependenciesURL)
+		_ = try? FileManager.`default`.removeItem(at: fallbackDependenciesURL)
 		return URL
 	case let .Failure(error):
 		NSLog("Warning: No Caches directory could be found or created: \(error.localizedDescription). (\(error))")
@@ -194,7 +194,7 @@ public final class Project {
 				return Cartfile.fromFile(cartfileURL)
 			}
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
-				if isNoSuchFileError(error) && NSFileManager.defaultManager().fileExistsAtPath(privateCartfileURL.path!) {
+				if isNoSuchFileError(error) && FileManager.`default`.fileExists(atPath: privateCartfileURL.path!) {
 					return SignalProducer(value: Cartfile())
 				}
 
@@ -451,13 +451,13 @@ public final class Project {
 										.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
 								}
 								.on(completed: {
-									_ = try? NSFileManager.defaultManager().trashItemAtURL(checkoutDirectoryURL, resultingItemURL: nil)
+									_ = try? FileManager.`default`.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
 								})
 								.then(SignalProducer(value: directoryURL))
 						}
 						.attemptMap { (temporaryDirectoryURL: NSURL) -> Result<Bool, CarthageError> in
 							do {
-								try NSFileManager.defaultManager().removeItemAtURL(temporaryDirectoryURL)
+								try FileManager.`default`.removeItem(at: temporaryDirectoryURL)
 								return .success(true)
 							} catch let error as NSError {
 								return .failure(.writeFailed(temporaryDirectoryURL, error))
@@ -513,7 +513,7 @@ public final class Project {
 					.flatMap(.concat) { asset -> SignalProducer<NSURL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(project, release, asset)
 
-						if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!) {
+						if FileManager.`default`.fileExists(atPath: fileURL.path!) {
 							return SignalProducer(value: fileURL)
 						} else {
 							return client.downloadAsset(asset)
@@ -685,7 +685,7 @@ public final class Project {
 		let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
 		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).URLByResolvingSymlinksInPath!
 		let subDependencyNames = subDependencies.map { $0.name }
-		let fileManager = NSFileManager.defaultManager()
+		let fileManager = FileManager.`default`
 
 		let symlinksProducer = SignalProducer(values: subDependencyNames)
 			.filter { name in
@@ -709,7 +709,7 @@ public final class Project {
 				let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).stringByAppendingPathComponent(name)
 				let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: subdirectoryPath)
 				do {
-					try fileManager.createSymbolicLinkAtPath(dependencyCheckoutURL.path!, withDestinationPath: linkDestinationPath)
+					try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.path!, withDestinationPath: linkDestinationPath)
 				} catch let error as NSError {
 					if !(error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError) {
 						return .failure(.writeFailed(dependencyCheckoutURL, error))
@@ -722,7 +722,7 @@ public final class Project {
 		return SignalProducer<(), CarthageError>
 			.attempt {
 				do {
-					try fileManager.createDirectoryAtURL(dependencyCheckoutsURL, withIntermediateDirectories: true, attributes: nil)
+					try fileManager.createDirectory(at: dependencyCheckoutsURL, withIntermediateDirectories: true)
 				} catch let error as NSError {
 					if !(error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError) {
 						return .failure(.writeFailed(dependencyCheckoutsURL, error))
@@ -744,7 +744,7 @@ public final class Project {
 			}
 			.flatMap(.concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
-				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
+				if !FileManager.`default`.fileExists(atPath: dependencyPath) {
 					return .empty
 				}
 
@@ -782,7 +782,7 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 		.attempt { fileURL in
 			let parentDirectoryURL = fileURL.URLByDeletingLastPathComponent!
 			do {
-				try NSFileManager.defaultManager().createDirectoryAtURL(parentDirectoryURL, withIntermediateDirectories: true, attributes: nil)
+				try FileManager.`default`.createDirectory(at: parentDirectoryURL, withIntermediateDirectories: true)
 				return .success(())
 			} catch let error as NSError {
 				return .failure(.writeFailed(parentDirectoryURL, error))
@@ -799,12 +799,12 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 			}
 
 			// If the “Cross-device link” error occurred, then falls back to
-			// `NSFileManager.moveItemAtURL()`.
+			// `FileManager.moveItem(at:to:)`.
 			//
 			// See https://github.com/Carthage/Carthage/issues/706 and
 			// https://github.com/Carthage/Carthage/issues/711.
 			do {
-				try NSFileManager.defaultManager().moveItemAtURL(downloadURL, toURL: newDownloadURL)
+				try FileManager.`default`.moveItem(at: downloadURL, to: newDownloadURL)
 				return .success(())
 			} catch let error as NSError {
 				return .failure(.writeFailed(newDownloadURL, error))
@@ -815,7 +815,7 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 /// Sends the URL to each file found in the given directory conforming to the
 /// given type identifier. If no type identifier is provided, all files are sent.
 private func filesInDirectory(directoryURL: NSURL, _ typeIdentifier: String? = nil) -> SignalProducer<NSURL, CarthageError> {
-	let producer = NSFileManager.defaultManager().carthage_enumeratorAtURL(directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: [ .SkipsHiddenFiles, .SkipsPackageDescendants ], catchErrors: true)
+	let producer = FileManager.`default`.carthage_enumerator(at: directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: [ .SkipsHiddenFiles, .SkipsPackageDescendants ], catchErrors: true)
 		.map { enumerator, URL in URL }
 	if let typeIdentifier = typeIdentifier {
 		return producer
@@ -968,12 +968,12 @@ internal func relativeLinkDestinationForDependencyProject(dependency: ProjectIde
 /// the URL to where the repository's folder will exist on disk, then complete
 /// when the operation completes.
 public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, destinationURL: NSURL = CarthageDependencyRepositoriesURL, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {
-	let fileManager = NSFileManager.defaultManager()
+	let fileManager = FileManager.`default`
 	let repositoryURL = repositoryFileURLForProject(project, baseURL: destinationURL)
 
 	return SignalProducer.attempt { () -> Result<GitURL, CarthageError> in
 			do {
-				try fileManager.createDirectoryAtURL(destinationURL, withIntermediateDirectories: true, attributes: nil)
+				try fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true)
 			} catch let error as NSError {
 				return .failure(.writeFailed(destinationURL, error))
 			}
@@ -1014,7 +1014,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 						// Either the directory didn't exist or it did but wasn't a git repository
 						// (Could happen if the process is killed during a previous directory creation)
 						// So we remove it, then clone
-						_ = try? fileManager.removeItemAtURL(repositoryURL)
+						_ = try? fileManager.removeItem(at: repositoryURL)
 						return SignalProducer(value: (.cloning(project), repositoryURL))
 							.concat(cloneRepository(remoteURL, repositoryURL).then(.empty))
 					}
