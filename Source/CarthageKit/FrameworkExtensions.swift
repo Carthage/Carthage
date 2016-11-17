@@ -294,24 +294,24 @@ extension NSURL {
 	}
 }
 
-extension NSFileManager {
+extension FileManager {
 	/// Creates a directory enumerator at the given URL. Sends each URL
 	/// enumerated, along with the enumerator itself (so it can be introspected
 	/// and modified as enumeration progresses).
-	public func carthage_enumeratorAtURL(URL: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions, catchErrors: Bool = false) -> SignalProducer<(NSDirectoryEnumerator, NSURL), CarthageError> {
+	public func carthage_enumerator(at url: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions = [], catchErrors: Bool = false) -> SignalProducer<(NSDirectoryEnumerator, NSURL), CarthageError> {
 		return SignalProducer { observer, disposable in
-			let enumerator = self.enumeratorAtURL(URL, includingPropertiesForKeys: keys, options: options) { (URL, error) in
+			let enumerator = self.enumerator(at: url, includingPropertiesForKeys: keys, options: options) { (url, error) in
 				if catchErrors {
 					return true
 				} else {
-					observer.send(error: CarthageError.readFailed(URL, error))
+					observer.send(error: CarthageError.readFailed(url, error))
 					return false
 				}
 			}!
 
 			while !disposable.isDisposed {
-				if let URL = enumerator.nextObject() as? NSURL {
-					let value = (enumerator, URL)
+				if let url = enumerator.nextObject() as? NSURL {
+					let value = (enumerator, url)
 					observer.send(value: value)
 				} else {
 					break

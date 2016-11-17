@@ -28,7 +28,7 @@ public struct ArchiveCommand: CommandType {
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "output", defaultValue: nil, usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)")
-				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: FileManager.`default`.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> ColorOptions.evaluate(m)
 				<*> m <| Argument(defaultValue: [], usage: "the names of the built frameworks to archive without any extension (or blank to pick up the frameworks in the current project built by `--no-skip-current`)")
 		}
@@ -85,7 +85,7 @@ public struct ArchiveCommand: CommandType {
 					let absolutePath = (options.directoryPath as NSString).stringByAppendingPathComponent(relativePath)
 					return (relativePath, absolutePath)
 				}
-				.filter { filePath in NSFileManager.defaultManager().fileExistsAtPath(filePath.absolutePath) }
+				.filter { filePath in FileManager.`default`.fileExists(atPath: filePath.absolutePath) }
 				.flatMap(.merge) { framework -> SignalProducer<String, CarthageError> in
 					let dSYM = (framework.relativePath as NSString).stringByAppendingPathExtension("dSYM")!
 					let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework.absolutePath))
@@ -93,7 +93,7 @@ public struct ArchiveCommand: CommandType {
 						.map { url in ((framework.relativePath as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.lastPathComponent!) }
 					let extraFilesProducer = SignalProducer(value: dSYM)
 						.concat(bcsymbolmapsProducer)
-						.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(framework.absolutePath) }
+						.filter { relativePath in FileManager.`default`.fileExists(atPath: framework.absolutePath) }
 					return SignalProducer(value: framework.relativePath)
 						.concat(extraFilesProducer)
 				}
@@ -117,7 +117,7 @@ public struct ArchiveCommand: CommandType {
 					let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
 
 					if let directory = outputURL.URLByDeletingLastPathComponent {
-						_ = try? NSFileManager.defaultManager().createDirectoryAtURL(directory, withIntermediateDirectories: true, attributes: nil)
+						_ = try? FileManager.`default`.createDirectory(at: directory, withIntermediateDirectories: true)
 					}
 					
 					return zipIntoArchive(outputURL, workingDirectory: options.directoryPath, inputPaths: paths).on(completed: {
@@ -141,7 +141,7 @@ private func outputPathWithOptions(options: ArchiveCommand.Options, frameworks: 
 		}
 
 		var isDirectory: ObjCBool = false
-		if NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory) && isDirectory {
+		if FileManager.`default`.fileExists(atPath: path, isDirectory: &isDirectory) && isDirectory {
 			// If the given path is an existing directory, output a zip file
 			// into that directory.
 			return (path as NSString).stringByAppendingPathComponent(defaultOutputPath)
