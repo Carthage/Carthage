@@ -118,6 +118,12 @@ import ReactiveTask
 		}
 	}
 
+	internal extension FlattenStrategy {
+		static var merge: FlattenStrategy { return .Merge }
+		static var concat: FlattenStrategy { return .Concat }
+		static var latest: FlattenStrategy { return .Latest }
+	}
+
 	internal extension QueueScheduler {
 		static var main: QueueScheduler { return mainQueueScheduler }
 	}

@@ -56,7 +56,7 @@ public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<N
 			return .success(temporaryPath)
 		}
 		.map { NSURL.fileURLWithPath($0, isDirectory: true) }
-		.flatMap(.Merge) { directoryURL in
+		.flatMap(.merge) { directoryURL in
 			return unzipArchiveToDirectory(fileURL, directoryURL)
 				.then(SignalProducer(value: directoryURL))
 		}

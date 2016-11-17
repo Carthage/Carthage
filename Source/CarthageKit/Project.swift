@@ -286,18 +286,18 @@ public final class Project {
 	/// necessary.
 	private func versionsForProject(project: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
 		let fetchVersions = cloneOrFetchDependency(project)
-			.flatMap(.Merge) { repositoryURL in listTags(repositoryURL) }
+			.flatMap(.merge) { repositoryURL in listTags(repositoryURL) }
 			.map { PinnedVersion($0) }
 			.collect()
 			.on(next: { newVersions in
 				self.cachedVersions[project] = newVersions
 			})
-			.flatMap(.Concat) { versions in SignalProducer<PinnedVersion, CarthageError>(values: versions) }
+			.flatMap(.concat) { versions in SignalProducer<PinnedVersion, CarthageError>(values: versions) }
 
 		return SignalProducer.attempt {
 				return .success(self.cachedVersions)
 			}
-			.flatMap(.Merge) { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
+			.flatMap(.merge) { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
 				if let versions = versionsByProject[project] {
 					return SignalProducer(values: versions)
 				} else {
@@ -306,7 +306,7 @@ public final class Project {
 			}
 			.startOnQueue(cachedVersionsQueue)
 			.collect()
-			.flatMap(.Concat) { versions -> SignalProducer<PinnedVersion, CarthageError> in
+			.flatMap(.concat) { versions -> SignalProducer<PinnedVersion, CarthageError> in
 				if versions.isEmpty {
 					return SignalProducer(error: .taggedVersionNotFound(project))
 				}
@@ -319,7 +319,7 @@ public final class Project {
 	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
 		let revision = dependency.version.commitish
 		return self.cloneOrFetchDependency(dependency.project, commitish: revision)
-			.flatMap(.Concat) { repositoryURL in
+			.flatMap(.concat) { repositoryURL in
 				return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
 			}
 			.flatMapError { _ in .empty }
@@ -330,7 +330,7 @@ public final class Project {
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
 		let repositoryURL = repositoryFileURLForProject(project)
 		return cloneOrFetchDependency(project, commitish: reference)
-			.flatMap(.Concat) { _ in
+			.flatMap(.concat) { _ in
 				return resolveTagInRepository(repositoryURL, reference)
 					.map { _ in
 						// If the reference is an exact tag, resolves it to the tag.
@@ -356,7 +356,7 @@ public final class Project {
 			.flatMapError { _ in .init(value: nil) }
 
 		return SignalProducer.zip(loadCombinedCartfile(), resolvedCartfile)
-			.flatMap(.Merge) { cartfile, resolvedCartfile in
+			.flatMap(.merge) { cartfile, resolvedCartfile in
 				return resolver.resolveDependenciesInCartfile(cartfile, lastResolved: resolvedCartfile, dependenciesToUpdate: dependenciesToUpdate)
 			}
 			.collect()
@@ -425,7 +425,7 @@ public final class Project {
 		return SignalProducer.attempt {
 				return .success(self.useBinaries)
 			}
-			.flatMap(.Merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
+			.flatMap(.merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
 				if !useBinaries {
 					return SignalProducer(value: false)
 				}
@@ -443,10 +443,10 @@ public final class Project {
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, authenticated: false))
 						}
 						.flatMap(.Concat, transform: unzipArchiveToTemporaryDirectory)
-						.flatMap(.Concat) { directoryURL in
+						.flatMap(.concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
 								.flatMap(.Merge, transform: self.copyFrameworkToBuildFolder)
-								.flatMap(.Merge) { frameworkURL in
+								.flatMap(.merge) { frameworkURL in
 									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
 										.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
 								}
@@ -501,7 +501,7 @@ public final class Project {
 			.on(next: { release in
 				self._projectEventsObserver.send(value: .downloadingBinaries(project, release.nameWithFallback))
 			})
-			.flatMap(.Concat) { release -> SignalProducer<NSURL, CarthageError> in
+			.flatMap(.concat) { release -> SignalProducer<NSURL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(values: release.assets)
 					.filter { asset in
 						let name = asset.name as NSString
@@ -510,7 +510,7 @@ public final class Project {
 						}
 						return CarthageProjectBinaryAssetContentTypes.contains(asset.contentType)
 					}
-					.flatMap(.Concat) { asset -> SignalProducer<NSURL, CarthageError> in
+					.flatMap(.concat) { asset -> SignalProducer<NSURL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(project, release, asset)
 
 						if NSFileManager.defaultManager().fileExistsAtPath(fileURL.path!) {
@@ -518,7 +518,7 @@ public final class Project {
 						} else {
 							return client.downloadAsset(asset)
 								.mapError(CarthageError.gitHubAPIRequestFailed)
-								.flatMap(.Concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
+								.flatMap(.concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
 						}
 					}
 			}
@@ -530,7 +530,7 @@ public final class Project {
 	/// Sends the URL to the framework after copying.
 	private func copyFrameworkToBuildFolder(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 		return platformForFramework(frameworkURL)
-			.flatMap(.Merge) { platform -> SignalProducer<NSURL, CarthageError> in
+			.flatMap(.merge) { platform -> SignalProducer<NSURL, CarthageError> in
 				let platformFolderURL = self.directoryURL.appendingPathComponent(platform.relativePath, isDirectory: true)
 				return SignalProducer(value: frameworkURL)
 					.copyFileURLsIntoDirectory(platformFolderURL)
@@ -569,7 +569,7 @@ public final class Project {
 		let project = dependency.project
 		let revision = dependency.version.commitish
 		return cloneOrFetchDependency(project, commitish: revision)
-			.flatMap(.Merge) { repositoryURL -> SignalProducer<(), CarthageError> in
+			.flatMap(.merge) { repositoryURL -> SignalProducer<(), CarthageError> in
 				let workingDirectoryURL = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true)
 				var submodule: Submodule?
 				
@@ -587,7 +587,7 @@ public final class Project {
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 						.then(self.dependenciesForDependency(dependency))
-						.flatMap(.Merge) { dependencies in
+						.flatMap(.merge) { dependencies in
 							return self.symlinkCheckoutPathsForDependencyProject(dependency.project, subDependencies: dependencies, rootDirectoryURL: self.directoryURL)
 						}
 				}
@@ -604,7 +604,7 @@ public final class Project {
 		// dependencies. Building a recursive lookup table with this information will let us sort
 		// dependencies before the projects that depend on them.
 		return SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: cartfile.dependencies)
-			.flatMap(.Merge) { (dependency: Dependency<PinnedVersion>) -> SignalProducer<DependencyGraph, CarthageError> in
+			.flatMap(.merge) { (dependency: Dependency<PinnedVersion>) -> SignalProducer<DependencyGraph, CarthageError> in
 				return self.dependenciesForDependency(dependency)
 					.map { dependencies in
 						[dependency.project: dependencies]
@@ -615,7 +615,7 @@ public final class Project {
 				next.forEach { result.updateValue($1, forKey: $0) }
 				return result
 			}
-			.flatMap(.Latest) { (graph: DependencyGraph) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+			.flatMap(.latest) { (graph: DependencyGraph) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				let projectsToInclude = Set(graph
 					.map { project, _ in project }
 					.filter { project in dependenciesToInclude?.contains(project.name) ?? false })
@@ -645,15 +645,15 @@ public final class Project {
 			}
 		
 		return loadResolvedCartfile()
-			.flatMap(.Merge) { resolvedCartfile in
+			.flatMap(.merge) { resolvedCartfile in
 				return self
 					.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToCheckout)
 					.collect()
 			}
 			.zip(with: submodulesSignal)
-			.flatMap(.Merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
+			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
 				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: dependencies)
-					.flatMap(.Concat) { dependency -> SignalProducer<(), CarthageError> in
+					.flatMap(.concat) { dependency -> SignalProducer<(), CarthageError> in
 						let project = dependency.project
 
 						let submoduleFound = submodulesByPath[project.relativePath] != nil
@@ -666,7 +666,7 @@ public final class Project {
 						}
 
 						return self.installBinariesForProject(project, atRevision: dependency.version.commitish)
-							.flatMap(.Merge) { installed -> SignalProducer<(), CarthageError> in
+							.flatMap(.merge) { installed -> SignalProducer<(), CarthageError> in
 								if installed {
 									return .empty
 								} else {
@@ -739,10 +739,10 @@ public final class Project {
 	/// Returns a producer-of-producers representing each scheme being built.
 	public func buildCheckedOutDependenciesWithOptions(options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
-			.flatMap(.Merge) { resolvedCartfile in
+			.flatMap(.merge) { resolvedCartfile in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
 			}
-			.flatMap(.Concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
+			.flatMap(.concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
 				if !NSFileManager.defaultManager().fileExistsAtPath(dependencyPath) {
 					return .empty
@@ -880,9 +880,9 @@ private func dSYMsInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, Cart
 /// errors if there was an error parsing a dSYM contained within the directory.
 private func dSYMForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return UUIDsForFramework(frameworkURL)
-		.flatMap(.Concat) { frameworkUUIDs in
+		.flatMap(.concat) { frameworkUUIDs in
 			return dSYMsInDirectory(directoryURL)
-				.flatMap(.Merge) { dSYMURL in
+				.flatMap(.merge) { dSYMURL in
 					return UUIDsForDSYM(dSYMURL)
 						.filter { dSYMUUIDs in
 							return dSYMUUIDs == frameworkUUIDs
@@ -903,7 +903,7 @@ private func BCSymbolMapsInDirectory(directoryURL: NSURL) -> SignalProducer<NSUR
 /// located somewhere within the given directory.
 private func BCSymbolMapsForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return UUIDsForFramework(frameworkURL)
-		.flatMap(.Merge) { UUIDs -> SignalProducer<NSURL, CarthageError> in
+		.flatMap(.merge) { UUIDs -> SignalProducer<NSURL, CarthageError> in
 			if UUIDs.isEmpty {
 				return .empty
 			}
@@ -980,9 +980,9 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 
 			return .success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
 		}
-		.flatMap(.Merge) { remoteURL -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
+		.flatMap(.merge) { remoteURL -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 			return isGitRepository(repositoryURL)
-				.flatMap(.Merge) { isRepository -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
+				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 					if isRepository {
 						let fetchProducer: () -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> = {
 							guard FetchCache.needsFetch(forURL: remoteURL) else {
@@ -999,7 +999,7 @@ public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, d
 									branchExistsInRepository(repositoryURL, pattern: commitish),
 									commitExistsInRepository(repositoryURL, revision: commitish)
 								)
-								.flatMap(.Concat) { branchExists, commitExists -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
+								.flatMap(.concat) { branchExists, commitExists -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> in
 									// If the given commitish is a branch, we should fetch.
 									if branchExists || !commitExists {
 										return fetchProducer()

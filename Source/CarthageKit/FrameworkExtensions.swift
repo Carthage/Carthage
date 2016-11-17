@@ -159,7 +159,7 @@ extension SignalProducerProtocol where Value: SignalProducerProtocol, Error == V
 	internal func permute() -> SignalProducer<[Value.Value], Error> {
 		return self
 			.collect()
-			.flatMap(.Concat) { (producers: [Value]) -> SignalProducer<[Value.Value], Error> in
+			.flatMap(.concat) { (producers: [Value]) -> SignalProducer<[Value.Value], Error> in
 				var combined = SignalProducer<[Value.Value], Error>(value: [])
 
 				for producer in producers {

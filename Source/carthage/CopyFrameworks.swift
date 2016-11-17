@@ -19,16 +19,16 @@ public struct CopyFrameworksCommand: CommandType {
 
 	public func run(options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
 		return inputFiles()
-			.flatMap(.Concat) { frameworkPath -> SignalProducer<(), CarthageError> in
+			.flatMap(.concat) { frameworkPath -> SignalProducer<(), CarthageError> in
 				let frameworkName = (frameworkPath as NSString).lastPathComponent
 
 				let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.invalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
 				let target = frameworksFolder().map { $0.appendingPathComponent(frameworkName, isDirectory: true) }
 
 				return SignalProducer.combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
-					.flatMap(.Merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
+					.flatMap(.merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
 						return shouldIgnoreFramework(source, validArchitectures: validArchitectures)
-							.flatMap(.Concat) { shouldIgnore -> SignalProducer<(), CarthageError> in
+							.flatMap(.concat) { shouldIgnore -> SignalProducer<(), CarthageError> in
 								if shouldIgnore {
 									carthage.println("warning: Ignoring \(frameworkName) because it does not support the current architecture\n")
 									return .empty
@@ -47,7 +47,7 @@ public struct CopyFrameworksCommand: CommandType {
 
 private func copyFramework(source: NSURL, target: NSURL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
-		.flatMap(.Merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
+		.flatMap(.merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
 			let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 			if buildActionIsArchiveOrInstall() {
 				return strip
@@ -74,11 +74,11 @@ private func shouldIgnoreFramework(framework: NSURL, validArchitectures: [String
 
 private func copyDebugSymbolsForFramework(source: NSURL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
 	return SignalProducer(result: appropriateDestinationFolder())
-		.flatMap(.Merge) { destinationURL in
+		.flatMap(.merge) { destinationURL in
 			return SignalProducer(value: source)
 				.map { return $0.appendingPathExtension("dSYM") }
 				.copyFileURLsIntoDirectory(destinationURL)
-				.flatMap(.Merge) { dSYMURL in
+				.flatMap(.merge) { dSYMURL in
 					return stripDSYM(dSYMURL, keepingArchitectures: validArchitectures)
 				}
 	    }
@@ -88,7 +88,7 @@ private func copyDebugSymbolsForFramework(source: NSURL, validArchitectures: [St
 private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	// This should be called only when `buildActionIsArchiveOrInstall()` is true.
 	return SignalProducer(result: builtProductsFolder())
-		.flatMap(.Merge) { builtProductsURL in
+		.flatMap(.merge) { builtProductsURL in
 			return BCSymbolMapsForFramework(frameworkURL)
 				.map { URL in directoryURL.appendingPathComponent(URL.lastPathComponent!, isDirectory: false) }
 				.copyFileURLsIntoDirectory(builtProductsURL)
@@ -158,12 +158,12 @@ private func inputFiles() -> SignalProducer<String, CarthageError> {
 	}
 
 	return SignalProducer(result: count)
-		.flatMap(.Merge) { count -> SignalProducer<String, CarthageError> in
+		.flatMap(.merge) { count -> SignalProducer<String, CarthageError> in
 			let variables = (0..<count).map { index -> SignalProducer<String, CarthageError> in
 				return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
 			}
 
 			return SignalProducer<SignalProducer<String, CarthageError>, CarthageError>(values: variables)
-				.flatten(.Concat)
+				.flatten(.concat)
 		}
 }

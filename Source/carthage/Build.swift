@@ -71,11 +71,11 @@ public struct BuildCommand: CommandType {
 	/// Builds a project with the given options.
 	public func buildWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
-			.flatMap(.Merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
+			.flatMap(.merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
 				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
 
 				var buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
-					.flatten(.Concat)
+					.flatten(.concat)
 
 				let stderrHandle = NSFileHandle.fileHandleWithStandardError()
 
@@ -113,7 +113,7 @@ public struct BuildCommand: CommandType {
 						})
 
 					buildProgress = SignalProducer<BuildSchemeProducer, CarthageError>(values: [ grepTask, buildProgress ])
-						.flatten(.Merge)
+						.flatten(.merge)
 				}
 
 				let formatting = options.colorOptions.formatting
@@ -162,7 +162,7 @@ public struct BuildCommand: CommandType {
 					return .empty
 				}
 			}
-			.flatMap(.Merge) { project in
+			.flatMap(.merge) { project in
 				return project.buildCheckedOutDependenciesWithOptions(options.buildOptions, dependenciesToBuild: options.dependenciesToBuild)
 			}
 

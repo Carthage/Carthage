@@ -8,7 +8,7 @@
 
 import ReactiveCocoa
 
-/// Serializes the execution of SignalProducers, like flatten(.Concat), but
+/// Serializes the execution of SignalProducers, like flatten(.concat), but
 /// without all needing to be enqueued in the same context.
 ///
 /// This allows you to manually enqueue producers from any code that has access
