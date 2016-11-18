@@ -152,14 +152,14 @@ public struct FetchCache {
 			return true
 		}
 
-		let difference = NSDate().timeIntervalSince1970 - lastFetch
+		let difference = Date().timeIntervalSince1970 - lastFetch
 
 		return !(0...fetchCacheInterval).contains(difference)
 	}
 
 	private static func updateLastFetchTime(forURL url: GitURL?) {
 		if let url = url {
-			lastFetchTimes[url] = NSDate().timeIntervalSince1970
+			lastFetchTimes[url] = Date().timeIntervalSince1970
 		}
 	}
 }

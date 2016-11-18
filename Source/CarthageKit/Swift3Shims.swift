@@ -61,6 +61,8 @@
 		static var orderedDescending: ComparisonResult { return .OrderedDescending }
 	}
 
+	internal typealias Date = NSDate
+
 	internal typealias FileHandle = NSFileHandle
 	internal extension FileHandle {
 		class var standardError: FileHandle { return fileHandleWithStandardError() }
