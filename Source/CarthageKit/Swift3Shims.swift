@@ -61,6 +61,20 @@
 		static var orderedDescending: ComparisonResult { return .OrderedDescending }
 	}
 
+	public typealias Data = NSData
+
+	internal typealias Date = NSDate
+
+	internal typealias FileHandle = NSFileHandle
+	internal extension FileHandle {
+		class var standardError: FileHandle { return fileHandleWithStandardError() }
+		class var standardOutput: FileHandle { return fileHandleWithStandardOutput() }
+
+		func write(data: Data) {
+			writeData(data)
+		}
+	}
+
 	internal typealias FileManager = NSFileManager
 	internal extension FileManager {
 		class var `default`: FileManager { return defaultManager() }
@@ -293,7 +307,7 @@
 	}
 
 	internal extension Task {
-		func launch(standardInput standardInput: SignalProducer<NSData, NoError>? = nil) -> SignalProducer<TaskEvent<NSData>, TaskError> {
+		func launch(standardInput standardInput: SignalProducer<Data, NoError>? = nil) -> SignalProducer<TaskEvent<Data>, TaskError> {
 			return launchTask(self, standardInput: standardInput)
 		}
 	}

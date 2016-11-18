@@ -141,7 +141,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		// automatically bail out if it looks like that's happening.
 		.timeout(after: 60, raising: .xcodebuildTimeout(project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
 		.retry(upTo: 2)
-		.map { (data: NSData) -> String in
+		.map { (data: Data) -> String in
 			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 		}
 		.flatMap(.merge) { string in
@@ -492,7 +492,7 @@ public struct BuildSettings {
 			// like that's happening.
 			.timeout(after: 60, raising: .xcodebuildTimeout(arguments.project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
 			.retry(upTo: 5)
-			.map { (data: NSData) -> String in
+			.map { (data: Data) -> String in
 				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
 			}
 			.flatMap(.merge) { (string: String) -> SignalProducer<BuildSettings, CarthageError> in
@@ -711,7 +711,7 @@ private func mergeExecutables(executableURLs: [NSURL], _ outputURL: NSURL) -> Si
 			}
 		}
 		.collect()
-		.flatMap(.merge) { executablePaths -> SignalProducer<TaskEvent<NSData>, CarthageError> in
+		.flatMap(.merge) { executablePaths -> SignalProducer<TaskEvent<Data>, CarthageError> in
 			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
 
 			return lipoTask.launch()
@@ -1358,7 +1358,7 @@ private func stripArchitecture(frameworkURL: NSURL, _ architecture: String) -> S
 	return SignalProducer.attempt { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
-		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<NSData>, CarthageError> in
+		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
 			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
 			return lipoTask.launch()
 				.mapError(CarthageError.taskError)

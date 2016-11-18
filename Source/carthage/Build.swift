@@ -77,18 +77,18 @@ public struct BuildCommand: CommandType {
 				var buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
 					.flatten(.concat)
 
-				let stderrHandle = NSFileHandle.fileHandleWithStandardError()
+				let stderrHandle = FileHandle.standardError
 
 				// Redirect any error-looking messages from stdout, because
 				// Xcode doesn't always forward them.
 				if !options.verbose {
-					let (_stdoutSignal, stdoutObserver) = Signal<NSData, NoError>.pipe()
+					let (_stdoutSignal, stdoutObserver) = Signal<Data, NoError>.pipe()
 					let stdoutProducer = SignalProducer(signal: _stdoutSignal)
 					let grepTask: BuildSchemeProducer = Task("/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ]).launch(standardInput: stdoutProducer)
 						.on(next: { taskEvent in
 							switch taskEvent {
 							case let .StandardOutput(data):
-								stderrHandle.writeData(data)
+								stderrHandle.write(data)
 
 							default:
 								break
@@ -126,13 +126,13 @@ public struct BuildCommand: CommandType {
 					}, next: { taskEvent in
 						switch taskEvent {
 						case let .Launch(task):
-							stdoutHandle.writeData(task.description.dataUsingEncoding(NSUTF8StringEncoding)!)
+							stdoutHandle.write(task.description.dataUsingEncoding(NSUTF8StringEncoding)!)
 
 						case let .StandardOutput(data):
-							stdoutHandle.writeData(data)
+							stdoutHandle.write(data)
 
 						case let .StandardError(data):
-							stderrHandle.writeData(data)
+							stderrHandle.write(data)
 
 						case let .Success(project, scheme):
 							carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(string: project.description))
@@ -187,7 +187,7 @@ public struct BuildCommand: CommandType {
 
 	/// Opens a temporary file on disk, returning a handle and the URL to the
 	/// file.
-	private func openTemporaryFile() -> SignalProducer<(NSFileHandle, NSURL), NSError> {
+	private func openTemporaryFile() -> SignalProducer<(FileHandle, NSURL), NSError> {
 		return SignalProducer.attempt {
 			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
 			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
@@ -202,7 +202,7 @@ public struct BuildCommand: CommandType {
 				return String.fromCString(ptr.baseAddress)!
 			}
 
-			let handle = NSFileHandle(fileDescriptor: logFD, closeOnDealloc: true)
+			let handle = FileHandle(fileDescriptor: logFD, closeOnDealloc: true)
 			let fileURL = NSURL.fileURLWithPath(temporaryPath, isDirectory: false)
 			return .success((handle, fileURL))
 		}
@@ -210,9 +210,9 @@ public struct BuildCommand: CommandType {
 
 	/// Opens a file handle for logging, returning the handle and the URL to any
 	/// temporary file on disk.
-	private func openLoggingHandle(options: Options) -> SignalProducer<(NSFileHandle, NSURL?), CarthageError> {
+	private func openLoggingHandle(options: Options) -> SignalProducer<(FileHandle, NSURL?), CarthageError> {
 		if options.verbose {
-			let out: (NSFileHandle, NSURL?) = (NSFileHandle.fileHandleWithStandardOutput(), nil)
+			let out: (FileHandle, NSURL?) = (FileHandle.standardOutput, nil)
 			return SignalProducer(value: out)
 		} else {
 			return openTemporaryFile()
