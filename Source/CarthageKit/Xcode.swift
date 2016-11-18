@@ -516,8 +516,8 @@ public struct BuildSettings {
 							return
 						}
 
-						if let result = self.targetSettingsRegex.firstMatchInString(line, options: [], range: NSMakeRange(0, (line as NSString).length)) {
-							let targetRange = result.rangeAtIndex(1)
+						if let result = self.targetSettingsRegex.firstMatch(in: line, range: NSMakeRange(0, (line as NSString).length)) {
+							let targetRange = result.rangeAt(1)
 
 							flushTarget()
 							currentTarget = (line as NSString).substringWithRange(targetRange)
@@ -901,10 +901,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						// so this can be switched once 7.0 becomes a requirement.
 						let platformName = sdk.platform.rawValue
 						let regex = try! NSRegularExpression(pattern: "-- \(platformName) [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: [])
-						let lastDeviceResult = regex.matchesInString(string as String, options: [], range: NSRange(location: 0, length: string.length)).last
+						let lastDeviceResult = regex.matches(in: string as String, range: NSRange(location: 0, length: string.length)).last
 						return lastDeviceResult.map { result in
 							// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
-							let deviceID = string.substringWithRange(result.rangeAtIndex(1))
+							let deviceID = string.substringWithRange(result.rangeAt(1))
 							return "platform=\(platformName) Simulator,id=\(deviceID)"
 						}
 					}
