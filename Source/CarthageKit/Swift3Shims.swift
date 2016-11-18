@@ -61,6 +61,16 @@
 		static var orderedDescending: ComparisonResult { return .OrderedDescending }
 	}
 
+	internal typealias FileHandle = NSFileHandle
+	internal extension FileHandle {
+		class var standardError: FileHandle { return fileHandleWithStandardError() }
+		class var standardOutput: FileHandle { return fileHandleWithStandardOutput() }
+
+		func write(data: NSData) {
+			writeData(data)
+		}
+	}
+
 	internal typealias FileManager = NSFileManager
 	internal extension FileManager {
 		class var `default`: FileManager { return defaultManager() }
