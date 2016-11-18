@@ -1382,9 +1382,9 @@ public func architecturesInPackage(packageURL: NSURL) -> SignalProducer<String, 
 					let characterSet = NSMutableCharacterSet.alphanumeric()
 					characterSet.addCharacters(in: " _-")
 
-					let scanner = NSScanner(string: output as String)
+					let scanner = Scanner(string: output as String)
 
-					if scanner.scanString("Architectures in the fat file:", intoString: nil) {
+					if scanner.scanString("Architectures in the fat file:", into: nil) {
 						// The output of "lipo -info PathToBinary" for fat files
 						// looks roughly like so:
 						//
@@ -1392,9 +1392,9 @@ public func architecturesInPackage(packageURL: NSURL) -> SignalProducer<String, 
 						//
 						var architectures: NSString?
 
-						scanner.scanString(binaryURL.path!, intoString: nil)
-						scanner.scanString("are:", intoString: nil)
-						scanner.scanCharactersFromSet(characterSet, intoString: &architectures)
+						scanner.scanString(binaryURL.path!, into: nil)
+						scanner.scanString("are:", into: nil)
+						scanner.scanCharacters(from: characterSet, into: &architectures)
 
 						let components = architectures?
 							.componentsSeparatedByString(" ")
@@ -1405,7 +1405,7 @@ public func architecturesInPackage(packageURL: NSURL) -> SignalProducer<String, 
 						}
 					}
 
-					if scanner.scanString("Non-fat file:", intoString: nil) {
+					if scanner.scanString("Non-fat file:", into: nil) {
 						// The output of "lipo -info PathToBinary" for thin
 						// files looks roughly like so:
 						//
@@ -1413,9 +1413,9 @@ public func architecturesInPackage(packageURL: NSURL) -> SignalProducer<String, 
 						//
 						var architecture: NSString?
 
-						scanner.scanString(binaryURL.path!, intoString: nil)
-						scanner.scanString("is architecture:", intoString: nil)
-						scanner.scanCharactersFromSet(characterSet, intoString: &architecture)
+						scanner.scanString(binaryURL.path!, into: nil)
+						scanner.scanString("is architecture:", into: nil)
+						scanner.scanCharacters(from: characterSet, into: &architecture)
 
 						if let architecture = architecture {
 							return SignalProducer(value: architecture as String)
@@ -1502,7 +1502,7 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, Carth
 			uuidCharacterSet.formUnion(with: .decimalDigits)
 			uuidCharacterSet.formUnion(with: CharacterSet(charactersIn: "-"))
 
-			let scanner = NSScanner(string: output as String)
+			let scanner = Scanner(string: output as String)
 			var uuids = Set<NSUUID>()
 
 			// The output of dwarfdump is a series of lines formatted as follows
@@ -1510,18 +1510,18 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, Carth
 			//
 			//     UUID: <UUID> (<Architecture>) <PathToBinary>
 			//
-			while !scanner.atEnd {
-				scanner.scanString("UUID: ", intoString: nil)
+			while !scanner.isAtEnd {
+				scanner.scanString("UUID: ", into: nil)
 
 				var uuidString: NSString?
-				scanner.scanCharactersFromSet(uuidCharacterSet, intoString: &uuidString)
+				scanner.scanCharacters(from: uuidCharacterSet, into: &uuidString)
 
 				if let uuidString = uuidString as? String, let uuid = NSUUID(UUIDString: uuidString) {
 					uuids.insert(uuid)
 				}
 
 				// Scan until a newline or end of file.
-				scanner.scanUpToCharactersFromSet(.newlines, intoString: nil)
+				scanner.scanUpToCharacters(from: .newlines, into: nil)
 			}
 
 			if !uuids.isEmpty {
