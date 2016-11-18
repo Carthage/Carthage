@@ -54,6 +54,13 @@
 		}
 	}
 
+	internal typealias ComparisonResult = NSComparisonResult
+	internal extension ComparisonResult {
+		static var orderedAscending: ComparisonResult { return .OrderedAscending }
+		static var orderedSame: ComparisonResult { return .OrderedSame }
+		static var orderedDescending: ComparisonResult { return .OrderedDescending }
+	}
+
 	internal typealias FileManager = NSFileManager
 	internal extension FileManager {
 		class var `default`: FileManager { return defaultManager() }

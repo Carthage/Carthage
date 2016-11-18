@@ -324,7 +324,7 @@ extension BuildPlatform: ArgumentType {
 
 		let findBuildPlatform: String -> BuildPlatform? = { string in
 			return self.acceptedStrings.lazy
-				.filter { key, _ in string.caseInsensitiveCompare(key) == .OrderedSame }
+				.filter { key, _ in string.caseInsensitiveCompare(key) == .orderedSame }
 				.map { _, platform in platform }
 				.first
 		}
