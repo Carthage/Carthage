@@ -185,13 +185,13 @@ public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, 
 public func ensureGitVersion(requiredVersion: String = CarthageRequiredGitVersion) -> SignalProducer<Bool, CarthageError> {
 	return launchGitTask([ "--version" ])
 		.map { input -> Bool in
-			let scanner = NSScanner(string: input)
-			guard scanner.scanString("git version ", intoString: nil) else {
+			let scanner = Scanner(string: input)
+			guard scanner.scanString("git version ", into: nil) else {
 				return false
 			}
 
 			var version: NSString?
-			if scanner.scanUpToString("", intoString: &version), let version = version {
+			if scanner.scanUpTo("", into: &version), let version = version {
 				return version.compare(requiredVersion, options: [ .NumericSearch ]) != .orderedAscending
 			} else {
 				return false
@@ -371,14 +371,14 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 			}
 
 			let value = components[1]
-			let scanner = NSScanner(string: components[0])
+			let scanner = Scanner(string: components[0])
 
-			if !scanner.scanString(keyPrefix, intoString: nil) {
+			if !scanner.scanString(keyPrefix, into: nil) {
 				continue
 			}
 
 			var key: NSString?
-			if !scanner.scanUpToString(keySuffix, intoString: &key) {
+			if !scanner.scanUpTo(keySuffix, into: &key) {
 				continue
 			}
 

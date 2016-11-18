@@ -229,12 +229,12 @@ extension SignalProducerProtocol where Value: EventProtocol, Value.Error == Erro
 	}
 }
 
-extension NSScanner {
+extension Scanner {
 	/// Returns the current line being scanned.
 	internal var currentLine: NSString {
 		// Force Foundation types, so we don't have to use Swift's annoying
 		// string indexing.
-		let nsString: NSString = string
+		let nsString = string as NSString
 		let scanRange: NSRange = NSMakeRange(scanLocation, 0)
 		let lineRange: NSRange = nsString.lineRangeForRange(scanRange)
 

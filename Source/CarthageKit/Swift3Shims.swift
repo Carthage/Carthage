@@ -134,6 +134,27 @@
 		}
 	}
 
+	public typealias Scanner = NSScanner
+	internal extension Scanner {
+		@nonobjc var isAtEnd: Bool { return atEnd }
+
+		func scanString(string: String, into result: AutoreleasingUnsafeMutablePointer<NSString?>) -> Bool {
+			return scanString(string, intoString: result)
+		}
+
+		func scanUpTo(string: String, into result: AutoreleasingUnsafeMutablePointer<NSString?>) -> Bool {
+			return scanUpToString(string, intoString: result)
+		}
+
+		func scanCharacters(from set: CharacterSet, into result: AutoreleasingUnsafeMutablePointer<NSString?>) -> Bool {
+			return scanCharactersFromSet(set, intoString: result)
+		}
+
+		func scanUpToCharacters(from set: CharacterSet, into result: AutoreleasingUnsafeMutablePointer<NSString?>) -> Bool {
+			return scanUpToCharactersFromSet(set, intoString: result)
+		}
+	}
+
 	// MARK: - Result
 
 	internal extension Result {

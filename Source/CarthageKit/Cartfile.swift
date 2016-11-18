@@ -37,14 +37,14 @@ public struct Cartfile {
 
 		let commentIndicator = "#"
 		string.enumerateLines { (line, stop) in
-			let scanner = NSScanner(string: line)
+			let scanner = Scanner(string: line)
 			
-			if scanner.scanString(commentIndicator, intoString: nil) {
+			if scanner.scanString(commentIndicator, into: nil) {
 				// Skip the rest of the line.
 				return
 			}
 
-			if scanner.atEnd {
+			if scanner.isAtEnd {
 				// The line was all whitespace.
 				return
 			}
@@ -58,12 +58,12 @@ public struct Cartfile {
 				stop = true
 			}
 
-			if scanner.scanString(commentIndicator, intoString: nil) {
+			if scanner.scanString(commentIndicator, into: nil) {
 				// Skip the rest of the line.
 				return
 			}
 
-			if !scanner.atEnd {
+			if !scanner.isAtEnd {
 				result = .failure(CarthageError.parseError(description: "unexpected trailing characters in line: \(line)"))
 				stop = true
 			}
@@ -142,8 +142,8 @@ public struct ResolvedCartfile {
 		var cartfile = self.init(dependencies: [])
 		var result: Result<(), CarthageError> = .success(())
 
-		let scanner = NSScanner(string: string)
-		scannerLoop: while !scanner.atEnd {
+		let scanner = Scanner(string: string)
+		scannerLoop: while !scanner.isAtEnd {
 			switch Dependency<PinnedVersion>.fromScanner(scanner) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep)
@@ -230,14 +230,14 @@ extension ProjectIdentifier: Hashable {
 
 extension ProjectIdentifier: Scannable {
 	/// Attempts to parse a ProjectIdentifier.
-	public static func fromScanner(scanner: NSScanner) -> Result<ProjectIdentifier, CarthageError> {
+	public static func fromScanner(scanner: Scanner) -> Result<ProjectIdentifier, CarthageError> {
 		let parser: (String -> Result<ProjectIdentifier, CarthageError>)
 
-		if scanner.scanString("github", intoString: nil) {
+		if scanner.scanString("github", into: nil) {
 			parser = { repoIdentifier in
 				return Repository.fromIdentifier(repoIdentifier).map { self.gitHub($0) }
 			}
-		} else if scanner.scanString("git", intoString: nil) {
+		} else if scanner.scanString("git", into: nil) {
 			parser = { URLString in
 				return .success(self.git(GitURL(URLString)))
 			}
@@ -245,12 +245,12 @@ extension ProjectIdentifier: Scannable {
 			return .failure(CarthageError.parseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
 		}
 
-		if !scanner.scanString("\"", intoString: nil) {
+		if !scanner.scanString("\"", into: nil) {
 			return .failure(CarthageError.parseError(description: "expected string after dependency type in line: \(scanner.currentLine)"))
 		}
 
 		var address: NSString? = nil
-		if !scanner.scanUpToString("\"", intoString: &address) || !scanner.scanString("\"", intoString: nil) {
+		if !scanner.scanUpTo("\"", into: &address) || !scanner.scanString("\"", into: nil) {
 			return .failure(CarthageError.parseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)"))
 		}
 
@@ -302,7 +302,7 @@ public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 
 extension Dependency where V: Scannable {
 	/// Attempts to parse a Dependency specification.
-	public static func fromScanner(scanner: NSScanner) -> Result<Dependency, CarthageError> {
+	public static func fromScanner(scanner: Scanner) -> Result<Dependency, CarthageError> {
 		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
 			return V.fromScanner(scanner).map { specifier in self.init(project: identifier, version: specifier) }
 		}
