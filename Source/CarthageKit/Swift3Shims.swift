@@ -28,6 +28,32 @@
 		static var main: Bundle { return mainBundle() }
 	}
 
+	internal typealias CharacterSet = NSCharacterSet
+	internal extension CharacterSet {
+		class var decimalDigits: CharacterSet { return decimalDigitCharacterSet() }
+		class var letters: CharacterSet { return letterCharacterSet() }
+		class var newlines: CharacterSet { return newlineCharacterSet() }
+		class var whitespaces: CharacterSet { return whitespaceCharacterSet() }
+		class var whitespacesAndNewlines: CharacterSet { return whitespaceAndNewlineCharacterSet() }
+
+		var inverted: CharacterSet { return invertedSet }
+
+		convenience init(charactersIn string: String) {
+			self.init(charactersInString: string)
+		}
+	}
+	internal extension NSMutableCharacterSet {
+		class func alphanumeric() -> NSMutableCharacterSet { return alphanumericCharacterSet() }
+
+		func addCharacters(in aString: String) {
+			return addCharactersInString(aString)
+		}
+
+		func formUnion(with otherSet: CharacterSet) {
+			return formUnionWithCharacterSet(otherSet)
+		}
+	}
+
 	internal typealias FileManager = NSFileManager
 	internal extension FileManager {
 		class var `default`: FileManager { return defaultManager() }

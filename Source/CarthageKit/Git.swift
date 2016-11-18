@@ -438,13 +438,13 @@ internal func gitmodulesEntriesInRepository(repositoryFileURL: NSURL, revision: 
 /// else, return the path given by "git rev-parse --show-toplevel"
 public func gitRootDirectoryForRepository(repositoryFileURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return launchGitTask([ "rev-parse", "--is-bare-repository" ], repositoryFileURL: repositoryFileURL)
-		.map { $0.stringByTrimmingCharactersInSet(.newlineCharacterSet()) }
+		.map { $0.stringByTrimmingCharactersInSet(.newlines) }
 		.flatMap(.concat) { isBareRepository -> SignalProducer<NSURL, CarthageError> in
 			if isBareRepository == "true" {
 				return SignalProducer(value: repositoryFileURL)
 			} else {
 				return launchGitTask([ "rev-parse", "--show-toplevel" ], repositoryFileURL: repositoryFileURL)
-					.map { $0.stringByTrimmingCharactersInSet(.newlineCharacterSet()) }
+					.map { $0.stringByTrimmingCharactersInSet(.newlines) }
 					.map(NSURL.init)
 			}
 		}
@@ -511,14 +511,14 @@ private func ensureDirectoryExistsAtURL(fileURL: NSURL) -> SignalProducer<(), Ca
 public func resolveReferenceInRepository(repositoryFileURL: NSURL, _ reference: String) -> SignalProducer<String, CarthageError> {
 	return ensureDirectoryExistsAtURL(repositoryFileURL)
 		.then(launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL))
-		.map { string in string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
+		.map { string in string.stringByTrimmingCharactersInSet(.whitespacesAndNewlines) }
 		.mapError { error in CarthageError.repositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No object named \"\(reference)\" exists", underlyingError: error as NSError) }
 }
 
 /// Attempts to resolve the given tag into an object SHA.
 internal func resolveTagInRepository(repositoryFileURL: NSURL, _ tag: String) -> SignalProducer<String, CarthageError> {
 	return launchGitTask([ "show-ref", "--tags", "--hash", tag ], repositoryFileURL: repositoryFileURL)
-		.map { string in string.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
+		.map { string in string.stringByTrimmingCharactersInSet(.whitespacesAndNewlines) }
 		.mapError { error in CarthageError.repositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No tag named \"\(tag)\" exists", underlyingError: error as NSError) }
 }
 
@@ -528,7 +528,7 @@ public func isGitRepository(directoryURL: NSURL) -> SignalProducer<Bool, NoError
 	return ensureDirectoryExistsAtURL(directoryURL)
 		.then(launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: directoryURL))
 		.map { outputIncludingLineEndings in
-			let relativeOrAbsoluteGitDirectory = outputIncludingLineEndings.stringByTrimmingCharactersInSet(.newlineCharacterSet())
+			let relativeOrAbsoluteGitDirectory = outputIncludingLineEndings.stringByTrimmingCharactersInSet(.newlines)
 			var absoluteGitDirectory: String?
 			if (relativeOrAbsoluteGitDirectory as NSString).absolutePath {
 				absoluteGitDirectory = relativeOrAbsoluteGitDirectory
