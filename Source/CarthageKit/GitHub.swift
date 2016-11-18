@@ -129,7 +129,7 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 }
 
 private func tokenFromEnvironment(forServer server: Server) -> String? {
-	let environment = NSProcessInfo.processInfo().environment
+	let environment = ProcessInfo.processInfo.environment
 
 	if let accessTokenInput = environment["GITHUB_ACCESS_TOKEN"] {
 		// Treat the input as comma-separated series of domains and tokens.
