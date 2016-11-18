@@ -85,6 +85,22 @@
 		}
 	}
 
+	internal extension NSRegularExpression {
+		func firstMatch(in string: String, options: NSMatchingOptions = [], range: NSRange) -> NSTextCheckingResult? {
+			return firstMatchInString(string, options: options, range: range)
+		}
+
+		func matches(in string: String, options: NSMatchingOptions = [], range: NSRange) -> [NSTextCheckingResult] {
+			return matchesInString(string, options: options, range: range)
+		}
+	}
+
+	internal extension NSTextCheckingResult {
+		func rangeAt(idx: Int) -> NSRange {
+			return rangeAtIndex(idx)
+		}
+	}
+
 	// MARK: - Result
 
 	internal extension Result {
