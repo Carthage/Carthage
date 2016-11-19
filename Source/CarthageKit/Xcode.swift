@@ -1466,7 +1466,7 @@ public func UUIDsForFramework(frameworkURL: NSURL) -> SignalProducer<Set<UUID>, 
 	return SignalProducer.attempt { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
-		.flatMap(.Merge, transform: UUIDsFromDwarfdump)
+		.flatMap(.merge, transform: UUIDsFromDwarfdump)
 }
 
 /// Sends a set of UUIDs for each architecture present in the given dSYM.

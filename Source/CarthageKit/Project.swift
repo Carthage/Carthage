@@ -442,10 +442,10 @@ public final class Project {
 							}
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, authenticated: false))
 						}
-						.flatMap(.Concat, transform: unzipArchiveToTemporaryDirectory)
+						.flatMap(.concat, transform: unzipArchiveToTemporaryDirectory)
 						.flatMap(.concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
-								.flatMap(.Merge, transform: self.copyFrameworkToBuildFolder)
+								.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
 								.flatMap(.merge) { frameworkURL in
 									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
 										.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
