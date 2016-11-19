@@ -174,6 +174,15 @@
 		}
 	}
 
+	public typealias UUID = NSUUID
+	internal extension UUID {
+		convenience init?(uuidString string: String) {
+			self.init(UUIDString: string)
+		}
+
+		var uuidString: String { return UUIDString }
+	}
+
 	// MARK: - Result
 
 	internal extension Result {
