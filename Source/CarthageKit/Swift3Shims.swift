@@ -4,6 +4,7 @@
 	import Result
 	import ReactiveCocoa
 	import ReactiveTask
+	import Tentacle
 
 	// MARK: - Foundation
 
@@ -323,6 +324,35 @@
 	internal extension Task {
 		func launch(standardInput standardInput: SignalProducer<Data, NoError>? = nil) -> SignalProducer<TaskEvent<Data>, TaskError> {
 			return launchTask(self, standardInput: standardInput)
+		}
+	}
+
+	// MARK: - Tentacle
+
+	internal extension Client {
+		var isAuthenticated: Bool { return authenticated }
+
+		func releases(in repository: Repository, page: UInt = 1, perPage: UInt = 30) -> SignalProducer<(Response, [Release]), Error> {
+			return releasesInRepository(repository, page: page, perPage: perPage)
+		}
+
+		func release(forTag tag: String, in repository: Repository) -> SignalProducer<(Response, Release), Error> {
+			return releaseForTag(tag, inRepository: repository)
+		}
+
+		func download(asset asset: Release.Asset) -> SignalProducer<NSURL, Error> {
+			return downloadAsset(asset)
+		}
+	}
+
+	internal extension Release {
+		var isDraft: Bool { return draft }
+	}
+
+	internal extension Server {
+		static var dotCom: Server { return .DotCom }
+		static func enterprise(url url: NSURL) -> Server {
+			return .Enterprise(url: url)
 		}
 	}
 #endif
