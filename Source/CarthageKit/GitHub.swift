@@ -76,7 +76,7 @@ extension Repository {
 				return .success(self.init(owner: owner, name: stripGitSuffix(name)))
 			} else {
 				let baseURL = URL.URLByDeletingLastPathComponent!.URLByDeletingLastPathComponent!
-				return .success(self.init(server: .Enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
+				return .success(self.init(server: .enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
 			}
 		}
 
@@ -164,14 +164,14 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 }
 
 extension Client {
-	convenience init(repository: Repository, authenticated: Bool = true) {
+	convenience init(repository: Repository, isAuthenticated: Bool = true) {
 		if Client.userAgent == nil {
 			Client.userAgent = gitHubUserAgent()
 		}
 		
 		let server = repository.server
 		
-		if !authenticated {
+		if !isAuthenticated {
 			self.init(server)
 		} else if let token = tokenFromEnvironment(forServer: server) {
 			self.init(server, token: token)
