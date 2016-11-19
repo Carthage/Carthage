@@ -903,16 +903,16 @@ private func BCSymbolMapsInDirectory(directoryURL: NSURL) -> SignalProducer<NSUR
 /// located somewhere within the given directory.
 private func BCSymbolMapsForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return UUIDsForFramework(frameworkURL)
-		.flatMap(.merge) { UUIDs -> SignalProducer<NSURL, CarthageError> in
-			if UUIDs.isEmpty {
+		.flatMap(.merge) { uuids -> SignalProducer<NSURL, CarthageError> in
+			if uuids.isEmpty {
 				return .empty
 			}
 			func filterUUIDs(signal: Signal<NSURL, CarthageError>) -> Signal<NSURL, CarthageError> {
-				var remainingUUIDs = UUIDs
+				var remainingUUIDs = uuids
 				let count = remainingUUIDs.count
 				return signal
 					.filter { fileURL in
-						if let basename = fileURL.URLByDeletingPathExtension?.lastPathComponent, fileUUID = NSUUID(UUIDString: basename) {
+						if let basename = fileURL.URLByDeletingPathExtension?.lastPathComponent, let fileUUID = UUID(uuidString: basename) {
 							return remainingUUIDs.remove(fileUUID) != nil
 						} else {
 							return false
