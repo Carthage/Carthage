@@ -13,7 +13,7 @@ import ReactiveTask
 
 /// Zips the given input items (recursively) into an archive that will be
 /// located at the given URL.
-public func zipIntoArchive(destinationArchiveURL: NSURL, workingDirectory: String, inputPaths: [String]) -> SignalProducer<(), CarthageError> {
+public func zipArchive(into destinationArchiveURL: NSURL, workingDirectory: String, inputPaths: [String]) -> SignalProducer<(), CarthageError> {
 	precondition(destinationArchiveURL.fileURL)
 	precondition(!inputPaths.isEmpty)
 	
@@ -26,7 +26,7 @@ public func zipIntoArchive(destinationArchiveURL: NSURL, workingDirectory: Strin
 
 /// Unzips the archive at the given file URL, extracting into the given
 /// directory URL (which must already exist).
-public func unzipArchiveToDirectory(fileURL: NSURL, _ destinationDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
+public func unzipArchive(_ fileURL: NSURL, to destinationDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
 	precondition(fileURL.fileURL)
 	precondition(destinationDirectoryURL.fileURL)
 
@@ -38,7 +38,7 @@ public func unzipArchiveToDirectory(fileURL: NSURL, _ destinationDirectoryURL: N
 
 /// Unzips the archive at the given file URL into a temporary directory, then
 /// sends the file URL to that directory.
-public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+public func unzipArchiveToTemporaryDirectory(_ fileURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return SignalProducer.attempt { () -> Result<String, CarthageError> in
 			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("carthage-archive.XXXXXX").nulTerminatedUTF8.map { CChar($0) }
 			let result = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> UnsafeMutablePointer<CChar> in
@@ -57,7 +57,7 @@ public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<N
 		}
 		.map { NSURL.fileURLWithPath($0, isDirectory: true) }
 		.flatMap(.merge) { directoryURL in
-			return unzipArchiveToDirectory(fileURL, directoryURL)
+			return unzipArchive(fileURL, to: directoryURL)
 				.then(SignalProducer(value: directoryURL))
 		}
 }
