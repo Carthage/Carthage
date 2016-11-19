@@ -45,7 +45,7 @@ class ArchiveSpec: QuickSpec {
 
 		describe("zipping") {
 			let originalCurrentDirectory = FileManager.`default`.currentDirectoryPath
-			let temporaryURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
+			let temporaryURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
 			let archiveURL = temporaryURL.appendingPathComponent("archive.zip", isDirectory: false)
 
 			beforeEach {

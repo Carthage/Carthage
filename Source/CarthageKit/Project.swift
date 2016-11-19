@@ -19,7 +19,7 @@ public let CarthageKitBundleIdentifier = Bundle(for: Project.self).bundleIdentif
 /// be found or created.
 private let fallbackDependenciesURL: NSURL = {
 	let homePath: String
-	if let homeEnvValue = NSProcessInfo.processInfo().environment["HOME"] {
+	if let homeEnvValue = ProcessInfo.processInfo.environment["HOME"] {
 		homePath = (homeEnvValue as NSString).stringByAppendingPathComponent(".carthage")
 	} else {
 		homePath = ("~/.carthage" as NSString).stringByExpandingTildeInPath

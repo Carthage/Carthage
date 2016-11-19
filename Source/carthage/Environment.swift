@@ -11,7 +11,7 @@ import Foundation
 import Result
 
 internal func getEnvironmentVariable(variable: String) -> Result<String, CarthageError> {
-	let environment = NSProcessInfo.processInfo().environment
+	let environment = ProcessInfo.processInfo.environment
 
 	if let value = environment[variable] {
 		return .success(value)

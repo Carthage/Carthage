@@ -168,7 +168,7 @@ public struct FetchCache {
 /// of an existing repository.
 public func launchGitTask(arguments: [String], repositoryFileURL: NSURL? = nil, standardInput: SignalProducer<Data, NoError>? = nil, environment: [String: String]? = nil) -> SignalProducer<String, CarthageError> {
 	// See https://github.com/Carthage/Carthage/issues/219.
-	var updatedEnvironment = environment ?? NSProcessInfo.processInfo().environment 
+	var updatedEnvironment = environment ?? ProcessInfo.processInfo.environment 
 	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
 
 	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
@@ -271,7 +271,7 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDir
 				return .failure(CarthageError.repositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory", underlyingError: error))
 			}
 
-			var environment = NSProcessInfo.processInfo().environment
+			var environment = ProcessInfo.processInfo.environment
 			environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
 			return .success(environment)
 		}

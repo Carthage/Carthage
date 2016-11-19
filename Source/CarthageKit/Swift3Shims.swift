@@ -148,6 +148,11 @@
 		}
 	}
 
+	internal typealias ProcessInfo = NSProcessInfo
+	internal extension ProcessInfo {
+		@nonobjc class var processInfo: ProcessInfo { return processInfo() }
+	}
+
 	public typealias Scanner = NSScanner
 	internal extension Scanner {
 		@nonobjc var isAtEnd: Bool { return atEnd }

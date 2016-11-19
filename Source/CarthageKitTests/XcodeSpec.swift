@@ -21,7 +21,7 @@ class XcodeSpec: QuickSpec {
 		let directoryURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
 		let projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
 		let buildFolderURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
-		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString), isDirectory: true)
+		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
 
 		beforeEach {
 			_ = try? FileManager.`default`.removeItem(at: buildFolderURL)
