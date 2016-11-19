@@ -6,8 +6,8 @@ class BuildArgumentsSpec: QuickSpec {
 	override func spec() {
 		describe("arguments") {
 			func itCreatesBuildArguments(message: String, arguments: [String], configure: inout BuildArguments -> Void) {
-				let workspace = ProjectLocator.Workspace(NSURL(string: "file:///Foo/Bar/workspace.xcworkspace")!)
-				let project = ProjectLocator.ProjectFile(NSURL(string: "file:///Foo/Bar/project.xcodeproj")!)
+				let workspace = ProjectLocator.workspace(NSURL(string: "file:///Foo/Bar/workspace.xcworkspace")!)
+				let project = ProjectLocator.projectFile(NSURL(string: "file:///Foo/Bar/project.xcodeproj")!)
 
 				let codeSignArguments = [
 					"CODE_SIGNING_REQUIRED=NO",
@@ -65,7 +65,7 @@ class BuildArgumentsSpec: QuickSpec {
 			}
 
 			describe("specifying the sdk") {
-				for sdk in SDK.allSDKs.subtract([.MacOSX]) {
+				for sdk in SDK.allSDKs.subtract([.macOSX]) {
 					itCreatesBuildArguments("includes \(sdk) in the argument if specified", arguments: ["-sdk", sdk.rawValue]) { (inout subject: BuildArguments) in
 						subject.sdk = sdk
 					}
@@ -75,10 +75,10 @@ class BuildArgumentsSpec: QuickSpec {
 				// resolution (see Carthage/Carthage#347).
 				//
 				// Since we wouldn't be trying to build this target unless it were
-				// for OS X already, just let xcodebuild figure out the SDK on its
+				// for macOS already, just let xcodebuild figure out the SDK on its
 				// own.
-				itCreatesBuildArguments("does not include the sdk flag if .MacOSX is specified", arguments: []) { (inout subject: BuildArguments) in
-					subject.sdk = .MacOSX
+				itCreatesBuildArguments("does not include the sdk flag if .macOSX is specified", arguments: []) { (inout subject: BuildArguments) in
+					subject.sdk = .macOSX
 				}
 			}
 
@@ -97,12 +97,12 @@ class BuildArgumentsSpec: QuickSpec {
 			}
 
 			describe("specifying the bitcode generation mode") {
-				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=marker if .Marker is set", arguments: ["BITCODE_GENERATION_MODE=marker"]) { (inout subject: BuildArguments) in
-					subject.bitcodeGenerationMode = .Marker
+				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=marker if .marker is set", arguments: ["BITCODE_GENERATION_MODE=marker"]) { (inout subject: BuildArguments) in
+					subject.bitcodeGenerationMode = .marker
 				}
 
-				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=bitcode if .Bitcode is set", arguments: ["BITCODE_GENERATION_MODE=bitcode"]) { (inout subject: BuildArguments) in
-					subject.bitcodeGenerationMode = .Bitcode
+				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=bitcode if .bitcode is set", arguments: ["BITCODE_GENERATION_MODE=bitcode"]) { (inout subject: BuildArguments) in
+					subject.bitcodeGenerationMode = .bitcode
 				}
 			}
 		}

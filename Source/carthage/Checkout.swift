@@ -43,7 +43,7 @@ public struct CheckoutCommand: CommandType {
 				<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 				<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist, disabled if --use-submodules option is present" + useBinariesAddendum)
 				<*> ColorOptions.evaluate(m)
-				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: FileManager.`default`.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> m <| Argument(defaultValue: [], usage: dependenciesUsage)
 		}
 
@@ -57,7 +57,7 @@ public struct CheckoutCommand: CommandType {
 			project.useBinaries = self.useBinaries
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
-			project.projectEvents.observeNext { eventSink.put($0) }
+			project.projectEvents.observeValues { eventSink.put($0) }
 
 			return SignalProducer(value: project)
 		}
@@ -74,6 +74,6 @@ public struct CheckoutCommand: CommandType {
 	/// Checks out dependencies with the given options.
 	public func checkoutWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
 		return options.loadProject()
-			.flatMap(.Merge) { $0.checkoutResolvedDependencies(options.dependenciesToCheckout) }
+			.flatMap(.merge) { $0.checkoutResolvedDependencies(options.dependenciesToCheckout) }
 	}
 }

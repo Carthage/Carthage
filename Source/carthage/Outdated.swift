@@ -30,7 +30,7 @@ public struct OutdatedCommand: CommandType {
 				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> m <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> ColorOptions.evaluate(m)
-				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: FileManager.`default`.currentDirectoryPath, usage: "the directory containing the Carthage project")
 		}
 		
 		/// Attempts to load the project referenced by the options, and configure it
@@ -41,7 +41,7 @@ public struct OutdatedCommand: CommandType {
 			project.preferHTTPS = !self.useSSH
 			
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
-			project.projectEvents.observeNext { eventSink.put($0) }
+			project.projectEvents.observeValues { eventSink.put($0) }
 			
 			return SignalProducer(value: project)
 		}
@@ -52,7 +52,7 @@ public struct OutdatedCommand: CommandType {
 
 	public func run(options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
-			.flatMap(.Merge) { $0.outdatedDependencies(options.verbose) }
+			.flatMap(.merge) { $0.outdatedDependencies(options.verbose) }
 			.on(next: { outdatedDependencies in
 				let formatting = options.colorOptions.formatting
 

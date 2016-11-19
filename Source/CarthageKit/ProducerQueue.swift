@@ -8,7 +8,7 @@
 
 import ReactiveCocoa
 
-/// Serializes the execution of SignalProducers, like flatten(.Concat), but
+/// Serializes the execution of SignalProducers, like flatten(.concat), but
 /// without all needing to be enqueued in the same context.
 ///
 /// This allows you to manually enqueue producers from any code that has access
@@ -28,7 +28,7 @@ internal final class ProducerQueue {
 	func enqueue<T, Error>(producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
 		return SignalProducer { observer, disposable in
 			dispatch_async(self.queue) {
-				if disposable.disposed {
+				if disposable.isDisposed {
 					return
 				}
 
@@ -37,7 +37,7 @@ internal final class ProducerQueue {
 				dispatch_suspend(self.queue)
 
 				producer.startWithSignal { signal, signalDisposable in
-					disposable.addDisposable(signalDisposable)
+					disposable.add(signalDisposable)
 
 					signal.observe { event in
 						observer.action(event)
@@ -52,7 +52,7 @@ internal final class ProducerQueue {
 	}
 }
 
-extension SignalProducerType {
+extension SignalProducerProtocol {
 	/// Shorthand for enqueuing the given producer upon the given queue.
 	internal func startOnQueue(queue: ProducerQueue) -> SignalProducer<Value, Error> {
 		return queue.enqueue(self.producer)

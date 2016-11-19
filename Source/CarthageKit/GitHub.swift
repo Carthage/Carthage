@@ -13,11 +13,11 @@ import Tentacle
 
 /// The User-Agent to use for GitHub requests.
 private func gitHubUserAgent() -> String {
-	let bundle = NSBundle.mainBundle() ?? NSBundle(identifier: CarthageKitBundleIdentifier)
+	let bundle = Bundle.main ?? Bundle(identifier: CarthageKitBundleIdentifier)
 	
 	let version = bundle.flatMap {
-		($0.objectForInfoDictionaryKey("CFBundleShortVersionString") ??
-		 $0.objectForInfoDictionaryKey(kCFBundleVersionKey as String)) as? String
+		($0.object(forInfoDictionaryKey: "CFBundleShortVersionString") ??
+		 $0.object(forInfoDictionaryKey: kCFBundleVersionKey as String)) as? String
 	} ?? "unknown"
 
 	let identifier = bundle?.bundleIdentifier ?? "CarthageKit-unknown"
@@ -28,12 +28,7 @@ extension Repository {
 	/// The URL that should be used for cloning this repository over HTTPS.
 	public var HTTPSURL: GitURL {
 		let auth = tokenFromEnvironment(forServer: server).map { "\($0)@" } ?? ""
-		let scheme: String
-		#if swift(>=2.3)
-			scheme = server.URL.scheme!
-		#else
-			scheme = server.URL.scheme
-		#endif
+		let scheme = server.URL.scheme!
 
 		return GitURL("\(scheme)://\(auth)\(server.URL.host!)/\(owner)/\(name).git")
 	}
@@ -57,10 +52,10 @@ extension Repository {
 	public static func fromIdentifier(identifier: String) -> Result<Repository, CarthageError> {
 		// GitHub.com
 		let range = NSRange(location: 0, length: (identifier as NSString).length)
-		if let match = NWORegex.firstMatchInString(identifier, options: [], range: range) {
-			let owner = (identifier as NSString).substringWithRange(match.rangeAtIndex(1))
-			let name = (identifier as NSString).substringWithRange(match.rangeAtIndex(2))
-			return .Success(self.init(owner: owner, name: stripGitSuffix(name)))
+		if let match = NWORegex.firstMatch(in: identifier, range: range) {
+			let owner = (identifier as NSString).substringWithRange(match.rangeAt(1))
+			let name = (identifier as NSString).substringWithRange(match.rangeAt(2))
+			return .success(self.init(owner: owner, name: stripGitSuffix(name)))
 		}
 
 		// GitHub Enterprise
@@ -78,14 +73,14 @@ extension Repository {
 			// If the host name starts with “github.com”, that is not an enterprise
 			// one.
 			if host == "github.com" || host == "www.github.com" {
-				return .Success(self.init(owner: owner, name: stripGitSuffix(name)))
+				return .success(self.init(owner: owner, name: stripGitSuffix(name)))
 			} else {
 				let baseURL = URL.URLByDeletingLastPathComponent!.URLByDeletingLastPathComponent!
-				return .Success(self.init(server: .Enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
+				return .success(self.init(server: .Enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
 			}
 		}
 
-		return .Failure(CarthageError.ParseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
+		return .failure(CarthageError.parseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
 	}
 }
 
@@ -103,7 +98,7 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 	let data = "url=\(server)".dataUsingEncoding(NSUTF8StringEncoding)!
 	
 	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
-		.flatMap(.Concat) { string in
+		.flatMap(.concat) { string in
 			return string.linesProducer
 		}
 		.reduce([:]) { (values: [String: String], line: String) -> [String: String] in
@@ -134,7 +129,7 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 }
 
 private func tokenFromEnvironment(forServer server: Server) -> String? {
-	let environment = NSProcessInfo.processInfo().environment
+	let environment = ProcessInfo.processInfo.environment
 
 	if let accessTokenInput = environment["GITHUB_ACCESS_TOKEN"] {
 		// Treat the input as comma-separated series of domains and tokens.

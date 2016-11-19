@@ -19,8 +19,8 @@ public func zipIntoArchive(destinationArchiveURL: NSURL, workingDirectory: Strin
 	
 	let task = Task("/usr/bin/env", workingDirectoryPath: workingDirectory, arguments: [ "zip", "-q", "-r", "--symlinks", destinationArchiveURL.path! ] + inputPaths)
 	
-	return launchTask(task)
-		.mapError(CarthageError.TaskError)
+	return task.launch()
+		.mapError(CarthageError.taskError)
 		.then(.empty)
 }
 
@@ -31,8 +31,8 @@ public func unzipArchiveToDirectory(fileURL: NSURL, _ destinationDirectoryURL: N
 	precondition(destinationDirectoryURL.fileURL)
 
 	let task = Task("/usr/bin/env", arguments: [ "unzip", "-qq", "-d", destinationDirectoryURL.path!, fileURL.path! ])
-	return launchTask(task)
-		.mapError(CarthageError.TaskError)
+	return task.launch()
+		.mapError(CarthageError.taskError)
 		.then(.empty)
 }
 
@@ -46,17 +46,17 @@ public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<N
 			}
 
 			if result == nil {
-				return .Failure(.TaskError(.POSIXError(errno)))
+				return .failure(.taskError(.posixError(errno)))
 			}
 
 			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
 				return String.fromCString(ptr.baseAddress)!
 			}
 
-			return .Success(temporaryPath)
+			return .success(temporaryPath)
 		}
 		.map { NSURL.fileURLWithPath($0, isDirectory: true) }
-		.flatMap(.Merge) { directoryURL in
+		.flatMap(.merge) { directoryURL in
 			return unzipArchiveToDirectory(fileURL, directoryURL)
 				.then(SignalProducer(value: directoryURL))
 		}

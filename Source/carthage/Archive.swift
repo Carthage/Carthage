@@ -28,7 +28,7 @@ public struct ArchiveCommand: CommandType {
 		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "output", defaultValue: nil, usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)")
-				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: FileManager.`default`.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> ColorOptions.evaluate(m)
 				<*> m <| Argument(defaultValue: [], usage: "the names of the built frameworks to archive without any extension (or blank to pick up the frameworks in the current project built by `--no-skip-current`)")
 		}
@@ -49,22 +49,22 @@ public struct ArchiveCommand: CommandType {
 			let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
 			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
 				.collect()
-				.flatMap(.Merge) { projects in
+				.flatMap(.merge) { projects in
 					return schemesInProjects(projects)
-						.flatMap(.Merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+						.flatMap(.merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 							if !schemes.isEmpty {
 								return .init(values: schemes)
 							} else {
-								return .init(error: .NoSharedFrameworkSchemes(.Git(GitURL(directoryURL.path!)), []))
+								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path!)), []))
 							}
 						}
 				}
-				.flatMap(.Merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
+				.flatMap(.merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 					return BuildSettings.loadWithArguments(buildArguments)
 				}
-				.flatMap(.Concat) { settings -> SignalProducer<String, CarthageError> in
-					if let wrapperName = settings.wrapperName.value where settings.productType.value == .Framework {
+				.flatMap(.concat) { settings -> SignalProducer<String, CarthageError> in
+					if let wrapperName = settings.wrapperName.value where settings.productType.value == .framework {
 						return .init(value: wrapperName)
 					} else {
 						return .empty
@@ -74,9 +74,9 @@ public struct ArchiveCommand: CommandType {
 				.map { Array(Set($0)).sort() }
 		}
 
-		return frameworks.flatMap(.Merge) { frameworks -> SignalProducer<(), CarthageError> in
+		return frameworks.flatMap(.merge) { frameworks -> SignalProducer<(), CarthageError> in
 			return SignalProducer(values: Platform.supportedPlatforms)
-				.flatMap(.Merge) { platform -> SignalProducer<String, CarthageError> in
+				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
 					return SignalProducer(values: frameworks).map { framework in
 						return (platform.relativePath as NSString).stringByAppendingPathComponent(framework)
 					}
@@ -85,15 +85,15 @@ public struct ArchiveCommand: CommandType {
 					let absolutePath = (options.directoryPath as NSString).stringByAppendingPathComponent(relativePath)
 					return (relativePath, absolutePath)
 				}
-				.filter { filePath in NSFileManager.defaultManager().fileExistsAtPath(filePath.absolutePath) }
-				.flatMap(.Merge) { framework -> SignalProducer<String, CarthageError> in
+				.filter { filePath in FileManager.`default`.fileExists(atPath: filePath.absolutePath) }
+				.flatMap(.merge) { framework -> SignalProducer<String, CarthageError> in
 					let dSYM = (framework.relativePath as NSString).stringByAppendingPathExtension("dSYM")!
 					let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework.absolutePath))
 						// generate relative paths for the bcsymbolmaps so they print nicely
 						.map { url in ((framework.relativePath as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.lastPathComponent!) }
 					let extraFilesProducer = SignalProducer(value: dSYM)
 						.concat(bcsymbolmapsProducer)
-						.filter { relativePath in NSFileManager.defaultManager().fileExistsAtPath(framework.absolutePath) }
+						.filter { relativePath in FileManager.`default`.fileExists(atPath: framework.absolutePath) }
 					return SignalProducer(value: framework.relativePath)
 						.concat(extraFilesProducer)
 				}
@@ -101,7 +101,7 @@ public struct ArchiveCommand: CommandType {
 					carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
 				})
 				.collect()
-				.flatMap(.Merge) { paths -> SignalProducer<(), CarthageError> in
+				.flatMap(.merge) { paths -> SignalProducer<(), CarthageError> in
 					
 					let foundFrameworks = paths
 						.lazy
@@ -109,7 +109,7 @@ public struct ArchiveCommand: CommandType {
 						.filter { $0.hasSuffix(".framework") }
 					
 					if Set(foundFrameworks) != Set(frameworks) {
-						let error = CarthageError.InvalidArgument(description: "Could not find any copies of \(frameworks.joinWithSeparator(", ")). Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
+						let error = CarthageError.invalidArgument(description: "Could not find any copies of \(frameworks.joinWithSeparator(", ")). Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
 						return SignalProducer(error: error)
 					}
 
@@ -117,7 +117,7 @@ public struct ArchiveCommand: CommandType {
 					let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
 
 					if let directory = outputURL.URLByDeletingLastPathComponent {
-						_ = try? NSFileManager.defaultManager().createDirectoryAtURL(directory, withIntermediateDirectories: true, attributes: nil)
+						_ = try? FileManager.`default`.createDirectory(at: directory, withIntermediateDirectories: true)
 					}
 					
 					return zipIntoArchive(outputURL, workingDirectory: options.directoryPath, inputPaths: paths).on(completed: {
@@ -141,7 +141,7 @@ private func outputPathWithOptions(options: ArchiveCommand.Options, frameworks: 
 		}
 
 		var isDirectory: ObjCBool = false
-		if NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory) && isDirectory {
+		if FileManager.`default`.fileExists(atPath: path, isDirectory: &isDirectory) && isDirectory {
 			// If the given path is an existing directory, output a zip file
 			// into that directory.
 			return (path as NSString).stringByAppendingPathComponent(defaultOutputPath)

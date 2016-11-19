@@ -50,7 +50,7 @@ public struct UpdateCommand: CommandType {
 				<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)")
 				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 				<*> BuildOptions.evaluate(m, addendum: "\n(ignored if --no-build option is present)")
-				<*> CheckoutCommand.Options.evaluate(m, useBinariesAddendum: "\n(ignored if --no-build option is present)", dependenciesUsage: "the dependency names to update, checkout and build")
+				<*> CheckoutCommand.Options.evaluate(m, useBinariesAddendum: "\n(ignored if --no-build or --toolchain option is present)", dependenciesUsage: "the dependency names to update, checkout and build")
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it
@@ -58,9 +58,11 @@ public struct UpdateCommand: CommandType {
 		public func loadProject() -> SignalProducer<Project, CarthageError> {
 			return checkoutOptions.loadProject()
 				.on(next: { project in
-					// Never check out binaries if we're skipping the build step,
+					// Never check out binaries if 
+					// 1. we're skipping the build step, or
+					// 2. `--toolchain` option is given
 					// because that means users may need the repository checkout.
-					if !self.buildAfterUpdate {
+					if !self.buildAfterUpdate || self.buildOptions.toolchain != nil {
 						project.useBinaries = false
 					}
 				})
@@ -72,18 +74,18 @@ public struct UpdateCommand: CommandType {
 
 	public func run(options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
-			.flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
+			.flatMap(.merge) { project -> SignalProducer<(), CarthageError> in
 				
 				let checkDependencies: SignalProducer<(), CarthageError>
 				if let depsToUpdate = options.dependenciesToUpdate {
 					checkDependencies = project
 						.loadCombinedCartfile()
-						.flatMap(.Concat) { cartfile -> SignalProducer<(), CarthageError> in
+						.flatMap(.concat) { cartfile -> SignalProducer<(), CarthageError> in
 							let dependencyNames = cartfile.dependencies.map { $0.project.name.lowercaseString }
 							let unknownDependencyNames = Set(depsToUpdate.map { $0.lowercaseString }).subtract(dependencyNames)
 							
 							if !unknownDependencyNames.isEmpty {
-								return SignalProducer(error: .UnknownDependencies(unknownDependencyNames.sort()))
+								return SignalProducer(error: .unknownDependencies(unknownDependencyNames.sort()))
 							}
 							return .empty
 						}

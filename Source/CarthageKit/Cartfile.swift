@@ -33,18 +33,18 @@ public struct Cartfile {
 	/// Attempts to parse Cartfile information from a string.
 	public static func fromString(string: String) -> Result<Cartfile, CarthageError> {
 		var cartfile = self.init()
-		var result: Result<(), CarthageError> = .Success(())
+		var result: Result<(), CarthageError> = .success(())
 
 		let commentIndicator = "#"
 		string.enumerateLines { (line, stop) in
-			let scanner = NSScanner(string: line)
+			let scanner = Scanner(string: line)
 			
-			if scanner.scanString(commentIndicator, intoString: nil) {
+			if scanner.scanString(commentIndicator, into: nil) {
 				// Skip the rest of the line.
 				return
 			}
 
-			if scanner.atEnd {
+			if scanner.isAtEnd {
 				// The line was all whitespace.
 				return
 			}
@@ -54,17 +54,17 @@ public struct Cartfile {
 				cartfile.dependencies.append(dep)
 
 			case let .Failure(error):
-				result = .Failure(error)
+				result = .failure(error)
 				stop = true
 			}
 
-			if scanner.scanString(commentIndicator, intoString: nil) {
+			if scanner.scanString(commentIndicator, into: nil) {
 				// Skip the rest of the line.
 				return
 			}
 
-			if !scanner.atEnd {
-				result = .Failure(CarthageError.ParseError(description: "unexpected trailing characters in line: \(line)"))
+			if !scanner.isAtEnd {
+				result = .failure(CarthageError.parseError(description: "unexpected trailing characters in line: \(line)"))
 				stop = true
 			}
 		}
@@ -78,7 +78,7 @@ public struct Cartfile {
 			let cartfileContents = try NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding)
 			return Cartfile.fromString(cartfileContents as String)
 		} catch let error as NSError {
-			return .Failure(CarthageError.ReadFailed(cartfileURL, error))
+			return .failure(CarthageError.readFailed(cartfileURL, error))
 		}
 	}
 
@@ -140,16 +140,16 @@ public struct ResolvedCartfile {
 	/// Attempts to parse Cartfile.resolved information from a string.
 	public static func fromString(string: String) -> Result<ResolvedCartfile, CarthageError> {
 		var cartfile = self.init(dependencies: [])
-		var result: Result<(), CarthageError> = .Success(())
+		var result: Result<(), CarthageError> = .success(())
 
-		let scanner = NSScanner(string: string)
-		scannerLoop: while !scanner.atEnd {
+		let scanner = Scanner(string: string)
+		scannerLoop: while !scanner.isAtEnd {
 			switch Dependency<PinnedVersion>.fromScanner(scanner) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep)
 
 			case let .Failure(error):
-				result = .Failure(error)
+				result = .failure(error)
 				break scannerLoop
 			}
 		}
@@ -176,18 +176,18 @@ extension ResolvedCartfile: CustomStringConvertible {
 /// Uniquely identifies a project that can be used as a dependency.
 public enum ProjectIdentifier: Comparable {
 	/// A repository hosted on GitHub.com.
-	case GitHub(Repository)
+	case gitHub(Repository)
 
 	/// An arbitrary Git repository.
-	case Git(GitURL)
+	case git(GitURL)
 
 	/// The unique, user-visible name for this project.
 	public var name: String {
 		switch self {
-		case let .GitHub(repo):
+		case let .gitHub(repo):
 			return repo.name
 
-		case let .Git(URL):
+		case let .git(URL):
 			return URL.name ?? URL.URLString
 		}
 	}
@@ -201,10 +201,10 @@ public enum ProjectIdentifier: Comparable {
 
 public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 	switch (lhs, rhs) {
-	case let (.GitHub(left), .GitHub(right)):
+	case let (.gitHub(left), .gitHub(right)):
 		return left == right
 
-	case let (.Git(left), .Git(right)):
+	case let (.git(left), .git(right)):
 		return left == right
 
 	default:
@@ -213,16 +213,16 @@ public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 }
 
 public func <(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
-	return lhs.name.caseInsensitiveCompare(rhs.name) == NSComparisonResult.OrderedAscending
+	return lhs.name.caseInsensitiveCompare(rhs.name) == .orderedAscending
 }
 
 extension ProjectIdentifier: Hashable {
 	public var hashValue: Int {
 		switch self {
-		case let .GitHub(repo):
+		case let .gitHub(repo):
 			return repo.hashValue
 
-		case let .Git(URL):
+		case let .git(URL):
 			return URL.hashValue
 		}
 	}
@@ -230,34 +230,34 @@ extension ProjectIdentifier: Hashable {
 
 extension ProjectIdentifier: Scannable {
 	/// Attempts to parse a ProjectIdentifier.
-	public static func fromScanner(scanner: NSScanner) -> Result<ProjectIdentifier, CarthageError> {
+	public static func fromScanner(scanner: Scanner) -> Result<ProjectIdentifier, CarthageError> {
 		let parser: (String -> Result<ProjectIdentifier, CarthageError>)
 
-		if scanner.scanString("github", intoString: nil) {
+		if scanner.scanString("github", into: nil) {
 			parser = { repoIdentifier in
-				return Repository.fromIdentifier(repoIdentifier).map { self.GitHub($0) }
+				return Repository.fromIdentifier(repoIdentifier).map { self.gitHub($0) }
 			}
-		} else if scanner.scanString("git", intoString: nil) {
+		} else if scanner.scanString("git", into: nil) {
 			parser = { URLString in
-				return .Success(self.Git(GitURL(URLString)))
+				return .success(self.git(GitURL(URLString)))
 			}
 		} else {
-			return .Failure(CarthageError.ParseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
+			return .failure(CarthageError.parseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
 		}
 
-		if !scanner.scanString("\"", intoString: nil) {
-			return .Failure(CarthageError.ParseError(description: "expected string after dependency type in line: \(scanner.currentLine)"))
+		if !scanner.scanString("\"", into: nil) {
+			return .failure(CarthageError.parseError(description: "expected string after dependency type in line: \(scanner.currentLine)"))
 		}
 
 		var address: NSString? = nil
-		if !scanner.scanUpToString("\"", intoString: &address) || !scanner.scanString("\"", intoString: nil) {
-			return .Failure(CarthageError.ParseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)"))
+		if !scanner.scanUpTo("\"", into: &address) || !scanner.scanString("\"", into: nil) {
+			return .failure(CarthageError.parseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)"))
 		}
 
 		if let address = address {
 			return parser(address as String)
 		} else {
-			return .Failure(CarthageError.ParseError(description: "empty string after dependency type in line: \(scanner.currentLine)"))
+			return .failure(CarthageError.parseError(description: "empty string after dependency type in line: \(scanner.currentLine)"))
 		}
 	}
 }
@@ -265,7 +265,7 @@ extension ProjectIdentifier: Scannable {
 extension ProjectIdentifier: CustomStringConvertible {
 	public var description: String {
 		switch self {
-		case let .GitHub(repo):
+		case let .gitHub(repo):
 			let repoDescription: String
 			switch repo.server {
 			case .DotCom:
@@ -276,7 +276,7 @@ extension ProjectIdentifier: CustomStringConvertible {
 			}
 			return "github \"\(repoDescription)\""
 
-		case let .Git(URL):
+		case let .git(URL):
 			return "git \"\(URL)\""
 		}
 	}
@@ -302,7 +302,7 @@ public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 
 extension Dependency where V: Scannable {
 	/// Attempts to parse a Dependency specification.
-	public static func fromScanner(scanner: NSScanner) -> Result<Dependency, CarthageError> {
+	public static func fromScanner(scanner: Scanner) -> Result<Dependency, CarthageError> {
 		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
 			return V.fromScanner(scanner).map { specifier in self.init(project: identifier, version: specifier) }
 		}

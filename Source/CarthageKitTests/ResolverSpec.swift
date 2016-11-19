@@ -16,14 +16,14 @@ import Tentacle
 
 class ResolverSpec: QuickSpec {
 	private func loadTestCartfile<T: CartfileType>(name: String, withExtension: String = "") -> T {
-		let testCartfileURL = NSBundle(forClass: self.dynamicType).URLForResource(name, withExtension: withExtension)!
+		let testCartfileURL = Bundle(for: type(of: self)).url(forResource: name, withExtension: withExtension)!
 		let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
 
 		return T.fromString(testCartfile).value!
 	}
 
 	private func dependencyForOwner(owner: String, name: String, version: String) -> CarthageKit.Dependency<PinnedVersion> {
-		return CarthageKit.Dependency(project: .GitHub(Repository(owner: owner, name: name)), version: PinnedVersion(version))
+		return CarthageKit.Dependency(project: .gitHub(Repository(owner: owner, name: name)), version: PinnedVersion(version))
 	}
 
 	private func orderedDependencies(producer: SignalProducer<CarthageKit.Dependency<PinnedVersion>, CarthageError>) -> [Dependency] {
@@ -140,7 +140,7 @@ class ResolverSpec: QuickSpec {
 					return SignalProducer(value: Cartfile())
 				}
 			}, resolvedGitReference: { _ -> SignalProducer<PinnedVersion, CarthageError> in
-				return SignalProducer(error: .InvalidArgument(description: "unexpected test error"))
+				return SignalProducer(error: .invalidArgument(description: "unexpected test error"))
 			})
 
 			let testCartfile: Cartfile = self.loadTestCartfile("EmbeddedFrameworksContainerCartfile")
@@ -173,20 +173,20 @@ class ResolverSpec: QuickSpec {
 		let cartfile: Result<Cartfile, CarthageError>
 
 		switch dependency.project {
-		case .GitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")):
+		case .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")):
 			cartfile = Cartfile.fromString("github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0")
 
-		case .GitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")):
+		case .gitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")):
 			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0")
 
-		case .Git(GitURL("/tmp/TestCartfileBranch")):
+		case .git(GitURL("/tmp/TestCartfileBranch")):
 			cartfile = Cartfile.fromString("git \"https://enterprise.local/desktop/git-error-translations2.git\" \"development\"")
 
-		case .Git(GitURL("/tmp/TestCartfileSHA")):
+		case .git(GitURL("/tmp/TestCartfileSHA")):
 			cartfile = Cartfile.fromString("git \"https://enterprise.local/desktop/git-error-translations2.git\" \"8ff4393ede2ca86d5a78edaf62b3a14d90bffab9\"")
 
 		default:
-			cartfile = .Success(Cartfile())
+			cartfile = .success(Cartfile())
 		}
 
 		return SignalProducer(value: cartfile.value!)

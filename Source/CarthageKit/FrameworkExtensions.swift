@@ -16,9 +16,9 @@ extension String {
 	internal var linesProducer: SignalProducer<String, NoError> {
 		return SignalProducer { observer, disposable in
 			(self as NSString).enumerateLinesUsingBlock { (line, stop) in
-				observer.sendNext(line)
+				observer.send(value: line)
 
-				if disposable.disposed {
+				if disposable.isDisposed {
 					stop.memory = true
 				}
 			}
@@ -38,7 +38,7 @@ internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	return result
 }
 
-extension SignalType {
+extension SignalProtocol {
 	/// Sends each value that occurs on `signal` combined with each value that
 	/// occurs on `otherSignal` (repeats included).
 	private func permuteWith<U>(otherSignal: Signal<U, Error>) -> Signal<(Value, U), Error> {
@@ -60,13 +60,13 @@ extension SignalType {
 
 					signalValues.append(value)
 					for otherValue in otherValues {
-						observer.sendNext((value, otherValue))
+						observer.send(value: (value, otherValue))
 					}
 
 					lock.unlock()
 
 				case let .Failed(error):
-					observer.sendFailed(error)
+					observer.send(error: error)
 
 				case .Completed:
 					lock.lock()
@@ -90,13 +90,13 @@ extension SignalType {
 
 					otherValues.append(value)
 					for signalValue in signalValues {
-						observer.sendNext((signalValue, value))
+						observer.send(value: (signalValue, value))
 					}
 
 					lock.unlock()
 
 				case let .Failed(error):
-					observer.sendFailed(error)
+					observer.send(error: error)
 
 				case .Completed:
 					lock.lock()
@@ -118,7 +118,7 @@ extension SignalType {
 	}
 }
 
-extension SignalProducerType {
+extension SignalProducerProtocol {
 	/// Sends each value that occurs on `producer` combined with each value that
 	/// occurs on `otherProducer` (repeats included).
 	private func permuteWith<U>(otherProducer: SignalProducer<U, Error>) -> SignalProducer<(Value, U), Error> {
@@ -132,10 +132,10 @@ extension SignalProducerType {
 
 		return SignalProducer { observer, outerDisposable in
 			self.startWithSignal { signal, disposable in
-				outerDisposable.addDisposable(disposable)
+				outerDisposable.add(disposable)
 
 				otherProducer.startWithSignal { otherSignal, otherDisposable in
-					outerDisposable.addDisposable(otherDisposable)
+					outerDisposable.add(otherDisposable)
 
 					signal.permuteWith(otherSignal).observe(observer)
 				}
@@ -151,7 +151,7 @@ extension SignalProducerType {
 	}
 }
 
-extension SignalProducerType where Value: SignalProducerType, Error == Value.Error {
+extension SignalProducerProtocol where Value: SignalProducerProtocol, Error == Value.Error {
 	/// Sends all permutations of the values from the inner producers, as they arrive.
 	///
 	/// If no producers are received, sends a single empty array then completes.
@@ -159,7 +159,7 @@ extension SignalProducerType where Value: SignalProducerType, Error == Value.Err
 	internal func permute() -> SignalProducer<[Value.Value], Error> {
 		return self
 			.collect()
-			.flatMap(.Concat) { (producers: [Value]) -> SignalProducer<[Value.Value], Error> in
+			.flatMap(.concat) { (producers: [Value]) -> SignalProducer<[Value.Value], Error> in
 				var combined = SignalProducer<[Value.Value], Error>(value: [])
 
 				for producer in producers {
@@ -177,7 +177,7 @@ extension SignalProducerType where Value: SignalProducerType, Error == Value.Err
 	}
 }
 
-extension SignalType where Value: EventType, Value.Error == Error {
+extension SignalProtocol where Value: EventProtocol, Value.Error == Error {
 	/// Dematerializes the signal, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> Signal<Value.Value, Error> {
@@ -191,7 +191,7 @@ extension SignalType where Value: EventType, Value.Error == Error {
 					switch innerEvent.event {
 					case let .Next(value):
 						receivedValue = true
-						observer.sendNext(value)
+						observer.send(value: value)
 
 					case let .Failed(error):
 						receivedError = error
@@ -204,11 +204,11 @@ extension SignalType where Value: EventType, Value.Error == Error {
 					}
 
 				case let .Failed(error):
-					observer.sendFailed(error)
+					observer.send(error: error)
 
 				case .Completed:
 					if let receivedError = receivedError where !receivedValue {
-						observer.sendFailed(receivedError)
+						observer.send(error: receivedError)
 					}
 
 					observer.sendCompleted()
@@ -221,7 +221,7 @@ extension SignalType where Value: EventType, Value.Error == Error {
 	}
 }
 
-extension SignalProducerType where Value: EventType, Value.Error == Error {
+extension SignalProducerProtocol where Value: EventProtocol, Value.Error == Error {
 	/// Dematerializes the producer, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> SignalProducer<Value.Value, Error> {
@@ -229,12 +229,12 @@ extension SignalProducerType where Value: EventType, Value.Error == Error {
 	}
 }
 
-extension NSScanner {
+extension Scanner {
 	/// Returns the current line being scanned.
 	internal var currentLine: NSString {
 		// Force Foundation types, so we don't have to use Swift's annoying
 		// string indexing.
-		let nsString: NSString = string
+		let nsString = string as NSString
 		let scanRange: NSRange = NSMakeRange(scanLocation, 0)
 		let lineRange: NSRange = nsString.lineRangeForRange(scanRange)
 
@@ -253,45 +253,29 @@ extension NSURL {
 			try getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey)
 
 			if let identifier = typeIdentifier as? String {
-				return .Success(identifier)
+				return .success(identifier)
 			}
 		} catch let err as NSError {
 			error = err
 		}
 
-		return .Failure(.ReadFailed(self, error))
+		return .failure(.readFailed(self, error))
 	}
 
 	public var carthage_absoluteString: String {
-		#if swift(>=2.3)
-			return absoluteString!
-		#else
-			return absoluteString
-		#endif
+		return absoluteString!
 	}
 
 	public func appendingPathExtension(pathExtension: String) -> NSURL {
-		#if swift(>=2.3)
-			return URLByAppendingPathExtension(pathExtension)!
-		#else
-			return URLByAppendingPathExtension(pathExtension)
-		#endif
+		return URLByAppendingPathExtension(pathExtension)!
 	}
 
 	public func appendingPathComponent(pathComponent: String) -> NSURL {
-		#if swift(>=2.3)
-			return URLByAppendingPathComponent(pathComponent)!
-		#else
-			return URLByAppendingPathComponent(pathComponent)
-		#endif
+		return URLByAppendingPathComponent(pathComponent)!
 	}
 
 	public func appendingPathComponent(pathComponent: String, isDirectory: Bool) -> NSURL {
-		#if swift(>=2.3)
-			return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)!
-		#else
-			return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)
-		#endif
+		return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)!
 	}
 
 	public func hasSubdirectory(possibleSubdirectory: NSURL) -> Bool {
@@ -310,25 +294,25 @@ extension NSURL {
 	}
 }
 
-extension NSFileManager {
+extension FileManager {
 	/// Creates a directory enumerator at the given URL. Sends each URL
 	/// enumerated, along with the enumerator itself (so it can be introspected
 	/// and modified as enumeration progresses).
-	public func carthage_enumeratorAtURL(URL: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions, catchErrors: Bool = false) -> SignalProducer<(NSDirectoryEnumerator, NSURL), CarthageError> {
+	public func carthage_enumerator(at url: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions = [], catchErrors: Bool = false) -> SignalProducer<(NSDirectoryEnumerator, NSURL), CarthageError> {
 		return SignalProducer { observer, disposable in
-			let enumerator = self.enumeratorAtURL(URL, includingPropertiesForKeys: keys, options: options) { (URL, error) in
+			let enumerator = self.enumerator(at: url, includingPropertiesForKeys: keys, options: options) { (url, error) in
 				if catchErrors {
 					return true
 				} else {
-					observer.sendFailed(CarthageError.ReadFailed(URL, error))
+					observer.send(error: CarthageError.readFailed(url, error))
 					return false
 				}
 			}!
 
-			while !disposable.disposed {
-				if let URL = enumerator.nextObject() as? NSURL {
-					let value = (enumerator, URL)
-					observer.sendNext(value)
+			while !disposable.isDisposed {
+				if let url = enumerator.nextObject() as? NSURL {
+					let value = (enumerator, url)
+					observer.send(value: value)
 				} else {
 					break
 				}

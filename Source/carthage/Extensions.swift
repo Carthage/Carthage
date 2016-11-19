@@ -57,7 +57,7 @@ extension String {
 	}
 }
 
-extension SignalProducerType where Error == CarthageError {
+extension SignalProducerProtocol where Error == CarthageError {
 	/// Waits on a SignalProducer that implements the behavior of a CommandType.
 	internal func waitOnCommand() -> Result<(), CarthageError> {
 		let result = producer
@@ -89,22 +89,22 @@ internal struct ProjectEventSink {
 		let formatting = colorOptions.formatting
 		
 		switch event {
-		case let .Cloning(project):
+		case let .cloning(project):
 			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(string: project.name))
 
-		case let .Fetching(project):
+		case let .fetching(project):
 			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(string: project.name))
 			
-		case let .CheckingOut(project, revision):
+		case let .checkingOut(project, revision):
 			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(string: project.name) + " at " + formatting.quote(revision))
 
-		case let .DownloadingBinaries(project, release):
+		case let .downloadingBinaries(project, release):
 			carthage.println(formatting.bullets + "Downloading " + formatting.projectName(string: project.name) + ".framework binary at " + formatting.quote(release))
 
-		case let .SkippedDownloadingBinaries(project, message):
+		case let .skippedDownloadingBinaries(project, message):
 			carthage.println(formatting.bullets + "Skipped downloading " + formatting.projectName(string: project.name) + ".framework binary due to the error:\n\t" + formatting.quote(message))
 
-		case let .SkippedBuilding(project, message):
+		case let .skippedBuilding(project, message):
 			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(string: project.name) + " due to the error:\n" + message)
 		}
 	}

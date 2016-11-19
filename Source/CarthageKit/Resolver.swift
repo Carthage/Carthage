@@ -37,9 +37,9 @@ public struct Resolver {
 	/// that they should be built.
 	public func resolveDependenciesInCartfile(cartfile: Cartfile, lastResolved: ResolvedCartfile? = nil, dependenciesToUpdate: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return graphsForCartfile(cartfile, dependencyOf: nil, basedOnGraph: DependencyGraph())
-			.take(1)
-			.observeOn(QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
-			.flatMap(.Merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+			.take(first: 1)
+			.observe(on: QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.resolveDependencesInCartfile"))
+			.flatMap(.merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				let orderedNodes = graph.orderedNodes.map { node -> DependencyNode in
 					node.dependencies = graph.edges[node] ?? []
 					return node
@@ -76,7 +76,7 @@ public struct Resolver {
 					// Skip newly added nodes which are not in the targets.
 					return nil
 				}
-				.ignoreNil()
+				.skipNil()
 			}
 	}
 
@@ -94,8 +94,8 @@ public struct Resolver {
 		return SignalProducer(values: cartfile.dependencies)
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
 				return SignalProducer(value: dependency)
-					.flatMap(.Concat) { dependency -> SignalProducer<PinnedVersion, CarthageError> in
-						if case let .GitReference(refName) = dependency.version {
+					.flatMap(.concat) { dependency -> SignalProducer<PinnedVersion, CarthageError> in
+						if case let .gitReference(refName) = dependency.version {
 							return self.resolvedGitReference(dependency.project, refName)
 						}
 
@@ -103,20 +103,20 @@ public struct Resolver {
 							.versionsForDependency(dependency.project)
 							.filter { dependency.version.satisfiedBy($0) }
 					}
-					.startOn(scheduler)
-					.observeOn(scheduler)
+					.start(on: scheduler)
+					.observe(on: scheduler)
 					.map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
 					.collect()
 					.map { $0.sort() }
-					.flatMap(.Concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
+					.flatMap(.concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
 						if nodes.isEmpty {
-							return SignalProducer(error: CarthageError.RequiredVersionNotFound(dependency.project, dependency.version))
+							return SignalProducer(error: CarthageError.requiredVersionNotFound(dependency.project, dependency.version))
 						} else {
 							return SignalProducer(values: nodes)
 						}
 					}
 			}
-			.observeOn(scheduler)
+			.observe(on: scheduler)
 			.permute()
 	}
 
@@ -130,11 +130,11 @@ public struct Resolver {
 		let scheduler = QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.graphsForDependenciesOfNode")
 
 		return cartfileForDependency(node.dependencyVersion)
-			.startOn(scheduler)
+			.start(on: scheduler)
 			.concat(SignalProducer(value: Cartfile(dependencies: [])))
-			.take(1)
-			.observeOn(scheduler)
-			.flatMap(.Concat) { cartfile in
+			.take(first: 1)
+			.observe(on: scheduler)
+			.flatMap(.concat) { cartfile in
 				return self.graphsForCartfile(cartfile, dependencyOf: node, basedOnGraph: inputGraph)
 			}
 	}
@@ -146,7 +146,7 @@ public struct Resolver {
 	/// This is a helper method, and not meant to be called from outside.
 	private func graphsForCartfile(cartfile: Cartfile, dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		return nodePermutationsForCartfile(cartfile)
-			.flatMap(.Concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
+			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
 				return self
 					.graphsForNodes(nodes, dependencyOf: dependencyOf, basedOnGraph: inputGraph)
 					.materialize()
@@ -173,13 +173,13 @@ public struct Resolver {
 						return (graph, newNodes)
 					}
 			}
-			.flatMap(.Concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
+			.flatMap(.concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
 				return SignalProducer(values: nodes)
 					// Each producer represents all evaluations of one subtree.
 					.map { node in self.graphsForDependenciesOfNode(node, basedOnGraph: graph) }
-					.observeOn(scheduler)
+					.observe(on: scheduler)
 					.permute()
-					.flatMap(.Concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
+					.flatMap(.concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
 						return SignalProducer<DependencyGraph, CarthageError>
 							.attempt {
 								mergeGraphs([ inputGraph ] + graphs)
@@ -272,13 +272,13 @@ private struct DependencyGraph: Equatable {
 					node = existingNode
 					node.versionSpecifier = newSpecifier
 				} else {
-					return .Failure(CarthageError.RequiredVersionNotFound(node.project, newSpecifier))
+					return .failure(CarthageError.requiredVersionNotFound(node.project, newSpecifier))
 				}
 			} else if existingNode.proposedVersion != node.proposedVersion {
 				// The guard condition above is required for enabling to build a
 				// dependency graph in the cases such as: one node has a
-				// `.GitReference` specifier of a branch name, and the other has
-				// a `.GitReference` of a SHA which is the HEAD of that branch.
+				// `.gitReference` specifier of a branch name, and the other has
+				// a `.gitReference` of a SHA which is the HEAD of that branch.
 				// If the specifiers are not the same but the nodes have the same
 				// proposed version, the graph should be valid.
 				//
@@ -289,7 +289,7 @@ private struct DependencyGraph: Equatable {
 					.first
 				let first = (existingNode.versionSpecifier, existingDependencyOf?.project)
 				let second = (node.versionSpecifier, dependencyOf?.project)
-				return .Failure(CarthageError.IncompatibleRequirements(node.project, first, second))
+				return .failure(CarthageError.incompatibleRequirements(node.project, first, second))
 			}
 		} else {
 			allNodes.insert(node)
@@ -318,7 +318,7 @@ private struct DependencyGraph: Equatable {
 			roots.insert(node)
 		}
 
-		return .Success(node)
+		return .success(node)
 	}
 	
 	/// Attempts to add the given nodes to the graph, optionally as a dependency
@@ -421,7 +421,7 @@ private func mergeGraphs
 	(graphs: Collection) -> Result<DependencyGraph, CarthageError> {
 	precondition(!graphs.isEmpty)
 	
-	var result: Result<DependencyGraph, CarthageError> = .Success(graphs.first!)
+	var result: Result<DependencyGraph, CarthageError> = .success(graphs.first!)
 
 	for next in graphs {
 		for root in next.roots {
