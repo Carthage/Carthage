@@ -120,7 +120,7 @@ public struct ArchiveCommand: CommandType {
 						_ = try? FileManager.`default`.createDirectory(at: directory, withIntermediateDirectories: true)
 					}
 					
-					return zipIntoArchive(outputURL, workingDirectory: options.directoryPath, inputPaths: paths).on(completed: {
+					return zip(paths: paths, into: outputURL, workingDirectory: options.directoryPath).on(completed: {
 						carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
 					})
 				}
