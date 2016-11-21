@@ -437,15 +437,15 @@ public final class Project {
 					let client = Client(repository: repository)
 					return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: client)
 						.flatMapError { error -> SignalProducer<NSURL, CarthageError> in
-							if !client.authenticated {
+							if !client.isAuthenticated {
 								return SignalProducer(error: error)
 							}
-							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, authenticated: false))
+							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
 						}
-						.flatMap(.Concat, transform: unzip(archive:))
+						.flatMap(.concat, transform: unzip(archive:))
 						.flatMap(.concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
-								.flatMap(.Merge, transform: self.copyFrameworkToBuildFolder)
+								.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
 								.flatMap(.merge) { frameworkURL in
 									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
 										.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
@@ -478,10 +478,10 @@ public final class Project {
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
 	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: Repository, client: Client) -> SignalProducer<NSURL, CarthageError> {
-		return client.releaseForTag(revision, inRepository: repository)
+		return client.release(forTag: revision, in: repository)
 			.map { _, release in release }
 			.filter { release in
-				return !release.draft && !release.assets.isEmpty
+				return !release.isDraft && !release.assets.isEmpty
 			}
 			.flatMapError { error -> SignalProducer<Release, CarthageError> in
 				switch error {
@@ -516,7 +516,7 @@ public final class Project {
 						if FileManager.`default`.fileExists(atPath: fileURL.path!) {
 							return SignalProducer(value: fileURL)
 						} else {
-							return client.downloadAsset(asset)
+							return client.download(asset: asset)
 								.mapError(CarthageError.gitHubAPIRequestFailed)
 								.flatMap(.concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
 						}
@@ -903,16 +903,16 @@ private func BCSymbolMapsInDirectory(directoryURL: NSURL) -> SignalProducer<NSUR
 /// located somewhere within the given directory.
 private func BCSymbolMapsForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return UUIDsForFramework(frameworkURL)
-		.flatMap(.merge) { UUIDs -> SignalProducer<NSURL, CarthageError> in
-			if UUIDs.isEmpty {
+		.flatMap(.merge) { uuids -> SignalProducer<NSURL, CarthageError> in
+			if uuids.isEmpty {
 				return .empty
 			}
 			func filterUUIDs(signal: Signal<NSURL, CarthageError>) -> Signal<NSURL, CarthageError> {
-				var remainingUUIDs = UUIDs
+				var remainingUUIDs = uuids
 				let count = remainingUUIDs.count
 				return signal
 					.filter { fileURL in
-						if let basename = fileURL.URLByDeletingPathExtension?.lastPathComponent, fileUUID = NSUUID(UUIDString: basename) {
+						if let basename = fileURL.URLByDeletingPathExtension?.lastPathComponent, let fileUUID = UUID(uuidString: basename) {
 							return remainingUUIDs.remove(fileUUID) != nil
 						} else {
 							return false

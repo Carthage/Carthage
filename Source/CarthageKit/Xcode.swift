@@ -1462,15 +1462,15 @@ private func stripDirectory(named directory: String, of frameworkURL: NSURL) -> 
 }
 
 /// Sends a set of UUIDs for each architecture present in the given framework.
-public func UUIDsForFramework(frameworkURL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
+public func UUIDsForFramework(frameworkURL: NSURL) -> SignalProducer<Set<UUID>, CarthageError> {
 	return SignalProducer.attempt { () -> Result<NSURL, CarthageError> in
 			return binaryURL(frameworkURL)
 		}
-		.flatMap(.Merge, transform: UUIDsFromDwarfdump)
+		.flatMap(.merge, transform: UUIDsFromDwarfdump)
 }
 
 /// Sends a set of UUIDs for each architecture present in the given dSYM.
-public func UUIDsForDSYM(dSYMURL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
+public func UUIDsForDSYM(dSYMURL: NSURL) -> SignalProducer<Set<UUID>, CarthageError> {
 	return UUIDsFromDwarfdump(dSYMURL)
 }
 
@@ -1481,21 +1481,21 @@ public func UUIDsForDSYM(dSYMURL: NSURL) -> SignalProducer<Set<NSUUID>, Carthage
 public func BCSymbolMapsForFramework(frameworkURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	let directoryURL = frameworkURL.URLByDeletingLastPathComponent!
 	return UUIDsForFramework(frameworkURL)
-		.flatMap(.merge) { UUIDs in SignalProducer<NSUUID, CarthageError>(values: UUIDs) }
-		.map { UUID in
-			return directoryURL.appendingPathComponent(UUID.UUIDString, isDirectory: false).appendingPathExtension("bcsymbolmap")
+		.flatMap(.merge) { uuids in SignalProducer<UUID, CarthageError>(values: uuids) }
+		.map { uuid in
+			return directoryURL.appendingPathComponent(uuid.uuidString, isDirectory: false).appendingPathExtension("bcsymbolmap")
 		}
 }
 
 /// Sends a set of UUIDs for each architecture present in the given URL.
-private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, CarthageError> {
+private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<UUID>, CarthageError> {
 	let dwarfdumpTask = Task("/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", URL.path! ])
 
 	return dwarfdumpTask.launch()
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
 		.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
-		.flatMap(.merge) { output -> SignalProducer<Set<NSUUID>, CarthageError> in
+		.flatMap(.merge) { output -> SignalProducer<Set<UUID>, CarthageError> in
 			// UUIDs are letters, decimals, or hyphens.
 			let uuidCharacterSet = NSMutableCharacterSet()
 			uuidCharacterSet.formUnion(with: .letters)
@@ -1503,7 +1503,7 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, Carth
 			uuidCharacterSet.formUnion(with: CharacterSet(charactersIn: "-"))
 
 			let scanner = Scanner(string: output as String)
-			var uuids = Set<NSUUID>()
+			var uuids = Set<UUID>()
 
 			// The output of dwarfdump is a series of lines formatted as follows
 			// for each architecture:
@@ -1516,7 +1516,7 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<NSUUID>, Carth
 				var uuidString: NSString?
 				scanner.scanCharacters(from: uuidCharacterSet, into: &uuidString)
 
-				if let uuidString = uuidString as? String, let uuid = NSUUID(UUIDString: uuidString) {
+				if let uuidString = uuidString as? String, let uuid = UUID(uuidString: uuidString) {
 					uuids.insert(uuid)
 				}
 
