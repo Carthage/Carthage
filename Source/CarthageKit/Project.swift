@@ -442,7 +442,7 @@ public final class Project {
 							}
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, authenticated: false))
 						}
-						.flatMap(.Concat, transform: unzipArchiveToTemporaryDirectory)
+						.flatMap(.Concat, transform: unzip(archive:))
 						.flatMap(.concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
 								.flatMap(.Merge, transform: self.copyFrameworkToBuildFolder)
