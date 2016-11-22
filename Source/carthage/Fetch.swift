@@ -17,7 +17,7 @@ public struct FetchCommand: CommandType {
 		public let colorOptions: ColorOptions
 		public let repositoryURL: GitURL
 
-		static func create(colorOptions: ColorOptions) -> GitURL -> Options {
+		static func create(colorOptions: ColorOptions) -> (GitURL) -> Options {
 			return { repositoryURL in
 				return self.init(colorOptions: colorOptions, repositoryURL: repositoryURL)
 			}

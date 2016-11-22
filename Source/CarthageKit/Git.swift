@@ -263,7 +263,7 @@ public func contentsOfFileInRepository(repositoryFileURL: NSURL, _ path: String,
 /// Checks out the working tree of the given (ideally bare) repository, at the
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
-public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
+public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: (Submodule) -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt { () -> Result<[String: String], CarthageError> in
 			do {
 				try FileManager.`default`.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true)
@@ -281,7 +281,7 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDir
 
 /// Clones matching submodules for the given repository at the specified
 /// revision, into the given working directory.
-public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: Submodule -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
+public func cloneSubmodulesForRepository(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD", shouldCloneSubmodule: (Submodule) -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
 	return submodulesInRepository(repositoryFileURL, revision: revision)
 		.flatMap(.concat) { submodule -> SignalProducer<(), CarthageError> in
 			if shouldCloneSubmodule(submodule) {

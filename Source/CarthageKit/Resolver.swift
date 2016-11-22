@@ -12,9 +12,9 @@ import ReactiveCocoa
 
 /// Responsible for resolving acyclic dependency graphs.
 public struct Resolver {
-	private let versionsForDependency: ProjectIdentifier -> SignalProducer<PinnedVersion, CarthageError>
+	private let versionsForDependency: (ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError>
 	private let resolvedGitReference: (ProjectIdentifier, String) -> SignalProducer<PinnedVersion, CarthageError>
-	private let cartfileForDependency: Dependency<PinnedVersion> -> SignalProducer<Cartfile, CarthageError>
+	private let cartfileForDependency: (Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError>
 
 	/// Instantiates a dependency graph resolver with the given behaviors.
 	///
@@ -24,7 +24,7 @@ public struct Resolver {
 	///                         dependency.
 	/// resolvedGitReference  - Resolves an arbitrary Git reference to the
 	///                         latest object.
-	public init(versionsForDependency: ProjectIdentifier -> SignalProducer<PinnedVersion, CarthageError>, cartfileForDependency: Dependency<PinnedVersion> -> SignalProducer<Cartfile, CarthageError>, resolvedGitReference: (ProjectIdentifier, String) -> SignalProducer<PinnedVersion, CarthageError>) {
+	public init(versionsForDependency: (ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError>, cartfileForDependency: (Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError>, resolvedGitReference: (ProjectIdentifier, String) -> SignalProducer<PinnedVersion, CarthageError>) {
 		self.versionsForDependency = versionsForDependency
 		self.cartfileForDependency = cartfileForDependency
 		self.resolvedGitReference = resolvedGitReference

@@ -38,7 +38,7 @@ public struct UpdateCommand: CommandType {
 			}
 		}
 
-		public static func create(checkoutAfterUpdate: Bool) -> Bool -> Bool -> BuildOptions -> CheckoutCommand.Options -> Options {
+		public static func create(checkoutAfterUpdate: Bool) -> (Bool) -> (Bool) -> (BuildOptions) -> (CheckoutCommand.Options) -> Options {
 			return { buildAfterUpdate in { isVerbose in {  buildOptions in { checkoutOptions in
 				return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, isVerbose: isVerbose, buildOptions: buildOptions, checkoutOptions: checkoutOptions, dependenciesToUpdate: checkoutOptions.dependenciesToCheckout)
 			} } } }
