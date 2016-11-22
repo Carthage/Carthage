@@ -251,14 +251,14 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).notTo(beNil())
 
-			let expectedError: Bool
+			let isExpectedError: Bool
 			if case .noSharedFrameworkSchemes? = result.error {
-				expectedError = true
+				isExpectedError = true
 			} else {
-				expectedError = false
+				isExpectedError = false
 			}
 
-			expect(expectedError) == true
+			expect(isExpectedError) == true
 		}
 
 		it("should build for one platform") {

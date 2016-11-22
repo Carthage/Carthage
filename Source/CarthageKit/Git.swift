@@ -200,11 +200,11 @@ public func ensureGitVersion(requiredVersion: String = CarthageRequiredGitVersio
 }
 
 /// Returns a signal that completes when cloning completes successfully.
-public func cloneRepository(cloneURL: GitURL, _ destinationURL: NSURL, bare: Bool = true) -> SignalProducer<String, CarthageError> {
+public func cloneRepository(cloneURL: GitURL, _ destinationURL: NSURL, isBare: Bool = true) -> SignalProducer<String, CarthageError> {
 	precondition(destinationURL.fileURL)
 
 	var arguments = [ "clone" ]
-	if bare {
+	if isBare {
 		arguments.append("--bare")
 	}
 
@@ -341,7 +341,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 
 			return .success(workingDirectoryURL.appendingPathComponent(submodule.path))
 		}
-		.flatMap(.concat) { submoduleDirectoryURL in cloneRepository(submodule.URL, submoduleDirectoryURL, bare: false) }
+		.flatMap(.concat) { submoduleDirectoryURL in cloneRepository(submodule.URL, submoduleDirectoryURL, isBare: false) }
 		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
 		.then(purgeGitDirectories)
 }
@@ -569,7 +569,7 @@ public func addSubmoduleToRepository(repositoryFileURL: NSURL, _ submodule: Subm
 
 				// If it doesn't exist, clone and initialize a submodule from our
 				// local bare repository.
-				return cloneRepository(fetchURL, submoduleDirectoryURL, bare: false)
+				return cloneRepository(fetchURL, submoduleDirectoryURL, isBare: false)
 					.then(launchGitTask([ "remote", "set-url", "origin", submodule.URL.URLString ], repositoryFileURL: submoduleDirectoryURL))
 					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
 					.then(addSubmodule)

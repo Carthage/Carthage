@@ -38,14 +38,14 @@ public struct BuildCommand: CommandType {
 		public let buildOptions: BuildOptions
 		public let skipCurrent: Bool
 		public let colorOptions: ColorOptions
-		public let verbose: Bool
+		public let isVerbose: Bool
 		public let directoryPath: String
 		public let dependenciesToBuild: [String]?
 
 		public static func create(buildOptions: BuildOptions) -> Bool -> ColorOptions -> Bool -> String -> [String] -> Options {
-			return { skipCurrent in { colorOptions in { verbose in { directoryPath in { dependenciesToBuild in
+			return { skipCurrent in { colorOptions in { isVerbose in { directoryPath in { dependenciesToBuild in
 				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
-				return self.init(buildOptions: buildOptions, skipCurrent: skipCurrent, colorOptions: colorOptions, verbose: verbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
+				return self.init(buildOptions: buildOptions, skipCurrent: skipCurrent, colorOptions: colorOptions, isVerbose: isVerbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
 			} } } } }
 		}
 
@@ -81,7 +81,7 @@ public struct BuildCommand: CommandType {
 
 				// Redirect any error-looking messages from stdout, because
 				// Xcode doesn't always forward them.
-				if !options.verbose {
+				if !options.isVerbose {
 					let (_stdoutSignal, stdoutObserver) = Signal<Data, NoError>.pipe()
 					let stdoutProducer = SignalProducer(signal: _stdoutSignal)
 					let grepTask: BuildSchemeProducer = Task("/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ]).launch(standardInput: stdoutProducer)
@@ -211,7 +211,7 @@ public struct BuildCommand: CommandType {
 	/// Opens a file handle for logging, returning the handle and the URL to any
 	/// temporary file on disk.
 	private func openLoggingHandle(options: Options) -> SignalProducer<(FileHandle, NSURL?), CarthageError> {
-		if options.verbose {
+		if options.isVerbose {
 			let out: (FileHandle, NSURL?) = (FileHandle.standardOutput, nil)
 			return SignalProducer(value: out)
 		} else {
