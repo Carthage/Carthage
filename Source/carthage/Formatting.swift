@@ -13,7 +13,7 @@ import Result
 import PrettyColors
 
 /// Wraps a string with terminal colors and formatting or passes it through, depending on `isColorful`.
-private func wrap(isColorful: Bool, wrap: Color.Wrap) -> String -> String {
+private func wrap(isColorful: Bool, wrap: Color.Wrap) -> (String) -> String {
 	return { string in
 		return isColorful ? wrap.wrap(string) : string
 	}

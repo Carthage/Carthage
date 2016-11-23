@@ -231,7 +231,7 @@ extension ProjectIdentifier: Hashable {
 extension ProjectIdentifier: Scannable {
 	/// Attempts to parse a ProjectIdentifier.
 	public static func fromScanner(scanner: Scanner) -> Result<ProjectIdentifier, CarthageError> {
-		let parser: (String -> Result<ProjectIdentifier, CarthageError>)
+		let parser: (String) -> Result<ProjectIdentifier, CarthageError>
 
 		if scanner.scanString("github", into: nil) {
 			parser = { repoIdentifier in

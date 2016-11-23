@@ -14,7 +14,7 @@ import ReactiveCocoa
 import ReactiveTask
 
 extension BuildOptions: OptionsType {
-	public static func create(configuration: String) -> BuildPlatform -> String? -> String? -> BuildOptions {
+	public static func create(configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> BuildOptions {
 		return { buildPlatform in { toolchain in { derivedDataPath in
 			return self.init(configuration: configuration, platforms: buildPlatform.platforms, toolchain: toolchain, derivedDataPath: derivedDataPath)
 		} } }
@@ -42,7 +42,7 @@ public struct BuildCommand: CommandType {
 		public let directoryPath: String
 		public let dependenciesToBuild: [String]?
 
-		public static func create(buildOptions: BuildOptions) -> Bool -> ColorOptions -> Bool -> String -> [String] -> Options {
+		public static func create(buildOptions: BuildOptions) -> (Bool) -> (ColorOptions) -> (Bool) -> (String) -> ([String]) -> Options {
 			return { skipCurrent in { colorOptions in { isVerbose in { directoryPath in { dependenciesToBuild in
 				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
 				return self.init(buildOptions: buildOptions, skipCurrent: skipCurrent, colorOptions: colorOptions, isVerbose: isVerbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
@@ -322,7 +322,7 @@ extension BuildPlatform: ArgumentType {
 	public static func fromString(string: String) -> BuildPlatform? {
 		let tokens = string.split()
 
-		let findBuildPlatform: String -> BuildPlatform? = { string in
+		let findBuildPlatform: (String) -> BuildPlatform? = { string in
 			return self.acceptedStrings.lazy
 				.filter { key, _ in string.caseInsensitiveCompare(key) == .orderedSame }
 				.map { _, platform in platform }

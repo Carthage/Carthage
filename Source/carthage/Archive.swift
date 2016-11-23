@@ -19,7 +19,7 @@ public struct ArchiveCommand: CommandType {
 		public let colorOptions: ColorOptions
 		public let frameworkNames: [String]
 
-		static func create(outputPath: String?) -> String -> ColorOptions -> [String] -> Options {
+		static func create(outputPath: String?) -> (String) -> (ColorOptions) -> ([String]) -> Options {
 			return { directoryPath in { colorOptions in { frameworkNames in
 				return self.init(outputPath: outputPath, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: frameworkNames)
 			} } }
