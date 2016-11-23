@@ -1,6 +1,7 @@
 #if swift(>=3)
 #else
 	import Foundation
+	import PrettyColors
 	import Result
 	import ReactiveCocoa
 	import ReactiveTask
@@ -182,6 +183,19 @@
 		}
 
 		var uuidString: String { return UUIDString }
+	}
+
+	// MARK: - PrettyColors
+
+	internal extension PrettyColors.Color.Named.Color {
+		static var green: PrettyColors.Color.Named.Color { return .Green }
+		static var yellow: PrettyColors.Color.Named.Color { return .Yellow }
+		static var blue: PrettyColors.Color.Named.Color { return .Blue }
+	}
+
+	internal extension StyleParameter {
+		static var bold: StyleParameter { return .Bold }
+		static var underlined: StyleParameter { return .Underlined }
 	}
 
 	// MARK: - Result
