@@ -91,7 +91,7 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for project in dependencies {
-				let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+				let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug"), cachedBinariesPath: nil)
 					.flatten(.concat)
 					.ignoreTaskData()
 					.on(next: { (project, scheme) in
@@ -102,7 +102,7 @@ class XcodeSpec: QuickSpec {
 				expect(result.error).to(beNil())
 			}
 
-			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"), cachedBinariesPath: nil)
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -187,7 +187,7 @@ class XcodeSpec: QuickSpec {
 
 			_ = try? FileManager.`default`.removeItem(at: _buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), cachedBinariesPath: nil)
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -217,7 +217,7 @@ class XcodeSpec: QuickSpec {
 
 			_ = try? FileManager.`default`.removeItem(at: _buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), cachedBinariesPath: nil)
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -241,7 +241,7 @@ class XcodeSpec: QuickSpec {
 
 			_ = try? FileManager.`default`.removeItem(at: _buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), cachedBinariesPath: nil)
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -263,7 +263,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for one platform") {
 			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
-			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
+			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]), cachedBinariesPath: nil)
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -284,7 +284,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for multiple platforms") {
 			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
-			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
+			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]), cachedBinariesPath: nil)
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
@@ -331,7 +331,7 @@ class XcodeSpec: QuickSpec {
 			let buildURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 			let dependencyBuildURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"), cachedBinariesPath: nil)
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(next: { (project, scheme) in
