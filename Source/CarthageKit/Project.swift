@@ -9,6 +9,7 @@
 import Foundation
 import Result
 import ReactiveCocoa
+import ReactiveTask
 import Tentacle
 
 /// Carthage's bundle identifier.
@@ -73,6 +74,11 @@ public let CarthageDependencyAssetsURL: NSURL = CarthageUserCachesURL.appendingP
 /// ~/Library/Caches/org.carthage.CarthageKit/dependencies/
 public let CarthageDependencyRepositoriesURL: NSURL = CarthageUserCachesURL.appendingPathComponent("dependencies", isDirectory: true)
 
+/// The file URL to the directory in which built binaries will be cached.
+///
+/// ~/Library/Caches/org.carthage.CarthageKit/build/
+public let CarthageDependencyBuildCacheURL: NSURL = CarthageUserCachesURL.appendingPathComponent("build", isDirectory: true)
+
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
 
@@ -116,6 +122,9 @@ public enum ProjectEvent {
 	/// Building the project is being skipped, since the project is not sharing
 	/// any framework schemes.
 	case skippedBuilding(ProjectIdentifier, String)
+
+	/// Building the project is being skipped, since the project has cached binaries.
+	case usedCachedBinaries(ProjectIdentifier)
 }
 
 /// Represents a project that is using Carthage.
@@ -747,8 +756,22 @@ public final class Project {
 				if !FileManager.`default`.fileExists(atPath: dependencyPath) {
 					return .empty
 				}
+				
+				let cachedBinariesPath: NSURL? = {
+					if options.useBuildProductsCache {
+						return CarthageDependencyBuildCacheURL.appendingPathComponent(dependency.project.name, isDirectory: true).appendingPathComponent(dependency.version.commitish, isDirectory: true)
+					}
+					
+					return nil
+				}()
+				
+				var isDirectory: ObjCBool = false
+				if let cachedBinariesPath = cachedBinariesPath where FileManager.`default`.fileExists(atPath: cachedBinariesPath.path!, isDirectory: &isDirectory) && isDirectory {
+					self._projectEventsObserver.send(value: .usedCachedBinaries(dependency.project))
+					return copyCachedBinaries(cachedBinariesPath, to: self.directoryURL)
+				}
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+				return buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, cachedBinariesPath: cachedBinariesPath, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
 						case .noSharedFrameworkSchemes:
@@ -764,6 +787,13 @@ public final class Project {
 					}
 			}
 	}
+}
+
+private func copyCachedBinaries(from: NSURL, to: NSURL) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	let task = Task("/usr/bin/env", arguments: [ "cp", "-r", from.path! + "/", to.path! ])
+	return task.launch()
+		.mapError(CarthageError.taskError)
+		.then(.empty)
 }
 
 /// Constructs a file URL to where the binary corresponding to the given
