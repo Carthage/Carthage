@@ -544,7 +544,7 @@ public final class Project {
 	///
 	/// Sends the URL of the dSYM after copying.
 	public func copyDSYMToBuildFolderForFramework(frameworkURL: URL, fromDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
-		let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
+		let destinationDirectoryURL = frameworkURL.deletingLastPathComponent()
 		return dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
 	}
@@ -558,7 +558,7 @@ public final class Project {
 	///
 	/// Sends the URLs of the bcsymbolmap files after copying.
 	public func copyBCSymbolMapsToBuildFolderForFramework(frameworkURL: URL, fromDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
-		let destinationDirectoryURL = frameworkURL.URLByDeletingLastPathComponent!
+		let destinationDirectoryURL = frameworkURL.deletingLastPathComponent()
 		return BCSymbolMapsForFramework(frameworkURL, inDirectoryURL: directoryURL)
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
 	}
@@ -780,7 +780,7 @@ private func fileURLToCachedBinary(project: ProjectIdentifier, _ release: Releas
 private func cacheDownloadedBinary(downloadURL: URL, toURL cachedURL: URL) -> SignalProducer<URL, CarthageError> {
 	return SignalProducer(value: cachedURL)
 		.attempt { fileURL in
-			let parentDirectoryURL = fileURL.URLByDeletingLastPathComponent!
+			let parentDirectoryURL = fileURL.deletingLastPathComponent()
 			do {
 				try FileManager.`default`.createDirectory(at: parentDirectoryURL, withIntermediateDirectories: true)
 				return .success(())

@@ -585,7 +585,7 @@ public func addSubmoduleToRepository(repositoryFileURL: URL, _ submodule: Submod
 /// Sends the new URL of the item after moving.
 public func moveItemInPossibleRepository(repositoryFileURL: URL, fromPath: String, toPath: String) -> SignalProducer<URL, CarthageError> {
 	let toURL = repositoryFileURL.appendingPathComponent(toPath)
-	let parentDirectoryURL = toURL.URLByDeletingLastPathComponent!
+	let parentDirectoryURL = toURL.deletingLastPathComponent()
 
 	return SignalProducer<(), CarthageError>.attempt {
 			do {

@@ -116,10 +116,10 @@ public struct ArchiveCommand: CommandType {
 					let outputPath = outputPathWithOptions(options, frameworks: frameworks)
 					let outputURL = URL(fileURLWithPath: outputPath, isDirectory: false)
 
-					if let directory = outputURL.URLByDeletingLastPathComponent {
-						_ = try? FileManager.`default`.createDirectory(at: directory, withIntermediateDirectories: true)
-					}
-					
+					_ = try? FileManager
+						.`default`
+						.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+
 					return zip(paths: paths, into: outputURL, workingDirectory: options.directoryPath).on(completed: {
 						carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
 					})

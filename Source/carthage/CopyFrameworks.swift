@@ -51,7 +51,7 @@ private func copyFramework(source: URL, target: URL, validArchitectures: [String
 			let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 			if buildActionIsArchiveOrInstall() {
 				return strip
-					.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.URLByDeletingLastPathComponent!))
+					.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.deletingLastPathComponent()))
 					.then(.empty)
 			} else {
 				return strip

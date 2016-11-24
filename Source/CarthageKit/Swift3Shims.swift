@@ -190,6 +190,10 @@
 			return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)!
 		}
 
+		func deletingLastPathComponent() -> URL {
+			return URLByDeletingLastPathComponent ?? self
+		}
+
 		@nonobjc func removeCachedResourceValue(forKey key: NSURLResourceKey) {
 			removeCachedResourceValueForKey(key as String)
 		}

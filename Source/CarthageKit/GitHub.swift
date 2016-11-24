@@ -75,7 +75,7 @@ extension Repository {
 			if host == "github.com" || host == "www.github.com" {
 				return .success(self.init(owner: owner, name: stripGitSuffix(name)))
 			} else {
-				let baseURL = url.URLByDeletingLastPathComponent!.URLByDeletingLastPathComponent!
+				let baseURL = url.deletingLastPathComponent().deletingLastPathComponent()
 				return .success(self.init(server: .enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
 			}
 		}

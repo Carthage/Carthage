@@ -1130,7 +1130,7 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 		do {
 			try fileManager.removeItem(at: dependencyBinariesURL)
 		} catch {
-			let dependencyParentURL = dependencyBinariesURL.URLByDeletingLastPathComponent!
+			let dependencyParentURL = dependencyBinariesURL.deletingLastPathComponent()
 
 			do {
 				try fileManager.createDirectory(at: dependencyParentURL, withIntermediateDirectories: true)
@@ -1306,7 +1306,7 @@ public func copyProduct(from: URL, _ to: URL) -> SignalProducer<URL, CarthageErr
 		}
 
 		do {
-			try manager.createDirectory(at: to.URLByDeletingLastPathComponent!, withIntermediateDirectories: true)
+			try manager.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
 		} catch let error as NSError {
 			// Although the method's documentation says: “YES if createIntermediates
 			// is set and the directory already exists)”, it seems to rarely
@@ -1315,7 +1315,7 @@ public func copyProduct(from: URL, _ to: URL) -> SignalProducer<URL, CarthageErr
 			//
 			// See https://github.com/Carthage/Carthage/issues/591
 			if error.code != NSFileWriteFileExistsError {
-				return .failure(.writeFailed(to.URLByDeletingLastPathComponent!, error))
+				return .failure(.writeFailed(to.deletingLastPathComponent(), error))
 			}
 		}
 
@@ -1479,7 +1479,7 @@ public func UUIDsForDSYM(dSYMURL: URL) -> SignalProducer<Set<UUID>, CarthageErro
 ///
 /// The returned URLs are relative to the parent directory of the framework.
 public func BCSymbolMapsForFramework(frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
-	let directoryURL = frameworkURL.URLByDeletingLastPathComponent!
+	let directoryURL = frameworkURL.deletingLastPathComponent()
 	return UUIDsForFramework(frameworkURL)
 		.flatMap(.merge) { uuids in SignalProducer<UUID, CarthageError>(values: uuids) }
 		.map { uuid in
