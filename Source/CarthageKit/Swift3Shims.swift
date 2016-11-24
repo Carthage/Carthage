@@ -189,6 +189,10 @@
 		func appendingPathComponent(pathComponent: String, isDirectory: Bool) -> URL {
 			return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)!
 		}
+
+		@nonobjc func removeCachedResourceValue(forKey key: NSURLResourceKey) {
+			removeCachedResourceValueForKey(key as String)
+		}
 	}
 
 	public typealias UUID = NSUUID

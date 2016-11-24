@@ -382,7 +382,7 @@ internal func beRelativeSymlinkToDirectory(directory: URL) -> MatcherFunc<URL> {
 		var isSymlink: Bool = false
 		do {
 			var isSymlinkObj: AnyObject?
-			url.removeCachedResourceValueForKey(NSURLIsSymbolicLinkKey)
+			url.removeCachedResourceValue(forKey: NSURLIsSymbolicLinkKey)
 			try url.getResourceValue(&isSymlinkObj, forKey: NSURLIsSymbolicLinkKey)
 			if isSymlinkObj != nil {
 				isSymlink = isSymlinkObj!.boolValue
