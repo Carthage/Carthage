@@ -15,11 +15,11 @@
 			self.init(forClass: aClass)
 		}
 
-		convenience init?(url: NSURL) {
+		convenience init?(url: URL) {
 			self.init(URL: url)
 		}
 
-		func url(forResource name: String?, withExtension ext: String?) -> NSURL? {
+		func url(forResource name: String?, withExtension ext: String?) -> URL? {
 			return URLForResource(name, withExtension: ext)
 		}
 
@@ -85,11 +85,11 @@
 			return try contentsOfDirectoryAtPath(path)
 		}
 
-		func copyItem(at srcURL: NSURL, to dstURL: NSURL) throws {
+		func copyItem(at srcURL: URL, to dstURL: URL) throws {
 			try copyItemAtURL(srcURL, toURL: dstURL)
 		}
 
-		func createDirectory(at url: NSURL, withIntermediateDirectories createIntermediates: Bool, attributes: [String : AnyObject]? = nil) throws {
+		func createDirectory(at url: URL, withIntermediateDirectories createIntermediates: Bool, attributes: [String : AnyObject]? = nil) throws {
 			try createDirectoryAtURL(url, withIntermediateDirectories: createIntermediates, attributes: attributes)
 		}
 
@@ -97,7 +97,7 @@
 			try createDirectoryAtPath(path, withIntermediateDirectories: createIntermediates, attributes: attributes)
 		}
 
-		func createSymbolicLink(at url: NSURL, withDestinationURL destURL: NSURL) throws {
+		func createSymbolicLink(at url: URL, withDestinationURL destURL: URL) throws {
 			try createSymbolicLinkAtURL(url, withDestinationURL: destURL)
 		}
 
@@ -109,7 +109,7 @@
 			return try destinationOfSymbolicLinkAtPath(path)
 		}
 
-		func enumerator(at url: NSURL, includingPropertiesForKeys keys: [String]?, options mask: NSDirectoryEnumerationOptions = [], errorHandler handler: ((NSURL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
+		func enumerator(at url: URL, includingPropertiesForKeys keys: [String]?, options mask: NSDirectoryEnumerationOptions = [], errorHandler handler: ((URL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
 			return enumeratorAtURL(url, includingPropertiesForKeys: keys, options: mask, errorHandler: handler)
 		}
 
@@ -121,15 +121,15 @@
 			return fileExistsAtPath(path, isDirectory: isDirectory)
 		}
 
-		func moveItem(at srcURL: NSURL, to dstURL: NSURL) throws {
+		func moveItem(at srcURL: URL, to dstURL: URL) throws {
 			try moveItemAtURL(srcURL, toURL: dstURL)
 		}
 
-		func removeItem(at url: NSURL) throws {
+		func removeItem(at url: URL) throws {
 			try removeItemAtURL(url)
 		}
 
-		func trashItem(at url: NSURL, resultingItemURL outResultingURL: AutoreleasingUnsafeMutablePointer<NSURL?>) throws {
+		func trashItem(at url: URL, resultingItemURL outResultingURL: AutoreleasingUnsafeMutablePointer<URL?>) throws {
 			try trashItemAtURL(url, resultingItemURL: outResultingURL)
 		}
 	}
@@ -369,7 +369,7 @@
 			return releaseForTag(tag, inRepository: repository)
 		}
 
-		func download(asset asset: Release.Asset) -> SignalProducer<NSURL, Error> {
+		func download(asset asset: Release.Asset) -> SignalProducer<URL, Error> {
 			return downloadAsset(asset)
 		}
 	}

@@ -38,13 +38,13 @@ public enum CarthageError: ErrorType, Equatable {
 	case unresolvedDependencies([String])
 
 	/// Failed to check out a repository.
-	case repositoryCheckoutFailed(workingDirectoryURL: NSURL, reason: String, underlyingError: NSError?)
+	case repositoryCheckoutFailed(workingDirectoryURL: URL, reason: String, underlyingError: NSError?)
 
 	/// Failed to read a file or directory at the given URL.
-	case readFailed(NSURL, NSError?)
+	case readFailed(URL, NSError?)
 
 	/// Failed to write a file or directory at the given URL.
-	case writeFailed(NSURL, NSError?)
+	case writeFailed(URL, NSError?)
 
 	/// An error occurred parsing a Carthage file.
 	case parseError(description: String)

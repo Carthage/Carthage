@@ -60,7 +60,7 @@ public struct BuildArguments {
 			args += [ "-configuration", configuration ]
 		}
 		
-		if let derivedDataPath = derivedDataPath, let standarizedPath = NSURL(fileURLWithPath: (derivedDataPath as NSString).stringByExpandingTildeInPath).URLByStandardizingPath?.path where !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
+		if let derivedDataPath = derivedDataPath, let standarizedPath = URL(fileURLWithPath: (derivedDataPath as NSString).stringByExpandingTildeInPath).URLByStandardizingPath?.path where !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
 			args += [ "-derivedDataPath", standarizedPath ]
 		}
 

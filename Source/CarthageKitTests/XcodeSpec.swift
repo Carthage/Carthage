@@ -21,7 +21,7 @@ class XcodeSpec: QuickSpec {
 		let directoryURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
 		let projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
 		let buildFolderURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
-		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
+		let targetFolderURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
 
 		beforeEach {
 			_ = try? FileManager.`default`.removeItem(at: buildFolderURL)
@@ -35,31 +35,31 @@ class XcodeSpec: QuickSpec {
 		describe("\(ProjectLocator.self)") {
 			describe("sorting") {
 				it("should put workspaces before projects") {
-					let workspace = ProjectLocator.workspace(NSURL(fileURLWithPath: "/Z.xcworkspace"))
-					let project = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
+					let workspace = ProjectLocator.workspace(URL(fileURLWithPath: "/Z.xcworkspace"))
+					let project = ProjectLocator.projectFile(URL(fileURLWithPath: "/A.xcodeproj"))
 					expect(workspace < project) == true
 				}
 				
 				it("should fall back to lexicographical sorting") {
-					let workspaceA = ProjectLocator.workspace(NSURL(fileURLWithPath: "/A.xcworkspace"))
-					let workspaceB = ProjectLocator.workspace(NSURL(fileURLWithPath: "/B.xcworkspace"))
+					let workspaceA = ProjectLocator.workspace(URL(fileURLWithPath: "/A.xcworkspace"))
+					let workspaceB = ProjectLocator.workspace(URL(fileURLWithPath: "/B.xcworkspace"))
 					expect(workspaceA < workspaceB) == true
 					
-					let projectA = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
-					let projectB = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/B.xcodeproj"))
+					let projectA = ProjectLocator.projectFile(URL(fileURLWithPath: "/A.xcodeproj"))
+					let projectB = ProjectLocator.projectFile(URL(fileURLWithPath: "/B.xcodeproj"))
 					expect(projectA < projectB) == true
 				}
 				
 				it("should put top-level directories first") {
-					let top = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/Z.xcodeproj"))
-					let bottom = ProjectLocator.workspace(NSURL(fileURLWithPath: "/A/A.xcodeproj"))
+					let top = ProjectLocator.projectFile(URL(fileURLWithPath: "/Z.xcodeproj"))
+					let bottom = ProjectLocator.workspace(URL(fileURLWithPath: "/A/A.xcodeproj"))
 					expect(top < bottom) == true
 				}
 			}
 		}
 
 		describe("locateProjectsInDirectory:") {
-			func relativePathsForProjectsInDirectory(directoryURL: NSURL) -> [String] {
+			func relativePathsForProjectsInDirectory(directoryURL: URL) -> [String] {
 				let result = locateProjectsInDirectory(directoryURL)
 					.map { $0.fileURL.carthage_absoluteString.substringFromIndex(directoryURL.carthage_absoluteString.endIndex) }
 					.collect()
@@ -371,7 +371,7 @@ internal func beExistingDirectory() -> MatcherFunc<String> {
 	}
 }
 
-internal func beRelativeSymlinkToDirectory(directory: NSURL) -> MatcherFunc<NSURL> {
+internal func beRelativeSymlinkToDirectory(directory: URL) -> MatcherFunc<URL> {
 	return MatcherFunc { actualExpression, failureMessage in
 		failureMessage.postfixMessage = "be a relative symlink to \(directory)"
 		let actualURL = try actualExpression.evaluate()

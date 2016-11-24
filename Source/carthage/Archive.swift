@@ -46,7 +46,7 @@ public struct ArchiveCommand: CommandType {
 				return ($0 as NSString).stringByAppendingPathExtension("framework")!
 			})
 		} else {
-			let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
+			let directoryURL = URL.fileURLWithPath(options.directoryPath, isDirectory: true)
 			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
 				.collect()
 				.flatMap(.merge) { projects in
@@ -88,7 +88,7 @@ public struct ArchiveCommand: CommandType {
 				.filter { filePath in FileManager.`default`.fileExists(atPath: filePath.absolutePath) }
 				.flatMap(.merge) { framework -> SignalProducer<String, CarthageError> in
 					let dSYM = (framework.relativePath as NSString).stringByAppendingPathExtension("dSYM")!
-					let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework.absolutePath))
+					let bcsymbolmapsProducer = BCSymbolMapsForFramework(URL(fileURLWithPath: framework.absolutePath))
 						// generate relative paths for the bcsymbolmaps so they print nicely
 						.map { url in ((framework.relativePath as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.lastPathComponent!) }
 					let extraFilesProducer = SignalProducer(value: dSYM)
@@ -114,7 +114,7 @@ public struct ArchiveCommand: CommandType {
 					}
 
 					let outputPath = outputPathWithOptions(options, frameworks: frameworks)
-					let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
+					let outputURL = URL(fileURLWithPath: outputPath, isDirectory: false)
 
 					if let directory = outputURL.URLByDeletingLastPathComponent {
 						_ = try? FileManager.`default`.createDirectory(at: directory, withIntermediateDirectories: true)
