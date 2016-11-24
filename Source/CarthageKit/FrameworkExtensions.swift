@@ -266,18 +266,6 @@ extension NSURL {
 		return absoluteString!
 	}
 
-	public func appendingPathExtension(pathExtension: String) -> NSURL {
-		return URLByAppendingPathExtension(pathExtension)!
-	}
-
-	public func appendingPathComponent(pathComponent: String) -> NSURL {
-		return URLByAppendingPathComponent(pathComponent)!
-	}
-
-	public func appendingPathComponent(pathComponent: String, isDirectory: Bool) -> NSURL {
-		return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)!
-	}
-
 	public func hasSubdirectory(possibleSubdirectory: NSURL) -> Bool {
 		let standardizedSelf = self.URLByStandardizingPath ?? self
 		let standardizedOther = possibleSubdirectory.URLByStandardizingPath ?? possibleSubdirectory

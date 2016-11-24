@@ -176,6 +176,21 @@
 		}
 	}
 
+	public typealias URL = NSURL
+	internal extension URL {
+		func appendingPathExtension(pathExtension: String) -> URL {
+			return URLByAppendingPathExtension(pathExtension)!
+		}
+
+		func appendingPathComponent(pathComponent: String) -> URL {
+			return URLByAppendingPathComponent(pathComponent)!
+		}
+
+		func appendingPathComponent(pathComponent: String, isDirectory: Bool) -> URL {
+			return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)!
+		}
+	}
+
 	public typealias UUID = NSUUID
 	internal extension UUID {
 		convenience init?(uuidString string: String) {
