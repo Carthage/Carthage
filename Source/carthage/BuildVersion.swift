@@ -21,8 +21,8 @@ public func localVersion() -> SemanticVersion {
 
 public func remoteVersion() -> SemanticVersion? {
 	
-	let latestRemoteVersion = Client(.DotCom)
-		.releasesInRepository(Repository(owner: "Carthage", name: "Carthage"), perPage: 1)
+	let latestRemoteVersion = Client(.dotCom)
+		.releases(in: Repository(owner: "Carthage", name: "Carthage"), perPage: 1)
 		.map { (_, releases) in
 			return releases.first!
 		}

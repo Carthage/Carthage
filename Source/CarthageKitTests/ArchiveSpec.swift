@@ -25,7 +25,7 @@ class ArchiveSpec: QuickSpec {
 			let archiveURL = Bundle(for: type(of: self)).url(forResource: "CartfilePrivateOnly", withExtension: "zip")!
 
 			it("should unzip archive to a temporary directory") {
-				let result = unzipArchiveToTemporaryDirectory(archiveURL).single()
+				let result = unzip(archive: archiveURL).single()
 				expect(result).notTo(beNil())
 				expect(result?.error).to(beNil())
 
@@ -70,15 +70,15 @@ class ArchiveSpec: QuickSpec {
 				let outerFilePath = "outer"
 				expect { try "foobar".writeToFile(outerFilePath, atomically: true, encoding: NSUTF8StringEncoding) }.notTo(throwError())
 
-				let result = zipIntoArchive(archiveURL, workingDirectory: temporaryURL.path!, inputPaths: [ innerFilePath, outerFilePath ]).wait()
+				let result = zip(paths: [ innerFilePath, outerFilePath ], into: archiveURL, workingDirectory: temporaryURL.path!).wait()
 				expect(result.error).to(beNil())
 
-				let unzipResult = unzipArchiveToTemporaryDirectory(archiveURL).single()
+				let unzipResult = unzip(archive: archiveURL).single()
 				expect(unzipResult).notTo(beNil())
 				expect(unzipResult?.error).to(beNil())
 
 				let enumerationResult = FileManager.`default`.carthage_enumerator(at: unzipResult?.value ?? temporaryURL, includingPropertiesForKeys: [])
-					.map { enumerator, URL in URL }
+					.map { enumerator, url in url }
 					.map { $0.lastPathComponent! }
 					.collect()
 					.single()
@@ -100,10 +100,10 @@ class ArchiveSpec: QuickSpec {
 				expect { try FileManager.`default`.createSymbolicLink(atPath: symlinkPath, withDestinationPath: destinationPath) }.notTo(throwError())
 				expect { try FileManager.`default`.destinationOfSymbolicLink(atPath: symlinkPath) } == destinationPath
 				
-				let result = zipIntoArchive(archiveURL, workingDirectory: temporaryURL.path!, inputPaths: [ symlinkPath, destinationPath ]).wait()
+				let result = zip(paths: [ symlinkPath, destinationPath ], into: archiveURL, workingDirectory: temporaryURL.path!).wait()
 				expect(result.error).to(beNil())
 
-				let unzipResult = unzipArchiveToTemporaryDirectory(archiveURL).single()
+				let unzipResult = unzip(archive: archiveURL).single()
 				expect(unzipResult).notTo(beNil())
 				expect(unzipResult?.error).to(beNil())
 

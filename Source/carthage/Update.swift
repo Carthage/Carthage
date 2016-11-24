@@ -16,14 +16,14 @@ public struct UpdateCommand: CommandType {
 	public struct Options: OptionsType {
 		public let checkoutAfterUpdate: Bool
 		public let buildAfterUpdate: Bool
-		public let verbose: Bool
+		public let isVerbose: Bool
 		public let buildOptions: CarthageKit.BuildOptions
 		public let checkoutOptions: CheckoutCommand.Options
 		public let dependenciesToUpdate: [String]?
 
 		/// The build options corresponding to these options.
 		public var buildCommandOptions: BuildCommand.Options {
-			return BuildCommand.Options(buildOptions: buildOptions, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, verbose: verbose, directoryPath: checkoutOptions.directoryPath, dependenciesToBuild: dependenciesToUpdate)
+			return BuildCommand.Options(buildOptions: buildOptions, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, isVerbose: isVerbose, directoryPath: checkoutOptions.directoryPath, dependenciesToBuild: dependenciesToUpdate)
 		}
 
 		/// If `checkoutAfterUpdate` and `buildAfterUpdate` are both true, this will
@@ -38,9 +38,9 @@ public struct UpdateCommand: CommandType {
 			}
 		}
 
-		public static func create(checkoutAfterUpdate: Bool) -> Bool -> Bool -> BuildOptions -> CheckoutCommand.Options -> Options {
-			return { buildAfterUpdate in { verbose in {  buildOptions in { checkoutOptions in
-				return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, verbose: verbose, buildOptions: buildOptions, checkoutOptions: checkoutOptions, dependenciesToUpdate: checkoutOptions.dependenciesToCheckout)
+		public static func create(checkoutAfterUpdate: Bool) -> (Bool) -> (Bool) -> (BuildOptions) -> (CheckoutCommand.Options) -> Options {
+			return { buildAfterUpdate in { isVerbose in {  buildOptions in { checkoutOptions in
+				return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, isVerbose: isVerbose, buildOptions: buildOptions, checkoutOptions: checkoutOptions, dependenciesToUpdate: checkoutOptions.dependenciesToCheckout)
 			} } } }
 		}
 

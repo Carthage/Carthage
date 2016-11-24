@@ -90,7 +90,7 @@ private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory dir
 	return SignalProducer(result: builtProductsFolder())
 		.flatMap(.merge) { builtProductsURL in
 			return BCSymbolMapsForFramework(frameworkURL)
-				.map { URL in directoryURL.appendingPathComponent(URL.lastPathComponent!, isDirectory: false) }
+				.map { url in directoryURL.appendingPathComponent(url.lastPathComponent!, isDirectory: false) }
 				.copyFileURLsIntoDirectory(builtProductsURL)
 		}
 }

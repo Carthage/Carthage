@@ -26,7 +26,7 @@ private func gitHubUserAgent() -> String {
 
 extension Repository {
 	/// The URL that should be used for cloning this repository over HTTPS.
-	public var HTTPSURL: GitURL {
+	public var httpsURL: GitURL {
 		let auth = tokenFromEnvironment(forServer: server).map { "\($0)@" } ?? ""
 		let scheme = server.URL.scheme!
 
@@ -34,7 +34,7 @@ extension Repository {
 	}
 
 	/// The URL that should be used for cloning this repository over SSH.
-	public var SSHURL: GitURL {
+	public var sshURL: GitURL {
 		return GitURL("ssh://git@\(server.URL.host!)/\(owner)/\(name).git")
 	}
 
@@ -60,10 +60,10 @@ extension Repository {
 
 		// GitHub Enterprise
 		if let
-			URL = NSURL(string: identifier),
-			host = URL.host,
+			url = NSURL(string: identifier),
+			host = url.host,
 			// The trailing slash of the host is included in the components.
-			var pathComponents = URL.pathComponents?.filter({ $0 != "/" })
+			var pathComponents = url.pathComponents?.filter({ $0 != "/" })
 			where pathComponents.count >= 2
 		{
 			// Consider that the instance might be in subdirectories.
@@ -75,8 +75,8 @@ extension Repository {
 			if host == "github.com" || host == "www.github.com" {
 				return .success(self.init(owner: owner, name: stripGitSuffix(name)))
 			} else {
-				let baseURL = URL.URLByDeletingLastPathComponent!.URLByDeletingLastPathComponent!
-				return .success(self.init(server: .Enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
+				let baseURL = url.URLByDeletingLastPathComponent!.URLByDeletingLastPathComponent!
+				return .success(self.init(server: .enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
 			}
 		}
 
@@ -164,14 +164,14 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 }
 
 extension Client {
-	convenience init(repository: Repository, authenticated: Bool = true) {
+	convenience init(repository: Repository, isAuthenticated: Bool = true) {
 		if Client.userAgent == nil {
 			Client.userAgent = gitHubUserAgent()
 		}
 		
 		let server = repository.server
 		
-		if !authenticated {
+		if !isAuthenticated {
 			self.init(server)
 		} else if let token = tokenFromEnvironment(forServer: server) {
 			self.init(server, token: token)

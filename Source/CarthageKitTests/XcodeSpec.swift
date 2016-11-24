@@ -251,14 +251,14 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).notTo(beNil())
 
-			let expectedError: Bool
+			let isExpectedError: Bool
 			if case .noSharedFrameworkSchemes? = result.error {
-				expectedError = true
+				isExpectedError = true
 			} else {
-				expectedError = false
+				isExpectedError = false
 			}
 
-			expect(expectedError) == true
+			expect(isExpectedError) == true
 		}
 
 		it("should build for one platform") {
@@ -376,14 +376,14 @@ internal func beRelativeSymlinkToDirectory(directory: NSURL) -> MatcherFunc<NSUR
 		failureMessage.postfixMessage = "be a relative symlink to \(directory)"
 		let actualURL = try actualExpression.evaluate()
 
-		guard let URL = actualURL else {
+		guard let url = actualURL else {
 			return false
 		}
 		var isSymlink: Bool = false
 		do {
 			var isSymlinkObj: AnyObject?
-			URL.removeCachedResourceValueForKey(NSURLIsSymbolicLinkKey)
-			try URL.getResourceValue(&isSymlinkObj, forKey: NSURLIsSymbolicLinkKey)
+			url.removeCachedResourceValueForKey(NSURLIsSymbolicLinkKey)
+			try url.getResourceValue(&isSymlinkObj, forKey: NSURLIsSymbolicLinkKey)
 			if isSymlinkObj != nil {
 				isSymlink = isSymlinkObj!.boolValue
 			}
@@ -394,14 +394,14 @@ internal func beRelativeSymlinkToDirectory(directory: NSURL) -> MatcherFunc<NSUR
 			return false
 		}
 
-		let destination: NSString = try! FileManager.`default`.destinationOfSymbolicLink(atPath: URL.path!)
+		let destination: NSString = try! FileManager.`default`.destinationOfSymbolicLink(atPath: url.path!)
 
 		guard !destination.absolutePath else {
 			failureMessage.postfixMessage += ", but is not a relative symlink"
 			return false
 		}
 
-		let standardDestination = URL.URLByResolvingSymlinksInPath?.URLByStandardizingPath
+		let standardDestination = url.URLByResolvingSymlinksInPath?.URLByStandardizingPath
 		let desiredDestination = directory.URLByStandardizingPath
 
 		let urlsEqual = standardDestination != nil && desiredDestination != nil && standardDestination == desiredDestination

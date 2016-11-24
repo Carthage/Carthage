@@ -31,7 +31,7 @@ private let fallbackDependenciesURL: NSURL = {
 private let CarthageUserCachesURL: NSURL = {
 	let fileManager = FileManager.`default`
 	
-	let URLResult: Result<NSURL, NSError> = `try` { (error: NSErrorPointer) -> NSURL? in
+	let urlResult: Result<NSURL, NSError> = `try` { (error: NSErrorPointer) -> NSURL? in
 		return try? fileManager.URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true)
 	}.flatMap { cachesURL in
 		let dependenciesURL = cachesURL.appendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
@@ -52,10 +52,10 @@ private let CarthageUserCachesURL: NSURL = {
 		}
 	}
 
-	switch URLResult {
-	case let .Success(URL):
+	switch urlResult {
+	case let .Success(url):
 		_ = try? FileManager.`default`.removeItem(at: fallbackDependenciesURL)
-		return URL
+		return url
 	case let .Failure(error):
 		NSLog("Warning: No Caches directory could be found or created: \(error.localizedDescription). (\(error))")
 		return fallbackDependenciesURL
@@ -281,7 +281,7 @@ public final class Project {
 					self._projectEventsObserver.send(value: event)
 				}
 			})
-			.map { _, URL in URL }
+			.map { _, url in url }
 			.take(last: 1)
 			.startOnQueue(gitOperationQueue)
 	}
@@ -443,15 +443,15 @@ public final class Project {
 					let client = Client(repository: repository)
 					return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: client)
 						.flatMapError { error -> SignalProducer<NSURL, CarthageError> in
-							if !client.authenticated {
+							if !client.isAuthenticated {
 								return SignalProducer(error: error)
 							}
-							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, authenticated: false))
+							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
 						}
-						.flatMap(.Concat, transform: unzipArchiveToTemporaryDirectory)
+						.flatMap(.concat, transform: unzip(archive:))
 						.flatMap(.concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
-								.flatMap(.Merge, transform: self.copyFrameworkToBuildFolder)
+								.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
 								.flatMap(.merge) { frameworkURL in
 									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
 										.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
@@ -484,10 +484,10 @@ public final class Project {
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
 	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: Repository, client: Client) -> SignalProducer<NSURL, CarthageError> {
-		return client.releaseForTag(revision, inRepository: repository)
+		return client.release(forTag: revision, in: repository)
 			.map { _, release in release }
 			.filter { release in
-				return !release.draft && !release.assets.isEmpty
+				return !release.isDraft && !release.assets.isEmpty
 			}
 			.flatMapError { error -> SignalProducer<Release, CarthageError> in
 				switch error {
@@ -522,7 +522,7 @@ public final class Project {
 						if FileManager.`default`.fileExists(atPath: fileURL.path!) {
 							return SignalProducer(value: fileURL)
 						} else {
-							return client.downloadAsset(asset)
+							return client.download(asset: asset)
 								.mapError(CarthageError.gitHubAPIRequestFailed)
 								.flatMap(.concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
 						}
@@ -580,11 +580,11 @@ public final class Project {
 				var submodule: Submodule?
 				
 				if var foundSubmodule = submodulesByPath[project.relativePath] {
-					foundSubmodule.URL = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
-					foundSubmodule.SHA = revision
+					foundSubmodule.url = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
+					foundSubmodule.sha = revision
 					submodule = foundSubmodule
 				} else if self.useSubmodules {
-					submodule = Submodule(name: project.relativePath, path: project.relativePath, URL: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), SHA: revision)
+					submodule = Submodule(name: project.relativePath, path: project.relativePath, url: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), sha: revision)
 				}
 				
 				if let submodule = submodule {
@@ -831,13 +831,13 @@ private func cacheDownloadedBinary(downloadURL: NSURL, toURL cachedURL: NSURL) -
 /// given type identifier. If no type identifier is provided, all files are sent.
 private func filesInDirectory(directoryURL: NSURL, _ typeIdentifier: String? = nil) -> SignalProducer<NSURL, CarthageError> {
 	let producer = FileManager.`default`.carthage_enumerator(at: directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: [ .SkipsHiddenFiles, .SkipsPackageDescendants ], catchErrors: true)
-		.map { enumerator, URL in URL }
+		.map { enumerator, url in url }
 	if let typeIdentifier = typeIdentifier {
 		return producer
-			.filter { URL in
-				return URL.typeIdentifier
+			.filter { url in
+				return url.typeIdentifier
 					.analysis(ifSuccess: { identifier in
-						return UTTypeConformsTo(identifier, typeIdentifier)
+						return UTTypeConformsTo(identifier as CFString, typeIdentifier as CFString)
 					}, ifFailure: { _ in false })
 			}
 	} else {
@@ -850,8 +850,8 @@ private func platformForFramework(frameworkURL: NSURL) -> SignalProducer<Platfor
 	return SignalProducer(value: frameworkURL)
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used
 		// because Xcode 6 and below do not include either in macOS frameworks.
-		.attemptMap { URL -> Result<String, CarthageError> in
-			let bundle = Bundle(url: URL)
+		.attemptMap { url -> Result<String, CarthageError> in
+			let bundle = Bundle(url: url)
 
 			func readFailed(message: String) -> CarthageError {
 				let error = Result<(), NSError>.error(message)
@@ -877,9 +877,9 @@ private func platformForFramework(frameworkURL: NSURL) -> SignalProducer<Platfor
 /// Sends the URL to each framework bundle found in the given directory.
 private func frameworksInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
-		.filter { URL in
+		.filter { url in
 			// Skip nested frameworks
-			let frameworksInURL = URL.pathComponents?.filter { pathComponent in
+			let frameworksInURL = url.pathComponents?.filter { pathComponent in
 				return (pathComponent as NSString).pathExtension == "framework"
 			}
 			return frameworksInURL?.count == 1
@@ -911,23 +911,23 @@ private func dSYMForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: 
 /// Sends the URL to each bcsymbolmap found in the given directory.
 private func BCSymbolMapsInDirectory(directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return filesInDirectory(directoryURL)
-		.filter { URL in URL.pathExtension == "bcsymbolmap" }
+		.filter { url in url.pathExtension == "bcsymbolmap" }
 }
 
 /// Sends the URLs of the bcsymbolmap files that match the given framework and are
 /// located somewhere within the given directory.
 private func BCSymbolMapsForFramework(frameworkURL: NSURL, inDirectoryURL directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return UUIDsForFramework(frameworkURL)
-		.flatMap(.merge) { UUIDs -> SignalProducer<NSURL, CarthageError> in
-			if UUIDs.isEmpty {
+		.flatMap(.merge) { uuids -> SignalProducer<NSURL, CarthageError> in
+			if uuids.isEmpty {
 				return .empty
 			}
 			func filterUUIDs(signal: Signal<NSURL, CarthageError>) -> Signal<NSURL, CarthageError> {
-				var remainingUUIDs = UUIDs
+				var remainingUUIDs = uuids
 				let count = remainingUUIDs.count
 				return signal
 					.filter { fileURL in
-						if let basename = fileURL.URLByDeletingPathExtension?.lastPathComponent, fileUUID = NSUUID(UUIDString: basename) {
+						if let basename = fileURL.URLByDeletingPathExtension?.lastPathComponent, let fileUUID = UUID(uuidString: basename) {
 							return remainingUUIDs.remove(fileUUID) != nil
 						} else {
 							return false
@@ -952,13 +952,13 @@ private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bo
 	switch project {
 	case let .gitHub(repository):
 		if preferHTTPS {
-			return repository.HTTPSURL
+			return repository.httpsURL
 		} else {
-			return repository.SSHURL
+			return repository.sshURL
 		}
 
-	case let .git(URL):
-		return URL
+	case let .git(url):
+		return url
 	}
 }
 

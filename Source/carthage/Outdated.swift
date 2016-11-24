@@ -15,13 +15,13 @@ import ReactiveCocoa
 public struct OutdatedCommand: CommandType {
 	public struct Options: OptionsType {
 		public let useSSH: Bool
-		public let verbose: Bool
+		public let isVerbose: Bool
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
 		
-		public static func create(useSSH: Bool) -> Bool -> ColorOptions -> String -> Options {
-			return { verbose in { colorOptions in { directoryPath in
-				return self.init(useSSH: useSSH, verbose: verbose, colorOptions: colorOptions, directoryPath: directoryPath)
+		public static func create(useSSH: Bool) -> (Bool) -> (ColorOptions) -> (String) -> Options {
+			return { isVerbose in { colorOptions in { directoryPath in
+				return self.init(useSSH: useSSH, isVerbose: isVerbose, colorOptions: colorOptions, directoryPath: directoryPath)
 			} } }
 		}
 		
@@ -52,7 +52,7 @@ public struct OutdatedCommand: CommandType {
 
 	public func run(options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
-			.flatMap(.merge) { $0.outdatedDependencies(options.verbose) }
+			.flatMap(.merge) { $0.outdatedDependencies(options.isVerbose) }
 			.on(next: { outdatedDependencies in
 				let formatting = options.colorOptions.formatting
 

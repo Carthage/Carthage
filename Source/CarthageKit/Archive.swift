@@ -11,13 +11,13 @@ import Result
 import ReactiveCocoa
 import ReactiveTask
 
-/// Zips the given input items (recursively) into an archive that will be
+/// Zips the given input paths (recursively) into an archive that will be
 /// located at the given URL.
-public func zipIntoArchive(destinationArchiveURL: NSURL, workingDirectory: String, inputPaths: [String]) -> SignalProducer<(), CarthageError> {
-	precondition(destinationArchiveURL.fileURL)
-	precondition(!inputPaths.isEmpty)
-	
-	let task = Task("/usr/bin/env", workingDirectoryPath: workingDirectory, arguments: [ "zip", "-q", "-r", "--symlinks", destinationArchiveURL.path! ] + inputPaths)
+public func zip(paths paths: [String], into archiveURL: NSURL, workingDirectory: String) -> SignalProducer<(), CarthageError> {
+	precondition(!paths.isEmpty)
+	precondition(archiveURL.fileURL)
+
+	let task = Task("/usr/bin/env", workingDirectoryPath: workingDirectory, arguments: [ "zip", "-q", "-r", "--symlinks", archiveURL.path! ] + paths)
 	
 	return task.launch()
 		.mapError(CarthageError.taskError)
@@ -26,7 +26,7 @@ public func zipIntoArchive(destinationArchiveURL: NSURL, workingDirectory: Strin
 
 /// Unzips the archive at the given file URL, extracting into the given
 /// directory URL (which must already exist).
-public func unzipArchiveToDirectory(fileURL: NSURL, _ destinationDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
+public func unzip(archive fileURL: NSURL, to destinationDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
 	precondition(fileURL.fileURL)
 	precondition(destinationDirectoryURL.fileURL)
 
@@ -38,7 +38,7 @@ public func unzipArchiveToDirectory(fileURL: NSURL, _ destinationDirectoryURL: N
 
 /// Unzips the archive at the given file URL into a temporary directory, then
 /// sends the file URL to that directory.
-public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+public func unzip(archive fileURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
 	return SignalProducer.attempt { () -> Result<String, CarthageError> in
 			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("carthage-archive.XXXXXX").nulTerminatedUTF8.map { CChar($0) }
 			let result = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> UnsafeMutablePointer<CChar> in
@@ -57,7 +57,7 @@ public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<N
 		}
 		.map { NSURL.fileURLWithPath($0, isDirectory: true) }
 		.flatMap(.merge) { directoryURL in
-			return unzipArchiveToDirectory(fileURL, directoryURL)
+			return unzip(archive: fileURL, to: directoryURL)
 				.then(SignalProducer(value: directoryURL))
 		}
 }

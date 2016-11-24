@@ -19,7 +19,7 @@ public struct ArchiveCommand: CommandType {
 		public let colorOptions: ColorOptions
 		public let frameworkNames: [String]
 
-		static func create(outputPath: String?) -> String -> ColorOptions -> [String] -> Options {
+		static func create(outputPath: String?) -> (String) -> (ColorOptions) -> ([String]) -> Options {
 			return { directoryPath in { colorOptions in { frameworkNames in
 				return self.init(outputPath: outputPath, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: frameworkNames)
 			} } }
@@ -120,7 +120,7 @@ public struct ArchiveCommand: CommandType {
 						_ = try? FileManager.`default`.createDirectory(at: directory, withIntermediateDirectories: true)
 					}
 					
-					return zipIntoArchive(outputURL, workingDirectory: options.directoryPath, inputPaths: paths).on(completed: {
+					return zip(paths: paths, into: outputURL, workingDirectory: options.directoryPath).on(completed: {
 						carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
 					})
 				}

@@ -21,7 +21,7 @@ public struct CheckoutCommand: CommandType {
 		public let directoryPath: String
 		public let dependenciesToCheckout: [String]?
 
-		public static func create(useSSH: Bool) -> Bool -> Bool -> ColorOptions -> String -> [String] -> Options {
+		public static func create(useSSH: Bool) -> (Bool) -> (Bool) -> (ColorOptions) -> (String) -> ([String]) -> Options {
 			return { useSubmodules in { useBinaries in { colorOptions in { directoryPath in { dependenciesToCheckout in
 				// Disable binary downloads when using submodules.
 				// See https://github.com/Carthage/Carthage/issues/419.
