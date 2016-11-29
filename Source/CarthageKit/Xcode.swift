@@ -164,14 +164,26 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(.whitespaces) }
 }
 
+
+/// Returns schemes specified by the `.carthage_schemes` file at the directory specified.
+/// Returns `nil` if it doesn't exist.
+private func carthageSchemesFileSchemes(directoryURL: NSURL) -> [String]? {
+	let carthageSchemesFileURL = directoryURL.appendingPathComponent(".carthage_schemes")
+	let contents = try? String(contentsOfURL: carthageSchemesFileURL, encoding: NSUTF8StringEncoding)
+	return contents?.componentsSeparatedByCharactersInSet(.newlines).filter { !$0.isEmpty }
+}
+
 /// Finds schemes of projects or workspaces, which Carthage should build, found
 /// within the given directory.
 public func buildableSchemesInDirectory(directoryURL: NSURL, withConfiguration configuration: String, forPlatforms platforms: Set<Platform> = []) -> SignalProducer<(ProjectLocator, [String]), CarthageError> {
 	precondition(directoryURL.fileURL)
 
+	let filteredSchemes = carthageSchemesFileSchemes(directoryURL)
+
 	return locateProjectsInDirectory(directoryURL)
 		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [String]), CarthageError> in
 			return schemesInProject(project)
+				.filter { scheme in return filteredSchemes?.contains(scheme) ?? true }
 				.flatMap(.merge) { scheme -> SignalProducer<String, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
