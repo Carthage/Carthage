@@ -27,13 +27,13 @@ public enum ProjectLocator: Comparable {
 	/// The file URL this locator refers to.
 	public var fileURL: NSURL {
 		switch self {
-		case let .workspace(URL):
-			assert(URL.fileURL)
-			return URL
+		case let .workspace(url):
+			assert(url.fileURL)
+			return url
 
-		case let .projectFile(URL):
-			assert(URL.fileURL)
-			return URL
+		case let .projectFile(url):
+			assert(url.fileURL)
+			return url
 		}
 	}
 
@@ -96,17 +96,17 @@ public func locateProjectsInDirectory(directoryURL: NSURL) -> SignalProducer<Pro
 		.flatMap(.merge) { directoriesToSkip in
 			return FileManager.`default`
 				.carthage_enumerator(at: directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-				.map { _, URL in URL }
-				.filter { URL in
-					return !directoriesToSkip.contains { $0.hasSubdirectory(URL) }
+				.map { _, url in url }
+				.filter { url in
+					return !directoriesToSkip.contains { $0.hasSubdirectory(url) }
 				}
 		}
-		.map { URL -> ProjectLocator? in
-			if let UTI = URL.typeIdentifier.value {
-				if (UTTypeConformsTo(UTI, "com.apple.dt.document.workspace")) {
-					return .workspace(URL)
-				} else if (UTTypeConformsTo(UTI, "com.apple.xcode.project")) {
-					return .projectFile(URL)
+		.map { url -> ProjectLocator? in
+			if let uti = url.typeIdentifier.value {
+				if (UTTypeConformsTo(uti as CFString, "com.apple.dt.document.workspace" as CFString)) {
+					return .workspace(url)
+				} else if (UTTypeConformsTo(uti as CFString, "com.apple.xcode.project" as CFString)) {
+					return .projectFile(url)
 				}
 			}
 			return nil
@@ -703,11 +703,11 @@ private func mergeExecutables(executableURLs: [NSURL], _ outputURL: NSURL) -> Si
 	precondition(outputURL.fileURL)
 
 	return SignalProducer<NSURL, CarthageError>(values: executableURLs)
-		.attemptMap { URL -> Result<String, CarthageError> in
-			if let path = URL.path {
+		.attemptMap { url -> Result<String, CarthageError> in
+			if let path = url.path {
 				return .success(path)
 			} else {
-				return .failure(.parseError(description: "expected file URL to built executable, got (URL)"))
+				return .failure(.parseError(description: "expected file URL to built executable, got \(url)"))
 			}
 		}
 		.collect()
@@ -729,12 +729,12 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: NSURL, _ destinatio
 	precondition(destinationModuleDirectoryURL.fileURL)
 
 	return FileManager.`default`.carthage_enumerator(at: sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants, .SkipsHiddenFiles ], catchErrors: true)
-		.attemptMap { _, URL -> Result<NSURL, CarthageError> in
-			let lastComponent: String? = URL.lastPathComponent
+		.attemptMap { _, url -> Result<NSURL, CarthageError> in
+			let lastComponent: String? = url.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.appendingPathComponent(lastComponent!).URLByResolvingSymlinksInPath!
 
 			do {
-				try FileManager.`default`.copyItem(at: URL, to: destinationURL)
+				try FileManager.`default`.copyItem(at: url, to: destinationURL)
 				return .success(destinationURL)
 			} catch let error as NSError {
 				return .failure(.writeFailed(destinationURL, error))
@@ -1505,8 +1505,8 @@ public func BCSymbolMapsForFramework(frameworkURL: NSURL) -> SignalProducer<NSUR
 }
 
 /// Sends a set of UUIDs for each architecture present in the given URL.
-private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<UUID>, CarthageError> {
-	let dwarfdumpTask = Task("/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", URL.path! ])
+private func UUIDsFromDwarfdump(url: NSURL) -> SignalProducer<Set<UUID>, CarthageError> {
+	let dwarfdumpTask = Task("/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", url.path! ])
 
 	return dwarfdumpTask.launch()
 		.ignoreTaskData()
@@ -1544,7 +1544,7 @@ private func UUIDsFromDwarfdump(URL: NSURL) -> SignalProducer<Set<UUID>, Carthag
 			if !uuids.isEmpty {
 				return SignalProducer(value: uuids)
 			} else {
-				return SignalProducer(error: .invalidUUIDs(description: "Could not parse UUIDs using dwarfdump from \(URL.path!)"))
+				return SignalProducer(error: .invalidUUIDs(description: "Could not parse UUIDs using dwarfdump from \(url.path!)"))
 			}
 		}
 }

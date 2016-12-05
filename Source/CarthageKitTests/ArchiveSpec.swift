@@ -78,7 +78,7 @@ class ArchiveSpec: QuickSpec {
 				expect(unzipResult?.error).to(beNil())
 
 				let enumerationResult = FileManager.`default`.carthage_enumerator(at: unzipResult?.value ?? temporaryURL, includingPropertiesForKeys: [])
-					.map { enumerator, URL in URL }
+					.map { enumerator, url in url }
 					.map { $0.lastPathComponent! }
 					.collect()
 					.single()

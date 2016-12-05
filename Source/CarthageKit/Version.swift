@@ -171,7 +171,7 @@ public enum VersionSpecifier: VersionType {
 
 	/// Determines whether the given version satisfies this version specifier.
 	public func satisfiedBy(version: PinnedVersion) -> Bool {
-		func withSemanticVersion(predicate: SemanticVersion -> Bool) -> Bool {
+		func withSemanticVersion(predicate: (SemanticVersion) -> Bool) -> Bool {
 			if let semanticVersion = SemanticVersion.fromPinnedVersion(version).value {
 				return predicate(semanticVersion)
 			} else {

@@ -13,7 +13,7 @@ import Result
 import PrettyColors
 
 /// Wraps a string with terminal colors and formatting or passes it through, depending on `isColorful`.
-private func wrap(isColorful: Bool, wrap: Color.Wrap) -> String -> String {
+private func wrap(isColorful: Bool, wrap: Color.Wrap) -> (String) -> String {
 	return { string in
 		return isColorful ? wrap.wrap(string) : string
 	}
@@ -58,7 +58,7 @@ public struct ColorOptions: OptionsType {
 		let isColorful: Bool
 		let bullets: String
 		let bulletin: Wrap
-		let URL: Wrap
+		let url: Wrap
 		let projectName: Wrap
 		let path: Wrap
 		
@@ -68,11 +68,11 @@ public struct ColorOptions: OptionsType {
 		
 		init(_ isColorful: Bool) {
 			self.isColorful = isColorful
-			bulletin      = wrap(isColorful, wrap: Color.Wrap(foreground: .Blue, style: .Bold))
+			bulletin      = wrap(isColorful, wrap: Color.Wrap(foreground: .blue, style: .bold))
 			bullets       = bulletin(string: "***") + " "
-			URL           = wrap(isColorful, wrap: Color.Wrap(styles: .Underlined))
-			projectName   = wrap(isColorful, wrap: Color.Wrap(styles: .Bold))
-			path          = wrap(isColorful, wrap: Color.Wrap(foreground: .Yellow))
+			url           = wrap(isColorful, wrap: Color.Wrap(styles: .underlined))
+			projectName   = wrap(isColorful, wrap: Color.Wrap(styles: .bold))
+			path          = wrap(isColorful, wrap: Color.Wrap(foreground: .yellow))
 		}
 
 		/// Wraps a string in bullets, one space of padding, and formatting.
@@ -82,7 +82,7 @@ public struct ColorOptions: OptionsType {
 
 		/// Wraps a string in quotation marks and formatting.
 		func quote(string: String, quotationMark: String = "\"") -> String {
-			return wrap(isColorful, wrap: Color.Wrap(foreground: .Green))(quotationMark + string + quotationMark)
+			return wrap(isColorful, wrap: Color.Wrap(foreground: .green))(quotationMark + string + quotationMark)
 		}
 	}
 	

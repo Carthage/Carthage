@@ -26,7 +26,7 @@ public struct Cartfile {
 
 	/// Returns the location where Cartfile should exist within the given
 	/// directory.
-	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
+	public static func urlInDirectory(directoryURL: NSURL) -> NSURL {
 		return directoryURL.appendingPathComponent("Cartfile")
 	}
 
@@ -133,7 +133,7 @@ public struct ResolvedCartfile {
 
 	/// Returns the location where Cartfile.resolved should exist within the given
 	/// directory.
-	public static func URLInDirectory(directoryURL: NSURL) -> NSURL {
+	public static func urlInDirectory(directoryURL: NSURL) -> NSURL {
 		return directoryURL.appendingPathComponent("Cartfile.resolved")
 	}
 
@@ -187,8 +187,8 @@ public enum ProjectIdentifier: Comparable {
 		case let .gitHub(repo):
 			return repo.name
 
-		case let .git(URL):
-			return URL.name ?? URL.URLString
+		case let .git(url):
+			return url.name ?? url.urlString
 		}
 	}
 
@@ -222,8 +222,8 @@ extension ProjectIdentifier: Hashable {
 		case let .gitHub(repo):
 			return repo.hashValue
 
-		case let .git(URL):
-			return URL.hashValue
+		case let .git(url):
+			return url.hashValue
 		}
 	}
 }
@@ -231,15 +231,15 @@ extension ProjectIdentifier: Hashable {
 extension ProjectIdentifier: Scannable {
 	/// Attempts to parse a ProjectIdentifier.
 	public static func fromScanner(scanner: Scanner) -> Result<ProjectIdentifier, CarthageError> {
-		let parser: (String -> Result<ProjectIdentifier, CarthageError>)
+		let parser: (String) -> Result<ProjectIdentifier, CarthageError>
 
 		if scanner.scanString("github", into: nil) {
 			parser = { repoIdentifier in
 				return Repository.fromIdentifier(repoIdentifier).map { self.gitHub($0) }
 			}
 		} else if scanner.scanString("git", into: nil) {
-			parser = { URLString in
-				return .success(self.git(GitURL(URLString)))
+			parser = { urlString in
+				return .success(self.git(GitURL(urlString)))
 			}
 		} else {
 			return .failure(CarthageError.parseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
@@ -276,8 +276,8 @@ extension ProjectIdentifier: CustomStringConvertible {
 			}
 			return "github \"\(repoDescription)\""
 
-		case let .git(URL):
-			return "git \"\(URL)\""
+		case let .git(url):
+			return "git \"\(url)\""
 		}
 	}
 }
