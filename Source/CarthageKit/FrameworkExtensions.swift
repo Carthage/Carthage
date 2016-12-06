@@ -267,8 +267,8 @@ extension URL {
 	}
 
 	public func hasSubdirectory(possibleSubdirectory: URL) -> Bool {
-		let standardizedSelf = self.URLByStandardizingPath ?? self
-		let standardizedOther = possibleSubdirectory.URLByStandardizingPath ?? possibleSubdirectory
+		let standardizedSelf = self.standardizedFileURL
+		let standardizedOther = possibleSubdirectory.standardizedFileURL
 
 		if
 			scheme == standardizedOther.scheme,

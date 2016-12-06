@@ -178,6 +178,10 @@
 
 	public typealias URL = NSURL
 	internal extension URL {
+		var standardizedFileURL : URL {
+			return URLByStandardizingPath ?? self
+		}
+
 		func appendingPathExtension(pathExtension: String) -> URL {
 			return URLByAppendingPathExtension(pathExtension)!
 		}

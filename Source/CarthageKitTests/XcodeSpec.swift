@@ -401,10 +401,10 @@ internal func beRelativeSymlinkToDirectory(directory: URL) -> MatcherFunc<URL> {
 			return false
 		}
 
-		let standardDestination = url.URLByResolvingSymlinksInPath?.URLByStandardizingPath
-		let desiredDestination = directory.URLByStandardizingPath
+		let standardDestination = url.URLByResolvingSymlinksInPath?.standardizedFileURL
+		let desiredDestination = directory.standardizedFileURL
 
-		let urlsEqual = standardDestination != nil && desiredDestination != nil && standardDestination == desiredDestination
+		let urlsEqual = standardDestination != nil && standardDestination == desiredDestination
 
 		if !urlsEqual {
 			failureMessage.postfixMessage += ", but does not point to the correct destination. Instead it points to \(standardDestination)"
