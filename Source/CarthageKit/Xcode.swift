@@ -95,7 +95,7 @@ public func locateProjectsInDirectory(directoryURL: URL) -> SignalProducer<Proje
 		.collect()
 		.flatMap(.merge) { directoriesToSkip in
 			return FileManager.`default`
-				.carthage_enumerator(at: directoryURL.URLByResolvingSymlinksInPath!, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+				.carthage_enumerator(at: directoryURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: enumerationOptions, catchErrors: true)
 				.map { _, url in url }
 				.filter { url in
 					return !directoriesToSkip.contains { $0.hasSubdirectory(url) }
@@ -731,7 +731,7 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: URL, _ destinationM
 	return FileManager.`default`.carthage_enumerator(at: sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants, .SkipsHiddenFiles ], catchErrors: true)
 		.attemptMap { _, url -> Result<URL, CarthageError> in
 			let lastComponent: String? = url.lastPathComponent
-			let destinationURL = destinationModuleDirectoryURL.appendingPathComponent(lastComponent!).URLByResolvingSymlinksInPath!
+			let destinationURL = destinationModuleDirectoryURL.appendingPathComponent(lastComponent!).resolvingSymlinksInPath()
 
 			do {
 				try FileManager.`default`.copyItem(at: url, to: destinationURL)
@@ -830,7 +830,7 @@ private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings
 
 			let mergeProductBinaries = SignalProducer(result: executableURLs &&& outputURL)
 				.flatMap(.concat) { (executableURLs: [URL], outputURL: URL) -> SignalProducer<(), CarthageError> in
-					return mergeExecutables(executableURLs, outputURL.URLByResolvingSymlinksInPath!)
+					return mergeExecutables(executableURLs, outputURL.resolvingSymlinksInPath())
 				}
 
 			let sourceModulesURL = SignalProducer(result: secondProductSettings.relativeModulesPath &&& secondProductSettings.builtProductsDirectoryURL)
@@ -993,7 +993,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			return !sdks.isEmpty
 		}
 		.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<URL>, CarthageError> in
-			let folderURL = workingDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
+			let folderURL = workingDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).resolvingSymlinksInPath()
 
 			// TODO: Generalize this further?
 			switch sdks.count {
@@ -1086,7 +1086,7 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// Returns producers in the same format as buildInDirectory().
 public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
-	let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
+	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
 	return symlinkBuildPathForDependencyProject(dependency, rootDirectoryURL: rootDirectoryURL)
 		.flatMap(.merge) { _ -> SignalProducer<BuildSchemeProducer, CarthageError> in
@@ -1111,9 +1111,9 @@ public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirector
 /// Returns a signal indicating success
 private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt {
-		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
-		let dependencyURL = rawDependencyURL.URLByResolvingSymlinksInPath!
+		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 		let fileManager = FileManager.`default`
 
 		do {
@@ -1346,7 +1346,7 @@ extension SignalProducerProtocol where Value == URL, Error == CarthageError {
 			.flatMap(.merge) { fileURL -> SignalProducer<URL, CarthageError> in
 				let fileName = fileURL.lastPathComponent!
 				let destinationURL = directoryURL.appendingPathComponent(fileName, isDirectory: false)
-				let resolvedDestinationURL = destinationURL.URLByResolvingSymlinksInPath!
+				let resolvedDestinationURL = destinationURL.resolvingSymlinksInPath()
 
 				return copyProduct(fileURL, resolvedDestinationURL)
 			}

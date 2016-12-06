@@ -201,6 +201,10 @@
 		@nonobjc func removeCachedResourceValue(forKey key: NSURLResourceKey) {
 			removeCachedResourceValueForKey(key as String)
 		}
+
+		func resolvingSymlinksInPath() -> URL {
+			return URLByResolvingSymlinksInPath ?? self
+		}
 	}
 
 	public typealias UUID = NSUUID
