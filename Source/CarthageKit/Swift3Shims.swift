@@ -184,6 +184,10 @@
 			return URLByStandardizingPath ?? self
 		}
 
+		var carthage_pathComponents: [String] {
+			return pathComponents ?? []
+		}
+
 		func appendingPathExtension(pathExtension: String) -> URL {
 			return URLByAppendingPathExtension(pathExtension)!
 		}

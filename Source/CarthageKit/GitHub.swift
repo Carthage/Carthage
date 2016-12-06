@@ -59,13 +59,12 @@ extension Repository {
 		}
 
 		// GitHub Enterprise
-		if let
-			url = NSURL(string: identifier),
-			host = url.host,
-			// The trailing slash of the host is included in the components.
-			var pathComponents = url.pathComponents?.filter({ $0 != "/" })
-			where pathComponents.count >= 2
-		{
+		breakpoint: if let url = NSURL(string: identifier), let host = url.host {
+			var pathComponents = url.carthage_pathComponents.filter { $0 != "/" }
+			guard pathComponents.count >= 2 else {
+				break breakpoint
+			}
+
 			// Consider that the instance might be in subdirectories.
 			let name = pathComponents.removeLast()
 			let owner = pathComponents.removeLast()

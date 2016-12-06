@@ -869,10 +869,10 @@ private func frameworksInDirectory(directoryURL: URL) -> SignalProducer<URL, Car
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
 		.filter { url in
 			// Skip nested frameworks
-			let frameworksInURL = url.pathComponents?.filter { pathComponent in
+			let frameworksInURL = url.carthage_pathComponents.filter { pathComponent in
 				return (pathComponent as NSString).pathExtension == "framework"
 			}
-			return frameworksInURL?.count == 1
+			return frameworksInURL.count == 1
 		}
 }
 

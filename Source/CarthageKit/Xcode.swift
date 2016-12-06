@@ -39,7 +39,7 @@ public enum ProjectLocator: Comparable {
 
 	/// The number of levels deep the current object is in the directory hierarchy.
 	public var level: Int {
-		return fileURL.pathComponents!.count - 1
+		return fileURL.carthage_pathComponents.count - 1
 	}
 }
 

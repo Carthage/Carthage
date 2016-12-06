@@ -270,14 +270,12 @@ extension URL {
 		let standardizedSelf = self.standardizedFileURL
 		let standardizedOther = possibleSubdirectory.standardizedFileURL
 
-		if
-			scheme == standardizedOther.scheme,
-			let path = standardizedSelf.pathComponents,
-			let otherPath = standardizedOther.pathComponents
-			where path.count <= otherPath.count
-		{
+		let path = standardizedSelf.carthage_pathComponents
+		let otherPath = standardizedOther.carthage_pathComponents
+		if scheme == standardizedOther.scheme && path.count <= otherPath.count {
 			return Array(otherPath[path.indices]) == path
 		}
+
 		return false
 	}
 }
