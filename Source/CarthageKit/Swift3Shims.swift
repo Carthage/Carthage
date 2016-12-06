@@ -211,6 +211,10 @@
 		func resolvingSymlinksInPath() -> URL {
 			return URLByResolvingSymlinksInPath ?? self
 		}
+
+		func withUnsafeFileSystemRepresentation<ResultType>(block: (UnsafePointer<Int8>?) throws -> ResultType) rethrows -> ResultType {
+			return try block(fileSystemRepresentation)
+		}
 	}
 
 	public typealias UUID = NSUUID

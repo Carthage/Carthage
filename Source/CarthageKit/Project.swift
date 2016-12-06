@@ -790,7 +790,12 @@ private func cacheDownloadedBinary(downloadURL: URL, toURL cachedURL: URL) -> Si
 		}
 		.attempt { newDownloadURL in
 			// Tries `rename()` system call at first.
-			if rename(downloadURL.fileSystemRepresentation, newDownloadURL.fileSystemRepresentation) == 0 {
+			let result = downloadURL.withUnsafeFileSystemRepresentation { old in
+				newDownloadURL.withUnsafeFileSystemRepresentation { new in
+					rename(old!, new!)
+				}
+			}
+			if result == 0 {
 				return .success(())
 			}
 
