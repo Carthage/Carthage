@@ -28,11 +28,11 @@ public enum ProjectLocator: Comparable {
 	public var fileURL: URL {
 		switch self {
 		case let .workspace(url):
-			assert(url.fileURL)
+			assert(url.isFileURL)
 			return url
 
 		case let .projectFile(url):
-			assert(url.fileURL)
+			assert(url.isFileURL)
 			return url
 		}
 	}
@@ -167,7 +167,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 /// Finds schemes of projects or workspaces, which Carthage should build, found
 /// within the given directory.
 public func buildableSchemesInDirectory(directoryURL: URL, withConfiguration configuration: String, forPlatforms platforms: Set<Platform> = []) -> SignalProducer<(ProjectLocator, [String]), CarthageError> {
-	precondition(directoryURL.fileURL)
+	precondition(directoryURL.isFileURL)
 
 	return locateProjectsInDirectory(directoryURL)
 		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [String]), CarthageError> in
@@ -700,7 +700,7 @@ private func copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL: URL, _ s
 /// Attempts to merge the given executables into one fat binary, written to
 /// the specified URL.
 private func mergeExecutables(executableURLs: [URL], _ outputURL: URL) -> SignalProducer<(), CarthageError> {
-	precondition(outputURL.fileURL)
+	precondition(outputURL.isFileURL)
 
 	return SignalProducer<URL, CarthageError>(values: executableURLs)
 		.attemptMap { url -> Result<String, CarthageError> in
@@ -725,8 +725,8 @@ private func mergeExecutables(executableURLs: [URL], _ outputURL: URL) -> Signal
 ///
 /// Sends the URL to each file after copying.
 private func mergeModuleIntoModule(sourceModuleDirectoryURL: URL, _ destinationModuleDirectoryURL: URL) -> SignalProducer<URL, CarthageError> {
-	precondition(sourceModuleDirectoryURL.fileURL)
-	precondition(destinationModuleDirectoryURL.fileURL)
+	precondition(sourceModuleDirectoryURL.isFileURL)
+	precondition(destinationModuleDirectoryURL.isFileURL)
 
 	return FileManager.`default`.carthage_enumerator(at: sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants, .SkipsHiddenFiles ], catchErrors: true)
 		.attemptMap { _, url -> Result<URL, CarthageError> in
@@ -866,7 +866,7 @@ public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
 public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: URL, derivedDataPath: String?, toolchain: String?, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<TaskEvent<URL>, CarthageError> {
-	precondition(workingDirectoryURL.fileURL)
+	precondition(workingDirectoryURL.isFileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration, derivedDataPath: derivedDataPath, toolchain: toolchain)
 
@@ -1171,7 +1171,7 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
 public func buildInDirectory(directoryURL: URL, withOptions options: BuildOptions, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-	precondition(directoryURL.fileURL)
+	precondition(directoryURL.isFileURL)
 
 	return SignalProducer { observer, disposable in
 		// Use SignalProducer.replayLazily to avoid enumerating the given directory

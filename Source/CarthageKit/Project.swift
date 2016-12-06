@@ -150,7 +150,7 @@ public final class Project {
 	private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
 
 	public init(directoryURL: URL) {
-		precondition(directoryURL.fileURL)
+		precondition(directoryURL.isFileURL)
 
 		let (signal, observer) = Signal<ProjectEvent, NoError>.pipe()
 		projectEvents = signal

@@ -201,7 +201,7 @@ public func ensureGitVersion(requiredVersion: String = CarthageRequiredGitVersio
 
 /// Returns a signal that completes when cloning completes successfully.
 public func cloneRepository(cloneURL: GitURL, _ destinationURL: URL, isBare: Bool = true) -> SignalProducer<String, CarthageError> {
-	precondition(destinationURL.fileURL)
+	precondition(destinationURL.isFileURL)
 
 	var arguments = [ "clone" ]
 	if isBare {
@@ -214,7 +214,7 @@ public func cloneRepository(cloneURL: GitURL, _ destinationURL: URL, isBare: Boo
 
 /// Returns a signal that completes when the fetch completes successfully.
 public func fetchRepository(repositoryFileURL: URL, remoteURL: GitURL? = nil, refspec: String? = nil) -> SignalProducer<String, CarthageError> {
-	precondition(repositoryFileURL.fileURL)
+	precondition(repositoryFileURL.isFileURL)
 
 	var arguments = [ "fetch", "--prune", "--quiet" ]
 	if let remoteURL = remoteURL {

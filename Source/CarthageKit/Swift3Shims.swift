@@ -178,6 +178,8 @@
 
 	public typealias URL = NSURL
 	internal extension URL {
+		@nonobjc var isFileURL: Bool { return fileURL }
+
 		var standardizedFileURL : URL {
 			return URLByStandardizingPath ?? self
 		}

@@ -15,7 +15,7 @@ import ReactiveTask
 /// located at the given URL.
 public func zip(paths paths: [String], into archiveURL: URL, workingDirectory: String) -> SignalProducer<(), CarthageError> {
 	precondition(!paths.isEmpty)
-	precondition(archiveURL.fileURL)
+	precondition(archiveURL.isFileURL)
 
 	let task = Task("/usr/bin/env", workingDirectoryPath: workingDirectory, arguments: [ "zip", "-q", "-r", "--symlinks", archiveURL.path! ] + paths)
 	
@@ -27,8 +27,8 @@ public func zip(paths paths: [String], into archiveURL: URL, workingDirectory: S
 /// Unzips the archive at the given file URL, extracting into the given
 /// directory URL (which must already exist).
 public func unzip(archive fileURL: URL, to destinationDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	precondition(fileURL.fileURL)
-	precondition(destinationDirectoryURL.fileURL)
+	precondition(fileURL.isFileURL)
+	precondition(destinationDirectoryURL.isFileURL)
 
 	let task = Task("/usr/bin/env", arguments: [ "unzip", "-qq", "-d", destinationDirectoryURL.path!, fileURL.path! ])
 	return task.launch()
