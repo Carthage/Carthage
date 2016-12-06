@@ -24,7 +24,7 @@ private let fallbackDependenciesURL: URL = {
 	} else {
 		homePath = ("~/.carthage" as NSString).stringByExpandingTildeInPath
 	}
-	return URL.fileURLWithPath(homePath, isDirectory:true)
+	return URL(fileURLWithPath: homePath, isDirectory:true)
 }()
 
 /// ~/Library/Caches/org.carthage.CarthageKit/

@@ -72,7 +72,7 @@ public struct BuildCommand: CommandType {
 	public func buildWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
 			.flatMap(.merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
-				let directoryURL = URL.fileURLWithPath(options.directoryPath, isDirectory: true)
+				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 
 				var buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
 					.flatten(.concat)
@@ -203,7 +203,7 @@ public struct BuildCommand: CommandType {
 			}
 
 			let handle = FileHandle(fileDescriptor: logFD, closeOnDealloc: true)
-			let fileURL = URL.fileURLWithPath(temporaryPath, isDirectory: false)
+			let fileURL = URL(fileURLWithPath: temporaryPath, isDirectory: false)
 			return .success((handle, fileURL))
 		}
 	}
@@ -218,7 +218,7 @@ public struct BuildCommand: CommandType {
 			return openTemporaryFile()
 				.map { handle, url in (handle, Optional(url)) }
 				.mapError { error in
-					let temporaryDirectoryURL = URL.fileURLWithPath(NSTemporaryDirectory(), isDirectory: true)
+					let temporaryDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
 					return .writeFailed(temporaryDirectoryURL, error)
 				}
 		}

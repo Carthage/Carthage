@@ -55,7 +55,7 @@ public func unzip(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
 
 			return .success(temporaryPath)
 		}
-		.map { URL.fileURLWithPath($0, isDirectory: true) }
+		.map { URL(fileURLWithPath: $0, isDirectory: true) }
 		.flatMap(.merge) { directoryURL in
 			return unzip(archive: fileURL, to: directoryURL)
 				.then(SignalProducer(value: directoryURL))

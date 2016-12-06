@@ -593,7 +593,7 @@ public struct BuildSettings {
 	/// Attempts to determine the URL to the built products directory.
 	public var builtProductsDirectoryURL: Result<URL, CarthageError> {
 		return self["BUILT_PRODUCTS_DIR"].map { productsDir in
-			return URL.fileURLWithPath(productsDir, isDirectory: true)
+			return URL(fileURLWithPath: productsDir, isDirectory: true)
 		}
 	}
 
