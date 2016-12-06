@@ -912,7 +912,7 @@ private func BCSymbolMapsForFramework(frameworkURL: URL, inDirectoryURL director
 				let count = remainingUUIDs.count
 				return signal
 					.filter { fileURL in
-						if let basename = fileURL.URLByDeletingPathExtension?.lastPathComponent, let fileUUID = UUID(uuidString: basename) {
+						if let basename = fileURL.deletingPathExtension().lastPathComponent, let fileUUID = UUID(uuidString: basename) {
 							return remainingUUIDs.remove(fileUUID) != nil
 						} else {
 							return false

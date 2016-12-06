@@ -198,6 +198,10 @@
 			return URLByDeletingLastPathComponent ?? self
 		}
 
+		func deletingPathExtension() -> URL {
+			return URLByDeletingPathExtension ?? self
+		}
+
 		@nonobjc func removeCachedResourceValue(forKey key: NSURLResourceKey) {
 			removeCachedResourceValueForKey(key as String)
 		}

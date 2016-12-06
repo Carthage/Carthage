@@ -1059,10 +1059,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 public func createDebugInformation(builtProductURL: URL) -> SignalProducer<TaskEvent<URL>, CarthageError> {
 	let dSYMURL = builtProductURL.appendingPathExtension("dSYM")
 
-	if let
-		executableName = builtProductURL.URLByDeletingPathExtension?.lastPathComponent,
-		executable = builtProductURL.appendingPathComponent(executableName).path,
-		dSYM = dSYMURL.path
+	if
+		let executableName = builtProductURL.deletingPathExtension().lastPathComponent,
+		let executable = builtProductURL.appendingPathComponent(executableName).path,
+		let dSYM = dSYMURL.path
 	{
 		let dsymutilTask = Task("/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
 
@@ -1544,7 +1544,7 @@ private func binaryURL(packageURL: URL) -> Result<URL, CarthageError> {
 		}
 
 	case .dSYM?:
-		if let binaryName = packageURL.URLByDeletingPathExtension?.URLByDeletingPathExtension?.lastPathComponent {
+		if let binaryName = packageURL.deletingPathExtension().deletingPathExtension().lastPathComponent {
 			let binaryURL = packageURL.appendingPathComponent("Contents/Resources/DWARF/\(binaryName)")
 			return .success(binaryURL)
 		}
