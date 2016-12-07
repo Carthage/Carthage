@@ -88,7 +88,7 @@ class ProjectSpec: QuickSpec {
 			let projectIdentifier = ProjectIdentifier.git(GitURL(repositoryURL.carthage_absoluteString))
 
 			func initRepository() {
-				expect { try FileManager.`default`.createDirectory(atPath: repositoryURL.path!, withIntermediateDirectories: true) }.notTo(throwError())
+				expect { try FileManager.`default`.createDirectory(atPath: repositoryURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
 				_ = launchGitTask([ "init" ], repositoryFileURL: repositoryURL).wait()
 			}
 
@@ -117,7 +117,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			beforeEach {
-				expect { try FileManager.`default`.createDirectory(atPath: temporaryURL.path!, withIntermediateDirectories: true) }.notTo(throwError())
+				expect { try FileManager.`default`.createDirectory(atPath: temporaryURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
 				initRepository()
 			}
 

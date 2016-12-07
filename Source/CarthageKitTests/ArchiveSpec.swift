@@ -29,7 +29,7 @@ class ArchiveSpec: QuickSpec {
 				expect(result).notTo(beNil())
 				expect(result?.error).to(beNil())
 
-				let directoryPath = result?.value?.path ?? FileManager.`default`.currentDirectoryPath
+				let directoryPath = result?.value?.carthage_path ?? FileManager.`default`.currentDirectoryPath
 				expect(directoryPath).to(beExistingDirectory())
 
 				let contents = (try? FileManager.`default`.contentsOfDirectory(atPath: directoryPath)) ?? []
@@ -49,8 +49,8 @@ class ArchiveSpec: QuickSpec {
 			let archiveURL = temporaryURL.appendingPathComponent("archive.zip", isDirectory: false)
 
 			beforeEach {
-				expect { try FileManager.`default`.createDirectory(atPath: temporaryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
-				expect(FileManager.`default`.changeCurrentDirectoryPath(temporaryURL.path!)) == true
+				expect { try FileManager.`default`.createDirectory(atPath: temporaryURL.carthage_path, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+				expect(FileManager.`default`.changeCurrentDirectoryPath(temporaryURL.carthage_path)) == true
 				return
 			}
 
@@ -70,7 +70,7 @@ class ArchiveSpec: QuickSpec {
 				let outerFilePath = "outer"
 				expect { try "foobar".writeToFile(outerFilePath, atomically: true, encoding: NSUTF8StringEncoding) }.notTo(throwError())
 
-				let result = zip(paths: [ innerFilePath, outerFilePath ], into: archiveURL, workingDirectory: temporaryURL.path!).wait()
+				let result = zip(paths: [ innerFilePath, outerFilePath ], into: archiveURL, workingDirectory: temporaryURL.carthage_path).wait()
 				expect(result.error).to(beNil())
 
 				let unzipResult = unzip(archive: archiveURL).single()
@@ -100,7 +100,7 @@ class ArchiveSpec: QuickSpec {
 				expect { try FileManager.`default`.createSymbolicLink(atPath: symlinkPath, withDestinationPath: destinationPath) }.notTo(throwError())
 				expect { try FileManager.`default`.destinationOfSymbolicLink(atPath: symlinkPath) } == destinationPath
 				
-				let result = zip(paths: [ symlinkPath, destinationPath ], into: archiveURL, workingDirectory: temporaryURL.path!).wait()
+				let result = zip(paths: [ symlinkPath, destinationPath ], into: archiveURL, workingDirectory: temporaryURL.carthage_path).wait()
 				expect(result.error).to(beNil())
 
 				let unzipResult = unzip(archive: archiveURL).single()
@@ -108,8 +108,8 @@ class ArchiveSpec: QuickSpec {
 				expect(unzipResult?.error).to(beNil())
 
 				let unzippedSymlinkURL = (unzipResult?.value ?? temporaryURL).appendingPathComponent(symlinkPath)
-				expect(FileManager.`default`.fileExists(atPath: unzippedSymlinkURL.path!)) == true
-				expect { try FileManager.`default`.destinationOfSymbolicLink(atPath: unzippedSymlinkURL.path!) } == destinationPath
+				expect(FileManager.`default`.fileExists(atPath: unzippedSymlinkURL.carthage_path)) == true
+				expect { try FileManager.`default`.destinationOfSymbolicLink(atPath: unzippedSymlinkURL.carthage_path) } == destinationPath
 			}
 		}
 	}

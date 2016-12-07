@@ -25,7 +25,7 @@ class XcodeSpec: QuickSpec {
 
 		beforeEach {
 			_ = try? FileManager.`default`.removeItem(at: buildFolderURL)
-			expect { try FileManager.`default`.createDirectory(atPath: targetFolderURL.path!, withIntermediateDirectories: true) }.notTo(throwError())
+			expect { try FileManager.`default`.createDirectory(atPath: targetFolderURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
 		}
 		
 		afterEach {
@@ -117,9 +117,9 @@ class XcodeSpec: QuickSpec {
 			projectNames.append("ReactiveCocoaLayout")
 
 			for dependency in projectNames {
-				let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path!
+				let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").carthage_path
 				let macdSYMPath = (macPath as NSString).stringByAppendingPathExtension("dSYM")!
-				let iOSPath = buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path!
+				let iOSPath = buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").carthage_path
 				let iOSdSYMPath = (iOSPath as NSString).stringByAppendingPathExtension("dSYM")!
 
 				for path in [ macPath, macdSYMPath, iOSPath, iOSdSYMPath ] {
@@ -138,7 +138,7 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
-			let auxiliaryFrameworkPath = buildFolderURL.appendingPathComponent("iOS/AuxiliaryFramework.framework").path!
+			let auxiliaryFrameworkPath = buildFolderURL.appendingPathComponent("iOS/AuxiliaryFramework.framework").carthage_path
 			expect(auxiliaryFrameworkPath).to(beExistingDirectory())
 
 			// Copy ReactiveCocoaLayout.framework to the temporary folder.
@@ -146,7 +146,7 @@ class XcodeSpec: QuickSpec {
 
 			let resultURL = copyProduct(frameworkFolderURL, targetURL).single()
 			expect(resultURL?.value) == targetURL
-			expect(targetURL.path).to(beExistingDirectory())
+			expect(targetURL.carthage_path).to(beExistingDirectory())
 
 			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
 			expect(strippingResult.value).notTo(beNil())
@@ -159,10 +159,10 @@ class XcodeSpec: QuickSpec {
 			expect(strippedArchitectures?.value).to(contain("armv7", "arm64"))
 
 			let modulesDirectoryURL = targetURL.appendingPathComponent("Modules", isDirectory: true)
-			expect(FileManager.`default`.fileExists(atPath: modulesDirectoryURL.path!)) == false
+			expect(FileManager.`default`.fileExists(atPath: modulesDirectoryURL.carthage_path)) == false
 			
 			var output: String = ""
-			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
+			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.carthage_path ])
 			
 			let codesignResult = codeSign.launch()
 				.on(next: { taskEvent in
@@ -205,7 +205,7 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for (platform, framework) in expectedPlatformsFrameworks {
-				let path = _buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path!
+				let path = _buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").carthage_path
 				expect(path).to(beExistingDirectory())
 			}
 		}
@@ -227,8 +227,8 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).to(beNil())
 
-			let macPath = _buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path!
-			let iOSPath = _buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path!
+			let macPath = _buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").carthage_path
+			let iOSPath = _buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").carthage_path
 
 			for path in [ macPath, iOSPath ] {
 				expect(path).to(beExistingDirectory())
@@ -274,11 +274,11 @@ class XcodeSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			// Verify that the build product exists at the top level.
-			let path = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").path!
+			let path = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").carthage_path
 			expect(path).to(beExistingDirectory())
 
 			// Verify that the other platform wasn't built.
-			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").path!
+			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").carthage_path
 			expect(FileManager.`default`.fileExists(atPath: incorrectPath, isDirectory: nil)) == false
 		}
 
@@ -296,8 +296,8 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the build products of all specified platforms exist 
 			// at the top level.
-			let macPath = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").path!
-			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").path!
+			let macPath = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").carthage_path
+			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").carthage_path
 
 			for path in [ macPath, iosPath ] {
 				expect(path).to(beExistingDirectory())
@@ -394,7 +394,7 @@ internal func beRelativeSymlinkToDirectory(directory: URL) -> MatcherFunc<URL> {
 			return false
 		}
 
-		let destination: NSString = try! FileManager.`default`.destinationOfSymbolicLink(atPath: url.path!)
+		let destination: NSString = try! FileManager.`default`.destinationOfSymbolicLink(atPath: url.carthage_path)
 
 		guard !destination.absolutePath else {
 			failureMessage.postfixMessage += ", but is not a relative symlink"

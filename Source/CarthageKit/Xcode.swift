@@ -73,7 +73,7 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 		return false
 
 	default:
-		return lhs.fileURL.path!.characters.lexicographicalCompare(rhs.fileURL.path!.characters)
+		return lhs.fileURL.carthage_path.characters.lexicographicalCompare(rhs.fileURL.carthage_path.characters)
 	}
 }
 
@@ -198,10 +198,8 @@ public func schemesInProjects(projects: [(ProjectLocator, [String])]) -> SignalP
 		.map { (project: ProjectLocator, schemes: [String]) in
 			// Only look for schemes that actually reside in the project
 			let containedSchemes = schemes.filter { (scheme: String) -> Bool in
-				if let schemePath = project.fileURL.appendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").path {
-					return FileManager.`default`.fileExists(atPath: schemePath)
-				}
-				return false
+				let schemePath = project.fileURL.appendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").carthage_path
+				return FileManager.`default`.fileExists(atPath: schemePath)
 			}
 			return (project, containedSchemes)
 		}
@@ -704,15 +702,15 @@ private func mergeExecutables(executableURLs: [URL], _ outputURL: URL) -> Signal
 
 	return SignalProducer<URL, CarthageError>(values: executableURLs)
 		.attemptMap { url -> Result<String, CarthageError> in
-			if let path = url.path {
-				return .success(path)
+			if url.isFileURL {
+				return .success(url.carthage_path)
 			} else {
 				return .failure(.parseError(description: "expected file URL to built executable, got \(url)"))
 			}
 		}
 		.collect()
 		.flatMap(.merge) { executablePaths -> SignalProducer<TaskEvent<Data>, CarthageError> in
-			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.path! ])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-create" ] + executablePaths + [ "-output", outputURL.carthage_path ])
 
 			return lipoTask.launch()
 				.mapError(CarthageError.taskError)
@@ -940,7 +938,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						}
 
 						var buildScheme = xcodebuildTask(["clean", "build"], argsForBuilding)
-						buildScheme.workingDirectoryPath = workingDirectoryURL.path!
+						buildScheme.workingDirectoryPath = workingDirectoryURL.carthage_path
 
 						return buildScheme.launch()
 							.flatMapTaskEvents(.concat) { _ in SignalProducer(values: settings) }
@@ -1059,11 +1057,9 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 public func createDebugInformation(builtProductURL: URL) -> SignalProducer<TaskEvent<URL>, CarthageError> {
 	let dSYMURL = builtProductURL.appendingPathExtension("dSYM")
 
-	if
-		let executableName = builtProductURL.deletingPathExtension().lastPathComponent,
-		let executable = builtProductURL.appendingPathComponent(executableName).path,
-		let dSYM = dSYMURL.path
-	{
+	if let executableName = builtProductURL.deletingPathExtension().lastPathComponent {
+		let executable = builtProductURL.appendingPathComponent(executableName).carthage_path
+		let dSYM = dSYMURL.carthage_path
 		let dsymutilTask = Task("/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
 
 		return dsymutilTask.launch()
@@ -1157,7 +1153,7 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 		} else {
 			let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: CarthageBinariesFolderPath)
 			do {
-				try fileManager.createSymbolicLink(atPath: dependencyBinariesURL.path!, withDestinationPath: linkDestinationPath)
+				try fileManager.createSymbolicLink(atPath: dependencyBinariesURL.carthage_path, withDestinationPath: linkDestinationPath)
 			} catch let error as NSError {
 				return .failure(.writeFailed(dependencyBinariesURL, error))
 			}
@@ -1190,7 +1186,7 @@ public func buildInDirectory(directoryURL: URL, withOptions options: BuildOption
 						if !schemes.isEmpty {
 							return .init(values: schemes)
 						} else {
-							return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path!)), options.platforms))
+							return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.carthage_path)), options.platforms))
 						}
 					}
 			}
@@ -1299,10 +1295,8 @@ public func copyProduct(from: URL, _ to: URL) -> SignalProducer<URL, CarthageErr
 		// When `from` and `to` are the same, we can just return success immediately.
 		//
 		// See https://github.com/Carthage/Carthage/pull/1160
-		if let path = to.path where
-			manager.fileExists(atPath: path) &&
-			from.absoluteURL == to.absoluteURL {
-				return .success(to)
+		if manager.fileExists(atPath: to.carthage_path) && from.absoluteURL == to.absoluteURL {
+			return .success(to)
 		}
 
 		do {
@@ -1359,7 +1353,7 @@ private func stripArchitecture(frameworkURL: URL, _ architecture: String) -> Sig
 			return binaryURL(frameworkURL)
 		}
 		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
-			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path! , binaryURL.path!])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.carthage_path , binaryURL.carthage_path])
 			return lipoTask.launch()
 				.mapError(CarthageError.taskError)
 		}
@@ -1372,7 +1366,7 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 			return binaryURL(packageURL)
 		}
 		.flatMap(.merge) { binaryURL -> SignalProducer<String, CarthageError> in
-			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path!])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.carthage_path])
 
 			return lipoTask.launch()
 				.ignoreTaskData()
@@ -1392,7 +1386,7 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 						//
 						var architectures: NSString?
 
-						scanner.scanString(binaryURL.path!, into: nil)
+						scanner.scanString(binaryURL.carthage_path, into: nil)
 						scanner.scanString("are:", into: nil)
 						scanner.scanCharacters(from: characterSet, into: &architectures)
 
@@ -1413,7 +1407,7 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 						//
 						var architecture: NSString?
 
-						scanner.scanString(binaryURL.path!, into: nil)
+						scanner.scanString(binaryURL.carthage_path, into: nil)
 						scanner.scanString("is architecture:", into: nil)
 						scanner.scanCharacters(from: characterSet, into: &architecture)
 
@@ -1422,7 +1416,7 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 						}
 					}
 
-					return SignalProducer(error: .invalidArchitectures(description: "Could not read architectures from \(packageURL.path!)"))
+					return SignalProducer(error: .invalidArchitectures(description: "Could not read architectures from \(packageURL.carthage_path)"))
 				}
 		}
 }
@@ -1447,7 +1441,7 @@ private func stripDirectory(named directory: String, of frameworkURL: URL) -> Si
 		let directoryURLToStrip = frameworkURL.appendingPathComponent(directory, isDirectory: true)
 
 		var isDirectory: ObjCBool = false
-		if !FileManager.`default`.fileExists(atPath: directoryURLToStrip.path!, isDirectory: &isDirectory) || !isDirectory {
+		if !FileManager.`default`.fileExists(atPath: directoryURLToStrip.carthage_path, isDirectory: &isDirectory) || !isDirectory {
 			return .success(())
 		}
 
@@ -1489,7 +1483,7 @@ public func BCSymbolMapsForFramework(frameworkURL: URL) -> SignalProducer<URL, C
 
 /// Sends a set of UUIDs for each architecture present in the given URL.
 private func UUIDsFromDwarfdump(url: URL) -> SignalProducer<Set<UUID>, CarthageError> {
-	let dwarfdumpTask = Task("/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", url.path! ])
+	let dwarfdumpTask = Task("/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", url.carthage_path ])
 
 	return dwarfdumpTask.launch()
 		.ignoreTaskData()
@@ -1527,14 +1521,14 @@ private func UUIDsFromDwarfdump(url: URL) -> SignalProducer<Set<UUID>, CarthageE
 			if !uuids.isEmpty {
 				return SignalProducer(value: uuids)
 			} else {
-				return SignalProducer(error: .invalidUUIDs(description: "Could not parse UUIDs using dwarfdump from \(url.path!)"))
+				return SignalProducer(error: .invalidUUIDs(description: "Could not parse UUIDs using dwarfdump from \(url.carthage_path)"))
 			}
 		}
 }
 
 /// Returns the URL of a binary inside a given package.
 private func binaryURL(packageURL: URL) -> Result<URL, CarthageError> {
-	let bundle = Bundle(path: packageURL.path!)
+	let bundle = Bundle(path: packageURL.carthage_path)
 	let packageType = (bundle?.object(forInfoDictionaryKey: "CFBundlePackageType") as? String).flatMap(PackageType.init)
 
 	switch packageType {
@@ -1558,7 +1552,7 @@ private func binaryURL(packageURL: URL) -> Result<URL, CarthageError> {
 
 /// Signs a framework with the given codesigning identity.
 private func codesign(frameworkURL: URL, _ expandedIdentity: String) -> SignalProducer<(), CarthageError> {
-	let codesignTask = Task("/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path! ])
+	let codesignTask = Task("/usr/bin/xcrun", arguments: [ "codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.carthage_path ])
 
 	return codesignTask.launch()
 		.mapError(CarthageError.taskError)

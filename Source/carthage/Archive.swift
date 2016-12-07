@@ -55,7 +55,7 @@ public struct ArchiveCommand: CommandType {
 							if !schemes.isEmpty {
 								return .init(values: schemes)
 							} else {
-								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path!)), []))
+								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.carthage_path)), []))
 							}
 						}
 				}

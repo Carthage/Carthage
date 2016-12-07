@@ -120,7 +120,7 @@ public struct BuildCommand: CommandType {
 
 				return buildProgress
 					.on(started: {
-						if let path = temporaryURL?.path {
+						if let path = temporaryURL?.carthage_path {
 							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: path))
 						}
 					}, next: { taskEvent in

@@ -158,7 +158,7 @@ extension CarthageError: CustomStringConvertible {
 			return "xcodebuild did not return a value for build setting \(setting)"
 
 		case let .readFailed(fileURL, underlyingError):
-			var description = "Failed to read file or folder at \(fileURL.path!)"
+			var description = "Failed to read file or folder at \(fileURL.carthage_path)"
 
 			if let underlyingError = underlyingError {
 				description += ": \(underlyingError)"
@@ -167,7 +167,7 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case let .writeFailed(fileURL, underlyingError):
-			var description = "Failed to write to \(fileURL.path!)"
+			var description = "Failed to write to \(fileURL.carthage_path)"
 
 			if let underlyingError = underlyingError {
 				description += ": \(underlyingError)"
@@ -188,7 +188,7 @@ extension CarthageError: CustomStringConvertible {
 			return "No available version for \(dependency) satisfies the requirement: \(specifier)"
 
 		case let .repositoryCheckoutFailed(workingDirectoryURL, reason, underlyingError):
-			var description = "Failed to check out repository into \(workingDirectoryURL.path!): \(reason)"
+			var description = "Failed to check out repository into \(workingDirectoryURL.carthage_path): \(reason)"
 
 			if let underlyingError = underlyingError {
 				description += " (\(underlyingError))"

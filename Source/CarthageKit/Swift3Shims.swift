@@ -184,6 +184,14 @@
 			return URLByStandardizingPath ?? self
 		}
 
+		// https://github.com/apple/swift-corelibs-foundation/blob/swift-3.0.1-RELEASE/Foundation/URL.swift#L607-L619
+		var carthage_path: String {
+			if let parameterString = parameterString {
+				return (path ?? "") + ";" + parameterString
+			}
+			return path ?? ""
+		}
+
 		var carthage_pathComponents: [String] {
 			return pathComponents ?? []
 		}

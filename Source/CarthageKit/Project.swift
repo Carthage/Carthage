@@ -194,7 +194,7 @@ public final class Project {
 				return Cartfile.fromFile(cartfileURL)
 			}
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
-				if isNoSuchFileError(error) && FileManager.`default`.fileExists(atPath: privateCartfileURL.path!) {
+				if isNoSuchFileError(error) && FileManager.`default`.fileExists(atPath: privateCartfileURL.carthage_path) {
 					return SignalProducer(value: Cartfile())
 				}
 
@@ -513,7 +513,7 @@ public final class Project {
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(project, release, asset)
 
-						if FileManager.`default`.fileExists(atPath: fileURL.path!) {
+						if FileManager.`default`.fileExists(atPath: fileURL.carthage_path) {
 							return SignalProducer(value: fileURL)
 						} else {
 							return client.download(asset: asset)
@@ -582,7 +582,7 @@ public final class Project {
 				}
 				
 				if let submodule = submodule {
-					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path!))
+					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.carthage_path))
 						.startOnQueue(self.gitOperationQueue)
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
@@ -709,7 +709,7 @@ public final class Project {
 				let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).stringByAppendingPathComponent(name)
 				let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: subdirectoryPath)
 				do {
-					try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.path!, withDestinationPath: linkDestinationPath)
+					try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.carthage_path, withDestinationPath: linkDestinationPath)
 				} catch let error as NSError {
 					if !(error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError) {
 						return .failure(.writeFailed(dependencyCheckoutURL, error))
@@ -743,7 +743,7 @@ public final class Project {
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
 			}
 			.flatMap(.concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
-				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true).path!
+				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true).carthage_path
 				if !FileManager.`default`.fileExists(atPath: dependencyPath) {
 					return .empty
 				}

@@ -27,7 +27,7 @@ public struct GitURL: Equatable {
 
 		if let parsedURL = parsedURL, host = parsedURL.host {
 			// Normal, valid URL.
-			let path = stripGitSuffix(parsedURL.path ?? "")
+			let path = stripGitSuffix(parsedURL.carthage_path)
 			return "\(host)\(path)"
 		} else if urlString.hasPrefix("/") {
 			// Local path.
@@ -171,7 +171,7 @@ public func launchGitTask(arguments: [String], repositoryFileURL: URL? = nil, st
 	var updatedEnvironment = environment ?? ProcessInfo.processInfo.environment 
 	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
 
-	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
+	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.carthage_path, environment: updatedEnvironment)
 
 	return taskDescription.launch(standardInput: standardInput)
 		.ignoreTaskData()
@@ -208,7 +208,7 @@ public func cloneRepository(cloneURL: GitURL, _ destinationURL: URL, isBare: Boo
 		arguments.append("--bare")
 	}
 
-	return launchGitTask(arguments + [ "--quiet", cloneURL.urlString, destinationURL.path! ])
+	return launchGitTask(arguments + [ "--quiet", cloneURL.urlString, destinationURL.carthage_path ])
 		.on(completed: { FetchCache.updateLastFetchTime(forURL: cloneURL) })
 }
 
@@ -272,7 +272,7 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: URL, _ workingDirec
 			}
 
 			var environment = ProcessInfo.processInfo.environment
-			environment["GIT_WORK_TREE"] = workingDirectoryURL.path!
+			environment["GIT_WORK_TREE"] = workingDirectoryURL.carthage_path
 			return .success(environment)
 		}
 		.flatMap(.concat) { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
@@ -303,7 +303,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 			do {
 				try url.getResourceValue(&name, forKey: NSURLNameKey)
 			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(url.path!)", underlyingError: error))
+				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(url.carthage_path)", underlyingError: error))
 			}
 
 			if (name as? String) != ".git" {
@@ -314,10 +314,10 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 			do {
 				try url.getResourceValue(&isDirectory, forKey: NSURLIsDirectoryKey)
 				if isDirectory == nil {
-					return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(url.path!) is a directory", underlyingError: nil))
+					return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(url.carthage_path) is a directory", underlyingError: nil))
 				}
 			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(url.path!) is a directory", underlyingError: error))
+				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(url.carthage_path) is a directory", underlyingError: error))
 			}
 
 			if let directory = isDirectory?.boolValue where directory {
@@ -328,7 +328,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 				try FileManager.`default`.removeItem(at: url)
 				return .empty
 			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(url.path!)", underlyingError: error))
+				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(url.carthage_path)", underlyingError: error))
 			}
 		}
 
@@ -499,7 +499,7 @@ public func commitExistsInRepository(repositoryFileURL: URL, revision: String = 
 private func ensureDirectoryExistsAtURL(fileURL: URL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer { observer, disposable in
 		var isDirectory: ObjCBool = false
-		if FileManager.`default`.fileExists(atPath: fileURL.path!, isDirectory: &isDirectory) && isDirectory {
+		if FileManager.`default`.fileExists(atPath: fileURL.carthage_path, isDirectory: &isDirectory) && isDirectory {
 			observer.sendCompleted()
 		} else {
 			observer.send(error: .readFailed(fileURL, nil))
@@ -533,7 +533,7 @@ public func isGitRepository(directoryURL: URL) -> SignalProducer<Bool, NoError> 
 			if (relativeOrAbsoluteGitDirectory as NSString).absolutePath {
 				absoluteGitDirectory = relativeOrAbsoluteGitDirectory
 			} else {
-				absoluteGitDirectory = directoryURL.appendingPathComponent(relativeOrAbsoluteGitDirectory).path
+				absoluteGitDirectory = directoryURL.appendingPathComponent(relativeOrAbsoluteGitDirectory).carthage_path
 			}
 			var isDirectory: ObjCBool = false
 			let directoryExists = absoluteGitDirectory.map { FileManager.`default`.fileExists(atPath: $0, isDirectory: &isDirectory) } ?? false
@@ -550,7 +550,7 @@ public func addSubmoduleToRepository(repositoryFileURL: URL, _ submodule: Submod
 	return isGitRepository(submoduleDirectoryURL)
 		.map { isRepository in
 			// Check if the submodule is initialized/updated already.
-			return isRepository && FileManager.`default`.fileExists(atPath: submoduleDirectoryURL.appendingPathComponent(".git").path!)
+			return isRepository && FileManager.`default`.fileExists(atPath: submoduleDirectoryURL.appendingPathComponent(".git").carthage_path)
 		}
 		.flatMap(.merge) { submoduleExists -> SignalProducer<(), CarthageError> in
 			if submoduleExists {
