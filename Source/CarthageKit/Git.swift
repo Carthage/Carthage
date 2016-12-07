@@ -299,20 +299,20 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
 	let purgeGitDirectories = FileManager.`default`.carthage_enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ NSURLIsDirectoryKey, NSURLNameKey ], catchErrors: true)
 		.flatMap(.merge) { enumerator, url -> SignalProducer<(), CarthageError> in
-			var name: AnyObject?
+			var name: String?
 			do {
-				try url.getResourceValue(&name, forKey: NSURLNameKey)
+				name = try url.resourceValues(forKeys: [ .nameKey ]).name
 			} catch let error as NSError {
 				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(url.carthage_path)", underlyingError: error))
 			}
 
-			if (name as? String) != ".git" {
+			if name != ".git" {
 				return .empty
 			}
 		
-			var isDirectory: AnyObject?
+			var isDirectory: Bool?
 			do {
-				try url.getResourceValue(&isDirectory, forKey: NSURLIsDirectoryKey)
+				isDirectory = try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory
 				if isDirectory == nil {
 					return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(url.carthage_path) is a directory", underlyingError: nil))
 				}
@@ -320,7 +320,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(url.carthage_path) is a directory", underlyingError: error))
 			}
 
-			if let directory = isDirectory?.boolValue where directory {
+			if let directory = isDirectory where directory {
 				enumerator.skipDescendants()
 			}
 

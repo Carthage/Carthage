@@ -1136,14 +1136,14 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 			}
 		}
 
-		var isSymlink: AnyObject?
+		var isSymlink: Bool?
 		do {
-			try rawDependencyURL.getResourceValue(&isSymlink, forKey: NSURLIsSymbolicLinkKey)
+			isSymlink = try rawDependencyURL.resourceValues(forKeys: [ .isSymbolicLinkKey ]).isSymbolicLink
 		} catch let error as NSError {
 			return .failure(.readFailed(rawDependencyURL, error))
 		}
 
-		if isSymlink as? Bool == true {
+		if isSymlink == true {
 			// Since this dependency is itself a symlink, we'll create an
 			// absolute link back to the project's Build folder.
 			do {

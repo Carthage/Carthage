@@ -220,16 +220,67 @@
 			return URLByDeletingPathExtension ?? self
 		}
 
-		@nonobjc func removeCachedResourceValue(forKey key: NSURLResourceKey) {
-			removeCachedResourceValueForKey(key as String)
+		func removeCachedResourceValue(forKey key: URLResourceKey) {
+			removeCachedResourceValueForKey(key.rawValue)
 		}
 
 		func resolvingSymlinksInPath() -> URL {
 			return URLByResolvingSymlinksInPath ?? self
 		}
 
+		func resourceValues(forKeys keys: Set<URLResourceKey>) throws -> URLResourceValues {
+			return URLResourceValues(url: self)
+		}
+
 		func withUnsafeFileSystemRepresentation<ResultType>(block: (UnsafePointer<Int8>?) throws -> ResultType) rethrows -> ResultType {
 			return try block(fileSystemRepresentation)
+		}
+	}
+
+	// https://developer.apple.com/reference/foundation/URLResourceKey
+	internal struct URLResourceKey: Hashable {
+		let rawValue: String
+
+		static let isDirectoryKey: URLResourceKey = URLResourceKey(rawValue: NSURLIsDirectoryKey)
+		static let isSymbolicLinkKey: URLResourceKey = URLResourceKey(rawValue: NSURLIsSymbolicLinkKey)
+		static let nameKey: URLResourceKey = URLResourceKey(rawValue: NSURLNameKey)
+		static let typeIdentifierKey: URLResourceKey = URLResourceKey(rawValue: NSURLTypeIdentifierKey)
+
+		var hashValue: Int { return rawValue.hashValue }
+	}
+
+	func ==(lhs: URLResourceKey, rhs: URLResourceKey) -> Bool {
+		return lhs.rawValue == rhs.rawValue
+	}
+
+	// https://developer.apple.com/reference/foundation/URLResourceValues
+	internal struct URLResourceValues {
+		private let url: URL
+
+		private func get<T>(forKey key: URLResourceKey) -> T? {
+			do {
+				var result: AnyObject?
+				try url.getResourceValue(&result, forKey: key.rawValue)
+				return result as? T
+			} catch {
+				return nil
+			}
+		}
+
+		var isDirectory: Bool? {
+			return get(forKey: .isDirectoryKey)
+		}
+
+		var isSymbolicLink: Bool? {
+			return get(forKey: .isSymbolicLinkKey)
+		}
+
+		var name: String? {
+			return get(forKey: .nameKey)
+		}
+
+		var typeIdentifier: String? {
+			return get(forKey: .typeIdentifierKey)
 		}
 	}
 

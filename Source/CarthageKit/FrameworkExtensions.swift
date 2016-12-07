@@ -249,10 +249,8 @@ extension URL {
 		var error: NSError?
 
 		do {
-			var typeIdentifier: AnyObject?
-			try getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey)
-
-			if let identifier = typeIdentifier as? String {
+			let typeIdentifier = try resourceValues(forKeys: [ .typeIdentifierKey ]).typeIdentifier
+			if let identifier = typeIdentifier {
 				return .success(identifier)
 			}
 		} catch let err as NSError {
