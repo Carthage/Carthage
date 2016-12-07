@@ -192,6 +192,10 @@
 			return path ?? ""
 		}
 
+		var carthage_lastPathComponent: String {
+			return lastPathComponent ?? ""
+		}
+
 		var carthage_pathComponents: [String] {
 			return pathComponents ?? []
 		}

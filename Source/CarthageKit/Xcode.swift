@@ -79,7 +79,7 @@ public func <(lhs: ProjectLocator, rhs: ProjectLocator) -> Bool {
 
 extension ProjectLocator: CustomStringConvertible {
 	public var description: String {
-		return fileURL.lastPathComponent!
+		return fileURL.carthage_lastPathComponent
 	}
 }
 
@@ -728,8 +728,8 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: URL, _ destinationM
 
 	return FileManager.`default`.carthage_enumerator(at: sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants, .SkipsHiddenFiles ], catchErrors: true)
 		.attemptMap { _, url -> Result<URL, CarthageError> in
-			let lastComponent: String? = url.lastPathComponent
-			let destinationURL = destinationModuleDirectoryURL.appendingPathComponent(lastComponent!).resolvingSymlinksInPath()
+			let lastComponent: String = url.carthage_lastPathComponent
+			let destinationURL = destinationModuleDirectoryURL.appendingPathComponent(lastComponent).resolvingSymlinksInPath()
 
 			do {
 				try FileManager.`default`.copyItem(at: url, to: destinationURL)
@@ -1057,7 +1057,8 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 public func createDebugInformation(builtProductURL: URL) -> SignalProducer<TaskEvent<URL>, CarthageError> {
 	let dSYMURL = builtProductURL.appendingPathExtension("dSYM")
 
-	if let executableName = builtProductURL.deletingPathExtension().lastPathComponent {
+	let executableName = builtProductURL.deletingPathExtension().carthage_lastPathComponent
+	if !executableName.isEmpty {
 		let executable = builtProductURL.appendingPathComponent(executableName).carthage_path
 		let dSYM = dSYMURL.carthage_path
 		let dsymutilTask = Task("/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
@@ -1338,7 +1339,7 @@ extension SignalProducerProtocol where Value == URL, Error == CarthageError {
 		return producer
 			.filter { fileURL in fileURL.checkResourceIsReachableAndReturnError(nil) }
 			.flatMap(.merge) { fileURL -> SignalProducer<URL, CarthageError> in
-				let fileName = fileURL.lastPathComponent!
+				let fileName = fileURL.carthage_lastPathComponent
 				let destinationURL = directoryURL.appendingPathComponent(fileName, isDirectory: false)
 				let resolvedDestinationURL = destinationURL.resolvingSymlinksInPath()
 
@@ -1538,7 +1539,8 @@ private func binaryURL(packageURL: URL) -> Result<URL, CarthageError> {
 		}
 
 	case .dSYM?:
-		if let binaryName = packageURL.deletingPathExtension().deletingPathExtension().lastPathComponent {
+		let binaryName = packageURL.deletingPathExtension().deletingPathExtension().carthage_lastPathComponent
+		if !binaryName.isEmpty {
 			let binaryURL = packageURL.appendingPathComponent("Contents/Resources/DWARF/\(binaryName)")
 			return .success(binaryURL)
 		}
