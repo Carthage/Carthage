@@ -75,8 +75,8 @@ public struct Cartfile {
 	/// Attempts to parse a Cartfile from a file at a given URL.
 	public static func fromFile(cartfileURL: URL) -> Result<Cartfile, CarthageError> {
 		do {
-			let cartfileContents = try NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding)
-			return Cartfile.fromString(cartfileContents as String)
+			let cartfileContents = try String(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding)
+			return Cartfile.fromString(cartfileContents)
 		} catch let error as NSError {
 			return .failure(CarthageError.readFailed(cartfileURL, error))
 		}

@@ -168,7 +168,7 @@ class XcodeSpec: QuickSpec {
 				.on(next: { taskEvent in
 					switch taskEvent {
 					case let .StandardError(data):
-						output += NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
+						output += String(data: data, encoding: NSUTF8StringEncoding)!
 						
 					default:
 						break
@@ -390,9 +390,9 @@ internal func beRelativeSymlinkToDirectory(directory: URL) -> MatcherFunc<URL> {
 			return false
 		}
 
-		let destination: NSString = try! FileManager.`default`.destinationOfSymbolicLink(atPath: url.carthage_path)
+		let destination = try! FileManager.`default`.destinationOfSymbolicLink(atPath: url.carthage_path)
 
-		guard !destination.absolutePath else {
+		guard !(destination as NSString).absolutePath else {
 			failureMessage.postfixMessage += ", but is not a relative symlink"
 			return false
 		}

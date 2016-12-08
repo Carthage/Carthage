@@ -51,7 +51,7 @@ extension Repository {
 	/// Enterprise instances.
 	public static func fromIdentifier(identifier: String) -> Result<Repository, CarthageError> {
 		// GitHub.com
-		let range = NSRange(location: 0, length: (identifier as NSString).length)
+		let range = NSRange(location: 0, length: identifier.utf16.count)
 		if let match = NWORegex.firstMatch(in: identifier, range: range) {
 			let owner = (identifier as NSString).substringWithRange(match.rangeAt(1))
 			let name = (identifier as NSString).substringWithRange(match.rangeAt(2))

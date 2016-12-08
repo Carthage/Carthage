@@ -141,8 +141,8 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		// automatically bail out if it looks like that's happening.
 		.timeout(after: 60, raising: .xcodebuildTimeout(project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
 		.retry(upTo: 2)
-		.map { (data: Data) -> String in
-			return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
+		.map { data in
+			return String(data: data, encoding: NSUTF8StringEncoding)!
 		}
 		.flatMap(.merge) { string in
 			return string.linesProducer
@@ -490,10 +490,10 @@ public struct BuildSettings {
 			// like that's happening.
 			.timeout(after: 60, raising: .xcodebuildTimeout(arguments.project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
 			.retry(upTo: 5)
-			.map { (data: Data) -> String in
-				return NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))! as String
+			.map { data in
+				return String(data: data, encoding: NSUTF8StringEncoding)!
 			}
-			.flatMap(.merge) { (string: String) -> SignalProducer<BuildSettings, CarthageError> in
+			.flatMap(.merge) { string -> SignalProducer<BuildSettings, CarthageError> in
 				return SignalProducer { observer, disposable in
 					var currentSettings: [String: String] = [:]
 					var currentTarget: String?
@@ -508,13 +508,13 @@ public struct BuildSettings {
 						currentSettings = [:]
 					}
 
-					(string as NSString).enumerateLinesUsingBlock { (line, stop) in
+					string.enumerateLines { line, stop in
 						if disposable.isDisposed {
-							stop.memory = true
+							stop = true
 							return
 						}
 
-						if let result = self.targetSettingsRegex.firstMatch(in: line, range: NSMakeRange(0, (line as NSString).length)) {
+						if let result = self.targetSettingsRegex.firstMatch(in: line, range: NSMakeRange(0, line.utf16.count)) {
 							let targetRange = result.rangeAt(1)
 
 							flushTarget()
@@ -891,7 +891,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				return destinationLookup.launch()
 					.ignoreTaskData()
 					.map { data in
-						let string = NSString(data: data, encoding: NSStringEncoding(NSUTF8StringEncoding))!
+						let string = String(data: data, encoding: NSUTF8StringEncoding)!
 						// The output as of Xcode 6.4 is structured text so we
 						// parse it using regex. The destination will be omitted
 						// altogether if parsing fails. Xcode 7.0 beta 4 added a
@@ -899,10 +899,10 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						// so this can be switched once 7.0 becomes a requirement.
 						let platformName = sdk.platform.rawValue
 						let regex = try! NSRegularExpression(pattern: "-- \(platformName) [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)", options: [])
-						let lastDeviceResult = regex.matches(in: string as String, range: NSRange(location: 0, length: string.length)).last
+						let lastDeviceResult = regex.matches(in: string, range: NSRange(location: 0, length: string.utf16.count)).last
 						return lastDeviceResult.map { result in
 							// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
-							let deviceID = string.substringWithRange(result.rangeAt(1))
+							let deviceID = (string as NSString).substringWithRange(result.rangeAt(1))
 							return "platform=\(platformName) Simulator,id=\(deviceID)"
 						}
 					}
@@ -1372,12 +1372,12 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 			return lipoTask.launch()
 				.ignoreTaskData()
 				.mapError(CarthageError.taskError)
-				.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
+				.map { String(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
 				.flatMap(.merge) { output -> SignalProducer<String, CarthageError> in
 					let characterSet = NSMutableCharacterSet.alphanumeric()
 					characterSet.addCharacters(in: " _-")
 
-					let scanner = Scanner(string: output as String)
+					let scanner = Scanner(string: output)
 
 					if scanner.scanString("Architectures in the fat file:", into: nil) {
 						// The output of "lipo -info PathToBinary" for fat files
@@ -1489,7 +1489,7 @@ private func UUIDsFromDwarfdump(url: URL) -> SignalProducer<Set<UUID>, CarthageE
 	return dwarfdumpTask.launch()
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
-		.map { NSString(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
+		.map { String(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
 		.flatMap(.merge) { output -> SignalProducer<Set<UUID>, CarthageError> in
 			// UUIDs are letters, decimals, or hyphens.
 			let uuidCharacterSet = NSMutableCharacterSet()
@@ -1497,7 +1497,7 @@ private func UUIDsFromDwarfdump(url: URL) -> SignalProducer<Set<UUID>, CarthageE
 			uuidCharacterSet.formUnion(with: .decimalDigits)
 			uuidCharacterSet.formUnion(with: CharacterSet(charactersIn: "-"))
 
-			let scanner = Scanner(string: output as String)
+			let scanner = Scanner(string: output)
 			var uuids = Set<UUID>()
 
 			// The output of dwarfdump is a series of lines formatted as follows

@@ -233,8 +233,8 @@ public final class Project {
 	public func loadResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
 		return SignalProducer.attempt {
 			do {
-				let resolvedCartfileContents = try NSString(contentsOfURL: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
-				return ResolvedCartfile.fromString(resolvedCartfileContents as String)
+				let resolvedCartfileContents = try String(contentsOfURL: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
+				return ResolvedCartfile.fromString(resolvedCartfileContents)
 			} catch let error as NSError {
 				return .failure(.readFailed(self.resolvedCartfileURL, error))
 			}
@@ -504,8 +504,7 @@ public final class Project {
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(values: release.assets)
 					.filter { asset in
-						let name = asset.name as NSString
-						if name.rangeOfString(CarthageProjectBinaryAssetPattern).location == NSNotFound {
+						if asset.name.rangeOfString(CarthageProjectBinaryAssetPattern) == nil {
 							return false
 						}
 						return CarthageProjectBinaryAssetContentTypes.contains(asset.contentType)

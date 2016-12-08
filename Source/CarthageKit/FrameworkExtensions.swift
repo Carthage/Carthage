@@ -15,11 +15,11 @@ extension String {
 	/// complete.
 	internal var linesProducer: SignalProducer<String, NoError> {
 		return SignalProducer { observer, disposable in
-			(self as NSString).enumerateLinesUsingBlock { (line, stop) in
+			self.enumerateLines { line, stop in
 				observer.send(value: line)
 
 				if disposable.isDisposed {
-					stop.memory = true
+					stop = true
 				}
 			}
 
@@ -231,7 +231,7 @@ extension SignalProducerProtocol where Value: EventProtocol, Value.Error == Erro
 
 extension Scanner {
 	/// Returns the current line being scanned.
-	internal var currentLine: NSString {
+	internal var currentLine: String {
 		// Force Foundation types, so we don't have to use Swift's annoying
 		// string indexing.
 		let nsString = string as NSString
