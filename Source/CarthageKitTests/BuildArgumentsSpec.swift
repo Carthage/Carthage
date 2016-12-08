@@ -6,8 +6,8 @@ class BuildArgumentsSpec: QuickSpec {
 	override func spec() {
 		describe("arguments") {
 			func itCreatesBuildArguments(message: String, arguments: [String], configure: inout BuildArguments -> Void) {
-				let workspace = ProjectLocator.workspace(NSURL(string: "file:///Foo/Bar/workspace.xcworkspace")!)
-				let project = ProjectLocator.projectFile(NSURL(string: "file:///Foo/Bar/project.xcodeproj")!)
+				let workspace = ProjectLocator.workspace(URL(string: "file:///Foo/Bar/workspace.xcworkspace")!)
+				let project = ProjectLocator.projectFile(URL(string: "file:///Foo/Bar/project.xcodeproj")!)
 
 				let codeSignArguments = [
 					"CODE_SIGNING_REQUIRED=NO",

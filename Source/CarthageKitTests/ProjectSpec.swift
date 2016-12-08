@@ -82,13 +82,13 @@ class ProjectSpec: QuickSpec {
 		describe("cloneOrFetchProject") {
 			// https://github.com/Carthage/Carthage/issues/1191
 			let temporaryPath = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(ProcessInfo.processInfo.globallyUniqueString)
-			let temporaryURL = NSURL(fileURLWithPath: temporaryPath, isDirectory: true)
+			let temporaryURL = URL(fileURLWithPath: temporaryPath, isDirectory: true)
 			let repositoryURL = temporaryURL.appendingPathComponent("carthage1191", isDirectory: true)
 			let cacheDirectoryURL = temporaryURL.appendingPathComponent("cache", isDirectory: true)
 			let projectIdentifier = ProjectIdentifier.git(GitURL(repositoryURL.carthage_absoluteString))
 
 			func initRepository() {
-				expect { try FileManager.`default`.createDirectory(atPath: repositoryURL.path!, withIntermediateDirectories: true) }.notTo(throwError())
+				expect { try FileManager.`default`.createDirectory(atPath: repositoryURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
 				_ = launchGitTask([ "init" ], repositoryFileURL: repositoryURL).wait()
 			}
 
@@ -100,7 +100,7 @@ class ProjectSpec: QuickSpec {
 					.stringByTrimmingCharactersInSet(.newlines)
 			}
 
-			func cloneOrFetch(commitish commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {
+			func cloneOrFetch(commitish commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
 				return cloneOrFetchProject(projectIdentifier, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
 			}
 
@@ -117,7 +117,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			beforeEach {
-				expect { try FileManager.`default`.createDirectory(atPath: temporaryURL.path!, withIntermediateDirectories: true) }.notTo(throwError())
+				expect { try FileManager.`default`.createDirectory(atPath: temporaryURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
 				initRepository()
 			}
 

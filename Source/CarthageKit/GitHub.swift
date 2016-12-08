@@ -51,7 +51,7 @@ extension Repository {
 	/// Enterprise instances.
 	public static func fromIdentifier(identifier: String) -> Result<Repository, CarthageError> {
 		// GitHub.com
-		let range = NSRange(location: 0, length: (identifier as NSString).length)
+		let range = NSRange(location: 0, length: identifier.utf16.count)
 		if let match = NWORegex.firstMatch(in: identifier, range: range) {
 			let owner = (identifier as NSString).substringWithRange(match.rangeAt(1))
 			let name = (identifier as NSString).substringWithRange(match.rangeAt(2))
@@ -59,13 +59,12 @@ extension Repository {
 		}
 
 		// GitHub Enterprise
-		if let
-			url = NSURL(string: identifier),
-			host = url.host,
-			// The trailing slash of the host is included in the components.
-			var pathComponents = url.pathComponents?.filter({ $0 != "/" })
-			where pathComponents.count >= 2
-		{
+		breakpoint: if let url = NSURL(string: identifier), let host = url.host {
+			var pathComponents = url.carthage_pathComponents.filter { $0 != "/" }
+			guard pathComponents.count >= 2 else {
+				break breakpoint
+			}
+
 			// Consider that the instance might be in subdirectories.
 			let name = pathComponents.removeLast()
 			let owner = pathComponents.removeLast()
@@ -75,7 +74,7 @@ extension Repository {
 			if host == "github.com" || host == "www.github.com" {
 				return .success(self.init(owner: owner, name: stripGitSuffix(name)))
 			} else {
-				let baseURL = url.URLByDeletingLastPathComponent!.URLByDeletingLastPathComponent!
+				let baseURL = url.deletingLastPathComponent().deletingLastPathComponent()
 				return .success(self.init(server: .enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
 			}
 		}

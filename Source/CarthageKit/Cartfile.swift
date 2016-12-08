@@ -26,7 +26,7 @@ public struct Cartfile {
 
 	/// Returns the location where Cartfile should exist within the given
 	/// directory.
-	public static func urlInDirectory(directoryURL: NSURL) -> NSURL {
+	public static func urlInDirectory(directoryURL: URL) -> URL {
 		return directoryURL.appendingPathComponent("Cartfile")
 	}
 
@@ -73,10 +73,10 @@ public struct Cartfile {
 	}
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
-	public static func fromFile(cartfileURL: NSURL) -> Result<Cartfile, CarthageError> {
+	public static func fromFile(cartfileURL: URL) -> Result<Cartfile, CarthageError> {
 		do {
-			let cartfileContents = try NSString(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding)
-			return Cartfile.fromString(cartfileContents as String)
+			let cartfileContents = try String(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding)
+			return Cartfile.fromString(cartfileContents)
 		} catch let error as NSError {
 			return .failure(CarthageError.readFailed(cartfileURL, error))
 		}
@@ -133,7 +133,7 @@ public struct ResolvedCartfile {
 
 	/// Returns the location where Cartfile.resolved should exist within the given
 	/// directory.
-	public static func urlInDirectory(directoryURL: NSURL) -> NSURL {
+	public static func urlInDirectory(directoryURL: URL) -> URL {
 		return directoryURL.appendingPathComponent("Cartfile.resolved")
 	}
 

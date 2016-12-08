@@ -22,7 +22,7 @@ public struct CopyFrameworksCommand: CommandType {
 			.flatMap(.concat) { frameworkPath -> SignalProducer<(), CarthageError> in
 				let frameworkName = (frameworkPath as NSString).lastPathComponent
 
-				let source = Result(NSURL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.invalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
+				let source = Result(URL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.invalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
 				let target = frameworksFolder().map { $0.appendingPathComponent(frameworkName, isDirectory: true) }
 
 				return SignalProducer.combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
@@ -45,13 +45,13 @@ public struct CopyFrameworksCommand: CommandType {
 	}
 }
 
-private func copyFramework(source: NSURL, target: NSURL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+private func copyFramework(source: URL, target: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
 		.flatMap(.merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
 			let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 			if buildActionIsArchiveOrInstall() {
 				return strip
-					.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.URLByDeletingLastPathComponent!))
+					.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.deletingLastPathComponent()))
 					.then(.empty)
 			} else {
 				return strip
@@ -59,7 +59,7 @@ private func copyFramework(source: NSURL, target: NSURL, validArchitectures: [St
 	}
 }
 
-private func shouldIgnoreFramework(framework: NSURL, validArchitectures: [String]) -> SignalProducer<Bool, CarthageError> {
+private func shouldIgnoreFramework(framework: URL, validArchitectures: [String]) -> SignalProducer<Bool, CarthageError> {
 	return architecturesInPackage(framework)
 		.collect()
 		.map { architectures in
@@ -72,7 +72,7 @@ private func shouldIgnoreFramework(framework: NSURL, validArchitectures: [String
 		}
 }
 
-private func copyDebugSymbolsForFramework(source: NSURL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+private func copyDebugSymbolsForFramework(source: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
 	return SignalProducer(result: appropriateDestinationFolder())
 		.flatMap(.merge) { destinationURL in
 			return SignalProducer(value: source)
@@ -85,12 +85,12 @@ private func copyDebugSymbolsForFramework(source: NSURL, validArchitectures: [St
 
 }
 
-private func copyBCSymbolMapsForFramework(frameworkURL: NSURL, fromDirectory directoryURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
+private func copyBCSymbolMapsForFramework(frameworkURL: URL, fromDirectory directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	// This should be called only when `buildActionIsArchiveOrInstall()` is true.
 	return SignalProducer(result: builtProductsFolder())
 		.flatMap(.merge) { builtProductsURL in
 			return BCSymbolMapsForFramework(frameworkURL)
-				.map { url in directoryURL.appendingPathComponent(url.lastPathComponent!, isDirectory: false) }
+				.map { url in directoryURL.appendingPathComponent(url.carthage_lastPathComponent, isDirectory: false) }
 				.copyFileURLsIntoDirectory(builtProductsURL)
 		}
 }
@@ -111,7 +111,7 @@ private func codeSigningAllowed() -> Bool {
 }
 
 // The fix for https://github.com/Carthage/Carthage/issues/1259
-private func appropriateDestinationFolder() -> Result<NSURL, CarthageError> {
+private func appropriateDestinationFolder() -> Result<URL, CarthageError> {
 	if buildActionIsArchiveOrInstall() {
 		return builtProductsFolder()
 	} else {
@@ -119,19 +119,19 @@ private func appropriateDestinationFolder() -> Result<NSURL, CarthageError> {
 	}
 }
 
-private func builtProductsFolder() -> Result<NSURL, CarthageError> {
+private func builtProductsFolder() -> Result<URL, CarthageError> {
 	return getEnvironmentVariable("BUILT_PRODUCTS_DIR")
-		.map { NSURL(fileURLWithPath: $0, isDirectory: true) }
+		.map { URL(fileURLWithPath: $0, isDirectory: true) }
 }
 
-private func targetBuildFolder() -> Result<NSURL, CarthageError> {
+private func targetBuildFolder() -> Result<URL, CarthageError> {
 	return getEnvironmentVariable("TARGET_BUILD_DIR")
-		.map { NSURL(fileURLWithPath: $0, isDirectory: true) }
+		.map { URL(fileURLWithPath: $0, isDirectory: true) }
 }
 
-private func frameworksFolder() -> Result<NSURL, CarthageError> {
+private func frameworksFolder() -> Result<URL, CarthageError> {
 	return appropriateDestinationFolder()
-		.flatMap { url -> Result<NSURL, CarthageError> in
+		.flatMap { url -> Result<URL, CarthageError> in
 			getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH")
 				.map { url.appendingPathComponent($0, isDirectory: true) }
 		}
