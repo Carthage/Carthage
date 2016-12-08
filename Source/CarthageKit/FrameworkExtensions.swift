@@ -242,17 +242,15 @@ extension Scanner {
 	}
 }
 
-extension NSURL {
+extension URL {
 	/// The type identifier of the receiver, or an error if it was unable to be
 	/// determined.
 	internal var typeIdentifier: Result<String, CarthageError> {
 		var error: NSError?
 
 		do {
-			var typeIdentifier: AnyObject?
-			try getResourceValue(&typeIdentifier, forKey: NSURLTypeIdentifierKey)
-
-			if let identifier = typeIdentifier as? String {
+			let typeIdentifier = try resourceValues(forKeys: [ .typeIdentifierKey ]).typeIdentifier
+			if let identifier = typeIdentifier {
 				return .success(identifier)
 			}
 		} catch let err as NSError {
@@ -266,30 +264,16 @@ extension NSURL {
 		return absoluteString!
 	}
 
-	public func appendingPathExtension(pathExtension: String) -> NSURL {
-		return URLByAppendingPathExtension(pathExtension)!
-	}
+	public func hasSubdirectory(possibleSubdirectory: URL) -> Bool {
+		let standardizedSelf = self.standardizedFileURL
+		let standardizedOther = possibleSubdirectory.standardizedFileURL
 
-	public func appendingPathComponent(pathComponent: String) -> NSURL {
-		return URLByAppendingPathComponent(pathComponent)!
-	}
-
-	public func appendingPathComponent(pathComponent: String, isDirectory: Bool) -> NSURL {
-		return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)!
-	}
-
-	public func hasSubdirectory(possibleSubdirectory: NSURL) -> Bool {
-		let standardizedSelf = self.URLByStandardizingPath ?? self
-		let standardizedOther = possibleSubdirectory.URLByStandardizingPath ?? possibleSubdirectory
-
-		if
-			scheme == standardizedOther.scheme,
-			let path = standardizedSelf.pathComponents,
-			let otherPath = standardizedOther.pathComponents
-			where path.count <= otherPath.count
-		{
+		let path = standardizedSelf.carthage_pathComponents
+		let otherPath = standardizedOther.carthage_pathComponents
+		if scheme == standardizedOther.scheme && path.count <= otherPath.count {
 			return Array(otherPath[path.indices]) == path
 		}
+
 		return false
 	}
 }
@@ -298,7 +282,7 @@ extension FileManager {
 	/// Creates a directory enumerator at the given URL. Sends each URL
 	/// enumerated, along with the enumerator itself (so it can be introspected
 	/// and modified as enumeration progresses).
-	public func carthage_enumerator(at url: NSURL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions = [], catchErrors: Bool = false) -> SignalProducer<(NSDirectoryEnumerator, NSURL), CarthageError> {
+	public func carthage_enumerator(at url: URL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions = [], catchErrors: Bool = false) -> SignalProducer<(NSDirectoryEnumerator, URL), CarthageError> {
 		return SignalProducer { observer, disposable in
 			let enumerator = self.enumerator(at: url, includingPropertiesForKeys: keys, options: options) { (url, error) in
 				if catchErrors {
@@ -310,7 +294,7 @@ extension FileManager {
 			}!
 
 			while !disposable.isDisposed {
-				if let url = enumerator.nextObject() as? NSURL {
+				if let url = enumerator.nextObject() as? URL {
 					let value = (enumerator, url)
 					observer.send(value: value)
 				} else {

@@ -46,10 +46,10 @@ public struct BuildArguments {
 
 		switch project {
 		case let .workspace(url):
-			args += [ "-workspace", url.path! ]
+			args += [ "-workspace", url.carthage_path ]
 
 		case let .projectFile(url):
-			args += [ "-project", url.path! ]
+			args += [ "-project", url.carthage_path ]
 		}
 
 		if let scheme = scheme {
@@ -60,8 +60,11 @@ public struct BuildArguments {
 			args += [ "-configuration", configuration ]
 		}
 		
-		if let derivedDataPath = derivedDataPath, let standarizedPath = NSURL(fileURLWithPath: (derivedDataPath as NSString).stringByExpandingTildeInPath).URLByStandardizingPath?.path where !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
-			args += [ "-derivedDataPath", standarizedPath ]
+		if let derivedDataPath = derivedDataPath {
+			let standarizedPath = URL(fileURLWithPath: (derivedDataPath as NSString).stringByExpandingTildeInPath).standardizedFileURL.carthage_path
+			if !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
+				args += [ "-derivedDataPath", standarizedPath ]
+			}
 		}
 
 		if let sdk = sdk {

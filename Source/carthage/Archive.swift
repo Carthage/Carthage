@@ -46,7 +46,7 @@ public struct ArchiveCommand: CommandType {
 				return ($0 as NSString).stringByAppendingPathExtension("framework")!
 			})
 		} else {
-			let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
+			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
 				.collect()
 				.flatMap(.merge) { projects in
@@ -55,7 +55,7 @@ public struct ArchiveCommand: CommandType {
 							if !schemes.isEmpty {
 								return .init(values: schemes)
 							} else {
-								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path!)), []))
+								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.carthage_path)), []))
 							}
 						}
 				}
@@ -88,9 +88,9 @@ public struct ArchiveCommand: CommandType {
 				.filter { filePath in FileManager.`default`.fileExists(atPath: filePath.absolutePath) }
 				.flatMap(.merge) { framework -> SignalProducer<String, CarthageError> in
 					let dSYM = (framework.relativePath as NSString).stringByAppendingPathExtension("dSYM")!
-					let bcsymbolmapsProducer = BCSymbolMapsForFramework(NSURL(fileURLWithPath: framework.absolutePath))
+					let bcsymbolmapsProducer = BCSymbolMapsForFramework(URL(fileURLWithPath: framework.absolutePath))
 						// generate relative paths for the bcsymbolmaps so they print nicely
-						.map { url in ((framework.relativePath as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.lastPathComponent!) }
+						.map { url in ((framework.relativePath as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.carthage_lastPathComponent) }
 					let extraFilesProducer = SignalProducer(value: dSYM)
 						.concat(bcsymbolmapsProducer)
 						.filter { relativePath in FileManager.`default`.fileExists(atPath: framework.absolutePath) }
@@ -114,12 +114,12 @@ public struct ArchiveCommand: CommandType {
 					}
 
 					let outputPath = outputPathWithOptions(options, frameworks: frameworks)
-					let outputURL = NSURL(fileURLWithPath: outputPath, isDirectory: false)
+					let outputURL = URL(fileURLWithPath: outputPath, isDirectory: false)
 
-					if let directory = outputURL.URLByDeletingLastPathComponent {
-						_ = try? FileManager.`default`.createDirectory(at: directory, withIntermediateDirectories: true)
-					}
-					
+					_ = try? FileManager
+						.`default`
+						.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+
 					return zip(paths: paths, into: outputURL, workingDirectory: options.directoryPath).on(completed: {
 						carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
 					})

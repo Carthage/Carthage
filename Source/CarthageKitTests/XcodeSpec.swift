@@ -21,11 +21,11 @@ class XcodeSpec: QuickSpec {
 		let directoryURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
 		let projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
 		let buildFolderURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
-		let targetFolderURL = NSURL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
+		let targetFolderURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
 
 		beforeEach {
 			_ = try? FileManager.`default`.removeItem(at: buildFolderURL)
-			expect { try FileManager.`default`.createDirectory(atPath: targetFolderURL.path!, withIntermediateDirectories: true) }.notTo(throwError())
+			expect { try FileManager.`default`.createDirectory(atPath: targetFolderURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
 		}
 		
 		afterEach {
@@ -35,31 +35,31 @@ class XcodeSpec: QuickSpec {
 		describe("\(ProjectLocator.self)") {
 			describe("sorting") {
 				it("should put workspaces before projects") {
-					let workspace = ProjectLocator.workspace(NSURL(fileURLWithPath: "/Z.xcworkspace"))
-					let project = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
+					let workspace = ProjectLocator.workspace(URL(fileURLWithPath: "/Z.xcworkspace"))
+					let project = ProjectLocator.projectFile(URL(fileURLWithPath: "/A.xcodeproj"))
 					expect(workspace < project) == true
 				}
 				
 				it("should fall back to lexicographical sorting") {
-					let workspaceA = ProjectLocator.workspace(NSURL(fileURLWithPath: "/A.xcworkspace"))
-					let workspaceB = ProjectLocator.workspace(NSURL(fileURLWithPath: "/B.xcworkspace"))
+					let workspaceA = ProjectLocator.workspace(URL(fileURLWithPath: "/A.xcworkspace"))
+					let workspaceB = ProjectLocator.workspace(URL(fileURLWithPath: "/B.xcworkspace"))
 					expect(workspaceA < workspaceB) == true
 					
-					let projectA = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/A.xcodeproj"))
-					let projectB = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/B.xcodeproj"))
+					let projectA = ProjectLocator.projectFile(URL(fileURLWithPath: "/A.xcodeproj"))
+					let projectB = ProjectLocator.projectFile(URL(fileURLWithPath: "/B.xcodeproj"))
 					expect(projectA < projectB) == true
 				}
 				
 				it("should put top-level directories first") {
-					let top = ProjectLocator.projectFile(NSURL(fileURLWithPath: "/Z.xcodeproj"))
-					let bottom = ProjectLocator.workspace(NSURL(fileURLWithPath: "/A/A.xcodeproj"))
+					let top = ProjectLocator.projectFile(URL(fileURLWithPath: "/Z.xcodeproj"))
+					let bottom = ProjectLocator.workspace(URL(fileURLWithPath: "/A/A.xcodeproj"))
 					expect(top < bottom) == true
 				}
 			}
 		}
 
 		describe("locateProjectsInDirectory:") {
-			func relativePathsForProjectsInDirectory(directoryURL: NSURL) -> [String] {
+			func relativePathsForProjectsInDirectory(directoryURL: URL) -> [String] {
 				let result = locateProjectsInDirectory(directoryURL)
 					.map { $0.fileURL.carthage_absoluteString.substringFromIndex(directoryURL.carthage_absoluteString.endIndex) }
 					.collect()
@@ -117,9 +117,9 @@ class XcodeSpec: QuickSpec {
 			projectNames.append("ReactiveCocoaLayout")
 
 			for dependency in projectNames {
-				let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path!
+				let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").carthage_path
 				let macdSYMPath = (macPath as NSString).stringByAppendingPathExtension("dSYM")!
-				let iOSPath = buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path!
+				let iOSPath = buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").carthage_path
 				let iOSdSYMPath = (iOSPath as NSString).stringByAppendingPathExtension("dSYM")!
 
 				for path in [ macPath, macdSYMPath, iOSPath, iOSdSYMPath ] {
@@ -138,7 +138,7 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that our dummy framework in the RCL iOS scheme built as
 			// well.
-			let auxiliaryFrameworkPath = buildFolderURL.appendingPathComponent("iOS/AuxiliaryFramework.framework").path!
+			let auxiliaryFrameworkPath = buildFolderURL.appendingPathComponent("iOS/AuxiliaryFramework.framework").carthage_path
 			expect(auxiliaryFrameworkPath).to(beExistingDirectory())
 
 			// Copy ReactiveCocoaLayout.framework to the temporary folder.
@@ -146,7 +146,7 @@ class XcodeSpec: QuickSpec {
 
 			let resultURL = copyProduct(frameworkFolderURL, targetURL).single()
 			expect(resultURL?.value) == targetURL
-			expect(targetURL.path).to(beExistingDirectory())
+			expect(targetURL.carthage_path).to(beExistingDirectory())
 
 			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
 			expect(strippingResult.value).notTo(beNil())
@@ -159,10 +159,10 @@ class XcodeSpec: QuickSpec {
 			expect(strippedArchitectures?.value).to(contain("armv7", "arm64"))
 
 			let modulesDirectoryURL = targetURL.appendingPathComponent("Modules", isDirectory: true)
-			expect(FileManager.`default`.fileExists(atPath: modulesDirectoryURL.path!)) == false
+			expect(FileManager.`default`.fileExists(atPath: modulesDirectoryURL.carthage_path)) == false
 			
 			var output: String = ""
-			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path! ])
+			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.carthage_path ])
 			
 			let codesignResult = codeSign.launch()
 				.on(next: { taskEvent in
@@ -205,7 +205,7 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for (platform, framework) in expectedPlatformsFrameworks {
-				let path = _buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path!
+				let path = _buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").carthage_path
 				expect(path).to(beExistingDirectory())
 			}
 		}
@@ -227,8 +227,8 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).to(beNil())
 
-			let macPath = _buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path!
-			let iOSPath = _buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path!
+			let macPath = _buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").carthage_path
+			let iOSPath = _buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").carthage_path
 
 			for path in [ macPath, iOSPath ] {
 				expect(path).to(beExistingDirectory())
@@ -274,11 +274,11 @@ class XcodeSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			// Verify that the build product exists at the top level.
-			let path = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").path!
+			let path = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").carthage_path
 			expect(path).to(beExistingDirectory())
 
 			// Verify that the other platform wasn't built.
-			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").path!
+			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").carthage_path
 			expect(FileManager.`default`.fileExists(atPath: incorrectPath, isDirectory: nil)) == false
 		}
 
@@ -296,8 +296,8 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the build products of all specified platforms exist 
 			// at the top level.
-			let macPath = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").path!
-			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").path!
+			let macPath = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").carthage_path
+			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").carthage_path
 
 			for path in [ macPath, iosPath ] {
 				expect(path).to(beExistingDirectory())
@@ -312,7 +312,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should locate the project from the parent directory") {
-			let result = locateProjectsInDirectory(directoryURL.URLByDeletingLastPathComponent!).collect().first()
+			let result = locateProjectsInDirectory(directoryURL.deletingLastPathComponent()).collect().first()
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
 			expect(result?.value).to(contain(.projectFile(projectURL)))
@@ -371,7 +371,7 @@ internal func beExistingDirectory() -> MatcherFunc<String> {
 	}
 }
 
-internal func beRelativeSymlinkToDirectory(directory: NSURL) -> MatcherFunc<NSURL> {
+internal func beRelativeSymlinkToDirectory(directory: URL) -> MatcherFunc<URL> {
 	return MatcherFunc { actualExpression, failureMessage in
 		failureMessage.postfixMessage = "be a relative symlink to \(directory)"
 		let actualURL = try actualExpression.evaluate()
@@ -381,12 +381,8 @@ internal func beRelativeSymlinkToDirectory(directory: NSURL) -> MatcherFunc<NSUR
 		}
 		var isSymlink: Bool = false
 		do {
-			var isSymlinkObj: AnyObject?
-			url.removeCachedResourceValueForKey(NSURLIsSymbolicLinkKey)
-			try url.getResourceValue(&isSymlinkObj, forKey: NSURLIsSymbolicLinkKey)
-			if isSymlinkObj != nil {
-				isSymlink = isSymlinkObj!.boolValue
-			}
+			url.removeCachedResourceValue(forKey: .isSymbolicLinkKey)
+			isSymlink = try url.resourceValues(forKeys: [ .isSymbolicLinkKey ]).isSymbolicLink ?? false
 		} catch {}
 
 		guard isSymlink else {
@@ -394,17 +390,17 @@ internal func beRelativeSymlinkToDirectory(directory: NSURL) -> MatcherFunc<NSUR
 			return false
 		}
 
-		let destination: NSString = try! FileManager.`default`.destinationOfSymbolicLink(atPath: url.path!)
+		let destination: NSString = try! FileManager.`default`.destinationOfSymbolicLink(atPath: url.carthage_path)
 
 		guard !destination.absolutePath else {
 			failureMessage.postfixMessage += ", but is not a relative symlink"
 			return false
 		}
 
-		let standardDestination = url.URLByResolvingSymlinksInPath?.URLByStandardizingPath
-		let desiredDestination = directory.URLByStandardizingPath
+		let standardDestination = url.resolvingSymlinksInPath().standardizedFileURL
+		let desiredDestination = directory.standardizedFileURL
 
-		let urlsEqual = standardDestination != nil && desiredDestination != nil && standardDestination == desiredDestination
+		let urlsEqual = standardDestination == desiredDestination
 
 		if !urlsEqual {
 			failureMessage.postfixMessage += ", but does not point to the correct destination. Instead it points to \(standardDestination)"

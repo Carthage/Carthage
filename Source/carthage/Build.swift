@@ -72,7 +72,7 @@ public struct BuildCommand: CommandType {
 	public func buildWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
 			.flatMap(.merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
-				let directoryURL = NSURL.fileURLWithPath(options.directoryPath, isDirectory: true)
+				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 
 				var buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
 					.flatten(.concat)
@@ -120,7 +120,7 @@ public struct BuildCommand: CommandType {
 
 				return buildProgress
 					.on(started: {
-						if let path = temporaryURL?.path {
+						if let path = temporaryURL?.carthage_path {
 							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: path))
 						}
 					}, next: { taskEvent in
@@ -145,7 +145,7 @@ public struct BuildCommand: CommandType {
 	/// Builds the project in the given directory, using the given options.
 	///
 	/// Returns a producer of producers, representing each scheme being built.
-	private func buildProjectInDirectoryURL(directoryURL: NSURL, options: Options) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	private func buildProjectInDirectoryURL(directoryURL: URL, options: Options) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
 
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
@@ -187,7 +187,7 @@ public struct BuildCommand: CommandType {
 
 	/// Opens a temporary file on disk, returning a handle and the URL to the
 	/// file.
-	private func openTemporaryFile() -> SignalProducer<(FileHandle, NSURL), NSError> {
+	private func openTemporaryFile() -> SignalProducer<(FileHandle, URL), NSError> {
 		return SignalProducer.attempt {
 			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
 			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
@@ -203,22 +203,22 @@ public struct BuildCommand: CommandType {
 			}
 
 			let handle = FileHandle(fileDescriptor: logFD, closeOnDealloc: true)
-			let fileURL = NSURL.fileURLWithPath(temporaryPath, isDirectory: false)
+			let fileURL = URL(fileURLWithPath: temporaryPath, isDirectory: false)
 			return .success((handle, fileURL))
 		}
 	}
 
 	/// Opens a file handle for logging, returning the handle and the URL to any
 	/// temporary file on disk.
-	private func openLoggingHandle(options: Options) -> SignalProducer<(FileHandle, NSURL?), CarthageError> {
+	private func openLoggingHandle(options: Options) -> SignalProducer<(FileHandle, URL?), CarthageError> {
 		if options.isVerbose {
-			let out: (FileHandle, NSURL?) = (FileHandle.standardOutput, nil)
+			let out: (FileHandle, URL?) = (FileHandle.standardOutput, nil)
 			return SignalProducer(value: out)
 		} else {
 			return openTemporaryFile()
 				.map { handle, url in (handle, Optional(url)) }
 				.mapError { error in
-					let temporaryDirectoryURL = NSURL.fileURLWithPath(NSTemporaryDirectory(), isDirectory: true)
+					let temporaryDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
 					return .writeFailed(temporaryDirectoryURL, error)
 				}
 		}
