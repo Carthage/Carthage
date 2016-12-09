@@ -32,13 +32,13 @@ private let CarthageUserCachesURL: URL = {
 	let fileManager = FileManager.`default`
 	
 	let urlResult: Result<URL, NSError> = `try` { (error: NSErrorPointer) -> URL? in
-		return try? fileManager.URLForDirectory(NSSearchPathDirectory.CachesDirectory, inDomain: NSSearchPathDomainMask.UserDomainMask, appropriateForURL: nil, create: true)
+		return try? fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
 	}.flatMap { cachesURL in
 		let dependenciesURL = cachesURL.appendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
 		let dependenciesPath = dependenciesURL.carthage_absoluteString
 		
 		if fileManager.fileExists(atPath: dependenciesPath, isDirectory:nil) {
-			if fileManager.isWritableFileAtPath(dependenciesPath) {
+			if fileManager.isWritableFile(atPath: dependenciesPath) {
 				return Result(value: dependenciesURL)
 			} else {
 				let error = NSError(domain: CarthageKitBundleIdentifier, code: 0, userInfo: nil)

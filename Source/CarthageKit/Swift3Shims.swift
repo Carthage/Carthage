@@ -121,6 +121,10 @@
 			return fileExistsAtPath(path, isDirectory: isDirectory)
 		}
 
+		@nonobjc func isWritableFile(atPath path: String) -> Bool {
+			return isWritableFileAtPath(path)
+		}
+
 		func moveItem(at srcURL: URL, to dstURL: URL) throws {
 			try moveItemAtURL(srcURL, toURL: dstURL)
 		}
@@ -132,6 +136,18 @@
 		func trashItem(at url: URL, resultingItemURL outResultingURL: AutoreleasingUnsafeMutablePointer<URL?>) throws {
 			try trashItemAtURL(url, resultingItemURL: outResultingURL)
 		}
+
+		func url(for directory: NSSearchPathDirectory, in domain: NSSearchPathDomainMask, appropriateFor url: URL?, create shouldCreate: Bool) throws -> URL {
+			return try URLForDirectory(directory, inDomain: domain, appropriateForURL: url, create: shouldCreate)
+		}
+	}
+
+	extension NSSearchPathDirectory {
+		static let cachesDirectory = NSSearchPathDirectory.CachesDirectory
+	}
+
+	extension NSSearchPathDomainMask {
+		static let userDomainMask = NSSearchPathDomainMask.UserDomainMask
 	}
 
 	internal extension NSRegularExpression {
