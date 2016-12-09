@@ -1,6 +1,9 @@
 install: true
 git:
   submodules: false
+branches:
+  only:
+    - master
 matrix:
   include:
     - os: osx
