@@ -132,7 +132,7 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 		return la == ra && lb == rb
 	
 	case let (.duplicateDependencies(left), .duplicateDependencies(right)):
-		return left.sort() == right.sort()
+		return left.sorted() == right.sorted()
 	
 	case let (.gitHubAPIRequestFailed(left), .gitHubAPIRequestFailed(right)):
 		return left == right
@@ -211,7 +211,7 @@ extension CarthageError: CustomStringConvertible {
 		case let .noSharedFrameworkSchemes(projectIdentifier, platforms):
 			var description = "Dependency \"\(projectIdentifier.name)\" has no shared framework schemes"
 			if !platforms.isEmpty {
-				let platformsString = platforms.map { $0.description }.joinWithSeparator(", ")
+				let platformsString = platforms.map { $0.description }.joined(separator: ", ")
 				description += " for any of the platforms: \(platformsString)"
 			}
 
@@ -237,7 +237,7 @@ extension CarthageError: CustomStringConvertible {
 			return "xcodebuild timed out while trying to read \(project) 😭"
 			
 		case let .duplicateDependencies(duplicateDeps):
-			let deps = duplicateDeps.sort() // important to match expected order in test cases
+			let deps = duplicateDeps.sorted() // important to match expected order in test cases
 				.reduce("") { (acc, dep) in
 					"\(acc)\n\t\(dep)"
 				}
@@ -249,11 +249,11 @@ extension CarthageError: CustomStringConvertible {
 				.map { (project, dependencies) in
 					let prettyDependencies = dependencies
 						.map { $0.name }
-						.joinWithSeparator(", ")
+						.joined(separator: ", ")
 
 					return "\(project.name): \(prettyDependencies)"
 				}
-				.joinWithSeparator("\n")
+				.joined(separator: "\n")
 
 			return "The dependency graph contained a cycle:\n\(prettyGraph)"
 
@@ -264,10 +264,10 @@ extension CarthageError: CustomStringConvertible {
 			return "GitHub API timed out"
 			
 		case let .unknownDependencies(names):
-			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joinWithSeparator(", ")) in Cartfile."
+			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile."
 
 		case let .unresolvedDependencies(names):
-			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joinWithSeparator(", ")) in Cartfile.resolved – please run `carthage update` if the dependency is contained in the project's Cartfile."
+			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile.resolved – please run `carthage update` if the dependency is contained in the project's Cartfile."
 
 		case let .taskError(taskError):
 			return taskError.description
@@ -304,7 +304,7 @@ extension DuplicateDependency: CustomStringConvertible {
 		}
 
 		return "(found in "
-			+ locations.joinWithSeparator(" and ")
+			+ locations.joined(separator: " and ")
 			+ ")"
 	}
 }

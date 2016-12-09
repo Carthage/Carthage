@@ -113,7 +113,7 @@ public func locateProjectsInDirectory(directoryURL: URL) -> SignalProducer<Proje
 		}
 		.skipNil()
 		.collect()
-		.map { $0.sort() }
+		.map { $0.sorted() }
 		.flatMap(.merge) { SignalProducer<ProjectLocator, CarthageError>(values: $0) }
 }
 
@@ -524,7 +524,7 @@ public struct BuildSettings {
 
 						let trimSet = CharacterSet.whitespacesAndNewlines
 						let components = line.characters
-							.split(1) { $0 == "=" }
+							.split(maxSplits: 1) { $0 == "=" }
 							.map { String($0).stringByTrimmingCharactersInSet(trimSet) }
 
 						if components.count == 2 {

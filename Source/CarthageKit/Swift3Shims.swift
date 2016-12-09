@@ -7,6 +7,42 @@
 	import ReactiveTask
 	import Tentacle
 
+	// MARK: - Stdlib
+
+	extension SequenceType where Generator.Element == String {
+		func joined(separator separator: String) -> String {
+			return joinWithSeparator(separator)
+		}
+	}
+
+	extension SequenceType where Generator.Element: Comparable {
+		func sorted() -> [Generator.Element] {
+			return sort()
+		}
+	}
+
+	extension CollectionType {
+		func split(maxSplits maxSplits: Int = .max, omittingEmptySubsequences: Bool = true, whereSeparator isSeparator: (Generator.Element) throws -> Bool) rethrows -> [SubSequence] {
+			return try split(maxSplits, allowEmptySlices: !omittingEmptySubsequences, isSeparator: isSeparator)
+		}
+	}
+
+	extension CollectionType where Generator.Element: Equatable {
+		func index(of element: Generator.Element) -> Index? {
+			return indexOf(element)
+		}
+	}
+
+	extension Set {
+		func isSubset(of other: Set<Element>) -> Bool {
+			return isSubsetOf(other)
+		}
+
+		mutating func formUnion<S: SequenceType where S.Generator.Element == Element>(other: S) {
+			unionInPlace(other)
+		}
+	}
+
 	// MARK: - Foundation
 
 	internal typealias Bundle = NSBundle

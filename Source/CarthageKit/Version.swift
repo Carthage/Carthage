@@ -80,7 +80,7 @@ extension SemanticVersion: Scannable {
 			return .failure(CarthageError.parseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
 
-		let components = (version! as String).characters.split(allowEmptySlices: false) { $0 == "." }.map(String.init)
+		let components = (version! as String).characters.split(omittingEmptySubsequences: true) { $0 == "." }.map(String.init)
 		if components.count == 0 {
 			return .failure(CarthageError.parseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
@@ -117,7 +117,7 @@ extension SemanticVersion: Hashable {
 
 extension SemanticVersion: CustomStringConvertible {
 	public var description: String {
-		return components.map { $0.description }.joinWithSeparator(".")
+		return components.map { $0.description }.joined(separator: ".")
 	}
 }
 
