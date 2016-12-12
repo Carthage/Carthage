@@ -63,47 +63,47 @@ class VersionSpecifierSpec: QuickSpec {
 			}
 		}
 
-		describe("satisfiedBy") {
+		describe("isSatisfied(by:)") {
 			it("should allow all versions for .any") {
 				let specifier = VersionSpecifier.any
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == true
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == true
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionOne.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionTwoZero.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionTwoOne.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionThree.pinnedVersion!)) == true
 			}
 
 			it("should allow greater or equal versions for .atLeast") {
 				let specifier = VersionSpecifier.atLeast(versionTwoOne)
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionOne.pinnedVersion!)) == false
+				expect(specifier.isSatisfied(by: versionTwoZero.pinnedVersion!)) == false
+				expect(specifier.isSatisfied(by: versionTwoOne.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionThree.pinnedVersion!)) == true
 			}
 
 			it("should allow greater or equal minor and patch versions for .compatibleWith") {
 				let specifier = VersionSpecifier.compatibleWith(versionTwoOne)
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == true
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == false
+				expect(specifier.isSatisfied(by: versionOne.pinnedVersion!)) == false
+				expect(specifier.isSatisfied(by: versionTwoZero.pinnedVersion!)) == false
+				expect(specifier.isSatisfied(by: versionTwoOne.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionThree.pinnedVersion!)) == false
 			}
 
 			it("should only allow exact versions for .exactly") {
 				let specifier = VersionSpecifier.exactly(versionTwoTwo)
-				expect(specifier.satisfiedBy(versionOne.pinnedVersion!)) == false
-				expect(specifier.satisfiedBy(versionTwoZero.pinnedVersion!)) == false
-				expect(specifier.satisfiedBy(versionTwoOne.pinnedVersion!)) == false
-				expect(specifier.satisfiedBy(versionTwoTwo.pinnedVersion!)) == true
-				expect(specifier.satisfiedBy(versionThree.pinnedVersion!)) == false
+				expect(specifier.isSatisfied(by: versionOne.pinnedVersion!)) == false
+				expect(specifier.isSatisfied(by: versionTwoZero.pinnedVersion!)) == false
+				expect(specifier.isSatisfied(by: versionTwoOne.pinnedVersion!)) == false
+				expect(specifier.isSatisfied(by: versionTwoTwo.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionThree.pinnedVersion!)) == false
 			}
 
 			it("should allow only greater patch versions to satisfy 0.x") {
 				let specifier = VersionSpecifier.compatibleWith(versionZeroOne)
-				expect(specifier.satisfiedBy(versionZeroOneOne.pinnedVersion!)) == true
-				expect(specifier.satisfiedBy(versionZeroTwo.pinnedVersion!)) == false
+				expect(specifier.isSatisfied(by: versionZeroOneOne.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: versionZeroTwo.pinnedVersion!)) == false
 			}
 		}
 

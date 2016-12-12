@@ -170,7 +170,7 @@ public enum VersionSpecifier: VersionType {
 	case gitReference(String)
 
 	/// Determines whether the given version satisfies this version specifier.
-	public func satisfiedBy(version: PinnedVersion) -> Bool {
+	public func isSatisfied(by version: PinnedVersion) -> Bool {
 		func withSemanticVersion(predicate: (SemanticVersion) -> Bool) -> Bool {
 			if let semanticVersion = SemanticVersion.fromPinnedVersion(version).value {
 				return predicate(semanticVersion)
