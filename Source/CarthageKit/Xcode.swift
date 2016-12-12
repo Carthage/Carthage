@@ -1379,7 +1379,7 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 
 					let scanner = Scanner(string: output)
 
-					if scanner.scanString("Architectures in the fat file:", into: nil) {
+					if scanner.scanString("Architectures in the fat file:") {
 						// The output of "lipo -info PathToBinary" for fat files
 						// looks roughly like so:
 						//
@@ -1387,8 +1387,8 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 						//
 						var architectures: NSString?
 
-						scanner.scanString(binaryURL.carthage_path, into: nil)
-						scanner.scanString("are:", into: nil)
+						scanner.scanString(binaryURL.carthage_path) {
+						scanner.scanString("are:") {
 						scanner.scanCharacters(from: characterSet, into: &architectures)
 
 						let components = architectures?
@@ -1400,7 +1400,7 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 						}
 					}
 
-					if scanner.scanString("Non-fat file:", into: nil) {
+					if scanner.scanString("Non-fat file:", into) {
 						// The output of "lipo -info PathToBinary" for thin
 						// files looks roughly like so:
 						//
@@ -1408,8 +1408,8 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 						//
 						var architecture: NSString?
 
-						scanner.scanString(binaryURL.carthage_path, into: nil)
-						scanner.scanString("is architecture:", into: nil)
+						scanner.scanString(binaryURL.carthage_path) {
+						scanner.scanString("is architecture:") {
 						scanner.scanCharacters(from: characterSet, into: &architecture)
 
 						if let architecture = architecture {
@@ -1506,7 +1506,7 @@ private func UUIDsFromDwarfdump(url: URL) -> SignalProducer<Set<UUID>, CarthageE
 			//     UUID: <UUID> (<Architecture>) <PathToBinary>
 			//
 			while !scanner.isAtEnd {
-				scanner.scanString("UUID: ", into: nil)
+				scanner.scanString("UUID: ") {
 
 				var uuidString: NSString?
 				scanner.scanCharacters(from: uuidCharacterSet, into: &uuidString)
@@ -1516,7 +1516,7 @@ private func UUIDsFromDwarfdump(url: URL) -> SignalProducer<Set<UUID>, CarthageE
 				}
 
 				// Scan until a newline or end of file.
-				scanner.scanUpToCharacters(from: .newlines, into: nil)
+				scanner.scanUpToCharacters(from: .newlines) {
 			}
 
 			if !uuids.isEmpty {

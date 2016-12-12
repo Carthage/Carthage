@@ -55,7 +55,7 @@ public struct SemanticVersion: VersionType, Comparable {
 
 		// Skip leading characters, like "v" or "version-" or anything like
 		// that.
-		scanner.scanUpToCharacters(from: versionCharacterSet, into: nil)
+		scanner.scanUpToCharacters(from: versionCharacterSet)
 
 		return self.fromScanner(scanner).flatMap { version in
 			if scanner.isAtEnd {
@@ -137,7 +137,7 @@ public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
 
 extension PinnedVersion: Scannable {
 	public static func fromScanner(scanner: Scanner) -> Result<PinnedVersion, CarthageError> {
-		if !scanner.scanString("\"", into: nil) {
+		if !scanner.scanString("\"") {
 			return .failure(CarthageError.parseError(description: "expected pinned version in line: \(scanner.currentLine)"))
 		}
 
@@ -146,7 +146,7 @@ extension PinnedVersion: Scannable {
 			return .failure(CarthageError.parseError(description: "empty pinned version in line: \(scanner.currentLine)"))
 		}
 
-		if !scanner.scanString("\"", into: nil) {
+		if !scanner.scanString("\"") {
 			return .failure(CarthageError.parseError(description: "unterminated pinned version in line: \(scanner.currentLine)"))
 		}
 
@@ -233,19 +233,19 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 extension VersionSpecifier: Scannable {
 	/// Attempts to parse a VersionSpecifier.
 	public static func fromScanner(scanner: Scanner) -> Result<VersionSpecifier, CarthageError> {
-		if scanner.scanString("==", into: nil) {
+		if scanner.scanString("==") {
 			return SemanticVersion.fromScanner(scanner).map { .exactly($0) }
-		} else if scanner.scanString(">=", into: nil) {
+		} else if scanner.scanString(">=") {
 			return SemanticVersion.fromScanner(scanner).map { .atLeast($0) }
-		} else if scanner.scanString("~>", into: nil) {
+		} else if scanner.scanString("~>") {
 			return SemanticVersion.fromScanner(scanner).map { .compatibleWith($0) }
-		} else if scanner.scanString("\"", into: nil) {
+		} else if scanner.scanString("\"") {
 			var refName: NSString? = nil
 			if !scanner.scanUpTo("\"", into: &refName) || refName == nil {
 				return .failure(CarthageError.parseError(description: "expected Git reference name in line: \(scanner.currentLine)"))
 			}
 
-			if !scanner.scanString("\"", into: nil) {
+			if !scanner.scanString("\"") {
 				return .failure(CarthageError.parseError(description: "unterminated Git reference name in line: \(scanner.currentLine)"))
 			}
 

@@ -39,7 +39,7 @@ public struct Cartfile {
 		string.enumerateLines { (line, stop) in
 			let scanner = Scanner(string: line)
 			
-			if scanner.scanString(commentIndicator, into: nil) {
+			if scanner.scanString(commentIndicator) {
 				// Skip the rest of the line.
 				return
 			}
@@ -58,7 +58,7 @@ public struct Cartfile {
 				stop = true
 			}
 
-			if scanner.scanString(commentIndicator, into: nil) {
+			if scanner.scanString(commentIndicator) {
 				// Skip the rest of the line.
 				return
 			}
@@ -233,11 +233,11 @@ extension ProjectIdentifier: Scannable {
 	public static func fromScanner(scanner: Scanner) -> Result<ProjectIdentifier, CarthageError> {
 		let parser: (String) -> Result<ProjectIdentifier, CarthageError>
 
-		if scanner.scanString("github", into: nil) {
+		if scanner.scanString("github") {
 			parser = { repoIdentifier in
 				return Repository.fromIdentifier(repoIdentifier).map { self.gitHub($0) }
 			}
-		} else if scanner.scanString("git", into: nil) {
+		} else if scanner.scanString("git") {
 			parser = { urlString in
 				return .success(self.git(GitURL(urlString)))
 			}
@@ -245,12 +245,12 @@ extension ProjectIdentifier: Scannable {
 			return .failure(CarthageError.parseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
 		}
 
-		if !scanner.scanString("\"", into: nil) {
+		if !scanner.scanString("\"") {
 			return .failure(CarthageError.parseError(description: "expected string after dependency type in line: \(scanner.currentLine)"))
 		}
 
 		var address: NSString? = nil
-		if !scanner.scanUpTo("\"", into: &address) || !scanner.scanString("\"", into: nil) {
+		if !scanner.scanUpTo("\"", into: &address) || !scanner.scanString("\"") {
 			return .failure(CarthageError.parseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)"))
 		}
 
