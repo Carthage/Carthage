@@ -104,7 +104,7 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 			var values = values
 
 			let parts = line.characters
-				.split(1, allowEmptySlices: false) { $0 == "=" }
+				.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }
 				.map(String.init)
 
 			if parts.count >= 2 {
@@ -135,11 +135,11 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 		// (e.g., `GITHUB_ACCESS_TOKEN="github.com=XXXXXXXXXXXXX,enterprise.local/ghe=YYYYYYYYY"`)
 		let records = accessTokenInput
 			.characters
-			.split(allowEmptySlices: false) { $0 == "," }
+			.split(omittingEmptySubsequences: true) { $0 == "," }
 			.reduce([:]) { (values: [String: String], record) in
 				var values = values
 
-				let parts = record.split(1, allowEmptySlices: false) { $0 == "=" }.map(String.init)
+				let parts = record.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }.map(String.init)
 				switch parts.count {
 				case 1:
 					// If the input is provided as an access token itself, use the

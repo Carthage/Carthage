@@ -625,7 +625,7 @@ public final class Project {
 
 				let sortedDependencies = cartfile.dependencies
 					.filter { dependency in sortedProjects.contains(dependency.project) }
-					.sort { left, right in sortedProjects.indexOf(left.project) < sortedProjects.indexOf(right.project) }
+					.sort { left, right in sortedProjects.index(of: left.project) < sortedProjects.index(of: right.project) }
 
 				return SignalProducer(values: sortedDependencies)
 			}

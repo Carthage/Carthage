@@ -71,7 +71,7 @@ public struct ArchiveCommand: CommandType {
 					}
 				}
 				.collect()
-				.map { Array(Set($0)).sort() }
+				.map { Array(Set($0)).sorted() }
 		}
 
 		return frameworks.flatMap(.merge) { frameworks -> SignalProducer<(), CarthageError> in
@@ -109,7 +109,7 @@ public struct ArchiveCommand: CommandType {
 						.filter { $0.hasSuffix(".framework") }
 					
 					if Set(foundFrameworks) != Set(frameworks) {
-						let error = CarthageError.invalidArgument(description: "Could not find any copies of \(frameworks.joinWithSeparator(", ")). Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
+						let error = CarthageError.invalidArgument(description: "Could not find any copies of \(frameworks.joined(separator: ", ")). Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
 						return SignalProducer(error: error)
 					}
 

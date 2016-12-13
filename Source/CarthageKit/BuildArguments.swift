@@ -115,6 +115,6 @@ public struct BuildArguments {
 
 extension BuildArguments: CustomStringConvertible {
 	public var description: String {
-		return arguments.joinWithSeparator(" ")
+		return arguments.joined(separator: " ")
 	}
 }

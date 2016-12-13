@@ -36,12 +36,12 @@ public struct GitURL: Equatable {
 			// scp syntax.
 			var strippedURLString = urlString
 
-			if let index = strippedURLString.characters.indexOf("@") {
+			if let index = strippedURLString.characters.index(of: "@") {
 				strippedURLString.removeRange(strippedURLString.startIndex...index)
 			}
 
 			var host = ""
-			if let index = strippedURLString.characters.indexOf(":") {
+			if let index = strippedURLString.characters.index(of: ":") {
 				host = strippedURLString[strippedURLString.startIndex..<index]
 				strippedURLString.removeRange(strippedURLString.startIndex...index)
 			}
@@ -59,7 +59,7 @@ public struct GitURL: Equatable {
 
 	/// The name of the repository, if it can be inferred from the URL.
 	public var name: String? {
-		let components = urlString.characters.split(allowEmptySlices: false) { $0 == "/" }
+		let components = urlString.characters.split(omittingEmptySubsequences: true) { $0 == "/" }
 
 		return components
 			.last
@@ -357,7 +357,7 @@ private func checkoutSubmodule(submodule: Submodule, _ submoduleWorkingDirectory
 /// Parses each key/value entry from the given config file contents, optionally
 /// stripping a known prefix/suffix off of each key.
 private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuffix: String = "") -> SignalProducer<(String, String), NoError> {
-	let entries = contents.characters.split(allowEmptySlices: false) { $0 == "\0" }
+	let entries = contents.characters.split(omittingEmptySubsequences: true) { $0 == "\0" }
 
 	return SignalProducer { observer, disposable in
 		for entry in entries {
@@ -365,7 +365,7 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 				break
 			}
 
-			let components = entry.split(1, allowEmptySlices: true) { $0 == "\n" }.map(String.init)
+			let components = entry.split(maxSplits: 1, omittingEmptySubsequences: false) { $0 == "\n" }.map(String.init)
 			if components.count != 2 {
 				continue
 			}
@@ -399,11 +399,11 @@ public func submoduleSHAForPath(repositoryFileURL: URL, _ path: String, revision
 		.attemptMap { string in
 			// Example:
 			// 160000 commit 083fd81ecf00124cbdaa8f86ef10377737f6325a	External/ObjectiveGit
-			let components = string.characters.split(3, allowEmptySlices: false) { $0 == " " || $0 == "\t" }
+			let components = string.characters.split(maxSplits: 3, omittingEmptySubsequences: true) { $0 == " " || $0 == "\t" }
 			if components.count >= 3 {
 				return .success(String(components[2]))
 			} else {
-				return .failure(CarthageError.parseError(description: "expected submodule commit SHA in output of task (\(task.joinWithSeparator(" "))) but encountered: \(string)"))
+				return .failure(CarthageError.parseError(description: "expected submodule commit SHA in output of task (\(task.joined(separator: " "))) but encountered: \(string)"))
 			}
 		}
 }
