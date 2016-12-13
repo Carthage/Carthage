@@ -202,6 +202,32 @@
 		}
 	}
 
+	internal extension NSString {
+		var deletingLastPathComponent: String {
+			return stringByDeletingLastPathComponent
+		}
+
+		var expandingTildeInPath: String {
+			return stringByExpandingTildeInPath
+		}
+
+		func appendingPathComponent(str: String) -> String {
+			return stringByAppendingPathComponent(str)
+		}
+
+		func appendingPathExtension(str: String) -> String? {
+			return stringByAppendingPathExtension(str)
+		}
+
+		func lineRange(for range: NSRange) -> NSRange {
+			return lineRangeForRange(range)
+		}
+
+		func substring(with range: NSRange) -> String {
+			return substringWithRange(range)
+		}
+	}
+
 	internal typealias ProcessInfo = NSProcessInfo
 	internal extension ProcessInfo {
 		@nonobjc class var processInfo: ProcessInfo { return processInfo() }

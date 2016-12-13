@@ -40,7 +40,7 @@ public func unzip(archive fileURL: URL, to destinationDirectoryURL: URL) -> Sign
 /// sends the file URL to that directory.
 public func unzip(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
 	return SignalProducer.attempt { () -> Result<String, CarthageError> in
-			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("carthage-archive.XXXXXX").nulTerminatedUTF8.map { CChar($0) }
+			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-archive.XXXXXX").nulTerminatedUTF8.map { CChar($0) }
 			let result = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> UnsafeMutablePointer<CChar> in
 				return mkdtemp(template.baseAddress)
 			}

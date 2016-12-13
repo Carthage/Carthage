@@ -53,8 +53,8 @@ extension Repository {
 		// GitHub.com
 		let range = NSRange(location: 0, length: identifier.utf16.count)
 		if let match = NWORegex.firstMatch(in: identifier, range: range) {
-			let owner = (identifier as NSString).substringWithRange(match.rangeAt(1))
-			let name = (identifier as NSString).substringWithRange(match.rangeAt(2))
+			let owner = (identifier as NSString).substring(with: match.rangeAt(1))
+			let name = (identifier as NSString).substring(with: match.rangeAt(2))
 			return .success(self.init(owner: owner, name: stripGitSuffix(name)))
 		}
 
