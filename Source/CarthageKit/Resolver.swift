@@ -101,7 +101,7 @@ public struct Resolver {
 
 						return self
 							.versionsForDependency(dependency.project)
-							.filter { dependency.version.satisfiedBy($0) }
+							.filter { dependency.version.isSatisfied(by: $0) }
 					}
 					.start(on: scheduler)
 					.observe(on: scheduler)
@@ -268,7 +268,7 @@ private struct DependencyGraph: Equatable {
 			let existingNode = allNodes[index]
 
 			if let newSpecifier = intersection(existingNode.versionSpecifier, node.versionSpecifier) {
-				if newSpecifier.satisfiedBy(existingNode.proposedVersion) {
+				if newSpecifier.isSatisfied(by: existingNode.proposedVersion) {
 					node = existingNode
 					node.versionSpecifier = newSpecifier
 				} else {
@@ -470,7 +470,7 @@ private class DependencyNode: Comparable {
 	}
 
 	init(project: ProjectIdentifier, proposedVersion: PinnedVersion, versionSpecifier: VersionSpecifier) {
-		precondition(versionSpecifier.satisfiedBy(proposedVersion))
+		precondition(versionSpecifier.isSatisfied(by: proposedVersion))
 
 		self.project = project
 		self.proposedVersion = proposedVersion
