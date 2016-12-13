@@ -50,7 +50,7 @@ public struct CheckoutCommand: CommandType {
 		/// Attempts to load the project referenced by the options, and configure it
 		/// accordingly.
 		public func loadProject() -> SignalProducer<Project, CarthageError> {
-			let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true)
+			let directoryURL = URL(fileURLWithPath: self.directoryPath, isDirectory: true)
 			let project = Project(directoryURL: directoryURL)
 			project.preferHTTPS = !self.useSSH
 			project.useSubmodules = self.useSubmodules

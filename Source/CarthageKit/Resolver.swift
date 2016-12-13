@@ -101,13 +101,13 @@ public struct Resolver {
 
 						return self
 							.versionsForDependency(dependency.project)
-							.filter { dependency.version.satisfiedBy($0) }
+							.filter { dependency.version.isSatisfied(by: $0) }
 					}
 					.start(on: scheduler)
 					.observe(on: scheduler)
 					.map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
 					.collect()
-					.map { $0.sort() }
+					.map { $0.sorted() }
 					.flatMap(.concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
 						if nodes.isEmpty {
 							return SignalProducer(error: CarthageError.requiredVersionNotFound(dependency.project, dependency.version))
@@ -264,11 +264,11 @@ private struct DependencyGraph: Equatable {
 	mutating func addNode(node: DependencyNode, dependencyOf: DependencyNode?) -> Result<DependencyNode, CarthageError> {
 		var node = node
 
-		if let index = allNodes.indexOf(node) {
+		if let index = allNodes.index(of: node) {
 			let existingNode = allNodes[index]
 
 			if let newSpecifier = intersection(existingNode.versionSpecifier, node.versionSpecifier) {
-				if newSpecifier.satisfiedBy(existingNode.proposedVersion) {
+				if newSpecifier.isSatisfied(by: existingNode.proposedVersion) {
 					node = existingNode
 					node.versionSpecifier = newSpecifier
 				} else {
@@ -301,7 +301,7 @@ private struct DependencyGraph: Equatable {
 
 			// If the given node has its dependencies, add them also to the list.
 			if let dependenciesOfNode = edges[node] {
-				nodeSet.unionInPlace(dependenciesOfNode)
+				nodeSet.formUnion(dependenciesOfNode)
 			}
 
 			edges[dependencyOf] = nodeSet
@@ -470,7 +470,7 @@ private class DependencyNode: Comparable {
 	}
 
 	init(project: ProjectIdentifier, proposedVersion: PinnedVersion, versionSpecifier: VersionSpecifier) {
-		precondition(versionSpecifier.satisfiedBy(proposedVersion))
+		precondition(versionSpecifier.isSatisfied(by: proposedVersion))
 
 		self.project = project
 		self.proposedVersion = proposedVersion

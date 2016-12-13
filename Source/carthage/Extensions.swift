@@ -50,9 +50,9 @@ internal func print<T>(object: T) {
 
 extension String {
 	/// Split the string into substrings separated by the given separators.
-	internal func split(allowEmptySlices: Bool = false, separators: [Character] = [ ",", " " ]) -> [String] {
+	internal func split(maxSplits maxSplits: Int = .max, omittingEmptySubsequences: Bool = true, separators: [Character] = [ ",", " " ]) -> [String] {
 		return characters
-			.split(allowEmptySlices: allowEmptySlices, isSeparator: separators.contains)
+			.split(maxSplits: maxSplits, omittingEmptySubsequences: omittingEmptySubsequences, whereSeparator: separators.contains)
 			.map(String.init)
 	}
 }

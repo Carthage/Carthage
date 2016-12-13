@@ -1,10 +1,47 @@
 #if swift(>=3)
 #else
 	import Foundation
+	import PrettyColors
 	import Result
 	import ReactiveCocoa
 	import ReactiveTask
 	import Tentacle
+
+	// MARK: - Stdlib
+
+	extension SequenceType where Generator.Element == String {
+		func joined(separator separator: String) -> String {
+			return joinWithSeparator(separator)
+		}
+	}
+
+	extension SequenceType where Generator.Element: Comparable {
+		func sorted() -> [Generator.Element] {
+			return sort()
+		}
+	}
+
+	extension CollectionType {
+		func split(maxSplits maxSplits: Int = .max, omittingEmptySubsequences: Bool = true, whereSeparator isSeparator: (Generator.Element) throws -> Bool) rethrows -> [SubSequence] {
+			return try split(maxSplits, allowEmptySlices: !omittingEmptySubsequences, isSeparator: isSeparator)
+		}
+	}
+
+	extension CollectionType where Generator.Element: Equatable {
+		func index(of element: Generator.Element) -> Index? {
+			return indexOf(element)
+		}
+	}
+
+	extension Set {
+		func isSubset(of other: Set<Element>) -> Bool {
+			return isSubsetOf(other)
+		}
+
+		mutating func formUnion<S: SequenceType where S.Generator.Element == Element>(other: S) {
+			unionInPlace(other)
+		}
+	}
 
 	// MARK: - Foundation
 
@@ -14,11 +51,11 @@
 			self.init(forClass: aClass)
 		}
 
-		convenience init?(url: NSURL) {
+		convenience init?(url: URL) {
 			self.init(URL: url)
 		}
 
-		func url(forResource name: String?, withExtension ext: String?) -> NSURL? {
+		func url(forResource name: String?, withExtension ext: String?) -> URL? {
 			return URLForResource(name, withExtension: ext)
 		}
 
@@ -84,11 +121,11 @@
 			return try contentsOfDirectoryAtPath(path)
 		}
 
-		func copyItem(at srcURL: NSURL, to dstURL: NSURL) throws {
+		func copyItem(at srcURL: URL, to dstURL: URL) throws {
 			try copyItemAtURL(srcURL, toURL: dstURL)
 		}
 
-		func createDirectory(at url: NSURL, withIntermediateDirectories createIntermediates: Bool, attributes: [String : AnyObject]? = nil) throws {
+		func createDirectory(at url: URL, withIntermediateDirectories createIntermediates: Bool, attributes: [String : AnyObject]? = nil) throws {
 			try createDirectoryAtURL(url, withIntermediateDirectories: createIntermediates, attributes: attributes)
 		}
 
@@ -96,7 +133,7 @@
 			try createDirectoryAtPath(path, withIntermediateDirectories: createIntermediates, attributes: attributes)
 		}
 
-		func createSymbolicLink(at url: NSURL, withDestinationURL destURL: NSURL) throws {
+		func createSymbolicLink(at url: URL, withDestinationURL destURL: URL) throws {
 			try createSymbolicLinkAtURL(url, withDestinationURL: destURL)
 		}
 
@@ -108,7 +145,7 @@
 			return try destinationOfSymbolicLinkAtPath(path)
 		}
 
-		func enumerator(at url: NSURL, includingPropertiesForKeys keys: [String]?, options mask: NSDirectoryEnumerationOptions = [], errorHandler handler: ((NSURL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
+		func enumerator(at url: URL, includingPropertiesForKeys keys: [String]?, options mask: NSDirectoryEnumerationOptions = [], errorHandler handler: ((URL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
 			return enumeratorAtURL(url, includingPropertiesForKeys: keys, options: mask, errorHandler: handler)
 		}
 
@@ -120,17 +157,33 @@
 			return fileExistsAtPath(path, isDirectory: isDirectory)
 		}
 
-		func moveItem(at srcURL: NSURL, to dstURL: NSURL) throws {
+		@nonobjc func isWritableFile(atPath path: String) -> Bool {
+			return isWritableFileAtPath(path)
+		}
+
+		func moveItem(at srcURL: URL, to dstURL: URL) throws {
 			try moveItemAtURL(srcURL, toURL: dstURL)
 		}
 
-		func removeItem(at url: NSURL) throws {
+		func removeItem(at url: URL) throws {
 			try removeItemAtURL(url)
 		}
 
-		func trashItem(at url: NSURL, resultingItemURL outResultingURL: AutoreleasingUnsafeMutablePointer<NSURL?>) throws {
+		func trashItem(at url: URL, resultingItemURL outResultingURL: AutoreleasingUnsafeMutablePointer<URL?>) throws {
 			try trashItemAtURL(url, resultingItemURL: outResultingURL)
 		}
+
+		func url(for directory: NSSearchPathDirectory, in domain: NSSearchPathDomainMask, appropriateFor url: URL?, create shouldCreate: Bool) throws -> URL {
+			return try URLForDirectory(directory, inDomain: domain, appropriateForURL: url, create: shouldCreate)
+		}
+	}
+
+	extension NSSearchPathDirectory {
+		static let cachesDirectory = NSSearchPathDirectory.CachesDirectory
+	}
+
+	extension NSSearchPathDomainMask {
+		static let userDomainMask = NSSearchPathDomainMask.UserDomainMask
 	}
 
 	internal extension NSRegularExpression {
@@ -175,6 +228,114 @@
 		}
 	}
 
+	public typealias URL = NSURL
+	internal extension URL {
+		@nonobjc var isFileURL: Bool { return fileURL }
+
+		var standardizedFileURL : URL {
+			return URLByStandardizingPath ?? self
+		}
+
+		// https://github.com/apple/swift-corelibs-foundation/blob/swift-3.0.1-RELEASE/Foundation/URL.swift#L607-L619
+		var carthage_path: String {
+			if let parameterString = parameterString {
+				return (path ?? "") + ";" + parameterString
+			}
+			return path ?? ""
+		}
+
+		var carthage_lastPathComponent: String {
+			return lastPathComponent ?? ""
+		}
+
+		var carthage_pathComponents: [String] {
+			return pathComponents ?? []
+		}
+
+		func appendingPathExtension(pathExtension: String) -> URL {
+			return URLByAppendingPathExtension(pathExtension)!
+		}
+
+		func appendingPathComponent(pathComponent: String) -> URL {
+			return URLByAppendingPathComponent(pathComponent)!
+		}
+
+		func appendingPathComponent(pathComponent: String, isDirectory: Bool) -> URL {
+			return URLByAppendingPathComponent(pathComponent, isDirectory: isDirectory)!
+		}
+
+		func deletingLastPathComponent() -> URL {
+			return URLByDeletingLastPathComponent ?? self
+		}
+
+		func deletingPathExtension() -> URL {
+			return URLByDeletingPathExtension ?? self
+		}
+
+		func removeCachedResourceValue(forKey key: URLResourceKey) {
+			removeCachedResourceValueForKey(key.rawValue)
+		}
+
+		func resolvingSymlinksInPath() -> URL {
+			return URLByResolvingSymlinksInPath ?? self
+		}
+
+		func resourceValues(forKeys keys: Set<URLResourceKey>) throws -> URLResourceValues {
+			return URLResourceValues(url: self)
+		}
+
+		func withUnsafeFileSystemRepresentation<ResultType>(block: (UnsafePointer<Int8>?) throws -> ResultType) rethrows -> ResultType {
+			return try block(fileSystemRepresentation)
+		}
+	}
+
+	// https://developer.apple.com/reference/foundation/URLResourceKey
+	internal struct URLResourceKey: Hashable {
+		let rawValue: String
+
+		static let isDirectoryKey: URLResourceKey = URLResourceKey(rawValue: NSURLIsDirectoryKey)
+		static let isSymbolicLinkKey: URLResourceKey = URLResourceKey(rawValue: NSURLIsSymbolicLinkKey)
+		static let nameKey: URLResourceKey = URLResourceKey(rawValue: NSURLNameKey)
+		static let typeIdentifierKey: URLResourceKey = URLResourceKey(rawValue: NSURLTypeIdentifierKey)
+
+		var hashValue: Int { return rawValue.hashValue }
+	}
+
+	func ==(lhs: URLResourceKey, rhs: URLResourceKey) -> Bool {
+		return lhs.rawValue == rhs.rawValue
+	}
+
+	// https://developer.apple.com/reference/foundation/URLResourceValues
+	internal struct URLResourceValues {
+		private let url: URL
+
+		private func get<T>(forKey key: URLResourceKey) -> T? {
+			do {
+				var result: AnyObject?
+				try url.getResourceValue(&result, forKey: key.rawValue)
+				return result as? T
+			} catch {
+				return nil
+			}
+		}
+
+		var isDirectory: Bool? {
+			return get(forKey: .isDirectoryKey)
+		}
+
+		var isSymbolicLink: Bool? {
+			return get(forKey: .isSymbolicLinkKey)
+		}
+
+		var name: String? {
+			return get(forKey: .nameKey)
+		}
+
+		var typeIdentifier: String? {
+			return get(forKey: .typeIdentifierKey)
+		}
+	}
+
 	public typealias UUID = NSUUID
 	internal extension UUID {
 		convenience init?(uuidString string: String) {
@@ -182,6 +343,19 @@
 		}
 
 		var uuidString: String { return UUIDString }
+	}
+
+	// MARK: - PrettyColors
+
+	internal extension PrettyColors.Color.Named.Color {
+		static var green: PrettyColors.Color.Named.Color { return .Green }
+		static var yellow: PrettyColors.Color.Named.Color { return .Yellow }
+		static var blue: PrettyColors.Color.Named.Color { return .Blue }
+	}
+
+	internal extension StyleParameter {
+		static var bold: StyleParameter { return .Bold }
+		static var underlined: StyleParameter { return .Underlined }
 	}
 
 	// MARK: - Result
@@ -340,7 +514,7 @@
 			return releaseForTag(tag, inRepository: repository)
 		}
 
-		func download(asset asset: Release.Asset) -> SignalProducer<NSURL, Error> {
+		func download(asset asset: Release.Asset) -> SignalProducer<URL, Error> {
 			return downloadAsset(asset)
 		}
 	}
