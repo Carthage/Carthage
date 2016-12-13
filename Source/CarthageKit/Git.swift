@@ -186,7 +186,7 @@ public func ensureGitVersion(requiredVersion: String = CarthageRequiredGitVersio
 	return launchGitTask([ "--version" ])
 		.map { input -> Bool in
 			let scanner = Scanner(string: input)
-			guard scanner.scanString("git version ", into: nil) else {
+			guard scanner.scanString("git version ") else {
 				return false
 			}
 
@@ -373,7 +373,7 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 			let value = components[1]
 			let scanner = Scanner(string: components[0])
 
-			if !scanner.scanString(keyPrefix, into: nil) {
+			if !scanner.scanString(keyPrefix) {
 				continue
 			}
 
