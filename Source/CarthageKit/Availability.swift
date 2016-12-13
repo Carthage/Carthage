@@ -16,3 +16,10 @@ public func unzipArchiveToTemporaryDirectory(fileURL: URL) -> SignalProducer<URL
 
 @available(*, unavailable, renamed="cloneRepository(_:_:isBare:)")
 public func cloneRepository(cloneURL: GitURL, _ destinationURL: URL, bare: Bool = true) -> SignalProducer<String, CarthageError> { fatalError() }
+
+// MARK: - Version.swift
+
+extension VersionSpecifier {
+	@available(*, unavailable, renamed="isSatisfied(by:)")
+	public func satisfiedBy(version: PinnedVersion) -> Bool { fatalError() }
+}
