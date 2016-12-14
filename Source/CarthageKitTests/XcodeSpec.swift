@@ -21,7 +21,7 @@ class XcodeSpec: QuickSpec {
 		let directoryURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
 		let projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
 		let buildFolderURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
-		let targetFolderURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
+		let targetFolderURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
 
 		beforeEach {
 			_ = try? FileManager.`default`.removeItem(at: buildFolderURL)
@@ -118,9 +118,9 @@ class XcodeSpec: QuickSpec {
 
 			for dependency in projectNames {
 				let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").carthage_path
-				let macdSYMPath = (macPath as NSString).stringByAppendingPathExtension("dSYM")!
+				let macdSYMPath = (macPath as NSString).appendingPathExtension("dSYM")!
 				let iOSPath = buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").carthage_path
-				let iOSdSYMPath = (iOSPath as NSString).stringByAppendingPathExtension("dSYM")!
+				let iOSdSYMPath = (iOSPath as NSString).appendingPathExtension("dSYM")!
 
 				for path in [ macPath, macdSYMPath, iOSPath, iOSdSYMPath ] {
 					expect(path).to(beExistingDirectory())

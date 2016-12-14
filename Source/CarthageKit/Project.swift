@@ -20,9 +20,9 @@ public let CarthageKitBundleIdentifier = Bundle(for: Project.self).bundleIdentif
 private let fallbackDependenciesURL: URL = {
 	let homePath: String
 	if let homeEnvValue = ProcessInfo.processInfo.environment["HOME"] {
-		homePath = (homeEnvValue as NSString).stringByAppendingPathComponent(".carthage")
+		homePath = (homeEnvValue as NSString).appendingPathComponent(".carthage")
 	} else {
-		homePath = ("~/.carthage" as NSString).stringByExpandingTildeInPath
+		homePath = ("~/.carthage" as NSString).expandingTildeInPath
 	}
 	return URL(fileURLWithPath: homePath, isDirectory:true)
 }()
@@ -705,7 +705,7 @@ public final class Project {
 			}
 			.attemptMap { name -> Result<(), CarthageError> in
 				let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
-				let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).stringByAppendingPathComponent(name)
+				let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
 				let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: subdirectoryPath)
 				do {
 					try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.carthage_path, withDestinationPath: linkDestinationPath)
@@ -954,12 +954,12 @@ private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bo
 
 /// Returns the string representing a relative path from a dependency project back to the root
 internal func relativeLinkDestinationForDependencyProject(dependency: ProjectIdentifier, subdirectory: String) -> String {
-	let dependencySubdirectoryPath = (dependency.relativePath as NSString).stringByAppendingPathComponent(subdirectory)
+	let dependencySubdirectoryPath = (dependency.relativePath as NSString).appendingPathComponent(subdirectory)
 	let componentsForGettingTheHellOutOfThisRelativePath = Array(count: (dependencySubdirectoryPath as NSString).pathComponents.count - 1, repeatedValue: "..")
 
 	// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
 	let linkDestinationPath = componentsForGettingTheHellOutOfThisRelativePath.reduce(subdirectory) { trailingPath, pathComponent in
-		return (pathComponent as NSString).stringByAppendingPathComponent(trailingPath)
+		return (pathComponent as NSString).appendingPathComponent(trailingPath)
 	}
 
 	return linkDestinationPath

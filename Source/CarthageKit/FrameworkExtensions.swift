@@ -236,9 +236,9 @@ extension Scanner {
 		// string indexing.
 		let nsString = string as NSString
 		let scanRange: NSRange = NSMakeRange(scanLocation, 0)
-		let lineRange: NSRange = nsString.lineRangeForRange(scanRange)
+		let lineRange: NSRange = nsString.lineRange(for: scanRange)
 
-		return nsString.substringWithRange(lineRange)
+		return nsString.substring(with: lineRange)
 	}
 }
 

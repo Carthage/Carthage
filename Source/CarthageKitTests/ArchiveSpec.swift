@@ -37,7 +37,7 @@ class ArchiveSpec: QuickSpec {
 				expect(contents.isEmpty) == false
 				expect(contents).to(contain(innerFolderName))
 
-				let innerContents = (try? FileManager.`default`.contentsOfDirectory(atPath: (directoryPath as NSString).stringByAppendingPathComponent(innerFolderName))) ?? []
+				let innerContents = (try? FileManager.`default`.contentsOfDirectory(atPath: (directoryPath as NSString).appendingPathComponent(innerFolderName))) ?? []
 				expect(innerContents.isEmpty) == false
 				expect(innerContents).to(contain("Cartfile.private"))
 			}
@@ -45,7 +45,7 @@ class ArchiveSpec: QuickSpec {
 
 		describe("zipping") {
 			let originalCurrentDirectory = FileManager.`default`.currentDirectoryPath
-			let temporaryURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
+			let temporaryURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
 			let archiveURL = temporaryURL.appendingPathComponent("archive.zip", isDirectory: false)
 
 			beforeEach {
@@ -64,7 +64,7 @@ class ArchiveSpec: QuickSpec {
 				let subdirPath = "subdir"
 				expect { try FileManager.`default`.createDirectory(atPath: subdirPath, withIntermediateDirectories: true) }.notTo(throwError())
 
-				let innerFilePath = (subdirPath as NSString).stringByAppendingPathComponent("inner")
+				let innerFilePath = (subdirPath as NSString).appendingPathComponent("inner")
 				expect { try "foobar".writeToFile(innerFilePath, atomically: true, encoding: NSUTF8StringEncoding) }.notTo(throwError())
 
 				let outerFilePath = "outer"

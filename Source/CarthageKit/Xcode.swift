@@ -239,7 +239,7 @@ public enum Platform: String {
 	/// be stored.
 	public var relativePath: String {
 		let subfolderName = rawValue
-		return (CarthageBinariesFolderPath as NSString).stringByAppendingPathComponent(subfolderName)
+		return (CarthageBinariesFolderPath as NSString).appendingPathComponent(subfolderName)
 	}
 
 	/// The SDKs that need to be built for this platform.
@@ -518,7 +518,7 @@ public struct BuildSettings {
 							let targetRange = result.rangeAt(1)
 
 							flushTarget()
-							currentTarget = (line as NSString).substringWithRange(targetRange)
+							currentTarget = (line as NSString).substring(with: targetRange)
 							return
 						}
 
@@ -636,9 +636,9 @@ public struct BuildSettings {
 	private var relativeModulesPath: Result<String?, CarthageError> {
 		if let moduleName = self["PRODUCT_MODULE_NAME"].value {
 			return self["CONTENTS_FOLDER_PATH"].map { contentsPath in
-				let path1 = (contentsPath as NSString).stringByAppendingPathComponent("Modules")
-				let path2 = (path1 as NSString).stringByAppendingPathComponent(moduleName)
-				return (path2 as NSString).stringByAppendingPathExtension("swiftmodule")
+				let path1 = (contentsPath as NSString).appendingPathComponent("Modules")
+				let path2 = (path1 as NSString).appendingPathComponent(moduleName)
+				return (path2 as NSString).appendingPathExtension("swiftmodule")
 			}
 		} else {
 			return .success(nil)
@@ -902,7 +902,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						let lastDeviceResult = regex.matches(in: string, range: NSRange(location: 0, length: string.utf16.count)).last
 						return lastDeviceResult.map { result in
 							// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
-							let deviceID = (string as NSString).substringWithRange(result.rangeAt(1))
+							let deviceID = (string as NSString).substring(with: result.rangeAt(1))
 							return "platform=\(platformName) Simulator,id=\(deviceID)"
 						}
 					}

@@ -195,7 +195,7 @@ public enum ProjectIdentifier: Comparable {
 	/// The path at which this project will be checked out, relative to the
 	/// working directory of the main project.
 	public var relativePath: String {
-		return (CarthageProjectCheckoutsPath as NSString).stringByAppendingPathComponent(name)
+		return (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
 	}
 }
 
