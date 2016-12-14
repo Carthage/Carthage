@@ -49,7 +49,7 @@ public struct Cartfile {
 				return
 			}
 
-			switch Dependency<VersionSpecifier>.fromScanner(scanner) {
+			switch Dependency<VersionSpecifier>.from(scanner) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep)
 
@@ -144,7 +144,7 @@ public struct ResolvedCartfile {
 
 		let scanner = Scanner(string: string)
 		scannerLoop: while !scanner.isAtEnd {
-			switch Dependency<PinnedVersion>.fromScanner(scanner) {
+			switch Dependency<PinnedVersion>.from(scanner) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep)
 
@@ -230,7 +230,7 @@ extension ProjectIdentifier: Hashable {
 
 extension ProjectIdentifier: Scannable {
 	/// Attempts to parse a ProjectIdentifier.
-	public static func fromScanner(scanner: Scanner) -> Result<ProjectIdentifier, CarthageError> {
+	public static func from(_ scanner: Scanner) -> Result<ProjectIdentifier, CarthageError> {
 		let parser: (String) -> Result<ProjectIdentifier, CarthageError>
 
 		if scanner.scanString("github", into: nil) {
@@ -302,9 +302,9 @@ public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 
 extension Dependency where V: Scannable {
 	/// Attempts to parse a Dependency specification.
-	public static func fromScanner(scanner: Scanner) -> Result<Dependency, CarthageError> {
-		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
-			return V.fromScanner(scanner).map { specifier in self.init(project: identifier, version: specifier) }
+	public static func from(_ scanner: Scanner) -> Result<Dependency, CarthageError> {
+		return ProjectIdentifier.from(scanner).flatMap { identifier in
+			return V.from(scanner).map { specifier in self.init(project: identifier, version: specifier) }
 		}
 	}
 }

@@ -57,7 +57,7 @@ public struct SemanticVersion: VersionType, Comparable {
 		// that.
 		scanner.scanUpToCharacters(from: versionCharacterSet, into: nil)
 
-		return self.fromScanner(scanner).flatMap { version in
+		return self.from(scanner).flatMap { version in
 			if scanner.isAtEnd {
 				var version = version
 				version.pinnedVersion = pinnedVersion
@@ -74,7 +74,7 @@ public struct SemanticVersion: VersionType, Comparable {
 extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
-	static public func fromScanner(scanner: Scanner) -> Result<SemanticVersion, CarthageError> {
+	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, CarthageError> {
 		var version: NSString? = nil
 		if !scanner.scanCharacters(from: versionCharacterSet, into: &version) || version == nil {
 			return .failure(CarthageError.parseError(description: "expected version in line: \(scanner.currentLine)"))
@@ -136,7 +136,7 @@ public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
 }
 
 extension PinnedVersion: Scannable {
-	public static func fromScanner(scanner: Scanner) -> Result<PinnedVersion, CarthageError> {
+	public static func from(_ scanner: Scanner) -> Result<PinnedVersion, CarthageError> {
 		if !scanner.scanString("\"", into: nil) {
 			return .failure(CarthageError.parseError(description: "expected pinned version in line: \(scanner.currentLine)"))
 		}
@@ -232,13 +232,13 @@ public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
 
 extension VersionSpecifier: Scannable {
 	/// Attempts to parse a VersionSpecifier.
-	public static func fromScanner(scanner: Scanner) -> Result<VersionSpecifier, CarthageError> {
+	public static func from(_ scanner: Scanner) -> Result<VersionSpecifier, CarthageError> {
 		if scanner.scanString("==", into: nil) {
-			return SemanticVersion.fromScanner(scanner).map { .exactly($0) }
+			return SemanticVersion.from(scanner).map { .exactly($0) }
 		} else if scanner.scanString(">=", into: nil) {
-			return SemanticVersion.fromScanner(scanner).map { .atLeast($0) }
+			return SemanticVersion.from(scanner).map { .atLeast($0) }
 		} else if scanner.scanString("~>", into: nil) {
-			return SemanticVersion.fromScanner(scanner).map { .compatibleWith($0) }
+			return SemanticVersion.from(scanner).map { .compatibleWith($0) }
 		} else if scanner.scanString("\"", into: nil) {
 			var refName: NSString? = nil
 			if !scanner.scanUpTo("\"", into: &refName) || refName == nil {
