@@ -3,7 +3,7 @@
 setup() {
     cd $BATS_TMPDIR
     rm -rf Argo
-    git clone -b v3.1.0 https://github.com/thoughtbot/Argo.git
+    git clone -b v2.3.0 https://github.com/thoughtbot/Argo.git
     cd Argo
 }
 
