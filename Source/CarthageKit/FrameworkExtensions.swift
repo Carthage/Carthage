@@ -41,10 +41,10 @@ internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 extension SignalProtocol {
 	/// Sends each value that occurs on `signal` combined with each value that
 	/// occurs on `otherSignal` (repeats included).
-	private func permuteWith<U>(otherSignal: Signal<U, Error>) -> Signal<(Value, U), Error> {
+	private func permute<U>(with otherSignal: Signal<U, Error>) -> Signal<(Value, U), Error> {
 		return Signal { observer in
 			let lock = NSLock()
-			lock.name = "org.carthage.CarthageKit.permuteWith"
+			lock.name = "org.carthage.CarthageKit.permute"
 
 			var signalValues: [Value] = []
 			var signalCompleted = false
@@ -121,9 +121,9 @@ extension SignalProtocol {
 extension SignalProducerProtocol {
 	/// Sends each value that occurs on `producer` combined with each value that
 	/// occurs on `otherProducer` (repeats included).
-	private func permuteWith<U>(otherProducer: SignalProducer<U, Error>) -> SignalProducer<(Value, U), Error> {
+	private func permute<U>(with otherProducer: SignalProducer<U, Error>) -> SignalProducer<(Value, U), Error> {
 		// This should be the implementation of this method:
-		// return lift(Signal.permuteWith)(otherProducer)
+		// return lift(Signal.permute(with:))(otherProducer)
 		//
 		// However, due to a Swift miscompilation (with `-O`) we need to inline `lift` here.
 		// See https://github.com/ReactiveCocoa/ReactiveCocoa/issues/2751 for more details.
@@ -137,7 +137,7 @@ extension SignalProducerProtocol {
 				otherProducer.startWithSignal { otherSignal, otherDisposable in
 					outerDisposable.add(otherDisposable)
 
-					signal.permuteWith(otherSignal).observe(observer)
+					signal.permute(with: otherSignal).observe(observer)
 				}
 			}
 		}
@@ -164,7 +164,7 @@ extension SignalProducerProtocol where Value: SignalProducerProtocol, Error == V
 
 				for producer in producers {
 					combined = combined
-						.permuteWith(producer.producer)
+						.permute(with: producer.producer)
 						.map { array, value in
 							var array = array
 							array.append(value)
