@@ -22,6 +22,10 @@
 			return rangeOfString(aString)
 		}
 
+		func substring(from index: Index) -> String {
+			return substringFromIndex(index)
+		}
+		
 		func trimmingCharacters(in set: CharacterSet) -> String {
 			return stringByTrimmingCharactersInSet(set)
 		}
