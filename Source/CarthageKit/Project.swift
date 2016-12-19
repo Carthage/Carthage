@@ -233,7 +233,7 @@ public final class Project {
 	public func loadResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
 		return SignalProducer.attempt {
 			do {
-				let resolvedCartfileContents = try String(contentsOfURL: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
+				let resolvedCartfileContents = try String(contentsOf: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
 				return ResolvedCartfile.fromString(resolvedCartfileContents)
 			} catch let error as NSError {
 				return .failure(.readFailed(self.resolvedCartfileURL, error))

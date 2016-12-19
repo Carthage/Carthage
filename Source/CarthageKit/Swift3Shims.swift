@@ -10,6 +10,10 @@
 	// MARK: - Stdlib
 	
 	internal extension String {
+		init(contentsOf url: URL, encoding enc: NSStringEncoding) throws {
+			try self.init(contentsOfURL: url, encoding: enc)
+		}
+
 		func components(separatedBy separator: String) -> [String] {
 			return componentsSeparatedByString(separator)
 		}
