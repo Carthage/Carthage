@@ -94,7 +94,7 @@ extension Release {
 }
 
 private func credentialsFromGit(forServer server: Server) -> (String, String)? {
-	let data = "url=\(server)".data(using: NSUTF8StringEncoding)!
+	let data = "url=\(server)".data(using: .utf8)!
 	
 	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
 		.flatMap(.concat) { string in

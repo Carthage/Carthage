@@ -177,7 +177,7 @@ public func launchGitTask(arguments: [String], repositoryFileURL: URL? = nil, st
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
 		.map { data in
-			return String(data: data, encoding: NSUTF8StringEncoding)!
+			return String(data: data, encoding: .utf8)!
 		}
 }
 

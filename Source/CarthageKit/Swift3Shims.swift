@@ -10,16 +10,24 @@
 	// MARK: - Stdlib
 	
 	internal extension String {
-		init(contentsOf url: URL, encoding enc: NSStringEncoding) throws {
-			try self.init(contentsOfURL: url, encoding: enc)
+		enum Encoding: UInt {
+			case utf8 = 4 // NSUTF8StringEncoding
+		}
+
+		init(contentsOf url: URL, encoding enc: Encoding) throws {
+			try self.init(contentsOfURL: url, encoding: enc.rawValue)
+		}
+
+		init?(data: Data, encoding: Encoding) {
+			self.init(data: data, encoding: encoding.rawValue)
 		}
 
 		func components(separatedBy separator: String) -> [String] {
 			return componentsSeparatedByString(separator)
 		}
 
-		func data(using encoding: NSStringEncoding, allowLossyConversion: Bool = false) -> Data? {
-			return dataUsingEncoding(encoding, allowLossyConversion: allowLossyConversion)
+		func data(using encoding: Encoding, allowLossyConversion: Bool = false) -> Data? {
+			return dataUsingEncoding(encoding.rawValue, allowLossyConversion: allowLossyConversion)
 		}
 
 		func lowercased() -> String {
@@ -38,12 +46,12 @@
 			return stringByTrimmingCharactersInSet(set)
 		}
 
-		func write(to url: URL, atomically useAuxiliaryFile: Bool, encoding enc: NSStringEncoding) throws {
-			try writeToURL(url, atomically: useAuxiliaryFile, encoding: enc)
+		func write(to url: URL, atomically useAuxiliaryFile: Bool, encoding enc: Encoding) throws {
+			try writeToURL(url, atomically: useAuxiliaryFile, encoding: enc.rawValue)
 		}
 
-		func write(toFile path: String, atomically useAuxiliaryFile: Bool, encoding enc: NSStringEncoding) throws {
-			try writeToFile(path, atomically: useAuxiliaryFile, encoding: enc)
+		func write(toFile path: String, atomically useAuxiliaryFile: Bool, encoding enc: Encoding) throws {
+			try writeToFile(path, atomically: useAuxiliaryFile, encoding: enc.rawValue)
 		}
 	}
 

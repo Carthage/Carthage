@@ -142,7 +142,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.timeout(after: 60, raising: .xcodebuildTimeout(project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
 		.retry(upTo: 2)
 		.map { data in
-			return String(data: data, encoding: NSUTF8StringEncoding)!
+			return String(data: data, encoding: .utf8)!
 		}
 		.flatMap(.merge) { string in
 			return string.linesProducer
@@ -491,7 +491,7 @@ public struct BuildSettings {
 			.timeout(after: 60, raising: .xcodebuildTimeout(arguments.project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
 			.retry(upTo: 5)
 			.map { data in
-				return String(data: data, encoding: NSUTF8StringEncoding)!
+				return String(data: data, encoding: .utf8)!
 			}
 			.flatMap(.merge) { string -> SignalProducer<BuildSettings, CarthageError> in
 				return SignalProducer { observer, disposable in
@@ -891,7 +891,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				return destinationLookup.launch()
 					.ignoreTaskData()
 					.map { data in
-						let string = String(data: data, encoding: NSUTF8StringEncoding)!
+						let string = String(data: data, encoding: .utf8)!
 						// The output as of Xcode 6.4 is structured text so we
 						// parse it using regex. The destination will be omitted
 						// altogether if parsing fails. Xcode 7.0 beta 4 added a
@@ -1372,7 +1372,7 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 			return lipoTask.launch()
 				.ignoreTaskData()
 				.mapError(CarthageError.taskError)
-				.map { String(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
+				.map { String(data: $0, encoding: .utf8) ?? "" }
 				.flatMap(.merge) { output -> SignalProducer<String, CarthageError> in
 					let characterSet = NSMutableCharacterSet.alphanumeric()
 					characterSet.addCharacters(in: " _-")
@@ -1489,7 +1489,7 @@ private func UUIDsFromDwarfdump(url: URL) -> SignalProducer<Set<UUID>, CarthageE
 	return dwarfdumpTask.launch()
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
-		.map { String(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
+		.map { String(data: $0, encoding: .utf8) ?? "" }
 		.flatMap(.merge) { output -> SignalProducer<Set<UUID>, CarthageError> in
 			// UUIDs are letters, decimals, or hyphens.
 			let uuidCharacterSet = NSMutableCharacterSet()

@@ -168,7 +168,7 @@ class XcodeSpec: QuickSpec {
 				.on(next: { taskEvent in
 					switch taskEvent {
 					case let .StandardError(data):
-						output += String(data: data, encoding: NSUTF8StringEncoding)!
+						output += String(data: data, encoding: .utf8)!
 						
 					default:
 						break

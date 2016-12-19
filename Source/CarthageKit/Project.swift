@@ -233,7 +233,7 @@ public final class Project {
 	public func loadResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
 		return SignalProducer.attempt {
 			do {
-				let resolvedCartfileContents = try String(contentsOf: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
+				let resolvedCartfileContents = try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8)
 				return ResolvedCartfile.fromString(resolvedCartfileContents)
 			} catch let error as NSError {
 				return .failure(.readFailed(self.resolvedCartfileURL, error))
@@ -244,7 +244,7 @@ public final class Project {
 	/// Writes the given Cartfile.resolved out to the project's directory.
 	public func writeResolvedCartfile(resolvedCartfile: ResolvedCartfile) -> Result<(), CarthageError> {
 		do {
-			try resolvedCartfile.description.write(to: resolvedCartfileURL, atomically: true, encoding: NSUTF8StringEncoding)
+			try resolvedCartfile.description.write(to: resolvedCartfileURL, atomically: true, encoding: .utf8)
 			return .success(())
 		} catch let error as NSError {
 			return .failure(.writeFailed(resolvedCartfileURL, error))

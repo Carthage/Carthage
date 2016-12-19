@@ -126,7 +126,7 @@ public struct BuildCommand: CommandType {
 					}, next: { taskEvent in
 						switch taskEvent {
 						case let .Launch(task):
-							stdoutHandle.write(task.description.data(using: NSUTF8StringEncoding)!)
+							stdoutHandle.write(task.description.data(using: .utf8)!)
 
 						case let .StandardOutput(data):
 							stdoutHandle.write(data)
