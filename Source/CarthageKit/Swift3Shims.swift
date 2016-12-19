@@ -18,6 +18,10 @@
 			return lowercaseString
 		}
 
+		func range(of aString: String) -> Range<Index>? {
+			return rangeOfString(aString)
+		}
+
 		func trimmingCharacters(in set: CharacterSet) -> String {
 			return stringByTrimmingCharactersInSet(set)
 		}

@@ -504,7 +504,7 @@ public final class Project {
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(values: release.assets)
 					.filter { asset in
-						if asset.name.rangeOfString(CarthageProjectBinaryAssetPattern) == nil {
+						if asset.name.range(of: CarthageProjectBinaryAssetPattern) == nil {
 							return false
 						}
 						return CarthageProjectBinaryAssetContentTypes.contains(asset.contentType)
