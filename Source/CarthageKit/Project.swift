@@ -244,7 +244,7 @@ public final class Project {
 	/// Writes the given Cartfile.resolved out to the project's directory.
 	public func writeResolvedCartfile(resolvedCartfile: ResolvedCartfile) -> Result<(), CarthageError> {
 		do {
-			try resolvedCartfile.description.writeToURL(resolvedCartfileURL, atomically: true, encoding: NSUTF8StringEncoding)
+			try resolvedCartfile.description.write(to: resolvedCartfileURL, atomically: true, encoding: NSUTF8StringEncoding)
 			return .success(())
 		} catch let error as NSError {
 			return .failure(.writeFailed(resolvedCartfileURL, error))

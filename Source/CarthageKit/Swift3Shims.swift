@@ -29,6 +29,10 @@
 		func trimmingCharacters(in set: CharacterSet) -> String {
 			return stringByTrimmingCharactersInSet(set)
 		}
+
+		func write(to url: URL, atomically useAuxiliaryFile: Bool, encoding enc: NSStringEncoding) throws {
+			try writeToURL(url, atomically: useAuxiliaryFile, encoding: enc)
+		}
 	}
 
 	extension SequenceType where Generator.Element == String {
