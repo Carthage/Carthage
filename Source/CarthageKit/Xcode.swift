@@ -1392,7 +1392,7 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 						scanner.scanCharacters(from: characterSet, into: &architectures)
 
 						let components = architectures?
-							.componentsSeparatedByString(" ")
+							.components(separatedBy: " ")
 							.filter { !$0.isEmpty }
 
 						if let components = components {

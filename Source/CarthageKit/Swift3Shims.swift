@@ -10,6 +10,10 @@
 	// MARK: - Stdlib
 	
 	internal extension String {
+		func components(separatedBy separator: String) -> [String] {
+			return componentsSeparatedByString(separator)
+		}
+
 		func lowercased() -> String {
 			return lowercaseString
 		}
@@ -227,6 +231,10 @@
 
 		func appendingPathExtension(str: String) -> String? {
 			return stringByAppendingPathExtension(str)
+		}
+
+		func components(separatedBy separator: String) -> [String] {
+			return componentsSeparatedByString(separator)
 		}
 
 		func lineRange(for range: NSRange) -> NSRange {
