@@ -14,6 +14,10 @@
 			return componentsSeparatedByString(separator)
 		}
 
+		func data(using encoding: NSStringEncoding, allowLossyConversion: Bool = false) -> Data? {
+			return dataUsingEncoding(encoding, allowLossyConversion: allowLossyConversion)
+		}
+
 		func lowercased() -> String {
 			return lowercaseString
 		}
