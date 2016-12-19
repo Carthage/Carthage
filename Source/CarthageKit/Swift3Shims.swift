@@ -10,6 +10,10 @@
 	// MARK: - Stdlib
 	
 	internal extension String {
+		func lowercased() -> String {
+			return lowercaseString
+		}
+
 		func trimmingCharacters(in set: CharacterSet) -> String {
 			return stringByTrimmingCharactersInSet(set)
 		}

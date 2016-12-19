@@ -294,7 +294,7 @@ public enum SDK: String {
 
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
-		return Result(self.init(rawValue: string.lowercaseString), failWith: .parseError(description: "unexpected SDK key \"\(string)\""))
+		return Result(self.init(rawValue: string.lowercased()), failWith: .parseError(description: "unexpected SDK key \"\(string)\""))
 	}
 
 	/// Split the given SDKs into simulator ones and device ones.
