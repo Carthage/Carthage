@@ -8,6 +8,12 @@
 	import Tentacle
 
 	// MARK: - Stdlib
+	
+	internal extension String {
+		func trimmingCharacters(in set: CharacterSet) -> String {
+			return stringByTrimmingCharactersInSet(set)
+		}
+	}
 
 	extension SequenceType where Generator.Element == String {
 		func joined(separator separator: String) -> String {

@@ -161,7 +161,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.skip { line in !line.hasSuffix("Schemes:") }
 		.skip(first: 1)
 		.take { line in !line.isEmpty }
-		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(.whitespaces) }
+		.map { line in line.trimmingCharacters(in: .whitespaces) }
 }
 
 /// Finds schemes of projects or workspaces, which Carthage should build, found
@@ -525,7 +525,7 @@ public struct BuildSettings {
 						let trimSet = CharacterSet.whitespacesAndNewlines
 						let components = line.characters
 							.split(maxSplits: 1) { $0 == "=" }
-							.map { String($0).stringByTrimmingCharactersInSet(trimSet) }
+							.map { String($0).trimmingCharacters(in: trimSet) }
 
 						if components.count == 2 {
 							currentSettings[components[0]] = components[1]
