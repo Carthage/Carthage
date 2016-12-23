@@ -138,7 +138,7 @@ public struct ResolvedCartfile {
 	}
 
 	/// Attempts to parse Cartfile.resolved information from a string.
-	public static func fromString(string: String) -> Result<ResolvedCartfile, CarthageError> {
+	public static func from(string string: String) -> Result<ResolvedCartfile, CarthageError> {
 		var cartfile = self.init(dependencies: [])
 		var result: Result<(), CarthageError> = .success(())
 

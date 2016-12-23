@@ -58,7 +58,7 @@ class CartfileSpec: QuickSpec {
 			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "resolved")!
 			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 
-			let result = ResolvedCartfile.fromString(testCartfile)
+			let result = ResolvedCartfile.from(string: testCartfile)
 			expect(result.error).to(beNil())
 
 			let resolvedCartfile = result.value!

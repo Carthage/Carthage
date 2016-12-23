@@ -20,6 +20,11 @@ extension Cartfile {
 	public static func fromString(string: String) -> Result<Cartfile, CarthageError> { fatalError() }
 }
 
+extension ResolvedCartfile {
+	@available(*, unavailable, renamed="from(string:)")
+	public static func fromString(string: String) -> Result<ResolvedCartfile, CarthageError> { fatalError() }
+}
+
 // MARK: - Git.swift
 
 @available(*, unavailable, renamed="cloneRepository(_:_:isBare:)")

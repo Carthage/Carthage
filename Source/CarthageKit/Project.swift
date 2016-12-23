@@ -234,7 +234,7 @@ public final class Project {
 		return SignalProducer.attempt {
 			do {
 				let resolvedCartfileContents = try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8)
-				return ResolvedCartfile.fromString(resolvedCartfileContents)
+				return ResolvedCartfile.from(string: resolvedCartfileContents)
 			} catch let error as NSError {
 				return .failure(.readFailed(self.resolvedCartfileURL, error))
 			}
