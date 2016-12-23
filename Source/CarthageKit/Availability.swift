@@ -18,6 +18,9 @@ public func unzipArchiveToTemporaryDirectory(fileURL: URL) -> SignalProducer<URL
 extension Cartfile {
 	@available(*, unavailable, renamed="from(string:)")
 	public static func fromString(string: String) -> Result<Cartfile, CarthageError> { fatalError() }
+
+	@available(*, unavailable, renamed="from(file:)")
+	public static func fromFile(cartfileURL: URL) -> Result<Cartfile, CarthageError> { fatalError() }
 }
 
 extension ResolvedCartfile {

@@ -73,7 +73,7 @@ public struct Cartfile {
 	}
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
-	public static func fromFile(cartfileURL: URL) -> Result<Cartfile, CarthageError> {
+	public static func from(file cartfileURL: URL) -> Result<Cartfile, CarthageError> {
 		do {
 			let cartfileContents = try String(contentsOf: cartfileURL, encoding: .utf8)
 			return Cartfile.from(string: cartfileContents)

@@ -191,7 +191,7 @@ public final class Project {
 		}
 		
 		let cartfile = SignalProducer.attempt {
-				return Cartfile.fromFile(cartfileURL)
+				return Cartfile.from(file: cartfileURL)
 			}
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) && FileManager.`default`.fileExists(atPath: privateCartfileURL.carthage_path) {
@@ -202,7 +202,7 @@ public final class Project {
 			}
 
 		let privateCartfile = SignalProducer.attempt {
-				return Cartfile.fromFile(privateCartfileURL)
+				return Cartfile.from(file: privateCartfileURL)
 			}
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) {
