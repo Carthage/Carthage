@@ -191,7 +191,7 @@ public final class Project {
 		}
 		
 		let cartfile = SignalProducer.attempt {
-				return Cartfile.fromFile(cartfileURL)
+				return Cartfile.from(file: cartfileURL)
 			}
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) && FileManager.`default`.fileExists(atPath: privateCartfileURL.carthage_path) {
@@ -202,7 +202,7 @@ public final class Project {
 			}
 
 		let privateCartfile = SignalProducer.attempt {
-				return Cartfile.fromFile(privateCartfileURL)
+				return Cartfile.from(file: privateCartfileURL)
 			}
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) {
@@ -218,10 +218,10 @@ public final class Project {
 
 				let duplicateDeps = cartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)"]) }
 					+ privateCartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectPrivateCartfilePath)"]) }
-					+ duplicateProjectsInCartfiles(cartfile, privateCartfile).map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]) }
+					+ duplicateProjectsIn(cartfile, privateCartfile).map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]) }
 
 				if duplicateDeps.count == 0 {
-					cartfile.appendCartfile(privateCartfile)
+					cartfile.append(privateCartfile)
 					return .success(cartfile)
 				}
 
@@ -234,7 +234,7 @@ public final class Project {
 		return SignalProducer.attempt {
 			do {
 				let resolvedCartfileContents = try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8)
-				return ResolvedCartfile.fromString(resolvedCartfileContents)
+				return ResolvedCartfile.from(string: resolvedCartfileContents)
 			} catch let error as NSError {
 				return .failure(.readFailed(self.resolvedCartfileURL, error))
 			}
@@ -323,7 +323,7 @@ public final class Project {
 				return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
 			}
 			.flatMapError { _ in .empty }
-			.attemptMap(Cartfile.fromString)
+			.attemptMap(Cartfile.from(string:))
 	}
 
 	/// Attempts to resolve a Git reference to a version.

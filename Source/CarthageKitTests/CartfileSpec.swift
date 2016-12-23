@@ -19,7 +19,7 @@ class CartfileSpec: QuickSpec {
 			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "")!
 			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 
-			let result = Cartfile.fromString(testCartfile)
+			let result = Cartfile.from(string: testCartfile)
 			expect(result.error).to(beNil())
 
 			let cartfile = result.value!
@@ -58,7 +58,7 @@ class CartfileSpec: QuickSpec {
 			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "resolved")!
 			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 
-			let result = ResolvedCartfile.fromString(testCartfile)
+			let result = ResolvedCartfile.from(string: testCartfile)
 			expect(result.error).to(beNil())
 
 			let resolvedCartfile = result.value!
@@ -77,7 +77,7 @@ class CartfileSpec: QuickSpec {
 			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile", withExtension: "")!
 			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 
-			let result = Cartfile.fromString(testCartfile)
+			let result = Cartfile.from(string: testCartfile)
 			expect(result.error).to(beNil())
 
 			let cartfile = result.value!
@@ -100,10 +100,10 @@ class CartfileSpec: QuickSpec {
 			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 			let testCartfile2 = try! String(contentsOf: testCartfile2URL, encoding: .utf8)
 
-			let result = Cartfile.fromString(testCartfile)
+			let result = Cartfile.from(string: testCartfile)
 			expect(result.error).to(beNil())
 
-			let result2 = Cartfile.fromString(testCartfile2)
+			let result2 = Cartfile.from(string: testCartfile2)
 			expect(result2.error).to(beNil())
 
 			let cartfile = result.value!
@@ -112,7 +112,7 @@ class CartfileSpec: QuickSpec {
 			let cartfile2 = result2.value!
 			expect(cartfile2.dependencies.count) == 3
 
-			let dupes = duplicateProjectsInCartfiles(cartfile, cartfile2).sort { $0.description < $1.description }
+			let dupes = duplicateProjectsIn(cartfile, cartfile2).sort { $0.description < $1.description }
 			expect(dupes.count) == 3
 
 			let dupe1 = dupes[0]
