@@ -27,6 +27,9 @@ extension Cartfile {
 }
 
 extension ResolvedCartfile {
+	@available(*, unavailable, renamed="url(in:)")
+	public static func urlInDirectory(directoryURL: URL) -> URL { fatalError() }
+
 	@available(*, unavailable, renamed="from(string:)")
 	public static func fromString(string: String) -> Result<ResolvedCartfile, CarthageError> { fatalError() }
 }

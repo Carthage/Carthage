@@ -133,7 +133,7 @@ public struct ResolvedCartfile {
 
 	/// Returns the location where Cartfile.resolved should exist within the given
 	/// directory.
-	public static func urlInDirectory(directoryURL: URL) -> URL {
+	public static func url(in directoryURL: URL) -> URL {
 		return directoryURL.appendingPathComponent("Cartfile.resolved")
 	}
 
