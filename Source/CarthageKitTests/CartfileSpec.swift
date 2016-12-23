@@ -19,7 +19,7 @@ class CartfileSpec: QuickSpec {
 			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "")!
 			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 
-			let result = Cartfile.fromString(testCartfile)
+			let result = Cartfile.from(string: testCartfile)
 			expect(result.error).to(beNil())
 
 			let cartfile = result.value!
@@ -77,7 +77,7 @@ class CartfileSpec: QuickSpec {
 			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile", withExtension: "")!
 			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 
-			let result = Cartfile.fromString(testCartfile)
+			let result = Cartfile.from(string: testCartfile)
 			expect(result.error).to(beNil())
 
 			let cartfile = result.value!
@@ -100,10 +100,10 @@ class CartfileSpec: QuickSpec {
 			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 			let testCartfile2 = try! String(contentsOf: testCartfile2URL, encoding: .utf8)
 
-			let result = Cartfile.fromString(testCartfile)
+			let result = Cartfile.from(string: testCartfile)
 			expect(result.error).to(beNil())
 
-			let result2 = Cartfile.fromString(testCartfile2)
+			let result2 = Cartfile.from(string: testCartfile2)
 			expect(result2.error).to(beNil())
 
 			let cartfile = result.value!

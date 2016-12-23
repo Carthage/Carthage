@@ -174,16 +174,16 @@ class ResolverSpec: QuickSpec {
 
 		switch dependency.project {
 		case .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")):
-			cartfile = Cartfile.fromString("github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0")
+			cartfile = Cartfile.from(string: "github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0")
 
 		case .gitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")):
-			cartfile = Cartfile.fromString("github \"jspahrsummers/xcconfigs\" ~> 1.0")
+			cartfile = Cartfile.from(string: "github \"jspahrsummers/xcconfigs\" ~> 1.0")
 
 		case .git(GitURL("/tmp/TestCartfileBranch")):
-			cartfile = Cartfile.fromString("git \"https://enterprise.local/desktop/git-error-translations2.git\" \"development\"")
+			cartfile = Cartfile.from(string: "git \"https://enterprise.local/desktop/git-error-translations2.git\" \"development\"")
 
 		case .git(GitURL("/tmp/TestCartfileSHA")):
-			cartfile = Cartfile.fromString("git \"https://enterprise.local/desktop/git-error-translations2.git\" \"8ff4393ede2ca86d5a78edaf62b3a14d90bffab9\"")
+			cartfile = Cartfile.from(string: "git \"https://enterprise.local/desktop/git-error-translations2.git\" \"8ff4393ede2ca86d5a78edaf62b3a14d90bffab9\"")
 
 		default:
 			cartfile = .success(Cartfile())

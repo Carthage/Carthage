@@ -1,5 +1,6 @@
 import Foundation
 import ReactiveCocoa
+import Result
 
 // MARK: - Archive.swift
 
@@ -11,6 +12,13 @@ public func unzipArchiveToDirectory(fileURL: URL, _ destinationDirectoryURL: URL
 
 @available(*, unavailable, renamed="unzip(archive:)")
 public func unzipArchiveToTemporaryDirectory(fileURL: URL) -> SignalProducer<URL, CarthageError> { fatalError() }
+
+// MARK: - Cartfile.swift
+
+extension Cartfile {
+	@available(*, unavailable, renamed="from(string:)")
+	public static func fromString(string: String) -> Result<Cartfile, CarthageError> { fatalError() }
+}
 
 // MARK: - Git.swift
 

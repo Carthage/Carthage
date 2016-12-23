@@ -31,7 +31,7 @@ public struct Cartfile {
 	}
 
 	/// Attempts to parse Cartfile information from a string.
-	public static func fromString(string: String) -> Result<Cartfile, CarthageError> {
+	public static func from(string string: String) -> Result<Cartfile, CarthageError> {
 		var cartfile = self.init()
 		var result: Result<(), CarthageError> = .success(())
 
@@ -76,7 +76,7 @@ public struct Cartfile {
 	public static func fromFile(cartfileURL: URL) -> Result<Cartfile, CarthageError> {
 		do {
 			let cartfileContents = try String(contentsOf: cartfileURL, encoding: .utf8)
-			return Cartfile.fromString(cartfileContents)
+			return Cartfile.from(string: cartfileContents)
 		} catch let error as NSError {
 			return .failure(CarthageError.readFailed(cartfileURL, error))
 		}

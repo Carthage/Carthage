@@ -323,7 +323,7 @@ public final class Project {
 				return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
 			}
 			.flatMapError { _ in .empty }
-			.attemptMap(Cartfile.fromString)
+			.attemptMap(Cartfile.from(string:))
 	}
 
 	/// Attempts to resolve a Git reference to a version.
