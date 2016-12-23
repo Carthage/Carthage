@@ -37,6 +37,9 @@ extension ResolvedCartfile {
 	public mutating func appendCartfile(cartfile: Cartfile) { fatalError() }
 }
 
+@available(*, unavailable, renamed="duplicateProjectsIn(_:_:)")
+public func duplicateProjectsInCartfiles(cartfile1: Cartfile, _ cartfile2: Cartfile) -> [ProjectIdentifier] { fatalError() }
+
 // MARK: - Git.swift
 
 @available(*, unavailable, renamed="cloneRepository(_:_:isBare:)")
