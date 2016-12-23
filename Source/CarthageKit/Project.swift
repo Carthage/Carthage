@@ -221,7 +221,7 @@ public final class Project {
 					+ duplicateProjectsInCartfiles(cartfile, privateCartfile).map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]) }
 
 				if duplicateDeps.count == 0 {
-					cartfile.appendCartfile(privateCartfile)
+					cartfile.append(privateCartfile)
 					return .success(cartfile)
 				}
 

@@ -32,6 +32,9 @@ extension ResolvedCartfile {
 
 	@available(*, unavailable, renamed="from(string:)")
 	public static func fromString(string: String) -> Result<ResolvedCartfile, CarthageError> { fatalError() }
+
+	@available(*, unavailable, renamed="append(_:)")
+	public mutating func appendCartfile(cartfile: Cartfile) { fatalError() }
 }
 
 // MARK: - Git.swift

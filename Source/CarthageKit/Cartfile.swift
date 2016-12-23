@@ -83,7 +83,7 @@ public struct Cartfile {
 	}
 
 	/// Appends the contents of another Cartfile to that of the receiver.
-	public mutating func appendCartfile(cartfile: Cartfile) {
+	public mutating func append(_ cartfile: Cartfile) {
 		dependencies += cartfile.dependencies
 	}
 }
