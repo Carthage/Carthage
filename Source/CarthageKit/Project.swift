@@ -233,7 +233,7 @@ public final class Project {
 	public func loadResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
 		return SignalProducer.attempt {
 			do {
-				let resolvedCartfileContents = try String(contentsOfURL: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
+				let resolvedCartfileContents = try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8)
 				return ResolvedCartfile.fromString(resolvedCartfileContents)
 			} catch let error as NSError {
 				return .failure(.readFailed(self.resolvedCartfileURL, error))
@@ -244,7 +244,7 @@ public final class Project {
 	/// Writes the given Cartfile.resolved out to the project's directory.
 	public func writeResolvedCartfile(resolvedCartfile: ResolvedCartfile) -> Result<(), CarthageError> {
 		do {
-			try resolvedCartfile.description.writeToURL(resolvedCartfileURL, atomically: true, encoding: NSUTF8StringEncoding)
+			try resolvedCartfile.description.write(to: resolvedCartfileURL, atomically: true, encoding: .utf8)
 			return .success(())
 		} catch let error as NSError {
 			return .failure(.writeFailed(resolvedCartfileURL, error))
@@ -504,7 +504,7 @@ public final class Project {
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(values: release.assets)
 					.filter { asset in
-						if asset.name.rangeOfString(CarthageProjectBinaryAssetPattern) == nil {
+						if asset.name.range(of: CarthageProjectBinaryAssetPattern) == nil {
 							return false
 						}
 						return CarthageProjectBinaryAssetContentTypes.contains(asset.contentType)
@@ -859,7 +859,7 @@ private func platformForFramework(frameworkURL: URL) -> SignalProducer<Platform,
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
-		.map { sdkName in sdkName.stringByTrimmingCharactersInSet(CharacterSet.letters.inverted) }
+		.map { sdkName in sdkName.trimmingCharacters(in: CharacterSet.letters.inverted) }
 		.attemptMap { platform in SDK.fromString(platform).map { $0.platform } }
 }
 

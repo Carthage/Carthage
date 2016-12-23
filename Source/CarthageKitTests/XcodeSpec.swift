@@ -61,7 +61,7 @@ class XcodeSpec: QuickSpec {
 		describe("locateProjectsInDirectory:") {
 			func relativePathsForProjectsInDirectory(directoryURL: URL) -> [String] {
 				let result = locateProjectsInDirectory(directoryURL)
-					.map { $0.fileURL.carthage_absoluteString.substringFromIndex(directoryURL.carthage_absoluteString.endIndex) }
+					.map { $0.fileURL.carthage_absoluteString.substring(from: directoryURL.carthage_absoluteString.endIndex) }
 					.collect()
 					.first()
 				expect(result?.error).to(beNil())
@@ -168,7 +168,7 @@ class XcodeSpec: QuickSpec {
 				.on(next: { taskEvent in
 					switch taskEvent {
 					case let .StandardError(data):
-						output += String(data: data, encoding: NSUTF8StringEncoding)!
+						output += String(data: data, encoding: .utf8)!
 						
 					default:
 						break

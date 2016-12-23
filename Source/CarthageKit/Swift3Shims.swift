@@ -8,6 +8,52 @@
 	import Tentacle
 
 	// MARK: - Stdlib
+	
+	internal extension String {
+		enum Encoding: UInt {
+			case utf8 = 4 // NSUTF8StringEncoding
+		}
+
+		init(contentsOf url: URL, encoding enc: Encoding) throws {
+			try self.init(contentsOfURL: url, encoding: enc.rawValue)
+		}
+
+		init?(data: Data, encoding: Encoding) {
+			self.init(data: data, encoding: encoding.rawValue)
+		}
+
+		func components(separatedBy separator: String) -> [String] {
+			return componentsSeparatedByString(separator)
+		}
+
+		func data(using encoding: Encoding, allowLossyConversion: Bool = false) -> Data? {
+			return dataUsingEncoding(encoding.rawValue, allowLossyConversion: allowLossyConversion)
+		}
+
+		func lowercased() -> String {
+			return lowercaseString
+		}
+
+		func range(of aString: String) -> Range<Index>? {
+			return rangeOfString(aString)
+		}
+
+		func substring(from index: Index) -> String {
+			return substringFromIndex(index)
+		}
+		
+		func trimmingCharacters(in set: CharacterSet) -> String {
+			return stringByTrimmingCharactersInSet(set)
+		}
+
+		func write(to url: URL, atomically useAuxiliaryFile: Bool, encoding enc: Encoding) throws {
+			try writeToURL(url, atomically: useAuxiliaryFile, encoding: enc.rawValue)
+		}
+
+		func write(toFile path: String, atomically useAuxiliaryFile: Bool, encoding enc: Encoding) throws {
+			try writeToFile(path, atomically: useAuxiliaryFile, encoding: enc.rawValue)
+		}
+	}
 
 	extension SequenceType where Generator.Element == String {
 		func joined(separator separator: String) -> String {
@@ -217,6 +263,10 @@
 
 		func appendingPathExtension(str: String) -> String? {
 			return stringByAppendingPathExtension(str)
+		}
+
+		func components(separatedBy separator: String) -> [String] {
+			return componentsSeparatedByString(separator)
 		}
 
 		func lineRange(for range: NSRange) -> NSRange {

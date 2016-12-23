@@ -17,7 +17,7 @@ class CartfileSpec: QuickSpec {
 	override func spec() {
 		it("should parse a Cartfile") {
 			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "")!
-			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
+			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 
 			let result = Cartfile.fromString(testCartfile)
 			expect(result.error).to(beNil())
@@ -56,7 +56,7 @@ class CartfileSpec: QuickSpec {
 
 		it("should parse a Cartfile.resolved") {
 			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "resolved")!
-			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
+			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 
 			let result = ResolvedCartfile.fromString(testCartfile)
 			expect(result.error).to(beNil())
@@ -75,7 +75,7 @@ class CartfileSpec: QuickSpec {
 
 		it("should detect duplicate dependencies in a single Cartfile") {
 			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile", withExtension: "")!
-			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
+			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 
 			let result = Cartfile.fromString(testCartfile)
 			expect(result.error).to(beNil())
@@ -97,8 +97,8 @@ class CartfileSpec: QuickSpec {
 			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile", withExtension: "")!
 			let testCartfile2URL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile.private", withExtension: "")!
 
-			let testCartfile = try! String(contentsOfURL: testCartfileURL, encoding: NSUTF8StringEncoding)
-			let testCartfile2 = try! String(contentsOfURL: testCartfile2URL, encoding: NSUTF8StringEncoding)
+			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
+			let testCartfile2 = try! String(contentsOf: testCartfile2URL, encoding: .utf8)
 
 			let result = Cartfile.fromString(testCartfile)
 			expect(result.error).to(beNil())
