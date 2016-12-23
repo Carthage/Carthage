@@ -26,7 +26,7 @@ public struct Cartfile {
 
 	/// Returns the location where Cartfile should exist within the given
 	/// directory.
-	public static func urlInDirectory(directoryURL: URL) -> URL {
+	public static func url(in directoryURL: URL) -> URL {
 		return directoryURL.appendingPathComponent("Cartfile")
 	}
 
