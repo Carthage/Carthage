@@ -139,7 +139,7 @@ private func frameworksFolder() -> Result<URL, CarthageError> {
 
 private func validArchitectures() -> Result<[String], CarthageError> {
 	return getEnvironmentVariable("VALID_ARCHS").map { architectures -> [String] in
-		architectures.componentsSeparatedByString(" ")
+		architectures.components(separatedBy: " ")
 	}
 }
 

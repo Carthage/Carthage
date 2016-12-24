@@ -37,7 +37,7 @@ class ArchiveSpec: QuickSpec {
 				expect(contents.isEmpty) == false
 				expect(contents).to(contain(innerFolderName))
 
-				let innerContents = (try? FileManager.`default`.contentsOfDirectory(atPath: (directoryPath as NSString).stringByAppendingPathComponent(innerFolderName))) ?? []
+				let innerContents = (try? FileManager.`default`.contentsOfDirectory(atPath: (directoryPath as NSString).appendingPathComponent(innerFolderName))) ?? []
 				expect(innerContents.isEmpty) == false
 				expect(innerContents).to(contain("Cartfile.private"))
 			}
@@ -45,7 +45,7 @@ class ArchiveSpec: QuickSpec {
 
 		describe("zipping") {
 			let originalCurrentDirectory = FileManager.`default`.currentDirectoryPath
-			let temporaryURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
+			let temporaryURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
 			let archiveURL = temporaryURL.appendingPathComponent("archive.zip", isDirectory: false)
 
 			beforeEach {
@@ -64,11 +64,11 @@ class ArchiveSpec: QuickSpec {
 				let subdirPath = "subdir"
 				expect { try FileManager.`default`.createDirectory(atPath: subdirPath, withIntermediateDirectories: true) }.notTo(throwError())
 
-				let innerFilePath = (subdirPath as NSString).stringByAppendingPathComponent("inner")
-				expect { try "foobar".writeToFile(innerFilePath, atomically: true, encoding: NSUTF8StringEncoding) }.notTo(throwError())
+				let innerFilePath = (subdirPath as NSString).appendingPathComponent("inner")
+				expect { try "foobar".write(toFile: innerFilePath, atomically: true, encoding: .utf8) }.notTo(throwError())
 
 				let outerFilePath = "outer"
-				expect { try "foobar".writeToFile(outerFilePath, atomically: true, encoding: NSUTF8StringEncoding) }.notTo(throwError())
+				expect { try "foobar".write(toFile: outerFilePath, atomically: true, encoding: .utf8) }.notTo(throwError())
 
 				let result = zip(paths: [ innerFilePath, outerFilePath ], into: archiveURL, workingDirectory: temporaryURL.carthage_path).wait()
 				expect(result.error).to(beNil())
@@ -94,7 +94,7 @@ class ArchiveSpec: QuickSpec {
 
 			it("should preserve symlinks") {
 				let destinationPath = "symlink-destination"
-				expect { try "foobar".writeToFile(destinationPath, atomically: true, encoding: NSUTF8StringEncoding) }.notTo(throwError())
+				expect { try "foobar".write(toFile: destinationPath, atomically: true, encoding: .utf8) }.notTo(throwError())
 
 				let symlinkPath = "symlink"
 				expect { try FileManager.`default`.createSymbolicLink(atPath: symlinkPath, withDestinationPath: destinationPath) }.notTo(throwError())

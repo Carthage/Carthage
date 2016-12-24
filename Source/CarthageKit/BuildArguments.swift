@@ -61,7 +61,7 @@ public struct BuildArguments {
 		}
 		
 		if let derivedDataPath = derivedDataPath {
-			let standarizedPath = URL(fileURLWithPath: (derivedDataPath as NSString).stringByExpandingTildeInPath).standardizedFileURL.carthage_path
+			let standarizedPath = URL(fileURLWithPath: (derivedDataPath as NSString).expandingTildeInPath).standardizedFileURL.carthage_path
 			if !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
 				args += [ "-derivedDataPath", standarizedPath ]
 			}

@@ -81,7 +81,7 @@ class ProjectSpec: QuickSpec {
 
 		describe("cloneOrFetchProject") {
 			// https://github.com/Carthage/Carthage/issues/1191
-			let temporaryPath = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(ProcessInfo.processInfo.globallyUniqueString)
+			let temporaryPath = (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString)
 			let temporaryURL = URL(fileURLWithPath: temporaryPath, isDirectory: true)
 			let repositoryURL = temporaryURL.appendingPathComponent("carthage1191", isDirectory: true)
 			let cacheDirectoryURL = temporaryURL.appendingPathComponent("cache", isDirectory: true)
@@ -97,7 +97,7 @@ class ProjectSpec: QuickSpec {
 				return launchGitTask([ "rev-parse", "--short", "HEAD" ], repositoryFileURL: repositoryURL)
 					.last()!
 					.value!
-					.stringByTrimmingCharactersInSet(.newlines)
+					.trimmingCharacters(in: .newlines)
 			}
 
 			func cloneOrFetch(commitish commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {

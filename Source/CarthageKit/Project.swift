@@ -20,9 +20,9 @@ public let CarthageKitBundleIdentifier = Bundle(for: Project.self).bundleIdentif
 private let fallbackDependenciesURL: URL = {
 	let homePath: String
 	if let homeEnvValue = ProcessInfo.processInfo.environment["HOME"] {
-		homePath = (homeEnvValue as NSString).stringByAppendingPathComponent(".carthage")
+		homePath = (homeEnvValue as NSString).appendingPathComponent(".carthage")
 	} else {
-		homePath = ("~/.carthage" as NSString).stringByExpandingTildeInPath
+		homePath = ("~/.carthage" as NSString).expandingTildeInPath
 	}
 	return URL(fileURLWithPath: homePath, isDirectory:true)
 }()
@@ -197,7 +197,7 @@ public final class Project {
 		}
 		
 		let cartfile = SignalProducer.attempt {
-				return Cartfile.fromFile(cartfileURL)
+				return Cartfile.from(file: cartfileURL)
 			}
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) && FileManager.`default`.fileExists(atPath: privateCartfileURL.carthage_path) {
@@ -208,7 +208,7 @@ public final class Project {
 			}
 
 		let privateCartfile = SignalProducer.attempt {
-				return Cartfile.fromFile(privateCartfileURL)
+				return Cartfile.from(file: privateCartfileURL)
 			}
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) {
@@ -224,10 +224,10 @@ public final class Project {
 
 				let duplicateDeps = cartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)"]) }
 					+ privateCartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectPrivateCartfilePath)"]) }
-					+ duplicateProjectsInCartfiles(cartfile, privateCartfile).map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]) }
+					+ duplicateProjectsIn(cartfile, privateCartfile).map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]) }
 
-				if duplicateDeps.count == 0 {
-					cartfile.appendCartfile(privateCartfile)
+				if duplicateDeps.isEmpty {
+					cartfile.append(privateCartfile)
 					return .success(cartfile)
 				}
 
@@ -239,8 +239,8 @@ public final class Project {
 	public func loadResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
 		return SignalProducer.attempt {
 			do {
-				let resolvedCartfileContents = try String(contentsOfURL: self.resolvedCartfileURL, encoding: NSUTF8StringEncoding)
-				return ResolvedCartfile.fromString(resolvedCartfileContents)
+				let resolvedCartfileContents = try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8)
+				return ResolvedCartfile.from(string: resolvedCartfileContents)
 			} catch let error as NSError {
 				return .failure(.readFailed(self.resolvedCartfileURL, error))
 			}
@@ -250,7 +250,7 @@ public final class Project {
 	/// Writes the given Cartfile.resolved out to the project's directory.
 	public func writeResolvedCartfile(resolvedCartfile: ResolvedCartfile) -> Result<(), CarthageError> {
 		do {
-			try resolvedCartfile.description.writeToURL(resolvedCartfileURL, atomically: true, encoding: NSUTF8StringEncoding)
+			try resolvedCartfile.description.write(to: resolvedCartfileURL, atomically: true, encoding: .utf8)
 			return .success(())
 		} catch let error as NSError {
 			return .failure(.writeFailed(resolvedCartfileURL, error))
@@ -329,7 +329,7 @@ public final class Project {
 				return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
 			}
 			.flatMapError { _ in .empty }
-			.attemptMap(Cartfile.fromString)
+			.attemptMap(Cartfile.from(string:))
 	}
 
 	/// Attempts to resolve a Git reference to a version.
@@ -510,7 +510,7 @@ public final class Project {
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(values: release.assets)
 					.filter { asset in
-						if asset.name.rangeOfString(CarthageProjectBinaryAssetPattern) == nil {
+						if asset.name.range(of: CarthageProjectBinaryAssetPattern) == nil {
 							return false
 						}
 						return CarthageProjectBinaryAssetContentTypes.contains(asset.contentType)
@@ -711,7 +711,7 @@ public final class Project {
 			}
 			.attemptMap { name -> Result<(), CarthageError> in
 				let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
-				let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).stringByAppendingPathComponent(name)
+				let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
 				let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: subdirectoryPath)
 				do {
 					try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.carthage_path, withDestinationPath: linkDestinationPath)
@@ -874,7 +874,7 @@ private func platformForFramework(frameworkURL: URL) -> SignalProducer<Platform,
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
-		.map { sdkName in sdkName.stringByTrimmingCharactersInSet(CharacterSet.letters.inverted) }
+		.map { sdkName in sdkName.trimmingCharacters(in: CharacterSet.letters.inverted) }
 		.attemptMap { platform in SDK.fromString(platform).map { $0.platform } }
 }
 
@@ -969,12 +969,12 @@ private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bo
 
 /// Returns the string representing a relative path from a dependency project back to the root
 internal func relativeLinkDestinationForDependencyProject(dependency: ProjectIdentifier, subdirectory: String) -> String {
-	let dependencySubdirectoryPath = (dependency.relativePath as NSString).stringByAppendingPathComponent(subdirectory)
+	let dependencySubdirectoryPath = (dependency.relativePath as NSString).appendingPathComponent(subdirectory)
 	let componentsForGettingTheHellOutOfThisRelativePath = Array(count: (dependencySubdirectoryPath as NSString).pathComponents.count - 1, repeatedValue: "..")
 
 	// Directs a link from, e.g., /Carthage/Checkouts/ReactiveCocoa/Carthage/Build to /Carthage/Build
 	let linkDestinationPath = componentsForGettingTheHellOutOfThisRelativePath.reduce(subdirectory) { trailingPath, pathComponent in
-		return (pathComponent as NSString).stringByAppendingPathComponent(trailingPath)
+		return (pathComponent as NSString).appendingPathComponent(trailingPath)
 	}
 
 	return linkDestinationPath

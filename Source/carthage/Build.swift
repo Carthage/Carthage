@@ -126,7 +126,7 @@ public struct BuildCommand: CommandType {
 					}, next: { taskEvent in
 						switch taskEvent {
 						case let .Launch(task):
-							stdoutHandle.write(task.description.dataUsingEncoding(NSUTF8StringEncoding)!)
+							stdoutHandle.write(task.description.data(using: .utf8)!)
 
 						case let .StandardOutput(data):
 							stdoutHandle.write(data)
@@ -189,7 +189,7 @@ public struct BuildCommand: CommandType {
 	/// file.
 	private func openTemporaryFile() -> SignalProducer<(FileHandle, URL), NSError> {
 		return SignalProducer.attempt {
-			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
+			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
 			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
 				return mkstemps(template.baseAddress, 4)
 			}

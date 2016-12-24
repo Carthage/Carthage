@@ -14,21 +14,17 @@ import Result
 import Tentacle
 
 public func localVersion() -> SemanticVersion {
-	
 	let versionString = Bundle(identifier: CarthageKitBundleIdentifier)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
-	return SemanticVersion.fromString(versionString).value!
+	return SemanticVersion.from(Scanner(string: versionString)).value!
 }
 
 public func remoteVersion() -> SemanticVersion? {
-	
 	let latestRemoteVersion = Client(.dotCom)
 		.releases(in: Repository(owner: "Carthage", name: "Carthage"), perPage: 1)
-		.map { (_, releases) in
-			return releases.first!
-		}
+		.map { _, releases in releases.first! }
 		.mapError(CarthageError.gitHubAPIRequestFailed)
-		.attemptMap { (release) -> Result<SemanticVersion, CarthageError> in
-			return SemanticVersion.fromString(release.tag)
+		.attemptMap { release -> Result<SemanticVersion, CarthageError> in
+			return SemanticVersion.from(Scanner(string: release.tag))
 		}
 		.timeout(after: 0.5, raising: CarthageError.gitHubAPITimeout, on: QueueScheduler.main)
 		.first()

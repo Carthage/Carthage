@@ -43,7 +43,7 @@ public struct ArchiveCommand: CommandType {
 		let frameworks: SignalProducer<[String], CarthageError>
 		if !options.frameworkNames.isEmpty {
 			frameworks = .init(value: options.frameworkNames.map {
-				return ($0 as NSString).stringByAppendingPathExtension("framework")!
+				return ($0 as NSString).appendingPathExtension("framework")!
 			})
 		} else {
 			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
@@ -78,19 +78,19 @@ public struct ArchiveCommand: CommandType {
 			return SignalProducer(values: Platform.supportedPlatforms)
 				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
 					return SignalProducer(values: frameworks).map { framework in
-						return (platform.relativePath as NSString).stringByAppendingPathComponent(framework)
+						return (platform.relativePath as NSString).appendingPathComponent(framework)
 					}
 				}
 				.map { relativePath -> (relativePath: String, absolutePath: String) in
-					let absolutePath = (options.directoryPath as NSString).stringByAppendingPathComponent(relativePath)
+					let absolutePath = (options.directoryPath as NSString).appendingPathComponent(relativePath)
 					return (relativePath, absolutePath)
 				}
 				.filter { filePath in FileManager.`default`.fileExists(atPath: filePath.absolutePath) }
 				.flatMap(.merge) { framework -> SignalProducer<String, CarthageError> in
-					let dSYM = (framework.relativePath as NSString).stringByAppendingPathExtension("dSYM")!
+					let dSYM = (framework.relativePath as NSString).appendingPathExtension("dSYM")!
 					let bcsymbolmapsProducer = BCSymbolMapsForFramework(URL(fileURLWithPath: framework.absolutePath))
 						// generate relative paths for the bcsymbolmaps so they print nicely
-						.map { url in ((framework.relativePath as NSString).stringByDeletingLastPathComponent as NSString).stringByAppendingPathComponent(url.carthage_lastPathComponent) }
+						.map { url in ((framework.relativePath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(url.carthage_lastPathComponent) }
 					let extraFilesProducer = SignalProducer(value: dSYM)
 						.concat(bcsymbolmapsProducer)
 						.filter { relativePath in FileManager.`default`.fileExists(atPath: framework.absolutePath) }
@@ -144,7 +144,7 @@ private func outputPathWithOptions(options: ArchiveCommand.Options, frameworks: 
 		if FileManager.`default`.fileExists(atPath: path, isDirectory: &isDirectory) && isDirectory {
 			// If the given path is an existing directory, output a zip file
 			// into that directory.
-			return (path as NSString).stringByAppendingPathComponent(defaultOutputPath)
+			return (path as NSString).appendingPathComponent(defaultOutputPath)
 		} else {
 			// Use the given path as the final output.
 			return path

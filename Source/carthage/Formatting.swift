@@ -44,7 +44,7 @@ public enum ColorArgument: String, ArgumentType, CustomStringConvertible {
 	public static let name = "color"
 	
 	public static func fromString(string: String) -> ColorArgument? {
-		return self.init(rawValue: string.lowercaseString)
+		return self.init(rawValue: string.lowercased())
 	}
 	
 }

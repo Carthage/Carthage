@@ -69,7 +69,7 @@ public struct Resolver {
 					// The dependencies which are not related to the targets
 					// should not be affected, so use the version in the last
 					// Cartfile.resolved.
-					if let dependencyForProject = lastResolved.dependencyForProject(node.project) {
+					if let dependencyForProject = lastResolved.dependency(for: node.project) {
 						return dependencyForProject
 					}
 

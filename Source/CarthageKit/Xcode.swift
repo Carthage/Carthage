@@ -142,7 +142,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.timeout(after: 60, raising: .xcodebuildTimeout(project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
 		.retry(upTo: 2)
 		.map { data in
-			return String(data: data, encoding: NSUTF8StringEncoding)!
+			return String(data: data, encoding: .utf8)!
 		}
 		.flatMap(.merge) { string in
 			return string.linesProducer
@@ -161,7 +161,7 @@ public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, 
 		.skip { line in !line.hasSuffix("Schemes:") }
 		.skip(first: 1)
 		.take { line in !line.isEmpty }
-		.map { (line: String) -> String in line.stringByTrimmingCharactersInSet(.whitespaces) }
+		.map { line in line.trimmingCharacters(in: .whitespaces) }
 }
 
 /// Finds schemes of projects or workspaces, which Carthage should build, found
@@ -239,7 +239,7 @@ public enum Platform: String {
 	/// be stored.
 	public var relativePath: String {
 		let subfolderName = rawValue
-		return (CarthageBinariesFolderPath as NSString).stringByAppendingPathComponent(subfolderName)
+		return (CarthageBinariesFolderPath as NSString).appendingPathComponent(subfolderName)
 	}
 
 	/// The SDKs that need to be built for this platform.
@@ -294,7 +294,7 @@ public enum SDK: String {
 
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func fromString(string: String) -> Result<SDK, CarthageError> {
-		return Result(self.init(rawValue: string.lowercaseString), failWith: .parseError(description: "unexpected SDK key \"\(string)\""))
+		return Result(self.init(rawValue: string.lowercased()), failWith: .parseError(description: "unexpected SDK key \"\(string)\""))
 	}
 
 	/// Split the given SDKs into simulator ones and device ones.
@@ -491,7 +491,7 @@ public struct BuildSettings {
 			.timeout(after: 60, raising: .xcodebuildTimeout(arguments.project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
 			.retry(upTo: 5)
 			.map { data in
-				return String(data: data, encoding: NSUTF8StringEncoding)!
+				return String(data: data, encoding: .utf8)!
 			}
 			.flatMap(.merge) { string -> SignalProducer<BuildSettings, CarthageError> in
 				return SignalProducer { observer, disposable in
@@ -518,14 +518,14 @@ public struct BuildSettings {
 							let targetRange = result.rangeAt(1)
 
 							flushTarget()
-							currentTarget = (line as NSString).substringWithRange(targetRange)
+							currentTarget = (line as NSString).substring(with: targetRange)
 							return
 						}
 
 						let trimSet = CharacterSet.whitespacesAndNewlines
 						let components = line.characters
 							.split(maxSplits: 1) { $0 == "=" }
-							.map { String($0).stringByTrimmingCharactersInSet(trimSet) }
+							.map { String($0).trimmingCharacters(in: trimSet) }
 
 						if components.count == 2 {
 							currentSettings[components[0]] = components[1]
@@ -636,9 +636,9 @@ public struct BuildSettings {
 	private var relativeModulesPath: Result<String?, CarthageError> {
 		if let moduleName = self["PRODUCT_MODULE_NAME"].value {
 			return self["CONTENTS_FOLDER_PATH"].map { contentsPath in
-				let path1 = (contentsPath as NSString).stringByAppendingPathComponent("Modules")
-				let path2 = (path1 as NSString).stringByAppendingPathComponent(moduleName)
-				return (path2 as NSString).stringByAppendingPathExtension("swiftmodule")
+				let path1 = (contentsPath as NSString).appendingPathComponent("Modules")
+				let path2 = (path1 as NSString).appendingPathComponent(moduleName)
+				return (path2 as NSString).appendingPathExtension("swiftmodule")
 			}
 		} else {
 			return .success(nil)
@@ -891,7 +891,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 				return destinationLookup.launch()
 					.ignoreTaskData()
 					.map { data in
-						let string = String(data: data, encoding: NSUTF8StringEncoding)!
+						let string = String(data: data, encoding: .utf8)!
 						// The output as of Xcode 6.4 is structured text so we
 						// parse it using regex. The destination will be omitted
 						// altogether if parsing fails. Xcode 7.0 beta 4 added a
@@ -902,7 +902,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						let lastDeviceResult = regex.matches(in: string, range: NSRange(location: 0, length: string.utf16.count)).last
 						return lastDeviceResult.map { result in
 							// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
-							let deviceID = (string as NSString).substringWithRange(result.rangeAt(1))
+							let deviceID = (string as NSString).substring(with: result.rangeAt(1))
 							return "platform=\(platformName) Simulator,id=\(deviceID)"
 						}
 					}
@@ -1372,7 +1372,7 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 			return lipoTask.launch()
 				.ignoreTaskData()
 				.mapError(CarthageError.taskError)
-				.map { String(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
+				.map { String(data: $0, encoding: .utf8) ?? "" }
 				.flatMap(.merge) { output -> SignalProducer<String, CarthageError> in
 					let characterSet = NSMutableCharacterSet.alphanumeric()
 					characterSet.addCharacters(in: " _-")
@@ -1392,7 +1392,7 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 						scanner.scanCharacters(from: characterSet, into: &architectures)
 
 						let components = architectures?
-							.componentsSeparatedByString(" ")
+							.components(separatedBy: " ")
 							.filter { !$0.isEmpty }
 
 						if let components = components {
@@ -1489,7 +1489,7 @@ private func UUIDsFromDwarfdump(url: URL) -> SignalProducer<Set<UUID>, CarthageE
 	return dwarfdumpTask.launch()
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
-		.map { String(data: $0, encoding: NSUTF8StringEncoding) ?? "" }
+		.map { String(data: $0, encoding: .utf8) ?? "" }
 		.flatMap(.merge) { output -> SignalProducer<Set<UUID>, CarthageError> in
 			// UUIDs are letters, decimals, or hyphens.
 			let uuidCharacterSet = NSMutableCharacterSet()

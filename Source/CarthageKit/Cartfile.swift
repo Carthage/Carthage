@@ -26,12 +26,12 @@ public struct Cartfile {
 
 	/// Returns the location where Cartfile should exist within the given
 	/// directory.
-	public static func urlInDirectory(directoryURL: URL) -> URL {
+	public static func url(in directoryURL: URL) -> URL {
 		return directoryURL.appendingPathComponent("Cartfile")
 	}
 
 	/// Attempts to parse Cartfile information from a string.
-	public static func fromString(string: String) -> Result<Cartfile, CarthageError> {
+	public static func from(string string: String) -> Result<Cartfile, CarthageError> {
 		var cartfile = self.init()
 		var result: Result<(), CarthageError> = .success(())
 
@@ -49,7 +49,7 @@ public struct Cartfile {
 				return
 			}
 
-			switch Dependency<VersionSpecifier>.fromScanner(scanner) {
+			switch Dependency<VersionSpecifier>.from(scanner) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep)
 
@@ -73,17 +73,17 @@ public struct Cartfile {
 	}
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
-	public static func fromFile(cartfileURL: URL) -> Result<Cartfile, CarthageError> {
+	public static func from(file cartfileURL: URL) -> Result<Cartfile, CarthageError> {
 		do {
-			let cartfileContents = try String(contentsOfURL: cartfileURL, encoding: NSUTF8StringEncoding)
-			return Cartfile.fromString(cartfileContents)
+			let cartfileContents = try String(contentsOf: cartfileURL, encoding: .utf8)
+			return Cartfile.from(string: cartfileContents)
 		} catch let error as NSError {
 			return .failure(CarthageError.readFailed(cartfileURL, error))
 		}
 	}
 
 	/// Appends the contents of another Cartfile to that of the receiver.
-	public mutating func appendCartfile(cartfile: Cartfile) {
+	public mutating func append(_ cartfile: Cartfile) {
 		dependencies += cartfile.dependencies
 	}
 }
@@ -112,7 +112,7 @@ extension Cartfile {
 
 /// Returns an array containing projects that are listed as dependencies
 /// in both arguments.
-public func duplicateProjectsInCartfiles(cartfile1: Cartfile, _ cartfile2: Cartfile) -> [ProjectIdentifier] {
+public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [ProjectIdentifier] {
 	let projectSet1 = cartfile1.dependencyCountedSet
 
 	return cartfile2.dependencies
@@ -133,18 +133,18 @@ public struct ResolvedCartfile {
 
 	/// Returns the location where Cartfile.resolved should exist within the given
 	/// directory.
-	public static func urlInDirectory(directoryURL: URL) -> URL {
+	public static func url(in directoryURL: URL) -> URL {
 		return directoryURL.appendingPathComponent("Cartfile.resolved")
 	}
 
 	/// Attempts to parse Cartfile.resolved information from a string.
-	public static func fromString(string: String) -> Result<ResolvedCartfile, CarthageError> {
+	public static func from(string string: String) -> Result<ResolvedCartfile, CarthageError> {
 		var cartfile = self.init(dependencies: [])
 		var result: Result<(), CarthageError> = .success(())
 
 		let scanner = Scanner(string: string)
 		scannerLoop: while !scanner.isAtEnd {
-			switch Dependency<PinnedVersion>.fromScanner(scanner) {
+			switch Dependency<PinnedVersion>.from(scanner) {
 			case let .Success(dep):
 				cartfile.dependencies.append(dep)
 
@@ -158,7 +158,7 @@ public struct ResolvedCartfile {
 	}
 
 	/// Returns the dependency whose project matches the given project or nil.
-	internal func dependencyForProject(project: ProjectIdentifier) -> Dependency<PinnedVersion>? {
+	internal func dependency(for project: ProjectIdentifier) -> Dependency<PinnedVersion>? {
 		return dependencies.lazy
 			.filter { $0.project == project }
 			.first
@@ -195,7 +195,7 @@ public enum ProjectIdentifier: Comparable {
 	/// The path at which this project will be checked out, relative to the
 	/// working directory of the main project.
 	public var relativePath: String {
-		return (CarthageProjectCheckoutsPath as NSString).stringByAppendingPathComponent(name)
+		return (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
 	}
 }
 
@@ -230,7 +230,7 @@ extension ProjectIdentifier: Hashable {
 
 extension ProjectIdentifier: Scannable {
 	/// Attempts to parse a ProjectIdentifier.
-	public static func fromScanner(scanner: Scanner) -> Result<ProjectIdentifier, CarthageError> {
+	public static func from(_ scanner: Scanner) -> Result<ProjectIdentifier, CarthageError> {
 		let parser: (String) -> Result<ProjectIdentifier, CarthageError>
 
 		if scanner.scanString("github", into: nil) {
@@ -302,9 +302,9 @@ public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
 
 extension Dependency where V: Scannable {
 	/// Attempts to parse a Dependency specification.
-	public static func fromScanner(scanner: Scanner) -> Result<Dependency, CarthageError> {
-		return ProjectIdentifier.fromScanner(scanner).flatMap { identifier in
-			return V.fromScanner(scanner).map { specifier in self.init(project: identifier, version: specifier) }
+	public static func from(_ scanner: Scanner) -> Result<Dependency, CarthageError> {
+		return ProjectIdentifier.from(scanner).flatMap { identifier in
+			return V.from(scanner).map { specifier in self.init(project: identifier, version: specifier) }
 		}
 	}
 }
