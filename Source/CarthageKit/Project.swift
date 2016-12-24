@@ -77,7 +77,7 @@ public let CarthageDependencyRepositoriesURL: URL = CarthageUserCachesURL.append
 /// directories will be stored.
 ///
 /// ~/Library/Caches/org.carthage.CarthageKit/DerivedData/
-public let CarthageDependencyDerivedDataURL: NSURL = CarthageUserCachesURL.appendingPathComponent("DerivedData", isDirectory: true)
+public let CarthageDependencyDerivedDataURL: URL = CarthageUserCachesURL.appendingPathComponent("DerivedData", isDirectory: true)
 
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
@@ -757,10 +757,10 @@ public final class Project {
 				}
 
 				var options = options
-				let baseUrl = options.derivedDataPath.flatMap(NSURL.init(string:)) ?? CarthageDependencyDerivedDataURL
+				let baseUrl = options.derivedDataPath.flatMap(URL.init(string:)) ?? CarthageDependencyDerivedDataURL
 				let derivedDataPerDependency = baseUrl.appendingPathComponent(project.name, isDirectory: true)
 				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version, isDirectory: true)
-				options.derivedDataPath = derivedDataVersioned.URLByResolvingSymlinksInPath?.path
+				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().carthage_path
 
 				return buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
