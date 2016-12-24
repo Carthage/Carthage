@@ -299,7 +299,7 @@ extension DuplicateDependency: CustomStringConvertible {
 	}
 
 	private var printableLocations: String {
-		if locations.count == 0 {
+		if locations.isEmpty {
 			return ""
 		}
 
