@@ -175,7 +175,7 @@
 		5499CA971A2394B700783309 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectSpec.swift; sourceTree = "<group>"; };
 		575983731C0FF16400B3D3CB /* carthage-fish-completion */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "carthage-fish-completion"; sourceTree = "<group>"; };
-		5F6BDC011DB2F1C8008C2EC5 /* BuildVersion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = BuildVersion.swift; path = ../carthage/BuildVersion.swift; sourceTree = "<group>"; };
+		5F6BDC011DB2F1C8008C2EC5 /* BuildVersion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildVersion.swift; sourceTree = "<group>"; };
 		6724C8691A850A4600E47F00 /* Environment.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		67AFA9891A79430B00B7DA78 /* PrettyColors.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PrettyColors.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		67C870071A7A04E100F6647C /* Formatting.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
@@ -357,12 +357,13 @@
 				D00105051A8EA74E0059D0A0 /* Archive.swift */,
 				D095BA3B1A187D40007F15D6 /* Bootstrap.swift */,
 				D03B32BE19EA49D8007788BE /* Build.swift */,
+				5F6BDC011DB2F1C8008C2EC5 /* BuildVersion.swift */,
 				F66685FB19E8F1EC00487A88 /* Checkout.swift */,
 				5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */,
 				6724C8691A850A4600E47F00 /* Environment.swift */,
 				D05BD1981A26864F00A36A0E /* Extensions.swift */,
-				67C870071A7A04E100F6647C /* Formatting.swift */,
 				D02DB8DF1A4BC9B600097CDE /* Fetch.swift */,
+				67C870071A7A04E100F6647C /* Formatting.swift */,
 				D0D1211B19E87861005E4BAA /* main.swift */,
 				F128A7191B463D490044368C /* Outdated.swift */,
 				D0AAC23F1A14933100060F2E /* Update.swift */,
@@ -449,7 +450,6 @@
 				CD3E530A1DE33095002C135C /* Availability.swift */,
 				89E80E601C754FFD000F8DCB /* BuildArguments.swift */,
 				CDF9D3701CF1E54200DF5A6F /* BuildOptions.swift */,
-				5F6BDC011DB2F1C8008C2EC5 /* BuildVersion.swift */,
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
 				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
 				D074EDC41A049283001DE082 /* FrameworkExtensions.swift */,
