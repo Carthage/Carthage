@@ -76,28 +76,33 @@ extension SemanticVersion: Scannable {
 	/// form "a.b.c".
 	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, CarthageError> {
 		var version: NSString? = nil
-		if !scanner.scanCharacters(from: versionCharacterSet, into: &version) || version == nil {
-			return .failure(CarthageError.parseError(description: "expected version in line: \(scanner.currentLine)"))
+		guard scanner.scanCharacters(from: versionCharacterSet, into: &version), let unwrapped = version else {
+			return .failure(.parseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
 
-		let components = (version! as String).characters.split(omittingEmptySubsequences: true) { $0 == "." }.map(String.init)
+		let components = (unwrapped as String)
+			.characters
+			.split(omittingEmptySubsequences: true) { $0 == "." }
+			.map(String.init)
 		if components.isEmpty {
-			return .failure(CarthageError.parseError(description: "expected version in line: \(scanner.currentLine)"))
+			return .failure(.parseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
 
-		let major = Int(components[0])
-		if major == nil {
-			return .failure(CarthageError.parseError(description: "expected major version number in \"\(version!)\""))
+		func parseVersion(at index: Int) -> Int? {
+			return components.count > index ? Int(components[index]) : nil
 		}
 
-		let minor = (components.count > 1 ? Int(components[1]) : nil)
-		if minor == nil {
-			return .failure(CarthageError.parseError(description: "expected minor version number in \"\(version!)\""))
+		guard let major = parseVersion(at: 0) else {
+			return .failure(.parseError(description: "expected major version number in \"\(unwrapped)\""))
 		}
 
-		let patch = (components.count > 2 ? Int(components[2]) : 0)
+		guard let minor = parseVersion(at: 1) else {
+			return .failure(.parseError(description: "expected minor version number in \"\(unwrapped)\""))
+		}
 
-		return .success(self.init(major: major!, minor: minor ?? 0, patch: patch ?? 0))
+		let patch = parseVersion(at: 2) ?? 0
+
+		return .success(self.init(major: major, minor: minor, patch: patch))
 	}
 }
 
