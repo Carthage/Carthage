@@ -81,7 +81,7 @@ extension SemanticVersion: Scannable {
 		}
 
 		let components = (version! as String).characters.split(omittingEmptySubsequences: true) { $0 == "." }.map(String.init)
-		if components.count == 0 {
+		if components.isEmpty {
 			return .failure(CarthageError.parseError(description: "expected version in line: \(scanner.currentLine)"))
 		}
 
