@@ -32,6 +32,7 @@
 		BEB076671C8A1FD800ABD373 /* Tentacle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076651C8A1FD800ABD373 /* Tentacle.framework */; };
 		CD07EB111E0EA5B200CFBEE4 /* ProjectLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD07EB101E0EA5B200CFBEE4 /* ProjectLocator.swift */; };
 		CD07EB131E0EA90F00CFBEE4 /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD07EB121E0EA90F00CFBEE4 /* Platform.swift */; };
+		CD07EB151E0F4DEA00CFBEE4 /* ProjectLocatorSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD07EB141E0F4DEA00CFBEE4 /* ProjectLocatorSpec.swift */; };
 		CD1FE6531DD366620016639E /* Runes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; };
 		CD1FE6541DD367920016639E /* Runes.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CD1FE6561DD857570016639E /* Swift3Shims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1FE6551DD857570016639E /* Swift3Shims.swift */; };
@@ -191,6 +192,7 @@
 		BEB076651C8A1FD800ABD373 /* Tentacle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Tentacle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD07EB101E0EA5B200CFBEE4 /* ProjectLocator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectLocator.swift; sourceTree = "<group>"; };
 		CD07EB121E0EA90F00CFBEE4 /* Platform.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Platform.swift; sourceTree = "<group>"; };
+		CD07EB141E0F4DEA00CFBEE4 /* ProjectLocatorSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectLocatorSpec.swift; sourceTree = "<group>"; };
 		CD1FE6521DD366620016639E /* Runes.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Runes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD1FE6551DD857570016639E /* Swift3Shims.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Swift3Shims.swift; sourceTree = "<group>"; };
 		CD3E530A1DE33095002C135C /* Availability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Availability.swift; sourceTree = "<group>"; };
@@ -500,6 +502,7 @@
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
 				89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */,
 				CDA0B6C91C468E67006C499C /* GitSpec.swift */,
+				CD07EB141E0F4DEA00CFBEE4 /* ProjectLocatorSpec.swift */,
 				549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */,
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
 				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
@@ -781,6 +784,7 @@
 				89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */,
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
 				3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */,
+				CD07EB151E0F4DEA00CFBEE4 /* ProjectLocatorSpec.swift in Sources */,
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,
 				549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */,
 				D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */,
