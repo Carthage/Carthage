@@ -33,6 +33,7 @@
 		CD07EB111E0EA5B200CFBEE4 /* ProjectLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD07EB101E0EA5B200CFBEE4 /* ProjectLocator.swift */; };
 		CD07EB131E0EA90F00CFBEE4 /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD07EB121E0EA90F00CFBEE4 /* Platform.swift */; };
 		CD07EB151E0F4DEA00CFBEE4 /* ProjectLocatorSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD07EB141E0F4DEA00CFBEE4 /* ProjectLocatorSpec.swift */; };
+		CD07EB171E0F51A500CFBEE4 /* SDK.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD07EB161E0F51A500CFBEE4 /* SDK.swift */; };
 		CD1FE6531DD366620016639E /* Runes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; };
 		CD1FE6541DD367920016639E /* Runes.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CD1FE6561DD857570016639E /* Swift3Shims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1FE6551DD857570016639E /* Swift3Shims.swift */; };
@@ -193,6 +194,7 @@
 		CD07EB101E0EA5B200CFBEE4 /* ProjectLocator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectLocator.swift; sourceTree = "<group>"; };
 		CD07EB121E0EA90F00CFBEE4 /* Platform.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Platform.swift; sourceTree = "<group>"; };
 		CD07EB141E0F4DEA00CFBEE4 /* ProjectLocatorSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectLocatorSpec.swift; sourceTree = "<group>"; };
+		CD07EB161E0F51A500CFBEE4 /* SDK.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SDK.swift; sourceTree = "<group>"; };
 		CD1FE6521DD366620016639E /* Runes.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Runes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD1FE6551DD857570016639E /* Swift3Shims.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Swift3Shims.swift; sourceTree = "<group>"; };
 		CD3E530A1DE33095002C135C /* Availability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Availability.swift; sourceTree = "<group>"; };
@@ -467,6 +469,7 @@
 				CD07EB101E0EA5B200CFBEE4 /* ProjectLocator.swift */,
 				D01D82D61A10160700F0DD94 /* Resolver.swift */,
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
+				CD07EB161E0F51A500CFBEE4 /* SDK.swift */,
 				CD1FE6551DD857570016639E /* Swift3Shims.swift */,
 				D0DE893F1A0F2CB00030A3EC /* Version.swift */,
 				D01F8A5319EA2F1700643E7C /* Xcode.swift */,
@@ -759,6 +762,7 @@
 				CD07EB131E0EA90F00CFBEE4 /* Platform.swift in Sources */,
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
+				CD07EB171E0F51A500CFBEE4 /* SDK.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */,
 				CD1FE6571DD857570016639E /* Swift3Shims.swift in Sources */,
