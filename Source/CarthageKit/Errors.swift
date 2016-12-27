@@ -237,10 +237,10 @@ extension CarthageError: CustomStringConvertible {
 			return "xcodebuild timed out while trying to read \(project) 😭"
 			
 		case let .duplicateDependencies(duplicateDeps):
-			let deps = duplicateDeps.sorted() // important to match expected order in test cases
-				.reduce("") { (acc, dep) in
-					"\(acc)\n\t\(dep)"
-				}
+			let deps = duplicateDeps
+				.sorted() // important to match expected order in test cases
+				.map { "\n\t" + $0.description }
+				.joined(separator: "")
 
 			return "The following dependencies are duplicates:\(deps)"
 
