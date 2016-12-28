@@ -80,20 +80,21 @@ class CartfileSpec: QuickSpec {
 			let result = Cartfile.from(string: testCartfile)
 			expect(result.error).notTo(beNil())
 
-			if case let .duplicateDependencies(dupes)? = result.error {
-				let dupes = dupes
-					.map { $0.project }
-					.sort { $0.description < $1.description }
-				expect(dupes.count) == 2
-				
-				let self2Dupe = dupes[0]
-				expect(self2Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self2", name: "self2"))
-				
-				let self3Dupe = dupes[1]
-				expect(self3Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self3", name: "self3"))
-			} else {
+			guard case let .duplicateDependencies(dupes)? = result.error else {
 				fail("Cartfile should error with duplicate dependencies")
+				return
 			}
+			
+			let projects = dupes
+				.map { $0.project }
+				.sort { $0.description < $1.description }
+			expect(dupes.count) == 2
+			
+			let self2Dupe = projects[0]
+			expect(self2Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self2", name: "self2"))
+			
+			let self3Dupe = projects[1]
+			expect(self3Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self3", name: "self3"))
 		}
 
 		it("should detect duplicate dependencies across two Cartfiles") {

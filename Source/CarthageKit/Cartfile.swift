@@ -90,18 +90,18 @@ public struct Cartfile {
 			return Cartfile
 				.from(string: cartfileContents)
 				.mapError { error in
-					if case let .duplicateDependencies(dupes) = error {
-						let dupes = dupes
-							.map { dependency in
-								return DuplicateDependency(
-									project: dependency.project,
-									locations: [ cartfileURL.carthage_path ]
-								)
-							}
-						return .duplicateDependencies(dupes)
-					} else {
+					guard case let .duplicateDependencies(dupes) = error else {
 						return error
 					}
+					
+					let dependencies = dupes
+						.map { dependency in
+							return DuplicateDependency(
+								project: dependency.project,
+								locations: [ cartfileURL.carthage_path ]
+							)
+						}
+					return .duplicateDependencies(dependencies)
 				}
 		} catch let error as NSError {
 			return .failure(CarthageError.readFailed(cartfileURL, error))
