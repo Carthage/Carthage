@@ -193,8 +193,8 @@
 			return try destinationOfSymbolicLinkAtPath(path)
 		}
 
-		func enumerator(at url: URL, includingPropertiesForKeys keys: [String]?, options mask: FileManager.DirectoryEnumerationOptions = [], errorHandler handler: ((URL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
-			return enumeratorAtURL(url, includingPropertiesForKeys: keys, options: mask, errorHandler: handler)
+		func enumerator(at url: URL, includingPropertiesForKeys keys: [URLResourceKey]?, options mask: FileManager.DirectoryEnumerationOptions = [], errorHandler handler: ((URL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
+			return enumeratorAtURL(url, includingPropertiesForKeys: keys.map { $0.map { $0.rawValue } }, options: mask, errorHandler: handler)
 		}
 
 		@nonobjc func fileExists(atPath path: String) -> Bool {

@@ -283,6 +283,15 @@ extension FileManager {
 	/// enumerated, along with the enumerator itself (so it can be introspected
 	/// and modified as enumeration progresses).
 	public func carthage_enumerator(at url: URL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions = [], catchErrors: Bool = false) -> SignalProducer<(NSDirectoryEnumerator, URL), CarthageError> {
+		return carthage_enumerator(
+			at: url,
+			includingPropertiesForKeys: keys.map(URLResourceKey.init),
+			options: options,
+			catchErrors: catchErrors
+		)
+	}
+
+	internal func carthage_enumerator(at url: URL, includingPropertiesForKeys keys: [URLResourceKey]? = nil, options: NSDirectoryEnumerationOptions = [], catchErrors: Bool = false) -> SignalProducer<(NSDirectoryEnumerator, URL), CarthageError> {
 		return SignalProducer { observer, disposable in
 			let enumerator = self.enumerator(at: url, includingPropertiesForKeys: keys, options: options) { (url, error) in
 				if catchErrors {

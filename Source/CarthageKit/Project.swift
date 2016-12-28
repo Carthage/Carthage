@@ -819,7 +819,7 @@ private func cacheDownloadedBinary(downloadURL: URL, toURL cachedURL: URL) -> Si
 /// Sends the URL to each file found in the given directory conforming to the
 /// given type identifier. If no type identifier is provided, all files are sent.
 private func filesInDirectory(directoryURL: URL, _ typeIdentifier: String? = nil) -> SignalProducer<URL, CarthageError> {
-	let producer = FileManager.`default`.carthage_enumerator(at: directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: [ .skipsHiddenFiles, .skipsPackageDescendants ], catchErrors: true)
+	let producer = FileManager.`default`.carthage_enumerator(at: directoryURL, includingPropertiesForKeys: [ .typeIdentifierKey ], options: [ .skipsHiddenFiles, .skipsPackageDescendants ], catchErrors: true)
 		.map { enumerator, url in url }
 	if let typeIdentifier = typeIdentifier {
 		return producer
