@@ -92,7 +92,7 @@ class CartfileSpec: QuickSpec {
 				let self3Dupe = dupes[1]
 				expect(self3Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self3", name: "self3"))
 			} else {
-				fatalError("should error")
+				fail("Cartfile should error with duplicate dependencies")
 			}
 		}
 
