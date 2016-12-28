@@ -161,6 +161,8 @@
 
 	internal typealias FileManager = NSFileManager
 	internal extension FileManager {
+		typealias DirectoryEnumerationOptions = NSDirectoryEnumerationOptions
+
 		class var `default`: FileManager { return defaultManager() }
 
 		@nonobjc func contentsOfDirectory(atPath path: String) throws -> [String] {
@@ -191,7 +193,7 @@
 			return try destinationOfSymbolicLinkAtPath(path)
 		}
 
-		func enumerator(at url: URL, includingPropertiesForKeys keys: [String]?, options mask: NSDirectoryEnumerationOptions = [], errorHandler handler: ((URL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
+		func enumerator(at url: URL, includingPropertiesForKeys keys: [String]?, options mask: FileManager.DirectoryEnumerationOptions = [], errorHandler handler: ((URL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
 			return enumeratorAtURL(url, includingPropertiesForKeys: keys, options: mask, errorHandler: handler)
 		}
 
@@ -222,6 +224,12 @@
 		func url(for directory: NSSearchPathDirectory, in domain: NSSearchPathDomainMask, appropriateFor url: URL?, create shouldCreate: Bool) throws -> URL {
 			return try URLForDirectory(directory, inDomain: domain, appropriateForURL: url, create: shouldCreate)
 		}
+	}
+
+	internal extension FileManager.DirectoryEnumerationOptions {
+		static var skipsHiddenFiles: FileManager.DirectoryEnumerationOptions { return .SkipsHiddenFiles }
+		static var skipsPackageDescendants: FileManager.DirectoryEnumerationOptions { return .SkipsPackageDescendants }
+		static var skipsSubdirectoryDescendants: FileManager.DirectoryEnumerationOptions { return .SkipsSubdirectoryDescendants }
 	}
 
 	extension NSSearchPathDirectory {

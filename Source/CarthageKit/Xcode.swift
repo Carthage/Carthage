@@ -19,7 +19,7 @@ public let CarthageBinariesFolderPath = "Carthage/Build"
 ///
 /// Sends all matches in preferential order.
 public func locateProjectsInDirectory(directoryURL: URL) -> SignalProducer<ProjectLocator, CarthageError> {
-	let enumerationOptions: NSDirectoryEnumerationOptions = [ .SkipsHiddenFiles, .SkipsPackageDescendants ]
+	let enumerationOptions: FileManager.DirectoryEnumerationOptions = [ .skipsHiddenFiles, .skipsPackageDescendants ]
 
 	return gitmodulesEntriesInRepository(directoryURL, revision: nil)
 		.map { directoryURL.appendingPathComponent($0.path) }
@@ -283,7 +283,7 @@ private func mergeModuleIntoModule(sourceModuleDirectoryURL: URL, _ destinationM
 	precondition(sourceModuleDirectoryURL.isFileURL)
 	precondition(destinationModuleDirectoryURL.isFileURL)
 
-	return FileManager.`default`.carthage_enumerator(at: sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .SkipsSubdirectoryDescendants, .SkipsHiddenFiles ], catchErrors: true)
+	return FileManager.`default`.carthage_enumerator(at: sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .skipsSubdirectoryDescendants, .skipsHiddenFiles ], catchErrors: true)
 		.attemptMap { _, url -> Result<URL, CarthageError> in
 			let lastComponent: String = url.carthage_lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.appendingPathComponent(lastComponent).resolvingSymlinksInPath()
