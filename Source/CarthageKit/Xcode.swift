@@ -567,13 +567,13 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 					.flatMap(.concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
 						switch settingsEvent {
 						case let .Launch(task):
-							return SignalProducer(value: .Launch(task))
+							return SignalProducer(value: .launch(task))
 
 						case let .StandardOutput(data):
-							return SignalProducer(value: .StandardOutput(data))
+							return SignalProducer(value: .standardOutput(data))
 
 						case let .StandardError(data):
-							return SignalProducer(value: .StandardError(data))
+							return SignalProducer(value: .standardError(data))
 
 						case let .Success(deviceSettingsByTarget):
 							return settingsByTarget(buildSDK(simulatorSDK))
