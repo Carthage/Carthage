@@ -161,6 +161,8 @@
 
 	internal typealias FileManager = NSFileManager
 	internal extension FileManager {
+		typealias DirectoryEnumerationOptions = NSDirectoryEnumerationOptions
+
 		class var `default`: FileManager { return defaultManager() }
 
 		@nonobjc func contentsOfDirectory(atPath path: String) throws -> [String] {
@@ -191,8 +193,8 @@
 			return try destinationOfSymbolicLinkAtPath(path)
 		}
 
-		func enumerator(at url: URL, includingPropertiesForKeys keys: [String]?, options mask: NSDirectoryEnumerationOptions = [], errorHandler handler: ((URL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
-			return enumeratorAtURL(url, includingPropertiesForKeys: keys, options: mask, errorHandler: handler)
+		func enumerator(at url: URL, includingPropertiesForKeys keys: [URLResourceKey]?, options mask: FileManager.DirectoryEnumerationOptions = [], errorHandler handler: ((URL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
+			return enumeratorAtURL(url, includingPropertiesForKeys: keys.map { $0.map { $0.rawValue } }, options: mask, errorHandler: handler)
 		}
 
 		@nonobjc func fileExists(atPath path: String) -> Bool {
@@ -224,6 +226,12 @@
 		}
 	}
 
+	internal extension FileManager.DirectoryEnumerationOptions {
+		static var skipsHiddenFiles: FileManager.DirectoryEnumerationOptions { return .SkipsHiddenFiles }
+		static var skipsPackageDescendants: FileManager.DirectoryEnumerationOptions { return .SkipsPackageDescendants }
+		static var skipsSubdirectoryDescendants: FileManager.DirectoryEnumerationOptions { return .SkipsSubdirectoryDescendants }
+	}
+
 	extension NSSearchPathDirectory {
 		static let cachesDirectory = NSSearchPathDirectory.CachesDirectory
 	}
@@ -233,6 +241,8 @@
 	}
 
 	internal extension NSRegularExpression {
+		typealias Options = NSRegularExpressionOptions
+
 		func firstMatch(in string: String, options: NSMatchingOptions = [], range: NSRange) -> NSTextCheckingResult? {
 			return firstMatchInString(string, options: options, range: range)
 		}
@@ -242,6 +252,11 @@
 		}
 	}
 
+	internal extension NSRegularExpression.Options {
+		static var anchorsMatchLines: NSRegularExpression.Options { return .AnchorsMatchLines }
+		static var caseInsensitive: NSRegularExpression.Options { return .CaseInsensitive }
+	}
+
 	internal extension NSTextCheckingResult {
 		func rangeAt(idx: Int) -> NSRange {
 			return rangeAtIndex(idx)
@@ -249,6 +264,9 @@
 	}
 
 	internal extension NSString {
+		typealias CompareOptions = NSStringCompareOptions
+		typealias EnumerationOptions = NSStringEnumerationOptions
+
 		var deletingLastPathComponent: String {
 			return stringByDeletingLastPathComponent
 		}
@@ -276,6 +294,15 @@
 		func substring(with range: NSRange) -> String {
 			return substringWithRange(range)
 		}
+	}
+
+	internal extension NSString.CompareOptions {
+		static var numeric: NSString.CompareOptions { return .NumericSearch }
+	}
+
+	internal extension NSString.EnumerationOptions {
+		static var byLines: NSString.EnumerationOptions { return .ByLines }
+		static var reverse: NSString.EnumerationOptions { return .Reverse }
 	}
 
 	internal typealias ProcessInfo = NSProcessInfo

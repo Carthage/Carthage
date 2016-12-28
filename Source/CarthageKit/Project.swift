@@ -689,19 +689,11 @@ public final class Project {
 		let symlinksProducer = SignalProducer(values: subDependencyNames)
 			.filter { name in
 				let checkoutURL = rootCheckoutsURL.appendingPathComponent(name)
-				let isDirectory: Bool
 				do {
-					var value: AnyObject?
-					try checkoutURL.getResourceValue(&value, forKey: NSURLIsDirectoryKey)
-					if let value = value {
-						isDirectory = value.boolValue
-					} else {
-						return false
-					}
+					return try checkoutURL.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory ?? false
 				} catch {
 					return false
 				}
-				return isDirectory
 			}
 			.attemptMap { name -> Result<(), CarthageError> in
 				let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
@@ -819,7 +811,7 @@ private func cacheDownloadedBinary(downloadURL: URL, toURL cachedURL: URL) -> Si
 /// Sends the URL to each file found in the given directory conforming to the
 /// given type identifier. If no type identifier is provided, all files are sent.
 private func filesInDirectory(directoryURL: URL, _ typeIdentifier: String? = nil) -> SignalProducer<URL, CarthageError> {
-	let producer = FileManager.`default`.carthage_enumerator(at: directoryURL, includingPropertiesForKeys: [ NSURLTypeIdentifierKey ], options: [ .SkipsHiddenFiles, .SkipsPackageDescendants ], catchErrors: true)
+	let producer = FileManager.`default`.carthage_enumerator(at: directoryURL, includingPropertiesForKeys: [ .typeIdentifierKey ], options: [ .skipsHiddenFiles, .skipsPackageDescendants ], catchErrors: true)
 		.map { enumerator, url in url }
 	if let typeIdentifier = typeIdentifier {
 		return producer

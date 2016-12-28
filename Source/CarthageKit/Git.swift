@@ -192,7 +192,7 @@ public func ensureGitVersion(requiredVersion: String = CarthageRequiredGitVersio
 
 			var version: NSString?
 			if scanner.scanUpTo("", into: &version), let version = version {
-				return version.compare(requiredVersion, options: [ .NumericSearch ]) != .orderedAscending
+				return version.compare(requiredVersion, options: [ .numeric ]) != .orderedAscending
 			} else {
 				return false
 			}
@@ -238,7 +238,7 @@ public func listTags(repositoryFileURL: URL) -> SignalProducer<String, CarthageE
 	return launchGitTask([ "tag", "--column=never" ], repositoryFileURL: repositoryFileURL)
 		.flatMap(.concat) { (allTags: String) -> SignalProducer<String, CarthageError> in
 			return SignalProducer { observer, disposable in
-				allTags.enumerateSubstringsInRange(allTags.characters.indices, options: [ .ByLines, .Reverse ]) { line, substringRange, enclosingRange, stop in
+				allTags.enumerateSubstringsInRange(allTags.characters.indices, options: [ .byLines, .reverse ]) { line, substringRange, enclosingRange, stop in
 					if disposable.isDisposed {
 						stop = true
 					}
@@ -297,7 +297,7 @@ public func cloneSubmodulesForRepository(repositoryFileURL: URL, _ workingDirect
 /// repository, but without any Git metadata.
 public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
-	let purgeGitDirectories = FileManager.`default`.carthage_enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ NSURLIsDirectoryKey, NSURLNameKey ], catchErrors: true)
+	let purgeGitDirectories = FileManager.`default`.carthage_enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
 		.flatMap(.merge) { enumerator, url -> SignalProducer<(), CarthageError> in
 			var name: String?
 			do {
