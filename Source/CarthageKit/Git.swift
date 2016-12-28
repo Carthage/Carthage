@@ -238,7 +238,7 @@ public func listTags(repositoryFileURL: URL) -> SignalProducer<String, CarthageE
 	return launchGitTask([ "tag", "--column=never" ], repositoryFileURL: repositoryFileURL)
 		.flatMap(.concat) { (allTags: String) -> SignalProducer<String, CarthageError> in
 			return SignalProducer { observer, disposable in
-				allTags.enumerateSubstringsInRange(allTags.characters.indices, options: [ .ByLines, .Reverse ]) { line, substringRange, enclosingRange, stop in
+				allTags.enumerateSubstringsInRange(allTags.characters.indices, options: [ .byLines, .reverse ]) { line, substringRange, enclosingRange, stop in
 					if disposable.isDisposed {
 						stop = true
 					}

@@ -265,6 +265,7 @@
 
 	internal extension NSString {
 		typealias CompareOptions = NSStringCompareOptions
+		typealias EnumerationOptions = NSStringEnumerationOptions
 
 		var deletingLastPathComponent: String {
 			return stringByDeletingLastPathComponent
@@ -297,6 +298,11 @@
 
 	internal extension NSString.CompareOptions {
 		static var numeric: NSString.CompareOptions { return .NumericSearch }
+	}
+
+	internal extension NSString.EnumerationOptions {
+		static var byLines: NSString.EnumerationOptions { return .ByLines }
+		static var reverse: NSString.EnumerationOptions { return .Reverse }
 	}
 
 	internal typealias ProcessInfo = NSProcessInfo
