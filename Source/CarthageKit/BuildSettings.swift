@@ -19,7 +19,7 @@ public struct BuildSettings {
 	///
 	/// Build settings for action build and target "ReactiveCocoaLayout Mac":
 	/// Build settings for action test and target CarthageKitTests:
-	private static let targetSettingsRegex = try! NSRegularExpression(pattern: "^Build settings for action (?:\\S+) and target \\\"?([^\":]+)\\\"?:$", options: [ .CaseInsensitive, .AnchorsMatchLines ])
+	private static let targetSettingsRegex = try! NSRegularExpression(pattern: "^Build settings for action (?:\\S+) and target \\\"?([^\":]+)\\\"?:$", options: [ .caseInsensitive, .anchorsMatchLines ])
 
 	/// Invokes `xcodebuild` to retrieve build settings for the given build
 	/// arguments.

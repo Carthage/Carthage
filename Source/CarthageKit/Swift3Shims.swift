@@ -241,6 +241,8 @@
 	}
 
 	internal extension NSRegularExpression {
+		typealias Options = NSRegularExpressionOptions
+
 		func firstMatch(in string: String, options: NSMatchingOptions = [], range: NSRange) -> NSTextCheckingResult? {
 			return firstMatchInString(string, options: options, range: range)
 		}
@@ -248,6 +250,11 @@
 		func matches(in string: String, options: NSMatchingOptions = [], range: NSRange) -> [NSTextCheckingResult] {
 			return matchesInString(string, options: options, range: range)
 		}
+	}
+
+	internal extension NSRegularExpression.Options {
+		static var anchorsMatchLines: NSRegularExpression.Options { return .AnchorsMatchLines }
+		static var caseInsensitive: NSRegularExpression.Options { return .CaseInsensitive }
 	}
 
 	internal extension NSTextCheckingResult {
