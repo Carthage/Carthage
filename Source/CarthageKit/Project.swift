@@ -216,9 +216,7 @@ public final class Project {
 			.attemptMap { cartfile, privateCartfile -> Result<Cartfile, CarthageError> in
 				var cartfile = cartfile
 
-				let duplicateDeps = cartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)"]) }
-					+ privateCartfile.duplicateProjects().map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectPrivateCartfilePath)"]) }
-					+ duplicateProjectsIn(cartfile, privateCartfile).map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]) }
+				let duplicateDeps = duplicateProjectsIn(cartfile, privateCartfile).map { DuplicateDependency(project: $0, locations: ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]) }
 
 				if duplicateDeps.isEmpty {
 					cartfile.append(privateCartfile)

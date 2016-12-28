@@ -55,8 +55,6 @@ class ProjectSpec: QuickSpec {
 				let bothLocations = ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]
 
 				let expectedError = CarthageError.duplicateDependencies([
-					makeDependency("self2", "self2", mainLocation),
-					makeDependency("self3", "self3", mainLocation),
 					makeDependency("1", "1", bothLocations),
 					makeDependency("3", "3", bothLocations),
 					makeDependency("5", "5", bothLocations),

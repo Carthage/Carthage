@@ -74,23 +74,26 @@ class CartfileSpec: QuickSpec {
 		}
 
 		it("should detect duplicate dependencies in a single Cartfile") {
-			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile", withExtension: "")!
+			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependenciesCartfile", withExtension: "")!
 			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 
 			let result = Cartfile.from(string: testCartfile)
-			expect(result.error).to(beNil())
+			expect(result.error).notTo(beNil())
 
-			let cartfile = result.value!
-			expect(cartfile.dependencies.count) == 11
-
-			let dupes = cartfile.duplicateProjects().sort { $0.description < $1.description }
-			expect(dupes.count) == 2
-
-			let self2Dupe = dupes[0]
-			expect(self2Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self2", name: "self2"))
-
-			let self3Dupe = dupes[1]
-			expect(self3Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self3", name: "self3"))
+			if case let .duplicateDependencies(dupes)? = result.error {
+				let dupes = dupes
+					.map { $0.project }
+					.sort { $0.description < $1.description }
+				expect(dupes.count) == 2
+				
+				let self2Dupe = dupes[0]
+				expect(self2Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self2", name: "self2"))
+				
+				let self3Dupe = dupes[1]
+				expect(self3Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self3", name: "self3"))
+			} else {
+				fatalError("should error")
+			}
 		}
 
 		it("should detect duplicate dependencies across two Cartfiles") {
@@ -107,7 +110,7 @@ class CartfileSpec: QuickSpec {
 			expect(result2.error).to(beNil())
 
 			let cartfile = result.value!
-			expect(cartfile.dependencies.count) == 11
+			expect(cartfile.dependencies.count) == 5
 
 			let cartfile2 = result2.value!
 			expect(cartfile2.dependencies.count) == 3
