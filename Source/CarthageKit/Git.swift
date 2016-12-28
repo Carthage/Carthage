@@ -192,7 +192,7 @@ public func ensureGitVersion(requiredVersion: String = CarthageRequiredGitVersio
 
 			var version: NSString?
 			if scanner.scanUpTo("", into: &version), let version = version {
-				return version.compare(requiredVersion, options: [ .NumericSearch ]) != .orderedAscending
+				return version.compare(requiredVersion, options: [ .numeric ]) != .orderedAscending
 			} else {
 				return false
 			}

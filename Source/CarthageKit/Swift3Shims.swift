@@ -264,6 +264,8 @@
 	}
 
 	internal extension NSString {
+		typealias CompareOptions = NSStringCompareOptions
+
 		var deletingLastPathComponent: String {
 			return stringByDeletingLastPathComponent
 		}
@@ -291,6 +293,10 @@
 		func substring(with range: NSRange) -> String {
 			return substringWithRange(range)
 		}
+	}
+
+	internal extension NSString.CompareOptions {
+		static var numeric: NSString.CompareOptions { return .NumericSearch }
 	}
 
 	internal typealias ProcessInfo = NSProcessInfo
