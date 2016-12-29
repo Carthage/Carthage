@@ -32,7 +32,7 @@ public struct Cartfile {
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func from(string string: String) -> Result<Cartfile, CarthageError> {
-		var cartfile = self.init()
+		var dependencies: [Dependency<VersionSpecifier>] = []
 		var result: Result<(), CarthageError> = .success(())
 
 		let commentIndicator = "#"
@@ -51,7 +51,7 @@ public struct Cartfile {
 
 			switch Dependency<VersionSpecifier>.from(scanner) {
 			case let .Success(dep):
-				cartfile.dependencies.append(dep)
+				dependencies.append(dep)
 
 			case let .Failure(error):
 				result = .failure(error)
@@ -70,6 +70,7 @@ public struct Cartfile {
 		}
 
 		return result.flatMap { _ in
+			let cartfile = Cartfile(dependencies: dependencies)
 			let dupes = cartfile
 				.dependencyCountedSet
 				.filter { $0.1 > 1 }
