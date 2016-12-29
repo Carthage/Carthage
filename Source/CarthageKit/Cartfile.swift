@@ -18,9 +18,9 @@ public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
-	public var dependencies: [Dependency<VersionSpecifier>]
+	public var dependencies: Set<Dependency<VersionSpecifier>>
 
-	public init(dependencies: [Dependency<VersionSpecifier>] = []) {
+	public init(dependencies: Set<Dependency<VersionSpecifier>> = []) {
 		self.dependencies = dependencies
 	}
 
@@ -32,7 +32,7 @@ public struct Cartfile {
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func from(string string: String) -> Result<Cartfile, CarthageError> {
-		var cartfile = self.init()
+		var dependencies: [Dependency<VersionSpecifier>] = []
 		var result: Result<(), CarthageError> = .success(())
 
 		let commentIndicator = "#"
@@ -51,7 +51,7 @@ public struct Cartfile {
 
 			switch Dependency<VersionSpecifier>.from(scanner) {
 			case let .Success(dep):
-				cartfile.dependencies.append(dep)
+				dependencies.append(dep)
 
 			case let .Failure(error):
 				result = .failure(error)
@@ -70,8 +70,7 @@ public struct Cartfile {
 		}
 
 		return result.flatMap { _ in
-			let dupes = cartfile
-				.dependencyCountedSet
+			let dupes = buildCountedSet(dependencies.map { $0.project })
 				.filter { $0.1 > 1 }
 				.map { $0.0 }
 				.map { DuplicateDependency(project: $0, locations: []) }
@@ -79,7 +78,7 @@ public struct Cartfile {
 			if !dupes.isEmpty {
 				return .failure(.duplicateDependencies(dupes))
 			}
-			return .success(cartfile)
+			return .success(Cartfile(dependencies: Set(dependencies)))
 		}
 	}
 
@@ -110,7 +109,7 @@ public struct Cartfile {
 
 	/// Appends the contents of another Cartfile to that of the receiver.
 	public mutating func append(_ cartfile: Cartfile) {
-		dependencies += cartfile.dependencies
+		dependencies.formUnion(cartfile.dependencies)
 	}
 }
 
@@ -120,23 +119,12 @@ extension Cartfile: CustomStringConvertible {
 	}
 }
 
-// Duplicate dependencies
-extension Cartfile {
-	/// Returns the dependencies in a cartfile as a counted set containing the
-	/// corresponding projects, represented as a dictionary.
-	private var dependencyCountedSet: [ProjectIdentifier: Int] {
-		return buildCountedSet(self.dependencies.map { $0.project })
-	}
-}
-
 /// Returns an array containing projects that are listed as dependencies
 /// in both arguments.
 public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [ProjectIdentifier] {
-	let projectSet1 = cartfile1.dependencyCountedSet
-
-	return cartfile2.dependencies
-		.map { $0.project }
-		.filter { projectSet1[$0] != nil }
+	let projects1 = cartfile1.dependencies.map { $0.project }
+	let projects2 = cartfile2.dependencies.map { $0.project }
+	return Array(Set(projects1).intersect(projects2))
 }
 
 /// Represents a parsed Cartfile.resolved, which specifies which exact version was
@@ -302,7 +290,7 @@ extension ProjectIdentifier: CustomStringConvertible {
 }
 
 /// Represents a single dependency of a project.
-public struct Dependency<V: VersionType>: Equatable {
+public struct Dependency<V: VersionType>: Hashable {
 	/// The project corresponding to this dependency.
 	public let project: ProjectIdentifier
 
@@ -312,6 +300,10 @@ public struct Dependency<V: VersionType>: Equatable {
 	public init(project: ProjectIdentifier, version: V) {
 		self.project = project
 		self.version = version
+	}
+	
+	public var hashValue: Int {
+		return project.hashValue ^ version.hashValue
 	}
 }
 

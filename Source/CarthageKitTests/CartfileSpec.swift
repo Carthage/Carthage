@@ -23,35 +23,51 @@ class CartfileSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			let cartfile = result.value!
-			expect(cartfile.dependencies.count) == 7
 
-			let depReactiveCocoa = cartfile.dependencies[0]
-			expect(depReactiveCocoa.project) == ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
-			expect(depReactiveCocoa.version) == VersionSpecifier.atLeast(SemanticVersion(major: 2, minor: 3, patch: 1))
+			let depReactiveCocoa = Dependency<VersionSpecifier>(
+				project: ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
+				version: .atLeast(SemanticVersion(major: 2, minor: 3, patch: 1))
+			)
 
-			let depMantle = cartfile.dependencies[1]
-			expect(depMantle.project) == ProjectIdentifier.gitHub(Repository(owner: "Mantle", name: "Mantle"))
-			expect(depMantle.version) == VersionSpecifier.compatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0))
+			let depMantle = Dependency<VersionSpecifier>(
+				project: .gitHub(Repository(owner: "Mantle", name: "Mantle")),
+				version: .compatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0))
+			)
 
-			let depLibextobjc = cartfile.dependencies[2]
-			expect(depLibextobjc.project) == ProjectIdentifier.gitHub(Repository(owner: "jspahrsummers", name: "libextobjc"))
-			expect(depLibextobjc.version) == VersionSpecifier.exactly(SemanticVersion(major: 0, minor: 4, patch: 1))
+			let depLibextobjc = Dependency<VersionSpecifier>(
+				project: .gitHub(Repository(owner: "jspahrsummers", name: "libextobjc")),
+				version: .exactly(SemanticVersion(major: 0, minor: 4, patch: 1))
+			)
 
-			let depConfigs = cartfile.dependencies[3]
-			expect(depConfigs.project) == ProjectIdentifier.gitHub(Repository(owner: "jspahrsummers", name: "xcconfigs"))
-			expect(depConfigs.version) == VersionSpecifier.any
+			let depConfigs = Dependency<VersionSpecifier>(
+				project: .gitHub(Repository(owner: "jspahrsummers", name: "xcconfigs")),
+				version: .any
+			)
 
-			let depCharts = cartfile.dependencies[4]
-			expect(depCharts.project) == ProjectIdentifier.gitHub(Repository(owner: "danielgindi", name: "ios-charts"))
-			expect(depCharts.version) == VersionSpecifier.any
+			let depCharts = Dependency<VersionSpecifier>(
+				project: .gitHub(Repository(owner: "danielgindi", name: "ios-charts")),
+				version: .any
+			)
 
-			let depErrorTranslations2 = cartfile.dependencies[5]
-			expect(depErrorTranslations2.project) == ProjectIdentifier.gitHub(Repository(server: .enterprise(url: URL(string: "https://enterprise.local/ghe")!), owner: "desktop", name: "git-error-translations"))
-			expect(depErrorTranslations2.version) == VersionSpecifier.any
+			let depErrorTranslations = Dependency<VersionSpecifier>(
+				project: .gitHub(Repository(server: .enterprise(url: URL(string: "https://enterprise.local/ghe")!), owner: "desktop", name: "git-error-translations")),
+				version: .any
+			)
 
-			let depErrorTranslations = cartfile.dependencies[6]
-			expect(depErrorTranslations.project) == ProjectIdentifier.git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))
-			expect(depErrorTranslations.version) == VersionSpecifier.gitReference("development")
+			let depErrorTranslations2 = Dependency<VersionSpecifier>(
+				project: .git(GitURL("https://enterprise.local/desktop/git-error-translations2.git")),
+				version: .gitReference("development")
+			)
+			
+			expect(cartfile.dependencies) == Set([
+				depReactiveCocoa,
+				depMantle,
+				depLibextobjc,
+				depConfigs,
+				depCharts,
+				depErrorTranslations,
+				depErrorTranslations2,
+			])
 		}
 
 		it("should parse a Cartfile.resolved") {

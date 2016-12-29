@@ -11,7 +11,7 @@ import Result
 import ReactiveCocoa
 
 /// An abstract type representing a way to specify versions.
-public protocol VersionType: Equatable {}
+public protocol VersionType: Hashable {}
 
 /// A semantic version.
 public struct SemanticVersion: VersionType, Comparable {
@@ -134,6 +134,10 @@ public struct PinnedVersion: VersionType {
 	public init(_ commitish: String) {
 		self.commitish = commitish
 	}
+	
+	public var hashValue: Int {
+		return commitish.hashValue
+	}
 }
 
 public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
@@ -209,6 +213,21 @@ public enum VersionSpecifier: VersionType {
 
 				return version.major == requirement.major && version >= requirement
 			}
+		}
+	}
+	
+	public var hashValue: Int {
+		switch self {
+		case .any:
+			return 0
+		case let .atLeast(version):
+			return 1 + version.hashValue
+		case let .compatibleWith(version):
+			return 2 + version.hashValue
+		case let .exactly(version):
+			return 3 + version.hashValue
+		case let .gitReference(commitish):
+			return commitish.hashValue
 		}
 	}
 }
