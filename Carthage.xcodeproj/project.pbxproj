@@ -26,6 +26,7 @@
 		89E80E641C755059000F8DCB /* BuildArgumentsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E80E631C755059000F8DCB /* BuildArgumentsSpec.swift */; };
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
+		BE624F491E13424400EAEFC9 /* DuplicateDependenciesCartfile in Resources */ = {isa = PBXBuildFile; fileRef = BE624F471E1341E900EAEFC9 /* DuplicateDependenciesCartfile */; };
 		BEA86F9F1C9F914A0049360B /* Curry.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076641C8A1FD800ABD373 /* Curry.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BEA86FA01C9F91500049360B /* Tentacle.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076651C8A1FD800ABD373 /* Tentacle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BEB076661C8A1FD800ABD373 /* Curry.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076641C8A1FD800ABD373 /* Curry.framework */; };
@@ -191,6 +192,7 @@
 		89E80E631C755059000F8DCB /* BuildArgumentsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArgumentsSpec.swift; sourceTree = "<group>"; };
 		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
+		BE624F471E1341E900EAEFC9 /* DuplicateDependenciesCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = DuplicateDependenciesCartfile; sourceTree = "<group>"; };
 		BEB076641C8A1FD800ABD373 /* Curry.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Curry.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEB076651C8A1FD800ABD373 /* Tentacle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Tentacle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD07EB101E0EA5B200CFBEE4 /* ProjectLocator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectLocator.swift; sourceTree = "<group>"; };
@@ -535,6 +537,7 @@
 				CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */,
 				D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */,
 				CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */,
+				BE624F471E1341E900EAEFC9 /* DuplicateDependenciesCartfile */,
 				D04A39811A2F72FB000C5604 /* EmbeddedFrameworksCartfile */,
 				D04A397F1A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile */,
 			);
@@ -675,6 +678,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D04A39801A2F72E6000C5604 /* EmbeddedFrameworksContainerCartfile in Resources */,
+				BE624F491E13424400EAEFC9 /* DuplicateDependenciesCartfile in Resources */,
 				D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */,
 				D0F551DC1A0D71AB0093311F /* TestCartfile.resolved in Resources */,
 				D04A39821A2F72FB000C5604 /* EmbeddedFrameworksCartfile in Resources */,

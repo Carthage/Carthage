@@ -69,14 +69,40 @@ public struct Cartfile {
 			}
 		}
 
-		return result.map { _ in cartfile }
+		return result.flatMap { _ in
+			let dupes = cartfile
+				.dependencyCountedSet
+				.filter { $0.1 > 1 }
+				.map { $0.0 }
+				.map { DuplicateDependency(project: $0, locations: []) }
+			
+			if !dupes.isEmpty {
+				return .failure(.duplicateDependencies(dupes))
+			}
+			return .success(cartfile)
+		}
 	}
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
 	public static func from(file cartfileURL: URL) -> Result<Cartfile, CarthageError> {
 		do {
 			let cartfileContents = try String(contentsOf: cartfileURL, encoding: .utf8)
-			return Cartfile.from(string: cartfileContents)
+			return Cartfile
+				.from(string: cartfileContents)
+				.mapError { error in
+					guard case let .duplicateDependencies(dupes) = error else {
+						return error
+					}
+					
+					let dependencies = dupes
+						.map { dependency in
+							return DuplicateDependency(
+								project: dependency.project,
+								locations: [ cartfileURL.carthage_path ]
+							)
+						}
+					return .duplicateDependencies(dependencies)
+				}
 		} catch let error as NSError {
 			return .failure(CarthageError.readFailed(cartfileURL, error))
 		}
@@ -96,13 +122,6 @@ extension Cartfile: CustomStringConvertible {
 
 // Duplicate dependencies
 extension Cartfile {
-	/// Returns an array containing projects that are listed as duplicate
-	/// dependencies.
-	public func duplicateProjects() -> [ProjectIdentifier] {
-		return self.dependencyCountedSet.filter { $0.1 > 1 }
-			.map { $0.0 }
-	}
-
 	/// Returns the dependencies in a cartfile as a counted set containing the
 	/// corresponding projects, represented as a dictionary.
 	private var dependencyCountedSet: [ProjectIdentifier: Int] {
