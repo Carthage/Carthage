@@ -250,11 +250,11 @@ public final class Project {
 	}
 
 	/// Produces the sub dependencies of the given dependency
-	func dependenciesForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Set<ProjectIdentifier>, CarthageError> {
-		return self.cartfileForDependency(dependency)
-			.map { (cartfile: Cartfile) -> Set<ProjectIdentifier> in
-				return Set(cartfile.dependencies.map { $0.project })
-			}
+	func dependencyProjectsForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Set<ProjectIdentifier>, CarthageError> {
+		return self.dependencies(for: dependency)
+			.map { $0.project }
+			.collect()
+			.map { Set($0) }
 			.concat(SignalProducer(value: Set()))
 			.take(first: 1)
 	}
@@ -282,7 +282,7 @@ public final class Project {
 	///
 	/// This will automatically clone or fetch the project's repository as
 	/// necessary.
-	private func versionsForProject(project: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
+	private func versions(for project: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
 		let fetchVersions = cloneOrFetchDependency(project)
 			.flatMap(.merge) { repositoryURL in listTags(repositoryURL) }
 			.map { PinnedVersion($0) }
@@ -313,8 +313,8 @@ public final class Project {
 			}
 	}
 	
-	/// Loads the Cartfile for the given dependency, at the given version.
-	private func cartfileForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
+	/// Loads the dependencies for the given dependency, at the given version.
+	private func dependencies(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> {
 		let revision = dependency.version.commitish
 		return self.cloneOrFetchDependency(dependency.project, commitish: revision)
 			.flatMap(.concat) { repositoryURL in
@@ -322,6 +322,9 @@ public final class Project {
 			}
 			.flatMapError { _ in .empty }
 			.attemptMap(Cartfile.from(string:))
+			.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
+				return SignalProducer(Array(cartfile.dependencies))
+			}
 	}
 
 	/// Attempts to resolve a Git reference to a version.
@@ -347,15 +350,16 @@ public final class Project {
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
 	public func updatedResolvedCartfile(dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
-		let resolver = Resolver(versionsForDependency: versionsForProject, cartfileForDependency: cartfileForDependency, resolvedGitReference: resolvedGitReference)
+		let resolver = Resolver(versionsForDependency: versions(for:), dependenciesForDependency: dependencies(for:), resolvedGitReference: resolvedGitReference)
 
 		let resolvedCartfile: SignalProducer<ResolvedCartfile?, CarthageError> = loadResolvedCartfile()
 			.map(Optional.init)
 			.flatMapError { _ in .init(value: nil) }
 
-		return SignalProducer.zip(loadCombinedCartfile(), resolvedCartfile)
+		return SignalProducer
+			.zip(loadCombinedCartfile(), resolvedCartfile)
 			.flatMap(.merge) { cartfile, resolvedCartfile in
-				return resolver.resolveDependenciesInCartfile(cartfile, lastResolved: resolvedCartfile, dependenciesToUpdate: dependenciesToUpdate)
+				return resolver.resolve(dependencies: cartfile.dependencies, lastResolved: resolvedCartfile, dependenciesToUpdate: dependenciesToUpdate)
 			}
 			.collect()
 			.map(ResolvedCartfile.init)
@@ -583,7 +587,7 @@ public final class Project {
 						.startOnQueue(self.gitOperationQueue)
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
-						.then(self.dependenciesForDependency(dependency))
+						.then(self.dependencyProjectsForDependency(dependency))
 						.flatMap(.merge) { dependencies in
 							return self.symlinkCheckoutPathsForDependencyProject(dependency.project, subDependencies: dependencies, rootDirectoryURL: self.directoryURL)
 						}
@@ -602,7 +606,7 @@ public final class Project {
 		// dependencies before the projects that depend on them.
 		return SignalProducer<Dependency<PinnedVersion>, CarthageError>(cartfile.dependencies)
 			.flatMap(.merge) { (dependency: Dependency<PinnedVersion>) -> SignalProducer<DependencyGraph, CarthageError> in
-				return self.dependenciesForDependency(dependency)
+				return self.dependencyProjectsForDependency(dependency)
 					.map { dependencies in
 						[dependency.project: dependencies]
 					}
