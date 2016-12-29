@@ -574,6 +574,16 @@
 		}
 	}
 
+	internal extension SignalProducer {
+		init<S: SignalType where S.Value == Value, S.Error == Error>(_ signal: S) {
+			self.init(signal: signal)
+		}
+
+		init<S: SequenceType where S.Generator.Element == Value>(_ values: S) {
+			self.init(values: values)
+		}
+	}
+
 	internal extension FlattenStrategy {
 		static var merge: FlattenStrategy { return .Merge }
 		static var concat: FlattenStrategy { return .Concat }

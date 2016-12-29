@@ -44,7 +44,7 @@ public struct Resolver {
 					node.dependencies = graph.edges[node] ?? []
 					return node
 				}
-				let orderedNodesProducer = SignalProducer<DependencyNode, CarthageError>(values: orderedNodes)
+				let orderedNodesProducer = SignalProducer<DependencyNode, CarthageError>(orderedNodes)
 
 				guard
 					let dependenciesToUpdate = dependenciesToUpdate,
@@ -91,7 +91,7 @@ public struct Resolver {
 	private func nodePermutationsForCartfile(cartfile: Cartfile) -> SignalProducer<[DependencyNode], CarthageError> {
 		let scheduler = QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.nodePermutationsForCartfile")
 
-		return SignalProducer(values: cartfile.dependencies)
+		return SignalProducer(cartfile.dependencies)
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
 				return SignalProducer(value: dependency)
 					.flatMap(.concat) { dependency -> SignalProducer<PinnedVersion, CarthageError> in
@@ -112,7 +112,7 @@ public struct Resolver {
 						if nodes.isEmpty {
 							return SignalProducer(error: CarthageError.requiredVersionNotFound(dependency.project, dependency.version))
 						} else {
-							return SignalProducer(values: nodes)
+							return SignalProducer(nodes)
 						}
 					}
 			}
@@ -174,7 +174,7 @@ public struct Resolver {
 					}
 			}
 			.flatMap(.concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
-				return SignalProducer(values: nodes)
+				return SignalProducer(nodes)
 					// Each producer represents all evaluations of one subtree.
 					.map { node in self.graphsForDependenciesOfNode(node, basedOnGraph: graph) }
 					.observe(on: scheduler)

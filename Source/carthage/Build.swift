@@ -83,7 +83,7 @@ public struct BuildCommand: CommandType {
 				// Xcode doesn't always forward them.
 				if !options.isVerbose {
 					let (_stdoutSignal, stdoutObserver) = Signal<Data, NoError>.pipe()
-					let stdoutProducer = SignalProducer(signal: _stdoutSignal)
+					let stdoutProducer = SignalProducer(_stdoutSignal)
 					let grepTask: BuildSchemeProducer = Task("/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ]).launch(standardInput: stdoutProducer)
 						.on(next: { taskEvent in
 							switch taskEvent {
@@ -112,7 +112,7 @@ public struct BuildCommand: CommandType {
 							stdoutObserver.sendInterrupted()
 						})
 
-					buildProgress = SignalProducer<BuildSchemeProducer, CarthageError>(values: [ grepTask, buildProgress ])
+					buildProgress = SignalProducer<BuildSchemeProducer, CarthageError>([ grepTask, buildProgress ])
 						.flatten(.merge)
 				}
 
