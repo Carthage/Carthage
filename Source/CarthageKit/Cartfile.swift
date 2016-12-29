@@ -18,9 +18,9 @@ public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
-	public var dependencies: [Dependency<VersionSpecifier>]
+	public var dependencies: Set<Dependency<VersionSpecifier>>
 
-	public init(dependencies: [Dependency<VersionSpecifier>] = []) {
+	public init(dependencies: Set<Dependency<VersionSpecifier>> = []) {
 		self.dependencies = dependencies
 	}
 
@@ -70,7 +70,7 @@ public struct Cartfile {
 		}
 
 		return result.flatMap { _ in
-			let cartfile = Cartfile(dependencies: dependencies)
+			let cartfile = Cartfile(dependencies: Set(dependencies))
 			let dupes = cartfile
 				.dependencyCountedSet
 				.filter { $0.1 > 1 }
@@ -111,7 +111,7 @@ public struct Cartfile {
 
 	/// Appends the contents of another Cartfile to that of the receiver.
 	public mutating func append(_ cartfile: Cartfile) {
-		dependencies += cartfile.dependencies
+		dependencies.formUnion(cartfile.dependencies)
 	}
 }
 
