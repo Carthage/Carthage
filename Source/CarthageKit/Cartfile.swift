@@ -70,9 +70,7 @@ public struct Cartfile {
 		}
 
 		return result.flatMap { _ in
-			let cartfile = Cartfile(dependencies: Set(dependencies))
-			let dupes = cartfile
-				.dependencyCountedSet
+			let dupes = buildCountedSet(dependencies.map { $0.project })
 				.filter { $0.1 > 1 }
 				.map { $0.0 }
 				.map { DuplicateDependency(project: $0, locations: []) }
@@ -80,7 +78,7 @@ public struct Cartfile {
 			if !dupes.isEmpty {
 				return .failure(.duplicateDependencies(dupes))
 			}
-			return .success(cartfile)
+			return .success(Cartfile(dependencies: Set(dependencies)))
 		}
 	}
 
@@ -121,23 +119,12 @@ extension Cartfile: CustomStringConvertible {
 	}
 }
 
-// Duplicate dependencies
-extension Cartfile {
-	/// Returns the dependencies in a cartfile as a counted set containing the
-	/// corresponding projects, represented as a dictionary.
-	private var dependencyCountedSet: [ProjectIdentifier: Int] {
-		return buildCountedSet(self.dependencies.map { $0.project })
-	}
-}
-
 /// Returns an array containing projects that are listed as dependencies
 /// in both arguments.
 public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [ProjectIdentifier] {
-	let projectSet1 = cartfile1.dependencyCountedSet
-
-	return cartfile2.dependencies
-		.map { $0.project }
-		.filter { projectSet1[$0] != nil }
+	let projects1 = cartfile1.dependencies.map { $0.project }
+	let projects2 = cartfile2.dependencies.map { $0.project }
+	return Array(Set(projects1).intersect(projects2))
 }
 
 /// Represents a parsed Cartfile.resolved, which specifies which exact version was
