@@ -597,6 +597,18 @@
 	// MARK: - ReactiveTask
 
 	internal extension TaskEvent {
+		static func launch(task: Task) -> TaskEvent<T> {
+			return .Launch(task)
+		}
+
+		static func standardOutput(data: Data) -> TaskEvent<T> {
+			return .StandardOutput(data)
+		}
+
+		static func standardError(data: Data) -> TaskEvent<T> {
+			return .StandardError(data)
+		}
+
 		static func success(value: T) -> TaskEvent<T> {
 			return .Success(value)
 		}
