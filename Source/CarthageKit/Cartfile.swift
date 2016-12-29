@@ -302,7 +302,7 @@ extension ProjectIdentifier: CustomStringConvertible {
 }
 
 /// Represents a single dependency of a project.
-public struct Dependency<V: VersionType>: Equatable {
+public struct Dependency<V: VersionType>: Hashable {
 	/// The project corresponding to this dependency.
 	public let project: ProjectIdentifier
 
@@ -312,6 +312,10 @@ public struct Dependency<V: VersionType>: Equatable {
 	public init(project: ProjectIdentifier, version: V) {
 		self.project = project
 		self.version = version
+	}
+	
+	public var hashValue: Int {
+		return project.hashValue ^ version.hashValue
 	}
 }
 
