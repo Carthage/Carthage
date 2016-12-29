@@ -39,7 +39,11 @@ public struct Resolver {
 	///
 	/// Sends each recursive dependency with its resolved version, in the order
 	/// that they should be built.
-	public func resolve(dependencies dependencies: Set<Dependency<VersionSpecifier>>, lastResolved: ResolvedCartfile? = nil, dependenciesToUpdate: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	public func resolve(
+		dependencies dependencies: Set<Dependency<VersionSpecifier>>,
+		lastResolved: ResolvedCartfile? = nil,
+		dependenciesToUpdate: [String]? = nil
+	) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return graphs(for: Array(dependencies), dependencyOf: nil, basedOnGraph: DependencyGraph())
 			.take(first: 1)
 			.observe(on: QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.resolve"))
