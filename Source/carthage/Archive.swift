@@ -53,7 +53,7 @@ public struct ArchiveCommand: CommandType {
 					return schemesInProjects(projects)
 						.flatMap(.merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 							if !schemes.isEmpty {
-								return .init(values: schemes)
+								return .init(schemes)
 							} else {
 								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.carthage_path)), []))
 							}
@@ -75,9 +75,9 @@ public struct ArchiveCommand: CommandType {
 		}
 
 		return frameworks.flatMap(.merge) { frameworks -> SignalProducer<(), CarthageError> in
-			return SignalProducer(values: Platform.supportedPlatforms)
+			return SignalProducer(Platform.supportedPlatforms)
 				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
-					return SignalProducer(values: frameworks).map { framework in
+					return SignalProducer(frameworks).map { framework in
 						return (platform.relativePath as NSString).appendingPathComponent(framework)
 					}
 				}

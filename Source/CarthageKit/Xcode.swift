@@ -46,7 +46,7 @@ public func locateProjectsInDirectory(directoryURL: URL) -> SignalProducer<Proje
 		.skipNil()
 		.collect()
 		.map { $0.sorted() }
-		.flatMap(.merge) { SignalProducer<ProjectLocator, CarthageError>(values: $0) }
+		.flatMap(.merge) { SignalProducer<ProjectLocator, CarthageError>($0) }
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
@@ -126,7 +126,7 @@ public func buildableSchemesInDirectory(directoryURL: URL, withConfiguration con
 /// Sends pairs of a scheme and a project, the scheme actually resides in
 /// the project.
 public func schemesInProjects(projects: [(ProjectLocator, [String])]) -> SignalProducer<[(String, ProjectLocator)], CarthageError> {
-	return SignalProducer(values: projects)
+	return SignalProducer(projects)
 		.map { (project: ProjectLocator, schemes: [String]) in
 			// Only look for schemes that actually reside in the project
 			let containedSchemes = schemes.filter { (scheme: String) -> Bool in
@@ -145,7 +145,7 @@ public func schemesInProjects(projects: [(ProjectLocator, [String])]) -> SignalP
 			}
 		}
 		.flatMap(.concat) { project, schemes in
-			return .init(values: schemes.map { ($0, project) })
+			return .init(schemes.map { ($0, project) })
 		}
 		.collect()
 }
@@ -257,7 +257,7 @@ private func copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL: URL, _ s
 private func mergeExecutables(executableURLs: [URL], _ outputURL: URL) -> SignalProducer<(), CarthageError> {
 	precondition(outputURL.isFileURL)
 
-	return SignalProducer<URL, CarthageError>(values: executableURLs)
+	return SignalProducer<URL, CarthageError>(executableURLs)
 		.attemptMap { url -> Result<String, CarthageError> in
 			if url.isFileURL {
 				return .success(url.carthage_path)
@@ -498,7 +498,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						buildScheme.workingDirectoryPath = workingDirectoryURL.carthage_path
 
 						return buildScheme.launch()
-							.flatMapTaskEvents(.concat) { _ in SignalProducer(values: settings) }
+							.flatMapTaskEvents(.concat) { _ in SignalProducer(settings) }
 							.mapError(CarthageError.taskError)
 					}
 			}
@@ -538,7 +538,7 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			}
 
 			let values = sdksByPlatform.map { ($0, Array($1)) }
-			return SignalProducer(values: values)
+			return SignalProducer(values)
 		}
 		.flatMap(.concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
 			let filterResult = sdkFilter(sdks: sdks, scheme: scheme, configuration: configuration, project: project)
@@ -742,7 +742,7 @@ public func buildInDirectory(directoryURL: URL, withOptions options: BuildOption
 				return schemesInProjects(projects)
 					.flatMap(.merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 						if !schemes.isEmpty {
-							return .init(values: schemes)
+							return .init(schemes)
 						} else {
 							return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.carthage_path)), options.platforms))
 						}
@@ -953,7 +953,7 @@ public func architecturesInPackage(packageURL: URL) -> SignalProducer<String, Ca
 							.filter { !$0.isEmpty }
 
 						if let components = components {
-							return SignalProducer(values: components)
+							return SignalProducer(components)
 						}
 					}
 
@@ -1033,7 +1033,7 @@ public func UUIDsForDSYM(dSYMURL: URL) -> SignalProducer<Set<UUID>, CarthageErro
 public func BCSymbolMapsForFramework(frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
 	let directoryURL = frameworkURL.deletingLastPathComponent()
 	return UUIDsForFramework(frameworkURL)
-		.flatMap(.merge) { uuids in SignalProducer<UUID, CarthageError>(values: uuids) }
+		.flatMap(.merge) { uuids in SignalProducer<UUID, CarthageError>(uuids) }
 		.map { uuid in
 			return directoryURL.appendingPathComponent(uuid.uuidString, isDirectory: false).appendingPathExtension("bcsymbolmap")
 		}

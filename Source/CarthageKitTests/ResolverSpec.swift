@@ -159,7 +159,7 @@ class ResolverSpec: QuickSpec {
 	}
 
 	private func versionsForDependency(project: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
-		return SignalProducer(values: [
+		return SignalProducer([
 			PinnedVersion("0.4.1"),
 			PinnedVersion("0.9.0"),
 			PinnedVersion("1.0.2"),

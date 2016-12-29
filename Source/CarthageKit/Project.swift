@@ -290,14 +290,14 @@ public final class Project {
 			.on(next: { newVersions in
 				self.cachedVersions[project] = newVersions
 			})
-			.flatMap(.concat) { versions in SignalProducer<PinnedVersion, CarthageError>(values: versions) }
+			.flatMap(.concat) { versions in SignalProducer<PinnedVersion, CarthageError>(versions) }
 
 		return SignalProducer.attempt {
 				return .success(self.cachedVersions)
 			}
 			.flatMap(.merge) { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
 				if let versions = versionsByProject[project] {
-					return SignalProducer(values: versions)
+					return SignalProducer(versions)
 				} else {
 					return fetchVersions
 				}
@@ -309,7 +309,7 @@ public final class Project {
 					return SignalProducer(error: .taggedVersionNotFound(project))
 				}
 				
-				return SignalProducer(values: versions)
+				return SignalProducer(versions)
 			}
 	}
 	
@@ -500,7 +500,7 @@ public final class Project {
 				self._projectEventsObserver.send(value: .downloadingBinaries(project, release.nameWithFallback))
 			})
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
-				return SignalProducer<Release.Asset, CarthageError>(values: release.assets)
+				return SignalProducer<Release.Asset, CarthageError>(release.assets)
 					.filter { asset in
 						if asset.name.range(of: CarthageProjectBinaryAssetPattern) == nil {
 							return false
@@ -600,7 +600,7 @@ public final class Project {
 		// out the relationships between them. Loading the cartfile will each will give us its
 		// dependencies. Building a recursive lookup table with this information will let us sort
 		// dependencies before the projects that depend on them.
-		return SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: cartfile.dependencies)
+		return SignalProducer<Dependency<PinnedVersion>, CarthageError>(cartfile.dependencies)
 			.flatMap(.merge) { (dependency: Dependency<PinnedVersion>) -> SignalProducer<DependencyGraph, CarthageError> in
 				return self.dependenciesForDependency(dependency)
 					.map { dependencies in
@@ -625,7 +625,7 @@ public final class Project {
 					.filter { dependency in sortedProjects.contains(dependency.project) }
 					.sort { left, right in sortedProjects.index(of: left.project) < sortedProjects.index(of: right.project) }
 
-				return SignalProducer(values: sortedDependencies)
+				return SignalProducer(sortedDependencies)
 			}
 	}
 
@@ -649,7 +649,7 @@ public final class Project {
 			}
 			.zip(with: submodulesSignal)
 			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
-				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: dependencies)
+				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(dependencies)
 					.flatMap(.concat) { dependency -> SignalProducer<(), CarthageError> in
 						let project = dependency.project
 
@@ -684,7 +684,7 @@ public final class Project {
 		let subDependencyNames = subDependencies.map { $0.name }
 		let fileManager = FileManager.`default`
 
-		let symlinksProducer = SignalProducer(values: subDependencyNames)
+		let symlinksProducer = SignalProducer(subDependencyNames)
 			.filter { name in
 				let checkoutURL = rootCheckoutsURL.appendingPathComponent(name)
 				do {

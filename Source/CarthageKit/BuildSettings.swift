@@ -117,7 +117,7 @@ public struct BuildSettings {
 
 		if let supportedPlatforms = supportedPlatforms.value {
 			let platforms = supportedPlatforms.characters.split { $0 == " " }.map(String.init)
-			return SignalProducer<String, CarthageError>(values: platforms)
+			return SignalProducer<String, CarthageError>(platforms)
 				.map { platform in SignalProducer(result: SDK.fromString(platform)) }
 				.flatten(.merge)
 		}
