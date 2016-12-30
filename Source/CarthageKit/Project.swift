@@ -250,7 +250,7 @@ public final class Project {
 	}
 
 	/// Produces the sub dependencies of the given dependency
-	func dependencyProjectsForDependency(dependency: Dependency<PinnedVersion>) -> SignalProducer<Set<ProjectIdentifier>, CarthageError> {
+	func dependencyProjects(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Set<ProjectIdentifier>, CarthageError> {
 		return self.dependencies(for: dependency)
 			.map { $0.project }
 			.collect()
@@ -591,7 +591,7 @@ public final class Project {
 						.startOnQueue(self.gitOperationQueue)
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
-						.then(self.dependencyProjectsForDependency(dependency))
+						.then(self.dependencyProjects(for: dependency))
 						.flatMap(.merge) { dependencies in
 							return self.symlinkCheckoutPathsForDependencyProject(dependency.project, subDependencies: dependencies, rootDirectoryURL: self.directoryURL)
 						}
@@ -610,7 +610,7 @@ public final class Project {
 		// dependencies before the projects that depend on them.
 		return SignalProducer<Dependency<PinnedVersion>, CarthageError>(cartfile.dependencies)
 			.flatMap(.merge) { (dependency: Dependency<PinnedVersion>) -> SignalProducer<DependencyGraph, CarthageError> in
-				return self.dependencyProjectsForDependency(dependency)
+				return self.dependencyProjects(for: dependency)
 					.map { dependencies in
 						[dependency.project: dependencies]
 					}
