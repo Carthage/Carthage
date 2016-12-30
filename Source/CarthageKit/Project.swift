@@ -359,7 +359,11 @@ public final class Project {
 		return SignalProducer
 			.zip(loadCombinedCartfile(), resolvedCartfile)
 			.flatMap(.merge) { cartfile, resolvedCartfile in
-				return resolver.resolve(dependencies: cartfile.dependencies, lastResolved: resolvedCartfile, dependenciesToUpdate: dependenciesToUpdate)
+				return resolver.resolve(
+					dependencies: cartfile.dependencies,
+					lastResolved: resolvedCartfile?.versions,
+					dependenciesToUpdate: dependenciesToUpdate
+				)
 			}
 			.collect()
 			.map(ResolvedCartfile.init)

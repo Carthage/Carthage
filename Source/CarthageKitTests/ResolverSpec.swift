@@ -75,7 +75,7 @@ class ResolverSpec: QuickSpec {
 				dependencies: testCartfile.dependencies,
 				lastResolved: ResolvedCartfile(dependencies: [
 						self.dependencyForOwner("danielgindi", name: "ios-charts", version: "2.4.0"),
-					]),
+					]).versions,
 				dependenciesToUpdate: [ "Mantle", "ReactiveCocoa" ]
 			)
 			let dependencies = self.orderedDependencies(producer)

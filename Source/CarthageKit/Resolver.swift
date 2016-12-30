@@ -41,7 +41,7 @@ public struct Resolver {
 	/// that they should be built.
 	public func resolve(
 		dependencies dependencies: Set<Dependency<VersionSpecifier>>,
-		lastResolved: ResolvedCartfile? = nil,
+	    lastResolved: [ProjectIdentifier: PinnedVersion]? = nil,
 		dependenciesToUpdate: [String]? = nil
 	) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return graphs(for: Array(dependencies), dependencyOf: nil, basedOnGraph: DependencyGraph())
@@ -75,10 +75,9 @@ public struct Resolver {
 					}
 
 					// The dependencies which are not related to the targets
-					// should not be affected, so use the version in the last
-					// Cartfile.resolved.
-					if let dependencyForProject = lastResolved.dependency(for: node.project) {
-						return dependencyForProject
+					// should not be affected, so use the last resolved version.
+					if let version = lastResolved[node.project] {
+						return Dependency(project: node.project, version: version)
 					}
 
 					// Skip newly added nodes which are not in the targets.

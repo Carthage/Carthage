@@ -130,9 +130,17 @@ public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) ->
 /// Represents a parsed Cartfile.resolved, which specifies which exact version was
 /// checked out for each dependency.
 public struct ResolvedCartfile {
-	/// The dependencies listed in the Cartfile.resolved, in the order that they
-	/// should be built.
+	/// The dependencies listed in the Cartfile.resolved.
 	public var dependencies: [Dependency<PinnedVersion>]
+	
+	/// The version of each project
+	public var versions: [ProjectIdentifier: PinnedVersion] {
+		var versions: [ProjectIdentifier: PinnedVersion] = [:]
+		for dependency in dependencies {
+			versions[dependency.project] = dependency.version
+		}
+		return versions
+	}
 
 	public init(dependencies: [Dependency<PinnedVersion>]) {
 		self.dependencies = dependencies
@@ -162,13 +170,6 @@ public struct ResolvedCartfile {
 		}
 
 		return result.map { _ in cartfile }
-	}
-
-	/// Returns the dependency whose project matches the given project or nil.
-	internal func dependency(for project: ProjectIdentifier) -> Dependency<PinnedVersion>? {
-		return dependencies.lazy
-			.filter { $0.project == project }
-			.first
 	}
 }
 
