@@ -471,6 +471,10 @@
 		static func failure(error: Error) -> Result<Value, Error> {
 			return .Failure(error)
 		}
+
+		func fanout<R: ResultType where Error == R.Error>(@autoclosure other: () -> R) -> Result<(Value, R.Value), Error> {
+			return self.flatMap { left in other().map { right in (left, right) } }
+		}
 	}
 
 	// MARK: - ReactiveSwift

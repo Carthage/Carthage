@@ -138,7 +138,7 @@ public struct BuildSettings {
 
 	/// Attempts to determine the FrameworkType identified by these build settings.
 	internal var frameworkType: Result<FrameworkType?, CarthageError> {
-		return (productType &&& machOType).map(FrameworkType.init)
+		return productType.fanout(machOType).map(FrameworkType.init)
 	}
 
 	/// Attempts to determine the URL to the built products directory.
@@ -156,11 +156,11 @@ public struct BuildSettings {
 
 	/// Attempts to determine the URL to the built executable.
 	public var executableURL: Result<URL, CarthageError> {
-		return builtProductsDirectoryURL.flatMap { builtProductsURL in
-			return self.executablePath.map { executablePath in
+		return builtProductsDirectoryURL
+			.fanout(executablePath)
+			.map { builtProductsURL, executablePath in
 				return builtProductsURL.appendingPathComponent(executablePath)
 			}
-		}
 	}
 
 	/// Attempts to determine the name of the built product's wrapper bundle.
@@ -170,11 +170,11 @@ public struct BuildSettings {
 
 	/// Attempts to determine the URL to the built product's wrapper.
 	public var wrapperURL: Result<URL, CarthageError> {
-		return builtProductsDirectoryURL.flatMap { builtProductsURL in
-			return self.wrapperName.map { wrapperName in
+		return builtProductsDirectoryURL
+			.fanout(wrapperName)
+			.map { builtProductsURL, wrapperName in
 				return builtProductsURL.appendingPathComponent(wrapperName)
 			}
-		}
 	}
 
 	/// Attempts to determine whether bitcode is enabled or not.
