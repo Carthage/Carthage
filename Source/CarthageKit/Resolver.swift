@@ -44,7 +44,7 @@ public struct Resolver {
 	    lastResolved: [ProjectIdentifier: PinnedVersion]? = nil,
 		dependenciesToUpdate: [String]? = nil
 	) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
-		return graphs(for: Array(dependencies), dependencyOf: nil, basedOnGraph: DependencyGraph())
+		return graphs(for: dependencies, dependencyOf: nil, basedOnGraph: DependencyGraph())
 			.take(first: 1)
 			.observe(on: QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.resolve"))
 			.flatMap(.merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
@@ -94,10 +94,10 @@ public struct Resolver {
 	/// `dependencies`. Each array represents one possible permutation of those
 	/// dependencies (chosen from among the versions that actually exist for
 	/// each).
-	private func nodePermutations(for dependencies: [Dependency<VersionSpecifier>]) -> SignalProducer<[DependencyNode], CarthageError> {
+	private func nodePermutations(for dependencies: Set<Dependency<VersionSpecifier>>) -> SignalProducer<[DependencyNode], CarthageError> {
 		let scheduler = QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.nodePermutations")
 
-		return SignalProducer(dependencies)
+		return SignalProducer(Array(dependencies))
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
 				return SignalProducer(value: dependency)
 					.flatMap(.concat) { dependency -> SignalProducer<PinnedVersion, CarthageError> in
@@ -142,7 +142,7 @@ public struct Resolver {
 			.take(first: 1)
 			.observe(on: scheduler)
 			.flatMap(.concat) { dependencies in
-				return self.graphs(for: dependencies, dependencyOf: node, basedOnGraph: inputGraph)
+				return self.graphs(for: Set(dependencies), dependencyOf: node, basedOnGraph: inputGraph)
 			}
 	}
 	
@@ -151,7 +151,7 @@ public struct Resolver {
 	/// specified node (or as a root otherwise).
 	///
 	/// This is a helper method, and not meant to be called from outside.
-	private func graphs(for dependencies: [Dependency<VersionSpecifier>], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
+	private func graphs(for dependencies: Set<Dependency<VersionSpecifier>>, dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		return nodePermutations(for: dependencies)
 			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
 				return self
