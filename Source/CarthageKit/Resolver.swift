@@ -41,7 +41,7 @@ public struct Resolver {
 	/// that they should be built.
 	public func resolve(
 		dependencies dependencies: Set<Dependency<VersionSpecifier>>,
-	    lastResolved: [ProjectIdentifier: PinnedVersion]? = nil,
+		lastResolved: [ProjectIdentifier: PinnedVersion]? = nil,
 		dependenciesToUpdate: [String]? = nil
 	) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		return graphs(for: dependencies, dependencyOf: nil, basedOnGraph: DependencyGraph())
