@@ -228,7 +228,7 @@ private enum PackageType: String {
 /// Returns a signal that will send the URL after copying upon .success.
 private func copyBuildProductIntoDirectory(directoryURL: URL, _ settings: BuildSettings) -> SignalProducer<URL, CarthageError> {
 	let target = settings.wrapperName.map(directoryURL.appendingPathComponent)
-	return SignalProducer(result: target &&& settings.wrapperURL)
+	return SignalProducer(result: target.fanout(settings.wrapperURL))
 		.flatMap(.merge) { (target, source) in
 			return copyProduct(source, target)
 		}
@@ -380,15 +380,15 @@ private func settingsByTarget<Error>(producer: SignalProducer<TaskEvent<BuildSet
 private func mergeBuildProductsIntoDirectory(firstProductSettings: BuildSettings, _ secondProductSettings: BuildSettings, _ destinationFolderURL: URL) -> SignalProducer<URL, CarthageError> {
 	return copyBuildProductIntoDirectory(destinationFolderURL, firstProductSettings)
 		.flatMap(.merge) { productURL -> SignalProducer<URL, CarthageError> in
-			let executableURLs = (firstProductSettings.executableURL &&& secondProductSettings.executableURL).map { [ $0, $1 ] }
+			let executableURLs = (firstProductSettings.executableURL.fanout(secondProductSettings.executableURL)).map { [ $0, $1 ] }
 			let outputURL = firstProductSettings.executablePath.map(destinationFolderURL.appendingPathComponent)
 
-			let mergeProductBinaries = SignalProducer(result: executableURLs &&& outputURL)
+			let mergeProductBinaries = SignalProducer(result: executableURLs.fanout(outputURL))
 				.flatMap(.concat) { (executableURLs: [URL], outputURL: URL) -> SignalProducer<(), CarthageError> in
 					return mergeExecutables(executableURLs, outputURL.resolvingSymlinksInPath())
 				}
 
-			let sourceModulesURL = SignalProducer(result: secondProductSettings.relativeModulesPath &&& secondProductSettings.builtProductsDirectoryURL)
+			let sourceModulesURL = SignalProducer(result: secondProductSettings.relativeModulesPath.fanout(secondProductSettings.builtProductsDirectoryURL))
 				.filter { $0.0 != nil }
 				.map { (modulesPath, productsURL) -> URL in
 					return productsURL.appendingPathComponent(modulesPath!)
