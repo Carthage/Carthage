@@ -117,38 +117,38 @@ class VersionSpecifierSpec: QuickSpec {
 			let v2_2_0 = SemanticVersion(major: 2, minor: 2, patch: 0)
 				
 			it("should return the tighter specifier when one is .any") {
-				testIntersection(VersionSpecifier.any, VersionSpecifier.any, expected: VersionSpecifier.any)
-				testIntersection(VersionSpecifier.any, VersionSpecifier.atLeast(v1_3_2), expected: VersionSpecifier.atLeast(v1_3_2))
-				testIntersection(VersionSpecifier.any, VersionSpecifier.compatibleWith(v1_3_2), expected: VersionSpecifier.compatibleWith(v1_3_2))
-				testIntersection(VersionSpecifier.any, VersionSpecifier.exactly(v1_3_2), expected: VersionSpecifier.exactly(v1_3_2))
+				testIntersection(.any, .any, expected: .any)
+				testIntersection(.any, .atLeast(v1_3_2), expected: .atLeast(v1_3_2))
+				testIntersection(.any, .compatibleWith(v1_3_2), expected: .compatibleWith(v1_3_2))
+				testIntersection(.any, .exactly(v1_3_2), expected: .exactly(v1_3_2))
 			}
 
 			it("should return the higher specifier when one is .atLeast") {
-				testIntersection(VersionSpecifier.atLeast(v1_3_2), VersionSpecifier.atLeast(v1_3_2), expected: VersionSpecifier.atLeast(v1_3_2))
-				testIntersection(VersionSpecifier.atLeast(v1_3_2), VersionSpecifier.atLeast(v2_1_1), expected: VersionSpecifier.atLeast(v2_1_1))
-				testIntersection(VersionSpecifier.atLeast(v1_3_2), VersionSpecifier.compatibleWith(v2_1_1), expected: VersionSpecifier.compatibleWith(v2_1_1))
-				testIntersection(VersionSpecifier.atLeast(v2_1_1), VersionSpecifier.compatibleWith(v2_2_0), expected: VersionSpecifier.compatibleWith(v2_2_0))
-				testIntersection(VersionSpecifier.atLeast(v1_3_2), VersionSpecifier.exactly(v2_2_0), expected: VersionSpecifier.exactly(v2_2_0))
+				testIntersection(.atLeast(v1_3_2), .atLeast(v1_3_2), expected: .atLeast(v1_3_2))
+				testIntersection(.atLeast(v1_3_2), .atLeast(v2_1_1), expected: .atLeast(v2_1_1))
+				testIntersection(.atLeast(v1_3_2), .compatibleWith(v2_1_1), expected: .compatibleWith(v2_1_1))
+				testIntersection(.atLeast(v2_1_1), .compatibleWith(v2_2_0), expected: .compatibleWith(v2_2_0))
+				testIntersection(.atLeast(v1_3_2), .exactly(v2_2_0), expected: .exactly(v2_2_0))
 			}
 
 			it("should return the higher minor or patch version when one is .compatibleWith") {
-				testIntersection(VersionSpecifier.compatibleWith(v1_3_2), VersionSpecifier.compatibleWith(v1_3_2), expected: VersionSpecifier.compatibleWith(v1_3_2))
-				testIntersection(VersionSpecifier.compatibleWith(v1_3_2), VersionSpecifier.compatibleWith(v2_1_1), expected: nil)
-				testIntersection(VersionSpecifier.compatibleWith(v2_1_1), VersionSpecifier.compatibleWith(v2_2_0), expected: VersionSpecifier.compatibleWith(v2_2_0))
-				testIntersection(VersionSpecifier.compatibleWith(v2_1_1), VersionSpecifier.exactly(v2_2_0), expected: VersionSpecifier.exactly(v2_2_0))
+				testIntersection(.compatibleWith(v1_3_2), .compatibleWith(v1_3_2), expected: .compatibleWith(v1_3_2))
+				testIntersection(.compatibleWith(v1_3_2), .compatibleWith(v2_1_1), expected: nil)
+				testIntersection(.compatibleWith(v2_1_1), .compatibleWith(v2_2_0), expected: .compatibleWith(v2_2_0))
+				testIntersection(.compatibleWith(v2_1_1), .exactly(v2_2_0), expected: .exactly(v2_2_0))
 			}
 
 			it("should only match exact specifiers for .exactly") {
-				testIntersection(VersionSpecifier.atLeast(v2_1_1), VersionSpecifier.exactly(v1_3_2), expected: nil)
-				testIntersection(VersionSpecifier.compatibleWith(v1_3_2), VersionSpecifier.exactly(v2_1_1), expected: nil)
-				testIntersection(VersionSpecifier.compatibleWith(v2_2_0), VersionSpecifier.exactly(v2_1_1), expected: nil)
-				testIntersection(VersionSpecifier.exactly(v1_3_2), VersionSpecifier.exactly(v1_3_2), expected: VersionSpecifier.exactly(v1_3_2))
-				testIntersection(VersionSpecifier.exactly(v2_1_1), VersionSpecifier.exactly(v1_3_2), expected: nil)
+				testIntersection(.exactly(v1_3_2), .atLeast(v2_1_1), expected: nil)
+				testIntersection(.exactly(v2_1_1), .compatibleWith(v1_3_2), expected: nil)
+				testIntersection(.exactly(v2_1_1), .compatibleWith(v2_2_0), expected: nil)
+				testIntersection(.exactly(v1_3_2), .exactly(v1_3_2), expected: VersionSpecifier.exactly(v1_3_2))
+				testIntersection(.exactly(v2_1_1), .exactly(v1_3_2), expected: nil)
 			}
 
 			it("should not let ~> 0.1.1 be compatible with 0.1.2, but not 0.2") {
-				testIntersection(VersionSpecifier.compatibleWith(v0_1_0), VersionSpecifier.compatibleWith(v0_1_1), expected: VersionSpecifier.compatibleWith(v0_1_1))
-				testIntersection(VersionSpecifier.compatibleWith(v0_1_0), VersionSpecifier.compatibleWith(v0_2_0), expected: nil)
+				testIntersection(.compatibleWith(v0_1_0), .compatibleWith(v0_1_1), expected: .compatibleWith(v0_1_1))
+				testIntersection(.compatibleWith(v0_1_0), .compatibleWith(v0_2_0), expected: nil)
 			}
 		}
 	}
