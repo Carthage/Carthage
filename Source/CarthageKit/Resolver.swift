@@ -97,7 +97,7 @@ public struct Resolver {
 	private func nodePermutations(for dependencies: Set<Dependency<VersionSpecifier>>) -> SignalProducer<[DependencyNode], CarthageError> {
 		let scheduler = QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.nodePermutations")
 
-		return SignalProducer(Array(dependencies))
+		return SignalProducer(dependencies)
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
 				return SignalProducer(value: dependency)
 					.flatMap(.concat) { dependency -> SignalProducer<PinnedVersion, CarthageError> in

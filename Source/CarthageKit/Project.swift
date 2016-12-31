@@ -323,7 +323,7 @@ public final class Project {
 			.flatMapError { _ in .empty }
 			.attemptMap(Cartfile.from(string:))
 			.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
-				return SignalProducer(Array(cartfile.dependencies))
+				return SignalProducer(cartfile.dependencies)
 			}
 	}
 

@@ -136,7 +136,7 @@ class ResolverSpec: QuickSpec {
 			}, dependenciesForDependency: { dependency -> SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError> in
 				if dependency.project.name == "EmbeddedFrameworks" {
 					let cartfile: Cartfile = self.loadTestCartfile("EmbeddedFrameworksCartfile")
-					return SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError>(Array(cartfile.dependencies))
+					return SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError>(cartfile.dependencies)
 				} else {
 					return .empty
 				}
