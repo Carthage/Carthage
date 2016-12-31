@@ -176,6 +176,7 @@ public struct ResolvedCartfile {
 extension ResolvedCartfile: CustomStringConvertible {
 	public var description: String {
 		return dependencies
+			.sort { $0.project.description < $1.project.description }
 			.map { $0.description + "\n" }
 			.joined(separator: "")
 	}
