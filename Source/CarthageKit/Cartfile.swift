@@ -175,9 +175,9 @@ public struct ResolvedCartfile {
 
 extension ResolvedCartfile: CustomStringConvertible {
 	public var description: String {
-		return dependencies.reduce("") { (string, dependency) in
-			return string + "\(dependency)\n"
-		}
+		return dependencies
+			.map { $0.description + "\n" }
+			.joined(separator: "")
 	}
 }
 
