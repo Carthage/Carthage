@@ -1,5 +1,15 @@
 /// Configures a build with Xcode.
 public struct BuildArguments {
+	/// Represents a build setting whether full bitcode should be embedded in the
+	/// binary.
+	public enum BitcodeGenerationMode: String {
+		/// Only bitcode marker will be embedded.
+		case marker = "marker"
+
+		/// Full bitcode will be embedded.
+		case bitcode = "bitcode"
+	}
+
 	/// The project to build.
 	public let project: ProjectLocator
 
