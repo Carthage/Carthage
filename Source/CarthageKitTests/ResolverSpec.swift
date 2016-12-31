@@ -43,15 +43,15 @@ class ResolverSpec: QuickSpec {
 
 		beforeEach {
 			resolver = Resolver(
-				versionsForDependency: self.versionsForDependency,
-				cartfileForDependency: self.cartfileForDependency,
+				versionsForDependency: self.versions(for:),
+				dependenciesForDependency: self.dependencies(for:),
 				resolvedGitReference: self.resolvedGitReference
 			)
 		}
 
 		it("should resolve a Cartfile") {
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
-			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
+			let producer = resolver.resolve(dependencies: testCartfile.dependencies)
 			let dependencies = self.orderedDependencies(producer)
 			expect(dependencies.count) == 8
 
@@ -71,11 +71,11 @@ class ResolverSpec: QuickSpec {
 		it("should resolve a Cartfile for specific dependencies") {
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
 
-			let producer = resolver.resolveDependenciesInCartfile(
-				testCartfile,
+			let producer = resolver.resolve(
+				dependencies: testCartfile.dependencies,
 				lastResolved: ResolvedCartfile(dependencies: [
 						self.dependencyForOwner("danielgindi", name: "ios-charts", version: "2.4.0"),
-					]),
+					]).versions,
 				dependenciesToUpdate: [ "Mantle", "ReactiveCocoa" ]
 			)
 			let dependencies = self.orderedDependencies(producer)
@@ -104,7 +104,7 @@ class ResolverSpec: QuickSpec {
 
 		it("should resolve a Cartfile whose dependency is specified by both a branch name and a SHA which is the HEAD of that branch") {
 			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfileProposedVersion")
-			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
+			let producer = resolver.resolve(dependencies: testCartfile.dependencies)
 			let dependencies = self.orderedDependencies(producer)
 			expect(dependencies.count) == 3
 
@@ -133,18 +133,19 @@ class ResolverSpec: QuickSpec {
 				default:
 					assert(false)
 				}
-			}, cartfileForDependency: { dependency -> SignalProducer<Cartfile, CarthageError> in
+			}, dependenciesForDependency: { dependency -> SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError> in
 				if dependency.project.name == "EmbeddedFrameworks" {
-					return SignalProducer(value: self.loadTestCartfile("EmbeddedFrameworksCartfile"))
+					let cartfile: Cartfile = self.loadTestCartfile("EmbeddedFrameworksCartfile")
+					return SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError>(cartfile.dependencies)
 				} else {
-					return SignalProducer(value: Cartfile())
+					return .empty
 				}
 			}, resolvedGitReference: { _ -> SignalProducer<PinnedVersion, CarthageError> in
 				return SignalProducer(error: .invalidArgument(description: "unexpected test error"))
 			})
 
 			let testCartfile: Cartfile = self.loadTestCartfile("EmbeddedFrameworksContainerCartfile")
-			let producer = resolver.resolveDependenciesInCartfile(testCartfile)
+			let producer = resolver.resolve(dependencies: testCartfile.dependencies)
 			let dependencies = self.orderedDependencies(producer)
 			expect(dependencies.count) == 4
 
@@ -158,7 +159,7 @@ class ResolverSpec: QuickSpec {
 		}
 	}
 
-	private func versionsForDependency(project: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
+	private func versions(for project: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
 		return SignalProducer([
 			PinnedVersion("0.4.1"),
 			PinnedVersion("0.9.0"),
@@ -169,27 +170,47 @@ class ResolverSpec: QuickSpec {
 		])
 	}
 
-	private func cartfileForDependency(dependency: CarthageKit.Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
-		let cartfile: Result<Cartfile, CarthageError>
-
+	private func dependencies(for dependency: CarthageKit.Dependency<PinnedVersion>) -> SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError> {
 		switch dependency.project {
 		case .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")):
-			cartfile = Cartfile.from(string: "github \"jspahrsummers/libextobjc\" ~> 0.4\ngithub \"jspahrsummers/objc-build-scripts\" >= 3.0")
+			return SignalProducer([
+				CarthageKit.Dependency(
+					project: .gitHub(Repository(owner: "jspahrsummers", name: "libextobjc")),
+					version: .compatibleWith(SemanticVersion(major: 0, minor: 4, patch: 0))
+				),
+				CarthageKit.Dependency(
+					project: .gitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")),
+					version: .atLeast(SemanticVersion(major: 3, minor: 0, patch: 0))
+				),
+			])
 
 		case .gitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")):
-			cartfile = Cartfile.from(string: "github \"jspahrsummers/xcconfigs\" ~> 1.0")
+			return SignalProducer([
+				CarthageKit.Dependency(
+					project: .gitHub(Repository(owner: "jspahrsummers", name: "xcconfigs")),
+					version: .compatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0))
+				),
+			])
 
 		case .git(GitURL("/tmp/TestCartfileBranch")):
-			cartfile = Cartfile.from(string: "git \"https://enterprise.local/desktop/git-error-translations2.git\" \"development\"")
+			return SignalProducer([
+				CarthageKit.Dependency(
+					project: .git(GitURL("https://enterprise.local/desktop/git-error-translations2.git")),
+					version: .gitReference("development")
+				),
+			])
 
 		case .git(GitURL("/tmp/TestCartfileSHA")):
-			cartfile = Cartfile.from(string: "git \"https://enterprise.local/desktop/git-error-translations2.git\" \"8ff4393ede2ca86d5a78edaf62b3a14d90bffab9\"")
+			return SignalProducer([
+				CarthageKit.Dependency(
+					project: .git(GitURL("https://enterprise.local/desktop/git-error-translations2.git")),
+					version: .gitReference("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9")
+				),
+			])
 
 		default:
-			cartfile = .success(Cartfile())
+			return .empty
 		}
-
-		return SignalProducer(value: cartfile.value!)
 	}
 
 	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
