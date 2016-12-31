@@ -366,6 +366,7 @@ public final class Project {
 				)
 			}
 			.collect()
+			.map(Set.init)
 			.map(ResolvedCartfile.init)
 	}
 	

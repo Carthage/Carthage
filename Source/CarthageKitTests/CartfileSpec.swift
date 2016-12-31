@@ -78,15 +78,16 @@ class CartfileSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			let resolvedCartfile = result.value!
-			expect(resolvedCartfile.dependencies.count) == 2
-
-			let depReactiveCocoa = resolvedCartfile.dependencies[0]
-			expect(depReactiveCocoa.project) == ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
-			expect(depReactiveCocoa.version) == PinnedVersion("v2.3.1")
-
-			let depMantle = resolvedCartfile.dependencies[1]
-			expect(depMantle.project) == ProjectIdentifier.git(GitURL("https://github.com/Mantle/Mantle.git"))
-			expect(depMantle.version) == PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47")
+			expect(resolvedCartfile.dependencies) == [
+				Dependency(
+					project: .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
+					version: PinnedVersion("v2.3.1")
+				),
+				Dependency(
+					project: .git(GitURL("https://github.com/Mantle/Mantle.git")),
+					version: PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47")
+				),
+			]
 		}
 
 		it("should detect duplicate dependencies in a single Cartfile") {
