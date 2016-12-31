@@ -128,7 +128,7 @@ public struct BuildSettings {
 
 	/// Attempts to determine the ProductType specified in these build settings.
 	public var productType: Result<ProductType, CarthageError> {
-		return self["PRODUCT_TYPE"].flatMap(ProductType.fromString)
+		return self["PRODUCT_TYPE"].flatMap(ProductType.from(string:))
 	}
 
 	/// Attempts to determine the MachOType specified in these build settings.
