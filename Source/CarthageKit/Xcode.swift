@@ -150,16 +150,6 @@ public func schemesInProjects(projects: [(ProjectLocator, [String])]) -> SignalP
 		.collect()
 }
 
-/// Represents a build setting whether full bitcode should be embedded in the
-/// binary.
-public enum BitcodeGenerationMode: String {
-	/// Only bitcode marker will be embedded.
-	case marker = "marker"
-
-	/// Full bitcode will be embedded.
-	case bitcode = "bitcode"
-}
-
 /// Describes the type of Mach-O files.
 /// See https://developer.apple.com/library/mac/documentation/DeveloperTools/Reference/XcodeBuildSettingRef/1-Build_Setting_Reference/build_setting_ref.html#//apple_ref/doc/uid/TP40003931-CH3-SW73.
 public enum MachOType: String {
