@@ -101,8 +101,8 @@ class VersionSpecifierSpec: QuickSpec {
 			}
 
 			it("should allow only greater patch versions to satisfy 0.x") {
-				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.fromPinnedVersion(v0_1_1).value!)
-				expect(specifier.isSatisfied(by: v0_1_0)) == false
+				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.fromPinnedVersion(v0_1_0).value!)
+				expect(specifier.isSatisfied(by: v0_1_0)) == true
 				expect(specifier.isSatisfied(by: v0_1_1)) == true
 				expect(specifier.isSatisfied(by: v0_2_0)) == false
 			}
