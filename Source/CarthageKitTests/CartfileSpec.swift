@@ -78,15 +78,16 @@ class CartfileSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			let resolvedCartfile = result.value!
-			expect(resolvedCartfile.dependencies.count) == 2
-
-			let depReactiveCocoa = resolvedCartfile.dependencies[0]
-			expect(depReactiveCocoa.project) == ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
-			expect(depReactiveCocoa.version) == PinnedVersion("v2.3.1")
-
-			let depMantle = resolvedCartfile.dependencies[1]
-			expect(depMantle.project) == ProjectIdentifier.git(GitURL("https://github.com/Mantle/Mantle.git"))
-			expect(depMantle.version) == PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47")
+			expect(resolvedCartfile.dependencies) == [
+				Dependency(
+					project: .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
+					version: PinnedVersion("v2.3.1")
+				),
+				Dependency(
+					project: .git(GitURL("https://github.com/Mantle/Mantle.git")),
+					version: PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47")
+				),
+			]
 		}
 
 		it("should detect duplicate dependencies in a single Cartfile") {
@@ -144,21 +145,28 @@ class CartfileSpec: QuickSpec {
 			let dupe5 = dupes[2]
 			expect(dupe5) == ProjectIdentifier.gitHub(Repository(owner: "5", name: "5"))
 		}
+	}
+}
 
-		describe("ResolvedCartfile") {
-			it("should output GitHub dependencies as expected") {
-				let project = ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
-				let version = PinnedVersion("v2.3.1")
-				let dependency = Dependency(project: project, version: version)
-
-				let resolvedCartfile = ResolvedCartfile(dependencies: [ dependency ])
-				let outputs = resolvedCartfile
-					.description
-					.characters
-					.split("\n")
-					.map(String.init)
-
-				expect(outputs).to(contain("github \"ReactiveCocoa/ReactiveCocoa\" \"v2.3.1\""))
+class ResolvedCartfileSpec: QuickSpec {
+	override func spec() {
+		describe("description") {
+			it("should output dependencies alphabetically") {
+				let result = Dependency(
+					project: .gitHub(Repository(owner: "antitypical", name: "Result")),
+					version: PinnedVersion("3.0.0")
+				)
+				let reactiveCocoa = Dependency(
+					project: .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
+					version: PinnedVersion("v2.3.1")
+				)
+				let reactiveSwift = Dependency(
+					project: .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveSwift")),
+					version: PinnedVersion("v1.0.0")
+				)
+				let resolvedCartfile = ResolvedCartfile(dependencies: [ result, reactiveSwift, reactiveCocoa ])
+				
+				expect(resolvedCartfile.description) == "github \"ReactiveCocoa/ReactiveCocoa\" \"v2.3.1\"\ngithub \"ReactiveCocoa/ReactiveSwift\" \"v1.0.0\"\ngithub \"antitypical/Result\" \"3.0.0\"\n"
 			}
 		}
 	}

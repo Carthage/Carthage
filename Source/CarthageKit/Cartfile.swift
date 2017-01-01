@@ -131,7 +131,7 @@ public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) ->
 /// checked out for each dependency.
 public struct ResolvedCartfile {
 	/// The dependencies listed in the Cartfile.resolved.
-	public var dependencies: [Dependency<PinnedVersion>]
+	public var dependencies: Set<Dependency<PinnedVersion>>
 	
 	/// The version of each project
 	public var versions: [ProjectIdentifier: PinnedVersion] {
@@ -142,7 +142,7 @@ public struct ResolvedCartfile {
 		return versions
 	}
 
-	public init(dependencies: [Dependency<PinnedVersion>]) {
+	public init(dependencies: Set<Dependency<PinnedVersion>>) {
 		self.dependencies = dependencies
 	}
 
@@ -161,7 +161,7 @@ public struct ResolvedCartfile {
 		scannerLoop: while !scanner.isAtEnd {
 			switch Dependency<PinnedVersion>.from(scanner) {
 			case let .Success(dep):
-				cartfile.dependencies.append(dep)
+				cartfile.dependencies.insert(dep)
 
 			case let .Failure(error):
 				result = .failure(error)
@@ -175,9 +175,10 @@ public struct ResolvedCartfile {
 
 extension ResolvedCartfile: CustomStringConvertible {
 	public var description: String {
-		return dependencies.reduce("") { (string, dependency) in
-			return string + "\(dependency)\n"
-		}
+		return dependencies
+			.sort { $0.project.description < $1.project.description }
+			.map { $0.description + "\n" }
+			.joined(separator: "")
 	}
 }
 
