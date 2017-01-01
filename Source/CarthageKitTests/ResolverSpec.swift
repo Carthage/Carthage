@@ -82,7 +82,7 @@ class ResolverSpec: QuickSpec {
 			// Dependencies should be listed in build order.
 			expect(generator.next()) == Dependency("Mantle", "1.3.0")
 
-			// Existing dependencies which are not inclued in the list should
+			// Existing dependencies which are not included in the list should
 			// not be updated.
 			expect(generator.next()) == Dependency("ios-charts", "2.4.0")
 
