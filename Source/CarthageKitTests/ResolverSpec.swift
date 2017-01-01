@@ -15,11 +15,11 @@ import Result
 import Tentacle
 
 class ResolverSpec: QuickSpec {
-	private func loadTestCartfile<T: CartfileType>(name: String, withExtension: String = "") -> T {
+	private func loadTestCartfile(name: String, withExtension: String = "") -> Cartfile {
 		let testCartfileURL = Bundle(for: type(of: self)).url(forResource: name, withExtension: withExtension)!
 		let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
 
-		return T.from(string: testCartfile).value!
+		return Cartfile.from(string: testCartfile).value!
 	}
 
 	private func orderedDependencies(producer: SignalProducer<CarthageKit.Dependency<PinnedVersion>, CarthageError>) -> [Dependency] {
@@ -46,7 +46,7 @@ class ResolverSpec: QuickSpec {
 		}
 
 		it("should resolve a Cartfile") {
-			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
+			let testCartfile = self.loadTestCartfile("TestCartfile")
 			let producer = resolver.resolve(dependencies: testCartfile.dependencies)
 			let dependencies = self.orderedDependencies(producer)
 			expect(dependencies.count) == 8
@@ -65,7 +65,7 @@ class ResolverSpec: QuickSpec {
 		}
 
 		it("should resolve a Cartfile for specific dependencies") {
-			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfile")
+			let testCartfile = self.loadTestCartfile("TestCartfile")
 
 			let producer = resolver.resolve(
 				dependencies: testCartfile.dependencies,
@@ -99,7 +99,7 @@ class ResolverSpec: QuickSpec {
 		}
 
 		it("should resolve a Cartfile whose dependency is specified by both a branch name and a SHA which is the HEAD of that branch") {
-			let testCartfile: Cartfile = self.loadTestCartfile("TestCartfileProposedVersion")
+			let testCartfile = self.loadTestCartfile("TestCartfileProposedVersion")
 			let producer = resolver.resolve(dependencies: testCartfile.dependencies)
 			let dependencies = self.orderedDependencies(producer)
 			expect(dependencies.count) == 3
@@ -131,7 +131,7 @@ class ResolverSpec: QuickSpec {
 				}
 			}, dependenciesForDependency: { dependency -> SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError> in
 				if dependency.project.name == "EmbeddedFrameworks" {
-					let cartfile: Cartfile = self.loadTestCartfile("EmbeddedFrameworksCartfile")
+					let cartfile = self.loadTestCartfile("EmbeddedFrameworksCartfile")
 					return SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError>(cartfile.dependencies)
 				} else {
 					return .empty
@@ -140,7 +140,7 @@ class ResolverSpec: QuickSpec {
 				return SignalProducer(error: .invalidArgument(description: "unexpected test error"))
 			})
 
-			let testCartfile: Cartfile = self.loadTestCartfile("EmbeddedFrameworksContainerCartfile")
+			let testCartfile = self.loadTestCartfile("EmbeddedFrameworksContainerCartfile")
 			let producer = resolver.resolve(dependencies: testCartfile.dependencies)
 			let dependencies = self.orderedDependencies(producer)
 			expect(dependencies.count) == 4
@@ -229,10 +229,3 @@ private struct Dependency: Equatable {
 private func == (lhs: Dependency, rhs: Dependency) -> Bool {
 	return lhs.name == rhs.name && lhs.version == rhs.version
 }
-
-private protocol CartfileType {
-	static func from(string string: String) -> Result<Self, CarthageError>
-}
-
-extension Cartfile: CartfileType {}
-extension ResolvedCartfile: CartfileType {}
