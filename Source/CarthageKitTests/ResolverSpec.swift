@@ -22,10 +22,6 @@ class ResolverSpec: QuickSpec {
 		return T.from(string: testCartfile).value!
 	}
 
-	private func dependencyForOwner(owner: String, name: String, version: String) -> CarthageKit.Dependency<PinnedVersion> {
-		return CarthageKit.Dependency(project: .gitHub(Repository(owner: owner, name: name)), version: PinnedVersion(version))
-	}
-
 	private func orderedDependencies(producer: SignalProducer<CarthageKit.Dependency<PinnedVersion>, CarthageError>) -> [Dependency] {
 		let result = producer
 			.map { Dependency($0.project.name, $0.version.commitish) }
@@ -73,9 +69,9 @@ class ResolverSpec: QuickSpec {
 
 			let producer = resolver.resolve(
 				dependencies: testCartfile.dependencies,
-				lastResolved: ResolvedCartfile(dependencies: [
-						self.dependencyForOwner("danielgindi", name: "ios-charts", version: "2.4.0"),
-					]).versions,
+				lastResolved: [
+					.gitHub(Repository(owner: "danielgindi", name: "ios-charts")): PinnedVersion("2.4.0")
+				],
 				dependenciesToUpdate: [ "Mantle", "ReactiveCocoa" ]
 			)
 			let dependencies = self.orderedDependencies(producer)
