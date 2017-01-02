@@ -44,15 +44,6 @@ class SemanticVersionSpec: QuickSpec {
 
 class VersionSpecifierSpec: QuickSpec {
 	override func spec() {
-		let versionZeroOne = SemanticVersion.fromPinnedVersion(PinnedVersion("0.1.0")).value!
-		let versionZeroOneOne = SemanticVersion.fromPinnedVersion(PinnedVersion("0.1.1")).value!
-		let versionZeroTwo = SemanticVersion.fromPinnedVersion(PinnedVersion("0.2.0")).value!
-		let versionOne = SemanticVersion.fromPinnedVersion(PinnedVersion("1.3.2")).value!
-		let versionTwoZero = SemanticVersion.fromPinnedVersion(PinnedVersion("2.0.2")).value!
-		let versionTwoOne = SemanticVersion.fromPinnedVersion(PinnedVersion("2.1.1")).value!
-		let versionTwoTwo = SemanticVersion.fromPinnedVersion(PinnedVersion("2.2.0")).value!
-		let versionThree = SemanticVersion.fromPinnedVersion(PinnedVersion("3.0.0")).value!
-
 		func testIntersection(lhs: VersionSpecifier, _ rhs: VersionSpecifier, expected: VersionSpecifier?) {
 			if let expected = expected {
 				expect(intersection(lhs, rhs)) == expected
@@ -64,83 +55,100 @@ class VersionSpecifierSpec: QuickSpec {
 		}
 
 		describe("isSatisfied(by:)") {
+			let v0_1_0 = PinnedVersion("0.1.0")
+			let v0_1_1 = PinnedVersion("0.1.1")
+			let v0_2_0 = PinnedVersion("0.2.0")
+			let v1_3_2 = PinnedVersion("1.3.2")
+			let v2_0_2 = PinnedVersion("2.0.2")
+			let v2_1_1 = PinnedVersion("2.1.1")
+			let v2_2_0 = PinnedVersion("2.2.0")
+			let v3_0_0 = PinnedVersion("3.0.0")
+			
 			it("should allow all versions for .any") {
 				let specifier = VersionSpecifier.any
-				expect(specifier.isSatisfied(by: versionOne.pinnedVersion!)) == true
-				expect(specifier.isSatisfied(by: versionTwoZero.pinnedVersion!)) == true
-				expect(specifier.isSatisfied(by: versionTwoOne.pinnedVersion!)) == true
-				expect(specifier.isSatisfied(by: versionTwoTwo.pinnedVersion!)) == true
-				expect(specifier.isSatisfied(by: versionThree.pinnedVersion!)) == true
+				expect(specifier.isSatisfied(by: v1_3_2)) == true
+				expect(specifier.isSatisfied(by: v2_0_2)) == true
+				expect(specifier.isSatisfied(by: v2_1_1)) == true
+				expect(specifier.isSatisfied(by: v2_2_0)) == true
+				expect(specifier.isSatisfied(by: v3_0_0)) == true
 			}
 
 			it("should allow greater or equal versions for .atLeast") {
-				let specifier = VersionSpecifier.atLeast(versionTwoOne)
-				expect(specifier.isSatisfied(by: versionOne.pinnedVersion!)) == false
-				expect(specifier.isSatisfied(by: versionTwoZero.pinnedVersion!)) == false
-				expect(specifier.isSatisfied(by: versionTwoOne.pinnedVersion!)) == true
-				expect(specifier.isSatisfied(by: versionTwoTwo.pinnedVersion!)) == true
-				expect(specifier.isSatisfied(by: versionThree.pinnedVersion!)) == true
+				let specifier = VersionSpecifier.atLeast(SemanticVersion.fromPinnedVersion(v2_1_1).value!)
+				expect(specifier.isSatisfied(by: v1_3_2)) == false
+				expect(specifier.isSatisfied(by: v2_0_2)) == false
+				expect(specifier.isSatisfied(by: v2_1_1)) == true
+				expect(specifier.isSatisfied(by: v2_2_0)) == true
+				expect(specifier.isSatisfied(by: v3_0_0)) == true
 			}
 
 			it("should allow greater or equal minor and patch versions for .compatibleWith") {
-				let specifier = VersionSpecifier.compatibleWith(versionTwoOne)
-				expect(specifier.isSatisfied(by: versionOne.pinnedVersion!)) == false
-				expect(specifier.isSatisfied(by: versionTwoZero.pinnedVersion!)) == false
-				expect(specifier.isSatisfied(by: versionTwoOne.pinnedVersion!)) == true
-				expect(specifier.isSatisfied(by: versionTwoTwo.pinnedVersion!)) == true
-				expect(specifier.isSatisfied(by: versionThree.pinnedVersion!)) == false
+				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.fromPinnedVersion(v2_1_1).value!)
+				expect(specifier.isSatisfied(by: v1_3_2)) == false
+				expect(specifier.isSatisfied(by: v2_0_2)) == false
+				expect(specifier.isSatisfied(by: v2_1_1)) == true
+				expect(specifier.isSatisfied(by: v2_2_0)) == true
+				expect(specifier.isSatisfied(by: v3_0_0)) == false
 			}
 
 			it("should only allow exact versions for .exactly") {
-				let specifier = VersionSpecifier.exactly(versionTwoTwo)
-				expect(specifier.isSatisfied(by: versionOne.pinnedVersion!)) == false
-				expect(specifier.isSatisfied(by: versionTwoZero.pinnedVersion!)) == false
-				expect(specifier.isSatisfied(by: versionTwoOne.pinnedVersion!)) == false
-				expect(specifier.isSatisfied(by: versionTwoTwo.pinnedVersion!)) == true
-				expect(specifier.isSatisfied(by: versionThree.pinnedVersion!)) == false
+				let specifier = VersionSpecifier.exactly(SemanticVersion.fromPinnedVersion(v2_2_0).value!)
+				expect(specifier.isSatisfied(by: v1_3_2)) == false
+				expect(specifier.isSatisfied(by: v2_0_2)) == false
+				expect(specifier.isSatisfied(by: v2_1_1)) == false
+				expect(specifier.isSatisfied(by: v2_2_0)) == true
+				expect(specifier.isSatisfied(by: v3_0_0)) == false
 			}
 
 			it("should allow only greater patch versions to satisfy 0.x") {
-				let specifier = VersionSpecifier.compatibleWith(versionZeroOne)
-				expect(specifier.isSatisfied(by: versionZeroOneOne.pinnedVersion!)) == true
-				expect(specifier.isSatisfied(by: versionZeroTwo.pinnedVersion!)) == false
+				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.fromPinnedVersion(v0_1_0).value!)
+				expect(specifier.isSatisfied(by: v0_1_0)) == true
+				expect(specifier.isSatisfied(by: v0_1_1)) == true
+				expect(specifier.isSatisfied(by: v0_2_0)) == false
 			}
 		}
 
 		describe("intersection") {
+			let v0_1_0 = SemanticVersion(major: 0, minor: 1, patch: 0)
+			let v0_1_1 = SemanticVersion(major: 0, minor: 1, patch: 1)
+			let v0_2_0 = SemanticVersion(major: 0, minor: 2, patch: 0)
+			let v1_3_2 = SemanticVersion(major: 1, minor: 3, patch: 2)
+			let v2_1_1 = SemanticVersion(major: 2, minor: 1, patch: 1)
+			let v2_2_0 = SemanticVersion(major: 2, minor: 2, patch: 0)
+				
 			it("should return the tighter specifier when one is .any") {
-				testIntersection(VersionSpecifier.any, VersionSpecifier.any, expected: VersionSpecifier.any)
-				testIntersection(VersionSpecifier.any, VersionSpecifier.atLeast(versionOne), expected: VersionSpecifier.atLeast(versionOne))
-				testIntersection(VersionSpecifier.any, VersionSpecifier.compatibleWith(versionOne), expected: VersionSpecifier.compatibleWith(versionOne))
-				testIntersection(VersionSpecifier.any, VersionSpecifier.exactly(versionOne), expected: VersionSpecifier.exactly(versionOne))
+				testIntersection(.any, .any, expected: .any)
+				testIntersection(.any, .atLeast(v1_3_2), expected: .atLeast(v1_3_2))
+				testIntersection(.any, .compatibleWith(v1_3_2), expected: .compatibleWith(v1_3_2))
+				testIntersection(.any, .exactly(v1_3_2), expected: .exactly(v1_3_2))
 			}
 
 			it("should return the higher specifier when one is .atLeast") {
-				testIntersection(VersionSpecifier.atLeast(versionOne), VersionSpecifier.atLeast(versionOne), expected: VersionSpecifier.atLeast(versionOne))
-				testIntersection(VersionSpecifier.atLeast(versionOne), VersionSpecifier.atLeast(versionTwoOne), expected: VersionSpecifier.atLeast(versionTwoOne))
-				testIntersection(VersionSpecifier.atLeast(versionOne), VersionSpecifier.compatibleWith(versionTwoOne), expected: VersionSpecifier.compatibleWith(versionTwoOne))
-				testIntersection(VersionSpecifier.atLeast(versionTwoOne), VersionSpecifier.compatibleWith(versionTwoTwo), expected: VersionSpecifier.compatibleWith(versionTwoTwo))
-				testIntersection(VersionSpecifier.atLeast(versionOne), VersionSpecifier.exactly(versionTwoTwo), expected: VersionSpecifier.exactly(versionTwoTwo))
+				testIntersection(.atLeast(v1_3_2), .atLeast(v1_3_2), expected: .atLeast(v1_3_2))
+				testIntersection(.atLeast(v1_3_2), .atLeast(v2_1_1), expected: .atLeast(v2_1_1))
+				testIntersection(.atLeast(v1_3_2), .compatibleWith(v2_1_1), expected: .compatibleWith(v2_1_1))
+				testIntersection(.atLeast(v2_1_1), .compatibleWith(v2_2_0), expected: .compatibleWith(v2_2_0))
+				testIntersection(.atLeast(v1_3_2), .exactly(v2_2_0), expected: .exactly(v2_2_0))
 			}
 
 			it("should return the higher minor or patch version when one is .compatibleWith") {
-				testIntersection(VersionSpecifier.compatibleWith(versionOne), VersionSpecifier.compatibleWith(versionOne), expected: VersionSpecifier.compatibleWith(versionOne))
-				testIntersection(VersionSpecifier.compatibleWith(versionOne), VersionSpecifier.compatibleWith(versionTwoOne), expected: nil)
-				testIntersection(VersionSpecifier.compatibleWith(versionTwoOne), VersionSpecifier.compatibleWith(versionTwoTwo), expected: VersionSpecifier.compatibleWith(versionTwoTwo))
-				testIntersection(VersionSpecifier.compatibleWith(versionTwoOne), VersionSpecifier.exactly(versionTwoTwo), expected: VersionSpecifier.exactly(versionTwoTwo))
+				testIntersection(.compatibleWith(v1_3_2), .compatibleWith(v1_3_2), expected: .compatibleWith(v1_3_2))
+				testIntersection(.compatibleWith(v1_3_2), .compatibleWith(v2_1_1), expected: nil)
+				testIntersection(.compatibleWith(v2_1_1), .compatibleWith(v2_2_0), expected: .compatibleWith(v2_2_0))
+				testIntersection(.compatibleWith(v2_1_1), .exactly(v2_2_0), expected: .exactly(v2_2_0))
 			}
 
 			it("should only match exact specifiers for .exactly") {
-				testIntersection(VersionSpecifier.atLeast(versionTwoOne), VersionSpecifier.exactly(versionOne), expected: nil)
-				testIntersection(VersionSpecifier.compatibleWith(versionOne), VersionSpecifier.exactly(versionTwoOne), expected: nil)
-				testIntersection(VersionSpecifier.compatibleWith(versionTwoTwo), VersionSpecifier.exactly(versionTwoOne), expected: nil)
-				testIntersection(VersionSpecifier.exactly(versionOne), VersionSpecifier.exactly(versionOne), expected: VersionSpecifier.exactly(versionOne))
-				testIntersection(VersionSpecifier.exactly(versionTwoOne), VersionSpecifier.exactly(versionOne), expected: nil)
+				testIntersection(.exactly(v1_3_2), .atLeast(v2_1_1), expected: nil)
+				testIntersection(.exactly(v2_1_1), .compatibleWith(v1_3_2), expected: nil)
+				testIntersection(.exactly(v2_1_1), .compatibleWith(v2_2_0), expected: nil)
+				testIntersection(.exactly(v1_3_2), .exactly(v1_3_2), expected: VersionSpecifier.exactly(v1_3_2))
+				testIntersection(.exactly(v2_1_1), .exactly(v1_3_2), expected: nil)
 			}
 
 			it("should not let ~> 0.1.1 be compatible with 0.1.2, but not 0.2") {
-				testIntersection(VersionSpecifier.compatibleWith(versionZeroOne), VersionSpecifier.compatibleWith(versionZeroOneOne), expected: VersionSpecifier.compatibleWith(versionZeroOneOne))
-				testIntersection(VersionSpecifier.compatibleWith(versionZeroOne), VersionSpecifier.compatibleWith(versionZeroTwo), expected: nil)
+				testIntersection(.compatibleWith(v0_1_0), .compatibleWith(v0_1_1), expected: .compatibleWith(v0_1_1))
+				testIntersection(.compatibleWith(v0_1_0), .compatibleWith(v0_2_0), expected: nil)
 			}
 		}
 	}
