@@ -133,7 +133,7 @@ public struct BuildSettings {
 
 	/// Attempts to determine the MachOType specified in these build settings.
 	public var machOType: Result<MachOType, CarthageError> {
-		return self["MACH_O_TYPE"].flatMap(MachOType.fromString)
+		return self["MACH_O_TYPE"].flatMap(MachOType.from(string:))
 	}
 
 	/// Attempts to determine the FrameworkType identified by these build settings.

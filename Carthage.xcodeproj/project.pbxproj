@@ -40,6 +40,7 @@
 		CD1FE6561DD857570016639E /* Swift3Shims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1FE6551DD857570016639E /* Swift3Shims.swift */; };
 		CD1FE6571DD857570016639E /* Swift3Shims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1FE6551DD857570016639E /* Swift3Shims.swift */; };
 		CD1FE6581DD85A140016639E /* Swift3Shims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1FE6551DD857570016639E /* Swift3Shims.swift */; };
+		CD2482671E1A05F50001EFE2 /* MachOType.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD2482661E1A05F50001EFE2 /* MachOType.swift */; };
 		CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD28C99C1E11846200322AF7 /* ProductType.swift */; };
 		CD3E530B1DE33095002C135C /* Availability.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3E530A1DE33095002C135C /* Availability.swift */; };
 		CD7F22441C67649F00B018A9 /* TestCartfileProposedVersion in Resources */ = {isa = PBXBuildFile; fileRef = CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */; };
@@ -201,6 +202,7 @@
 		CD07EB161E0F51A500CFBEE4 /* SDK.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SDK.swift; sourceTree = "<group>"; };
 		CD1FE6521DD366620016639E /* Runes.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Runes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD1FE6551DD857570016639E /* Swift3Shims.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Swift3Shims.swift; sourceTree = "<group>"; };
+		CD2482661E1A05F50001EFE2 /* MachOType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MachOType.swift; sourceTree = "<group>"; };
 		CD28C99C1E11846200322AF7 /* ProductType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProductType.swift; sourceTree = "<group>"; };
 		CD3E530A1DE33095002C135C /* Availability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Availability.swift; sourceTree = "<group>"; };
 		CD7F22431C67649F00B018A9 /* TestCartfileProposedVersion */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfileProposedVersion; sourceTree = "<group>"; };
@@ -470,6 +472,7 @@
 				D074EDC41A049283001DE082 /* FrameworkExtensions.swift */,
 				88ED56D519ECE34900CBF5C4 /* Git.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
+				CD2482661E1A05F50001EFE2 /* MachOType.swift */,
 				CD07EB121E0EA90F00CFBEE4 /* Platform.swift */,
 				D0A2025D1B114D1000C71375 /* ProducerQueue.swift */,
 				CD28C99C1E11846200322AF7 /* ProductType.swift */,
@@ -768,6 +771,7 @@
 			files = (
 				D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */,
 				D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */,
+				CD2482671E1A05F50001EFE2 /* MachOType.swift in Sources */,
 				D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */,
 				CD07EB131E0EA90F00CFBEE4 /* Platform.swift in Sources */,
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
