@@ -25,7 +25,7 @@ public struct OutdatedCommand: CommandType {
 			} } }
 		}
 		
-		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> m <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
@@ -50,7 +50,7 @@ public struct OutdatedCommand: CommandType {
 	public let verb = "outdated"
 	public let function = "Check for compatible updates to the project's dependencies"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
 			.flatMap(.merge) { $0.outdatedDependencies(options.isVerbose) }
 			.on(next: { outdatedDependencies in

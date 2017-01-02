@@ -33,11 +33,11 @@ public struct CheckoutCommand: CommandType {
 			} } } } }
 		}
 
-		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return evaluate(m, useBinariesAddendum: "", dependenciesUsage: "the dependency names to checkout")
 		}
 
-		public static func evaluate(m: CommandMode, useBinariesAddendum: String, dependenciesUsage: String) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ m: CommandMode, useBinariesAddendum: String, dependenciesUsage: String) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
@@ -66,7 +66,7 @@ public struct CheckoutCommand: CommandType {
 	public let verb = "checkout"
 	public let function = "Check out the project's dependencies"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return self.checkoutWithOptions(options)
 			.waitOnCommand()
 	}
