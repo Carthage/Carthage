@@ -43,10 +43,16 @@ public enum ColorArgument: String, ArgumentType, CustomStringConvertible {
 	
 	public static let name = "color"
 	
-	public static func fromString(string: String) -> ColorArgument? {
+	public static func from(string: String) -> ColorArgument? {
 		return self.init(rawValue: string.lowercased())
 	}
-	
+
+	#if swift(>=3)
+	#else
+	public static func fromString(string: String) -> ColorArgument? {
+		return from(string)
+	}
+	#endif
 }
 
 /// Options for whether to color and format terminal output.
@@ -90,7 +96,7 @@ public struct ColorOptions: OptionsType {
 		return self.init(argument: argument, formatting: Formatting(argument.isColorful))
 	}
 	
-	public static func evaluate(m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
+	public static func evaluate(_ m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "color", defaultValue: ColorArgument.auto, usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')")
 	}

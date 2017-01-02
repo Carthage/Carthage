@@ -20,11 +20,11 @@ extension BuildOptions: OptionsType {
 		} } }
 	}
 
-	public static func evaluate(m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
+	public static func evaluate(_ m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
 		return evaluate(m, addendum: "")
 	}
 
-	public static func evaluate(m: CommandMode, addendum: String) -> Result<BuildOptions, CommandantError<CarthageError>> {
+	public static func evaluate(_ m: CommandMode, addendum: String) -> Result<BuildOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
 			<*> m <| Option(key: "platform", defaultValue: .all, usage: "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')" + addendum)
@@ -49,7 +49,7 @@ public struct BuildCommand: CommandType {
 			} } } } }
 		}
 
-		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> BuildOptions.evaluate(m)
 				<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
@@ -63,7 +63,7 @@ public struct BuildCommand: CommandType {
 	public let verb = "build"
 	public let function = "Build the project's dependencies"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return self.buildWithOptions(options)
 			.waitOnCommand()
 	}
@@ -319,7 +319,7 @@ extension BuildPlatform: ArgumentType {
 		"all": .all
 	]
 
-	public static func fromString(string: String) -> BuildPlatform? {
+	public static func from(string: String) -> BuildPlatform? {
 		let tokens = string.split()
 
 		let findBuildPlatform: (String) -> BuildPlatform? = { string in
@@ -350,4 +350,11 @@ extension BuildPlatform: ArgumentType {
 			return .multiple(buildPlatforms)
 		}
 	}
+
+	#if swift(>=3)
+	#else
+	public static func fromString(string: String) -> BuildPlatform? {
+		return from(string)
+	}
+	#endif
 }

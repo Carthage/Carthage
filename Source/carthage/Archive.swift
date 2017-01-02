@@ -25,7 +25,7 @@ public struct ArchiveCommand: CommandType {
 			} } }
 		}
 
-		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "output", defaultValue: nil, usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)")
 				<*> m <| Option(key: "project-directory", defaultValue: FileManager.`default`.currentDirectoryPath, usage: "the directory containing the Carthage project")
@@ -37,7 +37,7 @@ public struct ArchiveCommand: CommandType {
 	public let verb = "archive"
 	public let function = "Archives built frameworks into a zip that Carthage can use"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(_ options: Options) -> Result<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 
 		let frameworks: SignalProducer<[String], CarthageError>

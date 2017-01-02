@@ -44,7 +44,7 @@ public struct UpdateCommand: CommandType {
 			} } } }
 		}
 
-		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 				<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)")
@@ -72,7 +72,7 @@ public struct UpdateCommand: CommandType {
 	public let verb = "update"
 	public let function = "Update and rebuild the project's dependencies"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
 			.flatMap(.merge) { project -> SignalProducer<(), CarthageError> in
 				
