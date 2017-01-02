@@ -118,11 +118,11 @@ public struct BuildSettings {
 		if let supportedPlatforms = supportedPlatforms.value {
 			let platforms = supportedPlatforms.characters.split { $0 == " " }.map(String.init)
 			return SignalProducer<String, CarthageError>(platforms)
-				.map { platform in SignalProducer(result: SDK.fromString(platform)) }
+				.map { platform in SignalProducer(result: SDK.from(string: platform)) }
 				.flatten(.merge)
 		}
 
-		let firstBuildSDK = self["PLATFORM_NAME"].flatMap(SDK.fromString)
+		let firstBuildSDK = self["PLATFORM_NAME"].flatMap(SDK.from(string:))
 		return SignalProducer(result: firstBuildSDK)
 	}
 

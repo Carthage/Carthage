@@ -27,7 +27,7 @@ public enum SDK: String {
 	public static let allSDKs: Set<SDK> = [.macOSX, .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator]
 
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
-	public static func fromString(string: String) -> Result<SDK, CarthageError> {
+	public static func from(string string: String) -> Result<SDK, CarthageError> {
 		return Result(self.init(rawValue: string.lowercased()), failWith: .parseError(description: "unexpected SDK key \"\(string)\""))
 	}
 
