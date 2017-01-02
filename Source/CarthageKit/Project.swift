@@ -626,6 +626,13 @@ public final class Project {
 					.map { project, _ in project }
 					.filter { project in dependenciesToInclude?.contains(project.name) ?? false })
 
+				// If the user has entered a dependency that isn't found in the Cartfile,
+				// the dependenciesToInclude array will exist and be non-empty, 
+				// and the projectsToInclude array will be empty. In this case, we need to return an error.
+				if let deps = dependenciesToInclude where !deps.isEmpty && projectsToInclude.isEmpty {
+					return SignalProducer(error: .unknownDependencies(deps))
+				}
+
 				guard let sortedProjects = topologicalSort(graph, nodes: projectsToInclude) else {
 					return SignalProducer(error: .dependencyCycle(graph))
 				}
