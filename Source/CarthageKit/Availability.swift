@@ -45,6 +45,13 @@ public func duplicateProjectsInCartfiles(cartfile1: Cartfile, _ cartfile2: Cartf
 @available(*, unavailable, renamed="cloneRepository(_:_:isBare:)")
 public func cloneRepository(cloneURL: GitURL, _ destinationURL: URL, bare: Bool = true) -> SignalProducer<String, CarthageError> { fatalError() }
 
+// MARK: - MachOType.swift
+
+extension MachOType {
+	@available(*, unavailable, renamed="from(string:)")
+	public static func fromString(string: String) -> Result<MachOType, CarthageError> { fatalError() }
+}
+
 // MARK: - ProductType.swift
 
 extension ProductType {
