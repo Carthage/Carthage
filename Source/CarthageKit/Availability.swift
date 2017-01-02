@@ -59,6 +59,13 @@ extension ProductType {
 	public static func fromString(string: String) -> Result<ProductType, CarthageError> { fatalError() }
 }
 
+// MARK: - SDK.swift
+
+extension SDK {
+	@available(*, unavailable, renamed="from(string:)")
+	public static func fromString(string: String) -> Result<SDK, CarthageError> { fatalError() }
+}
+
 // MARK: - Version.swift
 
 extension VersionSpecifier {

@@ -859,7 +859,7 @@ private func platformForFramework(frameworkURL: URL) -> SignalProducer<Platform,
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
 		.map { sdkName in sdkName.trimmingCharacters(in: CharacterSet.letters.inverted) }
-		.attemptMap { platform in SDK.fromString(platform).map { $0.platform } }
+		.attemptMap { platform in SDK.from(string: platform).map { $0.platform } }
 }
 
 /// Sends the URL to each framework bundle found in the given directory.
