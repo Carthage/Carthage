@@ -14,218 +14,306 @@ import ReactiveCocoa
 import Result
 import Tentacle
 
-class ResolverSpec: QuickSpec {
-	private func loadTestCartfile(name: String, withExtension: String = "") -> Cartfile {
-		let testCartfileURL = Bundle(for: type(of: self)).url(forResource: name, withExtension: withExtension)!
-		let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
+private let git1 = ProjectIdentifier.git(GitURL("https://example.com/repo1"))
+private let git2 = ProjectIdentifier.git(GitURL("https://example.com/repo2.git"))
+private let github1 = ProjectIdentifier.gitHub(Repository(owner: "gob", name: "1"))
+private let github2 = ProjectIdentifier.gitHub(Repository(owner: "gob", name: "2"))
+private let github3 = ProjectIdentifier.gitHub(Repository(owner: "gob", name: "3"))
 
-		return Cartfile.from(string: testCartfile).value!
-	}
+extension PinnedVersion {
+	private static let v0_1_0 = PinnedVersion("v0.1.0")
+	private static let v1_0_0 = PinnedVersion("v1.0.0")
+	private static let v1_1_0 = PinnedVersion("v1.1.0")
+	private static let v1_2_0 = PinnedVersion("v1.2.0")
+	private static let v2_0_0 = PinnedVersion("v2.0.0")
+	private static let v2_0_1 = PinnedVersion("v2.0.1")
+}
 
-	private func orderedDependencies(producer: SignalProducer<CarthageKit.Dependency<PinnedVersion>, CarthageError>) -> [Dependency] {
-		let result = producer
-			.map { Dependency($0.project.name, $0.version.commitish) }
-			.collect()
-			.first()
+extension SemanticVersion {
+	private static let v0_1_0 = SemanticVersion(major: 0, minor: 1, patch: 0)
+	private static let v1_0_0 = SemanticVersion(major: 1, minor: 0, patch: 0)
+	private static let v1_1_0 = SemanticVersion(major: 1, minor: 1, patch: 0)
+	private static let v1_2_0 = SemanticVersion(major: 1, minor: 2, patch: 0)
+	private static let v2_0_0 = SemanticVersion(major: 2, minor: 0, patch: 0)
+	private static let v2_0_1 = SemanticVersion(major: 2, minor: 0, patch: 1)
+}
 
-		expect(result).notTo(beNil())
-		expect(result?.error).to(beNil())
-
-		return result?.value ?? []
-	}
-
-	override func spec() {
-		var resolver: Resolver!
-
-		beforeEach {
-			resolver = Resolver(
-				versionsForDependency: self.versions(for:),
-				dependenciesForDependency: self.dependencies(for:),
-				resolvedGitReference: self.resolvedGitReference
-			)
-		}
-
-		it("should resolve a Cartfile") {
-			let testCartfile = self.loadTestCartfile("TestCartfile")
-			let producer = resolver.resolve(dependencies: testCartfile.dependencies)
-			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count) == 8
-
-			var generator = dependencies.generate()
-
-			// Dependencies should be listed in build order.
-			expect(generator.next()) == Dependency("Mantle", "1.3.0")
-			expect(generator.next()) == Dependency("git-error-translations", "3.0.0")
-			expect(generator.next()) == Dependency("git-error-translations2", "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9")
-			expect(generator.next()) == Dependency("ios-charts", "3.0.0")
-			expect(generator.next()) == Dependency("libextobjc", "0.4.1")
-			expect(generator.next()) == Dependency("xcconfigs", "1.3.0")
-			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0") // xcconfigs
-			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0") // libextobjc, objc-build-scripts, xcconfigs
-		}
-
-		it("should resolve a Cartfile for specific dependencies") {
-			let testCartfile = self.loadTestCartfile("TestCartfile")
-
-			let producer = resolver.resolve(
-				dependencies: testCartfile.dependencies,
-				lastResolved: [
-					.gitHub(Repository(owner: "danielgindi", name: "ios-charts")): PinnedVersion("2.4.0")
-				],
-				dependenciesToUpdate: [ "Mantle", "ReactiveCocoa" ]
-			)
-			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count) == 6
-
-			var generator = dependencies.generate()
-
-			// Dependencies should be listed in build order.
-			expect(generator.next()) == Dependency("Mantle", "1.3.0")
-
-			// Existing dependencies which are not included in the list should
-			// not be updated.
-			expect(generator.next()) == Dependency("ios-charts", "2.4.0")
-
-			// Nested dependencies should also be resolved.
-			expect(generator.next()) == Dependency("libextobjc", "0.4.1")
-			expect(generator.next()) == Dependency("xcconfigs", "1.3.0")
-			expect(generator.next()) == Dependency("objc-build-scripts", "3.0.0") // xcconfigs
-			expect(generator.next()) == Dependency("ReactiveCocoa", "3.0.0") // libextobjc, objc-build-scripts, xcconfigs
-
-			// Newly added dependencies which are not inclued in the list should
-			// not be resolved.
-			expect(dependencies).notTo(contain(Dependency("git-error-translations", "3.0.0")))
-			expect(dependencies).notTo(contain(Dependency("git-error-translations2", "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9")))
-		}
-
-		it("should resolve a Cartfile whose dependency is specified by both a branch name and a SHA which is the HEAD of that branch") {
-			let testCartfile = self.loadTestCartfile("TestCartfileProposedVersion")
-			let producer = resolver.resolve(dependencies: testCartfile.dependencies)
-			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count) == 3
-
-			var generator = dependencies.generate()
-
-			expect(generator.next()) == Dependency("git-error-translations2", "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9")
-			expect(generator.next()) == Dependency("TestCartfileBranch", "0.4.1")
-			expect(generator.next()) == Dependency("TestCartfileSHA", "0.9.0")
-		}
-
-		it("should correctly order transitive dependencies") {
-			let resolver = Resolver(versionsForDependency: { project -> SignalProducer<PinnedVersion, CarthageError> in
-				switch project.name {
-				case "EmbeddedFrameworks":
-					return SignalProducer(value: PinnedVersion("1.0.0"))
-
-				case "Alamofire":
-					return SignalProducer(value: PinnedVersion("1.1.2"))
-
-				case "SwiftyJSON":
-					return SignalProducer(value: PinnedVersion("2.1.2"))
-
-				case "Swell":
-					return SignalProducer(value: PinnedVersion("1.0.0"))
-
-				default:
-					assert(false)
-				}
-			}, dependenciesForDependency: { dependency -> SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError> in
-				if dependency.project.name == "EmbeddedFrameworks" {
-					let cartfile = self.loadTestCartfile("EmbeddedFrameworksCartfile")
-					return SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError>(cartfile.dependencies)
-				} else {
-					return .empty
-				}
-			}, resolvedGitReference: { _ -> SignalProducer<PinnedVersion, CarthageError> in
-				return SignalProducer(error: .invalidArgument(description: "unexpected test error"))
-			})
-
-			let testCartfile = self.loadTestCartfile("EmbeddedFrameworksContainerCartfile")
-			let producer = resolver.resolve(dependencies: testCartfile.dependencies)
-			let dependencies = self.orderedDependencies(producer)
-			expect(dependencies.count) == 4
-
-			var generator = dependencies.generate()
-
-			// Dependencies should be listed in build order.
-			expect(generator.next()) == Dependency("Alamofire", "1.1.2")
-			expect(generator.next()) == Dependency("Swell", "1.0.0")
-			expect(generator.next()) == Dependency("SwiftyJSON", "2.1.2")
-			expect(generator.next()) == Dependency("EmbeddedFrameworks", "1.0.0") // Alamofire, Swell, SwiftyJSON
+private struct DB {
+	var versions: [ProjectIdentifier: [PinnedVersion: [ProjectIdentifier: VersionSpecifier]]]
+	var references: [ProjectIdentifier: [String: PinnedVersion]] = [:]
+	
+	func versions(for dependency: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
+		if let versions = self.versions[dependency] {
+			return .init(values: versions.keys)
+		} else {
+			return .init(error: .taggedVersionNotFound(dependency))
 		}
 	}
-
-	private func versions(for project: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
-		return SignalProducer([
-			PinnedVersion("0.4.1"),
-			PinnedVersion("0.9.0"),
-			PinnedVersion("1.0.2"),
-			PinnedVersion("1.3.0"),
-			PinnedVersion("2.4.0"),
-			PinnedVersion("3.0.0")
-		])
-	}
-
-	private func dependencies(for dependency: CarthageKit.Dependency<PinnedVersion>) -> SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError> {
-		switch dependency.project {
-		case .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")):
-			return SignalProducer([
-				CarthageKit.Dependency(
-					project: .gitHub(Repository(owner: "jspahrsummers", name: "libextobjc")),
-					version: .compatibleWith(SemanticVersion(major: 0, minor: 4, patch: 0))
-				),
-				CarthageKit.Dependency(
-					project: .gitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")),
-					version: .atLeast(SemanticVersion(major: 3, minor: 0, patch: 0))
-				),
-			])
-
-		case .gitHub(Repository(owner: "jspahrsummers", name: "objc-build-scripts")):
-			return SignalProducer([
-				CarthageKit.Dependency(
-					project: .gitHub(Repository(owner: "jspahrsummers", name: "xcconfigs")),
-					version: .compatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0))
-				),
-			])
-
-		case .git(GitURL("/tmp/TestCartfileBranch")):
-			return SignalProducer([
-				CarthageKit.Dependency(
-					project: .git(GitURL("https://enterprise.local/desktop/git-error-translations2.git")),
-					version: .gitReference("development")
-				),
-			])
-
-		case .git(GitURL("/tmp/TestCartfileSHA")):
-			return SignalProducer([
-				CarthageKit.Dependency(
-					project: .git(GitURL("https://enterprise.local/desktop/git-error-translations2.git")),
-					version: .gitReference("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9")
-				),
-			])
-
-		default:
+	
+	func dependencies(for dependency: CarthageKit.Dependency<PinnedVersion>) -> SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError> {
+		if let dependencies = self.versions[dependency.project]?[dependency.version] {
+			return .init(values: dependencies.map { CarthageKit.Dependency(project: $0.0, version: $0.1) })
+		} else {
 			return .empty
 		}
 	}
-
-	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
-		return SignalProducer(value: PinnedVersion("8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"))
+	
+	func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
+		if let version = references[project]?[reference] {
+			return .init([ version ])
+		} else {
+			return .empty
+		}
+	}
+	
+	func resolve(
+		dependencies: [ProjectIdentifier: VersionSpecifier],
+		resolved: [ProjectIdentifier: PinnedVersion] = [:],
+		updating: Set<ProjectIdentifier> = []
+	) -> Result<[(ProjectIdentifier, PinnedVersion)], CarthageError> {
+		let resolver = Resolver(
+			versionsForDependency: self.versions(for:),
+			dependenciesForDependency: self.dependencies(for:),
+			resolvedGitReference: self.resolvedGitReference(_:reference:)
+		)
+		var set = Set<CarthageKit.Dependency<VersionSpecifier>>()
+		for dependency in dependencies {
+			set.insert(CarthageKit.Dependency(project: dependency.0, version: dependency.1))
+		}
+		return resolver
+			.resolve(
+				dependencies: set,
+				lastResolved: resolved,
+				dependenciesToUpdate: updating.map { $0.name }
+			)
+			.map { ($0.project, $0.version) }
+			.collect()
+			.first()!
 	}
 }
 
-// MARK: - Helpers
-
-private struct Dependency: Equatable {
-	let name: String
-	let version: PinnedVersion
-
-	init(_ name: String, _ versionString: String) {
-		self.name = name
-		self.version = PinnedVersion(versionString)
+extension DB: DictionaryLiteralConvertible {
+	init(dictionaryLiteral elements: (ProjectIdentifier, [PinnedVersion: [ProjectIdentifier: VersionSpecifier]])...) {
+		self.init(versions: [:], references: [:])
+		for (key, value) in elements {
+			versions[key] = value
+		}
 	}
 }
 
-private func == (lhs: Dependency, rhs: Dependency) -> Bool {
-	return lhs.name == rhs.name && lhs.version == rhs.version
+private func ==<A: Equatable, B: Equatable>(lhs: [(A, B)], rhs: [(A, B)]) -> Bool {
+	guard lhs.count == rhs.count else { return false }
+	for (lhs, rhs) in zip(lhs, rhs) {
+		guard lhs == rhs else { return false }
+	}
+	return true
+}
+
+private func equal<A: Equatable, B: Equatable>(_ expectedValue: [(A, B)]?) -> NonNilMatcherFunc<[(A, B)]> {
+	return NonNilMatcherFunc { actualExpression, failureMessage in
+		failureMessage.postfixMessage = "equal <\(stringify(expectedValue))>"
+		let actualValue = try actualExpression.evaluate()
+		if expectedValue == nil || actualValue == nil {
+			if expectedValue == nil {
+				failureMessage.postfixActual = " (use beNil() to match nils)"
+			}
+			return false
+		}
+		return expectedValue! == actualValue!
+	}
+}
+
+private func ==<A: Equatable, B: Equatable>(lhs: Expectation<[(A, B)]>, rhs: [(A, B)]) {
+	lhs.to(equal(rhs))
+}
+
+class ResolverSpec: QuickSpec {
+	override func spec() {
+		it("should resolve a simple Cartfile") {
+			let db: DB = [
+				github1: [
+					.v0_1_0: [
+						github2: .compatibleWith(.v1_0_0)
+					],
+				],
+				github2: [
+					.v1_0_0: [:],
+				],
+			]
+			
+			let resolved = db.resolve([ github1: .exactly(.v0_1_0) ])
+			expect(resolved.value!) == [
+				(github2, .v1_0_0),
+				(github1, .v0_1_0),
+			]
+		}
+		
+		it("should resolve to the latest matching versions") {
+			let db: DB = [
+				github1: [
+					.v0_1_0: [
+						github2: .compatibleWith(.v1_0_0)
+					],
+					.v1_0_0: [
+						github2: .compatibleWith(.v2_0_0),
+					],
+					.v1_1_0: [
+						github2: .compatibleWith(.v2_0_0),
+					]
+				],
+				github2: [
+					.v1_0_0: [:],
+					.v2_0_0: [:],
+					.v2_0_1: [:],
+				],
+			]
+			
+			let resolved = db.resolve([ github1: .any ])
+			expect(resolved.value!) == [
+				(github2, .v2_0_1),
+				(github1, .v1_1_0),
+			]
+		}
+		
+		it("should resolve a subset when given specific dependencies") {
+			let db: DB = [
+				github1: [
+					.v1_0_0: [
+						github2: .compatibleWith(.v1_0_0),
+					],
+					.v1_1_0: [
+						github2: .compatibleWith(.v1_0_0),
+					]
+				],
+				github2: [
+					.v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
+					.v1_1_0: [ github3: .compatibleWith(.v1_0_0) ]
+				],
+				github3: [
+					.v1_0_0: [:],
+					.v1_1_0: [:],
+					.v1_2_0: [:],
+				]
+			]
+			
+			let resolved = db.resolve(
+				[ github1: .any ],
+				resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
+				updating: [ github2 ]
+			)
+			expect(resolved.value!) == [
+				(github3, .v1_2_0),
+				(github2, .v1_1_0),
+				(github1, .v1_0_0),
+			]
+		}
+		
+		pending("should resolve a subset when given specific dependencies that have constraints") {
+			let db: DB = [
+				github1: [
+					.v1_0_0: [
+						github2: .compatibleWith(.v1_0_0),
+					],
+					.v1_1_0: [
+						github2: .compatibleWith(.v1_0_0),
+					],
+					.v2_0_0: [
+						github2: .compatibleWith(.v2_0_0),
+					]
+				],
+				github2: [
+					.v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
+					.v1_1_0: [ github3: .compatibleWith(.v1_0_0) ],
+					.v2_0_0: [:],
+				],
+				github3: [
+					.v1_0_0: [:],
+					.v1_1_0: [:],
+					.v1_2_0: [:],
+				]
+			]
+			
+			let resolved = db.resolve(
+				[ github1: .any ],
+				resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
+				updating: [ github2 ]
+			)
+			expect(resolved.value!) == [
+				(github3, .v1_2_0),
+				(github2, .v1_1_0),
+				(github1, .v1_0_0),
+			]
+		}
+
+		it("should resolve a Cartfile whose dependency is specified by both a branch name and a SHA which is the HEAD of that branch") {
+			let branch = "development"
+			let sha = "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"
+			
+			var db: DB = [
+				github1: [
+					.v1_0_0: [
+						github2: .any,
+						github3: .gitReference(sha),
+					],
+				],
+				github2: [
+					.v1_0_0: [
+						github3: .gitReference(branch)
+					],
+				],
+				github3: [
+					.v1_0_0: [:],
+				],
+			]
+			db.references = [
+				github3: [
+					branch: PinnedVersion(sha),
+					sha: PinnedVersion(sha),
+				],
+			]
+			
+			let resolved = db.resolve([ github1: .any, github2: .any ])
+			expect(resolved.value!) == [
+				(github3, PinnedVersion(sha)),
+				(github2, .v1_0_0),
+				(github1, .v1_0_0),
+			]
+			
+		}
+
+		it("should correctly order transitive dependencies") {
+			let db: DB = [
+				github1: [
+					.v1_0_0: [
+						github2: .any,
+						github3: .any,
+					],
+				],
+				github2: [
+					.v1_0_0: [
+						github3: .any,
+						git1: .any,
+					],
+				],
+				github3: [
+					.v1_0_0: [ git2: .any ],
+				],
+				git1: [
+					.v1_0_0: [ github3: .any ],
+				],
+				git2: [
+					.v1_0_0: [:],
+				],
+			]
+			
+			let resolved = db.resolve([ github1: .any ])
+			expect(resolved.value!) == [
+				(git2, .v1_0_0),
+				(github3, .v1_0_0),
+				(git1, .v1_0_0),
+				(github2, .v1_0_0),
+				(github1, .v1_0_0),
+			]
+		}
+	}
 }
