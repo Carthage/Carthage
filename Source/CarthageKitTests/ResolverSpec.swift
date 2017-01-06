@@ -20,22 +20,22 @@ private let github1 = ProjectIdentifier.gitHub(Repository(owner: "gob", name: "1
 private let github2 = ProjectIdentifier.gitHub(Repository(owner: "gob", name: "2"))
 private let github3 = ProjectIdentifier.gitHub(Repository(owner: "gob", name: "3"))
 
-extension PinnedVersion {
-	private static let v0_1_0 = PinnedVersion("v0.1.0")
-	private static let v1_0_0 = PinnedVersion("v1.0.0")
-	private static let v1_1_0 = PinnedVersion("v1.1.0")
-	private static let v1_2_0 = PinnedVersion("v1.2.0")
-	private static let v2_0_0 = PinnedVersion("v2.0.0")
-	private static let v2_0_1 = PinnedVersion("v2.0.1")
+private extension PinnedVersion {
+	static let v0_1_0 = PinnedVersion("v0.1.0")
+	static let v1_0_0 = PinnedVersion("v1.0.0")
+	static let v1_1_0 = PinnedVersion("v1.1.0")
+	static let v1_2_0 = PinnedVersion("v1.2.0")
+	static let v2_0_0 = PinnedVersion("v2.0.0")
+	static let v2_0_1 = PinnedVersion("v2.0.1")
 }
 
-extension SemanticVersion {
-	private static let v0_1_0 = SemanticVersion(major: 0, minor: 1, patch: 0)
-	private static let v1_0_0 = SemanticVersion(major: 1, minor: 0, patch: 0)
-	private static let v1_1_0 = SemanticVersion(major: 1, minor: 1, patch: 0)
-	private static let v1_2_0 = SemanticVersion(major: 1, minor: 2, patch: 0)
-	private static let v2_0_0 = SemanticVersion(major: 2, minor: 0, patch: 0)
-	private static let v2_0_1 = SemanticVersion(major: 2, minor: 0, patch: 1)
+private extension SemanticVersion {
+	static let v0_1_0 = SemanticVersion(major: 0, minor: 1, patch: 0)
+	static let v1_0_0 = SemanticVersion(major: 1, minor: 0, patch: 0)
+	static let v1_1_0 = SemanticVersion(major: 1, minor: 1, patch: 0)
+	static let v1_2_0 = SemanticVersion(major: 1, minor: 2, patch: 0)
+	static let v2_0_0 = SemanticVersion(major: 2, minor: 0, patch: 0)
+	static let v2_0_1 = SemanticVersion(major: 2, minor: 0, patch: 1)
 }
 
 private struct DB {
