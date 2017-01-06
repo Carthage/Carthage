@@ -193,11 +193,19 @@ class ResolverSpec: QuickSpec {
 					.v1_0_0: [:],
 					.v1_1_0: [:],
 					.v1_2_0: [:],
+				],
+				git1: [
+					.v1_0_0: [:],
 				]
 			]
 			
 			let resolved = db.resolve(
-				[ github1: .any ],
+				[
+					github1: .any,
+					// Newly added dependencies which are not inclued in the
+					// list should not be resolved.
+					git1: .any,
+				],
 				resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
 				updating: [ github2 ]
 			)
