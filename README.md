@@ -70,7 +70,6 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
   and add the paths to the frameworks you want to use under “Input Files”, e.g.:
 
   ```
-  $(SRCROOT)/Carthage/Build/iOS/Box.framework
   $(SRCROOT)/Carthage/Build/iOS/Result.framework
   $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
   ```
