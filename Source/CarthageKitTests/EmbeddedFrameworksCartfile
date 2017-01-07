@@ -1,8 +1,0 @@
-# Require Alamofire
-github "ishkawa/Alamofire" ~> 1.1.1
-
-# Require SwiftyJSON
-github "Present-Inc/SwiftyJSON" ~> 2.1.2
-
-# Require Swell (from the Present fork)
-github "Present-Inc/Swell" >= 1.0
