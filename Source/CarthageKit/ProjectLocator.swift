@@ -28,6 +28,40 @@ public enum ProjectLocator: Comparable {
 		return fileURL.carthage_pathComponents.count - 1
 	}
 
+	/// Attempts to locate projects and workspaces within the given directory.
+	///
+	/// Sends all matches in preferential order.
+	public static func locate(in directoryURL: URL) -> SignalProducer<ProjectLocator, CarthageError> {
+		let enumerationOptions: FileManager.DirectoryEnumerationOptions = [ .skipsHiddenFiles, .skipsPackageDescendants ]
+
+		return gitmodulesEntriesInRepository(directoryURL, revision: nil)
+			.map { directoryURL.appendingPathComponent($0.path) }
+			.concat(value: directoryURL.appendingPathComponent(CarthageProjectCheckoutsPath))
+			.collect()
+			.flatMap(.merge) { directoriesToSkip in
+				return FileManager.`default`
+					.carthage_enumerator(at: directoryURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [ .typeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+					.map { _, url in url }
+					.filter { url in
+						return !directoriesToSkip.contains { $0.hasSubdirectory(url) }
+					}
+			}
+			.map { url -> ProjectLocator? in
+				if let uti = url.typeIdentifier.value {
+					if (UTTypeConformsTo(uti as CFString, "com.apple.dt.document.workspace" as CFString)) {
+						return .workspace(url)
+					} else if (UTTypeConformsTo(uti as CFString, "com.apple.xcode.project" as CFString)) {
+						return .projectFile(url)
+					}
+				}
+				return nil
+			}
+			.skipNil()
+			.collect()
+			.map { $0.sorted() }
+			.flatMap(.merge) { SignalProducer<ProjectLocator, CarthageError>($0) }
+	}
+
 	/// Sends each scheme found in the receiver.
 	public func schemes() -> SignalProducer<String, CarthageError> {
 		let task = xcodebuildTask("-list", BuildArguments(project: self))

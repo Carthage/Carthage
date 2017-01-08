@@ -80,5 +80,8 @@ extension VersionSpecifier {
 
 // MARK: - Xcode.swift
 
+@available(*, unavailable, renamed="ProjectLocator.locate(in:)")
+public func locateProjectsInDirectory(directoryURL: URL) -> SignalProducer<ProjectLocator, CarthageError> { fatalError() }
+
 @available(*, unavailable, renamed="ProjectLocator.schemes(self:)")
 public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, CarthageError> { fatalError() }

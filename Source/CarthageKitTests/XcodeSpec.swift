@@ -34,7 +34,8 @@ class XcodeSpec: QuickSpec {
 		
 		describe("locateProjectsInDirectory:") {
 			func relativePathsForProjectsInDirectory(directoryURL: URL) -> [String] {
-				let result = locateProjectsInDirectory(directoryURL)
+				let result = ProjectLocator
+					.locate(in: directoryURL)
 					.map { $0.fileURL.carthage_absoluteString.substring(from: directoryURL.carthage_absoluteString.endIndex) }
 					.collect()
 					.first()
@@ -279,21 +280,21 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should locate the project") {
-			let result = locateProjectsInDirectory(directoryURL).first()
+			let result = ProjectLocator.locate(in: directoryURL).first()
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
 			expect(result?.value) == .projectFile(projectURL)
 		}
 
 		it("should locate the project from the parent directory") {
-			let result = locateProjectsInDirectory(directoryURL.deletingLastPathComponent()).collect().first()
+			let result = ProjectLocator.locate(in: directoryURL.deletingLastPathComponent()).collect().first()
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
 			expect(result?.value).to(contain(.projectFile(projectURL)))
 		}
 
 		it("should not locate the project from a directory not containing it") {
-			let result = locateProjectsInDirectory(directoryURL.appendingPathComponent("ReactiveCocoaLayout")).first()
+			let result = ProjectLocator.locate(in: directoryURL.appendingPathComponent("ReactiveCocoaLayout")).first()
 			expect(result).to(beNil())
 		}
 

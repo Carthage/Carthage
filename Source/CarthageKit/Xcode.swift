@@ -15,40 +15,6 @@ import ReactiveTask
 /// to the working directory).
 public let CarthageBinariesFolderPath = "Carthage/Build"
 
-/// Attempts to locate projects and workspaces within the given directory.
-///
-/// Sends all matches in preferential order.
-public func locateProjectsInDirectory(directoryURL: URL) -> SignalProducer<ProjectLocator, CarthageError> {
-	let enumerationOptions: FileManager.DirectoryEnumerationOptions = [ .skipsHiddenFiles, .skipsPackageDescendants ]
-
-	return gitmodulesEntriesInRepository(directoryURL, revision: nil)
-		.map { directoryURL.appendingPathComponent($0.path) }
-		.concat(value: directoryURL.appendingPathComponent(CarthageProjectCheckoutsPath))
-		.collect()
-		.flatMap(.merge) { directoriesToSkip in
-			return FileManager.`default`
-				.carthage_enumerator(at: directoryURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [ .typeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-				.map { _, url in url }
-				.filter { url in
-					return !directoriesToSkip.contains { $0.hasSubdirectory(url) }
-				}
-		}
-		.map { url -> ProjectLocator? in
-			if let uti = url.typeIdentifier.value {
-				if (UTTypeConformsTo(uti as CFString, "com.apple.dt.document.workspace" as CFString)) {
-					return .workspace(url)
-				} else if (UTTypeConformsTo(uti as CFString, "com.apple.xcode.project" as CFString)) {
-					return .projectFile(url)
-				}
-			}
-			return nil
-		}
-		.skipNil()
-		.collect()
-		.map { $0.sorted() }
-		.flatMap(.merge) { SignalProducer<ProjectLocator, CarthageError>($0) }
-}
-
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
 public func xcodebuildTask(tasks: [String], _ buildArguments: BuildArguments) -> Task {
@@ -66,7 +32,8 @@ public func xcodebuildTask(task: String, _ buildArguments: BuildArguments) -> Ta
 public func buildableSchemesInDirectory(directoryURL: URL, withConfiguration configuration: String, forPlatforms platforms: Set<Platform> = []) -> SignalProducer<(ProjectLocator, [String]), CarthageError> {
 	precondition(directoryURL.isFileURL)
 
-	return locateProjectsInDirectory(directoryURL)
+	return ProjectLocator
+		.locate(in: directoryURL)
 		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [String]), CarthageError> in
 			return project
 				.schemes()
