@@ -61,41 +61,6 @@ public func xcodebuildTask(task: String, _ buildArguments: BuildArguments) -> Ta
 	return xcodebuildTask([task], buildArguments)
 }
 
-/// Sends each scheme found in the given project.
-public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, CarthageError> {
-	let task = xcodebuildTask("-list", BuildArguments(project: project))
-
-	return task.launch()
-		.ignoreTaskData()
-		.mapError(CarthageError.taskError)
-		// xcodebuild has a bug where xcodebuild -list can sometimes hang
-		// indefinitely on projects that don't share any schemes, so
-		// automatically bail out if it looks like that's happening.
-		.timeout(after: 60, raising: .xcodebuildTimeout(project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
-		.retry(upTo: 2)
-		.map { data in
-			return String(data: data, encoding: .utf8)!
-		}
-		.flatMap(.merge) { string in
-			return string.linesProducer
-		}
-		.flatMap(.merge) { line -> SignalProducer<String, CarthageError> in
-			// Matches one of these two possible messages:
-			//
-			// '    This project contains no schemes.'
-			// 'There are no schemes in workspace "Carthage".'
-			if line.hasSuffix("contains no schemes.") || line.hasPrefix("There are no schemes") {
-				return SignalProducer(error: .noSharedSchemes(project, nil))
-			} else {
-				return SignalProducer(value: line)
-			}
-		}
-		.skip { line in !line.hasSuffix("Schemes:") }
-		.skip(first: 1)
-		.take { line in !line.isEmpty }
-		.map { line in line.trimmingCharacters(in: .whitespaces) }
-}
-
 /// Finds schemes of projects or workspaces, which Carthage should build, found
 /// within the given directory.
 public func buildableSchemesInDirectory(directoryURL: URL, withConfiguration configuration: String, forPlatforms platforms: Set<Platform> = []) -> SignalProducer<(ProjectLocator, [String]), CarthageError> {
@@ -103,7 +68,8 @@ public func buildableSchemesInDirectory(directoryURL: URL, withConfiguration con
 
 	return locateProjectsInDirectory(directoryURL)
 		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [String]), CarthageError> in
-			return schemesInProject(project)
+			return project
+				.schemes()
 				.flatMap(.merge) { scheme -> SignalProducer<String, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 

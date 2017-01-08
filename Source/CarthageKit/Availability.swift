@@ -72,3 +72,8 @@ extension VersionSpecifier {
 	@available(*, unavailable, renamed="isSatisfied(by:)")
 	public func satisfiedBy(version: PinnedVersion) -> Bool { fatalError() }
 }
+
+// MARK: - Xcode.swift
+
+@available(*, unavailable, renamed="ProjectLocator.schemes(self:)")
+public func schemesInProject(project: ProjectLocator) -> SignalProducer<String, CarthageError> { fatalError() }
