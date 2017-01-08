@@ -486,8 +486,8 @@ private class DependencyNode: Comparable {
 }
 
 private func <(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
-	let leftSemantic = SemanticVersion.fromPinnedVersion(lhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
-	let rightSemantic = SemanticVersion.fromPinnedVersion(rhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+	let leftSemantic = SemanticVersion.from(lhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+	let rightSemantic = SemanticVersion.from(rhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
 
 	// Try higher versions first.
 	return leftSemantic > rightSemantic

@@ -68,6 +68,11 @@ extension SDK {
 
 // MARK: - Version.swift
 
+extension SemanticVersion {
+	@available(*, unavailable, renamed="from(_:)")
+	public static func fromPinnedVersion(pinnedVersion: PinnedVersion) -> Result<SemanticVersion, CarthageError> { fatalError() }
+}
+
 extension VersionSpecifier {
 	@available(*, unavailable, renamed="isSatisfied(by:)")
 	public func satisfiedBy(version: PinnedVersion) -> Bool { fatalError() }
