@@ -47,7 +47,7 @@ public struct SemanticVersion: VersionType, Comparable {
 	private static let versionCharacterSet = CharacterSet(charactersIn: "0123456789.")
 
 	/// Attempts to parse a semantic version from a PinnedVersion.
-	public static func fromPinnedVersion(pinnedVersion: PinnedVersion) -> Result<SemanticVersion, CarthageError> {
+	public static func from(_ pinnedVersion: PinnedVersion) -> Result<SemanticVersion, CarthageError> {
 		let scanner = Scanner(string: pinnedVersion.commitish)
 
 		// Skip leading characters, like "v" or "version-" or anything like
@@ -176,7 +176,7 @@ public enum VersionSpecifier: VersionType {
 	/// Determines whether the given version satisfies this version specifier.
 	public func isSatisfied(by version: PinnedVersion) -> Bool {
 		func withSemanticVersion(predicate: (SemanticVersion) -> Bool) -> Bool {
-			if let semanticVersion = SemanticVersion.fromPinnedVersion(version).value {
+			if let semanticVersion = SemanticVersion.from(version).value {
 				return predicate(semanticVersion)
 			} else {
 				// Consider non-semantic versions (e.g., branches) to meet every

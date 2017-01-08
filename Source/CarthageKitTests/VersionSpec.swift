@@ -30,14 +30,14 @@ class SemanticVersionSpec: QuickSpec {
 		}
 
 		it("should parse semantic versions") {
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("1.4")).value) == SemanticVersion(major: 1, minor: 4, patch: 0)
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8.9")).value) == SemanticVersion(major: 2, minor: 8, patch: 9)
+			expect(SemanticVersion.from(PinnedVersion("1.4")).value) == SemanticVersion(major: 1, minor: 4, patch: 0)
+			expect(SemanticVersion.from(PinnedVersion("v2.8.9")).value) == SemanticVersion(major: 2, minor: 8, patch: 9)
 		}
 
 		it("should fail on invalid semantic versions") {
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v1")).value).to(beNil())
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("v2.8-alpha")).value).to(beNil())
-			expect(SemanticVersion.fromPinnedVersion(PinnedVersion("null-string-beta-2")).value).to(beNil())
+			expect(SemanticVersion.from(PinnedVersion("v1")).value).to(beNil())
+			expect(SemanticVersion.from(PinnedVersion("v2.8-alpha")).value).to(beNil())
+			expect(SemanticVersion.from(PinnedVersion("null-string-beta-2")).value).to(beNil())
 		}
 	}
 }
@@ -74,7 +74,7 @@ class VersionSpecifierSpec: QuickSpec {
 			}
 
 			it("should allow greater or equal versions for .atLeast") {
-				let specifier = VersionSpecifier.atLeast(SemanticVersion.fromPinnedVersion(v2_1_1).value!)
+				let specifier = VersionSpecifier.atLeast(SemanticVersion.from(v2_1_1).value!)
 				expect(specifier.isSatisfied(by: v1_3_2)) == false
 				expect(specifier.isSatisfied(by: v2_0_2)) == false
 				expect(specifier.isSatisfied(by: v2_1_1)) == true
@@ -83,7 +83,7 @@ class VersionSpecifierSpec: QuickSpec {
 			}
 
 			it("should allow greater or equal minor and patch versions for .compatibleWith") {
-				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.fromPinnedVersion(v2_1_1).value!)
+				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.from(v2_1_1).value!)
 				expect(specifier.isSatisfied(by: v1_3_2)) == false
 				expect(specifier.isSatisfied(by: v2_0_2)) == false
 				expect(specifier.isSatisfied(by: v2_1_1)) == true
@@ -92,7 +92,7 @@ class VersionSpecifierSpec: QuickSpec {
 			}
 
 			it("should only allow exact versions for .exactly") {
-				let specifier = VersionSpecifier.exactly(SemanticVersion.fromPinnedVersion(v2_2_0).value!)
+				let specifier = VersionSpecifier.exactly(SemanticVersion.from(v2_2_0).value!)
 				expect(specifier.isSatisfied(by: v1_3_2)) == false
 				expect(specifier.isSatisfied(by: v2_0_2)) == false
 				expect(specifier.isSatisfied(by: v2_1_1)) == false
@@ -101,7 +101,7 @@ class VersionSpecifierSpec: QuickSpec {
 			}
 
 			it("should allow only greater patch versions to satisfy 0.x") {
-				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.fromPinnedVersion(v0_1_0).value!)
+				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.from(v0_1_0).value!)
 				expect(specifier.isSatisfied(by: v0_1_0)) == true
 				expect(specifier.isSatisfied(by: v0_1_1)) == true
 				expect(specifier.isSatisfied(by: v0_2_0)) == false
