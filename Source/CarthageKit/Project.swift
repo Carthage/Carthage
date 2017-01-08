@@ -255,7 +255,7 @@ public final class Project {
 			.map { $0.project }
 			.collect()
 			.map { Set($0) }
-			.concat(SignalProducer(value: Set()))
+			.concat(value: Set())
 			.take(first: 1)
 	}
 
@@ -470,7 +470,7 @@ public final class Project {
 								return .failure(.writeFailed(temporaryDirectoryURL, error))
 							}
 						}
-						.concat(SignalProducer(value: false))
+						.concat(value: false)
 						.take(first: 1)
 
 				case .git:

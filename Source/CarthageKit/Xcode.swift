@@ -697,7 +697,7 @@ public func buildInDirectory(directoryURL: URL, withOptions options: BuildOption
 					}
 					// If there is no appropriate workspace, use the project in
 					// which the scheme is defined instead.
-					.concat(SignalProducer(value: (project, [])))
+					.concat(value: (project, []))
 					.take(first: 1)
 					.map { project, _ in (scheme, project) }
 			}
