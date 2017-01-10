@@ -15,33 +15,33 @@ import ReactiveCocoa
 public struct OutdatedCommand: CommandType {
 	public struct Options: OptionsType {
 		public let useSSH: Bool
-		public let verbose: Bool
+		public let isVerbose: Bool
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
 		
-		public static func create(useSSH: Bool) -> Bool -> ColorOptions -> String -> Options {
-			return { verbose in { colorOptions in { directoryPath in
-				return self.init(useSSH: useSSH, verbose: verbose, colorOptions: colorOptions, directoryPath: directoryPath)
+		public static func create(useSSH: Bool) -> (Bool) -> (ColorOptions) -> (String) -> Options {
+			return { isVerbose in { colorOptions in { directoryPath in
+				return self.init(useSSH: useSSH, isVerbose: isVerbose, colorOptions: colorOptions, directoryPath: directoryPath)
 			} } }
 		}
 		
-		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> m <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> ColorOptions.evaluate(m)
-				<*> m <| Option(key: "project-directory", defaultValue: NSFileManager.defaultManager().currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: FileManager.`default`.currentDirectoryPath, usage: "the directory containing the Carthage project")
 		}
 		
 		/// Attempts to load the project referenced by the options, and configure it
 		/// accordingly.
 		public func loadProject() -> SignalProducer<Project, CarthageError> {
-			let directoryURL = NSURL.fileURLWithPath(self.directoryPath, isDirectory: true)
+			let directoryURL = URL(fileURLWithPath: self.directoryPath, isDirectory: true)
 			let project = Project(directoryURL: directoryURL)
 			project.preferHTTPS = !self.useSSH
 			
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
-			project.projectEvents.observeNext { eventSink.put($0) }
+			project.projectEvents.observeValues { eventSink.put($0) }
 			
 			return SignalProducer(value: project)
 		}
@@ -50,9 +50,9 @@ public struct OutdatedCommand: CommandType {
 	public let verb = "outdated"
 	public let function = "Check for compatible updates to the project's dependencies"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
-			.flatMap(.Merge) { $0.outdatedDependencies(options.verbose) }
+			.flatMap(.merge) { $0.outdatedDependencies(options.isVerbose) }
 			.on(next: { outdatedDependencies in
 				let formatting = options.colorOptions.formatting
 

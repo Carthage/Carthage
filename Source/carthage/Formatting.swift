@@ -12,27 +12,27 @@ import Foundation
 import Result
 import PrettyColors
 
-/// Wraps a string with terminal colors and formatting or passes it through, depending on `colorful`.
-private func wrap(colorful: Bool, wrap: Color.Wrap) -> String -> String {
+/// Wraps a string with terminal colors and formatting or passes it through, depending on `isColorful`.
+private func wrap(isColorful: Bool, wrap: Color.Wrap) -> (String) -> String {
 	return { string in
-		return colorful ? wrap.wrap(string) : string
+		return isColorful ? wrap.wrap(string) : string
 	}
 }
 
 /// Argument for whether to color and format terminal output.
 public enum ColorArgument: String, ArgumentType, CustomStringConvertible {
-	case Auto = "auto"
-	case Never = "never"
-	case Always = "always"
+	case auto = "auto"
+	case never = "never"
+	case always = "always"
 	
 	/// Whether to color and format.
 	public var isColorful: Bool {
 		switch self {
-		case .Always:
+		case .always:
 			return true
-		case .Never:
+		case .never:
 			return false
-		case .Auto:
+		case .auto:
 			return Terminal.isTTY && !Terminal.isDumb
 		}
 	}
@@ -43,10 +43,16 @@ public enum ColorArgument: String, ArgumentType, CustomStringConvertible {
 	
 	public static let name = "color"
 	
-	public static func fromString(string: String) -> ColorArgument? {
-		return self.init(rawValue: string.lowercaseString)
+	public static func from(string: String) -> ColorArgument? {
+		return self.init(rawValue: string.lowercased())
 	}
-	
+
+	#if swift(>=3)
+	#else
+	public static func fromString(string: String) -> ColorArgument? {
+		return from(string)
+	}
+	#endif
 }
 
 /// Options for whether to color and format terminal output.
@@ -55,10 +61,10 @@ public struct ColorOptions: OptionsType {
 	let formatting: Formatting
 	
 	public struct Formatting {
-		let colorful: Bool
+		let isColorful: Bool
 		let bullets: String
 		let bulletin: Wrap
-		let URL: Wrap
+		let url: Wrap
 		let projectName: Wrap
 		let path: Wrap
 		
@@ -66,13 +72,13 @@ public struct ColorOptions: OptionsType {
 		/// Wraps a string with terminal colors and formatting or passes it through.
 		typealias Wrap = (string: String) -> String
 		
-		init(_ colorful: Bool) {
-			self.colorful = colorful
-			bulletin      = wrap(colorful, wrap: Color.Wrap(foreground: .Blue, style: .Bold))
+		init(_ isColorful: Bool) {
+			self.isColorful = isColorful
+			bulletin      = wrap(isColorful, wrap: Color.Wrap(foreground: .blue, style: .bold))
 			bullets       = bulletin(string: "***") + " "
-			URL           = wrap(colorful, wrap: Color.Wrap(styles: .Underlined))
-			projectName   = wrap(colorful, wrap: Color.Wrap(styles: .Bold))
-			path          = wrap(colorful, wrap: Color.Wrap(foreground: .Yellow))
+			url           = wrap(isColorful, wrap: Color.Wrap(styles: .underlined))
+			projectName   = wrap(isColorful, wrap: Color.Wrap(styles: .bold))
+			path          = wrap(isColorful, wrap: Color.Wrap(foreground: .yellow))
 		}
 
 		/// Wraps a string in bullets, one space of padding, and formatting.
@@ -82,7 +88,7 @@ public struct ColorOptions: OptionsType {
 
 		/// Wraps a string in quotation marks and formatting.
 		func quote(string: String, quotationMark: String = "\"") -> String {
-			return wrap(colorful, wrap: Color.Wrap(foreground: .Green))(quotationMark + string + quotationMark)
+			return wrap(isColorful, wrap: Color.Wrap(foreground: .green))(quotationMark + string + quotationMark)
 		}
 	}
 	
@@ -90,8 +96,8 @@ public struct ColorOptions: OptionsType {
 		return self.init(argument: argument, formatting: Formatting(argument.isColorful))
 	}
 	
-	public static func evaluate(m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
+	public static func evaluate(_ m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
 		return create
-			<*> m <| Option(key: "color", defaultValue: ColorArgument.Auto, usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')")
+			<*> m <| Option(key: "color", defaultValue: ColorArgument.auto, usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')")
 	}
 }

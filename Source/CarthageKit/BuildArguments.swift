@@ -1,5 +1,15 @@
 /// Configures a build with Xcode.
 public struct BuildArguments {
+	/// Represents a build setting whether full bitcode should be embedded in the
+	/// binary.
+	public enum BitcodeGenerationMode: String {
+		/// Only bitcode marker will be embedded.
+		case marker = "marker"
+
+		/// Full bitcode will be embedded.
+		case bitcode = "bitcode"
+	}
+
 	/// The project to build.
 	public let project: ProjectLocator
 
@@ -45,11 +55,11 @@ public struct BuildArguments {
 		var args = [ "xcodebuild" ]
 
 		switch project {
-		case let .Workspace(URL):
-			args += [ "-workspace", URL.path! ]
+		case let .workspace(url):
+			args += [ "-workspace", url.carthage_path ]
 
-		case let .ProjectFile(URL):
-			args += [ "-project", URL.path! ]
+		case let .projectFile(url):
+			args += [ "-project", url.carthage_path ]
 		}
 
 		if let scheme = scheme {
@@ -60,8 +70,11 @@ public struct BuildArguments {
 			args += [ "-configuration", configuration ]
 		}
 		
-		if let derivedDataPath = derivedDataPath, let standarizedPath = NSURL(fileURLWithPath: (derivedDataPath as NSString).stringByExpandingTildeInPath).URLByStandardizingPath?.path where !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
-			args += [ "-derivedDataPath", standarizedPath ]
+		if let derivedDataPath = derivedDataPath {
+			let standarizedPath = URL(fileURLWithPath: (derivedDataPath as NSString).expandingTildeInPath).standardizedFileURL.carthage_path
+			if !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
+				args += [ "-derivedDataPath", standarizedPath ]
+			}
 		}
 
 		if let sdk = sdk {
@@ -69,9 +82,9 @@ public struct BuildArguments {
 			// resolution (see Carthage/Carthage#347).
 			//
 			// Since we wouldn't be trying to build this target unless it were
-			// for OS X already, just let xcodebuild figure out the SDK on its
+			// for macOS already, just let xcodebuild figure out the SDK on its
 			// own.
-			if sdk != .MacOSX {
+			if sdk != .macOSX {
 				args += [ "-sdk", sdk.rawValue ]
 			}
 		}
@@ -112,6 +125,6 @@ public struct BuildArguments {
 
 extension BuildArguments: CustomStringConvertible {
 	public var description: String {
-		return arguments.joinWithSeparator(" ")
+		return arguments.joined(separator: " ")
 	}
 }

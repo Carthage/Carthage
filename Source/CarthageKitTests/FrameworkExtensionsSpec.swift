@@ -3,15 +3,15 @@ import Nimble
 
 class FrameworkExtensionsSpec: QuickSpec {
 	override func spec() {
-		describe("NSURL Extensions") {
+		describe("URL Extensions") {
 			it("should figure out if a is a subdirectory of b") {
-				let subject = NSURL(string: "file:///foo/bar")!
+				let subject = URL(string: "file:///foo/bar")!
 
-				let unrelatedScheme = NSURL(string: "http:///foo/bar/baz")!
-				let parentDir = NSURL(string: "file:///foo")!
-				let immediateSub = NSURL(string: "file:///foo/bar/baz")!
-				let distantSub = NSURL(string: "file:///foo/bar/baz/qux")!
-				let unrelatedDirectory = NSURL(string: "file:///bar/bar/baz")!
+				let unrelatedScheme = URL(string: "http:///foo/bar/baz")!
+				let parentDir = URL(string: "file:///foo")!
+				let immediateSub = URL(string: "file:///foo/bar/baz")!
+				let distantSub = URL(string: "file:///foo/bar/baz/qux")!
+				let unrelatedDirectory = URL(string: "file:///bar/bar/baz")!
 
 				expect(subject.hasSubdirectory(subject)) == true
 				expect(subject.hasSubdirectory(unrelatedScheme)) == false
@@ -22,18 +22,18 @@ class FrameworkExtensionsSpec: QuickSpec {
 			}
 
 			context("`hasSubdirectory` with /tmp and /private/tmp") {
-				let baseName = "/tmp/CarthageKitTests-NSURL-hasSubdirectory"
-				let parentDirUnderTmp = NSURL(fileURLWithPath: baseName)
-				let childDirUnderPrivateTmp = NSURL(fileURLWithPath: "/private\(baseName)/foo")
+				let baseName = "/tmp/CarthageKitTests-URL-hasSubdirectory"
+				let parentDirUnderTmp = URL(fileURLWithPath: baseName)
+				let childDirUnderPrivateTmp = URL(fileURLWithPath: "/private\(baseName)/foo")
 
 				beforeEach {
-					_ = try? NSFileManager.defaultManager()
-						.createDirectoryAtURL(childDirUnderPrivateTmp, withIntermediateDirectories: true, attributes: nil)
+					_ = try? FileManager.`default`
+						.createDirectory(at: childDirUnderPrivateTmp, withIntermediateDirectories: true)
 				}
 
 				afterEach {
-					_ = try? NSFileManager.defaultManager()
-						.removeItemAtURL(parentDirUnderTmp)
+					_ = try? FileManager.`default`
+						.removeItem(at: parentDirUnderTmp)
 				}
 
 				it("should resolve the difference between /tmp and /private/tmp") {

@@ -20,7 +20,13 @@ guard ensureGitVersion().first()?.value == true else {
 	exit(EXIT_FAILURE)
 }
 
-if let carthagePath = NSBundle.mainBundle().executablePath {
+if let remoteVersion = remoteVersion() where localVersion() < remoteVersion {
+	
+	let formatting = ColorOptions.Formatting(true)
+	carthage.println(formatting.bullets + "Please update to the latest Carthage version: \(remoteVersion). You currently are on \(localVersion())")
+}
+
+if let carthagePath = Bundle.main.executablePath {
 	setenv("CARTHAGE_PATH", carthagePath, 0)
 }
 

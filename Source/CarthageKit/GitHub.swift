@@ -13,11 +13,11 @@ import Tentacle
 
 /// The User-Agent to use for GitHub requests.
 private func gitHubUserAgent() -> String {
-	let bundle = NSBundle.mainBundle() ?? NSBundle(identifier: CarthageKitBundleIdentifier)
+	let bundle = Bundle.main ?? Bundle(identifier: CarthageKitBundleIdentifier)
 	
 	let version = bundle.flatMap {
-		($0.objectForInfoDictionaryKey("CFBundleShortVersionString") ??
-		 $0.objectForInfoDictionaryKey(kCFBundleVersionKey as String)) as? String
+		($0.object(forInfoDictionaryKey: "CFBundleShortVersionString") ??
+		 $0.object(forInfoDictionaryKey: kCFBundleVersionKey as String)) as? String
 	} ?? "unknown"
 
 	let identifier = bundle?.bundleIdentifier ?? "CarthageKit-unknown"
@@ -26,20 +26,15 @@ private func gitHubUserAgent() -> String {
 
 extension Repository {
 	/// The URL that should be used for cloning this repository over HTTPS.
-	public var HTTPSURL: GitURL {
+	public var httpsURL: GitURL {
 		let auth = tokenFromEnvironment(forServer: server).map { "\($0)@" } ?? ""
-		let scheme: String
-		#if swift(>=2.3)
-			scheme = server.URL.scheme!
-		#else
-			scheme = server.URL.scheme
-		#endif
+		let scheme = server.URL.scheme!
 
 		return GitURL("\(scheme)://\(auth)\(server.URL.host!)/\(owner)/\(name).git")
 	}
 
 	/// The URL that should be used for cloning this repository over SSH.
-	public var SSHURL: GitURL {
+	public var sshURL: GitURL {
 		return GitURL("ssh://git@\(server.URL.host!)/\(owner)/\(name).git")
 	}
 
@@ -56,21 +51,20 @@ extension Repository {
 	/// Enterprise instances.
 	public static func fromIdentifier(identifier: String) -> Result<Repository, CarthageError> {
 		// GitHub.com
-		let range = NSRange(location: 0, length: (identifier as NSString).length)
-		if let match = NWORegex.firstMatchInString(identifier, options: [], range: range) {
-			let owner = (identifier as NSString).substringWithRange(match.rangeAtIndex(1))
-			let name = (identifier as NSString).substringWithRange(match.rangeAtIndex(2))
-			return .Success(self.init(owner: owner, name: stripGitSuffix(name)))
+		let range = NSRange(location: 0, length: identifier.utf16.count)
+		if let match = NWORegex.firstMatch(in: identifier, range: range) {
+			let owner = (identifier as NSString).substring(with: match.rangeAt(1))
+			let name = (identifier as NSString).substring(with: match.rangeAt(2))
+			return .success(self.init(owner: owner, name: stripGitSuffix(name)))
 		}
 
 		// GitHub Enterprise
-		if let
-			URL = NSURL(string: identifier),
-			host = URL.host,
-			// The trailing slash of the host is included in the components.
-			var pathComponents = URL.pathComponents?.filter({ $0 != "/" })
-			where pathComponents.count >= 2
-		{
+		breakpoint: if let url = NSURL(string: identifier), let host = url.host {
+			var pathComponents = url.carthage_pathComponents.filter { $0 != "/" }
+			guard pathComponents.count >= 2 else {
+				break breakpoint
+			}
+
 			// Consider that the instance might be in subdirectories.
 			let name = pathComponents.removeLast()
 			let owner = pathComponents.removeLast()
@@ -78,14 +72,14 @@ extension Repository {
 			// If the host name starts with “github.com”, that is not an enterprise
 			// one.
 			if host == "github.com" || host == "www.github.com" {
-				return .Success(self.init(owner: owner, name: stripGitSuffix(name)))
+				return .success(self.init(owner: owner, name: stripGitSuffix(name)))
 			} else {
-				let baseURL = URL.URLByDeletingLastPathComponent!.URLByDeletingLastPathComponent!
-				return .Success(self.init(server: .Enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
+				let baseURL = url.deletingLastPathComponent().deletingLastPathComponent()
+				return .success(self.init(server: .enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
 			}
 		}
 
-		return .Failure(CarthageError.ParseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
+		return .failure(CarthageError.parseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
 	}
 }
 
@@ -100,17 +94,17 @@ extension Release {
 }
 
 private func credentialsFromGit(forServer server: Server) -> (String, String)? {
-	let data = "url=\(server)".dataUsingEncoding(NSUTF8StringEncoding)!
+	let data = "url=\(server)".data(using: .utf8)!
 	
 	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
-		.flatMap(.Concat) { string in
+		.flatMap(.concat) { string in
 			return string.linesProducer
 		}
 		.reduce([:]) { (values: [String: String], line: String) -> [String: String] in
 			var values = values
 
 			let parts = line.characters
-				.split(1, allowEmptySlices: false) { $0 == "=" }
+				.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }
 				.map(String.init)
 
 			if parts.count >= 2 {
@@ -134,18 +128,18 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 }
 
 private func tokenFromEnvironment(forServer server: Server) -> String? {
-	let environment = NSProcessInfo.processInfo().environment
+	let environment = ProcessInfo.processInfo.environment
 
 	if let accessTokenInput = environment["GITHUB_ACCESS_TOKEN"] {
 		// Treat the input as comma-separated series of domains and tokens.
 		// (e.g., `GITHUB_ACCESS_TOKEN="github.com=XXXXXXXXXXXXX,enterprise.local/ghe=YYYYYYYYY"`)
 		let records = accessTokenInput
 			.characters
-			.split(allowEmptySlices: false) { $0 == "," }
+			.split(omittingEmptySubsequences: true) { $0 == "," }
 			.reduce([:]) { (values: [String: String], record) in
 				var values = values
 
-				let parts = record.split(1, allowEmptySlices: false) { $0 == "=" }.map(String.init)
+				let parts = record.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }.map(String.init)
 				switch parts.count {
 				case 1:
 					// If the input is provided as an access token itself, use the
@@ -169,14 +163,14 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 }
 
 extension Client {
-	convenience init(repository: Repository, authenticated: Bool = true) {
+	convenience init(repository: Repository, isAuthenticated: Bool = true) {
 		if Client.userAgent == nil {
 			Client.userAgent = gitHubUserAgent()
 		}
 		
 		let server = repository.server
 		
-		if !authenticated {
+		if !isAuthenticated {
 			self.init(server)
 		} else if let token = tokenFromEnvironment(forServer: server) {
 			self.init(server, token: token)

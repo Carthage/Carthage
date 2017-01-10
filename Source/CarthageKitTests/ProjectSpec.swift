@@ -56,32 +56,32 @@ class ProjectSpec: QuickSpec {
 			it("should not rebuild cached frameworks unless instructed to ignore cached builds") {
 				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
 				
-				let result1 = buildDependencyTest(platforms: [.Mac])
+				let result1 = buildDependencyTest(platforms: [.macOS])
 				expect(result1).to(equal(expected))
 				
-				let result2 = buildDependencyTest(platforms: [.Mac])
+				let result2 = buildDependencyTest(platforms: [.macOS])
 				expect(result2).to(equal(Set<String>()))
 				
-				let result3 = buildDependencyTest(platforms: [.Mac], cacheBuilds: false)
+				let result3 = buildDependencyTest(platforms: [.macOS], cacheBuilds: false)
 				expect(result3).to(equal(expected))
 			}
 			
 			it("should rebuild cached frameworks (and dependencies) whose sha1 does not match the version file") {
 				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
 				
-				let result1 = buildDependencyTest(platforms: [.Mac])
+				let result1 = buildDependencyTest(platforms: [.macOS])
 				expect(result1).to(equal(expected))
 				
 				overwriteFramework("Prelude", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 				
-				let result2 = buildDependencyTest(platforms: [.Mac])
+				let result2 = buildDependencyTest(platforms: [.macOS])
 				expect(result2).to(equal(expected))
 			}
 			
 			it("should rebuild cached frameworks (and dependencies) whose version does not match the version file") {
 				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
 				
-				let result1 = buildDependencyTest(platforms: [.Mac])
+				let result1 = buildDependencyTest(platforms: [.macOS])
 				expect(result1).to(equal(expected))
 				
 				let preludeVersionFileURL = buildDirectoryURL.appendingPathComponent(".Prelude.version", isDirectory: false)
@@ -91,19 +91,19 @@ class ProjectSpec: QuickSpec {
 				let modifiedJson = json.stringByReplacingOccurrencesOfString("\"commitish\" : \"1.6.0\"", withString: "\"commitish\" : \"1.6.1\"")
 				let _ = try! modifiedJson.writeToFile(preludeVersionFilePath, atomically: true, encoding: NSUTF8StringEncoding)
 				
-				let result2 = buildDependencyTest(platforms: [.Mac])
+				let result2 = buildDependencyTest(platforms: [.macOS])
 				expect(result2).to(equal(expected))
 			}
 			
 			it("should not rebuild cached frameworks unnecessarily") {
 				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
 				
-				let result1 = buildDependencyTest(platforms: [.Mac])
+				let result1 = buildDependencyTest(platforms: [.macOS])
 				expect(result1).to(equal(expected))
 				
 				overwriteFramework("Either", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 				
-				let result2 = buildDependencyTest(platforms: [.Mac])
+				let result2 = buildDependencyTest(platforms: [.macOS])
 				expect(result2).to(equal(["Either-Mac", "Madness-Mac"]))
 			}
 			
@@ -127,7 +127,7 @@ class ProjectSpec: QuickSpec {
 		
 		describe("loadCombinedCartfile") {
 			it("should load a combined Cartfile when only a Cartfile is present") {
-				let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("CartfileOnly", withExtension: nil)!
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfileOnly", withExtension: nil)!
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 				expect(result?.value).notTo(beNil())
@@ -138,7 +138,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should load a combined Cartfile when only a Cartfile.private is present") {
-				let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("CartfilePrivateOnly", withExtension: nil)!
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfilePrivateOnly", withExtension: nil)!
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 				expect(result?.value).notTo(beNil())
@@ -149,7 +149,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should detect duplicate dependencies across Cartfile and Cartfile.private") {
-				let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("DuplicateDependencies", withExtension: nil)!
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies", withExtension: nil)!
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 
@@ -157,30 +157,27 @@ class ProjectSpec: QuickSpec {
 				expect(resultError).notTo(beNil())
 
 				let makeDependency: (String, String, [String]) -> DuplicateDependency = { (repoOwner, repoName, locations) in
-					let project = ProjectIdentifier.GitHub(Repository(owner: repoOwner, name: repoName))
+					let project = ProjectIdentifier.gitHub(Repository(owner: repoOwner, name: repoName))
 					return DuplicateDependency(project: project, locations: locations)
 				}
 
-				let mainLocation = ["\(CarthageProjectCartfilePath)"]
-				let bothLocations = ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]
+				let locations = ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]
 
-				let expectedError = CarthageError.DuplicateDependencies([
-					makeDependency("self2", "self2", mainLocation),
-					makeDependency("self3", "self3", mainLocation),
-					makeDependency("1", "1", bothLocations),
-					makeDependency("3", "3", bothLocations),
-					makeDependency("5", "5", bothLocations),
+				let expectedError = CarthageError.duplicateDependencies([
+					makeDependency("1", "1", locations),
+					makeDependency("3", "3", locations),
+					makeDependency("5", "5", locations),
 				])
 
 				expect(resultError) == expectedError
 			}
 			
 			it("should error when neither a Cartfile nor a Cartfile.private exists") {
-				let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("NoCartfile", withExtension: nil)!
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "NoCartfile", withExtension: nil)!
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 				
-				if case let .ReadFailed(_, underlyingError)? = result?.error {
+				if case let .readFailed(_, underlyingError)? = result?.error {
 					expect(underlyingError?.domain) == NSCocoaErrorDomain
 					expect(underlyingError?.code) == NSFileReadNoSuchFileError
 				} else {
@@ -191,14 +188,14 @@ class ProjectSpec: QuickSpec {
 
 		describe("cloneOrFetchProject") {
 			// https://github.com/Carthage/Carthage/issues/1191
-			let temporaryPath = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(NSProcessInfo.processInfo().globallyUniqueString)
-			let temporaryURL = NSURL(fileURLWithPath: temporaryPath, isDirectory: true)
+			let temporaryPath = (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString)
+			let temporaryURL = URL(fileURLWithPath: temporaryPath, isDirectory: true)
 			let repositoryURL = temporaryURL.appendingPathComponent("carthage1191", isDirectory: true)
 			let cacheDirectoryURL = temporaryURL.appendingPathComponent("cache", isDirectory: true)
-			let projectIdentifier = ProjectIdentifier.Git(GitURL(repositoryURL.carthage_absoluteString))
+			let projectIdentifier = ProjectIdentifier.git(GitURL(repositoryURL.carthage_absoluteString))
 
 			func initRepository() {
-				expect { try NSFileManager.defaultManager().createDirectoryAtPath(repositoryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+				expect { try FileManager.`default`.createDirectory(atPath: repositoryURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
 				_ = launchGitTask([ "init" ], repositoryFileURL: repositoryURL).wait()
 			}
 
@@ -207,10 +204,10 @@ class ProjectSpec: QuickSpec {
 				return launchGitTask([ "rev-parse", "--short", "HEAD" ], repositoryFileURL: repositoryURL)
 					.last()!
 					.value!
-					.stringByTrimmingCharactersInSet(.newlineCharacterSet())
+					.trimmingCharacters(in: .newlines)
 			}
 
-			func cloneOrFetch(commitish commitish: String? = nil) -> SignalProducer<(ProjectEvent?, NSURL), CarthageError> {
+			func cloneOrFetch(commitish commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
 				return cloneOrFetchProject(projectIdentifier, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
 			}
 
@@ -227,12 +224,12 @@ class ProjectSpec: QuickSpec {
 			}
 
 			beforeEach {
-				expect { try NSFileManager.defaultManager().createDirectoryAtPath(temporaryURL.path!, withIntermediateDirectories: true, attributes: nil) }.notTo(throwError())
+				expect { try FileManager.`default`.createDirectory(atPath: temporaryURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
 				initRepository()
 			}
 
 			afterEach {
-				_ = try? NSFileManager.defaultManager().removeItemAtURL(temporaryURL)
+				_ = try? FileManager.`default`.removeItem(at: temporaryURL)
 			}
 
 			it("should clone a project if it is not cloned yet") {
@@ -289,14 +286,14 @@ class ProjectSpec: QuickSpec {
 
 private extension ProjectEvent {
 	var isCloning: Bool {
-		if case .Cloning = self {
+		if case .cloning = self {
 			return true
 		}
 		return false
 	}
 
 	var isFetching: Bool {
-		if case .Fetching = self {
+		if case .fetching = self {
 			return true
 		}
 		return false

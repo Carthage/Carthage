@@ -50,14 +50,14 @@ internal func print<T>(object: T) {
 
 extension String {
 	/// Split the string into substrings separated by the given separators.
-	internal func split(allowEmptySlices: Bool = false, separators: [Character] = [ ",", " " ]) -> [String] {
+	internal func split(maxSplits maxSplits: Int = .max, omittingEmptySubsequences: Bool = true, separators: [Character] = [ ",", " " ]) -> [String] {
 		return characters
-			.split(allowEmptySlices: allowEmptySlices, isSeparator: separators.contains)
+			.split(maxSplits: maxSplits, omittingEmptySubsequences: omittingEmptySubsequences, whereSeparator: separators.contains)
 			.map(String.init)
 	}
 }
 
-extension SignalProducerType where Error == CarthageError {
+extension SignalProducerProtocol where Error == CarthageError {
 	/// Waits on a SignalProducer that implements the behavior of a CommandType.
 	internal func waitOnCommand() -> Result<(), CarthageError> {
 		let result = producer
@@ -72,9 +72,16 @@ extension SignalProducerType where Error == CarthageError {
 extension GitURL: ArgumentType {
 	public static let name = "URL"
 
-	public static func fromString(string: String) -> GitURL? {
+	public static func from(string: String) -> GitURL? {
 		return self.init(string)
 	}
+
+	#if swift(>=3)
+	#else
+	public static func fromString(string: String) -> GitURL? {
+		return from(string)
+	}
+	#endif
 }
 
 /// Logs project events put into the sink.
@@ -89,25 +96,25 @@ internal struct ProjectEventSink {
 		let formatting = colorOptions.formatting
 		
 		switch event {
-		case let .Cloning(project):
+		case let .cloning(project):
 			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(string: project.name))
 
-		case let .Fetching(project):
+		case let .fetching(project):
 			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(string: project.name))
 			
-		case let .CheckingOut(project, revision):
+		case let .checkingOut(project, revision):
 			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(string: project.name) + " at " + formatting.quote(revision))
 
-		case let .DownloadingBinaries(project, release):
+		case let .downloadingBinaries(project, release):
 			carthage.println(formatting.bullets + "Downloading " + formatting.projectName(string: project.name) + ".framework binary at " + formatting.quote(release))
 
-		case let .SkippedDownloadingBinaries(project, message):
+		case let .skippedDownloadingBinaries(project, message):
 			carthage.println(formatting.bullets + "Skipped downloading " + formatting.projectName(string: project.name) + ".framework binary due to the error:\n\t" + formatting.quote(message))
 
-		case let .SkippedBuilding(project, message):
+		case let .skippedBuilding(project, message):
 			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(string: project.name) + " due to the error:\n" + message)
 			
-		case let .SkippedBuildingCached(project):
+		case let .skippedBuildingCached(project):
 			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(string: project.name))
 		}
 	}

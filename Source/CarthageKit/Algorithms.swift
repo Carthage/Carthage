@@ -80,7 +80,7 @@ public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>
 public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>, nodes: Set<Node>) -> [Node]? {
 	guard !nodes.isEmpty else { return topologicalSort(graph) }
 
-	precondition(nodes.isSubsetOf(Set(graph.keys)))
+	precondition(nodes.isSubset(of: Set(graph.keys)))
 
 	// Ensure that the graph has no cycles, otherwise determining the set of 
 	// transitive incoming nodes could infinitely recurse.

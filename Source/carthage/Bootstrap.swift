@@ -20,8 +20,8 @@ public struct BootstrapCommand: CommandType {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
 		// `update` flags.
 		return options.loadProject()
-			.flatMap(.Merge) { project -> SignalProducer<(), CarthageError> in
-				if !NSFileManager.defaultManager().fileExistsAtPath(project.resolvedCartfileURL.path!) {
+			.flatMap(.merge) { project -> SignalProducer<(), CarthageError> in
+				if !FileManager.`default`.fileExists(atPath: project.resolvedCartfileURL.carthage_path) {
 					let formatting = options.checkoutOptions.colorOptions.formatting
 					carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
 					return project.updateDependencies(shouldCheckout: options.checkoutAfterUpdate)
@@ -31,12 +31,12 @@ public struct BootstrapCommand: CommandType {
 				if let depsToUpdate = options.dependenciesToUpdate {
 					checkDependencies = project
 						.loadResolvedCartfile()
-						.flatMap(.Concat) { resolvedCartfile -> SignalProducer<(), CarthageError> in
-							let resolvedDependencyNames = resolvedCartfile.dependencies.map { $0.project.name.lowercaseString }
-							let unresolvedDependencyNames = Set(depsToUpdate.map { $0.lowercaseString }).subtract(resolvedDependencyNames)
+						.flatMap(.concat) { resolvedCartfile -> SignalProducer<(), CarthageError> in
+							let resolvedDependencyNames = resolvedCartfile.dependencies.map { $0.project.name.lowercased() }
+							let unresolvedDependencyNames = Set(depsToUpdate.map { $0.lowercased() }).subtract(resolvedDependencyNames)
 							
 							if !unresolvedDependencyNames.isEmpty {
-								return SignalProducer(error: .UnresolvedDependencies(unresolvedDependencyNames.sort()))
+								return SignalProducer(error: .unresolvedDependencies(unresolvedDependencyNames.sorted()))
 							}
 							return .empty
 						}

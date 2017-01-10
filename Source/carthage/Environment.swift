@@ -11,12 +11,12 @@ import Foundation
 import Result
 
 internal func getEnvironmentVariable(variable: String) -> Result<String, CarthageError> {
-	let environment = NSProcessInfo.processInfo().environment
+	let environment = ProcessInfo.processInfo.environment
 
 	if let value = environment[variable] {
-		return .Success(value)
+		return .success(value)
 	} else {
-		return .Failure(CarthageError.MissingEnvironmentVariable(variable: variable))
+		return .failure(CarthageError.missingEnvironmentVariable(variable: variable))
 	}
 }
 
@@ -29,7 +29,7 @@ internal struct Terminal {
 	
 	/// Whether terminal type is `dumb`.
 	static var isDumb: Bool {
-		return (terminalType?.caseInsensitiveCompare("dumb") == .OrderedSame) ?? false
+		return (terminalType?.caseInsensitiveCompare("dumb") == .orderedSame) ?? false
 	}
 	
 	/// Whether STDOUT is a TTY.

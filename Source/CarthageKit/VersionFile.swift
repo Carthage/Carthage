@@ -65,7 +65,7 @@ private struct VersionFile {
 	
 	func cacheForPlatform(platform: Platform) -> CachedPlatform? {
 		switch platform {
-		case .Mac:
+		case .macOS:
 			return macOS
 		case .iOS:
 			return iOS
@@ -95,7 +95,7 @@ private struct VersionFile {
 extension VersionFile: Decodable {
 	static func decode(j: JSON) -> Decoded<VersionFile> {
 		return curry(self.init)
-			<^> j <|? Platform.Mac.rawValue
+			<^> j <|? Platform.macOS.rawValue
 			<*> j <|? Platform.iOS.rawValue
 			<*> j <|? Platform.watchOS.rawValue
 			<*> j <|? Platform.tvOS.rawValue
@@ -146,7 +146,7 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 	}
 	
 	let versionFile = VersionFile(
-		macOS: cachedPlatforms[Platform.Mac.rawValue],
+		macOS: cachedPlatforms[Platform.macOS.rawValue],
 		iOS: cachedPlatforms[Platform.iOS.rawValue],
 		watchOS: cachedPlatforms[Platform.watchOS.rawValue],
 		tvOS: cachedPlatforms[Platform.tvOS.rawValue])
