@@ -26,7 +26,7 @@ class ProjectSpec: QuickSpec {
 				
 				let project = Project(directoryURL: directoryURL)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds))
-					.flatten(.Concat)
+					.flatten(.concat)
 					.ignoreTaskData()
 					.on(next: { (project, scheme) in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")

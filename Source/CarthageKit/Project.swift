@@ -320,7 +320,7 @@ public final class Project {
 	private func cartfile(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
 		let revision = dependency.version.commitish
 		return self.cloneOrFetchDependency(dependency.project, commitish: revision)
-			.flatMap(.Concat) { repositoryURL in
+			.flatMap(.concat) { repositoryURL in
 				return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
 			}
 			.flatMapError { _ in .empty }
@@ -749,7 +749,7 @@ public final class Project {
 		return loadResolvedCartfile()
 			.flatMap(.merge) { resolvedCartfile in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
-					.flatMap(.Concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>), CarthageError> in
+					.flatMap(.concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>), CarthageError> in
 						self.cartfile(for: dependency)
 							.map { cartfile in Set(cartfile.dependencies.map { $0.project }) }
 							.concat(value: [])
@@ -763,7 +763,7 @@ public final class Project {
 						}
 						return includedDependencies + [nextDependency]
 					}
-					.flatMap(.Concat) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+					.flatMap(.concat) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 						SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: dependencies)
 					}
 			}

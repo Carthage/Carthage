@@ -668,7 +668,7 @@ public func buildInDirectory(directoryURL: URL, withOptions options: BuildOption
 					.take(first: 1)
 					.map { project, _ in (scheme, project) }
 			}
-			.flatMap(.Concat) { (scheme: String, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
+			.flatMap(.concat) { (scheme: String, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
 				let initialValue = (project, scheme)
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
