@@ -18,7 +18,7 @@ import ReactiveTask
 class ProjectSpec: QuickSpec {
 	override func spec() {
 		describe("createAndCheckVersionFiles") {
-			let directoryURL = NSBundle(forClass: self.dynamicType).URLForResource("DependencyTest", withExtension: nil)!
+			let directoryURL = NSBundle(forClass: type(of: self)).URLForResource("DependencyTest", withExtension: nil)!
 			let buildDirectoryURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 			
 			func buildDependencyTest(platforms platforms: Set<Platform> = [], cacheBuilds: Bool = true) -> Set<String> {

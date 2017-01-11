@@ -316,8 +316,8 @@ public final class Project {
 			}
 	}
 	
-	/// Loads the Cartfile for the given dependency, at the given version.
-	private func cartfile(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Cartfile, CarthageError> {
+	/// Loads the dependencies for the given dependency, at the given version.
+	private func dependencies(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> {
 		let revision = dependency.version.commitish
 		return self.cloneOrFetchDependency(dependency.project, commitish: revision)
 			.flatMap(.concat) { repositoryURL in
@@ -325,14 +325,9 @@ public final class Project {
 			}
 			.flatMapError { _ in .empty }
 			.attemptMap(Cartfile.from(string:))
-	}
-	
-	/// Loads the dependencies for the given dependency, at the given version.
-	private func dependencies(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> {
-		return cartfile(for: dependency)
 			.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
 				return SignalProducer(cartfile.dependencies)
-			}
+		}
 	}
 
 	/// Attempts to resolve a Git reference to a version.
@@ -750,15 +745,12 @@ public final class Project {
 			.flatMap(.merge) { resolvedCartfile in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
 					.flatMap(.concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>), CarthageError> in
-						self.cartfile(for: dependency)
-							.map { cartfile in Set(cartfile.dependencies.map { $0.project }) }
-							.concat(value: [])
-							.take(1)
-							.map { dependencies in (dependency, dependencies) }
+						self.dependencyProjects(for: dependency)
+							.map { projects in (dependency, projects) }
 					}
 					.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
-						let (nextDependency, dependencies) = nextGroup
-						if options.cacheBuilds && self.shouldSkipBuildForDependency(nextDependency, dependencies: dependencies, dependenciesToBeBuilt: includedDependencies, platforms: options.platforms) {
+						let (nextDependency, projects) = nextGroup
+						if options.cacheBuilds && self.shouldSkipBuildForDependency(nextDependency, dependencyProjects: projects, dependenciesToBeBuilt: includedDependencies, platforms: options.platforms) {
 							return includedDependencies
 						}
 						return includedDependencies + [nextDependency]
@@ -794,9 +786,9 @@ public final class Project {
 	/// listed in its Cartfile.
 	///
 	/// Returns true if the dependency does not need to be rebuilt.
-	private func shouldSkipBuildForDependency(dependency: Dependency<PinnedVersion>, dependencies: Set<ProjectIdentifier>, dependenciesToBeBuilt: [Dependency<PinnedVersion>], platforms: Set<Platform>) -> Bool {
+	private func shouldSkipBuildForDependency(dependency: Dependency<PinnedVersion>, dependencyProjects: Set<ProjectIdentifier>, dependenciesToBeBuilt: [Dependency<PinnedVersion>], platforms: Set<Platform>) -> Bool {
 		let projectsToBeBuilt = Set(dependenciesToBeBuilt.map { $0.project })
-		guard dependencies.intersect(projectsToBeBuilt).isEmpty else {
+		guard dependencyProjects.intersect(projectsToBeBuilt).isEmpty else {
 			return false
 		}
 		let versionFilesMatch = versionFileMatchesDependency(dependency, forPlatforms: platforms, rootDirectoryURL: self.directoryURL)
