@@ -30,7 +30,7 @@ extension BuildOptions: OptionsType {
 			<*> m <| Option(key: "platform", defaultValue: .all, usage: "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')" + addendum)
 			<*> m <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 			<*> m <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
-			<*> m <| Option(key: "cache-builds", defaultValue: true, usage: "use cached builds when possible")
+			<*> m <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
 	}
 }
 
