@@ -26,7 +26,9 @@ private extension PinnedVersion {
 	static let v1_1_0 = PinnedVersion("v1.1.0")
 	static let v1_2_0 = PinnedVersion("v1.2.0")
 	static let v2_0_0 = PinnedVersion("v2.0.0")
+	static let v2_0_0_beta_1 = PinnedVersion("v2.0.0-beta.1")
 	static let v2_0_1 = PinnedVersion("v2.0.1")
+	static let v3_0_0_beta_1 = PinnedVersion("v3.0.0-beta.1")
 }
 
 private extension SemanticVersion {
@@ -36,6 +38,7 @@ private extension SemanticVersion {
 	static let v1_2_0 = SemanticVersion(major: 1, minor: 2, patch: 0)
 	static let v2_0_0 = SemanticVersion(major: 2, minor: 0, patch: 0)
 	static let v2_0_1 = SemanticVersion(major: 2, minor: 0, patch: 1)
+	static let v3_0_0 = SemanticVersion(major: 3, minor: 0, patch: 0)
 }
 
 private struct DB {
@@ -322,6 +325,21 @@ class ResolverSpec: QuickSpec {
 				(github2, .v1_0_0),
 				(github1, .v1_0_0),
 			]
+		}
+		
+		pending("should fail if no versions match the requirements and prerelease versions exist") {
+			let db: DB = [
+				github1: [
+					.v1_0_0: [:],
+					.v2_0_0_beta_1: [:],
+					.v2_0_0: [:],
+					.v3_0_0_beta_1: [:],
+				],
+			]
+			
+			let resolved = db.resolve([ github1: .compatibleWith(.v3_0_0) ])
+			expect(resolved.value).to(beNil())
+			expect(resolved.error).notTo(beNil())
 		}
 	}
 }
