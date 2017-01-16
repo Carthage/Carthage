@@ -703,8 +703,8 @@ public final class Project {
 		let symlinksProducer = self.dependenciesForDependency(dependency)
 			.zipWith( // file system objects from git in `CarthageProjectCheckoutsPath` which might conflict with symlinks.
 				launchGitTask(
-					[ "ls-files", "--full-name", "-z", dependency.version.commitish, CarthageProjectCheckoutsPath ],
-					repositoryFileURL: self.directoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)
+					[ "ls-tree", "--full-name", "-z", dependency.version.commitish, CarthageProjectCheckoutsPath ],
+					repositoryFileURL:self.directoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)
 				)
 					.map { (output: String) -> [String] in
 						output.characters
