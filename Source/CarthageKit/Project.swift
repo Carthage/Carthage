@@ -696,9 +696,11 @@ public final class Project {
 		let symlinksProducer = SignalProducer<String, CarthageError>(subDependencyNames)
 			.filter { name in
 				let checkoutURL = rootCheckoutsURL.appendingPathComponent(name)
-				do {
-					return try checkoutURL.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory ?? false
-				} catch {
+
+				var value: AnyObject?
+				if let _ = try? checkoutURL.getResourceValue(&value, forKey: NSURLIsDirectoryKey), let value = value {
+					return value.boolValue
+				} else {
 					return false
 				}
 			}
