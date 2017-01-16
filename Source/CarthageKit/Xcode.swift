@@ -319,7 +319,7 @@ public typealias SDKFilterCallback = (sdks: [SDK], scheme: String, configuration
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: URL, derivedDataPath: String?, toolchain: String?, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<TaskEvent<URL>, CarthageError> {
+public func buildScheme(scheme: String, withConfiguration configuration: String, inProject project: ProjectLocator, workingDirectoryURL: URL, derivedDataPath: String?, toolchain: String?, cachedBinariesPath: URL?, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<TaskEvent<URL>, CarthageError> {
 	precondition(workingDirectoryURL.isFileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: configuration, derivedDataPath: derivedDataPath, toolchain: toolchain)
@@ -454,7 +454,15 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 			case 1:
 				return buildSDK(sdks[0])
 					.flatMapTaskEvents(.merge) { settings in
-						return copyBuildProductIntoDirectory(folderURL, settings)
+						return copyBuildProductIntoDirectory(folderURL, settings).flatMap(.merge, transform: { (url) -> SignalProducer<NSURL, CarthageError> in
+
+							if let cachedBinariesPath = cachedBinariesPath {
+								let folderURL = cachedBinariesPath.appendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
+								return copyBuildProductIntoDirectory(folderURL, settings)
+							}
+							
+							return SignalProducer(value: url)
+						})
 					}
 
 			case 2:
@@ -497,7 +505,16 @@ public func buildScheme(scheme: String, withConfiguration configuration: String,
 						}
 					}
 					.flatMapTaskEvents(.concat) { (deviceSettings, simulatorSettings) in
-						return mergeBuildProductsIntoDirectory(deviceSettings, simulatorSettings, folderURL)
+						return mergeBuildProductsIntoDirectory(deviceSettings, simulatorSettings, folderURL).flatMap(.merge, transform: { (url) -> SignalProducer<NSURL, CarthageError> in
+							
+							if let cachedBinariesPath = cachedBinariesPath {
+								let folderURL = cachedBinariesPath.appendingPathComponent(platform.relativePath, isDirectory: true).URLByResolvingSymlinksInPath!
+								return mergeBuildProductsIntoDirectory(deviceSettings, simulatorSettings, folderURL)
+							}
+							
+							return SignalProducer(value: url)
+						})
+
 					}
 
 			default:
@@ -537,13 +554,13 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(dependency: ProjectIdentifier, _ rootDirectoryURL: URL, withOptions options: BuildOptions, cachedBinariesPath: URL?, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
 	return symlinkBuildPathForDependencyProject(dependency, rootDirectoryURL: rootDirectoryURL)
 		.flatMap(.merge) { _ -> SignalProducer<BuildSchemeProducer, CarthageError> in
-			return buildInDirectory(dependencyURL, withOptions: options, sdkFilter: sdkFilter)
+			return buildInDirectory(dependencyURL, withOptions: options, cachedBinariesPath: cachedBinariesPath, sdkFilter: sdkFilter)
 				.mapError { error in
 					switch (dependency, error) {
 					case let (_, .noSharedFrameworkSchemes(_, platforms)):
@@ -623,7 +640,7 @@ private func symlinkBuildPathForDependencyProject(dependency: ProjectIdentifier,
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a
 /// signal-of-signals representing each scheme being built.
-public func buildInDirectory(directoryURL: URL, withOptions options: BuildOptions, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildInDirectory(directoryURL: URL, withOptions options: BuildOptions, cachedBinariesPath: URL?, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	precondition(directoryURL.isFileURL)
 
 	return SignalProducer { observer, disposable in
@@ -682,7 +699,7 @@ public func buildInDirectory(directoryURL: URL, withOptions options: BuildOption
 					return sdkFilter(sdks: filteredSDKs, scheme: scheme, configuration: configuration, project: project)
 				}
 
-				let buildProgress = buildScheme(scheme, withConfiguration: options.configuration, inProject: project, workingDirectoryURL: directoryURL, derivedDataPath: options.derivedDataPath, toolchain: options.toolchain, sdkFilter: wrappedSDKFilter)
+				let buildProgress = buildScheme(scheme, withConfiguration: options.configuration, inProject: project, workingDirectoryURL: directoryURL, derivedDataPath: options.derivedDataPath, toolchain: options.toolchain, cachedBinariesPath: cachedBinariesPath, sdkFilter: wrappedSDKFilter)
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for
 					// completion.

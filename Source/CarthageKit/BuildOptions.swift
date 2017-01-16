@@ -16,11 +16,14 @@ public struct BuildOptions {
 	public let toolchain: String?
 	/// The path to the custom derived data folder.
 	public let derivedDataPath: String?
+	/// The path to the cached binaries folder.
+	public let useBuildProductsCache: Bool
 
-	public init(configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil) {
+	public init(configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil, useBuildProductsCache: Bool = false) {
 		self.configuration = configuration
 		self.platforms = platforms
 		self.toolchain = toolchain
 		self.derivedDataPath = derivedDataPath
+		self.useBuildProductsCache = useBuildProductsCache
 	}
 }
