@@ -1,5 +1,9 @@
 import Foundation
+#if swift(>=3)
+import ReactiveSwift
+#else
 import ReactiveCocoa
+#endif
 
 /// Describes how to locate the actual project or workspace that Xcode should
 /// build.

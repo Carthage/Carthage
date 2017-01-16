@@ -8,7 +8,11 @@
 
 import Foundation
 import Result
+#if swift(>=3)
+import ReactiveSwift
+#else
 import ReactiveCocoa
+#endif
 import ReactiveTask
 
 /// Zips the given input paths (recursively) into an archive that will be
