@@ -690,19 +690,12 @@ public final class Project {
 		let symlinksProducer = SignalProducer(values: subDependencyNames)
 			.filter { name in
 				let checkoutURL = rootCheckoutsURL.appendingPathComponent(name)
-				let isDirectory: Bool
-				do {
-					var value: AnyObject?
-					try checkoutURL.getResourceValue(&value, forKey: NSURLIsDirectoryKey)
-					if let value = value {
-						isDirectory = value.boolValue
-					} else {
-						return false
-					}
-				} catch {
+				var value: AnyObject?
+				if let _ = try? checkoutURL.getResourceValue(&value, forKey: NSURLIsDirectoryKey), let value = value {
+					return value.boolValue
+				} else {
 					return false
 				}
-				return isDirectory
 			}
 			.attemptMap { name -> Result<(), CarthageError> in
 				let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
