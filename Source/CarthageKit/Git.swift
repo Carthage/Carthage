@@ -265,7 +265,9 @@ public func contentsOfFileInRepository(_ repositoryFileURL: URL, _ path: String,
 /// Checks out the working tree of the given (ideally bare) repository, at the
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
-public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDirectoryURL: URL, revision: String = "HEAD", shouldCloneSubmodule: @escaping (Submodule) -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
+///
+/// Submodules of the working tree must be handled seperately.
+public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD") -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt { () -> Result<[String: String], CarthageError> in
 			do {
 				try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true)
@@ -277,22 +279,8 @@ public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDir
 			environment["GIT_WORK_TREE"] = workingDirectoryURL.carthage_path
 			return .success(environment)
 		}
-		.flatMap(.concat) { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
-		.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision, shouldCloneSubmodule: shouldCloneSubmodule))
-}
-
-/// Clones matching submodules for the given repository at the specified
-/// revision, into the given working directory.
-public func cloneSubmodulesForRepository(_ repositoryFileURL: URL, _ workingDirectoryURL: URL, revision: String = "HEAD", shouldCloneSubmodule: @escaping (Submodule) -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
-	return submodulesInRepository(repositoryFileURL, revision: revision)
-		.flatMap(.concat) { submodule -> SignalProducer<(), CarthageError> in
-			if shouldCloneSubmodule(submodule) {
-				return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
-			} else {
-				return .empty
-			}
-		}
-		.filter { _ in false }
+		.flatMap(.Concat) { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
+		.then(.empty)
 }
 
 /// Clones the given submodule into the working directory of its parent
