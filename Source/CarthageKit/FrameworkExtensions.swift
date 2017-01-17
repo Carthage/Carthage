@@ -264,10 +264,6 @@ extension URL {
 		return .failure(.readFailed(self, error))
 	}
 
-	public var carthage_absoluteString: String {
-		return absoluteString!
-	}
-
 	public func hasSubdirectory(possibleSubdirectory: URL) -> Bool {
 		let standardizedSelf = self.standardizedFileURL
 		let standardizedOther = possibleSubdirectory.standardizedFileURL
