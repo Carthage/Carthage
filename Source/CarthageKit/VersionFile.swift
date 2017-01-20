@@ -33,37 +33,18 @@ extension CachedFramework: Decodable {
 	}
 }
 
-private struct CachedPlatform {
+private struct VersionFile {
 	let commitish: String
-	let cachedFrameworks: [CachedFramework]
+	// TODO: Xcode/Clang version
+	
+	let macOS: [CachedFramework]?
+	let iOS: [CachedFramework]?
+	let watchOS: [CachedFramework]?
+	let tvOS: [CachedFramework]?
 	
 	static let commitishKey = "commitish"
-	static let cachedFrameworksKey = "cachedFrameworks"
 	
-	func toJSONObject() -> AnyObject {
-		let array = cachedFrameworks.map { $0.toJSONObject() }
-		return [
-			CachedPlatform.commitishKey: commitish,
-			CachedPlatform.cachedFrameworksKey: array
-		]
-	}
-}
-
-extension CachedPlatform: Decodable {
-	static func decode(j: JSON) -> Decoded<CachedPlatform> {
-		return curry(self.init)
-			<^> j <| CachedPlatform.commitishKey
-			<*> j <|| CachedPlatform.cachedFrameworksKey
-	}
-}
-
-private struct VersionFile {
-	let macOS: CachedPlatform?
-	let iOS: CachedPlatform?
-	let watchOS: CachedPlatform?
-	let tvOS: CachedPlatform?
-	
-	func cacheForPlatform(platform: Platform) -> CachedPlatform? {
+	func cachesForPlatform(platform: Platform) -> [CachedFramework]? {
 		switch platform {
 		case .macOS:
 			return macOS
@@ -77,18 +58,23 @@ private struct VersionFile {
 	}
 	
 	func cachedPlatforms() -> Set<Platform> {
-		return Set(Platform.supportedPlatforms.filter { self.cacheForPlatform($0) != nil })
+		return Set(Platform.supportedPlatforms.filter { self.cachesForPlatform($0) != nil })
 	}
 	
 	func toJSONObject() -> AnyObject {
-		return Platform.supportedPlatforms.reduce([String: AnyObject](), combine: { (dict, platform) in
-			var dict = dict
-			dict[platform.rawValue] = cacheForPlatform(platform)?.toJSONObject()
-			return dict
-		})
+		var dict: [String: AnyObject] = [:]
+		dict[VersionFile.commitishKey] = commitish
+		for platform in Platform.supportedPlatforms {
+			if let caches = cachesForPlatform(platform) {
+				dict[platform.rawValue] = caches.map { $0.toJSONObject() }
+			}
+		}
+		return dict
 	}
 	
-	init(macOS: CachedPlatform?, iOS: CachedPlatform?, watchOS: CachedPlatform?, tvOS: CachedPlatform?) {
+	init(commitish: String, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
+		self.commitish = commitish
+		
 		self.macOS = macOS
 		self.iOS = iOS
 		self.watchOS = watchOS
@@ -105,14 +91,16 @@ private struct VersionFile {
 		self = versionFile
 	}
 	
-	func checkPlatform(platform: Platform, commitish: String, rootDirectoryURL: URL) -> Bool {
-		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
-		
-		guard let cachedPlatform = cacheForPlatform(platform) where commitish == cachedPlatform.commitish else {
+	func check(platform: Platform, commitish: String, rootDirectoryURL: URL) -> Bool {
+		guard commitish == self.commitish else {
 			return false
 		}
 		
-		let cachedFrameworks: [CachedFramework] = cachedPlatform.cachedFrameworks
+		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+		guard let cachedFrameworks = cachesForPlatform(platform) else {
+			return false
+		}
+		
 		for cachedFramework in cachedFrameworks {
 			let platformURL = rootBinariesURL.appendingPathComponent(platform.rawValue, isDirectory: true).URLByResolvingSymlinksInPath!
 			let frameworkURL = platformURL.appendingPathComponent("\(cachedFramework.name).framework", isDirectory: true)
@@ -141,10 +129,11 @@ private struct VersionFile {
 extension VersionFile: Decodable {
 	static func decode(j: JSON) -> Decoded<VersionFile> {
 		return curry(self.init)
-			<^> j <|? Platform.macOS.rawValue
-			<*> j <|? Platform.iOS.rawValue
-			<*> j <|? Platform.watchOS.rawValue
-			<*> j <|? Platform.tvOS.rawValue
+			<^> j <| VersionFile.commitishKey
+			<*> j <||? Platform.macOS.rawValue
+			<*> j <||? Platform.iOS.rawValue
+			<*> j <||? Platform.watchOS.rawValue
+			<*> j <||? Platform.tvOS.rawValue
 	}
 }
 
@@ -155,7 +144,7 @@ extension VersionFile: Decodable {
 ///
 /// Returns true if the version file was successfully created.
 public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, buildProductURLs: [URL], rootDirectoryURL: URL) -> Bool {
-	var frameworksByPlatform: [String: [CachedFramework]] = [:]
+	var platformCaches: [String: [CachedFramework]] = [:]
 	
 	for url in buildProductURLs {
 		guard let platformName = url.URLByDeletingLastPathComponent?.lastPathComponent,
@@ -168,42 +157,26 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 		}
 		let cachedFramework = CachedFramework(name: frameworkName, sha1: sha1)
 		
-		var frameworks = frameworksByPlatform[platformName] ?? []
+		var frameworks = platformCaches[platformName] ?? []
 		frameworks.append(cachedFramework)
-		frameworksByPlatform[platformName] = frameworks
-	}
-	
-	var cachedPlatforms: [String: CachedPlatform] = frameworksByPlatform.reduce([:]) { (cachedPlatforms, entry: (platformName: String, cachedFrameworks: [CachedFramework])) in
-		var cachedPlatforms = cachedPlatforms
-		cachedPlatforms[entry.platformName] = CachedPlatform(commitish: dependency.version.commitish, cachedFrameworks: entry.cachedFrameworks)
-		return cachedPlatforms
+		platformCaches[platformName] = frameworks
 	}
 	
 	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
 	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
 	
-	if let oldVersionFile = VersionFile(url: versionFileURL) {
-		for platform in Platform.supportedPlatforms {
-			if let oldCachedPlatform = oldVersionFile.cacheForPlatform(platform) where cachedPlatforms[platform.rawValue] == nil {
-				cachedPlatforms[platform.rawValue] = oldCachedPlatform
-			}
-		}
-	}
-	
 	let versionFile = VersionFile(
-		macOS: cachedPlatforms[Platform.macOS.rawValue],
-		iOS: cachedPlatforms[Platform.iOS.rawValue],
-		watchOS: cachedPlatforms[Platform.watchOS.rawValue],
-		tvOS: cachedPlatforms[Platform.tvOS.rawValue])
+		commitish: dependency.version.commitish,
+		macOS: platformCaches[Platform.macOS.rawValue],
+		iOS: platformCaches[Platform.iOS.rawValue],
+		watchOS: platformCaches[Platform.watchOS.rawValue],
+		tvOS: platformCaches[Platform.tvOS.rawValue])
 	
 	return versionFile.write(to: versionFileURL)
 }
 
-/// Determines whether a dependency can be skipped.  If a version file
-/// for the dependency project exists, and its commitish matches, and
-/// the recorded SHA1s are the same as the computed SHA1s of each
-/// framework in the Carthage/Build directory for the given platforms,
-/// the dependency can be skipped.
+/// Determines whether a dependency can be skipped because it is
+/// already cached.
 ///
 /// If a set of platforms is not provided and a version file exists,
 /// the platforms listed in the version file are used instead.
@@ -220,7 +193,7 @@ public func versionFileMatchesDependency(dependency: Dependency<PinnedVersion>, 
 	let cachedPlatforms = versionFile.cachedPlatforms()
 	let platformsToCheck = platforms.isEmpty ? cachedPlatforms : platforms
 	for platform in platformsToCheck {
-		if !versionFile.checkPlatform(platform, commitish: commitish, rootDirectoryURL: rootDirectoryURL) {
+		if !versionFile.check(platform, commitish: commitish, rootDirectoryURL: rootDirectoryURL) {
 			return false
 		}
 	}

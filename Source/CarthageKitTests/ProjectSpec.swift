@@ -108,11 +108,6 @@ class ProjectSpec: QuickSpec {
 			}
 			
 			it("should rebuild a framework for all platforms even a cached framework is invalid for only a single platform") {
-				// This is a limitation of the current version file implementation: the frameworks for all platforms
-				// are rebuilt even if only a single platform's framework is invalid because the platforms to build for
-				// are not determined until later in the build process (if the platforms to build for are not specified
-				// via build options).
-				
 				let expected: Set = ["Prelude-Mac", "Prelude-iOS", "Either-Mac", "Either-iOS", "Madness-Mac", "Madness-iOS"]
 				
 				let result1 = buildDependencyTest()
