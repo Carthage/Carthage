@@ -9,6 +9,7 @@
 import Foundation
 import Argo
 import Curry
+import ReactiveCocoa
 
 private struct CachedFramework {
 	let name: String
@@ -101,28 +102,27 @@ private struct VersionFile {
 			return false
 		}
 		
-		for cachedFramework in cachedFrameworks {
-			let platformURL = rootBinariesURL.appendingPathComponent(platform.rawValue, isDirectory: true).URLByResolvingSymlinksInPath!
-			let frameworkURL = platformURL.appendingPathComponent("\(cachedFramework.name).framework", isDirectory: true)
-			let frameworkBinaryURL = frameworkURL.appendingPathComponent("\(cachedFramework.name)", isDirectory: false)
-			guard let sha1 = sha1ForFileAtURL(frameworkBinaryURL) where sha1 == cachedFramework.sha1 else {
-				return false
+		do {
+			for cachedFramework in cachedFrameworks {
+				let platformURL = rootBinariesURL.appendingPathComponent(platform.rawValue, isDirectory: true).URLByResolvingSymlinksInPath!
+				let frameworkURL = platformURL.appendingPathComponent("\(cachedFramework.name).framework", isDirectory: true)
+				let frameworkBinaryURL = frameworkURL.appendingPathComponent("\(cachedFramework.name)", isDirectory: false)
+				guard let sha1 = try sha1ForFileAtURL(frameworkBinaryURL) where sha1 == cachedFramework.sha1 else {
+					return false
+				}
 			}
+		}
+		catch {
+			return false
 		}
 		
 		return true
 	}
 	
-	func write(to url: URL) -> Bool {
-		do {
-			let json = toJSONObject()
-			let jsonData = try NSJSONSerialization.dataWithJSONObject(json, options: .PrettyPrinted)
-			try jsonData.writeToURL(url, options: .DataWritingAtomic)
-		}
-		catch {
-			return false
-		}
-		return true
+	func write(to url: URL) throws {
+		let json = toJSONObject()
+		let jsonData = try NSJSONSerialization.dataWithJSONObject(json, options: .PrettyPrinted)
+		try jsonData.writeToURL(url, options: .DataWritingAtomic)
 	}
 }
 
@@ -142,44 +142,67 @@ extension VersionFile: Decodable {
 /// the SHA1s of the built frameworks for each platform in order
 /// to allow those frameworks to be skipped in future builds.
 ///
-/// Returns true if the version file was successfully created.
-public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, buildProductURLs: [URL], rootDirectoryURL: URL) -> Bool {
-	var platformCaches: [String: [CachedFramework]] = [:]
-	
-	for url in buildProductURLs {
-		guard let platformName = url.URLByDeletingLastPathComponent?.lastPathComponent,
-			let frameworkName = url.URLByDeletingPathExtension?.lastPathComponent else {
-			return false
-		}
-		let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
-		guard let sha1 = sha1ForFileAtURL(frameworkURL) else {
-			return false
-		}
-		let cachedFramework = CachedFramework(name: frameworkName, sha1: sha1)
+/// Returns a signal that succeeds once the file has been created.
+public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, buildProductURLs: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+	return SignalProducer.attempt {
+			var platformCaches: [String: [CachedFramework]] = [:]
 		
-		var frameworks = platformCaches[platformName] ?? []
-		frameworks.append(cachedFramework)
-		platformCaches[platformName] = frameworks
-	}
-	
-	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
-	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
-	
-	let versionFile = VersionFile(
-		commitish: dependency.version.commitish,
-		macOS: platformCaches[Platform.macOS.rawValue],
-		iOS: platformCaches[Platform.iOS.rawValue],
-		watchOS: platformCaches[Platform.watchOS.rawValue],
-		tvOS: platformCaches[Platform.tvOS.rawValue])
-	
-	return versionFile.write(to: versionFileURL)
+			let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
+			for platform in platformsToCache {
+				platformCaches[platform.rawValue] = []
+			}
+			
+			for url in buildProductURLs {
+				guard let platformName = url.URLByDeletingLastPathComponent?.lastPathComponent,
+					let frameworkName = url.URLByDeletingPathExtension?.lastPathComponent else {
+					return .failure(.versionFileError(description: "unable to construct version file path"))
+				}
+				let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
+				do {
+					guard let sha1 = try sha1ForFileAtURL(frameworkURL) else {
+						return .failure(.versionFileError(description: "unable to generate sha1 for framework"))
+					}
+					let cachedFramework = CachedFramework(name: frameworkName, sha1: sha1)
+					
+					if var frameworks = platformCaches[platformName] {
+						frameworks.append(cachedFramework)
+						platformCaches[platformName] = frameworks
+					}
+					else {
+						return .failure(.versionFileError(description: "unexpected platform found in path"))
+					}
+				}
+				catch let error as NSError {
+					return .failure(.readFailed(frameworkURL, error))
+				}
+			}
+			
+			let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+			let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
+			
+			let versionFile = VersionFile(
+				commitish: dependency.version.commitish,
+				macOS: platformCaches[Platform.macOS.rawValue],
+				iOS: platformCaches[Platform.iOS.rawValue],
+				watchOS: platformCaches[Platform.watchOS.rawValue],
+				tvOS: platformCaches[Platform.tvOS.rawValue])
+		
+			do {
+				try versionFile.write(to: versionFileURL)
+			}
+			catch let error as NSError {
+				return .failure(.writeFailed(versionFileURL, error))
+			}
+		
+			return .success(())
+		}
 }
 
 /// Determines whether a dependency can be skipped because it is
 /// already cached.
 ///
 /// If a set of platforms is not provided and a version file exists,
-/// the platforms listed in the version file are used instead.
+/// the platforms in the version file are used instead.
 ///
 /// Returns true if the the dependency can be skipped.
 public func versionFileMatchesDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, rootDirectoryURL: URL) -> Bool {
@@ -201,10 +224,10 @@ public func versionFileMatchesDependency(dependency: Dependency<PinnedVersion>, 
 	return true
 }
 
-private func sha1ForFileAtURL(frameworkFileURL: URL) -> String? {
+private func sha1ForFileAtURL(frameworkFileURL: URL) throws -> String? {
 	guard let path = frameworkFileURL.path where NSFileManager.defaultManager().fileExistsAtPath(path) else {
 		return nil
 	}
-	let frameworkData = try? NSData(contentsOfFile: path, options: .DataReadingMappedAlways)
-	return frameworkData?.sha1()?.toHexString() // shasum
+	let frameworkData = try NSData(contentsOfFile: path, options: .DataReadingMappedAlways)
+	return frameworkData.sha1()?.toHexString() // shasum
 }

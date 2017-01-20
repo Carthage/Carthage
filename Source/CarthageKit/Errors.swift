@@ -83,6 +83,9 @@ public enum CarthageError: ErrorType, Equatable {
 
 	/// An error occurred while shelling out.
 	case taskError(TaskError)
+	
+	/// An error occurred while generating the version file.
+	case versionFileError(description: String)
 }
 
 private func == (lhs: CarthageError.VersionRequirement, rhs: CarthageError.VersionRequirement) -> Bool {
@@ -271,6 +274,9 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .taskError(taskError):
 			return taskError.description
+			
+		case let .versionFileError(description):
+			return "Caching error: \(description)"
 		}
 	}
 }

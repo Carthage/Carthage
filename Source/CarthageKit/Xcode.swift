@@ -705,15 +705,14 @@ public func buildInDirectory(directoryURL: URL, withOptions options: BuildOption
 				let versionFileSignal: Signal<TaskEvent<(ProjectLocator, String)>, CarthageError> = signal
 						.ignoreTaskData()
 						.collect()
-						.on(next: { (urls: [URL]) in
+						.flatMap(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
 							guard let dependency = dependency, rootDirectoryURL = rootDirectoryURL else {
-								return
+								return .empty
 							}
-							if !createVersionFileForDependency(dependency, forPlatforms: options.platforms, buildProductURLs: urls, rootDirectoryURL: rootDirectoryURL) {
-								NSLog("Warning: Version file could not be created for \(dependency.project.name)")
-							}
-						})
-						.map { (urls: [URL]) -> TaskEvent<(ProjectLocator, String)> in
+							return createVersionFileForDependency(dependency, forPlatforms: options.platforms, buildProductURLs: urls, rootDirectoryURL: rootDirectoryURL)
+								.flatMapError { _ in .empty }
+						}
+						.map { _ -> TaskEvent<(ProjectLocator, String)> in
 							return .success(ignoredValue)
 						}
 						.filter { taskEvent in
