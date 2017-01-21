@@ -90,7 +90,7 @@ public struct BuildCommand: CommandType {
 						switch event {
 						case .Launch, .Success:
 							return true
-						case .StandardError, .StandardOutput:
+						case .StandardOutput, .StandardError:
 							return false
 						}
 					}
