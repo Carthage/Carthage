@@ -97,11 +97,11 @@ public struct BuildCommand: CommandType {
 				}
 
 				return buildProgress
-					.flatMapError { error in
+					.mapError { error in
 						if case let .buildFailed(taskError, _) = error {
-							return SignalProducer(error: .buildFailed(taskError, log: temporaryURL))
+							return .buildFailed(taskError, log: temporaryURL)
 						} else {
-							return SignalProducer(error: error)
+							return error
 						}
 					}
 					.on(
