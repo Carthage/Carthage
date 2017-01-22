@@ -687,6 +687,13 @@ public func buildInDirectory(directoryURL: URL, withOptions options: BuildOption
 				}
 
 				let buildProgress = buildScheme(scheme, withConfiguration: options.configuration, inProject: project, workingDirectoryURL: directoryURL, derivedDataPath: options.derivedDataPath, toolchain: options.toolchain, sdkFilter: wrappedSDKFilter)
+					.mapError { (error) -> CarthageError in
+						if case let .taskError(taskError) = error {
+							return .buildFailed(taskError, log: nil)
+						} else {
+							return error
+						}
+					}
 					// Discard any existing Success values, since we want to
 					// use our initial value instead of waiting for
 					// completion.
