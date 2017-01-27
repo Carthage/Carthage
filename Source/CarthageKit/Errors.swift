@@ -7,7 +7,11 @@
 //
 
 import Foundation
+#if swift(>=3)
+import ReactiveSwift
+#else
 import ReactiveCocoa
+#endif
 import ReactiveTask
 import Tentacle
 
@@ -80,6 +84,8 @@ public enum CarthageError: ErrorType, Equatable {
 	case gitHubAPIRequestFailed(Client.Error)
 	
 	case gitHubAPITimeout
+	
+	case buildFailed(TaskError, log: URL?)
 
 	/// An error occurred while shelling out.
 	case taskError(TaskError)
@@ -142,6 +148,9 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 		
 	case (.gitHubAPITimeout, .gitHubAPITimeout):
 		return true
+		
+	case let (.buildFailed(la, lb), .buildFailed(ra, rb)):
+		return la == ra && lb == rb
 	
 	case let (.taskError(left), .taskError(right)):
 		return left == right
@@ -271,6 +280,20 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .unresolvedDependencies(names):
 			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile.resolved – please run `carthage update` if the dependency is contained in the project's Cartfile."
+			
+		case let .buildFailed(taskError, log):
+			var message = "Build Failed\n"
+			if case let .ShellTaskFailed(task, exitCode, _) = taskError {
+				message += "\tTask failed with exit code \(exitCode):\n"
+				message += "\t\(task)\n"
+			} else {
+				message += "\t" + taskError.description + "\n"
+			}
+			message += "\nThis usually indicates that project itself failed to compile."
+			if let log = log {
+				message += " Please check the xcodebuild log for more details: \(log.carthage_path)"
+			}
+			return message
 
 		case let .taskError(taskError):
 			return taskError.description

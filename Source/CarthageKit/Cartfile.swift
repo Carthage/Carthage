@@ -8,7 +8,11 @@
 
 import Foundation
 import Result
+#if swift(>=3)
+import ReactiveSwift
+#else
 import ReactiveCocoa
+#endif
 import Tentacle
 
 /// The relative path to a project's checked out dependencies.

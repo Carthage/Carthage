@@ -8,7 +8,11 @@
 
 import Foundation
 import Result
+#if swift(>=3)
+import ReactiveSwift
+#else
 import ReactiveCocoa
+#endif
 
 /// Responsible for resolving acyclic dependency graphs.
 public struct Resolver {

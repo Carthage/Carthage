@@ -1,5 +1,9 @@
 import Foundation
+#if swift(>=3)
+import ReactiveSwift
+#else
 import ReactiveCocoa
+#endif
 import Result
 
 // MARK: - Archive.swift

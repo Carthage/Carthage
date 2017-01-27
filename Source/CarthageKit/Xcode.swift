@@ -8,7 +8,11 @@
 
 import Foundation
 import Result
+#if swift(>=3)
+import ReactiveSwift
+#else
 import ReactiveCocoa
+#endif
 import ReactiveTask
 
 /// The name of the folder into which Carthage puts binaries it builds (relative
@@ -682,6 +686,13 @@ public func buildInDirectory(directoryURL: URL, withOptions options: BuildOption
 				}
 				
 				return buildScheme(scheme, withOptions: options, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
+					.mapError { (error) -> CarthageError in
+						if case let .taskError(taskError) = error {
+							return .buildFailed(taskError, log: nil)
+						} else {
+							return error
+						}
+					}
 					.on(started: {
 						observer.sendNext(.Success(initialValue))
 					})

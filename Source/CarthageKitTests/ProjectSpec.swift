@@ -10,7 +10,11 @@
 import Foundation
 import Nimble
 import Quick
+#if swift(>=3)
+import ReactiveSwift
+#else
 import ReactiveCocoa
+#endif
 import Tentacle
 import Result
 import ReactiveTask

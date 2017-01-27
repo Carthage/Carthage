@@ -84,6 +84,8 @@ When archiving your application for submission to the App Store or TestFlight, X
 
 Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.resolved][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.resolved][]**, because anyone else using the project will need that file to build the same framework versions.
 
+### Running a project that uses Carthage
+
 After you’ve finished the above steps and pushed your changes, other users of the project only need to fetch the repository and run `carthage bootstrap` to get started with the frameworks you’ve added.
 
 ### Adding frameworks to unit tests or a framework

@@ -8,7 +8,11 @@
 
 import Foundation
 import Result
+#if swift(>=3)
+import ReactiveSwift
+#else
 import ReactiveCocoa
+#endif
 
 extension String {
 	/// Returns a producer that will enumerate each line of the receiver, then
@@ -258,10 +262,6 @@ extension URL {
 		}
 
 		return .failure(.readFailed(self, error))
-	}
-
-	public var carthage_absoluteString: String {
-		return absoluteString!
 	}
 
 	public func hasSubdirectory(possibleSubdirectory: URL) -> Bool {

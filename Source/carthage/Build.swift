@@ -10,7 +10,11 @@ import CarthageKit
 import Commandant
 import Foundation
 import Result
+#if swift(>=3)
+import ReactiveSwift
+#else
 import ReactiveCocoa
+#endif
 import ReactiveTask
 
 extension BuildOptions: OptionsType {
@@ -80,65 +84,49 @@ public struct BuildCommand: CommandType {
 
 				let stderrHandle = FileHandle.standardError
 
-				// Redirect any error-looking messages from stdout, because
-				// Xcode doesn't always forward them.
+				let formatting = options.colorOptions.formatting
+				
 				if !options.isVerbose {
-					let (_stdoutSignal, stdoutObserver) = Signal<Data, NoError>.pipe()
-					let stdoutProducer = SignalProducer(_stdoutSignal)
-					let grepTask: BuildSchemeProducer = Task("/usr/bin/grep", arguments: [ "--extended-regexp", "(warning|error|failed):" ]).launch(standardInput: stdoutProducer)
-						.on(next: { taskEvent in
-							switch taskEvent {
-							case let .StandardOutput(data):
-								stderrHandle.write(data)
-
-							default:
-								break
-							}
-						})
-						.flatMapError { _ in .empty }
-						.then(.empty)
-
-					buildProgress = buildProgress
-						.on(next: { taskEvent in
-							switch taskEvent {
-							case let .StandardOutput(data):
-								stdoutObserver.send(value: data)
-
-							default:
-								break
-							}
-						}, terminated: {
-							stdoutObserver.sendCompleted()
-						}, interrupted: {
-							stdoutObserver.sendInterrupted()
-						})
-
-					buildProgress = SignalProducer<BuildSchemeProducer, CarthageError>([ grepTask, buildProgress ])
-						.flatten(.merge)
+					buildProgress = buildProgress.filter { event in
+						switch event {
+						case .Launch, .Success:
+							return true
+						case .StandardOutput, .StandardError:
+							return false
+						}
+					}
 				}
 
-				let formatting = options.colorOptions.formatting
-
 				return buildProgress
-					.on(started: {
-						if let path = temporaryURL?.carthage_path {
-							carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: path))
+					.mapError { error in
+						if case let .buildFailed(taskError, _) = error {
+							return .buildFailed(taskError, log: temporaryURL)
+						} else {
+							return error
 						}
-					}, next: { taskEvent in
-						switch taskEvent {
-						case let .Launch(task):
-							stdoutHandle.write(task.description.data(using: .utf8)!)
-
-						case let .StandardOutput(data):
-							stdoutHandle.write(data)
-
-						case let .StandardError(data):
-							stderrHandle.write(data)
-
-						case let .Success(project, scheme):
-							carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(string: project.description))
+					}
+					.on(
+						started: {
+							if let path = temporaryURL?.carthage_path {
+								carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: path))
+							}
+						},
+						next: { taskEvent in
+							switch taskEvent {
+							case let .Launch(task):
+								stdoutHandle.write(task.description.data(using: .utf8)!)
+								
+							case let .StandardOutput(data):
+								stdoutHandle.write(data)
+								
+							case let .StandardError(data):
+								stderrHandle.write(data)
+								
+							case let .Success(project, scheme):
+								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(string: project.description))
+							}
 						}
-					})
+					)
 					.then(.empty)
 			}
 	}
