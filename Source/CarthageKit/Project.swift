@@ -754,10 +754,20 @@ public final class Project {
 					}
 					.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
 						let (nextDependency, projects) = nextGroup
-						if options.cacheBuilds && self.shouldSkipBuildForDependency(nextDependency, dependencyProjects: projects, dependenciesToBeBuilt: includedDependencies, platforms: options.platforms) {
-							return includedDependencies
+						guard options.cacheBuilds else {
+							return includedDependencies + [nextDependency]
 						}
-						return includedDependencies + [nextDependency]
+
+						var dependenciesToBuild = includedDependencies
+						_ = self.shouldSkipBuildForDependency(nextDependency, dependencyProjects: projects, dependenciesToBeBuilt: includedDependencies, platforms: options.platforms)
+							.on(next: { shouldSkip in
+								if !shouldSkip {
+									dependenciesToBuild.append(nextDependency)
+								}
+							})
+							.wait() // We must wait since subsequent calls to reduce rely on the results of the previous project skipping or not
+
+						return dependenciesToBuild
 					}
 					.flatMap(.concat) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 						SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: dependencies)
@@ -790,16 +800,18 @@ public final class Project {
 	/// listed in its Cartfile.
 	///
 	/// Returns true if the dependency does not need to be rebuilt.
-	private func shouldSkipBuildForDependency(dependency: Dependency<PinnedVersion>, dependencyProjects: Set<ProjectIdentifier>, dependenciesToBeBuilt: [Dependency<PinnedVersion>], platforms: Set<Platform>) -> Bool {
+	private func shouldSkipBuildForDependency(dependency: Dependency<PinnedVersion>, dependencyProjects: Set<ProjectIdentifier>, dependenciesToBeBuilt: [Dependency<PinnedVersion>], platforms: Set<Platform>) -> SignalProducer<Bool, CarthageError> {
 		let projectsToBeBuilt = Set(dependenciesToBeBuilt.map { $0.project })
 		guard dependencyProjects.intersect(projectsToBeBuilt).isEmpty else {
-			return false
+			return .init(value: false)
 		}
-		let versionFilesMatch = versionFileMatchesDependency(dependency, forPlatforms: platforms, rootDirectoryURL: self.directoryURL)
-		if versionFilesMatch {
-			self._projectEventsObserver.sendNext(.skippedBuildingCached(dependency.project))
-		}
-		return versionFilesMatch
+
+		return versionFileMatchesDependency(dependency, forPlatforms: platforms, rootDirectoryURL: self.directoryURL)
+			.on(next: { matches in
+				if matches {
+					self._projectEventsObserver.sendNext(.skippedBuildingCached(dependency.project))
+				}
+			})
 	}
 }
 
