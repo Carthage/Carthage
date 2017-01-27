@@ -10,18 +10,19 @@ import Foundation
 import Argo
 import Curry
 import ReactiveCocoa
+import ReactiveTask
 
 private struct CachedFramework {
 	let name: String
-	let sha1: String
+	let md5: String
 	
 	static let nameKey = "name"
-	static let sha1Key = "sha1"
+	static let md5Key = "md5"
 	
 	func toJSONObject() -> AnyObject {
 		return [
 			CachedFramework.nameKey: name,
-			CachedFramework.sha1Key: sha1
+			CachedFramework.md5Key: md5
 		]
 	}
 }
@@ -30,7 +31,7 @@ extension CachedFramework: Decodable {
 	static func decode(j: JSON) -> Decoded<CachedFramework> {
 		return curry(self.init)
 			<^> j <| CachedFramework.nameKey
-			<*> j <| CachedFramework.sha1Key
+			<*> j <| CachedFramework.md5Key
 	}
 }
 
@@ -107,7 +108,7 @@ private struct VersionFile {
 				let platformURL = rootBinariesURL.appendingPathComponent(platform.rawValue, isDirectory: true).URLByResolvingSymlinksInPath!
 				let frameworkURL = platformURL.appendingPathComponent("\(cachedFramework.name).framework", isDirectory: true)
 				let frameworkBinaryURL = frameworkURL.appendingPathComponent("\(cachedFramework.name)", isDirectory: false)
-				guard let sha1 = try sha1ForFileAtURL(frameworkBinaryURL) where sha1 == cachedFramework.sha1 else {
+				guard let md5 = try md5ForFileAtURL(frameworkBinaryURL) where md5 == cachedFramework.md5 else {
 					return false
 				}
 			}
@@ -159,10 +160,10 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 				}
 				let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
 				do {
-					guard let sha1 = try sha1ForFileAtURL(frameworkURL) else {
-						return .failure(.versionFileError(description: "unable to generate sha1 for framework"))
+					guard let md5 = try md5ForFileAtURL(frameworkURL) else {
+						return .failure(.versionFileError(description: "unable to generate md5 for framework"))
 					}
-					let cachedFramework = CachedFramework(name: frameworkName, sha1: sha1)
+					let cachedFramework = CachedFramework(name: frameworkName, md5: md5)
 					
 					if var frameworks = platformCaches[platformName] {
 						frameworks.append(cachedFramework)
@@ -224,7 +225,7 @@ public func versionFileMatchesDependency(dependency: Dependency<PinnedVersion>, 
 	return true
 }
 
-private func sha1ForFileAtURL(frameworkFileURL: URL) throws -> String? {
+private func md5ForFileAtURL(frameworkFileURL: URL) throws -> String? {
 	guard let path = frameworkFileURL.path where NSFileManager.defaultManager().fileExistsAtPath(path) else {
 		return nil
 	}

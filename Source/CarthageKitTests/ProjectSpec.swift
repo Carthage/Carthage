@@ -70,7 +70,7 @@ class ProjectSpec: QuickSpec {
 				expect(result3).to(equal(expected))
 			}
 			
-			it("should rebuild cached frameworks (and dependencies) whose sha1 does not match the version file") {
+			it("should rebuild cached frameworks (and dependencies) whose md5 does not match the version file") {
 				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
 				
 				let result1 = buildDependencyTest(platforms: [.macOS])
