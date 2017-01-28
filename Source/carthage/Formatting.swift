@@ -13,7 +13,7 @@ import Result
 import PrettyColors
 
 /// Wraps a string with terminal colors and formatting or passes it through, depending on `isColorful`.
-private func wrap(isColorful: Bool, wrap: Color.Wrap) -> (String) -> String {
+private func wrap(_ isColorful: Bool, wrap: Color.Wrap) -> (String) -> String {
 	return { string in
 		return isColorful ? wrap.wrap(string) : string
 	}
@@ -82,17 +82,17 @@ public struct ColorOptions: OptionsType {
 		}
 
 		/// Wraps a string in bullets, one space of padding, and formatting.
-		func bulletinTitle(string: String) -> String {
+		func bulletinTitle(_ string: String) -> String {
 			return bulletin(string: "*** " + string + " ***")
 		}
 
 		/// Wraps a string in quotation marks and formatting.
-		func quote(string: String, quotationMark: String = "\"") -> String {
+		func quote(_ string: String, quotationMark: String = "\"") -> String {
 			return wrap(isColorful, wrap: Color.Wrap(foreground: .green))(quotationMark + string + quotationMark)
 		}
 	}
 	
-	public static func create(argument: ColorArgument) -> ColorOptions {
+	public static func create(_ argument: ColorArgument) -> ColorOptions {
 		return self.init(argument: argument, formatting: Formatting(argument.isColorful))
 	}
 	

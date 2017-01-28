@@ -23,7 +23,7 @@ public struct OutdatedCommand: CommandType {
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
 		
-		public static func create(useSSH: Bool) -> (Bool) -> (ColorOptions) -> (String) -> Options {
+		public static func create(_ useSSH: Bool) -> (Bool) -> (ColorOptions) -> (String) -> Options {
 			return { isVerbose in { colorOptions in { directoryPath in
 				return self.init(useSSH: useSSH, isVerbose: isVerbose, colorOptions: colorOptions, directoryPath: directoryPath)
 			} } }

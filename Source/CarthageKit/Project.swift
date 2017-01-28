@@ -180,7 +180,7 @@ public final class Project {
 		let cartfileURL = directoryURL.appendingPathComponent(CarthageProjectCartfilePath, isDirectory: false)
 		let privateCartfileURL = directoryURL.appendingPathComponent(CarthageProjectPrivateCartfilePath, isDirectory: false)
 
-		func isNoSuchFileError(error: CarthageError) -> Bool {
+		func isNoSuchFileError(_ error: CarthageError) -> Bool {
 			switch error {
 			case let .readFailed(_, underlyingError):
 				if let underlyingError = underlyingError {
@@ -244,7 +244,7 @@ public final class Project {
 	}
 
 	/// Writes the given Cartfile.resolved out to the project's directory.
-	public func writeResolvedCartfile(resolvedCartfile: ResolvedCartfile) -> Result<(), CarthageError> {
+	public func writeResolvedCartfile(_ resolvedCartfile: ResolvedCartfile) -> Result<(), CarthageError> {
 		do {
 			try resolvedCartfile.description.write(to: resolvedCartfileURL, atomically: true, encoding: .utf8)
 			return .success(())
@@ -270,7 +270,7 @@ public final class Project {
 	///
 	/// Returns a signal which will send the URL to the repository's folder on
 	/// disk once cloning or fetching has completed.
-	private func cloneOrFetchDependency(project: ProjectIdentifier, commitish: String? = nil) -> SignalProducer<URL, CarthageError> {
+	private func cloneOrFetchDependency(_ project: ProjectIdentifier, commitish: String? = nil) -> SignalProducer<URL, CarthageError> {
 		return cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS, commitish: commitish)
 			.on(next: { event, _ in
 				if let event = event {
@@ -332,7 +332,7 @@ public final class Project {
 	}
 
 	/// Attempts to resolve a Git reference to a version.
-	private func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
+	private func resolvedGitReference(_ project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
 		let repositoryURL = repositoryFileURLForProject(project)
 		return cloneOrFetchDependency(project, commitish: reference)
 			.flatMap(.concat) { _ in
@@ -353,7 +353,7 @@ public final class Project {
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func updatedResolvedCartfile(dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
+	public func updatedResolvedCartfile(_ dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
 		let resolver = Resolver(versionsForDependency: versions(for:), dependenciesForDependency: dependencies(for:), resolvedGitReference: resolvedGitReference)
 
 		let resolvedCartfile: SignalProducer<ResolvedCartfile?, CarthageError> = loadResolvedCartfile()
@@ -379,7 +379,7 @@ public final class Project {
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func outdatedDependencies(includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], CarthageError> {
+	public func outdatedDependencies(_ includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], CarthageError> {
 		typealias PinnedDependency = Dependency<PinnedVersion>
 		typealias OutdatedDependency = (PinnedDependency, PinnedDependency)
 
@@ -432,7 +432,7 @@ public final class Project {
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-	private func installBinariesForProject(project: ProjectIdentifier, atRevision revision: String) -> SignalProducer<Bool, CarthageError> {
+	private func installBinariesForProject(_ project: ProjectIdentifier, atRevision revision: String) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer.attempt {
 				return .success(self.useBinaries)
 			}
@@ -488,7 +488,7 @@ public final class Project {
 	///
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
-	private func downloadMatchingBinariesForProject(project: ProjectIdentifier, atRevision revision: String, fromRepository repository: Repository, client: Client) -> SignalProducer<URL, CarthageError> {
+	private func downloadMatchingBinariesForProject(_ project: ProjectIdentifier, atRevision revision: String, fromRepository repository: Repository, client: Client) -> SignalProducer<URL, CarthageError> {
 		return client.release(forTag: revision, in: repository)
 			.map { _, release in release }
 			.filter { release in
@@ -538,7 +538,7 @@ public final class Project {
 	/// folder.
 	///
 	/// Sends the URL to the framework after copying.
-	private func copyFrameworkToBuildFolder(frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
+	private func copyFrameworkToBuildFolder(_ frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
 		return platformForFramework(frameworkURL)
 			.flatMap(.merge) { platform -> SignalProducer<URL, CarthageError> in
 				let platformFolderURL = self.directoryURL.appendingPathComponent(platform.relativePath, isDirectory: true)
@@ -553,7 +553,7 @@ public final class Project {
 	/// If no dSYM is found for the given framework, completes with no values.
 	///
 	/// Sends the URL of the dSYM after copying.
-	public func copyDSYMToBuildFolderForFramework(frameworkURL: URL, fromDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+	public func copyDSYMToBuildFolderForFramework(_ frameworkURL: URL, fromDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 		let destinationDirectoryURL = frameworkURL.deletingLastPathComponent()
 		return dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
@@ -567,7 +567,7 @@ public final class Project {
 	/// no values.
 	///
 	/// Sends the URLs of the bcsymbolmap files after copying.
-	public func copyBCSymbolMapsToBuildFolderForFramework(frameworkURL: URL, fromDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+	public func copyBCSymbolMapsToBuildFolderForFramework(_ frameworkURL: URL, fromDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 		let destinationDirectoryURL = frameworkURL.deletingLastPathComponent()
 		return BCSymbolMapsForFramework(frameworkURL, inDirectoryURL: directoryURL)
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
@@ -575,7 +575,7 @@ public final class Project {
 
 	/// Checks out the given dependency into its intended working directory,
 	/// cloning it first if need be.
-	private func checkoutOrCloneDependency(dependency: Dependency<PinnedVersion>, submodulesByPath: [String: Submodule]) -> SignalProducer<(), CarthageError> {
+	private func checkoutOrCloneDependency(_ dependency: Dependency<PinnedVersion>, submodulesByPath: [String: Submodule]) -> SignalProducer<(), CarthageError> {
 		let project = dependency.project
 		let revision = dependency.version.commitish
 		return cloneOrFetchDependency(project, commitish: revision)
@@ -607,7 +607,7 @@ public final class Project {
 			})
 	}
 	
-	public func buildOrderForResolvedCartfile(cartfile: ResolvedCartfile, dependenciesToInclude: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	public func buildOrderForResolvedCartfile(_ cartfile: ResolvedCartfile, dependenciesToInclude: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		typealias DependencyGraph = [ProjectIdentifier: Set<ProjectIdentifier>]
 		// A resolved cartfile already has all the recursive dependencies. All we need to do is sort
 		// out the relationships between them. Loading the cartfile will each will give us its
@@ -644,7 +644,7 @@ public final class Project {
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
 	/// optionally they are limited by the given list of dependency names.
-	public func checkoutResolvedDependencies(dependenciesToCheckout: [String]? = nil) -> SignalProducer<(), CarthageError> {
+	public func checkoutResolvedDependencies(_ dependenciesToCheckout: [String]? = nil) -> SignalProducer<(), CarthageError> {
 		/// Determine whether the repository currently holds any submodules (if
 		/// it even is a repository).
 		let submodulesSignal = submodulesInRepository(self.directoryURL)
@@ -689,7 +689,7 @@ public final class Project {
 	}
 
 	/// Creates symlink between the dependency checkouts and the root checkouts
-	private func symlinkCheckoutPathsForDependencyProject(dependency: ProjectIdentifier, subDependencies: Set<ProjectIdentifier>, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+	private func symlinkCheckoutPathsForDependencyProject(_ dependency: ProjectIdentifier, subDependencies: Set<ProjectIdentifier>, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 		let rootCheckoutsURL = rootDirectoryURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
@@ -739,7 +739,7 @@ public final class Project {
 	/// optionally they are limited by the given list of dependency names.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithOptions(options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	public func buildCheckedOutDependenciesWithOptions(_ options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.merge) { resolvedCartfile in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
@@ -770,7 +770,7 @@ public final class Project {
 
 /// Constructs a file URL to where the binary corresponding to the given
 /// arguments should live.
-private func fileURLToCachedBinary(project: ProjectIdentifier, _ release: Release, _ asset: Release.Asset) -> URL {
+private func fileURLToCachedBinary(_ project: ProjectIdentifier, _ release: Release, _ asset: Release.Asset) -> URL {
 	// ~/Library/Caches/org.carthage.CarthageKit/binaries/ReactiveCocoa/v2.3.1/1234-ReactiveCocoa.framework.zip
 	return CarthageDependencyAssetsURL.appendingPathComponent("\(project.name)/\(release.tag)/\(asset.ID)-\(asset.name)", isDirectory: false)
 }
@@ -779,7 +779,7 @@ private func fileURLToCachedBinary(project: ProjectIdentifier, _ release: Releas
 /// given.
 ///
 /// Sends the final file URL upon .success.
-private func cacheDownloadedBinary(downloadURL: URL, toURL cachedURL: URL) -> SignalProducer<URL, CarthageError> {
+private func cacheDownloadedBinary(_ downloadURL: URL, toURL cachedURL: URL) -> SignalProducer<URL, CarthageError> {
 	return SignalProducer(value: cachedURL)
 		.attempt { fileURL in
 			let parentDirectoryURL = fileURL.deletingLastPathComponent()
@@ -821,7 +821,7 @@ private func cacheDownloadedBinary(downloadURL: URL, toURL cachedURL: URL) -> Si
 
 /// Sends the URL to each file found in the given directory conforming to the
 /// given type identifier. If no type identifier is provided, all files are sent.
-private func filesInDirectory(directoryURL: URL, _ typeIdentifier: String? = nil) -> SignalProducer<URL, CarthageError> {
+private func filesInDirectory(_ directoryURL: URL, _ typeIdentifier: String? = nil) -> SignalProducer<URL, CarthageError> {
 	let producer = FileManager.`default`.carthage_enumerator(at: directoryURL, includingPropertiesForKeys: [ .typeIdentifierKey ], options: [ .skipsHiddenFiles, .skipsPackageDescendants ], catchErrors: true)
 		.map { enumerator, url in url }
 	if let typeIdentifier = typeIdentifier {
@@ -838,14 +838,14 @@ private func filesInDirectory(directoryURL: URL, _ typeIdentifier: String? = nil
 }
 
 /// Sends the platform specified in the given Info.plist.
-private func platformForFramework(frameworkURL: URL) -> SignalProducer<Platform, CarthageError> {
+private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, CarthageError> {
 	return SignalProducer(value: frameworkURL)
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used
 		// because Xcode 6 and below do not include either in macOS frameworks.
 		.attemptMap { url -> Result<String, CarthageError> in
 			let bundle = Bundle(url: url)
 
-			func readFailed(message: String) -> CarthageError {
+			func readFailed(_ message: String) -> CarthageError {
 				let error = Result<(), NSError>.error(message)
 				return .readFailed(frameworkURL, error)
 			}
@@ -867,7 +867,7 @@ private func platformForFramework(frameworkURL: URL) -> SignalProducer<Platform,
 }
 
 /// Sends the URL to each framework bundle found in the given directory.
-private func frameworksInDirectory(directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
 		.filter { url in
 			// Skip nested frameworks
@@ -879,13 +879,13 @@ private func frameworksInDirectory(directoryURL: URL) -> SignalProducer<URL, Car
 }
 
 /// Sends the URL to each dSYM found in the given directory
-private func dSYMsInDirectory(directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+private func dSYMsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, "com.apple.xcode.dsym")
 }
 
 /// Sends the URL of the dSYM whose UUIDs match those of the given framework, or
 /// errors if there was an error parsing a dSYM contained within the directory.
-private func dSYMForFramework(frameworkURL: URL, inDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+private func dSYMForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return UUIDsForFramework(frameworkURL)
 		.flatMap(.concat) { frameworkUUIDs in
 			return dSYMsInDirectory(directoryURL)
@@ -901,20 +901,20 @@ private func dSYMForFramework(frameworkURL: URL, inDirectoryURL directoryURL: UR
 }
 
 /// Sends the URL to each bcsymbolmap found in the given directory.
-private func BCSymbolMapsInDirectory(directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+private func BCSymbolMapsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL)
 		.filter { url in url.pathExtension == "bcsymbolmap" }
 }
 
 /// Sends the URLs of the bcsymbolmap files that match the given framework and are
 /// located somewhere within the given directory.
-private func BCSymbolMapsForFramework(frameworkURL: URL, inDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+private func BCSymbolMapsForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return UUIDsForFramework(frameworkURL)
 		.flatMap(.merge) { uuids -> SignalProducer<URL, CarthageError> in
 			if uuids.isEmpty {
 				return .empty
 			}
-			func filterUUIDs(signal: Signal<URL, CarthageError>) -> Signal<URL, CarthageError> {
+			func filterUUIDs(_ signal: Signal<URL, CarthageError>) -> Signal<URL, CarthageError> {
 				var remainingUUIDs = uuids
 				let count = remainingUUIDs.count
 				return signal
@@ -935,13 +935,13 @@ private func BCSymbolMapsForFramework(frameworkURL: URL, inDirectoryURL director
 
 /// Returns the file URL at which the given project's repository will be
 /// located.
-private func repositoryFileURLForProject(project: ProjectIdentifier, baseURL: URL = CarthageDependencyRepositoriesURL) -> URL {
+private func repositoryFileURLForProject(_ project: ProjectIdentifier, baseURL: URL = CarthageDependencyRepositoriesURL) -> URL {
 	return baseURL.appendingPathComponent(project.name, isDirectory: true)
 }
 
 
 /// Returns the URL that the project's remote repository exists at.
-private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bool) -> GitURL {
+private func repositoryURLForProject(_ project: ProjectIdentifier, preferHTTPS: Bool) -> GitURL {
 	switch project {
 	case let .gitHub(repository):
 		if preferHTTPS {
@@ -956,7 +956,7 @@ private func repositoryURLForProject(project: ProjectIdentifier, preferHTTPS: Bo
 }
 
 /// Returns the string representing a relative path from a dependency project back to the root
-internal func relativeLinkDestinationForDependencyProject(dependency: ProjectIdentifier, subdirectory: String) -> String {
+internal func relativeLinkDestinationForDependencyProject(_ dependency: ProjectIdentifier, subdirectory: String) -> String {
 	let dependencySubdirectoryPath = (dependency.relativePath as NSString).appendingPathComponent(subdirectory)
 	let componentsForGettingTheHellOutOfThisRelativePath = Array(count: (dependencySubdirectoryPath as NSString).pathComponents.count - 1, repeatedValue: "..")
 
@@ -975,7 +975,7 @@ internal func relativeLinkDestinationForDependencyProject(dependency: ProjectIde
 /// Returns a signal which will send the operation type once started, and
 /// the URL to where the repository's folder will exist on disk, then complete
 /// when the operation completes.
-public func cloneOrFetchProject(project: ProjectIdentifier, preferHTTPS: Bool, destinationURL: URL = CarthageDependencyRepositoriesURL, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
+public func cloneOrFetchProject(_ project: ProjectIdentifier, preferHTTPS: Bool, destinationURL: URL = CarthageDependencyRepositoriesURL, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
 	let fileManager = FileManager.`default`
 	let repositoryURL = repositoryFileURLForProject(project, baseURL: destinationURL)
 

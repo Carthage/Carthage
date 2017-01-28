@@ -91,11 +91,11 @@ public enum CarthageError: ErrorType, Equatable {
 	case taskError(TaskError)
 }
 
-private func == (lhs: CarthageError.VersionRequirement, rhs: CarthageError.VersionRequirement) -> Bool {
+private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
 	return lhs.specifier == rhs.specifier && lhs.fromProject == rhs.fromProject
 }
 
-public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
+public func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
 	switch (lhs, rhs) {
 	case let (.invalidArgument(left), .invalidArgument(right)):
 		return left == right
@@ -332,11 +332,11 @@ extension DuplicateDependency: CustomStringConvertible {
 	}
 }
 
-public func == (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
+public func == (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
 	return lhs.project == rhs.project && lhs.locations == rhs.locations
 }
 
-public func < (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
+public func < (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
 	if lhs.description < rhs.description {
 		return true
 	}

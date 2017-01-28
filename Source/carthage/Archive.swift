@@ -23,7 +23,7 @@ public struct ArchiveCommand: CommandType {
 		public let colorOptions: ColorOptions
 		public let frameworkNames: [String]
 
-		static func create(outputPath: String?) -> (String) -> (ColorOptions) -> ([String]) -> Options {
+		static func create(_ outputPath: String?) -> (String) -> (ColorOptions) -> ([String]) -> Options {
 			return { directoryPath in { colorOptions in { frameworkNames in
 				return self.init(outputPath: outputPath, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: frameworkNames)
 			} } }
@@ -135,7 +135,7 @@ public struct ArchiveCommand: CommandType {
 
 /// Returns an appropriate output file path for the resulting zip file using
 /// the given option and frameworks.
-private func outputPathWithOptions(options: ArchiveCommand.Options, frameworks: [String]) -> String {
+private func outputPathWithOptions(_ options: ArchiveCommand.Options, frameworks: [String]) -> String {
 	let defaultOutputPath = "\(frameworks.first!).zip"
 
 	return options.outputPath.map { path -> String in

@@ -10,7 +10,7 @@ import CarthageKit
 import Foundation
 import Result
 
-internal func getEnvironmentVariable(variable: String) -> Result<String, CarthageError> {
+internal func getEnvironmentVariable(_ variable: String) -> Result<String, CarthageError> {
 	let environment = ProcessInfo.processInfo.environment
 
 	if let value = environment[variable] {
