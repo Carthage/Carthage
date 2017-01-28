@@ -136,7 +136,7 @@ public struct Resolver {
 	/// In other words, this attempts to create one transformed graph for each
 	/// possible permutation of the dependencies for the given node (chosen from
 	/// among the verisons that actually exist for each).
-	private func graphsForDependenciesOfNode(node: DependencyNode, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
+	private func graphsForDependenciesOfNode(_ node: DependencyNode, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		let scheduler = QueueScheduler(qos: QOS_CLASS_DEFAULT, name: "org.carthage.CarthageKit.Resolver.graphsForDependenciesOfNode")
 
 		return dependenciesForDependency(node.dependencyVersion)
@@ -272,7 +272,7 @@ private struct DependencyGraph: Equatable {
 	/// Returns the node as actually inserted into the graph (which may be
 	/// different from the node passed in), or an error if this addition would
 	/// make the graph inconsistent.
-	mutating func addNode(node: DependencyNode, dependencyOf: DependencyNode?) -> Result<DependencyNode, CarthageError> {
+	mutating func addNode(_ node: DependencyNode, dependencyOf: DependencyNode?) -> Result<DependencyNode, CarthageError> {
 		var node = node
 
 		if let index = allNodes.index(of: node) {
@@ -361,7 +361,7 @@ private struct DependencyGraph: Equatable {
 
 	/// Whether the given node is included or not in the nested dependencies of
 	/// the given dependencies.
-	func dependencies(dependencies: [String], containsNestedDependencyOfNode node: DependencyNode) -> Bool {
+	func dependencies(_ dependencies: [String], containsNestedDependencyOfNode node: DependencyNode) -> Bool {
 		return edges.lazy
 			.filter { edge, nodeSet in
 				return dependencies.contains(edge.project.name) && nodeSet.contains(node)
@@ -371,7 +371,7 @@ private struct DependencyGraph: Equatable {
 	}
 }
 
-private func ==(lhs: DependencyGraph, rhs: DependencyGraph) -> Bool {
+private func ==(_ lhs: DependencyGraph, _ rhs: DependencyGraph) -> Bool {
 	if lhs.edges.count != rhs.edges.count || lhs.roots.count != rhs.roots.count {
 		return false
 	}
@@ -489,7 +489,7 @@ private class DependencyNode: Comparable {
 	}
 }
 
-private func <(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
+private func <(_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
 	let leftSemantic = SemanticVersion.from(lhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
 	let rightSemantic = SemanticVersion.from(rhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
 
@@ -497,7 +497,7 @@ private func <(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
 	return leftSemantic > rightSemantic
 }
 
-private func ==(lhs: DependencyNode, rhs: DependencyNode) -> Bool {
+private func ==(_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
 	return lhs.project == rhs.project
 }
 

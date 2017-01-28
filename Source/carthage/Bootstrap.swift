@@ -20,7 +20,7 @@ public struct BootstrapCommand: CommandType {
 	public let verb = "bootstrap"
 	public let function = "Check out and build the project's dependencies"
 
-	public func run(options: UpdateCommand.Options) -> Result<(), CarthageError> {
+	public func run(_ options: UpdateCommand.Options) -> Result<(), CarthageError> {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
 		// `update` flags.
 		return options.loadProject()

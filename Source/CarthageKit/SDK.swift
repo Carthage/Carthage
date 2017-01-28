@@ -32,7 +32,7 @@ public enum SDK: String {
 	}
 
 	/// Split the given SDKs into simulator ones and device ones.
-	internal static func splitSDKs<S: SequenceType where S.Generator.Element == SDK>(sdks: S) -> (simulators: [SDK], devices: [SDK]) {
+	internal static func splitSDKs<S: SequenceType where S.Generator.Element == SDK>(_ sdks: S) -> (simulators: [SDK], devices: [SDK]) {
 		return (
 			simulators: sdks.filter { $0.isSimulator },
 			devices: sdks.filter { !$0.isSimulator }

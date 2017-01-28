@@ -18,7 +18,7 @@ import ReactiveCocoa
 import ReactiveTask
 
 extension BuildOptions: OptionsType {
-	public static func create(configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> BuildOptions {
+	public static func create(_ configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> BuildOptions {
 		return { buildPlatform in { toolchain in { derivedDataPath in
 			return self.init(configuration: configuration, platforms: buildPlatform.platforms, toolchain: toolchain, derivedDataPath: derivedDataPath)
 		} } }
@@ -46,7 +46,7 @@ public struct BuildCommand: CommandType {
 		public let directoryPath: String
 		public let dependenciesToBuild: [String]?
 
-		public static func create(buildOptions: BuildOptions) -> (Bool) -> (ColorOptions) -> (Bool) -> (String) -> ([String]) -> Options {
+		public static func create(_ buildOptions: BuildOptions) -> (Bool) -> (ColorOptions) -> (Bool) -> (String) -> ([String]) -> Options {
 			return { skipCurrent in { colorOptions in { isVerbose in { directoryPath in { dependenciesToBuild in
 				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
 				return self.init(buildOptions: buildOptions, skipCurrent: skipCurrent, colorOptions: colorOptions, isVerbose: isVerbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
@@ -73,7 +73,7 @@ public struct BuildCommand: CommandType {
 	}
 
 	/// Builds a project with the given options.
-	public func buildWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
+	public func buildWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
 			.flatMap(.merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
 				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
@@ -133,7 +133,7 @@ public struct BuildCommand: CommandType {
 	/// Builds the project in the given directory, using the given options.
 	///
 	/// Returns a producer of producers, representing each scheme being built.
-	private func buildProjectInDirectoryURL(directoryURL: URL, options: Options) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	private func buildProjectInDirectoryURL(_ directoryURL: URL, options: Options) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
 
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
@@ -198,7 +198,7 @@ public struct BuildCommand: CommandType {
 
 	/// Opens a file handle for logging, returning the handle and the URL to any
 	/// temporary file on disk.
-	private func openLoggingHandle(options: Options) -> SignalProducer<(FileHandle, URL?), CarthageError> {
+	private func openLoggingHandle(_ options: Options) -> SignalProducer<(FileHandle, URL?), CarthageError> {
 		if options.isVerbose {
 			let out: (FileHandle, URL?) = (FileHandle.standardOutput, nil)
 			return SignalProducer(value: out)
@@ -259,7 +259,7 @@ public enum BuildPlatform: Equatable {
 	}
 }
 
-public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
+public func ==(_ lhs: BuildPlatform, _ rhs: BuildPlatform) -> Bool {
 	switch (lhs, rhs) {
 	case let (.multiple(left), .multiple(right)):
 		return left == right

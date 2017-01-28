@@ -29,7 +29,7 @@ internal final class ProducerQueue {
 	/// Creates a SignalProducer that will enqueue the given producer when
 	/// started, wait until the queue is empty to begin work, and block other
 	/// work while executing.
-	func enqueue<T, Error>(producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
+	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
 		return SignalProducer { observer, disposable in
 			dispatch_async(self.queue) {
 				if disposable.isDisposed {
@@ -58,7 +58,7 @@ internal final class ProducerQueue {
 
 extension SignalProducerProtocol {
 	/// Shorthand for enqueuing the given producer upon the given queue.
-	internal func startOnQueue(queue: ProducerQueue) -> SignalProducer<Value, Error> {
+	internal func startOnQueue(_ queue: ProducerQueue) -> SignalProducer<Value, Error> {
 		return queue.enqueue(self.producer)
 	}
 }

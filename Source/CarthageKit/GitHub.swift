@@ -53,7 +53,7 @@ extension Repository {
 	/// Parses repository information out of a string of the form "owner/name"
 	/// for the github.com, or the form "http(s)://hostname/owner/name" for
 	/// Enterprise instances.
-	public static func fromIdentifier(identifier: String) -> Result<Repository, CarthageError> {
+	public static func fromIdentifier(_ identifier: String) -> Result<Repository, CarthageError> {
 		// GitHub.com
 		let range = NSRange(location: 0, length: identifier.utf16.count)
 		if let match = NWORegex.firstMatch(in: identifier, range: range) {

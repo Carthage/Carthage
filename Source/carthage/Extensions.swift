@@ -39,14 +39,14 @@ internal func println() {
 }
 
 /// A thread-safe version of Swift's standard println().
-internal func println<T>(object: T) {
+internal func println<T>(_ object: T) {
 	dispatch_async(outputQueue) {
 		Swift.print(object)
 	}
 }
 
 /// A thread-safe version of Swift's standard print().
-internal func print<T>(object: T) {
+internal func print<T>(_ object: T) {
 	dispatch_async(outputQueue) {
 		Swift.print(object, terminator: "")
 	}
@@ -96,7 +96,7 @@ internal struct ProjectEventSink {
 		self.colorOptions = colorOptions
 	}
 	
-	mutating func put(event: ProjectEvent) {
+	mutating func put(_ event: ProjectEvent) {
 		let formatting = colorOptions.formatting
 		
 		switch event {

@@ -77,7 +77,7 @@ public struct GitURL: Equatable {
 }
 
 /// Strips any trailing .git in the given name, if one exists.
-public func stripGitSuffix(string: String) -> String {
+public func stripGitSuffix(_ string: String) -> String {
 	if string.hasSuffix(".git") {
 		return string[string.startIndex..<string.endIndex.advancedBy(-4)]
 	} else {
@@ -85,7 +85,7 @@ public func stripGitSuffix(string: String) -> String {
 	}
 }
 
-public func ==(lhs: GitURL, rhs: GitURL) -> Bool {
+public func ==(_ lhs: GitURL, _ rhs: GitURL) -> Bool {
 	return lhs.normalizedURLString == rhs.normalizedURLString
 }
 
@@ -124,7 +124,7 @@ public struct Submodule: Equatable {
 	}
 }
 
-public func ==(lhs: Submodule, rhs: Submodule) -> Bool {
+public func ==(_ lhs: Submodule, _ rhs: Submodule) -> Bool {
 	return lhs.name == rhs.name && lhs.path == rhs.path && lhs.url == rhs.url && lhs.sha == rhs.sha
 }
 
@@ -170,7 +170,7 @@ public struct FetchCache {
 
 /// Shells out to `git` with the given arguments, optionally in the directory
 /// of an existing repository.
-public func launchGitTask(arguments: [String], repositoryFileURL: URL? = nil, standardInput: SignalProducer<Data, NoError>? = nil, environment: [String: String]? = nil) -> SignalProducer<String, CarthageError> {
+public func launchGitTask(_ arguments: [String], repositoryFileURL: URL? = nil, standardInput: SignalProducer<Data, NoError>? = nil, environment: [String: String]? = nil) -> SignalProducer<String, CarthageError> {
 	// See https://github.com/Carthage/Carthage/issues/219.
 	var updatedEnvironment = environment ?? ProcessInfo.processInfo.environment 
 	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
@@ -186,7 +186,7 @@ public func launchGitTask(arguments: [String], repositoryFileURL: URL? = nil, st
 }
 
 /// Checks if the git version satisfies the given required version.
-public func ensureGitVersion(requiredVersion: String = CarthageRequiredGitVersion) -> SignalProducer<Bool, CarthageError> {
+public func ensureGitVersion(_ requiredVersion: String = CarthageRequiredGitVersion) -> SignalProducer<Bool, CarthageError> {
 	return launchGitTask([ "--version" ])
 		.map { input -> Bool in
 			let scanner = Scanner(string: input)
@@ -204,7 +204,7 @@ public func ensureGitVersion(requiredVersion: String = CarthageRequiredGitVersio
 }
 
 /// Returns a signal that completes when cloning completes successfully.
-public func cloneRepository(cloneURL: GitURL, _ destinationURL: URL, isBare: Bool = true) -> SignalProducer<String, CarthageError> {
+public func cloneRepository(_ cloneURL: GitURL, _ destinationURL: URL, isBare: Bool = true) -> SignalProducer<String, CarthageError> {
 	precondition(destinationURL.isFileURL)
 
 	var arguments = [ "clone" ]
@@ -217,7 +217,7 @@ public func cloneRepository(cloneURL: GitURL, _ destinationURL: URL, isBare: Boo
 }
 
 /// Returns a signal that completes when the fetch completes successfully.
-public func fetchRepository(repositoryFileURL: URL, remoteURL: GitURL? = nil, refspec: String? = nil) -> SignalProducer<String, CarthageError> {
+public func fetchRepository(_ repositoryFileURL: URL, remoteURL: GitURL? = nil, refspec: String? = nil) -> SignalProducer<String, CarthageError> {
 	precondition(repositoryFileURL.isFileURL)
 
 	var arguments = [ "fetch", "--prune", "--quiet" ]
@@ -238,7 +238,7 @@ public func fetchRepository(repositoryFileURL: URL, remoteURL: GitURL? = nil, re
 }
 
 /// Sends each tag found in the given Git repository.
-public func listTags(repositoryFileURL: URL) -> SignalProducer<String, CarthageError> {
+public func listTags(_ repositoryFileURL: URL) -> SignalProducer<String, CarthageError> {
 	return launchGitTask([ "tag", "--column=never" ], repositoryFileURL: repositoryFileURL)
 		.flatMap(.concat) { (allTags: String) -> SignalProducer<String, CarthageError> in
 			return SignalProducer { observer, disposable in
@@ -259,7 +259,7 @@ public func listTags(repositoryFileURL: URL) -> SignalProducer<String, CarthageE
 
 /// Returns the text contents of the path at the given revision, or an error if
 /// the path could not be loaded.
-public func contentsOfFileInRepository(repositoryFileURL: URL, _ path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
+public func contentsOfFileInRepository(_ repositoryFileURL: URL, _ path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
 	let showObject = "\(revision):\(path)"
 	return launchGitTask([ "show", showObject ], repositoryFileURL: repositoryFileURL)
 }
@@ -267,7 +267,7 @@ public func contentsOfFileInRepository(repositoryFileURL: URL, _ path: String, r
 /// Checks out the working tree of the given (ideally bare) repository, at the
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
-public func checkoutRepositoryToDirectory(repositoryFileURL: URL, _ workingDirectoryURL: URL, revision: String = "HEAD", shouldCloneSubmodule: (Submodule) -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
+public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDirectoryURL: URL, revision: String = "HEAD", shouldCloneSubmodule: (Submodule) -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt { () -> Result<[String: String], CarthageError> in
 			do {
 				try FileManager.`default`.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true)
@@ -285,7 +285,7 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: URL, _ workingDirec
 
 /// Clones matching submodules for the given repository at the specified
 /// revision, into the given working directory.
-public func cloneSubmodulesForRepository(repositoryFileURL: URL, _ workingDirectoryURL: URL, revision: String = "HEAD", shouldCloneSubmodule: (Submodule) -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
+public func cloneSubmodulesForRepository(_ repositoryFileURL: URL, _ workingDirectoryURL: URL, revision: String = "HEAD", shouldCloneSubmodule: (Submodule) -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
 	return submodulesInRepository(repositoryFileURL, revision: revision)
 		.flatMap(.concat) { submodule -> SignalProducer<(), CarthageError> in
 			if shouldCloneSubmodule(submodule) {
@@ -299,7 +299,7 @@ public func cloneSubmodulesForRepository(repositoryFileURL: URL, _ workingDirect
 
 /// Clones the given submodule into the working directory of its parent
 /// repository, but without any Git metadata.
-public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
 	let purgeGitDirectories = FileManager.`default`.carthage_enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
 		.flatMap(.merge) { enumerator, url -> SignalProducer<(), CarthageError> in
@@ -352,7 +352,7 @@ public func cloneSubmoduleInWorkingDirectory(submodule: Submodule, _ workingDire
 
 /// Recursively checks out the given submodule's revision, in its working
 /// directory.
-private func checkoutSubmodule(submodule: Submodule, _ submoduleWorkingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+private func checkoutSubmodule(_ submodule: Submodule, _ submoduleWorkingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	return launchGitTask([ "checkout", "--quiet", submodule.sha ], repositoryFileURL: submoduleWorkingDirectoryURL)
 		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleWorkingDirectoryURL))
 		.then(.empty)
@@ -360,7 +360,7 @@ private func checkoutSubmodule(submodule: Submodule, _ submoduleWorkingDirectory
 
 /// Parses each key/value entry from the given config file contents, optionally
 /// stripping a known prefix/suffix off of each key.
-private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuffix: String = "") -> SignalProducer<(String, String), NoError> {
+private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keySuffix: String = "") -> SignalProducer<(String, String), NoError> {
 	let entries = contents.characters.split(omittingEmptySubsequences: true) { $0 == "\0" }
 
 	return SignalProducer { observer, disposable in
@@ -397,7 +397,7 @@ private func parseConfigEntries(contents: String, keyPrefix: String = "", keySuf
 
 /// Determines the SHA that the submodule at the given path is pinned to, in the
 /// revision of the parent repository specified.
-public func submoduleSHAForPath(repositoryFileURL: URL, _ path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
+public func submoduleSHAForPath(_ repositoryFileURL: URL, _ path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
 	let task = [ "ls-tree", "-z", revision, path ]
 	return launchGitTask(task, repositoryFileURL: repositoryFileURL)
 		.attemptMap { string in
@@ -414,7 +414,7 @@ public func submoduleSHAForPath(repositoryFileURL: URL, _ path: String, revision
 
 /// Returns each entry of `.gitmodules` found in the given repository revision,
 /// or an empty signal if none exist.
-internal func gitmodulesEntriesInRepository(repositoryFileURL: URL, revision: String?) -> SignalProducer<(name: String, path: String, url: GitURL), CarthageError> {
+internal func gitmodulesEntriesInRepository(_ repositoryFileURL: URL, revision: String?) -> SignalProducer<(name: String, path: String, url: GitURL), CarthageError> {
 	var baseArguments = [ "config", "-z" ]
 	let modulesFile = ".gitmodules"
 
@@ -440,7 +440,7 @@ internal func gitmodulesEntriesInRepository(repositoryFileURL: URL, revision: St
 ///
 /// If in bare repository, return the passed repo path as the root
 /// else, return the path given by "git rev-parse --show-toplevel"
-public func gitRootDirectoryForRepository(repositoryFileURL: URL) -> SignalProducer<URL, CarthageError> {
+public func gitRootDirectoryForRepository(_ repositoryFileURL: URL) -> SignalProducer<URL, CarthageError> {
 	return launchGitTask([ "rev-parse", "--is-bare-repository" ], repositoryFileURL: repositoryFileURL)
 		.map { $0.trimmingCharacters(in: .newlines) }
 		.flatMap(.concat) { isBareRepository -> SignalProducer<URL, CarthageError> in
@@ -456,7 +456,7 @@ public func gitRootDirectoryForRepository(repositoryFileURL: URL) -> SignalProdu
 
 /// Returns each submodule found in the given repository revision, or an empty
 /// signal if none exist.
-public func submodulesInRepository(repositoryFileURL: URL, revision: String = "HEAD") -> SignalProducer<Submodule, CarthageError> {
+public func submodulesInRepository(_ repositoryFileURL: URL, revision: String = "HEAD") -> SignalProducer<Submodule, CarthageError> {
 	return gitmodulesEntriesInRepository(repositoryFileURL, revision: revision)
 		.flatMap(.concat) { name, path, url in
 			return gitRootDirectoryForRepository(repositoryFileURL)
@@ -472,7 +472,7 @@ public func submodulesInRepository(repositoryFileURL: URL, revision: String = "H
 ///
 /// If the specified file URL does not represent a valid Git repository, `false`
 /// will be sent.
-internal func branchExistsInRepository(repositoryFileURL: URL, pattern: String) -> SignalProducer<Bool, NoError> {
+internal func branchExistsInRepository(_ repositoryFileURL: URL, pattern: String) -> SignalProducer<Bool, NoError> {
 	return ensureDirectoryExistsAtURL(repositoryFileURL)
 		.succeeded()
 		.flatMap(.concat) { exists -> SignalProducer<Bool, NoError> in
@@ -491,7 +491,7 @@ internal func branchExistsInRepository(repositoryFileURL: URL, pattern: String) 
 ///
 /// If the specified file URL does not represent a valid Git repository, `false`
 /// will be sent.
-public func commitExistsInRepository(repositoryFileURL: URL, revision: String = "HEAD") -> SignalProducer<Bool, NoError> {
+public func commitExistsInRepository(_ repositoryFileURL: URL, revision: String = "HEAD") -> SignalProducer<Bool, NoError> {
 	return ensureDirectoryExistsAtURL(repositoryFileURL)
 		.then(launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL))
 		.then(.init(value: true))
@@ -500,7 +500,7 @@ public func commitExistsInRepository(repositoryFileURL: URL, revision: String = 
 
 /// NSTask throws a hissy fit (a.k.a. exception) if the working directory
 /// doesn't exist, so pre-emptively check for that.
-private func ensureDirectoryExistsAtURL(fileURL: URL) -> SignalProducer<(), CarthageError> {
+private func ensureDirectoryExistsAtURL(_ fileURL: URL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer { observer, disposable in
 		var isDirectory: ObjCBool = false
 		if FileManager.`default`.fileExists(atPath: fileURL.carthage_path, isDirectory: &isDirectory) && isDirectory {
@@ -512,7 +512,7 @@ private func ensureDirectoryExistsAtURL(fileURL: URL) -> SignalProducer<(), Cart
 }
 
 /// Attempts to resolve the given reference into an object SHA.
-public func resolveReferenceInRepository(repositoryFileURL: URL, _ reference: String) -> SignalProducer<String, CarthageError> {
+public func resolveReferenceInRepository(_ repositoryFileURL: URL, _ reference: String) -> SignalProducer<String, CarthageError> {
 	return ensureDirectoryExistsAtURL(repositoryFileURL)
 		.then(launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL))
 		.map { string in string.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -520,7 +520,7 @@ public func resolveReferenceInRepository(repositoryFileURL: URL, _ reference: St
 }
 
 /// Attempts to resolve the given tag into an object SHA.
-internal func resolveTagInRepository(repositoryFileURL: URL, _ tag: String) -> SignalProducer<String, CarthageError> {
+internal func resolveTagInRepository(_ repositoryFileURL: URL, _ tag: String) -> SignalProducer<String, CarthageError> {
 	return launchGitTask([ "show-ref", "--tags", "--hash", tag ], repositoryFileURL: repositoryFileURL)
 		.map { string in string.trimmingCharacters(in: .whitespacesAndNewlines) }
 		.mapError { error in CarthageError.repositoryCheckoutFailed(workingDirectoryURL: repositoryFileURL, reason: "No tag named \"\(tag)\" exists", underlyingError: error as NSError) }
@@ -528,7 +528,7 @@ internal func resolveTagInRepository(repositoryFileURL: URL, _ tag: String) -> S
 
 /// Attempts to determine whether the given directory represents a Git
 /// repository.
-public func isGitRepository(directoryURL: URL) -> SignalProducer<Bool, NoError> {
+public func isGitRepository(_ directoryURL: URL) -> SignalProducer<Bool, NoError> {
 	return ensureDirectoryExistsAtURL(directoryURL)
 		.then(launchGitTask([ "rev-parse", "--git-dir", ], repositoryFileURL: directoryURL))
 		.map { outputIncludingLineEndings in
@@ -548,7 +548,7 @@ public func isGitRepository(directoryURL: URL) -> SignalProducer<Bool, NoError> 
 
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if
 /// the desired revision does not exist or the submodule needs to be cloned.
-public func addSubmoduleToRepository(repositoryFileURL: URL, _ submodule: Submodule, _ fetchURL: GitURL) -> SignalProducer<(), CarthageError> {
+public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Submodule, _ fetchURL: GitURL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = repositoryFileURL.appendingPathComponent(submodule.path, isDirectory: true)
 
 	return isGitRepository(submoduleDirectoryURL)
@@ -587,7 +587,7 @@ public func addSubmoduleToRepository(repositoryFileURL: URL, _ submodule: Submod
 /// repository is not found.
 ///
 /// Sends the new URL of the item after moving.
-public func moveItemInPossibleRepository(repositoryFileURL: URL, fromPath: String, toPath: String) -> SignalProducer<URL, CarthageError> {
+public func moveItemInPossibleRepository(_ repositoryFileURL: URL, fromPath: String, toPath: String) -> SignalProducer<URL, CarthageError> {
 	let toURL = repositoryFileURL.appendingPathComponent(toPath)
 	let parentDirectoryURL = toURL.deletingLastPathComponent()
 

@@ -212,7 +212,7 @@ public enum ProjectIdentifier: Comparable {
 	}
 }
 
-public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
+public func ==(_ lhs: ProjectIdentifier, _ rhs: ProjectIdentifier) -> Bool {
 	switch (lhs, rhs) {
 	case let (.gitHub(left), .gitHub(right)):
 		return left == right
@@ -225,7 +225,7 @@ public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 	}
 }
 
-public func <(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
+public func <(_ lhs: ProjectIdentifier, _ rhs: ProjectIdentifier) -> Bool {
 	return lhs.name.caseInsensitiveCompare(rhs.name) == .orderedAscending
 }
 
@@ -313,7 +313,7 @@ public struct Dependency<V: VersionType>: Hashable {
 	}
 }
 
-public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
+public func ==<V>(_ lhs: Dependency<V>, _ rhs: Dependency<V>) -> Bool {
 	return lhs.project == rhs.project && lhs.version == rhs.version
 }
 

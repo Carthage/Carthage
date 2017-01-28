@@ -33,7 +33,7 @@ extension String {
 }
 
 /// Merges `rhs` into `lhs` and returns the result.
-internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
+internal func combineDictionaries<K, V>(_ lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	var result = lhs
 	for (key, value) in rhs {
 		result.updateValue(value, forKey: key)
@@ -264,7 +264,7 @@ extension URL {
 		return .failure(.readFailed(self, error))
 	}
 
-	public func hasSubdirectory(possibleSubdirectory: URL) -> Bool {
+	public func hasSubdirectory(_ possibleSubdirectory: URL) -> Bool {
 		let standardizedSelf = self.standardizedFileURL
 		let standardizedOther = possibleSubdirectory.standardizedFileURL
 
@@ -319,7 +319,7 @@ extension FileManager {
 /// Creates a counted set from a sequence. The counted set is represented as a
 /// dictionary where the keys are elements from the sequence and values count
 /// how many times elements are present in the sequence.
-internal func buildCountedSet<S: SequenceType>(sequence: S) -> [S.Generator.Element: Int] {
+internal func buildCountedSet<S: SequenceType>(_ sequence: S) -> [S.Generator.Element: Int] {
 	return sequence.reduce([:]) { set, elem in
 		var set = set
 		if let count = set[elem] {
