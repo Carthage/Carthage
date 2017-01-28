@@ -54,8 +54,8 @@
 		D012AD111AF9844D00EE91DA /* Result.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D012AD0F1AF9843700EE91DA /* Result.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82D61A10160700F0DD94 /* Resolver.swift */; };
 		D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */; };
-		D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; };
-		D01F8A4519EA28E600643E7C /* ReactiveCocoa.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D01F8A3F19EA28C400643E7C /* ReactiveSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveSwift.framework */; };
+		D01F8A4519EA28E600643E7C /* ReactiveSwift.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A3E19EA28C400643E7C /* ReactiveSwift.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D01F8A4A19EA28FE00643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
 		D01F8A4C19EA28FE00643E7C /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4B19EA28FE00643E7C /* Nimble.framework */; };
 		D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F8A5319EA2F1700643E7C /* Xcode.swift */; };
@@ -146,7 +146,7 @@
 				CD1FE6541DD367920016639E /* Runes.framework in Copy Frameworks */,
 				BEA86FA01C9F91500049360B /* Tentacle.framework in Copy Frameworks */,
 				BEA86F9F1C9F914A0049360B /* Curry.framework in Copy Frameworks */,
-				D01F8A4519EA28E600643E7C /* ReactiveCocoa.framework in Copy Frameworks */,
+				D01F8A4519EA28E600643E7C /* ReactiveSwift.framework in Copy Frameworks */,
 				D00CCE331A20784800109F8C /* Commandant.framework in Copy Frameworks */,
 				D0E0E1B11A2D28CB0097BE2B /* ReactiveTask.framework in Copy Frameworks */,
 				67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */,
@@ -211,7 +211,7 @@
 		D012AD0F1AF9843700EE91DA /* Result.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Result.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01D82D61A10160700F0DD94 /* Resolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Resolver.swift; sourceTree = "<group>"; };
 		D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResolverSpec.swift; sourceTree = "<group>"; };
-		D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveCocoa.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D01F8A3E19EA28C400643E7C /* ReactiveSwift.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ReactiveSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4619EA28F600643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Nimble.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4719EA28F600643E7C /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Quick.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4B19EA28FE00643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Nimble.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -281,7 +281,7 @@
 				BEB076671C8A1FD800ABD373 /* Tentacle.framework in Frameworks */,
 				D0E0E1B01A2D28AC0097BE2B /* ReactiveTask.framework in Frameworks */,
 				D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */,
-				D01F8A3F19EA28C400643E7C /* ReactiveCocoa.framework in Frameworks */,
+				D01F8A3F19EA28C400643E7C /* ReactiveSwift.framework in Frameworks */,
 				67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */,
 				D012AD101AF9843700EE91DA /* Result.framework in Frameworks */,
 			);
@@ -493,7 +493,7 @@
 				CD1FE6521DD366620016639E /* Runes.framework */,
 				D00CCE311A20783A00109F8C /* Commandant.framework */,
 				67AFA9891A79430B00B7DA78 /* PrettyColors.framework */,
-				D01F8A3E19EA28C400643E7C /* ReactiveCocoa.framework */,
+				D01F8A3E19EA28C400643E7C /* ReactiveSwift.framework */,
 				D0E0E1AF1A2D28AC0097BE2B /* ReactiveTask.framework */,
 				BEB076651C8A1FD800ABD373 /* Tentacle.framework */,
 				D0D1217019E87B05005E4BAA /* Info.plist */,

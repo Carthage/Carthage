@@ -11,7 +11,7 @@
       location = "group:Carthage/Checkouts/Curry/Curry.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:Carthage/Checkouts/ReactiveCocoa/ReactiveCocoa.xcodeproj">
+      location = "group:Carthage/Checkouts/ReactiveSwift/ReactiveSwift.xcodeproj">
    </FileRef>
    <FileRef
       location = "group:Carthage/Checkouts/Quick/Quick.xcodeproj">
