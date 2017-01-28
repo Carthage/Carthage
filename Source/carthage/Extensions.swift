@@ -62,7 +62,7 @@ extension String {
 }
 
 extension SignalProducerProtocol where Error == CarthageError {
-	/// Waits on a SignalProducer that implements the behavior of a CommandType.
+	/// Waits on a SignalProducer that implements the behavior of a CommandProtocol.
 	internal func waitOnCommand() -> Result<(), CarthageError> {
 		let result = producer
 			.then(SignalProducer<(), CarthageError>.empty)
@@ -73,7 +73,7 @@ extension SignalProducerProtocol where Error == CarthageError {
 	}
 }
 
-extension GitURL: ArgumentType {
+extension GitURL: ArgumentProtocol {
 	public static let name = "URL"
 
 	public static func from(string: String) -> GitURL? {

@@ -20,7 +20,7 @@ private func wrap(_ isColorful: Bool, wrap: Color.Wrap) -> (String) -> String {
 }
 
 /// Argument for whether to color and format terminal output.
-public enum ColorArgument: String, ArgumentType, CustomStringConvertible {
+public enum ColorArgument: String, ArgumentProtocol, CustomStringConvertible {
 	case auto = "auto"
 	case never = "never"
 	case always = "always"
@@ -56,7 +56,7 @@ public enum ColorArgument: String, ArgumentType, CustomStringConvertible {
 }
 
 /// Options for whether to color and format terminal output.
-public struct ColorOptions: OptionsType {
+public struct ColorOptions: OptionsProtocol {
 	let argument: ColorArgument
 	let formatting: Formatting
 	

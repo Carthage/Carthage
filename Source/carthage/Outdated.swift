@@ -16,8 +16,8 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 
-public struct OutdatedCommand: CommandType {
-	public struct Options: OptionsType {
+public struct OutdatedCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
 		public let isVerbose: Bool
 		public let colorOptions: ColorOptions

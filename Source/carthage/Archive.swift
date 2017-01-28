@@ -16,8 +16,8 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 
-public struct ArchiveCommand: CommandType {
-	public struct Options: OptionsType {
+public struct ArchiveCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let outputPath: String?
 		public let directoryPath: String
 		public let colorOptions: ColorOptions

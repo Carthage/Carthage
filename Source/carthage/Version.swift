@@ -11,7 +11,7 @@ import Commandant
 import Foundation
 import Result
 
-public struct VersionCommand: CommandType {
+public struct VersionCommand: CommandProtocol {
 	public let verb = "version"
 	public let function = "Display the current version of Carthage"
 

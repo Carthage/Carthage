@@ -17,7 +17,7 @@ import ReactiveCocoa
 #endif
 
 
-public struct CopyFrameworksCommand: CommandType {
+public struct CopyFrameworksCommand: CommandProtocol {
 	public let verb = "copy-frameworks"
 	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
 

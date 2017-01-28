@@ -16,8 +16,8 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 
-public struct CheckoutCommand: CommandType {
-	public struct Options: OptionsType {
+public struct CheckoutCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
 		public let useSubmodules: Bool
 		public let useBinaries: Bool
