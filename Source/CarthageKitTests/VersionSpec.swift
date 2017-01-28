@@ -44,7 +44,7 @@ class SemanticVersionSpec: QuickSpec {
 
 class VersionSpecifierSpec: QuickSpec {
 	override func spec() {
-		func testIntersection(lhs: VersionSpecifier, _ rhs: VersionSpecifier, expected: VersionSpecifier?) {
+		func testIntersection(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier, expected: VersionSpecifier?) {
 			if let expected = expected {
 				expect(intersection(lhs, rhs)) == expected
 				expect(intersection(rhs, lhs)) == expected

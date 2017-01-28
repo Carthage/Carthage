@@ -70,12 +70,12 @@ public struct ColorOptions: OptionsProtocol {
 		
 		
 		/// Wraps a string with terminal colors and formatting or passes it through.
-		typealias Wrap = (string: String) -> String
+		typealias Wrap = (_ string: String) -> String
 		
 		init(_ isColorful: Bool) {
 			self.isColorful = isColorful
 			bulletin      = wrap(isColorful, wrap: Color.Wrap(foreground: .blue, style: .bold))
-			bullets       = bulletin(string: "***") + " "
+			bullets       = bulletin("***") + " "
 			url           = wrap(isColorful, wrap: Color.Wrap(styles: .underlined))
 			projectName   = wrap(isColorful, wrap: Color.Wrap(styles: .bold))
 			path          = wrap(isColorful, wrap: Color.Wrap(foreground: .yellow))
@@ -83,7 +83,7 @@ public struct ColorOptions: OptionsProtocol {
 
 		/// Wraps a string in bullets, one space of padding, and formatting.
 		func bulletinTitle(_ string: String) -> String {
-			return bulletin(string: "*** " + string + " ***")
+			return bulletin("*** " + string + " ***")
 		}
 
 		/// Wraps a string in quotation marks and formatting.

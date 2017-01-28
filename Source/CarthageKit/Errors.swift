@@ -16,7 +16,7 @@ import ReactiveTask
 import Tentacle
 
 /// Possible errors that can originate from Carthage.
-public enum CarthageError: ErrorType, Equatable {
+public enum CarthageError: Error, Equatable {
 	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: ProjectIdentifier?)
 
 	/// One or more arguments was invalid.
@@ -280,7 +280,7 @@ extension CarthageError: CustomStringConvertible {
 			
 		case let .buildFailed(taskError, log):
 			var message = "Build Failed\n"
-			if case let .ShellTaskFailed(task, exitCode, _) = taskError {
+			if case let .shellTaskFailed(task, exitCode, _) = taskError {
 				message += "\tTask failed with exit code \(exitCode):\n"
 				message += "\t\(task)\n"
 			} else {
@@ -312,7 +312,7 @@ public struct DuplicateDependency: Comparable {
 	// test case.
 	public init(project: ProjectIdentifier, locations: [String]) {
 		self.project = project
-		self.locations = locations.sort(<)
+		self.locations = locations.sorted(by: <)
 	}
 }
 

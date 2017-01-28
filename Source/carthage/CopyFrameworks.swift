@@ -40,7 +40,7 @@ public struct CopyFrameworksCommand: CommandProtocol {
 									let copyFrameworks = copyFramework(source, target: target, validArchitectures: validArchitectures)
 									let copydSYMs = copyDebugSymbolsForFramework(source, validArchitectures: validArchitectures)
 									return SignalProducer.combineLatest(copyFrameworks, copydSYMs)
-										.then(.empty)
+										.then(SignalProducer<(), CarthageError>.empty)
 								}
 						}
 				}
@@ -56,7 +56,7 @@ private func copyFramework(_ source: URL, target: URL, validArchitectures: [Stri
 			if buildActionIsArchiveOrInstall() {
 				return strip
 					.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.deletingLastPathComponent()))
-					.then(.empty)
+					.then(SignalProducer<(), CarthageError>.empty)
 			} else {
 				return strip
 			}

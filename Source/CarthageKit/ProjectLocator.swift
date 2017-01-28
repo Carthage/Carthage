@@ -76,7 +76,7 @@ public enum ProjectLocator: Comparable {
 			// xcodebuild has a bug where xcodebuild -list can sometimes hang
 			// indefinitely on projects that don't share any schemes, so
 			// automatically bail out if it looks like that's happening.
-			.timeout(after: 60, raising: .xcodebuildTimeout(self), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
+			.timeout(after: 60, raising: .xcodebuildTimeout(self), on: QueueScheduler(qos: .default))
 			.retry(upTo: 2)
 			.map { data in
 				return String(data: data, encoding: .utf8)!
@@ -132,7 +132,7 @@ public func <(_ lhs: ProjectLocator, _ rhs: ProjectLocator) -> Bool {
 		return false
 
 	default:
-		return lhs.fileURL.carthage_path.characters.lexicographicalCompare(rhs.fileURL.carthage_path.characters)
+		return lhs.fileURL.carthage_path.characters.lexicographicallyPrecedes(rhs.fileURL.carthage_path.characters)
 	}
 }
 

@@ -51,7 +51,7 @@ private struct DB {
 	
 	func versions(for dependency: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
 		if let versions = self.versions[dependency] {
-			return .init(values: versions.keys)
+			return .init(versions.keys)
 		} else {
 			return .init(error: .taggedVersionNotFound(dependency))
 		}
@@ -59,13 +59,13 @@ private struct DB {
 	
 	func dependencies(for dependency: CarthageKit.Dependency<PinnedVersion>) -> SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError> {
 		if let dependencies = self.versions[dependency.project]?[dependency.version] {
-			return .init(values: dependencies.map { CarthageKit.Dependency(project: $0.0, version: $0.1) })
+			return .init(dependencies.map { CarthageKit.Dependency(project: $0.0, version: $0.1) })
 		} else {
 			return .empty
 		}
 	}
 	
-	func resolvedGitReference(project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
+	func resolvedGitReference(_ project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
 		if let version = references[project]?[reference] {
 			return .init(value: version)
 		} else {
@@ -74,7 +74,7 @@ private struct DB {
 	}
 	
 	func resolve(
-		dependencies: [ProjectIdentifier: VersionSpecifier],
+		_ dependencies: [ProjectIdentifier: VersionSpecifier],
 		resolved: [ProjectIdentifier: PinnedVersion] = [:],
 		updating: Set<ProjectIdentifier> = []
 	) -> Result<[(ProjectIdentifier, PinnedVersion)], CarthageError> {
@@ -99,7 +99,7 @@ private struct DB {
 	}
 }
 
-extension DB: DictionaryLiteralConvertible {
+extension DB: ExpressibleByDictionaryLiteral {
 	init(dictionaryLiteral elements: (ProjectIdentifier, [PinnedVersion: [ProjectIdentifier: VersionSpecifier]])...) {
 		self.init(versions: [:], references: [:])
 		for (key, value) in elements {

@@ -48,7 +48,7 @@ public struct SemanticVersion: VersionType, Comparable {
 	}
 
 	/// The set of all characters present in valid semantic versions.
-	private static let versionCharacterSet = CharacterSet(charactersIn: "0123456789.")
+	fileprivate static let versionCharacterSet = CharacterSet(charactersIn: "0123456789.")
 
 	/// Attempts to parse a semantic version from a PinnedVersion.
 	public static func from(_ pinnedVersion: PinnedVersion) -> Result<SemanticVersion, CarthageError> {
@@ -106,7 +106,7 @@ extension SemanticVersion: Scannable {
 }
 
 public func <(_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
-	return lhs.components.lexicographicalCompare(rhs.components)
+	return lhs.components.lexicographicallyPrecedes(rhs.components)
 }
 
 public func ==(_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
@@ -300,7 +300,7 @@ extension VersionSpecifier: CustomStringConvertible {
 	}
 }
 
-private func intersection(atLeast atLeast: SemanticVersion, compatibleWith: SemanticVersion) -> VersionSpecifier? {
+private func intersection(atLeast: SemanticVersion, compatibleWith: SemanticVersion) -> VersionSpecifier? {
 	if atLeast.major > compatibleWith.major {
 		return nil
 	} else if atLeast.major < compatibleWith.major {
@@ -310,7 +310,7 @@ private func intersection(atLeast atLeast: SemanticVersion, compatibleWith: Sema
 	}
 }
 
-private func intersection(atLeast atLeast: SemanticVersion, exactly: SemanticVersion) -> VersionSpecifier? {
+private func intersection(atLeast: SemanticVersion, exactly: SemanticVersion) -> VersionSpecifier? {
 	if atLeast > exactly {
 		return nil
 	}
@@ -318,7 +318,7 @@ private func intersection(atLeast atLeast: SemanticVersion, exactly: SemanticVer
 	return .exactly(exactly)
 }
 
-private func intersection(compatibleWith compatibleWith: SemanticVersion, exactly: SemanticVersion) -> VersionSpecifier? {
+private func intersection(compatibleWith: SemanticVersion, exactly: SemanticVersion) -> VersionSpecifier? {
 	if exactly.major != compatibleWith.major || compatibleWith > exactly {
 		return nil
 	}
@@ -407,7 +407,7 @@ public func intersection(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Ve
 ///
 /// In other words, any version that satisfies the returned specifier will
 /// satisfy _all_ of the given specifiers.
-public func intersection<S: SequenceType where S.Generator.Element == VersionSpecifier>(_ specs: S) -> VersionSpecifier? {
+public func intersection<S: Sequence>(_ specs: S) -> VersionSpecifier? where S.Iterator.Element == VersionSpecifier {
 	return specs.reduce(nil) { (left: VersionSpecifier?, right: VersionSpecifier) -> VersionSpecifier? in
 		if let left = left {
 			return intersection(left, right)

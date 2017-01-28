@@ -42,7 +42,7 @@ public struct FetchCommand: CommandProtocol {
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
 		return cloneOrFetchProject(project, preferHTTPS: true)
-			.on(next: { event, _ in
+			.on(value: { event, _ in
 				if let event = event {
 					eventSink.put(event)
 				}

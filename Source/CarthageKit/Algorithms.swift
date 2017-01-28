@@ -42,12 +42,12 @@ public func topologicalSort<Node: Comparable>(_ graph: Dictionary<Node, Set<Node
 
 	// Maintain a working graph with all sources removed.
 	var workingGraph = graph
-	sources.forEach { node in workingGraph.removeValueForKey(node) }
+	sources.forEach { node in workingGraph.removeValue(forKey: node) }
 
 	var sorted: [Node] = []
 
 	while !sources.isEmpty {
-		sources.sortInPlace(>)
+		sources.sort(by: >)
 
 		let lastSource = sources.removeLast()
 		sorted.append(lastSource)
@@ -58,7 +58,7 @@ public func topologicalSort<Node: Comparable>(_ graph: Dictionary<Node, Set<Node
 
 			if incomingEdges.isEmpty {
 				sources.append(node)
-				workingGraph.removeValueForKey(node)
+				workingGraph.removeValue(forKey: node)
 			}
 		}
 	}

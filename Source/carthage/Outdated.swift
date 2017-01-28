@@ -57,13 +57,13 @@ public struct OutdatedCommand: CommandProtocol {
 	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
 			.flatMap(.merge) { $0.outdatedDependencies(options.isVerbose) }
-			.on(next: { outdatedDependencies in
+			.on(value: { outdatedDependencies in
 				let formatting = options.colorOptions.formatting
 
 				if !outdatedDependencies.isEmpty {
-					carthage.println(formatting.path(string: "The following dependencies are outdated:"))
+					carthage.println(formatting.path("The following dependencies are outdated:"))
 					for (currentDependency, updatedDependency) in outdatedDependencies {
-						carthage.println(formatting.projectName(string: currentDependency.project.name) + " \(currentDependency.version) -> \(updatedDependency.version)")
+						carthage.println(formatting.projectName(currentDependency.project.name) + " \(currentDependency.version) -> \(updatedDependency.version)")
 					}
 				} else {
 					carthage.println("All dependencies are up to date.")
