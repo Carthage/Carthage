@@ -16,8 +16,8 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 
-public struct UpdateCommand: CommandType {
-	public struct Options: OptionsType {
+public struct UpdateCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let checkoutAfterUpdate: Bool
 		public let buildAfterUpdate: Bool
 		public let isVerbose: Bool

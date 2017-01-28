@@ -16,8 +16,8 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 
-public struct FetchCommand: CommandType {
-	public struct Options: OptionsType {
+public struct FetchCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let colorOptions: ColorOptions
 		public let repositoryURL: GitURL
 

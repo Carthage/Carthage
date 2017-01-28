@@ -20,6 +20,7 @@ import Foundation
 		}
 	}
 #else
+	import Commandant
 	import PrettyColors
 	import Result
 	import ReactiveCocoa
@@ -470,6 +471,12 @@ import Foundation
 
 		var uuidString: String { return UUIDString }
 	}
+
+	// MARK: - Commandant
+
+	public typealias ArgumentProtocol = ArgumentType
+	public typealias CommandProtocol = CommandType
+	public typealias OptionsProtocol = OptionsType
 
 	// MARK: - PrettyColors
 

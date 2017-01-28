@@ -17,7 +17,7 @@ import ReactiveCocoa
 #endif
 import ReactiveTask
 
-extension BuildOptions: OptionsType {
+extension BuildOptions: OptionsProtocol {
 	public static func create(_ configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> BuildOptions {
 		return { buildPlatform in { toolchain in { derivedDataPath in
 			return self.init(configuration: configuration, platforms: buildPlatform.platforms, toolchain: toolchain, derivedDataPath: derivedDataPath)
@@ -37,8 +37,8 @@ extension BuildOptions: OptionsType {
 	}
 }
 
-public struct BuildCommand: CommandType {
-	public struct Options: OptionsType {
+public struct BuildCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let buildOptions: BuildOptions
 		public let skipCurrent: Bool
 		public let colorOptions: ColorOptions
@@ -296,7 +296,7 @@ extension BuildPlatform: CustomStringConvertible {
 	}
 }
 
-extension BuildPlatform: ArgumentType {
+extension BuildPlatform: ArgumentProtocol {
 	public static let name = "platform"
 
 	private static let acceptedStrings: [String: BuildPlatform] = [

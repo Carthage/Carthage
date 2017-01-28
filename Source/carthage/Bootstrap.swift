@@ -16,7 +16,7 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 
-public struct BootstrapCommand: CommandType {
+public struct BootstrapCommand: CommandProtocol {
 	public let verb = "bootstrap"
 	public let function = "Check out and build the project's dependencies"
 
