@@ -4,8 +4,8 @@ setup() {
     cd $BATS_TMPDIR
     rm -rf UpdateTest
     mkdir UpdateTest && cd UpdateTest
-    echo 'github "antitypical/Result" == 2.1.3' > Cartfile
-    echo 'github "Quick/Nimble" == 4.1.0' > Cartfile.private
+    echo 'github "antitypical/Result" == 3.1' > Cartfile
+    echo 'github "Quick/Nimble" == 6.0.1' > Cartfile.private
 }
 
 teardown() {
