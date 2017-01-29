@@ -22,6 +22,8 @@ matrix:
       language: objective-c
       osx_image: xcode8.2
       script:
+        - brew update
+        - brew uninstall carthage
         - brew install bats
         - make install
         - bats Source/CarthageIntegration
