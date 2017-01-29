@@ -592,25 +592,18 @@ public final class Project {
 					}
 				}
 
-				func symlinkCheckoutPaths(submodule submodule: Submodule?) -> SignalProducer<(), CarthageError> {
-					return self.symlinkCheckoutPathsForDependencyProject(
-						dependency,
-						repositoryURL: repositoryURL,
-						rootDirectoryURL: self.directoryURL,
-						// In the presense of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
-						// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
-						addSubmoduleForDependency: submodule.map {
-							addSubmoduleToRepository(self.directoryURL, $0, GitURL(repositoryURL.carthage_path)).startOnQueue(self.gitOperationQueue)
-						}
-					)
-				}
-
+				let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
+				
 				if let submodule = submodule() {
-					return symlinkCheckoutPaths(submodule: submodule)
+					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
+					// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
+					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.carthage_path))
+						.startOnQueue(self.gitOperationQueue)
+						.then(symlinkCheckoutPaths)
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
-						// For checkouts of “ideally bare” repositories of `dependency`, we add its submodules by cloning ourselves after symlinking.
-						.then(symlinkCheckoutPaths(submodule: nil))
+						// For checkouts of “ideally bare” repositories of `dependency`, we add its submodules by cloning ourselves, after symlinking.
+						.then(symlinkCheckoutPaths)
 						.then(
 							submodulesInRepository(repositoryURL, revision: revision)
 								.flatMap(.merge) {
@@ -705,40 +698,46 @@ public final class Project {
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
 
+	/// - parameters:
+	/// 	- flatMapTransform: defaults to identity function. Only ever used for one thing, but parameterized for unit testing purposes.
+	private func fileSystemObjects(for dependency: Dependency<PinnedVersion>, withRepository repositoryURL: URL, at pathList: String, flatMapTransform: @escaping (String) -> String? = { $0 }) -> SignalProducer<[String], CarthageError> {
+		return launchGitTask(
+			// ls-tree, because `ls-files` returns no output (for all instances I've seen) on bare repos.
+			// flag “-z” enables output separated by the nul character (`\0`).
+			[ "ls-tree", "-z", "-r", "--full-name", "--name-only", dependency.version.commitish, pathList ],
+			repositoryFileURL: repositoryURL
+		)
+			.map { (output: String) -> [String] in
+				output.characters.lazy
+					.split(separator: "\0")
+					.map { String($0) }
+					.flatMap(flatMapTransform)
+			}
+	}
+
 	/// Creates symlink between the dependency checkouts and the root checkouts
-	private func symlinkCheckoutPathsForDependencyProject(_ dependency: Dependency<PinnedVersion>, repositoryURL: URL, rootDirectoryURL: URL, addSubmoduleForDependency: SignalProducer<(), CarthageError>? = nil) -> SignalProducer<(), CarthageError> {
+	private func symlinkCheckoutPaths(for dependency: Dependency<PinnedVersion>, withRepository repositoryURL: URL, atRootDirectory rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
 		let fileManager = FileManager.default
 
 		return self.dependencyProjects(for: dependency)
-			.zip(with: // file system objects from git in `CarthageProjectCheckoutsPath` which might conflict with symlinks.
-				launchGitTask(
-					// ls-tree, because `ls-files` returns no output (for all instances I've seen) on bare repos.
-					// flag “-z” enables output separated by the nul character (`\0`).
-					[ "ls-tree", "-z", "-r", "--full-name", "--name-only", dependency.version.commitish, CarthageProjectCheckoutsPath ],
-					repositoryFileURL: repositoryURL
-				)
-					.map { (output: String) -> [String] in
-						output.characters.lazy
-							.split(separator: "\0")
-							.map { String($0) }
-							.flatMap { (path: String) -> String? in
-								let componentsRelativeToDirectoryURL = {
-									return URL(string: $0, relativeTo: self.directoryURL)?.standardizedFileURL.carthage_pathComponents
-								}
-								if
-									let components = componentsRelativeToDirectoryURL(path),
-									let comparator = componentsRelativeToDirectoryURL(CarthageProjectCheckoutsPath),
-									Array(components.dropLast(1)) == comparator
-								{
-									return components.last!
-								} else {
-									return nil
-								}
-							}
+			.zip(with: // file system objects which might conflict with symlinks
+				fileSystemObjects(for: dependency, withRepository: repositoryURL, at: CarthageProjectCheckoutsPath, flatMapTransform: { path in
+					let componentsRelativeToDirectoryURL = {
+						return URL(string: $0, relativeTo: self.directoryURL)?.standardizedFileURL.carthage_pathComponents
 					}
+					if
+						let components = componentsRelativeToDirectoryURL(path),
+						let comparator = componentsRelativeToDirectoryURL(CarthageProjectCheckoutsPath),
+						Array(components.dropLast(1)) == comparator
+					{
+						return components.last!
+					} else {
+						return nil
+					}
+				})
 			)
 			.attemptMap { (dependencies: Set<ProjectIdentifier>, components: [String]) -> Result<(), CarthageError> in
 				let names = dependencies.filter { dependency in
@@ -750,8 +749,6 @@ public final class Project {
 						dependency.name.caseInsensitiveCompare($0) == .orderedSame
 					}.isEmpty
 				}.map { $0.name }
-
-				if let result = addSubmoduleForDependency?.wait(), case .failure(_) = result { return result }
 
 				// If no `CarthageProjectCheckoutsPath`-housed symlinks are needed,
 				// return early after potentially adding submodules
