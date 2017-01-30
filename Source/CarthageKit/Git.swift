@@ -267,7 +267,7 @@ public func contentsOfFileInRepository(_ repositoryFileURL: URL, _ path: String,
 /// will be created.
 ///
 /// Submodules of the working tree must be handled seperately.
-public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDirectoryURL: NSURL, revision: String = "HEAD") -> SignalProducer<(), CarthageError> {
+public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDirectoryURL: URL, revision: String = "HEAD") -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt { () -> Result<[String: String], CarthageError> in
 			do {
 				try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true)
@@ -279,8 +279,8 @@ public func checkoutRepositoryToDirectory(repositoryFileURL: NSURL, _ workingDir
 			environment["GIT_WORK_TREE"] = workingDirectoryURL.carthage_path
 			return .success(environment)
 		}
-		.flatMap(.Concat) { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
-		.then(.empty)
+		.flatMap(.concat) { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
+		.then(SignalProducer<(), CarthageError>.empty)
 }
 
 /// Clones the given submodule into the working directory of its parent
