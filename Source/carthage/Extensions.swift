@@ -21,8 +21,7 @@ import ReactiveCocoa
 import ReactiveTask
 
 private let outputQueue = { () -> DispatchQueue in
-	let queue = DispatchQueue(label: "org.carthage.carthage.outputQueue")
-	queue.setTarget(queue: DispatchQueue.global(priority: .high))
+	let queue = DispatchQueue(label: "org.carthage.carthage.outputQueue", target: .global(priority: .high))
 
 	atexit_b {
 		queue.sync(flags: .barrier) {}
