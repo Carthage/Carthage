@@ -13,7 +13,7 @@ public enum ProductType: String {
 
 	/// Attempts to parse a product type from a string returned from
 	/// `xcodebuild`.
-	public static func from(string string: String) -> Result<ProductType, CarthageError> {
+	public static func from(string: String) -> Result<ProductType, CarthageError> {
 		return Result(self.init(rawValue: string), failWith: .parseError(description: "unexpected product type \"\(string)\""))
 	}
 }

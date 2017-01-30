@@ -88,16 +88,16 @@ public struct BuildCommand: CommandProtocol {
 				if !options.isVerbose {
 					buildProgress = buildProgress.filter { event in
 						switch event {
-						case .Launch, .Success:
+						case .launch, .success:
 							return true
-						case .StandardOutput, .StandardError:
+						case .standardOutput, .standardError:
 							return false
 						}
 					}
 				}
 
 				return buildProgress
-					.mapError { error in
+					.mapError { error -> CarthageError in
 						if case let .buildFailed(taskError, _) = error {
 							return .buildFailed(taskError, log: temporaryURL)
 						} else {
@@ -107,26 +107,26 @@ public struct BuildCommand: CommandProtocol {
 					.on(
 						started: {
 							if let path = temporaryURL?.carthage_path {
-								carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: path))
+								carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(path))
 							}
 						},
-						next: { taskEvent in
+						value: { taskEvent in
 							switch taskEvent {
-							case let .Launch(task):
+							case let .launch(task):
 								stdoutHandle.write(task.description.data(using: .utf8)!)
 								
-							case let .StandardOutput(data):
+							case let .standardOutput(data):
 								stdoutHandle.write(data)
 								
-							case let .StandardError(data):
+							case let .standardError(data):
 								stderrHandle.write(data)
 								
-							case let .Success(project, scheme):
-								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(string: project.description))
+							case let .success(project, scheme):
+								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(project.description))
 							}
 						}
 					)
-					.then(.empty)
+					.then(SignalProducer<(), CarthageError>.empty)
 			}
 	}
 
@@ -177,8 +177,8 @@ public struct BuildCommand: CommandProtocol {
 	/// file.
 	private func openTemporaryFile() -> SignalProducer<(FileHandle, URL), NSError> {
 		return SignalProducer.attempt {
-			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
-			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
+			var temporaryDirectoryTemplate: ContiguousArray<CChar> = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-xcodebuild.XXXXXX.log").utf8CString
+			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (template: inout UnsafeMutableBufferPointer<CChar>) -> Int32 in
 				return mkstemps(template.baseAddress, 4)
 			}
 
@@ -187,7 +187,7 @@ public struct BuildCommand: CommandProtocol {
 			}
 
 			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
-				return String.fromCString(ptr.baseAddress)!
+				return String(validatingUTF8: ptr.baseAddress!)!
 			}
 
 			let handle = FileHandle(fileDescriptor: logFD, closeOnDealloc: true)
@@ -327,7 +327,7 @@ extension BuildPlatform: ArgumentProtocol {
 		default:
 			var buildPlatforms = [BuildPlatform]()
 			for token in tokens {
-				if let found = findBuildPlatform(token) where found != .all {
+				if let found = findBuildPlatform(token), found != .all {
 					buildPlatforms.append(found)
 				} else {
 					// Reject if an invalid value is included in the comma-

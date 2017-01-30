@@ -35,7 +35,7 @@ public struct Cartfile {
 	}
 
 	/// Attempts to parse Cartfile information from a string.
-	public static func from(string string: String) -> Result<Cartfile, CarthageError> {
+	public static func from(string: String) -> Result<Cartfile, CarthageError> {
 		var dependencies: [Dependency<VersionSpecifier>] = []
 		var result: Result<(), CarthageError> = .success(())
 
@@ -54,10 +54,10 @@ public struct Cartfile {
 			}
 
 			switch Dependency<VersionSpecifier>.from(scanner) {
-			case let .Success(dep):
+			case let .success(dep):
 				dependencies.append(dep)
 
-			case let .Failure(error):
+			case let .failure(error):
 				result = .failure(error)
 				stop = true
 			}
@@ -128,7 +128,7 @@ extension Cartfile: CustomStringConvertible {
 public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [ProjectIdentifier] {
 	let projects1 = cartfile1.dependencies.map { $0.project }
 	let projects2 = cartfile2.dependencies.map { $0.project }
-	return Array(Set(projects1).intersect(projects2))
+	return Array(Set(projects1).intersection(Set(projects2)))
 }
 
 /// Represents a parsed Cartfile.resolved, which specifies which exact version was
@@ -157,17 +157,17 @@ public struct ResolvedCartfile {
 	}
 
 	/// Attempts to parse Cartfile.resolved information from a string.
-	public static func from(string string: String) -> Result<ResolvedCartfile, CarthageError> {
+	public static func from(string: String) -> Result<ResolvedCartfile, CarthageError> {
 		var cartfile = self.init(dependencies: [])
 		var result: Result<(), CarthageError> = .success(())
 
 		let scanner = Scanner(string: string)
 		scannerLoop: while !scanner.isAtEnd {
 			switch Dependency<PinnedVersion>.from(scanner) {
-			case let .Success(dep):
+			case let .success(dep):
 				cartfile.dependencies.insert(dep)
 
-			case let .Failure(error):
+			case let .failure(error):
 				result = .failure(error)
 				break scannerLoop
 			}
@@ -180,7 +180,7 @@ public struct ResolvedCartfile {
 extension ResolvedCartfile: CustomStringConvertible {
 	public var description: String {
 		return dependencies
-			.sort { $0.project.description < $1.project.description }
+			.sorted { $0.project.description < $1.project.description }
 			.map { $0.description + "\n" }
 			.joined(separator: "")
 	}
@@ -281,11 +281,11 @@ extension ProjectIdentifier: CustomStringConvertible {
 		case let .gitHub(repo):
 			let repoDescription: String
 			switch repo.server {
-			case .DotCom:
+			case .dotCom:
 				repoDescription = "\(repo.owner)/\(repo.name)"
 
-			case .Enterprise:
-				repoDescription = "\(repo.URL)"
+			case .enterprise:
+				repoDescription = "\(repo.url)"
 			}
 			return "github \"\(repoDescription)\""
 

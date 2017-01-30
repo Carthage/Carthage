@@ -93,6 +93,7 @@ class ProjectSpec: QuickSpec {
 				_ = launchGitTask([ "init" ], repositoryFileURL: repositoryURL).wait()
 			}
 
+			@discardableResult
 			func addCommit() -> String {
 				_ = launchGitTask([ "commit", "--allow-empty", "-m \"Empty commit\"" ], repositoryFileURL: repositoryURL).wait()
 				return launchGitTask([ "rev-parse", "--short", "HEAD" ], repositoryFileURL: repositoryURL)
@@ -101,18 +102,18 @@ class ProjectSpec: QuickSpec {
 					.trimmingCharacters(in: .newlines)
 			}
 
-			func cloneOrFetch(commitish commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
+			func cloneOrFetch(commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
 				return cloneOrFetchProject(projectIdentifier, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
 			}
 
-			func assertProjectEvent(commitish commitish: String? = nil, clearFetchTime: Bool = true, action: ProjectEvent? -> ()) {
+			func assertProjectEvent(commitish: String? = nil, clearFetchTime: Bool = true, action: @escaping (ProjectEvent?) -> ()) {
 				waitUntil { done in
 					if clearFetchTime {
 						FetchCache.clearFetchTimes()
 					}
 					cloneOrFetch(commitish: commitish).start(Observer(
-						completed: done,
-						next: { event, _ in action(event) }
+						value: { event, _ in action(event) },
+						completed: done
 					))
 				}
 			}

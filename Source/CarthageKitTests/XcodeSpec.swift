@@ -37,7 +37,7 @@ class XcodeSpec: QuickSpec {
 		}
 		
 		describe("locateProjectsInDirectory:") {
-			func relativePathsForProjectsInDirectory(directoryURL: URL) -> [String] {
+			func relativePathsForProjectsInDirectory(_ directoryURL: URL) -> [String] {
 				let result = ProjectLocator
 					.locate(in: directoryURL)
 					.map { $0.fileURL.carthage_absoluteString.substring(from: directoryURL.carthage_absoluteString.endIndex) }
@@ -73,7 +73,7 @@ class XcodeSpec: QuickSpec {
 				let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 					.flatten(.concat)
 					.ignoreTaskData()
-					.on(next: { (project, scheme) in
+					.on(value: { (project, scheme) in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 					})
 					.wait()
@@ -84,7 +84,7 @@ class XcodeSpec: QuickSpec {
 			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -144,9 +144,9 @@ class XcodeSpec: QuickSpec {
 			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.carthage_path ])
 			
 			let codesignResult = codeSign.launch()
-				.on(next: { taskEvent in
+				.on(value: { taskEvent in
 					switch taskEvent {
-					case let .StandardError(data):
+					case let .standardError(data):
 						output += String(data: data, encoding: .utf8)!
 						
 					default:
@@ -169,7 +169,7 @@ class XcodeSpec: QuickSpec {
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -199,7 +199,7 @@ class XcodeSpec: QuickSpec {
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -223,7 +223,7 @@ class XcodeSpec: QuickSpec {
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -245,7 +245,7 @@ class XcodeSpec: QuickSpec {
 			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -266,7 +266,7 @@ class XcodeSpec: QuickSpec {
 			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -313,7 +313,7 @@ class XcodeSpec: QuickSpec {
 			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -342,20 +342,20 @@ internal func beExistingDirectory() -> MatcherFunc<String> {
 
 		if !exists {
 			failureMessage.postfixMessage += ", but does not exist"
-		} else if !isDirectory {
+		} else if !isDirectory.boolValue {
 			failureMessage.postfixMessage += ", but is not a directory"
 		}
 
-		return exists && isDirectory
+		return exists && isDirectory.boolValue
 	}
 }
 
-internal func beRelativeSymlinkToDirectory(directory: URL) -> MatcherFunc<URL> {
+internal func beRelativeSymlinkToDirectory(_ directory: URL) -> MatcherFunc<URL> {
 	return MatcherFunc { actualExpression, failureMessage in
 		failureMessage.postfixMessage = "be a relative symlink to \(directory)"
 		let actualURL = try actualExpression.evaluate()
 
-		guard let url = actualURL else {
+		guard var url = actualURL else {
 			return false
 		}
 		var isSymlink: Bool = false
@@ -371,7 +371,7 @@ internal func beRelativeSymlinkToDirectory(directory: URL) -> MatcherFunc<URL> {
 
 		let destination = try! FileManager.`default`.destinationOfSymbolicLink(atPath: url.carthage_path)
 
-		guard !(destination as NSString).absolutePath else {
+		guard !(destination as NSString).isAbsolutePath else {
 			failureMessage.postfixMessage += ", but is not a relative symlink"
 			return false
 		}
