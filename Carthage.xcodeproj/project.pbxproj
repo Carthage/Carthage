@@ -90,7 +90,6 @@
 		D0F648821A4DD3D900BCF808 /* Argo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F648811A4DD3D900BCF808 /* Argo.framework */; };
 		D0F648831A4DD3EA00BCF808 /* Argo.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D0F648811A4DD3D900BCF808 /* Argo.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		F128A71A1B463D490044368C /* Outdated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F128A7191B463D490044368C /* Outdated.swift */; };
-		F14ECE551D8B135C009EBF02 /* NSData+SHA1.swift in Sources */ = {isa = PBXBuildFile; fileRef = F14ECE531D8B12B5009EBF02 /* NSData+SHA1.swift */; };
 		F162F3421D63D8A900809D7E /* VersionFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CB3CFB1D63D05D00C9EB99 /* VersionFile.swift */; };
 		F603929919EA29F80050A6AF /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = F603929819EA29F80050A6AF /* Project.swift */; };
 		F689C33619EA14D4006D1EFA /* Checkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66685FB19E8F1EC00487A88 /* Checkout.swift */; };
@@ -268,7 +267,6 @@
 		D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfile.resolved; sourceTree = "<group>"; };
 		D0F648811A4DD3D900BCF808 /* Argo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Argo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F128A7191B463D490044368C /* Outdated.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Outdated.swift; sourceTree = "<group>"; };
-		F14ECE531D8B12B5009EBF02 /* NSData+SHA1.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "NSData+SHA1.swift"; sourceTree = "<group>"; };
 		F1CB3CFB1D63D05D00C9EB99 /* VersionFile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionFile.swift; sourceTree = "<group>"; };
 		F603929819EA29F80050A6AF /* Project.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
 		F66685FB19E8F1EC00487A88 /* Checkout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Checkout.swift; sourceTree = "<group>"; };
@@ -470,7 +468,6 @@
 				D074EDC41A049283001DE082 /* FrameworkExtensions.swift */,
 				88ED56D519ECE34900CBF5C4 /* Git.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
-				F14ECE531D8B12B5009EBF02 /* NSData+SHA1.swift */,
 				CD2482661E1A05F50001EFE2 /* MachOType.swift */,
 				CD07EB121E0EA90F00CFBEE4 /* Platform.swift */,
 				D0A2025D1B114D1000C71375 /* ProducerQueue.swift */,
@@ -774,7 +771,6 @@
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
 				CD07EB171E0F51A500CFBEE4 /* SDK.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
-				F14ECE551D8B135C009EBF02 /* NSData+SHA1.swift in Sources */,
 				CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */,
 				CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */,
 				CD1FE6571DD857570016639E /* Swift3Shims.swift in Sources */,
