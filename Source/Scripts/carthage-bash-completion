@@ -29,12 +29,12 @@ _carthage() {
             bootstrap|update)
                 COMPREPLY=($(compgen -W '--no-checkout --no-build --verbose --configuration \
                     --platform --toolchain --derived-data --use-ssh --use-submodules \
-                    --no-use-binaries --color --project-directory' -- ${cur}))
+                    --no-use-binaries --color --project-directory --cache-builds' -- ${cur}))
                 return 0
                 ;;
             build)
                 COMPREPLY=($(compgen -W '--configuration --platform --toolchain --derived-data \
-                    --no-skip-current --color --verbose --project-directory' -- ${cur}))
+                    --no-skip-current --color --verbose --project-directory --cache-builds' -- ${cur}))
                 return 0
                 ;;
             checkout)

@@ -59,6 +59,7 @@ _carthage() {
                         '--no-use-binaries' \
                         '--color: :(auto always never)' \
                         '--project-directory: :_directories' \
+                        '--cache-builds' \
                         '*: :__carthage_dependencies' \
                         && ret=0
                         ;;
@@ -72,6 +73,7 @@ _carthage() {
                         '--color: :(auto always never)' \
                         '--verbose' \
                         '--project-directory: :_directories' \
+                        '--cache-builds' \
                         '(-)*:: :->null_state' \
                         && ret=0
                         ;;
