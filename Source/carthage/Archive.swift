@@ -16,14 +16,14 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 
-public struct ArchiveCommand: CommandType {
-	public struct Options: OptionsType {
+public struct ArchiveCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let outputPath: String?
 		public let directoryPath: String
 		public let colorOptions: ColorOptions
 		public let frameworkNames: [String]
 
-		static func create(outputPath: String?) -> (String) -> (ColorOptions) -> ([String]) -> Options {
+		static func create(_ outputPath: String?) -> (String) -> (ColorOptions) -> ([String]) -> Options {
 			return { directoryPath in { colorOptions in { frameworkNames in
 				return self.init(outputPath: outputPath, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: frameworkNames)
 			} } }
@@ -68,7 +68,7 @@ public struct ArchiveCommand: CommandType {
 					return BuildSettings.loadWithArguments(buildArguments)
 				}
 				.flatMap(.concat) { settings -> SignalProducer<String, CarthageError> in
-					if let wrapperName = settings.wrapperName.value where settings.productType.value == .framework {
+					if let wrapperName = settings.wrapperName.value, settings.productType.value == .framework {
 						return .init(value: wrapperName)
 					} else {
 						return .empty
@@ -101,8 +101,8 @@ public struct ArchiveCommand: CommandType {
 					return SignalProducer(value: framework.relativePath)
 						.concat(extraFilesProducer)
 				}
-				.on(next: { path in
-					carthage.println(formatting.bullets + "Found " + formatting.path(string: path))
+				.on(value: { path in
+					carthage.println(formatting.bullets + "Found " + formatting.path(path))
 				})
 				.collect()
 				.flatMap(.merge) { paths -> SignalProducer<(), CarthageError> in
@@ -125,7 +125,7 @@ public struct ArchiveCommand: CommandType {
 						.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
 
 					return zip(paths: paths, into: outputURL, workingDirectory: options.directoryPath).on(completed: {
-						carthage.println(formatting.bullets + "Created " + formatting.path(string: outputPath))
+						carthage.println(formatting.bullets + "Created " + formatting.path(outputPath))
 					})
 				}
 		}
@@ -135,7 +135,7 @@ public struct ArchiveCommand: CommandType {
 
 /// Returns an appropriate output file path for the resulting zip file using
 /// the given option and frameworks.
-private func outputPathWithOptions(options: ArchiveCommand.Options, frameworks: [String]) -> String {
+private func outputPathWithOptions(_ options: ArchiveCommand.Options, frameworks: [String]) -> String {
 	let defaultOutputPath = "\(frameworks.first!).zip"
 
 	return options.outputPath.map { path -> String in
@@ -145,7 +145,7 @@ private func outputPathWithOptions(options: ArchiveCommand.Options, frameworks: 
 		}
 
 		var isDirectory: ObjCBool = false
-		if FileManager.`default`.fileExists(atPath: path, isDirectory: &isDirectory) && isDirectory {
+		if FileManager.`default`.fileExists(atPath: path, isDirectory: &isDirectory) && isDirectory.boolValue {
 			// If the given path is an existing directory, output a zip file
 			// into that directory.
 			return (path as NSString).appendingPathComponent(defaultOutputPath)

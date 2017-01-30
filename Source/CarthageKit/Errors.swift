@@ -16,7 +16,7 @@ import ReactiveTask
 import Tentacle
 
 /// Possible errors that can originate from Carthage.
-public enum CarthageError: ErrorType, Equatable {
+public enum CarthageError: Error, Equatable {
 	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: ProjectIdentifier?)
 
 	/// One or more arguments was invalid.
@@ -94,11 +94,11 @@ public enum CarthageError: ErrorType, Equatable {
 	case versionFileError(description: String)
 }
 
-private func == (lhs: CarthageError.VersionRequirement, rhs: CarthageError.VersionRequirement) -> Bool {
+private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
 	return lhs.specifier == rhs.specifier && lhs.fromProject == rhs.fromProject
 }
 
-public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
+public func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
 	switch (lhs, rhs) {
 	case let (.invalidArgument(left), .invalidArgument(right)):
 		return left == right
@@ -283,7 +283,7 @@ extension CarthageError: CustomStringConvertible {
 			
 		case let .buildFailed(taskError, log):
 			var message = "Build Failed\n"
-			if case let .ShellTaskFailed(task, exitCode, _) = taskError {
+			if case let .shellTaskFailed(task, exitCode, _) = taskError {
 				message += "\tTask failed with exit code \(exitCode):\n"
 				message += "\t\(task)\n"
 			} else {
@@ -318,7 +318,7 @@ public struct DuplicateDependency: Comparable {
 	// test case.
 	public init(project: ProjectIdentifier, locations: [String]) {
 		self.project = project
-		self.locations = locations.sort(<)
+		self.locations = locations.sorted(by: <)
 	}
 }
 
@@ -338,11 +338,11 @@ extension DuplicateDependency: CustomStringConvertible {
 	}
 }
 
-public func == (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
+public func == (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
 	return lhs.project == rhs.project && lhs.locations == rhs.locations
 }
 
-public func < (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
+public func < (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
 	if lhs.description < rhs.description {
 		return true
 	}

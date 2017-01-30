@@ -18,7 +18,7 @@ import ReactiveCocoa
 import ReactiveTask
 
 extension BuildOptions: OptionsType {
-	public static func create(configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> Bool -> BuildOptions {
+	public static func create(_ configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> Bool -> BuildOptions {
 		return { buildPlatform in { toolchain in { derivedDataPath in { cacheBuilds in
 			return self.init(configuration: configuration, platforms: buildPlatform.platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, cacheBuilds: cacheBuilds)
 		} } } }
@@ -38,8 +38,8 @@ extension BuildOptions: OptionsType {
 	}
 }
 
-public struct BuildCommand: CommandType {
-	public struct Options: OptionsType {
+public struct BuildCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let buildOptions: BuildOptions
 		public let skipCurrent: Bool
 		public let colorOptions: ColorOptions
@@ -47,7 +47,7 @@ public struct BuildCommand: CommandType {
 		public let directoryPath: String
 		public let dependenciesToBuild: [String]?
 
-		public static func create(buildOptions: BuildOptions) -> (Bool) -> (ColorOptions) -> (Bool) -> (String) -> ([String]) -> Options {
+		public static func create(_ buildOptions: BuildOptions) -> (Bool) -> (ColorOptions) -> (Bool) -> (String) -> ([String]) -> Options {
 			return { skipCurrent in { colorOptions in { isVerbose in { directoryPath in { dependenciesToBuild in
 				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
 				return self.init(buildOptions: buildOptions, skipCurrent: skipCurrent, colorOptions: colorOptions, isVerbose: isVerbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
@@ -74,7 +74,7 @@ public struct BuildCommand: CommandType {
 	}
 
 	/// Builds a project with the given options.
-	public func buildWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
+	public func buildWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
 			.flatMap(.merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
 				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
@@ -89,16 +89,16 @@ public struct BuildCommand: CommandType {
 				if !options.isVerbose {
 					buildProgress = buildProgress.filter { event in
 						switch event {
-						case .Launch, .Success:
+						case .launch, .success:
 							return true
-						case .StandardOutput, .StandardError:
+						case .standardOutput, .standardError:
 							return false
 						}
 					}
 				}
 
 				return buildProgress
-					.mapError { error in
+					.mapError { error -> CarthageError in
 						if case let .buildFailed(taskError, _) = error {
 							return .buildFailed(taskError, log: temporaryURL)
 						} else {
@@ -108,33 +108,33 @@ public struct BuildCommand: CommandType {
 					.on(
 						started: {
 							if let path = temporaryURL?.carthage_path {
-								carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(string: path))
+								carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(path))
 							}
 						},
-						next: { taskEvent in
+						value: { taskEvent in
 							switch taskEvent {
-							case let .Launch(task):
+							case let .launch(task):
 								stdoutHandle.write(task.description.data(using: .utf8)!)
 								
-							case let .StandardOutput(data):
+							case let .standardOutput(data):
 								stdoutHandle.write(data)
 								
-							case let .StandardError(data):
+							case let .standardError(data):
 								stderrHandle.write(data)
 								
-							case let .Success(project, scheme):
-								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(string: project.description))
+							case let .success(project, scheme):
+								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(project.description))
 							}
 						}
 					)
-					.then(.empty)
+					.then(SignalProducer<(), CarthageError>.empty)
 			}
 	}
 
 	/// Builds the project in the given directory, using the given options.
 	///
 	/// Returns a producer of producers, representing each scheme being built.
-	private func buildProjectInDirectoryURL(directoryURL: URL, options: Options) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	private func buildProjectInDirectoryURL(_ directoryURL: URL, options: Options) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		let project = Project(directoryURL: directoryURL)
 
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
@@ -178,8 +178,8 @@ public struct BuildCommand: CommandType {
 	/// file.
 	private func openTemporaryFile() -> SignalProducer<(FileHandle, URL), NSError> {
 		return SignalProducer.attempt {
-			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-xcodebuild.XXXXXX.log").nulTerminatedUTF8.map { CChar($0) }
-			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> Int32 in
+			var temporaryDirectoryTemplate: ContiguousArray<CChar> = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-xcodebuild.XXXXXX.log").utf8CString
+			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (template: inout UnsafeMutableBufferPointer<CChar>) -> Int32 in
 				return mkstemps(template.baseAddress, 4)
 			}
 
@@ -188,7 +188,7 @@ public struct BuildCommand: CommandType {
 			}
 
 			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
-				return String.fromCString(ptr.baseAddress)!
+				return String(validatingUTF8: ptr.baseAddress!)!
 			}
 
 			let handle = FileHandle(fileDescriptor: logFD, closeOnDealloc: true)
@@ -199,7 +199,7 @@ public struct BuildCommand: CommandType {
 
 	/// Opens a file handle for logging, returning the handle and the URL to any
 	/// temporary file on disk.
-	private func openLoggingHandle(options: Options) -> SignalProducer<(FileHandle, URL?), CarthageError> {
+	private func openLoggingHandle(_ options: Options) -> SignalProducer<(FileHandle, URL?), CarthageError> {
 		if options.isVerbose {
 			let out: (FileHandle, URL?) = (FileHandle.standardOutput, nil)
 			return SignalProducer(value: out)
@@ -260,7 +260,7 @@ public enum BuildPlatform: Equatable {
 	}
 }
 
-public func ==(lhs: BuildPlatform, rhs: BuildPlatform) -> Bool {
+public func ==(_ lhs: BuildPlatform, _ rhs: BuildPlatform) -> Bool {
 	switch (lhs, rhs) {
 	case let (.multiple(left), .multiple(right)):
 		return left == right
@@ -297,7 +297,7 @@ extension BuildPlatform: CustomStringConvertible {
 	}
 }
 
-extension BuildPlatform: ArgumentType {
+extension BuildPlatform: ArgumentProtocol {
 	public static let name = "platform"
 
 	private static let acceptedStrings: [String: BuildPlatform] = [
@@ -328,7 +328,7 @@ extension BuildPlatform: ArgumentType {
 		default:
 			var buildPlatforms = [BuildPlatform]()
 			for token in tokens {
-				if let found = findBuildPlatform(token) where found != .all {
+				if let found = findBuildPlatform(token), found != .all {
 					buildPlatforms.append(found)
 				} else {
 					// Reject if an invalid value is included in the comma-

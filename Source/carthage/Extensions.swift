@@ -20,12 +20,11 @@ import ReactiveCocoa
 #endif
 import ReactiveTask
 
-private let outputQueue = { () -> dispatch_queue_t in
-	let queue = dispatch_queue_create("org.carthage.carthage.outputQueue", DISPATCH_QUEUE_SERIAL)
-	dispatch_set_target_queue(queue, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0))
+private let outputQueue = { () -> DispatchQueue in
+	let queue = DispatchQueue(label: "org.carthage.carthage.outputQueue", target: .global(priority: .high))
 
 	atexit_b {
-		dispatch_barrier_sync(queue) {}
+		queue.sync(flags: .barrier) {}
 	}
 
 	return queue
@@ -33,28 +32,28 @@ private let outputQueue = { () -> dispatch_queue_t in
 
 /// A thread-safe version of Swift's standard println().
 internal func println() {
-	dispatch_async(outputQueue) {
+	outputQueue.async {
 		Swift.print()
 	}
 }
 
 /// A thread-safe version of Swift's standard println().
-internal func println<T>(object: T) {
-	dispatch_async(outputQueue) {
+internal func println<T>(_ object: T) {
+	outputQueue.async {
 		Swift.print(object)
 	}
 }
 
 /// A thread-safe version of Swift's standard print().
-internal func print<T>(object: T) {
-	dispatch_async(outputQueue) {
+internal func print<T>(_ object: T) {
+	outputQueue.async {
 		Swift.print(object, terminator: "")
 	}
 }
 
 extension String {
 	/// Split the string into substrings separated by the given separators.
-	internal func split(maxSplits maxSplits: Int = .max, omittingEmptySubsequences: Bool = true, separators: [Character] = [ ",", " " ]) -> [String] {
+	internal func split(maxSplits: Int = .max, omittingEmptySubsequences: Bool = true, separators: [Character] = [ ",", " " ]) -> [String] {
 		return characters
 			.split(maxSplits: maxSplits, omittingEmptySubsequences: omittingEmptySubsequences, whereSeparator: separators.contains)
 			.map(String.init)
@@ -62,7 +61,7 @@ extension String {
 }
 
 extension SignalProducerProtocol where Error == CarthageError {
-	/// Waits on a SignalProducer that implements the behavior of a CommandType.
+	/// Waits on a SignalProducer that implements the behavior of a CommandProtocol.
 	internal func waitOnCommand() -> Result<(), CarthageError> {
 		let result = producer
 			.then(SignalProducer<(), CarthageError>.empty)
@@ -73,7 +72,7 @@ extension SignalProducerProtocol where Error == CarthageError {
 	}
 }
 
-extension GitURL: ArgumentType {
+extension GitURL: ArgumentProtocol {
 	public static let name = "URL"
 
 	public static func from(string: String) -> GitURL? {
@@ -96,30 +95,30 @@ internal struct ProjectEventSink {
 		self.colorOptions = colorOptions
 	}
 	
-	mutating func put(event: ProjectEvent) {
+	mutating func put(_ event: ProjectEvent) {
 		let formatting = colorOptions.formatting
 		
 		switch event {
 		case let .cloning(project):
-			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(string: project.name))
+			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(project.name))
 
 		case let .fetching(project):
-			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(string: project.name))
+			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(project.name))
 			
 		case let .checkingOut(project, revision):
-			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(string: project.name) + " at " + formatting.quote(revision))
+			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(project.name) + " at " + formatting.quote(revision))
 
 		case let .downloadingBinaries(project, release):
-			carthage.println(formatting.bullets + "Downloading " + formatting.projectName(string: project.name) + ".framework binary at " + formatting.quote(release))
+			carthage.println(formatting.bullets + "Downloading " + formatting.projectName(project.name) + ".framework binary at " + formatting.quote(release))
 
 		case let .skippedDownloadingBinaries(project, message):
-			carthage.println(formatting.bullets + "Skipped downloading " + formatting.projectName(string: project.name) + ".framework binary due to the error:\n\t" + formatting.quote(message))
+			carthage.println(formatting.bullets + "Skipped downloading " + formatting.projectName(project.name) + ".framework binary due to the error:\n\t" + formatting.quote(message))
 
 		case let .skippedBuilding(project, message):
-			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(string: project.name) + " due to the error:\n" + message)
+			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(project.name) + " due to the error:\n" + message)
 			
 		case let .skippedBuildingCached(project):
-			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(string: project.name))
+			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(project.name))
 		}
 	}
 }

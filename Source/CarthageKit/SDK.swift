@@ -27,12 +27,12 @@ public enum SDK: String {
 	public static let allSDKs: Set<SDK> = [.macOSX, .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator]
 
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
-	public static func from(string string: String) -> Result<SDK, CarthageError> {
+	public static func from(string: String) -> Result<SDK, CarthageError> {
 		return Result(self.init(rawValue: string.lowercased()), failWith: .parseError(description: "unexpected SDK key \"\(string)\""))
 	}
 
 	/// Split the given SDKs into simulator ones and device ones.
-	internal static func splitSDKs<S: SequenceType where S.Generator.Element == SDK>(sdks: S) -> (simulators: [SDK], devices: [SDK]) {
+	internal static func splitSDKs<S: Sequence>(_ sdks: S) -> (simulators: [SDK], devices: [SDK]) where S.Iterator.Element == SDK {
 		return (
 			simulators: sdks.filter { $0.isSimulator },
 			devices: sdks.filter { !$0.isSimulator }

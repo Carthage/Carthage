@@ -16,12 +16,12 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 
-public struct FetchCommand: CommandType {
-	public struct Options: OptionsType {
+public struct FetchCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let colorOptions: ColorOptions
 		public let repositoryURL: GitURL
 
-		static func create(colorOptions: ColorOptions) -> (GitURL) -> Options {
+		static func create(_ colorOptions: ColorOptions) -> (GitURL) -> Options {
 			return { repositoryURL in
 				return self.init(colorOptions: colorOptions, repositoryURL: repositoryURL)
 			}
@@ -42,7 +42,7 @@ public struct FetchCommand: CommandType {
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
 		return cloneOrFetchProject(project, preferHTTPS: true)
-			.on(next: { event, _ in
+			.on(value: { event, _ in
 				if let event = event {
 					eventSink.put(event)
 				}

@@ -1,6 +1,8 @@
 import Foundation
 
 #if swift(>=3)
+	import Result
+
 	internal extension URL {
 		var carthage_absoluteString: String {
 			return absoluteString
@@ -19,7 +21,16 @@ import Foundation
 			return pathComponents
 		}
 	}
+
+	// MARK: - Result
+
+	internal extension Result {
+		func fanout<R: ResultProtocol>(_ other: @autoclosure () -> R) -> Result<(Value, R.Value), Error> where Error == R.Error {
+			return self.flatMap { left in other().map { right in (left, right) } }
+		}
+	}
 #else
+	import Commandant
 	import PrettyColors
 	import Result
 	import ReactiveCocoa
@@ -470,6 +481,12 @@ import Foundation
 
 		var uuidString: String { return UUIDString }
 	}
+
+	// MARK: - Commandant
+
+	public typealias ArgumentProtocol = ArgumentType
+	public typealias CommandProtocol = CommandType
+	public typealias OptionsProtocol = OptionsType
 
 	// MARK: - PrettyColors
 

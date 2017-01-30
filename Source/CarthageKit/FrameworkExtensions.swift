@@ -33,7 +33,7 @@ extension String {
 }
 
 /// Merges `rhs` into `lhs` and returns the result.
-internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
+internal func combineDictionaries<K, V>(_ lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	var result = lhs
 	for (key, value) in rhs {
 		result.updateValue(value, forKey: key)
@@ -45,7 +45,7 @@ internal func combineDictionaries<K, V>(lhs: [K: V], rhs: [K: V]) -> [K: V] {
 extension SignalProtocol {
 	/// Sends each value that occurs on `signal` combined with each value that
 	/// occurs on `otherSignal` (repeats included).
-	private func permute<U>(with otherSignal: Signal<U, Error>) -> Signal<(Value, U), Error> {
+	fileprivate func permute<U>(with otherSignal: Signal<U, Error>) -> Signal<(Value, U), Error> {
 		return Signal { observer in
 			let lock = NSLock()
 			lock.name = "org.carthage.CarthageKit.permute"
@@ -59,7 +59,7 @@ extension SignalProtocol {
 
 			compositeDisposable += self.observe { event in
 				switch event {
-				case let .Next(value):
+				case let .value(value):
 					lock.lock()
 
 					signalValues.append(value)
@@ -69,10 +69,10 @@ extension SignalProtocol {
 
 					lock.unlock()
 
-				case let .Failed(error):
+				case let .failed(error):
 					observer.send(error: error)
 
-				case .Completed:
+				case .completed:
 					lock.lock()
 
 					signalCompleted = true
@@ -82,14 +82,14 @@ extension SignalProtocol {
 
 					lock.unlock()
 
-				case .Interrupted:
+				case .interrupted:
 					observer.sendInterrupted()
 				}
 			}
 
 			compositeDisposable += otherSignal.observe { event in
 				switch event {
-				case let .Next(value):
+				case let .value(value):
 					lock.lock()
 
 					otherValues.append(value)
@@ -99,10 +99,10 @@ extension SignalProtocol {
 
 					lock.unlock()
 
-				case let .Failed(error):
+				case let .failed(error):
 					observer.send(error: error)
 
-				case .Completed:
+				case .completed:
 					lock.lock()
 
 					otherCompleted = true
@@ -112,7 +112,7 @@ extension SignalProtocol {
 
 					lock.unlock()
 
-				case .Interrupted:
+				case .interrupted:
 					observer.sendInterrupted()
 				}
 			}
@@ -125,7 +125,7 @@ extension SignalProtocol {
 extension SignalProducerProtocol {
 	/// Sends each value that occurs on `producer` combined with each value that
 	/// occurs on `otherProducer` (repeats included).
-	private func permute<U>(with otherProducer: SignalProducer<U, Error>) -> SignalProducer<(Value, U), Error> {
+	fileprivate func permute<U>(with otherProducer: SignalProducer<U, Error>) -> SignalProducer<(Value, U), Error> {
 		// This should be the implementation of this method:
 		// return lift(Signal.permute(with:))(otherProducer)
 		//
@@ -150,7 +150,7 @@ extension SignalProducerProtocol {
 	/// Sends a boolean of whether the producer succeeded or failed.
 	internal func succeeded() -> SignalProducer<Bool, NoError> {
 		return self
-			.then(.init(value: true))
+			.then(SignalProducer<Bool, Error>.init(value: true))
 			.flatMapError { _ in .init(value: false) }
 	}
 }
@@ -159,7 +159,6 @@ extension SignalProducerProtocol where Value: SignalProducerProtocol, Error == V
 	/// Sends all permutations of the values from the inner producers, as they arrive.
 	///
 	/// If no producers are received, sends a single empty array then completes.
-	@warn_unused_result(message="Did you forget to call `start` on the producer?")
 	internal func permute() -> SignalProducer<[Value.Value], Error> {
 		return self
 			.collect()
@@ -191,33 +190,33 @@ extension SignalProtocol where Value: EventProtocol, Value.Error == Error {
 
 			return self.observe { event in
 				switch event {
-				case let .Next(innerEvent):
+				case let .value(innerEvent):
 					switch innerEvent.event {
-					case let .Next(value):
+					case let .value(value):
 						receivedValue = true
 						observer.send(value: value)
 
-					case let .Failed(error):
+					case let .failed(error):
 						receivedError = error
 
-					case .Completed:
+					case .completed:
 						observer.sendCompleted()
 
-					case .Interrupted:
+					case .interrupted:
 						observer.sendInterrupted()
 					}
 
-				case let .Failed(error):
+				case let .failed(error):
 					observer.send(error: error)
 
-				case .Completed:
-					if let receivedError = receivedError where !receivedValue {
+				case .completed:
+					if let receivedError = receivedError, !receivedValue {
 						observer.send(error: receivedError)
 					}
 
 					observer.sendCompleted()
 
-				case .Interrupted:
+				case .interrupted:
 					observer.sendInterrupted()
 				}
 			}
@@ -264,7 +263,7 @@ extension URL {
 		return .failure(.readFailed(self, error))
 	}
 
-	public func hasSubdirectory(possibleSubdirectory: URL) -> Bool {
+	public func hasSubdirectory(_ possibleSubdirectory: URL) -> Bool {
 		let standardizedSelf = self.standardizedFileURL
 		let standardizedOther = possibleSubdirectory.standardizedFileURL
 
@@ -282,22 +281,13 @@ extension FileManager {
 	/// Creates a directory enumerator at the given URL. Sends each URL
 	/// enumerated, along with the enumerator itself (so it can be introspected
 	/// and modified as enumeration progresses).
-	public func carthage_enumerator(at url: URL, includingPropertiesForKeys keys: [String], options: NSDirectoryEnumerationOptions = [], catchErrors: Bool = false) -> SignalProducer<(NSDirectoryEnumerator, URL), CarthageError> {
-		return carthage_enumerator(
-			at: url,
-			includingPropertiesForKeys: keys.map(URLResourceKey.init),
-			options: options,
-			catchErrors: catchErrors
-		)
-	}
-
-	internal func carthage_enumerator(at url: URL, includingPropertiesForKeys keys: [URLResourceKey]? = nil, options: NSDirectoryEnumerationOptions = [], catchErrors: Bool = false) -> SignalProducer<(NSDirectoryEnumerator, URL), CarthageError> {
+	public func carthage_enumerator(at url: URL, includingPropertiesForKeys keys: [URLResourceKey]? = nil, options: FileManager.DirectoryEnumerationOptions = [], catchErrors: Bool = false) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
 		return SignalProducer { observer, disposable in
 			let enumerator = self.enumerator(at: url, includingPropertiesForKeys: keys, options: options) { (url, error) in
 				if catchErrors {
 					return true
 				} else {
-					observer.send(error: CarthageError.readFailed(url, error))
+					observer.send(error: CarthageError.readFailed(url, error as NSError))
 					return false
 				}
 			}!
@@ -319,7 +309,7 @@ extension FileManager {
 /// Creates a counted set from a sequence. The counted set is represented as a
 /// dictionary where the keys are elements from the sequence and values count
 /// how many times elements are present in the sequence.
-internal func buildCountedSet<S: SequenceType>(sequence: S) -> [S.Generator.Element: Int] {
+internal func buildCountedSet<S: Sequence>(_ sequence: S) -> [S.Iterator.Element: Int] {
 	return sequence.reduce([:]) { set, elem in
 		var set = set
 		if let count = set[elem] {

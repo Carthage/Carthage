@@ -16,8 +16,8 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 
-public struct CheckoutCommand: CommandType {
-	public struct Options: OptionsType {
+public struct CheckoutCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
 		public let useSubmodules: Bool
 		public let useBinaries: Bool
@@ -25,7 +25,7 @@ public struct CheckoutCommand: CommandType {
 		public let directoryPath: String
 		public let dependenciesToCheckout: [String]?
 
-		public static func create(useSSH: Bool) -> (Bool) -> (Bool) -> (ColorOptions) -> (String) -> ([String]) -> Options {
+		public static func create(_ useSSH: Bool) -> (Bool) -> (Bool) -> (ColorOptions) -> (String) -> ([String]) -> Options {
 			return { useSubmodules in { useBinaries in { colorOptions in { directoryPath in { dependenciesToCheckout in
 				// Disable binary downloads when using submodules.
 				// See https://github.com/Carthage/Carthage/issues/419.
@@ -76,7 +76,7 @@ public struct CheckoutCommand: CommandType {
 	}
 
 	/// Checks out dependencies with the given options.
-	public func checkoutWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
+	public func checkoutWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		return options.loadProject()
 			.flatMap(.merge) { $0.checkoutResolvedDependencies(options.dependenciesToCheckout) }
 	}

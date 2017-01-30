@@ -30,7 +30,7 @@ public struct BuildSettings {
 	///
 	/// Upon .success, sends one BuildSettings value for each target included in
 	/// the referenced scheme.
-	public static func loadWithArguments(arguments: BuildArguments) -> SignalProducer<BuildSettings, CarthageError> {
+	public static func loadWithArguments(_ arguments: BuildArguments) -> SignalProducer<BuildSettings, CarthageError> {
 		// xcodebuild (in Xcode 8) has a bug where xcodebuild -showBuildSettings
 		// can hang indefinitely on projects that contain core data models.
 		// rdar://27052195
@@ -45,7 +45,7 @@ public struct BuildSettings {
 			// can sometimes hang indefinitely on projects that don't
 			// share any schemes, so automatically bail out if it looks
 			// like that's happening.
-			.timeout(after: 60, raising: .xcodebuildTimeout(arguments.project), on: QueueScheduler(qos: QOS_CLASS_DEFAULT))
+			.timeout(after: 60, raising: .xcodebuildTimeout(arguments.project), on: QueueScheduler(qos: .default))
 			.retry(upTo: 5)
 			.map { data in
 				return String(data: data, encoding: .utf8)!
@@ -99,7 +99,7 @@ public struct BuildSettings {
 	///
 	/// If an SDK is unrecognized or could not be determined, an error will be
 	/// sent on the returned signal.
-	public static func SDKsForScheme(scheme: String, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
+	public static func SDKsForScheme(_ scheme: String, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
 		return loadWithArguments(BuildArguments(project: project, scheme: scheme))
 			.take(first: 1)
 			.flatMap(.merge) { $0.buildSDKs }

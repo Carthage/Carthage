@@ -16,8 +16,8 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 
-public struct UpdateCommand: CommandType {
-	public struct Options: OptionsType {
+public struct UpdateCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let checkoutAfterUpdate: Bool
 		public let buildAfterUpdate: Bool
 		public let isVerbose: Bool
@@ -42,7 +42,7 @@ public struct UpdateCommand: CommandType {
 			}
 		}
 
-		public static func create(checkoutAfterUpdate: Bool) -> (Bool) -> (Bool) -> (BuildOptions) -> (CheckoutCommand.Options) -> Options {
+		public static func create(_ checkoutAfterUpdate: Bool) -> (Bool) -> (Bool) -> (BuildOptions) -> (CheckoutCommand.Options) -> Options {
 			return { buildAfterUpdate in { isVerbose in {  buildOptions in { checkoutOptions in
 				return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, isVerbose: isVerbose, buildOptions: buildOptions, checkoutOptions: checkoutOptions, dependenciesToUpdate: checkoutOptions.dependenciesToCheckout)
 			} } } }
@@ -61,7 +61,7 @@ public struct UpdateCommand: CommandType {
 		/// accordingly.
 		public func loadProject() -> SignalProducer<Project, CarthageError> {
 			return checkoutOptions.loadProject()
-				.on(next: { project in
+				.on(value: { project in
 					// Never check out binaries if 
 					// 1. we're skipping the build step, or
 					// 2. `--toolchain` option is given
@@ -86,7 +86,7 @@ public struct UpdateCommand: CommandType {
 						.loadCombinedCartfile()
 						.flatMap(.concat) { cartfile -> SignalProducer<(), CarthageError> in
 							let dependencyNames = cartfile.dependencies.map { $0.project.name.lowercased() }
-							let unknownDependencyNames = Set(depsToUpdate.map { $0.lowercased() }).subtract(dependencyNames)
+							let unknownDependencyNames = Set(depsToUpdate.map { $0.lowercased() }).subtracting(dependencyNames)
 							
 							if !unknownDependencyNames.isEmpty {
 								return SignalProducer(error: .unknownDependencies(unknownDependencyNames.sorted()))
