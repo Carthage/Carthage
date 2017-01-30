@@ -22,17 +22,17 @@ import ReactiveTask
 class ProjectSpec: QuickSpec {
 	override func spec() {
 		describe("createAndCheckVersionFiles") {
-			let directoryURL = NSBundle(forClass: type(of: self)).URLForResource("DependencyTest", withExtension: nil)!
+			let directoryURL = Bundle(for: type(of: self)).url(forResource: "DependencyTest", withExtension: nil)!
 			let buildDirectoryURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 			
-			func buildDependencyTest(platforms platforms: Set<Platform> = [], cacheBuilds: Bool = true) -> Set<String> {
+			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true) -> Set<String> {
 				var builtSchemes: [String] = []
 				
 				let project = Project(directoryURL: directoryURL)
-				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds))
+				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, toolchain: "com.apple.dt.toolchain.Swift_2_3", cacheBuilds: cacheBuilds))
 					.flatten(.concat)
 					.ignoreTaskData()
-					.on(next: { (project, scheme) in
+					.on(value: { (project, scheme) in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 						builtSchemes.append(scheme)
 					})
@@ -42,19 +42,17 @@ class ProjectSpec: QuickSpec {
 				return Set(builtSchemes)
 			}
 			
-			func overwriteFramework(frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: NSURL) {
+			func overwriteFramework(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL) {
 				let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
 				let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
 				let binaryURL = frameworkURL.appendingPathComponent(frameworkName, isDirectory: false)
-				let binaryPath = binaryURL.path!
 				
-				let data = "junkdata".dataUsingEncoding(NSUTF8StringEncoding)!
-				let result = data.writeToFile(binaryPath, atomically: true)
-				expect(result).to(beTrue())
+				let data = "junkdata".data(using: .utf8)!
+				try! data.write(to: binaryURL, options: .atomic)
 			}
 			
 			beforeEach {
-				let _ = try? NSFileManager.defaultManager().removeItemAtURL(buildDirectoryURL)
+				let _ = try? FileManager.default.removeItem(at: buildDirectoryURL)
 			}
 			
 			it("should not rebuild cached frameworks unless instructed to ignore cached builds") {
@@ -89,11 +87,11 @@ class ProjectSpec: QuickSpec {
 				expect(result1).to(equal(expected))
 				
 				let preludeVersionFileURL = buildDirectoryURL.appendingPathComponent(".Prelude.version", isDirectory: false)
-				let preludeVersionFilePath = preludeVersionFileURL.path!
+				let preludeVersionFilePath = preludeVersionFileURL.path
 				
-				let json = try! NSString(contentsOfURL: preludeVersionFileURL, encoding: NSUTF8StringEncoding)
-				let modifiedJson = json.stringByReplacingOccurrencesOfString("\"commitish\" : \"1.6.0\"", withString: "\"commitish\" : \"1.6.1\"")
-				let _ = try! modifiedJson.writeToFile(preludeVersionFilePath, atomically: true, encoding: NSUTF8StringEncoding)
+				let json = try! String(contentsOf: preludeVersionFileURL, encoding: .utf8)
+				let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"1.6.0\"", with: "\"commitish\" : \"1.6.1\"")
+				let _ = try! modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
 				
 				let result2 = buildDependencyTest(platforms: [.macOS])
 				expect(result2).to(equal(expected))
