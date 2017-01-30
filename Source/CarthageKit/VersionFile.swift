@@ -161,7 +161,25 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 		platformCaches[platform.rawValue] = []
 	}
 
-	return SignalProducer<URL, CarthageError>(values: buildProductURLs)
+
+	let writeVersionFile = currentXcodeVersion()
+		.attemptMap { xcodeVersion -> Result<(), CarthageError> in
+			let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+			let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
+
+			let versionFile = VersionFile(
+				commitish: dependency.version.commitish,
+				xcodeVersion: xcodeVersion,
+				macOS: platformCaches[Platform.macOS.rawValue],
+				iOS: platformCaches[Platform.iOS.rawValue],
+				watchOS: platformCaches[Platform.watchOS.rawValue],
+				tvOS: platformCaches[Platform.tvOS.rawValue])
+
+			return versionFile.write(to: versionFileURL)
+	}
+
+	if !buildProductURLs.isEmpty {
+		return SignalProducer<URL, CarthageError>(values: buildProductURLs)
 		.flatMap(.merge) { url -> SignalProducer<(), CarthageError> in
 			guard let platformName = url.URLByDeletingLastPathComponent?.lastPathComponent,
 				let frameworkName = url.URLByDeletingPathExtension?.lastPathComponent else {
@@ -181,24 +199,15 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 					}
 				}
 				.collect()
-				.flatMap(.concat) { _ -> SignalProducer<String, CarthageError> in
-					return currentXcodeVersion()
-				}
-				.attemptMap { xcodeVersion -> Result<(), CarthageError> in
-					let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
-					let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
-
-					let versionFile = VersionFile(
-						commitish: dependency.version.commitish,
-						xcodeVersion: xcodeVersion,
-						macOS: platformCaches[Platform.macOS.rawValue],
-						iOS: platformCaches[Platform.iOS.rawValue],
-						watchOS: platformCaches[Platform.watchOS.rawValue],
-						tvOS: platformCaches[Platform.tvOS.rawValue])
-
-					return versionFile.write(to: versionFileURL)
+				.flatMap(.concat) { _ -> SignalProducer<(), CarthageError> in
+					return writeVersionFile
 				}
 		}
+	} else {
+		// Write out an empty version file for dependencies with no built frameworks, so cache builds can differentiate between
+		// no cache and a dependency that has no frameworks
+		return writeVersionFile
+	}
 }
 
 /// Determines whether a dependency can be skipped because it is
