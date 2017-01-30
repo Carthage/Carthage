@@ -17,8 +17,8 @@ import ReactiveCocoa
 #endif
 import ReactiveTask
 
-extension BuildOptions: OptionsType {
-	public static func create(_ configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> Bool -> BuildOptions {
+extension BuildOptions: OptionsProtocol {
+	public static func create(_ configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> (Bool) -> BuildOptions {
 		return { buildPlatform in { toolchain in { derivedDataPath in { cacheBuilds in
 			return self.init(configuration: configuration, platforms: buildPlatform.platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, cacheBuilds: cacheBuilds)
 		} } } }

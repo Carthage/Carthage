@@ -9,15 +9,13 @@ In order to avoid rebuilding frameworks unnecessarily, Carthage stores cache dat
 Each version file contains JSON data in a format similar to that of the version file for .Prelude.version:
 
     {
-      "Mac" : {
-        "commitish" : "1.6.0",
-        "cachedFrameworks" : [
-          {
-            "sha1" : "ad4c4bfe83c546d18418825b8c481df11b3910cc",
-            "name" : "Prelude"
-          }
-        ]
-      }
+      "commitish" : "1.6.0",
+      "Mac" : [
+       {
+           "sha1" : "ad4c4bfe83c546d18418825b8c481df11b3910cc",
+           "name" : "Prelude"
+       }
+      ]
     }
 
 #### Caching builds with version files

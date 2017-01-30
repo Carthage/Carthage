@@ -7,9 +7,10 @@
 //
 
 import Foundation
+import Runes
 import Argo
 import Curry
-import ReactiveCocoa
+import ReactiveSwift
 import ReactiveTask
 import Result
 
@@ -20,7 +21,7 @@ private struct CachedFramework {
 	static let nameKey = "name"
 	static let md5Key = "md5"
 	
-	func toJSONObject() -> AnyObject {
+	func toJSONObject() -> Any {
 		return [
 			CachedFramework.nameKey: name,
 			CachedFramework.md5Key: md5
@@ -29,7 +30,7 @@ private struct CachedFramework {
 }
 
 extension CachedFramework: Decodable {
-	static func decode(j: JSON) -> Decoded<CachedFramework> {
+	static func decode(_ j: JSON) -> Decoded<CachedFramework> {
 		return curry(self.init)
 			<^> j <| CachedFramework.nameKey
 			<*> j <| CachedFramework.md5Key
@@ -48,7 +49,7 @@ private struct VersionFile {
 	static let commitishKey = "commitish"
 	static let xcodeVersionKey = "xcodeVersion"
 	
-	func cachesForPlatform(platform: Platform) -> [CachedFramework]? {
+	func cachesForPlatform(_ platform: Platform) -> [CachedFramework]? {
 		switch platform {
 		case .macOS:
 			return macOS
@@ -65,8 +66,8 @@ private struct VersionFile {
 		return Set(Platform.supportedPlatforms.filter { self.cachesForPlatform($0) != nil })
 	}
 	
-	func toJSONObject() -> AnyObject {
-		var dict: [String: AnyObject] = [
+	func toJSONObject() -> Any {
+		var dict: [String: Any] = [
 			VersionFile.commitishKey : commitish,
 			VersionFile.xcodeVersionKey : xcodeVersion
 		]
@@ -89,28 +90,28 @@ private struct VersionFile {
 	}
 	
 	init?(url: URL) {
-		guard NSFileManager.defaultManager().fileExistsAtPath(url.path!),
-			let jsonData = NSData(contentsOfFile: url.path!),
-			let json = try? NSJSONSerialization.JSONObjectWithData(jsonData, options: .AllowFragments),
+		guard FileManager.default.fileExists(atPath: url.path),
+			let jsonData = try? Data(contentsOf: url),
+			let json = try? JSONSerialization.jsonObject(with: jsonData, options: .allowFragments),
 			let versionFile: VersionFile = Argo.decode(json) else {
 			return nil
 		}
 		self = versionFile
 	}
 	
-	func check(platform: Platform, commitish: String, xcodeVersion: String, rootDirectoryURL: URL) -> SignalProducer<Bool, CarthageError> {
+	func check(_ platform: Platform, commitish: String, xcodeVersion: String, rootDirectoryURL: URL) -> SignalProducer<Bool, CarthageError> {
 		guard commitish == self.commitish && xcodeVersion == self.xcodeVersion else {
 			return .init(value: false)
 		}
 		
-		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		guard let cachedFrameworks = cachesForPlatform(platform) else {
 			return .init(value: false)
 		}
 
-		return SignalProducer<CachedFramework, CarthageError>(values: cachedFrameworks)
+		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<Bool, CarthageError> in
-				let platformURL = rootBinariesURL.appendingPathComponent(platform.rawValue, isDirectory: true).URLByResolvingSymlinksInPath!
+				let platformURL = rootBinariesURL.appendingPathComponent(platform.rawValue, isDirectory: true).resolvingSymlinksInPath()
 				let frameworkURL = platformURL.appendingPathComponent("\(cachedFramework.name).framework", isDirectory: true)
 				let frameworkBinaryURL = frameworkURL.appendingPathComponent("\(cachedFramework.name)", isDirectory: false)
 				return md5ForFileAtURL(frameworkBinaryURL)
@@ -126,8 +127,8 @@ private struct VersionFile {
 	func write(to url: URL) -> Result<(), CarthageError> {
 		do {
 			let json = toJSONObject()
-			let jsonData = try NSJSONSerialization.dataWithJSONObject(json, options: .PrettyPrinted)
-			try jsonData.writeToURL(url, options: .DataWritingAtomic)
+			let jsonData = try JSONSerialization.data(withJSONObject: json, options: .prettyPrinted)
+			try jsonData.write(to: url, options: .atomic)
 			return .success(())
 		} catch let error as NSError {
 			return .failure(.writeFailed(url, error))
@@ -136,7 +137,7 @@ private struct VersionFile {
 }
 
 extension VersionFile: Decodable {
-	static func decode(j: JSON) -> Decoded<VersionFile> {
+	static func decode(_ j: JSON) -> Decoded<VersionFile> {
 		return curry(self.init)
 			<^> j <| VersionFile.commitishKey
 			<*> j <| VersionFile.xcodeVersionKey
@@ -153,7 +154,7 @@ extension VersionFile: Decodable {
 /// to allow those frameworks to be skipped in future builds.
 ///
 /// Returns a signal that succeeds once the file has been created.
-public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, buildProductURLs: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+public func createVersionFileForDependency(_ dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, buildProductURLs: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	var platformCaches: [String: [CachedFramework]] = [:]
 
 	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
@@ -164,7 +165,7 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 
 	let writeVersionFile = currentXcodeVersion()
 		.attemptMap { xcodeVersion -> Result<(), CarthageError> in
-			let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+			let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 			let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
 
 			let versionFile = VersionFile(
@@ -179,12 +180,10 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 	}
 
 	if !buildProductURLs.isEmpty {
-		return SignalProducer<URL, CarthageError>(values: buildProductURLs)
+		return SignalProducer<URL, CarthageError>(buildProductURLs)
 		.flatMap(.merge) { url -> SignalProducer<(), CarthageError> in
-			guard let platformName = url.URLByDeletingLastPathComponent?.lastPathComponent,
-				let frameworkName = url.URLByDeletingPathExtension?.lastPathComponent else {
-					return .init(error: .versionFileError(description: "unable to construct version file path"))
-			}
+			let platformName = url.deletingLastPathComponent().lastPathComponent
+			let frameworkName = url.deletingPathExtension().lastPathComponent
 			let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
 			return md5ForFileAtURL(frameworkURL)
 				.attemptMap { md5 -> Result<(), CarthageError> in
@@ -217,8 +216,8 @@ public func createVersionFileForDependency(dependency: Dependency<PinnedVersion>
 /// the platforms in the version file are used instead.
 ///
 /// Returns true if the the dependency can be skipped.
-public func versionFileMatchesDependency(dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, rootDirectoryURL: URL) -> SignalProducer<Bool, CarthageError> {
-	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).URLByResolvingSymlinksInPath!
+public func versionFileMatchesDependency(_ dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, rootDirectoryURL: URL) -> SignalProducer<Bool, CarthageError> {
+	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
 	guard let versionFile = VersionFile(url: versionFileURL) else {
 		return .init(value: false)
@@ -230,7 +229,7 @@ public func versionFileMatchesDependency(dependency: Dependency<PinnedVersion>, 
 
 	return currentXcodeVersion()
 		.flatMap(.concat) { xcodeVersion in
-			return SignalProducer<Platform, CarthageError>(values: platformsToCheck)
+			return SignalProducer<Platform, CarthageError>(platformsToCheck)
 				.flatMap(.merge) { platform in
 					return versionFile.check(platform, commitish: commitish, xcodeVersion: xcodeVersion, rootDirectoryURL: rootDirectoryURL)
 				}
@@ -254,11 +253,11 @@ private func currentXcodeVersion() -> SignalProducer<String, CarthageError> {
 	}
 }
 
-private func md5ForFileAtURL(frameworkFileURL: URL) -> SignalProducer<String, CarthageError> {
-	guard let path = frameworkFileURL.path where NSFileManager.defaultManager().fileExistsAtPath(path) else {
+private func md5ForFileAtURL(_ frameworkFileURL: URL) -> SignalProducer<String, CarthageError> {
+	guard FileManager.default.fileExists(atPath: frameworkFileURL.path) else {
 		return .init(error: .versionFileError(description: "File does not exist for md5 generation \(frameworkFileURL)"))
 	}
-	let task = Task("/usr/bin/env", arguments: ["md5", "-q", frameworkFileURL.path!])
+	let task = Task("/usr/bin/env", arguments: ["md5", "-q", frameworkFileURL.path])
 	return task.launch()
 		.mapError(CarthageError.taskError)
 		.ignoreTaskData()

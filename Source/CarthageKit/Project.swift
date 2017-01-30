@@ -759,7 +759,7 @@ public final class Project {
 
 						var dependenciesToBuild = includedDependencies
 						_ = self.shouldSkipBuildForDependency(nextDependency, dependencyProjects: projects, dependenciesToBeBuilt: includedDependencies, platforms: options.platforms)
-							.on(next: { shouldSkip in
+							.on(value: { shouldSkip in
 								if !shouldSkip {
 									dependenciesToBuild.append(nextDependency)
 								}
@@ -769,7 +769,7 @@ public final class Project {
 						return dependenciesToBuild
 					}
 					.flatMap(.concat) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-						SignalProducer<Dependency<PinnedVersion>, CarthageError>(values: dependencies)
+						SignalProducer<Dependency<PinnedVersion>, CarthageError>(dependencies)
 					}
 			}
 			.flatMap(.concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
@@ -799,16 +799,16 @@ public final class Project {
 	/// listed in its Cartfile.
 	///
 	/// Returns true if the dependency does not need to be rebuilt.
-	private func shouldSkipBuildForDependency(dependency: Dependency<PinnedVersion>, dependencyProjects: Set<ProjectIdentifier>, dependenciesToBeBuilt: [Dependency<PinnedVersion>], platforms: Set<Platform>) -> SignalProducer<Bool, CarthageError> {
+	private func shouldSkipBuildForDependency(_ dependency: Dependency<PinnedVersion>, dependencyProjects: Set<ProjectIdentifier>, dependenciesToBeBuilt: [Dependency<PinnedVersion>], platforms: Set<Platform>) -> SignalProducer<Bool, CarthageError> {
 		let projectsToBeBuilt = Set(dependenciesToBeBuilt.map { $0.project })
-		guard dependencyProjects.intersect(projectsToBeBuilt).isEmpty else {
+		guard dependencyProjects.intersection(projectsToBeBuilt).isEmpty else {
 			return .init(value: false)
 		}
 
 		return versionFileMatchesDependency(dependency, forPlatforms: platforms, rootDirectoryURL: self.directoryURL)
-			.on(next: { matches in
+			.on(value: { matches in
 				if matches {
-					self._projectEventsObserver.sendNext(.skippedBuildingCached(dependency.project))
+					self._projectEventsObserver.send(value: .skippedBuildingCached(dependency.project))
 				}
 			})
 	}

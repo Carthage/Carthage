@@ -322,8 +322,8 @@ public typealias SDKFilterCallback = (_ sdks: [SDK], _ scheme: String, _ configu
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme(_ scheme: String, withOptions options: BuildOptions, inProject project: ProjectLocator, workingDirectoryURL: URL, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<TaskEvent<URL>, CarthageError> {
-	precondition(workingDirectoryURL.fileURL)
+public func buildScheme(_ scheme: String, withOptions options: BuildOptions, inProject project: ProjectLocator, workingDirectoryURL: URL, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<TaskEvent<URL>, CarthageError> {
+	precondition(workingDirectoryURL.isFileURL)
 
 	let buildArgs = BuildArguments(project: project, scheme: scheme, configuration: options.configuration, derivedDataPath: options.derivedDataPath, toolchain: options.toolchain)
 
@@ -540,7 +540,7 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(_ dependency: Dependency<PinnedVersion>, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(_ dependency: Dependency<PinnedVersion>, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 	
@@ -626,8 +626,8 @@ private func symlinkBuildPathForDependencyProject(_ dependency: ProjectIdentifie
 /// Builds the any shared framework schemes found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
-public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: Dependency<PinnedVersion>? = nil, rootDirectoryURL: URL? = nil, sdkFilter: SDKFilterCallback = { .Success($0.0) }) -> BuildSchemeProducer {
-	precondition(directoryURL.fileURL)
+public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: Dependency<PinnedVersion>? = nil, rootDirectoryURL: URL? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> BuildSchemeProducer {
+	precondition(directoryURL.isFileURL)
 
 	return BuildSchemeProducer { observer, disposable in
 		// Use SignalProducer.replayLazily to avoid enumerating the given directory
@@ -693,13 +693,13 @@ public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOpti
 						}
 					}
 					.on(started: {
-						observer.sendNext(.Success(initialValue))
+						observer.send(value: .success(initialValue))
 					})
 			}
 			.startWithSignal({ (signal, signalDisposable) in
 				disposable += signalDisposable
-				
-				let ignoredValue = (ProjectLocator.workspace(URL(string: "")!), "")
+
+				let ignoredValue = (ProjectLocator.workspace(URL(string: ".")!), "")
 				
 				let eventSignal: Signal<TaskEvent<(ProjectLocator, String)>, CarthageError> = signal
 					// Discard any Success values, since we want to
@@ -716,7 +716,7 @@ public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOpti
 						.ignoreTaskData()
 						.collect()
 						.flatMap(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
-							guard let dependency = dependency, rootDirectoryURL = rootDirectoryURL else {
+							guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
 								return .empty
 							}
 							return createVersionFileForDependency(dependency, forPlatforms: options.platforms, buildProductURLs: urls, rootDirectoryURL: rootDirectoryURL)
