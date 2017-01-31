@@ -272,7 +272,7 @@ public func contentsOfFileInRepository(_ repositoryFileURL: URL, _ path: String,
 public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDirectoryURL: URL, revision: String = "HEAD", shouldCloneSubmodule: @escaping (Submodule) -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt { () -> Result<[String: String], CarthageError> in
 			do {
-				try FileManager.`default`.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true)
+				try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true)
 			} catch let error as NSError {
 				return .failure(CarthageError.repositoryCheckoutFailed(workingDirectoryURL: workingDirectoryURL, reason: "Could not create working directory", underlyingError: error))
 			}
@@ -303,7 +303,7 @@ public func cloneSubmodulesForRepository(_ repositoryFileURL: URL, _ workingDire
 /// repository, but without any Git metadata.
 public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
-	let purgeGitDirectories = FileManager.`default`.carthage_enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
+	let purgeGitDirectories = FileManager.default.carthage_enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
 		.flatMap(.merge) { enumerator, url -> SignalProducer<(), CarthageError> in
 			var name: String?
 			do {
@@ -331,7 +331,7 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 			}
 
 			do {
-				try FileManager.`default`.removeItem(at: url)
+				try FileManager.default.removeItem(at: url)
 				return .empty
 			} catch let error as NSError {
 				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(url.carthage_path)", underlyingError: error))
@@ -340,7 +340,7 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 
 	return SignalProducer.attempt { () -> Result<URL, CarthageError> in
 			do {
-				try FileManager.`default`.removeItem(at: submoduleDirectoryURL)
+				try FileManager.default.removeItem(at: submoduleDirectoryURL)
 			} catch let error as NSError {
 				return .failure(CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove submodule checkout", underlyingError: error))
 			}
@@ -505,7 +505,7 @@ public func commitExistsInRepository(_ repositoryFileURL: URL, revision: String 
 private func ensureDirectoryExistsAtURL(_ fileURL: URL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer { observer, disposable in
 		var isDirectory: ObjCBool = false
-		if FileManager.`default`.fileExists(atPath: fileURL.carthage_path, isDirectory: &isDirectory) && isDirectory.boolValue {
+		if FileManager.default.fileExists(atPath: fileURL.carthage_path, isDirectory: &isDirectory) && isDirectory.boolValue {
 			observer.sendCompleted()
 		} else {
 			observer.send(error: .readFailed(fileURL, nil))
@@ -542,7 +542,7 @@ public func isGitRepository(_ directoryURL: URL) -> SignalProducer<Bool, NoError
 				absoluteGitDirectory = directoryURL.appendingPathComponent(relativeOrAbsoluteGitDirectory).carthage_path
 			}
 			var isDirectory: ObjCBool = false
-			let directoryExists = absoluteGitDirectory.map { FileManager.`default`.fileExists(atPath: $0, isDirectory: &isDirectory) } ?? false
+			let directoryExists = absoluteGitDirectory.map { FileManager.default.fileExists(atPath: $0, isDirectory: &isDirectory) } ?? false
 			return directoryExists && isDirectory.boolValue
 		}
 		.flatMapError { _ in SignalProducer(value: false) }
@@ -556,7 +556,7 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 	return isGitRepository(submoduleDirectoryURL)
 		.map { isRepository in
 			// Check if the submodule is initialized/updated already.
-			return isRepository && FileManager.`default`.fileExists(atPath: submoduleDirectoryURL.appendingPathComponent(".git").carthage_path)
+			return isRepository && FileManager.default.fileExists(atPath: submoduleDirectoryURL.appendingPathComponent(".git").carthage_path)
 		}
 		.flatMap(.merge) { submoduleExists -> SignalProducer<(), CarthageError> in
 			if submoduleExists {
@@ -595,7 +595,7 @@ public func moveItemInPossibleRepository(_ repositoryFileURL: URL, fromPath: Str
 
 	return SignalProducer<(), CarthageError>.attempt {
 			do {
-				try FileManager.`default`.createDirectory(at: parentDirectoryURL, withIntermediateDirectories: true)
+				try FileManager.default.createDirectory(at: parentDirectoryURL, withIntermediateDirectories: true)
 			} catch let error as NSError {
 				return .failure(CarthageError.writeFailed(parentDirectoryURL, error))
 			}
@@ -612,7 +612,7 @@ public func moveItemInPossibleRepository(_ repositoryFileURL: URL, fromPath: Str
 				let fromURL = repositoryFileURL.appendingPathComponent(fromPath)
 
 				do {
-					try FileManager.`default`.moveItem(at: fromURL, to: toURL)
+					try FileManager.default.moveItem(at: fromURL, to: toURL)
 					return SignalProducer(value: toURL)
 				} catch let error as NSError {
 					return SignalProducer(error: .writeFailed(toURL, error))
