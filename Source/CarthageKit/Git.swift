@@ -299,7 +299,8 @@ public func cloneSubmodulesForRepository(_ repositoryFileURL: URL, _ workingDire
 /// repository, but without any Git metadata.
 public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
-	let purgeGitDirectories = FileManager.default.carthage_enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
+	let purgeGitDirectories = FileManager.default.reactive
+		.enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
 		.flatMap(.merge) { enumerator, url -> SignalProducer<(), CarthageError> in
 			var name: String?
 			do {
