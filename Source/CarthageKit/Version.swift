@@ -8,10 +8,10 @@
 
 import Foundation
 import Result
-import ReactiveCocoa
+import ReactiveSwift
 
 /// An abstract type representing a way to specify versions.
-public protocol VersionType: Equatable {}
+public protocol VersionType: Hashable {}
 
 /// A semantic version.
 public struct SemanticVersion: VersionType, Comparable {
@@ -31,9 +31,6 @@ public struct SemanticVersion: VersionType, Comparable {
 	/// Increments to this component represent backwards-compatible bug fixes.
 	public let patch: Int
 
-	/// The pin from which this semantic version was derived.
-	public var pinnedVersion: PinnedVersion?
-
 	/// A list of the version components, in order from most significant to
 	/// least significant.
 	public var components: [Int] {
@@ -47,10 +44,10 @@ public struct SemanticVersion: VersionType, Comparable {
 	}
 
 	/// The set of all characters present in valid semantic versions.
-	private static let versionCharacterSet = CharacterSet(charactersIn: "0123456789.")
+	fileprivate static let versionCharacterSet = CharacterSet(charactersIn: "0123456789.")
 
 	/// Attempts to parse a semantic version from a PinnedVersion.
-	public static func fromPinnedVersion(pinnedVersion: PinnedVersion) -> Result<SemanticVersion, CarthageError> {
+	public static func from(_ pinnedVersion: PinnedVersion) -> Result<SemanticVersion, CarthageError> {
 		let scanner = Scanner(string: pinnedVersion.commitish)
 
 		// Skip leading characters, like "v" or "version-" or anything like
@@ -59,8 +56,6 @@ public struct SemanticVersion: VersionType, Comparable {
 
 		return self.from(scanner).flatMap { version in
 			if scanner.isAtEnd {
-				var version = version
-				version.pinnedVersion = pinnedVersion
 				return .success(version)
 			} else {
 				// Disallow versions like "1.0a5", because we only support
@@ -106,11 +101,11 @@ extension SemanticVersion: Scannable {
 	}
 }
 
-public func <(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
-	return lhs.components.lexicographicalCompare(rhs.components)
+public func <(_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
+	return lhs.components.lexicographicallyPrecedes(rhs.components)
 }
 
-public func ==(lhs: SemanticVersion, rhs: SemanticVersion) -> Bool {
+public func ==(_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
 	return lhs.components == rhs.components
 }
 
@@ -134,9 +129,13 @@ public struct PinnedVersion: VersionType {
 	public init(_ commitish: String) {
 		self.commitish = commitish
 	}
+	
+	public var hashValue: Int {
+		return commitish.hashValue
+	}
 }
 
-public func ==(lhs: PinnedVersion, rhs: PinnedVersion) -> Bool {
+public func ==(_ lhs: PinnedVersion, _ rhs: PinnedVersion) -> Bool {
 	return lhs.commitish == rhs.commitish
 }
 
@@ -176,8 +175,8 @@ public enum VersionSpecifier: VersionType {
 
 	/// Determines whether the given version satisfies this version specifier.
 	public func isSatisfied(by version: PinnedVersion) -> Bool {
-		func withSemanticVersion(predicate: (SemanticVersion) -> Bool) -> Bool {
-			if let semanticVersion = SemanticVersion.fromPinnedVersion(version).value {
+		func withSemanticVersion(_ predicate: (SemanticVersion) -> Bool) -> Bool {
+			if let semanticVersion = SemanticVersion.from(version).value {
 				return predicate(semanticVersion)
 			} else {
 				// Consider non-semantic versions (e.g., branches) to meet every
@@ -211,9 +210,24 @@ public enum VersionSpecifier: VersionType {
 			}
 		}
 	}
+	
+	public var hashValue: Int {
+		switch self {
+		case .any:
+			return 0
+		case let .atLeast(version):
+			return 1 + version.hashValue
+		case let .compatibleWith(version):
+			return 2 + version.hashValue
+		case let .exactly(version):
+			return 3 + version.hashValue
+		case let .gitReference(commitish):
+			return commitish.hashValue
+		}
+	}
 }
 
-public func ==(lhs: VersionSpecifier, rhs: VersionSpecifier) -> Bool {
+public func ==(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Bool {
 	switch (lhs, rhs) {
 	case (.any, .any):
 		return true
@@ -282,7 +296,7 @@ extension VersionSpecifier: CustomStringConvertible {
 	}
 }
 
-private func intersection(atLeast atLeast: SemanticVersion, compatibleWith: SemanticVersion) -> VersionSpecifier? {
+private func intersection(atLeast: SemanticVersion, compatibleWith: SemanticVersion) -> VersionSpecifier? {
 	if atLeast.major > compatibleWith.major {
 		return nil
 	} else if atLeast.major < compatibleWith.major {
@@ -292,7 +306,7 @@ private func intersection(atLeast atLeast: SemanticVersion, compatibleWith: Sema
 	}
 }
 
-private func intersection(atLeast atLeast: SemanticVersion, exactly: SemanticVersion) -> VersionSpecifier? {
+private func intersection(atLeast: SemanticVersion, exactly: SemanticVersion) -> VersionSpecifier? {
 	if atLeast > exactly {
 		return nil
 	}
@@ -300,7 +314,7 @@ private func intersection(atLeast atLeast: SemanticVersion, exactly: SemanticVer
 	return .exactly(exactly)
 }
 
-private func intersection(compatibleWith compatibleWith: SemanticVersion, exactly: SemanticVersion) -> VersionSpecifier? {
+private func intersection(compatibleWith: SemanticVersion, exactly: SemanticVersion) -> VersionSpecifier? {
 	if exactly.major != compatibleWith.major || compatibleWith > exactly {
 		return nil
 	}
@@ -313,7 +327,7 @@ private func intersection(compatibleWith compatibleWith: SemanticVersion, exactl
 ///
 /// In other words, any version that satisfies the returned specifier will
 /// satisfy _both_ of the given specifiers.
-public func intersection(lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> VersionSpecifier? {
+public func intersection(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> VersionSpecifier? {
 	switch (lhs, rhs) {
 	// Unfortunately, patterns with a wildcard _ are not considered exhaustive,
 	// so do the same thing manually.
@@ -389,7 +403,7 @@ public func intersection(lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Vers
 ///
 /// In other words, any version that satisfies the returned specifier will
 /// satisfy _all_ of the given specifiers.
-public func intersection<S: SequenceType where S.Generator.Element == VersionSpecifier>(specs: S) -> VersionSpecifier? {
+public func intersection<S: Sequence>(_ specs: S) -> VersionSpecifier? where S.Iterator.Element == VersionSpecifier {
 	return specs.reduce(nil) { (left: VersionSpecifier?, right: VersionSpecifier) -> VersionSpecifier? in
 		if let left = left {
 			return intersection(left, right)

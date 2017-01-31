@@ -13,14 +13,14 @@ import Result
 import PrettyColors
 
 /// Wraps a string with terminal colors and formatting or passes it through, depending on `isColorful`.
-private func wrap(isColorful: Bool, wrap: Color.Wrap) -> (String) -> String {
+private func wrap(_ isColorful: Bool, wrap: Color.Wrap) -> (String) -> String {
 	return { string in
 		return isColorful ? wrap.wrap(string) : string
 	}
 }
 
 /// Argument for whether to color and format terminal output.
-public enum ColorArgument: String, ArgumentType, CustomStringConvertible {
+public enum ColorArgument: String, ArgumentProtocol, CustomStringConvertible {
 	case auto = "auto"
 	case never = "never"
 	case always = "always"
@@ -43,14 +43,20 @@ public enum ColorArgument: String, ArgumentType, CustomStringConvertible {
 	
 	public static let name = "color"
 	
-	public static func fromString(string: String) -> ColorArgument? {
+	public static func from(string: String) -> ColorArgument? {
 		return self.init(rawValue: string.lowercased())
 	}
-	
+
+	#if swift(>=3)
+	#else
+	public static func fromString(string: String) -> ColorArgument? {
+		return from(string)
+	}
+	#endif
 }
 
 /// Options for whether to color and format terminal output.
-public struct ColorOptions: OptionsType {
+public struct ColorOptions: OptionsProtocol {
 	let argument: ColorArgument
 	let formatting: Formatting
 	
@@ -64,33 +70,33 @@ public struct ColorOptions: OptionsType {
 		
 		
 		/// Wraps a string with terminal colors and formatting or passes it through.
-		typealias Wrap = (string: String) -> String
+		typealias Wrap = (_ string: String) -> String
 		
 		init(_ isColorful: Bool) {
 			self.isColorful = isColorful
 			bulletin      = wrap(isColorful, wrap: Color.Wrap(foreground: .blue, style: .bold))
-			bullets       = bulletin(string: "***") + " "
+			bullets       = bulletin("***") + " "
 			url           = wrap(isColorful, wrap: Color.Wrap(styles: .underlined))
 			projectName   = wrap(isColorful, wrap: Color.Wrap(styles: .bold))
 			path          = wrap(isColorful, wrap: Color.Wrap(foreground: .yellow))
 		}
 
 		/// Wraps a string in bullets, one space of padding, and formatting.
-		func bulletinTitle(string: String) -> String {
-			return bulletin(string: "*** " + string + " ***")
+		func bulletinTitle(_ string: String) -> String {
+			return bulletin("*** " + string + " ***")
 		}
 
 		/// Wraps a string in quotation marks and formatting.
-		func quote(string: String, quotationMark: String = "\"") -> String {
+		func quote(_ string: String, quotationMark: String = "\"") -> String {
 			return wrap(isColorful, wrap: Color.Wrap(foreground: .green))(quotationMark + string + quotationMark)
 		}
 	}
 	
-	public static func create(argument: ColorArgument) -> ColorOptions {
+	public static func create(_ argument: ColorArgument) -> ColorOptions {
 		return self.init(argument: argument, formatting: Formatting(argument.isColorful))
 	}
 	
-	public static func evaluate(m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
+	public static func evaluate(_ m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "color", defaultValue: ColorArgument.auto, usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')")
 	}

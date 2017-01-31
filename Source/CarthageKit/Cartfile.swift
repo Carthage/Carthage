@@ -8,7 +8,7 @@
 
 import Foundation
 import Result
-import ReactiveCocoa
+import ReactiveSwift
 import Tentacle
 
 /// The relative path to a project's checked out dependencies.
@@ -18,9 +18,9 @@ public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
-	public var dependencies: [Dependency<VersionSpecifier>]
+	public var dependencies: Set<Dependency<VersionSpecifier>>
 
-	public init(dependencies: [Dependency<VersionSpecifier>] = []) {
+	public init(dependencies: Set<Dependency<VersionSpecifier>> = []) {
 		self.dependencies = dependencies
 	}
 
@@ -31,8 +31,8 @@ public struct Cartfile {
 	}
 
 	/// Attempts to parse Cartfile information from a string.
-	public static func from(string string: String) -> Result<Cartfile, CarthageError> {
-		var cartfile = self.init()
+	public static func from(string: String) -> Result<Cartfile, CarthageError> {
+		var dependencies: [Dependency<VersionSpecifier>] = []
 		var result: Result<(), CarthageError> = .success(())
 
 		let commentIndicator = "#"
@@ -50,10 +50,10 @@ public struct Cartfile {
 			}
 
 			switch Dependency<VersionSpecifier>.from(scanner) {
-			case let .Success(dep):
-				cartfile.dependencies.append(dep)
+			case let .success(dep):
+				dependencies.append(dep)
 
-			case let .Failure(error):
+			case let .failure(error):
 				result = .failure(error)
 				stop = true
 			}
@@ -69,14 +69,39 @@ public struct Cartfile {
 			}
 		}
 
-		return result.map { _ in cartfile }
+		return result.flatMap { _ in
+			let dupes = buildCountedSet(dependencies.map { $0.project })
+				.filter { $0.1 > 1 }
+				.map { $0.0 }
+				.map { DuplicateDependency(project: $0, locations: []) }
+			
+			if !dupes.isEmpty {
+				return .failure(.duplicateDependencies(dupes))
+			}
+			return .success(Cartfile(dependencies: Set(dependencies)))
+		}
 	}
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
 	public static func from(file cartfileURL: URL) -> Result<Cartfile, CarthageError> {
 		do {
 			let cartfileContents = try String(contentsOf: cartfileURL, encoding: .utf8)
-			return Cartfile.from(string: cartfileContents)
+			return Cartfile
+				.from(string: cartfileContents)
+				.mapError { error in
+					guard case let .duplicateDependencies(dupes) = error else {
+						return error
+					}
+					
+					let dependencies = dupes
+						.map { dependency in
+							return DuplicateDependency(
+								project: dependency.project,
+								locations: [ cartfileURL.carthage_path ]
+							)
+						}
+					return .duplicateDependencies(dependencies)
+				}
 		} catch let error as NSError {
 			return .failure(CarthageError.readFailed(cartfileURL, error))
 		}
@@ -84,7 +109,7 @@ public struct Cartfile {
 
 	/// Appends the contents of another Cartfile to that of the receiver.
 	public mutating func append(_ cartfile: Cartfile) {
-		dependencies += cartfile.dependencies
+		dependencies.formUnion(cartfile.dependencies)
 	}
 }
 
@@ -94,40 +119,30 @@ extension Cartfile: CustomStringConvertible {
 	}
 }
 
-// Duplicate dependencies
-extension Cartfile {
-	/// Returns an array containing projects that are listed as duplicate
-	/// dependencies.
-	public func duplicateProjects() -> [ProjectIdentifier] {
-		return self.dependencyCountedSet.filter { $0.1 > 1 }
-			.map { $0.0 }
-	}
-
-	/// Returns the dependencies in a cartfile as a counted set containing the
-	/// corresponding projects, represented as a dictionary.
-	private var dependencyCountedSet: [ProjectIdentifier: Int] {
-		return buildCountedSet(self.dependencies.map { $0.project })
-	}
-}
-
 /// Returns an array containing projects that are listed as dependencies
 /// in both arguments.
 public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [ProjectIdentifier] {
-	let projectSet1 = cartfile1.dependencyCountedSet
-
-	return cartfile2.dependencies
-		.map { $0.project }
-		.filter { projectSet1[$0] != nil }
+	let projects1 = cartfile1.dependencies.map { $0.project }
+	let projects2 = cartfile2.dependencies.map { $0.project }
+	return Array(Set(projects1).intersection(Set(projects2)))
 }
 
 /// Represents a parsed Cartfile.resolved, which specifies which exact version was
 /// checked out for each dependency.
 public struct ResolvedCartfile {
-	/// The dependencies listed in the Cartfile.resolved, in the order that they
-	/// should be built.
-	public var dependencies: [Dependency<PinnedVersion>]
+	/// The dependencies listed in the Cartfile.resolved.
+	public var dependencies: Set<Dependency<PinnedVersion>>
+	
+	/// The version of each project
+	public var versions: [ProjectIdentifier: PinnedVersion] {
+		var versions: [ProjectIdentifier: PinnedVersion] = [:]
+		for dependency in dependencies {
+			versions[dependency.project] = dependency.version
+		}
+		return versions
+	}
 
-	public init(dependencies: [Dependency<PinnedVersion>]) {
+	public init(dependencies: Set<Dependency<PinnedVersion>>) {
 		self.dependencies = dependencies
 	}
 
@@ -138,17 +153,17 @@ public struct ResolvedCartfile {
 	}
 
 	/// Attempts to parse Cartfile.resolved information from a string.
-	public static func from(string string: String) -> Result<ResolvedCartfile, CarthageError> {
+	public static func from(string: String) -> Result<ResolvedCartfile, CarthageError> {
 		var cartfile = self.init(dependencies: [])
 		var result: Result<(), CarthageError> = .success(())
 
 		let scanner = Scanner(string: string)
 		scannerLoop: while !scanner.isAtEnd {
 			switch Dependency<PinnedVersion>.from(scanner) {
-			case let .Success(dep):
-				cartfile.dependencies.append(dep)
+			case let .success(dep):
+				cartfile.dependencies.insert(dep)
 
-			case let .Failure(error):
+			case let .failure(error):
 				result = .failure(error)
 				break scannerLoop
 			}
@@ -156,20 +171,14 @@ public struct ResolvedCartfile {
 
 		return result.map { _ in cartfile }
 	}
-
-	/// Returns the dependency whose project matches the given project or nil.
-	internal func dependency(for project: ProjectIdentifier) -> Dependency<PinnedVersion>? {
-		return dependencies.lazy
-			.filter { $0.project == project }
-			.first
-	}
 }
 
 extension ResolvedCartfile: CustomStringConvertible {
 	public var description: String {
-		return dependencies.reduce("") { (string, dependency) in
-			return string + "\(dependency)\n"
-		}
+		return dependencies
+			.sorted { $0.project.description < $1.project.description }
+			.map { $0.description + "\n" }
+			.joined(separator: "")
 	}
 }
 
@@ -199,7 +208,7 @@ public enum ProjectIdentifier: Comparable {
 	}
 }
 
-public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
+public func ==(_ lhs: ProjectIdentifier, _ rhs: ProjectIdentifier) -> Bool {
 	switch (lhs, rhs) {
 	case let (.gitHub(left), .gitHub(right)):
 		return left == right
@@ -212,7 +221,7 @@ public func ==(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
 	}
 }
 
-public func <(lhs: ProjectIdentifier, rhs: ProjectIdentifier) -> Bool {
+public func <(_ lhs: ProjectIdentifier, _ rhs: ProjectIdentifier) -> Bool {
 	return lhs.name.caseInsensitiveCompare(rhs.name) == .orderedAscending
 }
 
@@ -268,11 +277,11 @@ extension ProjectIdentifier: CustomStringConvertible {
 		case let .gitHub(repo):
 			let repoDescription: String
 			switch repo.server {
-			case .DotCom:
+			case .dotCom:
 				repoDescription = "\(repo.owner)/\(repo.name)"
 
-			case .Enterprise:
-				repoDescription = "\(repo.URL)"
+			case .enterprise:
+				repoDescription = "\(repo.url)"
 			}
 			return "github \"\(repoDescription)\""
 
@@ -283,7 +292,7 @@ extension ProjectIdentifier: CustomStringConvertible {
 }
 
 /// Represents a single dependency of a project.
-public struct Dependency<V: VersionType>: Equatable {
+public struct Dependency<V: VersionType>: Hashable {
 	/// The project corresponding to this dependency.
 	public let project: ProjectIdentifier
 
@@ -294,9 +303,13 @@ public struct Dependency<V: VersionType>: Equatable {
 		self.project = project
 		self.version = version
 	}
+	
+	public var hashValue: Int {
+		return project.hashValue ^ version.hashValue
+	}
 }
 
-public func ==<V>(lhs: Dependency<V>, rhs: Dependency<V>) -> Bool {
+public func ==<V>(_ lhs: Dependency<V>, _ rhs: Dependency<V>) -> Bool {
 	return lhs.project == rhs.project && lhs.version == rhs.version
 }
 

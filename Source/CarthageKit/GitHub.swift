@@ -8,19 +8,19 @@
 
 import Foundation
 import Result
-import ReactiveCocoa
+import ReactiveSwift
 import Tentacle
 
 /// The User-Agent to use for GitHub requests.
 private func gitHubUserAgent() -> String {
-	let bundle = Bundle.main ?? Bundle(identifier: CarthageKitBundleIdentifier)
-	
-	let version = bundle.flatMap {
-		($0.object(forInfoDictionaryKey: "CFBundleShortVersionString") ??
-		 $0.object(forInfoDictionaryKey: kCFBundleVersionKey as String)) as? String
-	} ?? "unknown"
+	let bundle = Bundle.main
 
-	let identifier = bundle?.bundleIdentifier ?? "CarthageKit-unknown"
+	let get: (_ key: String) -> String? = { bundle.object(forInfoDictionaryKey: $0) as? String }
+	let version = get("CFBundleShortVersionString")
+		?? get(kCFBundleVersionKey as String)
+		?? "unknown"
+
+	let identifier = bundle.bundleIdentifier
 	return "\(identifier)/\(version)"
 }
 
@@ -28,14 +28,14 @@ extension Repository {
 	/// The URL that should be used for cloning this repository over HTTPS.
 	public var httpsURL: GitURL {
 		let auth = tokenFromEnvironment(forServer: server).map { "\($0)@" } ?? ""
-		let scheme = server.URL.scheme!
+		let scheme = server.url.scheme!
 
-		return GitURL("\(scheme)://\(auth)\(server.URL.host!)/\(owner)/\(name).git")
+		return GitURL("\(scheme)://\(auth)\(server.url.host!)/\(owner)/\(name).git")
 	}
 
 	/// The URL that should be used for cloning this repository over SSH.
 	public var sshURL: GitURL {
-		return GitURL("ssh://git@\(server.URL.host!)/\(owner)/\(name).git")
+		return GitURL("ssh://git@\(server.url.host!)/\(owner)/\(name).git")
 	}
 
 	/// The URL for filing a new GitHub issue for this repository.
@@ -49,7 +49,7 @@ extension Repository {
 	/// Parses repository information out of a string of the form "owner/name"
 	/// for the github.com, or the form "http(s)://hostname/owner/name" for
 	/// Enterprise instances.
-	public static func fromIdentifier(identifier: String) -> Result<Repository, CarthageError> {
+	public static func fromIdentifier(_ identifier: String) -> Result<Repository, CarthageError> {
 		// GitHub.com
 		let range = NSRange(location: 0, length: identifier.utf16.count)
 		if let match = NWORegex.firstMatch(in: identifier, range: range) {
@@ -59,7 +59,7 @@ extension Repository {
 		}
 
 		// GitHub Enterprise
-		breakpoint: if let url = NSURL(string: identifier), let host = url.host {
+		breakpoint: if let url = URL(string: identifier), let host = url.host {
 			var pathComponents = url.carthage_pathComponents.filter { $0 != "/" }
 			guard pathComponents.count >= 2 else {
 				break breakpoint
@@ -86,7 +86,7 @@ extension Repository {
 extension Release {
 	/// The name of this release, with fallback to its tag when the name is an empty string or nil.
 	public var nameWithFallback: String {
-		if let name = name where !name.isEmpty {
+		if let name = name, !name.isEmpty {
 			return name
 		}
 		return tag
@@ -117,7 +117,7 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 			return values
 		}
 		.map { (values: [String: String]) -> (String, String)? in
-			if let username = values["username"], password = values["password"] {
+			if let username = values["username"], let password = values["password"] {
 				return (username, password)
 			}
 			
@@ -156,7 +156,7 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 
 				return values
 			}
-		return records[server.URL.host!]
+		return records[server.url.host!]
 	}
 	
 	return nil

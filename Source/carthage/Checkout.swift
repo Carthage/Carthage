@@ -10,10 +10,10 @@ import CarthageKit
 import Commandant
 import Foundation
 import Result
-import ReactiveCocoa
+import ReactiveSwift
 
-public struct CheckoutCommand: CommandType {
-	public struct Options: OptionsType {
+public struct CheckoutCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
 		public let useSubmodules: Bool
 		public let useBinaries: Bool
@@ -21,7 +21,7 @@ public struct CheckoutCommand: CommandType {
 		public let directoryPath: String
 		public let dependenciesToCheckout: [String]?
 
-		public static func create(useSSH: Bool) -> (Bool) -> (Bool) -> (ColorOptions) -> (String) -> ([String]) -> Options {
+		public static func create(_ useSSH: Bool) -> (Bool) -> (Bool) -> (ColorOptions) -> (String) -> ([String]) -> Options {
 			return { useSubmodules in { useBinaries in { colorOptions in { directoryPath in { dependenciesToCheckout in
 				// Disable binary downloads when using submodules.
 				// See https://github.com/Carthage/Carthage/issues/419.
@@ -33,17 +33,17 @@ public struct CheckoutCommand: CommandType {
 			} } } } }
 		}
 
-		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return evaluate(m, useBinariesAddendum: "", dependenciesUsage: "the dependency names to checkout")
 		}
 
-		public static func evaluate(m: CommandMode, useBinariesAddendum: String, dependenciesUsage: String) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ m: CommandMode, useBinariesAddendum: String, dependenciesUsage: String) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 				<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist, disabled if --use-submodules option is present" + useBinariesAddendum)
 				<*> ColorOptions.evaluate(m)
-				<*> m <| Option(key: "project-directory", defaultValue: FileManager.`default`.currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> m <| Argument(defaultValue: [], usage: dependenciesUsage)
 		}
 
@@ -66,13 +66,13 @@ public struct CheckoutCommand: CommandType {
 	public let verb = "checkout"
 	public let function = "Check out the project's dependencies"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return self.checkoutWithOptions(options)
 			.waitOnCommand()
 	}
 
 	/// Checks out dependencies with the given options.
-	public func checkoutWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
+	public func checkoutWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		return options.loadProject()
 			.flatMap(.merge) { $0.checkoutResolvedDependencies(options.dependenciesToCheckout) }
 	}

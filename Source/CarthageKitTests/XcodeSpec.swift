@@ -11,7 +11,7 @@ import Foundation
 import Result
 import Nimble
 import Quick
-import ReactiveCocoa
+import ReactiveSwift
 import ReactiveTask
 import Tentacle
 
@@ -24,17 +24,18 @@ class XcodeSpec: QuickSpec {
 		let targetFolderURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
 
 		beforeEach {
-			_ = try? FileManager.`default`.removeItem(at: buildFolderURL)
-			expect { try FileManager.`default`.createDirectory(atPath: targetFolderURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
+			_ = try? FileManager.default.removeItem(at: buildFolderURL)
+			expect { try FileManager.default.createDirectory(atPath: targetFolderURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
 		}
 		
 		afterEach {
-			_ = try? FileManager.`default`.removeItem(at: targetFolderURL)
+			_ = try? FileManager.default.removeItem(at: targetFolderURL)
 		}
 		
 		describe("locateProjectsInDirectory:") {
-			func relativePathsForProjectsInDirectory(directoryURL: URL) -> [String] {
-				let result = locateProjectsInDirectory(directoryURL)
+			func relativePathsForProjectsInDirectory(_ directoryURL: URL) -> [String] {
+				let result = ProjectLocator
+					.locate(in: directoryURL)
 					.map { $0.fileURL.carthage_absoluteString.substring(from: directoryURL.carthage_absoluteString.endIndex) }
 					.collect()
 					.first()
@@ -68,7 +69,7 @@ class XcodeSpec: QuickSpec {
 				let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 					.flatten(.concat)
 					.ignoreTaskData()
-					.on(next: { (project, scheme) in
+					.on(value: { (project, scheme) in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 					})
 					.wait()
@@ -79,7 +80,7 @@ class XcodeSpec: QuickSpec {
 			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -133,15 +134,15 @@ class XcodeSpec: QuickSpec {
 			expect(strippedArchitectures?.value).to(contain("armv7", "arm64"))
 
 			let modulesDirectoryURL = targetURL.appendingPathComponent("Modules", isDirectory: true)
-			expect(FileManager.`default`.fileExists(atPath: modulesDirectoryURL.carthage_path)) == false
+			expect(FileManager.default.fileExists(atPath: modulesDirectoryURL.carthage_path)) == false
 			
 			var output: String = ""
 			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.carthage_path ])
 			
 			let codesignResult = codeSign.launch()
-				.on(next: { taskEvent in
+				.on(value: { taskEvent in
 					switch taskEvent {
-					case let .StandardError(data):
+					case let .standardError(data):
 						output += String(data: data, encoding: .utf8)!
 						
 					default:
@@ -159,12 +160,12 @@ class XcodeSpec: QuickSpec {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			_ = try? FileManager.`default`.removeItem(at: _buildFolderURL)
+			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -189,12 +190,12 @@ class XcodeSpec: QuickSpec {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			_ = try? FileManager.`default`.removeItem(at: _buildFolderURL)
+			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -213,12 +214,12 @@ class XcodeSpec: QuickSpec {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "Swell-0.5.0", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			_ = try? FileManager.`default`.removeItem(at: _buildFolderURL)
+			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -240,7 +241,7 @@ class XcodeSpec: QuickSpec {
 			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -253,7 +254,7 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the other platform wasn't built.
 			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").carthage_path
-			expect(FileManager.`default`.fileExists(atPath: incorrectPath, isDirectory: nil)) == false
+			expect(FileManager.default.fileExists(atPath: incorrectPath, isDirectory: nil)) == false
 		}
 
 		it("should build for multiple platforms") {
@@ -261,7 +262,7 @@ class XcodeSpec: QuickSpec {
 			let result = buildDependencyProject(project, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -279,21 +280,21 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should locate the project") {
-			let result = locateProjectsInDirectory(directoryURL).first()
+			let result = ProjectLocator.locate(in: directoryURL).first()
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
 			expect(result?.value) == .projectFile(projectURL)
 		}
 
 		it("should locate the project from the parent directory") {
-			let result = locateProjectsInDirectory(directoryURL.deletingLastPathComponent()).collect().first()
+			let result = ProjectLocator.locate(in: directoryURL.deletingLastPathComponent()).collect().first()
 			expect(result).notTo(beNil())
 			expect(result?.error).to(beNil())
 			expect(result?.value).to(contain(.projectFile(projectURL)))
 		}
 
 		it("should not locate the project from a directory not containing it") {
-			let result = locateProjectsInDirectory(directoryURL.appendingPathComponent("ReactiveCocoaLayout")).first()
+			let result = ProjectLocator.locate(in: directoryURL.appendingPathComponent("ReactiveCocoaLayout")).first()
 			expect(result).to(beNil())
 		}
 
@@ -308,7 +309,7 @@ class XcodeSpec: QuickSpec {
 			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(next: { (project, scheme) in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -333,24 +334,24 @@ internal func beExistingDirectory() -> MatcherFunc<String> {
 		}
 
 		var isDirectory: ObjCBool = false
-		let exists = FileManager.`default`.fileExists(atPath: path, isDirectory: &isDirectory)
+		let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
 
 		if !exists {
 			failureMessage.postfixMessage += ", but does not exist"
-		} else if !isDirectory {
+		} else if !isDirectory.boolValue {
 			failureMessage.postfixMessage += ", but is not a directory"
 		}
 
-		return exists && isDirectory
+		return exists && isDirectory.boolValue
 	}
 }
 
-internal func beRelativeSymlinkToDirectory(directory: URL) -> MatcherFunc<URL> {
+internal func beRelativeSymlinkToDirectory(_ directory: URL) -> MatcherFunc<URL> {
 	return MatcherFunc { actualExpression, failureMessage in
 		failureMessage.postfixMessage = "be a relative symlink to \(directory)"
 		let actualURL = try actualExpression.evaluate()
 
-		guard let url = actualURL else {
+		guard var url = actualURL else {
 			return false
 		}
 		var isSymlink: Bool = false
@@ -364,9 +365,9 @@ internal func beRelativeSymlinkToDirectory(directory: URL) -> MatcherFunc<URL> {
 			return false
 		}
 
-		let destination = try! FileManager.`default`.destinationOfSymbolicLink(atPath: url.carthage_path)
+		let destination = try! FileManager.default.destinationOfSymbolicLink(atPath: url.carthage_path)
 
-		guard !(destination as NSString).absolutePath else {
+		guard !(destination as NSString).isAbsolutePath else {
 			failureMessage.postfixMessage += ", but is not a relative symlink"
 			return false
 		}

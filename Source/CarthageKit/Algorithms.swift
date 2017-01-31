@@ -34,7 +34,7 @@
 ///
 /// Nodes that are equal from a topological perspective are sorted by the
 /// strict total order as defined by `Comparable`.
-public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>) -> [Node]? {
+public func topologicalSort<Node: Comparable>(_ graph: Dictionary<Node, Set<Node>>) -> [Node]? {
 	// Maintain a list of nodes with no incoming edges (sources).
 	var sources = graph
 		.filter { _, incomingEdges in incomingEdges.isEmpty }
@@ -42,12 +42,12 @@ public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>
 
 	// Maintain a working graph with all sources removed.
 	var workingGraph = graph
-	sources.forEach { node in workingGraph.removeValueForKey(node) }
+	sources.forEach { node in workingGraph.removeValue(forKey: node) }
 
 	var sorted: [Node] = []
 
 	while !sources.isEmpty {
-		sources.sortInPlace(>)
+		sources.sort(by: >)
 
 		let lastSource = sources.removeLast()
 		sorted.append(lastSource)
@@ -58,7 +58,7 @@ public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>
 
 			if incomingEdges.isEmpty {
 				sources.append(node)
-				workingGraph.removeValueForKey(node)
+				workingGraph.removeValue(forKey: node)
 			}
 		}
 	}
@@ -77,7 +77,7 @@ public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>
 /// given graph.
 ///
 /// Returns nil if the provided graph has a cycle or is malformed.
-public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>, nodes: Set<Node>) -> [Node]? {
+public func topologicalSort<Node: Comparable>(_ graph: Dictionary<Node, Set<Node>>, nodes: Set<Node>) -> [Node]? {
 	guard !nodes.isEmpty else { return topologicalSort(graph) }
 
 	precondition(nodes.isSubset(of: Set(graph.keys)))
@@ -93,7 +93,7 @@ public func topologicalSort<Node: Comparable>(graph: Dictionary<Node, Set<Node>>
 
 /// Returns the set of nodes that the given node in the provided graph has as
 /// its incoming nodes, both directly and transitively.
-private func transitiveIncomingNodes<Node: Equatable>(graph: Dictionary<Node, Set<Node>>, node: Node) -> Set<Node> {
+private func transitiveIncomingNodes<Node: Equatable>(_ graph: Dictionary<Node, Set<Node>>, node: Node) -> Set<Node> {
 	guard let nodes = graph[node] else { return Set() }
 
 	let incomingNodes = Set(nodes.flatMap { transitiveIncomingNodes(graph, node: $0) })

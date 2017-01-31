@@ -10,18 +10,18 @@ import CarthageKit
 import Commandant
 import Foundation
 import Result
-import ReactiveCocoa
+import ReactiveSwift
 
-public struct BootstrapCommand: CommandType {
+public struct BootstrapCommand: CommandProtocol {
 	public let verb = "bootstrap"
 	public let function = "Check out and build the project's dependencies"
 
-	public func run(options: UpdateCommand.Options) -> Result<(), CarthageError> {
+	public func run(_ options: UpdateCommand.Options) -> Result<(), CarthageError> {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
 		// `update` flags.
 		return options.loadProject()
 			.flatMap(.merge) { project -> SignalProducer<(), CarthageError> in
-				if !FileManager.`default`.fileExists(atPath: project.resolvedCartfileURL.carthage_path) {
+				if !FileManager.default.fileExists(atPath: project.resolvedCartfileURL.carthage_path) {
 					let formatting = options.checkoutOptions.colorOptions.formatting
 					carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
 					return project.updateDependencies(shouldCheckout: options.checkoutAfterUpdate)
@@ -33,7 +33,7 @@ public struct BootstrapCommand: CommandType {
 						.loadResolvedCartfile()
 						.flatMap(.concat) { resolvedCartfile -> SignalProducer<(), CarthageError> in
 							let resolvedDependencyNames = resolvedCartfile.dependencies.map { $0.project.name.lowercased() }
-							let unresolvedDependencyNames = Set(depsToUpdate.map { $0.lowercased() }).subtract(resolvedDependencyNames)
+							let unresolvedDependencyNames = Set(depsToUpdate.map { $0.lowercased() }).subtracting(resolvedDependencyNames)
 							
 							if !unresolvedDependencyNames.isEmpty {
 								return SignalProducer(error: .unresolvedDependencies(unresolvedDependencyNames.sorted()))

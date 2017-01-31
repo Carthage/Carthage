@@ -10,14 +10,14 @@ import CarthageKit
 import Commandant
 import Foundation
 import Result
-import ReactiveCocoa
+import ReactiveSwift
 
 
-public struct CopyFrameworksCommand: CommandType {
+public struct CopyFrameworksCommand: CommandProtocol {
 	public let verb = "copy-frameworks"
 	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
 
-	public func run(options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
+	public func run(_ options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
 		return inputFiles()
 			.flatMap(.concat) { frameworkPath -> SignalProducer<(), CarthageError> in
 				let frameworkName = (frameworkPath as NSString).lastPathComponent
@@ -36,7 +36,7 @@ public struct CopyFrameworksCommand: CommandType {
 									let copyFrameworks = copyFramework(source, target: target, validArchitectures: validArchitectures)
 									let copydSYMs = copyDebugSymbolsForFramework(source, validArchitectures: validArchitectures)
 									return SignalProducer.combineLatest(copyFrameworks, copydSYMs)
-										.then(.empty)
+										.then(SignalProducer<(), CarthageError>.empty)
 								}
 						}
 				}
@@ -45,21 +45,21 @@ public struct CopyFrameworksCommand: CommandType {
 	}
 }
 
-private func copyFramework(source: URL, target: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+private func copyFramework(_ source: URL, target: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
 		.flatMap(.merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
 			let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 			if buildActionIsArchiveOrInstall() {
 				return strip
 					.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.deletingLastPathComponent()))
-					.then(.empty)
+					.then(SignalProducer<(), CarthageError>.empty)
 			} else {
 				return strip
 			}
 	}
 }
 
-private func shouldIgnoreFramework(framework: URL, validArchitectures: [String]) -> SignalProducer<Bool, CarthageError> {
+private func shouldIgnoreFramework(_ framework: URL, validArchitectures: [String]) -> SignalProducer<Bool, CarthageError> {
 	return architecturesInPackage(framework)
 		.collect()
 		.map { architectures in
@@ -72,7 +72,7 @@ private func shouldIgnoreFramework(framework: URL, validArchitectures: [String])
 		}
 }
 
-private func copyDebugSymbolsForFramework(source: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+private func copyDebugSymbolsForFramework(_ source: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
 	return SignalProducer(result: appropriateDestinationFolder())
 		.flatMap(.merge) { destinationURL in
 			return SignalProducer(value: source)
@@ -85,7 +85,7 @@ private func copyDebugSymbolsForFramework(source: URL, validArchitectures: [Stri
 
 }
 
-private func copyBCSymbolMapsForFramework(frameworkURL: URL, fromDirectory directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+private func copyBCSymbolMapsForFramework(_ frameworkURL: URL, fromDirectory directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	// This should be called only when `buildActionIsArchiveOrInstall()` is true.
 	return SignalProducer(result: builtProductsFolder())
 		.flatMap(.merge) { builtProductsURL in
@@ -163,7 +163,7 @@ private func inputFiles() -> SignalProducer<String, CarthageError> {
 				return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
 			}
 
-			return SignalProducer<SignalProducer<String, CarthageError>, CarthageError>(values: variables)
+			return SignalProducer<SignalProducer<String, CarthageError>, CarthageError>(variables)
 				.flatten(.concat)
 		}
 }

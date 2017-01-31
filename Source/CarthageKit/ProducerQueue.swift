@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Carthage. All rights reserved.
 //
 
-import ReactiveCocoa
+import ReactiveSwift
 
 /// Serializes the execution of SignalProducers, like flatten(.concat), but
 /// without all needing to be enqueued in the same context.
@@ -15,26 +15,26 @@ import ReactiveCocoa
 /// to the queue object, instead of being required to funnel all producers
 /// through a single producer-of-producers.
 internal final class ProducerQueue {
-	private let queue: dispatch_queue_t
+	private let queue: DispatchQueue
 
 	/// Initializes a queue with the given debug name.
 	init(name: String) {
-		queue = dispatch_queue_create(name, DISPATCH_QUEUE_SERIAL)
+		queue = DispatchQueue(label: name)
 	}
 
 	/// Creates a SignalProducer that will enqueue the given producer when
 	/// started, wait until the queue is empty to begin work, and block other
 	/// work while executing.
-	func enqueue<T, Error>(producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
+	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
 		return SignalProducer { observer, disposable in
-			dispatch_async(self.queue) {
+			self.queue.async {
 				if disposable.isDisposed {
 					return
 				}
 
 				// Prevent further operations from starting until we're
 				// done.
-				dispatch_suspend(self.queue)
+				self.queue.suspend()
 
 				producer.startWithSignal { signal, signalDisposable in
 					disposable.add(signalDisposable)
@@ -43,7 +43,7 @@ internal final class ProducerQueue {
 						observer.action(event)
 
 						if event.isTerminating {
-							dispatch_resume(self.queue)
+							self.queue.resume()
 						}
 					}
 				}
@@ -54,7 +54,7 @@ internal final class ProducerQueue {
 
 extension SignalProducerProtocol {
 	/// Shorthand for enqueuing the given producer upon the given queue.
-	internal func startOnQueue(queue: ProducerQueue) -> SignalProducer<Value, Error> {
+	internal func startOnQueue(_ queue: ProducerQueue) -> SignalProducer<Value, Error> {
 		return queue.enqueue(self.producer)
 	}
 }

@@ -10,27 +10,27 @@ import CarthageKit
 import Commandant
 import Foundation
 import Result
-import ReactiveCocoa
+import ReactiveSwift
 
-public struct OutdatedCommand: CommandType {
-	public struct Options: OptionsType {
+public struct OutdatedCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
 		public let isVerbose: Bool
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
 		
-		public static func create(useSSH: Bool) -> (Bool) -> (ColorOptions) -> (String) -> Options {
+		public static func create(_ useSSH: Bool) -> (Bool) -> (ColorOptions) -> (String) -> Options {
 			return { isVerbose in { colorOptions in { directoryPath in
 				return self.init(useSSH: useSSH, isVerbose: isVerbose, colorOptions: colorOptions, directoryPath: directoryPath)
 			} } }
 		}
 		
-		public static func evaluate(m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
 				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> m <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> ColorOptions.evaluate(m)
-				<*> m <| Option(key: "project-directory", defaultValue: FileManager.`default`.currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 		}
 		
 		/// Attempts to load the project referenced by the options, and configure it
@@ -50,16 +50,16 @@ public struct OutdatedCommand: CommandType {
 	public let verb = "outdated"
 	public let function = "Check for compatible updates to the project's dependencies"
 
-	public func run(options: Options) -> Result<(), CarthageError> {
+	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
 			.flatMap(.merge) { $0.outdatedDependencies(options.isVerbose) }
-			.on(next: { outdatedDependencies in
+			.on(value: { outdatedDependencies in
 				let formatting = options.colorOptions.formatting
 
 				if !outdatedDependencies.isEmpty {
-					carthage.println(formatting.path(string: "The following dependencies are outdated:"))
+					carthage.println(formatting.path("The following dependencies are outdated:"))
 					for (currentDependency, updatedDependency) in outdatedDependencies {
-						carthage.println(formatting.projectName(string: currentDependency.project.name) + " \(currentDependency.version) -> \(updatedDependency.version)")
+						carthage.println(formatting.projectName(currentDependency.project.name) + " \(currentDependency.version) -> \(updatedDependency.version)")
 					}
 				} else {
 					carthage.println("All dependencies are up to date.")

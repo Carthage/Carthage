@@ -7,12 +7,12 @@
 //
 
 import Foundation
-import ReactiveCocoa
+import ReactiveSwift
 import ReactiveTask
 import Tentacle
 
 /// Possible errors that can originate from Carthage.
-public enum CarthageError: ErrorType, Equatable {
+public enum CarthageError: Error, Equatable {
 	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: ProjectIdentifier?)
 
 	/// One or more arguments was invalid.
@@ -80,16 +80,18 @@ public enum CarthageError: ErrorType, Equatable {
 	case gitHubAPIRequestFailed(Client.Error)
 	
 	case gitHubAPITimeout
+	
+	case buildFailed(TaskError, log: URL?)
 
 	/// An error occurred while shelling out.
 	case taskError(TaskError)
 }
 
-private func == (lhs: CarthageError.VersionRequirement, rhs: CarthageError.VersionRequirement) -> Bool {
+private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
 	return lhs.specifier == rhs.specifier && lhs.fromProject == rhs.fromProject
 }
 
-public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
+public func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
 	switch (lhs, rhs) {
 	case let (.invalidArgument(left), .invalidArgument(right)):
 		return left == right
@@ -139,6 +141,9 @@ public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
 		
 	case (.gitHubAPITimeout, .gitHubAPITimeout):
 		return true
+		
+	case let (.buildFailed(la, lb), .buildFailed(ra, rb)):
+		return la == ra && lb == rb
 	
 	case let (.taskError(left), .taskError(right)):
 		return left == right
@@ -237,10 +242,10 @@ extension CarthageError: CustomStringConvertible {
 			return "xcodebuild timed out while trying to read \(project) 😭"
 			
 		case let .duplicateDependencies(duplicateDeps):
-			let deps = duplicateDeps.sorted() // important to match expected order in test cases
-				.reduce("") { (acc, dep) in
-					"\(acc)\n\t\(dep)"
-				}
+			let deps = duplicateDeps
+				.sorted() // important to match expected order in test cases
+				.map { "\n\t" + $0.description }
+				.joined(separator: "")
 
 			return "The following dependencies are duplicates:\(deps)"
 
@@ -268,6 +273,20 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .unresolvedDependencies(names):
 			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile.resolved – please run `carthage update` if the dependency is contained in the project's Cartfile."
+			
+		case let .buildFailed(taskError, log):
+			var message = "Build Failed\n"
+			if case let .shellTaskFailed(task, exitCode, _) = taskError {
+				message += "\tTask failed with exit code \(exitCode):\n"
+				message += "\t\(task)\n"
+			} else {
+				message += "\t" + taskError.description + "\n"
+			}
+			message += "\nThis usually indicates that project itself failed to compile."
+			if let log = log {
+				message += " Please check the xcodebuild log for more details: \(log.carthage_path)"
+			}
+			return message
 
 		case let .taskError(taskError):
 			return taskError.description
@@ -289,7 +308,7 @@ public struct DuplicateDependency: Comparable {
 	// test case.
 	public init(project: ProjectIdentifier, locations: [String]) {
 		self.project = project
-		self.locations = locations.sort(<)
+		self.locations = locations.sorted(by: <)
 	}
 }
 
@@ -309,11 +328,11 @@ extension DuplicateDependency: CustomStringConvertible {
 	}
 }
 
-public func == (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
+public func == (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
 	return lhs.project == rhs.project && lhs.locations == rhs.locations
 }
 
-public func < (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
+public func < (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
 	if lhs.description < rhs.description {
 		return true
 	}

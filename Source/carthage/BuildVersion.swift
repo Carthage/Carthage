@@ -8,7 +8,7 @@
 
 import Foundation
 import CarthageKit
-import ReactiveCocoa
+import ReactiveSwift
 import ReactiveTask
 import Result
 import Tentacle

@@ -1,6 +1,36 @@
+import Foundation
+
 #if swift(>=3)
+	import Result
+
+	internal extension URL {
+		var carthage_absoluteString: String {
+			return absoluteString
+		}
+
+		// https://github.com/apple/swift-corelibs-foundation/blob/swift-3.0.1-RELEASE/Foundation/URL.swift#L607-L619
+		var carthage_path: String {
+			return path
+		}
+
+		var carthage_lastPathComponent: String {
+			return lastPathComponent
+		}
+
+		var carthage_pathComponents: [String] {
+			return pathComponents
+		}
+	}
+
+	// MARK: - Result
+
+	internal extension Result {
+		func fanout<R: ResultProtocol>(_ other: @autoclosure () -> R) -> Result<(Value, R.Value), Error> where Error == R.Error {
+			return self.flatMap { left in other().map { right in (left, right) } }
+		}
+	}
 #else
-	import Foundation
+	import Commandant
 	import PrettyColors
 	import Result
 	import ReactiveCocoa
@@ -161,6 +191,8 @@
 
 	internal typealias FileManager = NSFileManager
 	internal extension FileManager {
+		typealias DirectoryEnumerationOptions = NSDirectoryEnumerationOptions
+
 		class var `default`: FileManager { return defaultManager() }
 
 		@nonobjc func contentsOfDirectory(atPath path: String) throws -> [String] {
@@ -191,8 +223,8 @@
 			return try destinationOfSymbolicLinkAtPath(path)
 		}
 
-		func enumerator(at url: URL, includingPropertiesForKeys keys: [String]?, options mask: NSDirectoryEnumerationOptions = [], errorHandler handler: ((URL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
-			return enumeratorAtURL(url, includingPropertiesForKeys: keys, options: mask, errorHandler: handler)
+		func enumerator(at url: URL, includingPropertiesForKeys keys: [URLResourceKey]?, options mask: FileManager.DirectoryEnumerationOptions = [], errorHandler handler: ((URL, NSError) -> Bool)? = nil) -> NSDirectoryEnumerator? {
+			return enumeratorAtURL(url, includingPropertiesForKeys: keys.map { $0.map { $0.rawValue } }, options: mask, errorHandler: handler)
 		}
 
 		@nonobjc func fileExists(atPath path: String) -> Bool {
@@ -224,6 +256,12 @@
 		}
 	}
 
+	internal extension FileManager.DirectoryEnumerationOptions {
+		static var skipsHiddenFiles: FileManager.DirectoryEnumerationOptions { return .SkipsHiddenFiles }
+		static var skipsPackageDescendants: FileManager.DirectoryEnumerationOptions { return .SkipsPackageDescendants }
+		static var skipsSubdirectoryDescendants: FileManager.DirectoryEnumerationOptions { return .SkipsSubdirectoryDescendants }
+	}
+
 	extension NSSearchPathDirectory {
 		static let cachesDirectory = NSSearchPathDirectory.CachesDirectory
 	}
@@ -233,6 +271,8 @@
 	}
 
 	internal extension NSRegularExpression {
+		typealias Options = NSRegularExpressionOptions
+
 		func firstMatch(in string: String, options: NSMatchingOptions = [], range: NSRange) -> NSTextCheckingResult? {
 			return firstMatchInString(string, options: options, range: range)
 		}
@@ -242,6 +282,11 @@
 		}
 	}
 
+	internal extension NSRegularExpression.Options {
+		static var anchorsMatchLines: NSRegularExpression.Options { return .AnchorsMatchLines }
+		static var caseInsensitive: NSRegularExpression.Options { return .CaseInsensitive }
+	}
+
 	internal extension NSTextCheckingResult {
 		func rangeAt(idx: Int) -> NSRange {
 			return rangeAtIndex(idx)
@@ -249,6 +294,9 @@
 	}
 
 	internal extension NSString {
+		typealias CompareOptions = NSStringCompareOptions
+		typealias EnumerationOptions = NSStringEnumerationOptions
+
 		var deletingLastPathComponent: String {
 			return stringByDeletingLastPathComponent
 		}
@@ -276,6 +324,15 @@
 		func substring(with range: NSRange) -> String {
 			return substringWithRange(range)
 		}
+	}
+
+	internal extension NSString.CompareOptions {
+		static var numeric: NSString.CompareOptions { return .NumericSearch }
+	}
+
+	internal extension NSString.EnumerationOptions {
+		static var byLines: NSString.EnumerationOptions { return .ByLines }
+		static var reverse: NSString.EnumerationOptions { return .Reverse }
 	}
 
 	internal typealias ProcessInfo = NSProcessInfo
@@ -310,6 +367,10 @@
 
 		var standardizedFileURL : URL {
 			return URLByStandardizingPath ?? self
+		}
+
+		var carthage_absoluteString: String {
+			return absoluteString!
 		}
 
 		// https://github.com/apple/swift-corelibs-foundation/blob/swift-3.0.1-RELEASE/Foundation/URL.swift#L607-L619
@@ -421,6 +482,12 @@
 		var uuidString: String { return UUIDString }
 	}
 
+	// MARK: - Commandant
+
+	public typealias ArgumentProtocol = ArgumentType
+	public typealias CommandProtocol = CommandType
+	public typealias OptionsProtocol = OptionsType
+
 	// MARK: - PrettyColors
 
 	internal extension PrettyColors.Color.Named.Color {
@@ -443,6 +510,10 @@
 
 		static func failure(error: Error) -> Result<Value, Error> {
 			return .Failure(error)
+		}
+
+		func fanout<R: ResultType where Error == R.Error>(@autoclosure other: () -> R) -> Result<(Value, R.Value), Error> {
+			return self.flatMap { left in other().map { right in (left, right) } }
 		}
 	}
 
@@ -547,6 +618,16 @@
 		}
 	}
 
+	internal extension SignalProducer {
+		init<S: SignalType where S.Value == Value, S.Error == Error>(_ signal: S) {
+			self.init(signal: signal)
+		}
+
+		init<S: SequenceType where S.Generator.Element == Value>(_ values: S) {
+			self.init(values: values)
+		}
+	}
+
 	internal extension FlattenStrategy {
 		static var merge: FlattenStrategy { return .Merge }
 		static var concat: FlattenStrategy { return .Concat }
@@ -560,6 +641,18 @@
 	// MARK: - ReactiveTask
 
 	internal extension TaskEvent {
+		static func launch(task: Task) -> TaskEvent<T> {
+			return .Launch(task)
+		}
+
+		static func standardOutput(data: Data) -> TaskEvent<T> {
+			return .StandardOutput(data)
+		}
+
+		static func standardError(data: Data) -> TaskEvent<T> {
+			return .StandardError(data)
+		}
+
 		static func success(value: T) -> TaskEvent<T> {
 			return .Success(value)
 		}
