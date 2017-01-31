@@ -43,7 +43,7 @@ public enum ProjectLocator: Comparable {
 			.concat(value: directoryURL.appendingPathComponent(CarthageProjectCheckoutsPath))
 			.collect()
 			.flatMap(.merge) { directoriesToSkip in
-				return FileManager.`default`
+				return FileManager.default
 					.carthage_enumerator(at: directoryURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [ .typeIdentifierKey ], options: enumerationOptions, catchErrors: true)
 					.map { _, url in url }
 					.filter { url in

@@ -34,7 +34,7 @@ public struct OutdatedCommand: CommandProtocol {
 				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> m <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> ColorOptions.evaluate(m)
-				<*> m <| Option(key: "project-directory", defaultValue: FileManager.`default`.currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 		}
 		
 		/// Attempts to load the project referenced by the options, and configure it

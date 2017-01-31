@@ -27,12 +27,12 @@ class FrameworkExtensionsSpec: QuickSpec {
 				let childDirUnderPrivateTmp = URL(fileURLWithPath: "/private\(baseName)/foo")
 
 				beforeEach {
-					_ = try? FileManager.`default`
+					_ = try? FileManager.default
 						.createDirectory(at: childDirUnderPrivateTmp, withIntermediateDirectories: true)
 				}
 
 				afterEach {
-					_ = try? FileManager.`default`
+					_ = try? FileManager.default
 						.removeItem(at: parentDirUnderTmp)
 				}
 
