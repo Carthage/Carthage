@@ -6,11 +6,7 @@
 //  Copyright (c) 2015 Carthage. All rights reserved.
 //
 
-#if swift(>=3)
 import ReactiveSwift
-#else
-import ReactiveCocoa
-#endif
 
 /// Serializes the execution of SignalProducers, like flatten(.concat), but
 /// without all needing to be enqueued in the same context.

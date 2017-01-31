@@ -31,8 +31,8 @@ extension ProjectLocator {
 			.concat(value: directoryURL.appendingPathComponent(CarthageProjectCheckoutsPath))
 			.collect()
 			.flatMap(.merge) { directoriesToSkip in
-				return FileManager.`default`
-					.carthage_enumerator(at: directoryURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [ .typeIdentifierKey ], options: enumerationOptions, catchErrors: true)
+				return FileManager.default.reactive
+					.enumerator(at: directoryURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [ .typeIdentifierKey ], options: enumerationOptions, catchErrors: true)
 					.map { _, url in url }
 					.filter { url in
 						return !directoriesToSkip.contains { $0.hasSubdirectory(url) }

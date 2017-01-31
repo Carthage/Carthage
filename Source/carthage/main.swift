@@ -9,11 +9,7 @@
 import CarthageKit
 import Commandant
 import Foundation
-#if swift(>=3)
 import ReactiveSwift
-#else
-import ReactiveCocoa
-#endif
 import ReactiveTask
 import Result
 
