@@ -749,7 +749,7 @@ public final class Project {
 				let project = dependency.project
 				let version = dependency.version.commitish
 
-				let dependencyPath = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true).carthage_path
+				let dependencyPath = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true).path
 				if !FileManager.default.fileExists(atPath: dependencyPath) {
 					return .empty
 				}
@@ -760,7 +760,7 @@ public final class Project {
 				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version, isDirectory: true)
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().carthage_path
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+				return buildDependencyProject(project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
 						case .noSharedFrameworkSchemes:
