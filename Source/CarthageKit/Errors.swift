@@ -14,6 +14,7 @@ import ReactiveCocoa
 #endif
 import ReactiveTask
 import Tentacle
+import XCDBLD
 
 /// Possible errors that can originate from Carthage.
 public enum CarthageError: Error, Equatable {

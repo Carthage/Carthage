@@ -14,6 +14,7 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 import ReactiveTask
+import XCDBLD
 
 /// The name of the folder into which Carthage puts binaries it builds (relative
 /// to the working directory).

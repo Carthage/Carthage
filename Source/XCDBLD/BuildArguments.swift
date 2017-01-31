@@ -1,3 +1,5 @@
+import XCDBLD
+
 /// Configures a build with Xcode.
 public struct BuildArguments {
 	/// Represents a build setting whether full bitcode should be embedded in the
@@ -56,10 +58,10 @@ public struct BuildArguments {
 
 		switch project {
 		case let .workspace(url):
-			args += [ "-workspace", url.carthage_path ]
+			args += [ "-workspace", url.path ]
 
 		case let .projectFile(url):
-			args += [ "-project", url.carthage_path ]
+			args += [ "-project", url.path ]
 		}
 
 		if let scheme = scheme {
@@ -71,7 +73,7 @@ public struct BuildArguments {
 		}
 		
 		if let derivedDataPath = derivedDataPath {
-			let standarizedPath = URL(fileURLWithPath: (derivedDataPath as NSString).expandingTildeInPath).standardizedFileURL.carthage_path
+			let standarizedPath = URL(fileURLWithPath: (derivedDataPath as NSString).expandingTildeInPath).standardizedFileURL.path
 			if !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
 				args += [ "-derivedDataPath", standarizedPath ]
 			}

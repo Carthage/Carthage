@@ -15,6 +15,7 @@ import ReactiveSwift
 #else
 import ReactiveCocoa
 #endif
+import XCDBLD
 
 public struct ArchiveCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {

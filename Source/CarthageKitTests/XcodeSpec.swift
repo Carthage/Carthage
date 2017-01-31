@@ -18,6 +18,7 @@ import ReactiveCocoa
 #endif
 import ReactiveTask
 import Tentacle
+import XCDBLD
 
 class XcodeSpec: QuickSpec {
 	override func spec() {

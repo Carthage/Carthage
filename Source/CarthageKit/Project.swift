@@ -14,6 +14,7 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 import Tentacle
+import XCDBLD
 
 /// Carthage's bundle identifier.
 public let CarthageKitBundleIdentifier = Bundle(for: Project.self).bundleIdentifier!

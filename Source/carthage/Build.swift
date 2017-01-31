@@ -16,6 +16,7 @@ import ReactiveSwift
 import ReactiveCocoa
 #endif
 import ReactiveTask
+import XCDBLD
 
 extension BuildOptions: OptionsProtocol {
 	public static func create(_ configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> BuildOptions {
