@@ -8,11 +8,7 @@
 
 import Foundation
 import Result
-#if swift(>=3)
 import ReactiveSwift
-#else
-import ReactiveCocoa
-#endif
 import Tentacle
 
 /// Carthage's bundle identifier.
