@@ -1,6 +1,6 @@
 github "thoughtbot/Curry" "v3.0.0"
 github "Quick/Nimble" "v6.0.1"
-github "jdhealy/PrettyColors" "6f54504f8715c5d51114bcff821c48fd87d8a8b7"
+github "jdhealy/PrettyColors" "v5.0.0"
 github "Quick/Quick" "v1.0.0"
 github "antitypical/Result" "3.1.0"
 github "thoughtbot/Runes" "v4.0.1"
