@@ -8,11 +8,7 @@
 
 import Foundation
 import Result
-#if swift(>=3)
 import ReactiveSwift
-#else
-import ReactiveCocoa
-#endif
 
 /// An abstract type representing a way to specify versions.
 public protocol VersionType: Hashable {}

@@ -8,11 +8,7 @@
 
 import Foundation
 import Result
-#if swift(>=3)
 import ReactiveSwift
-#else
-import ReactiveCocoa
-#endif
 
 extension String {
 	/// Returns a producer that will enumerate each line of the receiver, then
