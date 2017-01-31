@@ -1,5 +1,3 @@
-import XCDBLD
-
 /// Configures a build with Xcode.
 public struct BuildArguments {
 	/// Represents a build setting whether full bitcode should be embedded in the
