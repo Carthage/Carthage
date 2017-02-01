@@ -1,4 +1,4 @@
-github "Carthage/ReactiveTask" "96e1013e0a6782bf0faba27485fe2d0a1153b531"
+github "Carthage/ReactiveTask" ~> 0.11
 github "Carthage/Commandant" ~> 0.11.2
 github "jdhealy/PrettyColors" "6f54504f8715c5d51114bcff821c48fd87d8a8b7"
 github "ReactiveCocoa/ReactiveSwift" ~> 1.0
