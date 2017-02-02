@@ -34,9 +34,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		575983731C0FF16400B3D3CB /* carthage-fish-completion */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "carthage-fish-completion"; sourceTree = "<group>"; };
-		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
-		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
 		BE0292401E403278004FB579 /* BuildArguments.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArguments.swift; sourceTree = "<group>"; };
 		BE0292421E403298004FB579 /* BuildArgumentsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArgumentsSpec.swift; sourceTree = "<group>"; };
 		BE0292441E40330D004FB579 /* ProjectLocator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectLocator.swift; sourceTree = "<group>"; };
@@ -98,17 +95,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		98400F591BD24DC5008C5DDE /* Scripts */ = {
-			isa = PBXGroup;
-			children = (
-				98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */,
-				575983731C0FF16400B3D3CB /* carthage-fish-completion */,
-				98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */,
-			);
-			name = Scripts;
-			path = Source/Scripts;
-			sourceTree = "<group>";
-		};
 		BE02924E1E4033F4004FB579 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -125,7 +111,6 @@
 				D0D1216E19E87B05005E4BAA /* XCDBLD */,
 				D0D1217B19E87B05005E4BAA /* XCDBLDTests */,
 				D0D1212219E878CC005E4BAA /* Configuration */,
-				98400F591BD24DC5008C5DDE /* Scripts */,
 				D0D1211919E87861005E4BAA /* Products */,
 				BE02924E1E4033F4004FB579 /* Frameworks */,
 			);
