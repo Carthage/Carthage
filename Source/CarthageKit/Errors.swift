@@ -50,7 +50,7 @@ public enum CarthageError: Error, Equatable {
 	/// Failed to write a file or directory at the given URL.
 	case writeFailed(URL, NSError?)
 
-	/// An error occurred parsing a Carthage file.
+	/// An error occurred parsing a Carthage file or task result
 	case parseError(description: String)
 
 	// An expected environment variable wasn't found.
@@ -89,9 +89,6 @@ public enum CarthageError: Error, Equatable {
 
 	/// An error occurred while shelling out.
 	case taskError(TaskError)
-	
-	/// An error occurred while generating the version file.
-	case versionFileError(description: String)
 }
 
 private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
@@ -297,9 +294,6 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .taskError(taskError):
 			return taskError.description
-			
-		case let .versionFileError(description):
-			return "Caching error: \(description)"
 		}
 	}
 }
