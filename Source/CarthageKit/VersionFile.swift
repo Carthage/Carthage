@@ -14,7 +14,7 @@ import ReactiveSwift
 import ReactiveTask
 import Result
 
-private struct CachedFramework {
+struct CachedFramework {
 	let name: String
 	let md5: String
 	
@@ -37,7 +37,7 @@ extension CachedFramework: Decodable {
 	}
 }
 
-private struct VersionFile {
+struct VersionFile {
 	let commitish: String
 	let xcodeVersion: String
 	

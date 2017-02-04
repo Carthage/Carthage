@@ -1,0 +1,21 @@
+{
+  "xcodeVersion": "Xcode 8.2.1\nBuild version 8C1002",
+  "commitish": "v1.0",
+  "iOS": [
+    {
+      "name": "TestFramework1",
+      "md5": "ios-framework1-md5"
+    },
+    {
+      "name": "TestFramework2",
+      "md5": "ios-framework2-md5"
+    }
+  ],
+  "Mac": [
+    {
+      "name": "TestFramework1",
+      "md5": "mac-framework1-md5"
+    }
+  ],
+  "tvOS": []
+}
