@@ -63,6 +63,12 @@
 				<key>RootRelativeBundlePath</key>
 				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/Tentacle.framework</string>
 			</dict>
+			<dict>
+				<key>BundleOverwriteAction</key>
+				<string></string>
+				<key>RootRelativeBundlePath</key>
+				<string>Library/Frameworks/CarthageKit.framework/Versions/A/Frameworks/XCDBLD.framework</string>
+			</dict>
 		</array>
 		<key>RootRelativeBundlePath</key>
 		<string>Library/Frameworks/CarthageKit.framework</string>
