@@ -698,23 +698,6 @@ public final class Project {
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
 
-	/// - parameters:
-	/// 	- flatMapTransform: defaults to identity function. Only ever used for one thing, but parameterized for unit testing purposes.
-	private func fileSystemObjects(for dependency: Dependency<PinnedVersion>, withRepository repositoryURL: URL, at pathList: String, flatMapTransform: @escaping (String) -> String? = { $0 }) -> SignalProducer<[String], CarthageError> {
-		return launchGitTask(
-			// ls-tree, because `ls-files` returns no output (for all instances I've seen) on bare repos.
-			// flag “-z” enables output separated by the nul character (`\0`).
-			[ "ls-tree", "-z", "-r", "--full-name", "--name-only", dependency.version.commitish, pathList ],
-			repositoryFileURL: repositoryURL
-		)
-			.map { (output: String) -> [String] in
-				output.characters.lazy
-					.split(separator: "\0")
-					.map { String($0) }
-					.flatMap(flatMapTransform)
-			}
-	}
-
 	/// Creates symlink between the dependency checkouts and the root checkouts
 	private func symlinkCheckoutPaths(for dependency: Dependency<PinnedVersion>, withRepository repositoryURL: URL, atRootDirectory rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)

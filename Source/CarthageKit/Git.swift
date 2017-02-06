@@ -382,6 +382,25 @@ private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keyS
 	}
 }
 
+/// Git’s representation of file system objects at a path relative to the repository root.
+///
+/// - parameters:
+/// 	- flatMapTransform: defaults to identity function. Only ever used for one thing, but parameterized for unit testing purposes.
+internal func fileSystemObjects(for dependency: Dependency<PinnedVersion>, withRepository repositoryURL: URL, at pathList: String, flatMapTransform: @escaping (String) -> String? = { $0 }) -> SignalProducer<[String], CarthageError> {
+	return launchGitTask(
+		// ls-tree, because `ls-files` returns no output (for all instances I've seen) on bare repos.
+		// flag “-z” enables output separated by the nul character (`\0`).
+		[ "ls-tree", "-z", "-r", "--full-name", "--name-only", dependency.version.commitish, pathList ],
+		repositoryFileURL: repositoryURL
+	)
+		.map { (output: String) -> [String] in
+			output.characters.lazy
+				.split(separator: "\0")
+				.map { String($0) }
+				.flatMap(flatMapTransform)
+		}
+}
+
 /// Determines the SHA that the submodule at the given path is pinned to, in the
 /// revision of the parent repository specified.
 public func submoduleSHAForPath(_ repositoryFileURL: URL, _ path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
