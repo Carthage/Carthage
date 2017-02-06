@@ -580,21 +580,21 @@ public final class Project {
 				
 				/// The submodule for an already existing submodule at dependency project’s path
 				/// or the submodule to be added at this path given the `--use-submodules` flag.
-				func submodule() -> Submodule? {
-					if var foundSubmodule = submodulesByPath[project.relativePath] {
-						foundSubmodule.url = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
-						foundSubmodule.sha = revision
-						return foundSubmodule
-					} else if self.useSubmodules {
-						return Submodule(name: project.relativePath, path: project.relativePath, url: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), sha: revision)
-					} else {
-						return nil
-					}
+				let submodule: Submodule?
+				
+				if var foundSubmodule = submodulesByPath[project.relativePath] {
+					foundSubmodule.url = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
+					foundSubmodule.sha = revision
+					submodule = foundSubmodule
+				} else if self.useSubmodules {
+					submodule = Submodule(name: project.relativePath, path: project.relativePath, url: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), sha: revision)
+				} else {
+					submodule = nil
 				}
 
 				let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
 				
-				if let submodule = submodule() {
+				if let submodule = submodule {
 					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
 					// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
 					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.carthage_path))
