@@ -11,6 +11,7 @@ import Commandant
 import Foundation
 import Result
 import ReactiveSwift
+import XCDBLD
 
 public struct ArchiveCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {

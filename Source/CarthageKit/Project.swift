@@ -10,6 +10,7 @@ import Foundation
 import Result
 import ReactiveSwift
 import Tentacle
+import XCDBLD
 
 /// Carthage's bundle identifier.
 public let CarthageKitBundleIdentifier = Bundle(for: Project.self).bundleIdentifier!

@@ -1,6 +1,6 @@
 import Quick
 import Nimble
-import CarthageKit
+import XCDBLD
 
 class BuildArgumentsSpec: QuickSpec {
 	override func spec() {

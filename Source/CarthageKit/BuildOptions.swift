@@ -6,6 +6,8 @@
 //  Copyright © 2016 Carthage. All rights reserved.
 //
 
+import XCDBLD
+
 /// The build options used for building `xcodebuild` command.
 public struct BuildOptions {
 	/// The Xcode configuration to build.

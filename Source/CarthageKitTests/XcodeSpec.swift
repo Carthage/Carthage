@@ -14,6 +14,7 @@ import Quick
 import ReactiveSwift
 import ReactiveTask
 import Tentacle
+import XCDBLD
 
 class XcodeSpec: QuickSpec {
 	override func spec() {
