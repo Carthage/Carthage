@@ -740,15 +740,17 @@ public final class Project {
 				})
 			)
 			.attemptMap { (dependencies: Set<ProjectIdentifier>, components: [String]) -> Result<(), CarthageError> in
-				let names = dependencies.filter { dependency in
-					// Filter out dependencies with names matching (case-insensitively) file system objects from git in `CarthageProjectCheckoutsPath`.
-					// Edge case warning on file system case-sensitivity. If a differently-cased file system object exists in git
-					// and is stored on a case-sensitive file system (like the Sierra preview of APFS), we currently preempt
-					// the non-conflicting symlink. Probably, nobody actually desires or needs the opposite behavior.
-					components.filter {
-						dependency.name.caseInsensitiveCompare($0) == .orderedSame
-					}.isEmpty
-				}.map { $0.name }
+				let names = dependencies
+					.filter { dependency in
+						// Filter out dependencies with names matching (case-insensitively) file system objects from git in `CarthageProjectCheckoutsPath`.
+						// Edge case warning on file system case-sensitivity. If a differently-cased file system object exists in git
+						// and is stored on a case-sensitive file system (like the Sierra preview of APFS), we currently preempt
+						// the non-conflicting symlink. Probably, nobody actually desires or needs the opposite behavior.
+						components.filter {
+							dependency.name.caseInsensitiveCompare($0) == .orderedSame
+						}.isEmpty
+					}
+					.map { $0.name }
 
 				// If no `CarthageProjectCheckoutsPath`-housed symlinks are needed,
 				// return early after potentially adding submodules
