@@ -707,7 +707,7 @@ public final class Project {
 
 		return self.dependencyProjects(for: dependency)
 			.zip(with: // file system objects which might conflict with symlinks
-				fileSystemObjects(for: dependency, withRepository: repositoryURL, at: CarthageProjectCheckoutsPath, flatMapTransform: { path in
+				fileSystemObjects(for: dependency, withRepository: repositoryURL, at: CarthageProjectCheckoutsPath, pathTransformWhereNilResultsWillBeEliminated: { path in
 					let componentsRelativeToDirectoryURL = {
 						return URL(string: $0, relativeTo: self.directoryURL)?.standardizedFileURL.carthage_pathComponents
 					}

@@ -384,9 +384,8 @@ private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keyS
 
 /// Git’s representation of file system objects at a path relative to the repository root.
 ///
-/// - parameters:
-/// 	- flatMapTransform: defaults to identity function. Only ever used for one thing, but parameterized for unit testing purposes.
-internal func fileSystemObjects(for dependency: Dependency<PinnedVersion>, withRepository repositoryURL: URL, at pathList: String, flatMapTransform: @escaping (String) -> String? = { $0 }) -> SignalProducer<[String], CarthageError> {
+/// - parameter pathTransformWhereNilResultsWillBeEliminated: Defaults to identity function. Only ever used for one thing, but parameterized for unit testing purposes.
+internal func fileSystemObjects(for dependency: Dependency<PinnedVersion>, withRepository repositoryURL: URL, at pathList: String, pathTransformWhereNilResultsWillBeEliminated: @escaping (String) -> String? = { $0 }) -> SignalProducer<[String], CarthageError> {
 	return launchGitTask(
 		// ls-tree, because `ls-files` returns no output (for all instances I've seen) on bare repos.
 		// flag “-z” enables output separated by the nul character (`\0`).
@@ -397,7 +396,7 @@ internal func fileSystemObjects(for dependency: Dependency<PinnedVersion>, withR
 			output.characters.lazy
 				.split(separator: "\0")
 				.map { String($0) }
-				.flatMap(flatMapTransform)
+				.flatMap(pathTransformWhereNilResultsWillBeEliminated)
 		}
 }
 
