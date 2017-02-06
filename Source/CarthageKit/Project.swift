@@ -123,6 +123,12 @@ public enum ProjectEvent {
 	
 	/// Building the project is being skipped because it is cached.
 	case skippedBuildingCached(ProjectIdentifier)
+	
+	/// Rebuilding a cached project because of a version file/framework mismatch.
+	case rebuildingCached(ProjectIdentifier)
+	
+	/// Building an uncached project.
+	case buildingUncached(ProjectIdentifier)
 }
 
 /// Represents a project that is using Carthage.
@@ -807,10 +813,23 @@ public final class Project {
 
 		return versionFileMatchesDependency(dependency, forPlatforms: platforms, rootDirectoryURL: self.directoryURL)
 			.on(value: { matches in
-				if matches {
-					self._projectEventsObserver.send(value: .skippedBuildingCached(dependency.project))
+				let event: ProjectEvent
+				if let matches = matches {
+					if matches {
+						event = .skippedBuildingCached(dependency.project)
+					}
+					else {
+						event = .rebuildingCached(dependency.project)
+					}
 				}
+				else {
+					event = .buildingUncached(dependency.project)
+				}
+				self._projectEventsObserver.send(value: event)
 			})
+			.map { result in
+				return (result ?? false)
+			}
 	}
 }
 

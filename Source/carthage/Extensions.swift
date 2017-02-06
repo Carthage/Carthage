@@ -118,7 +118,13 @@ internal struct ProjectEventSink {
 			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(project.name) + " due to the error:\n" + message)
 			
 		case let .skippedBuildingCached(project):
-			carthage.println(formatting.bullets + "Found valid framework cache for " + formatting.projectName(project.name) + ", skipping build")
+			carthage.println(formatting.bullets + "Valid cache found for " + formatting.projectName(project.name) + ", skipping build")
+			
+		case let .rebuildingCached(project):
+			carthage.println(formatting.bullets + "Invalid cache found for " + formatting.projectName(project.name) + ", rebuilding with all downstream dependencies")
+			
+		case let .buildingUncached(project):
+			carthage.println(formatting.bullets + "No cache found for " + formatting.projectName(project.name) + ", building with all downstream dependencies")
 		}
 	}
 }

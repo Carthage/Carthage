@@ -226,12 +226,14 @@ public func createVersionFileForDependency(_ dependency: Dependency<PinnedVersio
 ///
 /// If a set of platforms is not provided, all platforms are checked.
 ///
-/// Returns true if the the dependency can be skipped.
-public func versionFileMatchesDependency(_ dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, rootDirectoryURL: URL) -> SignalProducer<Bool, CarthageError> {
+/// Returns an optional bool which is nil if no version file exists,
+/// otherwise true if the version file matches and the build can be
+/// skipped or false if there is a mismatch of some kind.
+public func versionFileMatchesDependency(_ dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, rootDirectoryURL: URL) -> SignalProducer<Bool?, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
 	guard let versionFile = VersionFile(url: versionFileURL) else {
-		return .init(value: false)
+		return .init(value: nil)
 	}
 	let commitish = dependency.version.commitish
 
@@ -244,6 +246,9 @@ public func versionFileMatchesDependency(_ dependency: Dependency<PinnedVersion>
 					return versionFile.satisfies(platform: platform, commitish: commitish, xcodeVersion: xcodeVersion, binariesDirectoryURL: rootBinariesURL)
 				}
 				.reduce(true) { current, result in
+					guard let current = current else {
+						return false
+					}
 					return current && result
 				}
 		}
