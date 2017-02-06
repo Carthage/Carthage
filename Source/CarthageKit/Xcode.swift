@@ -541,8 +541,8 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 public func buildDependencyProject(_ dependency: Dependency<PinnedVersion>, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
-	
-    return symlinkBuildPathForDependencyProject(dependency.project, rootDirectoryURL: rootDirectoryURL)
+
+	return symlinkBuildPathForDependencyProject(dependency.project, rootDirectoryURL: rootDirectoryURL)
 		.map { _ -> BuildSchemeProducer in
 			return buildInDirectory(dependencyURL, withOptions: options, dependency: dependency, rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
 				.mapError { error in
@@ -681,7 +681,7 @@ public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOpti
 					}
 					return sdkFilter(filteredSDKs, scheme, configuration, project)
 				}
-				
+
 				return buildScheme(scheme, withOptions: options, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
 					.mapError { (error) -> CarthageError in
 						if case let .taskError(taskError) = error {
@@ -979,9 +979,8 @@ public func currentXcodeVersion() -> SignalProducer<String, CarthageError> {
 			guard let versionString = String(data: data, encoding: .utf8) else {
 				return .failure(.parseError(description: "Could not get xcode version"))
 			}
-
 			return .success(versionString.trimmingCharacters(in: .whitespacesAndNewlines))
-	}
+		}
 }
 
 /// Sends a set of UUIDs for each architecture present in the given URL.

@@ -59,7 +59,7 @@ class XcodeSpec: QuickSpec {
 				expect(relativePaths) == [ "SampleGitSubmodule.xcodeproj/" ]
 			}
 		}
-		
+
 		it("should build for all platforms") {
 			let dependencies = [
 				ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes")),

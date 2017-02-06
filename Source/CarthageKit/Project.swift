@@ -334,7 +334,7 @@ public final class Project {
 			.attemptMap(Cartfile.from(string:))
 			.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
 				return SignalProducer(cartfile.dependencies)
-		}
+			}
 	}
 
 	/// Attempts to resolve a Git reference to a version.
@@ -780,7 +780,7 @@ public final class Project {
 				if !FileManager.default.fileExists(atPath: dependencyPath) {
 					return .empty
 				}
-				
+
 				return buildDependencyProject(dependency, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
