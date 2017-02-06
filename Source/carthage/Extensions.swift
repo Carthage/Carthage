@@ -13,11 +13,7 @@ import CarthageKit
 import Commandant
 import Foundation
 import Result
-#if swift(>=3)
 import ReactiveSwift
-#else
-import ReactiveCocoa
-#endif
 import ReactiveTask
 
 private let outputQueue = { () -> DispatchQueue in

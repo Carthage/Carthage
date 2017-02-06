@@ -10,11 +10,7 @@ import CarthageKit
 import Commandant
 import Foundation
 import Result
-#if swift(>=3)
 import ReactiveSwift
-#else
-import ReactiveCocoa
-#endif
 
 public struct BootstrapCommand: CommandProtocol {
 	public let verb = "bootstrap"
@@ -25,7 +21,7 @@ public struct BootstrapCommand: CommandProtocol {
 		// `update` flags.
 		return options.loadProject()
 			.flatMap(.merge) { project -> SignalProducer<(), CarthageError> in
-				if !FileManager.`default`.fileExists(atPath: project.resolvedCartfileURL.carthage_path) {
+				if !FileManager.default.fileExists(atPath: project.resolvedCartfileURL.carthage_path) {
 					let formatting = options.checkoutOptions.colorOptions.formatting
 					carthage.println(formatting.bullets + "No Cartfile.resolved found, updating dependencies")
 					return project.updateDependencies(shouldCheckout: options.checkoutAfterUpdate)

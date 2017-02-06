@@ -8,12 +8,9 @@
 
 import Foundation
 import Result
-#if swift(>=3)
 import ReactiveSwift
-#else
-import ReactiveCocoa
-#endif
 import ReactiveTask
+import XCDBLD
 
 /// The name of the folder into which Carthage puts binaries it builds (relative
 /// to the working directory).
@@ -68,7 +65,7 @@ public func schemesInProjects(_ projects: [(ProjectLocator, [String])]) -> Signa
 			// Only look for schemes that actually reside in the project
 			let containedSchemes = schemes.filter { (scheme: String) -> Bool in
 				let schemePath = project.fileURL.appendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").carthage_path
-				return FileManager.`default`.fileExists(atPath: schemePath)
+				return FileManager.default.fileExists(atPath: schemePath)
 			}
 			return (project, containedSchemes)
 		}
@@ -101,7 +98,7 @@ internal enum FrameworkType {
 			self = .dynamic
 
 		case (.framework, .staticlib):
-			self = .`static`
+			self = .static
 
 		case _:
 			return nil
@@ -186,13 +183,14 @@ private func mergeModuleIntoModule(_ sourceModuleDirectoryURL: URL, _ destinatio
 	precondition(sourceModuleDirectoryURL.isFileURL)
 	precondition(destinationModuleDirectoryURL.isFileURL)
 
-	return FileManager.`default`.carthage_enumerator(at: sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .skipsSubdirectoryDescendants, .skipsHiddenFiles ], catchErrors: true)
+	return FileManager.default.reactive
+		.enumerator(at: sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .skipsSubdirectoryDescendants, .skipsHiddenFiles ], catchErrors: true)
 		.attemptMap { _, url -> Result<URL, CarthageError> in
 			let lastComponent: String = url.carthage_lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.appendingPathComponent(lastComponent).resolvingSymlinksInPath()
 
 			do {
-				try FileManager.`default`.copyItem(at: url, to: destinationURL)
+				try FileManager.default.copyItem(at: url, to: destinationURL)
 				return .success(destinationURL)
 			} catch let error as NSError {
 				return .failure(.writeFailed(destinationURL, error))
@@ -571,7 +569,7 @@ private func symlinkBuildPathForDependencyProject(_ dependency: ProjectIdentifie
 		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
-		let fileManager = FileManager.`default`
+		let fileManager = FileManager.default
 
 		do {
 			try fileManager.createDirectory(at: rootBinariesURL, withIntermediateDirectories: true)
@@ -777,7 +775,7 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
 /// Returns a signal that will send the URL after copying upon .success.
 public func copyProduct(_ from: URL, _ to: URL) -> SignalProducer<URL, CarthageError> {
 	return SignalProducer<URL, CarthageError>.attempt {
-		let manager = FileManager.`default`
+		let manager = FileManager.default
 
 		// This signal deletes `to` before it copies `from` over it.
 		// If `from` and `to` point to the same resource, there's no need to perform a copy at all
@@ -931,12 +929,12 @@ private func stripDirectory(named directory: String, of frameworkURL: URL) -> Si
 		let directoryURLToStrip = frameworkURL.appendingPathComponent(directory, isDirectory: true)
 
 		var isDirectory: ObjCBool = false
-		if !FileManager.`default`.fileExists(atPath: directoryURLToStrip.carthage_path, isDirectory: &isDirectory) || !isDirectory.boolValue {
+		if !FileManager.default.fileExists(atPath: directoryURLToStrip.carthage_path, isDirectory: &isDirectory) || !isDirectory.boolValue {
 			return .success(())
 		}
 
 		do {
-			try FileManager.`default`.removeItem(at: directoryURLToStrip)
+			try FileManager.default.removeItem(at: directoryURLToStrip)
 		} catch let error as NSError {
 			return .failure(.writeFailed(directoryURLToStrip, error))
 		}

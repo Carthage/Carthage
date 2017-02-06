@@ -13,6 +13,7 @@ import Curry
 import ReactiveSwift
 import ReactiveTask
 import Result
+import XCDBLD
 
 struct CachedFramework {
 	let name: String

@@ -12,6 +12,7 @@ import Nimble
 import Argo
 import ReactiveSwift
 import Result
+import XCDBLD
 @testable import CarthageKit
 
 class VersionFileSpec: QuickSpec {

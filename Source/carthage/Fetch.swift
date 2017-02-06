@@ -10,11 +10,7 @@ import CarthageKit
 import Commandant
 import Result
 import Foundation
-#if swift(>=3)
 import ReactiveSwift
-#else
-import ReactiveCocoa
-#endif
 
 public struct FetchCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
