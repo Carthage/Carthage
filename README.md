@@ -138,7 +138,7 @@ Note that you should be [using submodules](#using-submodules-for-dependencies) b
 
 ### Caching builds
 
-By default Carthage will avoid rebuilding a dependency if its resolved version and the hash of its built frameworks are unchanged for a given platform.  Caching information is stored in invisible version files in the Build directory, which are described in more detail in Carthage’s documentation.  If the --no-cache-builds option is provided, both cached and non-cached frameworks will be built.
+By default Carthage will rebuild a dependency regardless of whether it's the same resolved version as before. Passing the `--cache-builds` will cause carthage to avoid rebuilding a dependency if it can. See information on [version files][VersionFile] for details on how carthage performs this caching. 
 
 ### Bash/Zsh/Fish completion
 
@@ -295,3 +295,4 @@ Header backdrop photo is released under the [CC BY-NC-SA 2.0](https://creativeco
 [Carthage/Checkouts]: Documentation/Artifacts.md#carthagecheckouts
 [Bash/Zsh/Fish Completion]: Documentation/BashZshFishCompletion.md
 [CarthageKit]: Source/CarthageKit
+[VersionFile]: Documentation/VersionFile.md
