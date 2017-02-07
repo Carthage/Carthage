@@ -748,32 +748,43 @@ public final class Project {
 	/// Returns a producer-of-producers representing each scheme being built.
 	public func buildCheckedOutDependenciesWithOptions(_ options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
-			.flatMap(.merge) { resolvedCartfile in
+			.flatMap(.concat) { resolvedCartfile -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
-					.flatMap(.concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>), CarthageError> in
-						self.dependencyProjects(for: dependency)
-							.map { projects in (dependency, projects) }
+			}
+			.flatMap(.concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>), CarthageError> in
+				return self
+					.dependencyProjects(for: dependency)
+					.map { projects in (dependency, projects) }
+			}
+			.flatMap(.concat) { nextGroup -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>, Bool?), CarthageError> in
+				let (dependency, nestedDependencies) = nextGroup
+				return versionFileMatchesDependency(dependency, forPlatforms: options.platforms, rootDirectoryURL: self.directoryURL)
+					.map { matches in
+						return (dependency, nestedDependencies, matches)
 					}
-					.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
-						let (nextDependency, projects) = nextGroup
-						guard options.cacheBuilds else {
-							return includedDependencies + [nextDependency]
-						}
+			}.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
+				let (nextDependency, projects, matches) = nextGroup
+				let dependenciesIncludingNext = includedDependencies + [nextDependency]
+				let projectsToBeBuilt = Set(includedDependencies.map { $0.project })
+				guard options.cacheBuilds && projects.intersection(projectsToBeBuilt).isEmpty else {
+					return dependenciesIncludingNext
+				}
 
-						var dependenciesToBuild = includedDependencies
-						_ = self.shouldSkipBuildForDependency(nextDependency, dependencyProjects: projects, dependenciesToBeBuilt: includedDependencies, platforms: options.platforms)
-							.on(value: { shouldSkip in
-								if !shouldSkip {
-									dependenciesToBuild.append(nextDependency)
-								}
-							})
-							.wait() // We must wait since subsequent calls to reduce rely on the results of the previous project skipping or not
+				guard let versionFileMatches = matches else {
+					self._projectEventsObserver.send(value: .buildingUncached(nextDependency.project))
+					return dependenciesIncludingNext
+				}
 
-						return dependenciesToBuild
-					}
-					.flatMap(.concat) { dependencies -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-						SignalProducer<Dependency<PinnedVersion>, CarthageError>(dependencies)
-					}
+				if versionFileMatches {
+					self._projectEventsObserver.send(value: .skippedBuildingCached(nextDependency.project))
+					return includedDependencies
+				} else {
+					self._projectEventsObserver.send(value: .rebuildingCached(nextDependency.project))
+					return dependenciesIncludingNext
+				}
+			}
+			.flatMap(.concat) { dependencies in
+				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(dependencies)
 			}
 			.flatMap(.concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true).carthage_path
