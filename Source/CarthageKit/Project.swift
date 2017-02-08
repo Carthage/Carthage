@@ -151,6 +151,9 @@ public final class Project {
 	public let projectEvents: Signal<ProjectEvent, NoError>
 	private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
 
+	/// Emits the currect Swift version
+	public let swiftVersion: SignalProducer<String, CarthageError>
+
 	public init(directoryURL: URL) {
 		precondition(directoryURL.isFileURL)
 
@@ -159,6 +162,8 @@ public final class Project {
 		_projectEventsObserver = observer
 
 		self.directoryURL = directoryURL
+
+		swiftVersion = Project.determineSwiftVersion().replayLazily(upTo: 1)
 	}
 
 	deinit {
@@ -173,7 +178,7 @@ public final class Project {
 	private let cachedVersionsQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cachedVersionsQueue")
 
 	/// Attempts to determine the local version of swift
-	public func determineSwiftVersion() -> SignalProducer<String, CarthageError> {
+	private static func determineSwiftVersion() -> SignalProducer<String, CarthageError> {
 		let taskDescription = Task("/usr/bin/env", arguments: ["xcrun", "swift", "--version"])
 
 		return taskDescription.launch(standardInput: nil)
@@ -186,7 +191,7 @@ public final class Project {
 	}
 
 	/// Parses output of `swift --version` for the version string.
-	private func parseSwiftVersionCommand(output: String) -> SignalProducer<String, CarthageError> {
+	private static func parseSwiftVersionCommand(output: String) -> SignalProducer<String, CarthageError> {
 		guard
 			let regex = try? NSRegularExpression(pattern: "Apple Swift version (.+) \\(", options: []),
 			let matchRange = regex.firstMatch(in: output, options: [], range: NSRange(location: 0, length: output.characters.count))?.rangeAt(1)

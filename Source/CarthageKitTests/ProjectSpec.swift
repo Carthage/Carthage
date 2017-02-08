@@ -17,7 +17,7 @@ class ProjectSpec: QuickSpec {
 	override func spec() {
 		describe("determineSwiftVersion") {
 			it("should correctly determin current swift verion.") {
-				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).determineSwiftVersion().single()
+				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).swiftVersion.single()
 				expect(result?.value) == "3.0.2"
 			}
 		}
