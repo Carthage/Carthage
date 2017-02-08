@@ -199,20 +199,20 @@ public func createVersionFile(for dependency: Dependency<PinnedVersion>, platfor
 
 	if !buildProducts.isEmpty {
 		return SignalProducer<URL, CarthageError>(buildProducts)
-		.flatMap(.merge) { url -> SignalProducer<String, CarthageError> in
-			let platformName = url.deletingLastPathComponent().lastPathComponent
-			let frameworkName = url.deletingPathExtension().lastPathComponent
-			let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
-			return md5ForFileAtURL(frameworkURL)
-				.on(value: { md5 in
-					let cachedFramework = CachedFramework(name: frameworkName, md5: md5)
-					if var frameworks = platformCaches[platformName] {
-						frameworks.append(cachedFramework)
-						platformCaches[platformName] = frameworks
-					}
-				})
-		}
-		.then(writeVersionFile)
+			.flatMap(.merge) { url -> SignalProducer<String, CarthageError> in
+				let platformName = url.deletingLastPathComponent().lastPathComponent
+				let frameworkName = url.deletingPathExtension().lastPathComponent
+				let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
+				return md5ForFileAtURL(frameworkURL)
+					.on(value: { md5 in
+						let cachedFramework = CachedFramework(name: frameworkName, md5: md5)
+						if var frameworks = platformCaches[platformName] {
+							frameworks.append(cachedFramework)
+							platformCaches[platformName] = frameworks
+						}
+					})
+			}
+			.then(writeVersionFile)
 	} else {
 		// Write out an empty version file for dependencies with no built frameworks, so cache builds can differentiate between
 		// no cache and a dependency that has no frameworks
@@ -232,7 +232,7 @@ public func versionFileMatches(_ dependency: Dependency<PinnedVersion>, platform
 	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
 	guard let versionFile = VersionFile(url: versionFileURL) else {
-		return .init(value: nil)
+		return SignalProducer(value: nil)
 	}
 	let commitish = dependency.version.commitish
 
@@ -255,7 +255,7 @@ public func versionFileMatches(_ dependency: Dependency<PinnedVersion>, platform
 
 private func md5ForFileAtURL(_ frameworkFileURL: URL) -> SignalProducer<String, CarthageError> {
 	guard FileManager.default.fileExists(atPath: frameworkFileURL.path) else {
-		return .init(error: .readFailed(frameworkFileURL, nil))
+		return SignalProducer(error: .readFailed(frameworkFileURL, nil))
 	}
 	let task = Task("/usr/bin/env", arguments: ["md5", "-q", frameworkFileURL.path])
 	return task.launch()

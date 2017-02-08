@@ -133,7 +133,7 @@ class VersionFileSpec: QuickSpec {
 
 			// One framework missing
 			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: SignalProducer(["ios-framework1-md5", nil]))
-			
+
 			// Mismatched commitish
 			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.1", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: SignalProducer(["ios-framework1-md5", "ios-framework2-md5"]))
 
