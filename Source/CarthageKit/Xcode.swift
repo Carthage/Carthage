@@ -717,7 +717,7 @@ public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOpti
 							guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
 								return .empty
 							}
-							return createVersionFile(for: dependency, platforms: options.platforms, buildProducts: urls, rootDirectory: rootDirectoryURL)
+							return createVersionFile(for: dependency, platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL)
 								.flatMapError { _ in .empty }
 						}
 						.map { _ -> TaskEvent<(ProjectLocator, String)> in

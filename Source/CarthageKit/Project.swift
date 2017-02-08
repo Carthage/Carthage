@@ -755,7 +755,7 @@ public final class Project {
 				return SignalProducer.combineLatest(
 					SignalProducer(value: dependency),
 					self.dependencyProjects(for: dependency),
-					versionFileMatches(dependency, for: options.platforms, rootDirectory: self.directoryURL)
+					versionFileMatches(dependency, platforms: options.platforms, rootDirectoryURL: self.directoryURL)
 				)
 			}.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
 				let (nextDependency, projects, matches) = nextGroup
