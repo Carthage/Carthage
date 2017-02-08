@@ -576,7 +576,9 @@ public final class Project {
 	internal func matchingSwiftVersionURL(_ frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer.combineLatest(swiftVersion, frameworkSwiftVersion(frameworkURL))
 			.flatMap(.merge) { swiftVersion, frameworkVersion in
-				return swiftVersion == frameworkVersion ? SignalProducer(value: frameworkURL) : SignalProducer(error: .incompatibleFrameworkSwiftVersion(local: swiftVersion, framework: frameworkVersion))
+				return swiftVersion == frameworkVersion
+					? SignalProducer(value: frameworkURL)
+					: SignalProducer(error: .incompatibleFrameworkSwiftVersions(local: swiftVersion, framework: frameworkVersion))
 			}
 			.take(first: 1)
 	}

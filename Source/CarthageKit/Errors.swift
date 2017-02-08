@@ -94,7 +94,7 @@ public enum CarthageError: Error, Equatable {
 	case unknownFrameworkSwiftVersion
 
 	/// The framework binary is not compatible with the local Swift version.
-	case incompatibleFrameworkSwiftVersion(local: String, framework: String)
+	case incompatibleFrameworkSwiftVersions(local: String, framework: String)
 }
 
 private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
@@ -164,7 +164,7 @@ public func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
 	case (.unknownFrameworkSwiftVersion, .unknownFrameworkSwiftVersion):
 		return true
 
-	case let (.incompatibleFrameworkSwiftVersion(la, lb), .incompatibleFrameworkSwiftVersion(ra, rb)):
+	case let (.incompatibleFrameworkSwiftVersions(la, lb), .incompatibleFrameworkSwiftVersions(ra, rb)):
 		return la == ra && lb == rb
 
 	default:
@@ -316,7 +316,7 @@ extension CarthageError: CustomStringConvertible {
 		case .unknownFrameworkSwiftVersion:
 			return "Unable to determine local Swift version."
 
-		case let .incompatibleFrameworkSwiftVersion(local, framework):
+		case let .incompatibleFrameworkSwiftVersions(local, framework):
 			return "Incompatible Swift version - framework was built with \(framework) and the local version is \(local)."
 		}
 	}

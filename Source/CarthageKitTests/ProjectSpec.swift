@@ -43,7 +43,7 @@ class ProjectSpec: QuickSpec {
 				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).matchingSwiftVersionURL(frameworkURL).single()
 
 				expect(result?.value).to(beNil())
-				expect(result?.error) == .incompatibleFrameworkSwiftVersion(local: currentSwiftVersion, framework: "0.0.0")
+				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: currentSwiftVersion, framework: "0.0.0")
 			}
 		}
 
