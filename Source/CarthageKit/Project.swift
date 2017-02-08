@@ -11,6 +11,7 @@ import Result
 import ReactiveSwift
 import Tentacle
 import XCDBLD
+import ReactiveTask
 
 /// Carthage's bundle identifier.
 public let CarthageKitBundleIdentifier = Bundle(for: Project.self).bundleIdentifier!
@@ -170,6 +171,31 @@ public final class Project {
 	/// fetching/cloning.
 	private var cachedVersions: CachedVersions = [:]
 	private let cachedVersionsQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cachedVersionsQueue")
+
+	/// Attempts to determine the local version of swift
+	public func determineSwiftVersion() -> SignalProducer<String, CarthageError> {
+		let taskDescription = Task("/usr/bin/env", arguments: ["xcrun", "swift", "--version"])
+
+		return taskDescription.launch(standardInput: nil)
+			.ignoreTaskData()
+			.mapError(CarthageError.taskError)
+			.map { data in
+				return String(data: data, encoding: .utf8)!
+			}
+			.flatMap(.concat, transform: parseSwiftVersionCommand)
+	}
+
+	/// Parses output of `swift --version` for the version string.
+	private func parseSwiftVersionCommand(output: String) -> SignalProducer<String, CarthageError> {
+		guard
+			let regex = try? NSRegularExpression(pattern: "Apple Swift version (.+) \\(", options: []),
+			let matchRange = regex.firstMatch(in: output, options: [], range: NSRange(location: 0, length: output.characters.count))?.rangeAt(1)
+		else {
+			return SignalProducer(error: .unknownLocalSwiftVersion)
+		}
+
+		return SignalProducer(value: (output as NSString).substring(with: matchRange))
+	}
 
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.

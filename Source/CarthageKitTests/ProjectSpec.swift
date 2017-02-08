@@ -15,6 +15,13 @@ import Tentacle
 
 class ProjectSpec: QuickSpec {
 	override func spec() {
+		describe("determineSwiftVersion") {
+			it("should correctly determin current swift verion.") {
+				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).determineSwiftVersion().single()
+				expect(result?.value) == "3.0.2"
+			}
+		}
+
 		describe("loadCombinedCartfile") {
 			it("should load a combined Cartfile when only a Cartfile is present") {
 				let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfileOnly", withExtension: nil)!
