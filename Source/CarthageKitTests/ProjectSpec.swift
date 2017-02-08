@@ -38,12 +38,12 @@ class ProjectSpec: QuickSpec {
 				expect(result?.value) == testFrameworkURL
 			}
 
-			it("should ignore framework URLs with the incorrect Swift version") {
+			it("should throw an error when the framework has the incorrect Swift version") {
 				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOld.framework", withExtension: nil)!
 				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).matchingSwiftVersionURL(frameworkURL).single()
 
 				expect(result?.value).to(beNil())
-				expect(result?.error).to(beNil())
+				expect(result?.error) == .incompatibleFrameworkSwiftVersion
 			}
 		}
 

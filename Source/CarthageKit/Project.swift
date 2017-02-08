@@ -118,6 +118,10 @@ public enum ProjectEvent {
 	/// Building the project is being skipped, since the project is not sharing
 	/// any framework schemes.
 	case skippedBuilding(ProjectIdentifier, String)
+
+	/// Installing of a binary framework is being skipped because of an inability
+	/// to verify that it was built with a compatible Swift version.
+	case skippedInstallingBinaries(ProjectIdentifier, String)
 }
 
 /// Represents a project that is using Carthage.
@@ -184,22 +188,29 @@ public final class Project {
 		return taskDescription.launch(standardInput: nil)
 			.ignoreTaskData()
 			.mapError(CarthageError.taskError)
-			.map { data in
-				return String(data: data, encoding: .utf8)!
+			.map { data -> String? in
+				return parseSwiftVersionCommand(output: String(data: data, encoding: .utf8))
 			}
-			.flatMap(.concat, transform: parseSwiftVersionCommand)
+			.flatMap(.concat) { versionString -> SignalProducer<String, CarthageError> in
+				if let versionString = versionString {
+					return SignalProducer(value: versionString)
+				} else {
+					return SignalProducer(error: .unknownLocalSwiftVersion)
+				}
+			}
 	}
 
 	/// Parses output of `swift --version` for the version string.
-	private static func parseSwiftVersionCommand(output: String) -> SignalProducer<String, CarthageError> {
+	private static func parseSwiftVersionCommand(output: String?) -> String? {
 		guard
+			let output = output,
 			let regex = try? NSRegularExpression(pattern: "Apple Swift version (.+) \\(", options: []),
 			let matchRange = regex.firstMatch(in: output, options: [], range: NSRange(location: 0, length: output.characters.count))?.rangeAt(1)
 		else {
-			return SignalProducer(error: .unknownLocalSwiftVersion)
+			return nil
 		}
 
-		return SignalProducer(value: (output as NSString).substring(with: matchRange))
+		return (output as NSString).substring(with: matchRange)
 	}
 
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
@@ -485,6 +496,10 @@ public final class Project {
 						.flatMap(.concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
 								.flatMap(.merge, transform: self.matchingSwiftVersionURL)
+								.flatMapError { error in
+									self._projectEventsObserver.send(value: .skippedInstallingBinaries(project, error.description))
+									return SignalProducer.empty
+								}
 								.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
 								.flatMap(.merge) { frameworkURL in
 									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
@@ -567,8 +582,7 @@ public final class Project {
 	internal func matchingSwiftVersionURL(_ frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer.combineLatest(swiftVersion, frameworkSwiftVersion(frameworkURL))
 			.flatMap(.merge) { swiftVersion, frameworkVersion -> SignalProducer<(), CarthageError> in
-				print("swift version: \(swiftVersion), frameworkVersion: \(frameworkVersion)")
-				return swiftVersion == frameworkVersion ? SignalProducer(value: ()) : SignalProducer.empty
+				return swiftVersion == frameworkVersion ? SignalProducer(value: ()) : SignalProducer(error: .incompatibleFrameworkSwiftVersion)
 			}
 			.map { frameworkURL }
 			.take(first: 1)
@@ -579,13 +593,13 @@ public final class Project {
 		guard
 			let swiftHeaderURL = frameworkURL.swiftHeaderURL(),
 			let data = try? Data(contentsOf: swiftHeaderURL),
-			let contents = String(data: data, encoding: .utf8)
+			let contents = String(data: data, encoding: .utf8),
+			let swiftVersion = Project.parseSwiftVersionCommand(output: contents)
 		else {
-			// TODO: need to change this.
-			return SignalProducer(error: .unknownLocalSwiftVersion)
+			return SignalProducer(error: .unknownFrameworkSwiftVersion)
 		}
 
-		return Project.parseSwiftVersionCommand(output: contents)
+		return SignalProducer(value: swiftVersion)
 	}
 
 	/// Copies the framework at the given URL into the current project's build

@@ -112,6 +112,9 @@ internal struct ProjectEventSink {
 
 		case let .skippedBuilding(project, message):
 			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(project.name) + " due to the error:\n" + message)
+
+		case let .skippedInstallingBinaries(project, message):
+			carthage.println(formatting.bullets + "Skipped installing " + formatting.projectName(project.name) + ".framework binary due to the error:\n\t" + formatting.quote(message))
 		}
 	}
 }
