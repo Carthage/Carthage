@@ -751,17 +751,12 @@ public final class Project {
 			.flatMap(.concat) { resolvedCartfile -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
 			}
-			.flatMap(.concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>), CarthageError> in
-				return self
-					.dependencyProjects(for: dependency)
-					.map { projects in (dependency, projects) }
-			}
-			.flatMap(.concat) { nextGroup -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>, Bool?), CarthageError> in
-				let (dependency, nestedDependencies) = nextGroup
-				return versionFileMatchesDependency(dependency, forPlatforms: options.platforms, rootDirectoryURL: self.directoryURL)
-					.map { matches in
-						return (dependency, nestedDependencies, matches)
-					}
+			.flatMap(.concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>, Bool?), CarthageError> in
+				return SignalProducer.combineLatest(
+					SignalProducer(value: dependency),
+					self.dependencyProjects(for: dependency),
+					versionFileMatches(dependency, for: options.platforms, rootDirectory: self.directoryURL)
+				)
 			}.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
 				let (nextDependency, projects, matches) = nextGroup
 				let dependenciesIncludingNext = includedDependencies + [nextDependency]
@@ -806,37 +801,6 @@ public final class Project {
 							return SignalProducer(error: error)
 						}
 					}
-			}
-	}
-	
-	/// Checks the version files for the dependency and each of the dependencies
-	/// listed in its Cartfile.
-	///
-	/// Returns true if the dependency does not need to be rebuilt.
-	private func shouldSkipBuildForDependency(_ dependency: Dependency<PinnedVersion>, dependencyProjects: Set<ProjectIdentifier>, dependenciesToBeBuilt: [Dependency<PinnedVersion>], platforms: Set<Platform>) -> SignalProducer<Bool, CarthageError> {
-		let projectsToBeBuilt = Set(dependenciesToBeBuilt.map { $0.project })
-		guard dependencyProjects.intersection(projectsToBeBuilt).isEmpty else {
-			return .init(value: false)
-		}
-
-		return versionFileMatchesDependency(dependency, forPlatforms: platforms, rootDirectoryURL: self.directoryURL)
-			.on(value: { matches in
-				let event: ProjectEvent
-				if let matches = matches {
-					if matches {
-						event = .skippedBuildingCached(dependency.project)
-					}
-					else {
-						event = .rebuildingCached(dependency.project)
-					}
-				}
-				else {
-					event = .buildingUncached(dependency.project)
-				}
-				self._projectEventsObserver.send(value: event)
-			})
-			.map { result in
-				return (result ?? false)
 			}
 	}
 }

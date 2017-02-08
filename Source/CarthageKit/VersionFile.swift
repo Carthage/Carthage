@@ -104,9 +104,11 @@ struct VersionFile {
 		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<(String, String), CarthageError> in
 				let frameworkName = cachedFramework.name
-				let platformURL = binariesDirectoryURL.appendingPathComponent(platform.rawValue, isDirectory: true).resolvingSymlinksInPath()
-				let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: true)
-				let frameworkBinaryURL = frameworkURL.appendingPathComponent("\(frameworkName)", isDirectory: false)
+				let frameworkBinaryURL = binariesDirectoryURL
+					.appendingPathComponent(platform.rawValue, isDirectory: true)
+					.resolvingSymlinksInPath()
+					.appendingPathComponent("\(frameworkName).framework", isDirectory: true)
+					.appendingPathComponent("\(frameworkName)", isDirectory: false)
 
 				return md5ForFileAtURL(frameworkBinaryURL)
 					.map { md5String in
@@ -174,7 +176,7 @@ extension VersionFile: Decodable {
 /// to allow those frameworks to be skipped in future builds.
 ///
 /// Returns a signal that succeeds once the file has been created.
-public func createVersionFileForDependency(_ dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, buildProductURLs: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+public func createVersionFile(for dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, buildProducts: [URL], rootDirectory: URL) -> SignalProducer<(), CarthageError> {
 	var platformCaches: [String: [CachedFramework]] = [:]
 
 	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
@@ -185,7 +187,7 @@ public func createVersionFileForDependency(_ dependency: Dependency<PinnedVersio
 
 	let writeVersionFile = currentXcodeVersion()
 		.attemptMap { xcodeVersion -> Result<(), CarthageError> in
-			let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
+			let rootBinariesURL = rootDirectory.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 			let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
 
 			let versionFile = VersionFile(
@@ -199,8 +201,8 @@ public func createVersionFileForDependency(_ dependency: Dependency<PinnedVersio
 			return versionFile.write(to: versionFileURL)
 	}
 
-	if !buildProductURLs.isEmpty {
-		return SignalProducer<URL, CarthageError>(buildProductURLs)
+	if !buildProducts.isEmpty {
+		return SignalProducer<URL, CarthageError>(buildProducts)
 		.flatMap(.merge) { url -> SignalProducer<String, CarthageError> in
 			let platformName = url.deletingLastPathComponent().lastPathComponent
 			let frameworkName = url.deletingPathExtension().lastPathComponent
@@ -230,8 +232,8 @@ public func createVersionFileForDependency(_ dependency: Dependency<PinnedVersio
 /// Returns an optional bool which is nil if no version file exists,
 /// otherwise true if the version file matches and the build can be
 /// skipped or false if there is a mismatch of some kind.
-public func versionFileMatchesDependency(_ dependency: Dependency<PinnedVersion>, forPlatforms platforms: Set<Platform>, rootDirectoryURL: URL) -> SignalProducer<Bool?, CarthageError> {
-	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
+public func versionFileMatches(_ dependency: Dependency<PinnedVersion>, for platforms: Set<Platform>, rootDirectory: URL) -> SignalProducer<Bool?, CarthageError> {
+	let rootBinariesURL = rootDirectory.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
 	guard let versionFile = VersionFile(url: versionFileURL) else {
 		return .init(value: nil)
