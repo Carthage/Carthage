@@ -314,7 +314,7 @@ extension CarthageError: CustomStringConvertible {
 			return "Unable to determine local Swift version."
 
 		case .unknownFrameworkSwiftVersion:
-			return "Unable to determine local Swift version."
+			return "Unable to determine framework Swift version."
 
 		case let .incompatibleFrameworkSwiftVersions(local, framework):
 			return "Incompatible Swift version - framework was built with \(framework) and the local version is \(local)."
