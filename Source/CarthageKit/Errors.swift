@@ -86,6 +86,9 @@ public enum CarthageError: Error, Equatable {
 
 	/// An error occurred while shelling out.
 	case taskError(TaskError)
+
+	/// An error in determining the local Swift version
+	case unknownLocalSwiftVersion
 }
 
 private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
@@ -148,6 +151,9 @@ public func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
 	
 	case let (.taskError(left), .taskError(right)):
 		return left == right
+
+	case (.unknownLocalSwiftVersion, .unknownLocalSwiftVersion):
+		return true
 	
 	default:
 		return false
@@ -291,6 +297,9 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .taskError(taskError):
 			return taskError.description
+
+		case .unknownLocalSwiftVersion:
+			return "Unable to determine local Swift version."
 		}
 	}
 }
