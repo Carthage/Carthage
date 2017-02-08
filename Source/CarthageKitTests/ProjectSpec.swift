@@ -15,10 +15,27 @@ import Tentacle
 
 class ProjectSpec: QuickSpec {
 	override func spec() {
-		describe("determineSwiftVersion") {
-			it("should correctly determin current swift verion.") {
+		describe("determineBinaryCompatibility") {
+			let currentSwiftVersion = "3.0.2"
+			let testFramework = "Quick.framework"
+			let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+			let testFrameworkURL = currentDirectory.appendingPathComponent(testFramework)
+
+			it("should correctly determine current swift verion.") {
 				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).swiftVersion.single()
-				expect(result?.value) == "3.0.2"
+				expect(result?.value) == currentSwiftVersion
+			}
+
+			it("should correctly determine a framework's swift version") {
+				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).frameworkSwiftVersion(testFrameworkURL).single()
+
+				expect(result?.value) == currentSwiftVersion
+			}
+
+			it("should pass through framework URLs with the correct Swift version") {
+				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).matchingSwiftVersionURL(testFrameworkURL).single()
+
+				expect(result?.value) == testFrameworkURL
 			}
 		}
 

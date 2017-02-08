@@ -271,6 +271,13 @@ extension URL {
 
 		return false
 	}
+
+	/// Returns the first `URL` to match `<self>/Headers/*-Swift.h`. Otherwise `nil`.
+	internal func swiftHeaderURL() -> URL? {
+		let headersURL = self.appendingPathComponent("Headers", isDirectory: true).resolvingSymlinksInPath()
+		let dirContents = try? FileManager.default.contentsOfDirectory(at: headersURL, includingPropertiesForKeys: [], options: [])
+		return dirContents?.filter { $0.absoluteString.contains("-Swift.h") }.first
+	}
 }
 
 extension FileManager: ReactiveExtensionsProvider {

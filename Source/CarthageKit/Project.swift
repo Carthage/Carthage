@@ -152,7 +152,7 @@ public final class Project {
 	private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
 
 	/// Emits the currect Swift version
-	public let swiftVersion: SignalProducer<String, CarthageError>
+	internal let swiftVersion: SignalProducer<String, CarthageError>
 
 	public init(directoryURL: URL) {
 		precondition(directoryURL.isFileURL)
@@ -484,6 +484,7 @@ public final class Project {
 						.flatMap(.concat, transform: unzip(archive:))
 						.flatMap(.concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
+								.flatMap(.merge, transform: self.matchingSwiftVersionURL)
 								.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
 								.flatMap(.merge) { frameworkURL in
 									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
@@ -560,6 +561,31 @@ public final class Project {
 						}
 					}
 			}
+	}
+
+	/// Emits the framework URL if it matches the local swift version and `empty` if not.
+	internal func matchingSwiftVersionURL(_ frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
+		return SignalProducer.combineLatest(swiftVersion, frameworkSwiftVersion(frameworkURL))
+			.flatMap(.merge) { swiftVersion, frameworkVersion -> SignalProducer<(), CarthageError> in
+				print("swift version: \(swiftVersion), frameworkVersion: \(frameworkVersion)")
+				return swiftVersion == frameworkVersion ? SignalProducer(value: ()) : SignalProducer.empty
+			}
+			.map { frameworkURL }
+			.take(first: 1)
+	}
+
+	/// Determines the Swift version of a framework at a given `URL`.
+	internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, CarthageError> {
+		guard
+			let swiftHeaderURL = frameworkURL.swiftHeaderURL(),
+			let data = try? Data(contentsOf: swiftHeaderURL),
+			let contents = String(data: data, encoding: .utf8)
+		else {
+			// TODO: need to change this.
+			return SignalProducer(error: .unknownLocalSwiftVersion)
+		}
+
+		return Project.parseSwiftVersionCommand(output: contents)
 	}
 
 	/// Copies the framework at the given URL into the current project's build
