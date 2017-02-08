@@ -543,7 +543,6 @@ public final class Project {
 					? SignalProducer(value: frameworkURL)
 					: SignalProducer(error: .incompatibleFrameworkSwiftVersions(local: swiftVersion, framework: frameworkVersion))
 			}
-			.take(first: 1)
 	}
 
 	/// Copies the framework at the given URL into the current project's build
