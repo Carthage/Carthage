@@ -16,6 +16,55 @@ import XCDBLD
 /// to the working directory).
 public let CarthageBinariesFolderPath = "Carthage/Build"
 
+/// Emits the currect Swift version
+internal let swiftVersion: SignalProducer<String, CarthageError> = { return determineSwiftVersion().replayLazily(upTo: 1) }()
+
+/// Attempts to determine the local version of swift
+private func determineSwiftVersion() -> SignalProducer<String, CarthageError> {
+	let taskDescription = Task("/usr/bin/env", arguments: ["xcrun", "swift", "--version"])
+
+	return taskDescription.launch(standardInput: nil)
+		.ignoreTaskData()
+		.mapError(CarthageError.taskError)
+		.map { data -> String? in
+			return parseSwiftVersionCommand(output: String(data: data, encoding: .utf8))
+		}
+		.flatMap(.concat) { versionString -> SignalProducer<String, CarthageError> in
+			if let versionString = versionString {
+				return SignalProducer(value: versionString)
+			} else {
+				return SignalProducer(error: .unknownLocalSwiftVersion)
+			}
+	}
+}
+
+/// Parses output of `swift --version` for the version string.
+internal func parseSwiftVersionCommand(output: String?) -> String? {
+	guard
+		let output = output,
+		let regex = try? NSRegularExpression(pattern: "Apple Swift version (.+) \\(", options: []),
+		let matchRange = regex.firstMatch(in: output, options: [], range: NSRange(location: 0, length: output.characters.count))?.rangeAt(1)
+		else {
+			return nil
+	}
+
+	return (output as NSString).substring(with: matchRange)
+}
+
+/// Determines the Swift version of a framework at a given `URL`.
+internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, CarthageError> {
+	guard
+		let swiftHeaderURL = frameworkURL.swiftHeaderURL(),
+		let data = try? Data(contentsOf: swiftHeaderURL),
+		let contents = String(data: data, encoding: .utf8),
+		let swiftVersion = parseSwiftVersionCommand(output: contents)
+		else {
+			return SignalProducer(error: .unknownFrameworkSwiftVersion)
+	}
+
+	return SignalProducer(value: swiftVersion)
+}
+
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
 public func xcodebuildTask(_ tasks: [String], _ buildArguments: BuildArguments) -> Task {

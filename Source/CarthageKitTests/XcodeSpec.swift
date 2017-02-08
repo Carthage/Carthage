@@ -6,7 +6,7 @@
 //  Copyright (c) 2014 Carthage. All rights reserved.
 //
 
-import CarthageKit
+@testable import CarthageKit
 import Foundation
 import Result
 import Nimble
@@ -17,6 +17,8 @@ import Tentacle
 import XCDBLD
 
 class XcodeSpec: QuickSpec {
+	static let currentSwiftVersion = "3.0.2"
+
 	override func spec() {
 		// The fixture is maintained at https://github.com/ikesyo/carthage-fixtures-ReactiveCocoaLayout
 		let directoryURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
@@ -32,7 +34,23 @@ class XcodeSpec: QuickSpec {
 		afterEach {
 			_ = try? FileManager.default.removeItem(at: targetFolderURL)
 		}
-		
+
+		describe("determingSwiftVersions") {
+			it("determines the local Swift version") {
+				let result = swiftVersion.single()
+				expect(result?.value) == XcodeSpec.currentSwiftVersion
+			}
+
+			it("should correctly determine a framework's swift version") {
+				let testFramework = "Quick.framework"
+				let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+				let testFrameworkURL = currentDirectory.appendingPathComponent(testFramework)
+				let result = frameworkSwiftVersion(testFrameworkURL).single()
+
+				expect(result?.value) == XcodeSpec.currentSwiftVersion
+			}
+		}
+
 		describe("locateProjectsInDirectory:") {
 			func relativePathsForProjectsInDirectory(_ directoryURL: URL) -> [String] {
 				let result = ProjectLocator

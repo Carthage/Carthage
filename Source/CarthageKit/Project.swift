@@ -155,9 +155,6 @@ public final class Project {
 	public let projectEvents: Signal<ProjectEvent, NoError>
 	private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
 
-	/// Emits the currect Swift version
-	internal let swiftVersion: SignalProducer<String, CarthageError>
-
 	public init(directoryURL: URL) {
 		precondition(directoryURL.isFileURL)
 
@@ -166,8 +163,6 @@ public final class Project {
 		_projectEventsObserver = observer
 
 		self.directoryURL = directoryURL
-
-		swiftVersion = Project.determineSwiftVersion().replayLazily(upTo: 1)
 	}
 
 	deinit {
@@ -180,38 +175,6 @@ public final class Project {
 	/// fetching/cloning.
 	private var cachedVersions: CachedVersions = [:]
 	private let cachedVersionsQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cachedVersionsQueue")
-
-	/// Attempts to determine the local version of swift
-	private static func determineSwiftVersion() -> SignalProducer<String, CarthageError> {
-		let taskDescription = Task("/usr/bin/env", arguments: ["xcrun", "swift", "--version"])
-
-		return taskDescription.launch(standardInput: nil)
-			.ignoreTaskData()
-			.mapError(CarthageError.taskError)
-			.map { data -> String? in
-				return parseSwiftVersionCommand(output: String(data: data, encoding: .utf8))
-			}
-			.flatMap(.concat) { versionString -> SignalProducer<String, CarthageError> in
-				if let versionString = versionString {
-					return SignalProducer(value: versionString)
-				} else {
-					return SignalProducer(error: .unknownLocalSwiftVersion)
-				}
-			}
-	}
-
-	/// Parses output of `swift --version` for the version string.
-	private static func parseSwiftVersionCommand(output: String?) -> String? {
-		guard
-			let output = output,
-			let regex = try? NSRegularExpression(pattern: "Apple Swift version (.+) \\(", options: []),
-			let matchRange = regex.firstMatch(in: output, options: [], range: NSRange(location: 0, length: output.characters.count))?.rangeAt(1)
-		else {
-			return nil
-		}
-
-		return (output as NSString).substring(with: matchRange)
-	}
 
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.
@@ -581,20 +544,6 @@ public final class Project {
 					: SignalProducer(error: .incompatibleFrameworkSwiftVersions(local: swiftVersion, framework: frameworkVersion))
 			}
 			.take(first: 1)
-	}
-
-	/// Determines the Swift version of a framework at a given `URL`.
-	internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, CarthageError> {
-		guard
-			let swiftHeaderURL = frameworkURL.swiftHeaderURL(),
-			let data = try? Data(contentsOf: swiftHeaderURL),
-			let contents = String(data: data, encoding: .utf8),
-			let swiftVersion = Project.parseSwiftVersionCommand(output: contents)
-		else {
-			return SignalProducer(error: .unknownFrameworkSwiftVersion)
-		}
-
-		return SignalProducer(value: swiftVersion)
 	}
 
 	/// Copies the framework at the given URL into the current project's build
