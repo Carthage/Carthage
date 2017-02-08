@@ -535,7 +535,7 @@ public final class Project {
 			}
 	}
 
-	/// Emits the framework URL if it matches the local swift version and `empty` if not.
+	/// Emits the framework URL if it matches the local swift version and errors if not.
 	internal func matchingSwiftVersionURL(_ frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer.combineLatest(swiftVersion, frameworkSwiftVersion(frameworkURL))
 			.flatMap(.merge) { swiftVersion, frameworkVersion in
