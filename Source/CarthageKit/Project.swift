@@ -496,10 +496,6 @@ public final class Project {
 						.flatMap(.concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
 								.flatMap(.merge, transform: self.matchingSwiftVersionURL)
-								.flatMapError { error in
-									self._projectEventsObserver.send(value: .skippedInstallingBinaries(project, error.description))
-									return SignalProducer.empty
-								}
 								.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
 								.flatMap(.merge) { frameworkURL in
 									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
@@ -507,16 +503,14 @@ public final class Project {
 								}
 								.on(completed: {
 									_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
+								}, disposed: {
+									_ = try? FileManager.default.removeItem(at: directoryURL)
 								})
-								.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 						}
-						.attemptMap { (temporaryDirectoryURL: URL) -> Result<Bool, CarthageError> in
-							do {
-								try FileManager.default.removeItem(at: temporaryDirectoryURL)
-								return .success(true)
-							} catch let error as NSError {
-								return .failure(.writeFailed(temporaryDirectoryURL, error))
-							}
+						.map { _ in true }
+						.flatMapError { error in
+							self._projectEventsObserver.send(value: .skippedInstallingBinaries(project, error.description))
+							return SignalProducer(value: false)
 						}
 						.concat(value: false)
 						.take(first: 1)
