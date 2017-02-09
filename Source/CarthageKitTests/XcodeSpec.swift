@@ -35,19 +35,33 @@ class XcodeSpec: QuickSpec {
 			_ = try? FileManager.default.removeItem(at: targetFolderURL)
 		}
 
-		describe("determingSwiftVersions") {
+		describe("determingSwiftInformation") {
+			let testSwiftFramework = "Quick.framework"
+			let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+			let testSwiftFrameworkURL = currentDirectory.appendingPathComponent(testSwiftFramework)
+
 			it("determines the local Swift version") {
 				let result = swiftVersion.single()
 				expect(result?.value) == XcodeSpec.currentSwiftVersion
 			}
 
-			it("should correctly determine a framework's swift version") {
-				let testFramework = "Quick.framework"
-				let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
-				let testFrameworkURL = currentDirectory.appendingPathComponent(testFramework)
-				let result = frameworkSwiftVersion(testFrameworkURL).single()
+			it("should correctly determine a framework's Swift version") {
+				let result = frameworkSwiftVersion(testSwiftFrameworkURL).single()
 
 				expect(result?.value) == XcodeSpec.currentSwiftVersion
+			}
+
+			it("should correctly determine that a Swift framework is a Swift framework") {
+				let result = isSwiftFramework(testSwiftFrameworkURL).single()
+
+				expect(result?.value) == true
+			}
+
+			it("should correctly determine that an ObjC framework is not a Swift framework") {
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldObjc.framework", withExtension: nil)!
+				let result = isSwiftFramework(frameworkURL).single()
+
+				expect(result?.value) == false
 			}
 		}
 

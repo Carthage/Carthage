@@ -278,6 +278,13 @@ extension URL {
 		let dirContents = try? FileManager.default.contentsOfDirectory(at: headersURL, includingPropertiesForKeys: [], options: [])
 		return dirContents?.filter { $0.absoluteString.contains("-Swift.h") }.first
 	}
+
+	/// Returns the first `URL` to match `<self>/Modules/*.swiftmodule`. Otherwise `nil`.
+	internal func swiftmoduleURL() -> URL? {
+		let headersURL = self.appendingPathComponent("Modules", isDirectory: true).resolvingSymlinksInPath()
+		let dirContents = try? FileManager.default.contentsOfDirectory(at: headersURL, includingPropertiesForKeys: [], options: [])
+		return dirContents?.filter { $0.absoluteString.contains("swiftmodule") }.first
+	}
 }
 
 extension FileManager: ReactiveExtensionsProvider {

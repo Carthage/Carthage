@@ -65,6 +65,11 @@ internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<Strin
 	return SignalProducer(value: swiftVersion)
 }
 
+/// Determines whether a framework was built with Swift
+internal func isSwiftFramework(_ frameworkURL: URL) -> SignalProducer<Bool, CarthageError> {
+	return SignalProducer(value: frameworkURL.swiftmoduleURL() != nil)
+}
+
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
 public func xcodebuildTask(_ tasks: [String], _ buildArguments: BuildArguments) -> Task {

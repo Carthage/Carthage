@@ -16,22 +16,29 @@ import Tentacle
 class ProjectSpec: QuickSpec {
 	override func spec() {
 		describe("determineBinaryCompatibility") {
-			it("should pass through framework URLs with the correct Swift version") {
-				let testFramework = "Quick.framework"
+			it("should pass through Swift framework URLs with the correct Swift version") {
+				let framework = "Quick.framework"
 				let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
-				let testFrameworkURL = currentDirectory.appendingPathComponent(testFramework)
+				let frameworkURL = currentDirectory.appendingPathComponent(framework)
 
-				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).matchingSwiftVersionURL(testFrameworkURL).single()
+				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).compatibleFrameworkURL(frameworkURL).single()
 
-				expect(result?.value) == testFrameworkURL
+				expect(result?.value) == frameworkURL
 			}
 
-			it("should throw an error when the framework has the incorrect Swift version") {
-				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOld.framework", withExtension: nil)!
-				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).matchingSwiftVersionURL(frameworkURL).single()
+			it("should throw an error when the Swift framework has the incorrect Swift version") {
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldSwift.framework", withExtension: nil)!
+				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).compatibleFrameworkURL(frameworkURL).single()
 
 				expect(result?.value).to(beNil())
 				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: XcodeSpec.currentSwiftVersion, framework: "0.0.0")
+			}
+
+			it("should pass through ObjC framework URLs") {
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldObjc.framework", withExtension: nil)!
+				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).compatibleFrameworkURL(frameworkURL).single()
+
+				expect(result?.value) == frameworkURL
 			}
 		}
 
