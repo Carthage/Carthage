@@ -31,7 +31,7 @@ class ProjectSpec: QuickSpec {
 				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).compatibleFrameworkURL(frameworkURL).single()
 
 				expect(result?.value).to(beNil())
-				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: XcodeSpec.currentSwiftVersion, framework: "0.0.0")
+				expect(result?.error) == CarthageError.internalError(description: SwiftVersionError.incompatibleFrameworkSwiftVersions(local: XcodeSpec.currentSwiftVersion, framework: "0.0.0").description)
 			}
 
 			it("should pass through ObjC framework URLs") {

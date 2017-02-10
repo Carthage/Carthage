@@ -121,7 +121,7 @@ public enum ProjectEvent {
 
 	/// Installing of a binary framework is being skipped because of an inability
 	/// to verify that it was built with a compatible Swift version.
-	case skippedInstallingBinaries(ProjectIdentifier, String)
+	case skippedInstallingBinaries(project: ProjectIdentifier, error: Error)
 }
 
 /// Represents a project that is using Carthage.
@@ -472,7 +472,7 @@ public final class Project {
 						}
 						.map { _ in true }
 						.flatMapError { error in
-							self._projectEventsObserver.send(value: .skippedInstallingBinaries(project, error.description))
+							self._projectEventsObserver.send(value: .skippedInstallingBinaries(project: project, error: error))
 							return SignalProducer(value: false)
 						}
 						.concat(value: false)
@@ -538,6 +538,7 @@ public final class Project {
 	/// Emits the framework URL if it is compatible with the build environment and errors if not
 	internal func compatibleFrameworkURL(_ frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
 		return isSwiftFramework(frameworkURL)
+			.mapError { error in CarthageError.internalError(description: error.description) }
 			.flatMap(.merge) { isSwift in
 				return isSwift ? self.matchingSwiftVersionURL(frameworkURL) : SignalProducer(value: frameworkURL)
 			}
@@ -551,6 +552,7 @@ public final class Project {
 					? SignalProducer(value: frameworkURL)
 					: SignalProducer(error: .incompatibleFrameworkSwiftVersions(local: swiftVersion, framework: frameworkVersion))
 			}
+			.mapError { error in CarthageError.internalError(description: error.description) }
 	}
 
 	/// Copies the framework at the given URL into the current project's build

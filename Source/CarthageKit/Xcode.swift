@@ -17,19 +17,19 @@ import XCDBLD
 public let CarthageBinariesFolderPath = "Carthage/Build"
 
 /// Emits the currect Swift version
-internal let swiftVersion: SignalProducer<String, CarthageError> = { return determineSwiftVersion().replayLazily(upTo: 1) }()
+internal let swiftVersion: SignalProducer<String, SwiftVersionError> = { return determineSwiftVersion().replayLazily(upTo: 1) }()
 
 /// Attempts to determine the local version of swift
-private func determineSwiftVersion() -> SignalProducer<String, CarthageError> {
+private func determineSwiftVersion() -> SignalProducer<String, SwiftVersionError> {
 	let taskDescription = Task("/usr/bin/env", arguments: ["xcrun", "swift", "--version"])
 
 	return taskDescription.launch(standardInput: nil)
 		.ignoreTaskData()
-		.mapError(CarthageError.taskError)
+		.mapError { _ in SwiftVersionError.unknownLocalSwiftVersion }
 		.map { data -> String? in
 			return parseSwiftVersionCommand(output: String(data: data, encoding: .utf8))
 		}
-		.attemptMap { Result($0, failWith: CarthageError.unknownLocalSwiftVersion) }
+		.attemptMap { Result($0, failWith: SwiftVersionError.unknownLocalSwiftVersion) }
 }
 
 /// Parses output of `swift --version` for the version string.
@@ -46,7 +46,7 @@ internal func parseSwiftVersionCommand(output: String?) -> String? {
 }
 
 /// Determines the Swift version of a framework at a given `URL`.
-internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, CarthageError> {
+internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, SwiftVersionError> {
 	guard
 		let swiftHeaderURL = frameworkURL.swiftHeaderURL(),
 		let data = try? Data(contentsOf: swiftHeaderURL),
@@ -60,7 +60,7 @@ internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<Strin
 }
 
 /// Determines whether a framework was built with Swift
-internal func isSwiftFramework(_ frameworkURL: URL) -> SignalProducer<Bool, CarthageError> {
+internal func isSwiftFramework(_ frameworkURL: URL) -> SignalProducer<Bool, SwiftVersionError> {
 	return SignalProducer(value: frameworkURL.swiftmoduleURL() != nil)
 }
 
