@@ -29,13 +29,7 @@ private func determineSwiftVersion() -> SignalProducer<String, CarthageError> {
 		.map { data -> String? in
 			return parseSwiftVersionCommand(output: String(data: data, encoding: .utf8))
 		}
-		.flatMap(.concat) { versionString -> SignalProducer<String, CarthageError> in
-			if let versionString = versionString {
-				return SignalProducer(value: versionString)
-			} else {
-				return SignalProducer(error: .unknownLocalSwiftVersion)
-			}
-	}
+		.attemptMap { Result($0, failWith: CarthageError.unknownLocalSwiftVersion) }
 }
 
 /// Parses output of `swift --version` for the version string.
