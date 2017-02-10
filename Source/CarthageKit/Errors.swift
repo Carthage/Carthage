@@ -49,6 +49,9 @@ public enum CarthageError: Error, Equatable {
 	/// An error occurred parsing a Carthage file.
 	case parseError(description: String)
 
+	/// An error occurred parsing the binary-only framework definition file
+	case invalidBinaryJSON(URL, BinaryJSONError)
+
 	// An expected environment variable wasn't found.
 	case missingEnvironmentVariable(variable: String)
 
@@ -80,11 +83,17 @@ public enum CarthageError: Error, Equatable {
 	case gitHubAPIRequestFailed(Client.Error)
 	
 	case gitHubAPITimeout
-	
+
 	case buildFailed(TaskError, log: URL?)
 
 	/// An error occurred while shelling out.
 	case taskError(TaskError)
+}
+
+public extension CarthageError {
+	init(scannableError: ScannableError) {
+		self = .parseError(description: "\(scannableError)")
+	}
 }
 
 private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
@@ -120,7 +129,10 @@ public func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
 	
 	case let (.parseError(left), .parseError(right)):
 		return left == right
-	
+
+	case let (.invalidBinaryJSON(leftUrl, leftError), .invalidBinaryJSON(rightUrl, rightError)):
+		return leftUrl == rightUrl && leftError == rightError
+
 	case let (.missingEnvironmentVariable(left), .missingEnvironmentVariable(right)):
 		return left == right
 	
@@ -141,10 +153,10 @@ public func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
 		
 	case (.gitHubAPITimeout, .gitHubAPITimeout):
 		return true
-		
+
 	case let (.buildFailed(la, lb), .buildFailed(ra, rb)):
 		return la == ra && lb == rb
-	
+
 	case let (.taskError(left), .taskError(right)):
 		return left == right
 	
@@ -204,6 +216,9 @@ extension CarthageError: CustomStringConvertible {
 		case let .parseError(description):
 			return "Parse error: \(description)"
 
+		case let .invalidBinaryJSON(url, error):
+			return "Unable to parse binary-only framework JSON at \(url) due to error: \(error)"
+
 		case let .invalidArchitectures(description):
 			return "Invalid architecture: \(description)"
 
@@ -224,7 +239,7 @@ extension CarthageError: CustomStringConvertible {
 			case let .gitHub(repository):
 				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
 
-			case .git:
+			case .git, .binary:
 				break
 			}
 
@@ -273,7 +288,7 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .unresolvedDependencies(names):
 			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile.resolved – please run `carthage update` if the dependency is contained in the project's Cartfile."
-			
+
 		case let .buildFailed(taskError, log):
 			var message = "Build Failed\n"
 			if case let .shellTaskFailed(task, exitCode, _) = taskError {
@@ -293,6 +308,82 @@ extension CarthageError: CustomStringConvertible {
 		}
 	}
 }
+
+/// Error parsing strings into types, used in Scannable protocol
+public struct ScannableError : Error, Equatable {
+
+	let message: String
+	let currentLine: String?
+
+	public init(message: String, currentLine: String? = nil) {
+		self.message = message
+		self.currentLine = currentLine
+	}
+
+}
+
+extension ScannableError: CustomStringConvertible {
+	public var description: String {
+		return "\(message) in line: \(currentLine)"
+	}
+}
+
+public func == (lhs: ScannableError, rhs: ScannableError) -> Bool {
+	return lhs.description == rhs.description && lhs.currentLine == rhs.currentLine
+}
+
+/// Error parsing a binary-only framework JSON file, used in CarthageError.invalidBinaryJSON.
+public enum BinaryJSONError: Error {
+
+	/// Unable to parse the JSON.
+	case invalidJSON(NSError?)
+
+	/// Unable to parse a semantic version from a framework entry.
+	case invalidVersion(ScannableError)
+
+	/// Unable to parse a URL from a framework entry.
+	case invalidURL(String)
+
+	/// URL is non-HTTPS
+	case nonHTTPSURL(URL)
+}
+
+extension BinaryJSONError: CustomStringConvertible {
+	public var description: String {
+		switch self {
+		case let .invalidJSON(error):
+			return "invalid JSON: \(error)"
+		case let .invalidVersion(error):
+			return "unable to parse semantic version: \(error)"
+		case let .invalidURL(string):
+			return "invalid URL: \(string)"
+		case let .nonHTTPSURL(url):
+			return "specified URL '\(url)' must be HTTPS"
+		}
+	}
+}
+
+extension BinaryJSONError: Equatable {
+	public static func == (lhs: BinaryJSONError, rhs: BinaryJSONError) -> Bool {
+		switch (lhs, rhs) {
+		case let (.invalidJSON(left), .invalidJSON(right)):
+			return left == right
+
+		case let (.invalidVersion(left), .invalidVersion(right)):
+			return left == right
+
+		case let (.invalidURL(left), .invalidURL(right)):
+			return left == right
+
+		case let (.nonHTTPSURL(left), .nonHTTPSURL(right)):
+			return left == right
+
+		default:
+			return false
+		}
+	}
+}
+
 
 /// A duplicate dependency, used in CarthageError.duplicateDependencies.
 public struct DuplicateDependency: Comparable {
