@@ -40,28 +40,42 @@ class XcodeSpec: QuickSpec {
 			let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
 			let testSwiftFrameworkURL = currentDirectory.appendingPathComponent(testSwiftFramework)
 
-			it("determines the local Swift version") {
-				let result = swiftVersion.single()
-				expect(result?.value) == XcodeSpec.currentSwiftVersion
-			}
-
-			it("should correctly determine a framework's Swift version") {
-				let result = frameworkSwiftVersion(testSwiftFrameworkURL).single()
-
-				expect(result?.value) == XcodeSpec.currentSwiftVersion
-			}
-
-			it("should correctly determine that a Swift framework is a Swift framework") {
+			it("should determine that a Swift framework is a Swift framework") {
 				let result = isSwiftFramework(testSwiftFrameworkURL).single()
 
 				expect(result?.value) == true
 			}
 
-			it("should correctly determine that an ObjC framework is not a Swift framework") {
+			it("should determine that an ObjC framework is not a Swift framework") {
 				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldObjc.framework", withExtension: nil)!
 				let result = isSwiftFramework(frameworkURL).single()
 
 				expect(result?.value) == false
+			}
+
+			it("determines the local Swift version") {
+				let result = swiftVersion.single()
+				expect(result?.value) == XcodeSpec.currentSwiftVersion
+			}
+
+			it("should determine a framework's Swift version") {
+				let result = frameworkSwiftVersion(testSwiftFrameworkURL).single()
+
+				expect(result?.value) == XcodeSpec.currentSwiftVersion
+			}
+
+			it("should determine when a Swift framework is compatible") {
+				let result = checkSwiftFrameworkCompatibility(testSwiftFrameworkURL).single()
+
+				expect(result?.value) == testSwiftFrameworkURL
+			}
+
+			it("should determine when a Swift framework is incompatible") {
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldSwift.framework", withExtension: nil)!
+				let result = checkSwiftFrameworkCompatibility(frameworkURL).single()
+
+				expect(result?.value).to(beNil())
+				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: XcodeSpec.currentSwiftVersion, framework: "0.0.0")
 			}
 		}
 

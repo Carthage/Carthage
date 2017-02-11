@@ -458,7 +458,10 @@ public final class Project {
 						.flatMap(.concat, transform: unzip(archive:))
 						.flatMap(.concat) { directoryURL in
 							return frameworksInDirectory(directoryURL)
-								.flatMap(.merge, transform: self.compatibleFrameworkURL)
+								.flatMap(.merge) { url in
+									return checkFrameworkCompatibility(url)
+										.mapError { error in CarthageError.internalError(description: error.description) }
+								}
 								.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
 								.flatMap(.merge) { frameworkURL in
 									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
@@ -533,26 +536,6 @@ public final class Project {
 						}
 					}
 			}
-	}
-
-	/// Emits the framework URL if it is compatible with the build environment and errors if not
-	internal func compatibleFrameworkURL(_ frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
-		return isSwiftFramework(frameworkURL)
-			.mapError { error in CarthageError.internalError(description: error.description) }
-			.flatMap(.merge) { isSwift in
-				return isSwift ? self.matchingSwiftVersionURL(frameworkURL) : SignalProducer(value: frameworkURL)
-			}
-	}
-
-	/// Emits the framework URL if it matches the local Swift version and errors if not.
-	internal func matchingSwiftVersionURL(_ frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
-		return SignalProducer.combineLatest(swiftVersion, frameworkSwiftVersion(frameworkURL))
-			.flatMap(.merge) { swiftVersion, frameworkVersion in
-				return swiftVersion == frameworkVersion
-					? SignalProducer(value: frameworkURL)
-					: SignalProducer(error: .incompatibleFrameworkSwiftVersions(local: swiftVersion, framework: frameworkVersion))
-			}
-			.mapError { error in CarthageError.internalError(description: error.description) }
 	}
 
 	/// Copies the framework at the given URL into the current project's build

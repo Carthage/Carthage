@@ -15,33 +15,6 @@ import Tentacle
 
 class ProjectSpec: QuickSpec {
 	override func spec() {
-		describe("determineBinaryCompatibility") {
-			it("should pass through Swift framework URLs with the correct Swift version") {
-				let framework = "Quick.framework"
-				let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
-				let frameworkURL = currentDirectory.appendingPathComponent(framework)
-
-				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).compatibleFrameworkURL(frameworkURL).single()
-
-				expect(result?.value) == frameworkURL
-			}
-
-			it("should throw an error when the Swift framework has the incorrect Swift version") {
-				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldSwift.framework", withExtension: nil)!
-				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).compatibleFrameworkURL(frameworkURL).single()
-
-				expect(result?.value).to(beNil())
-				expect(result?.error) == CarthageError.internalError(description: SwiftVersionError.incompatibleFrameworkSwiftVersions(local: XcodeSpec.currentSwiftVersion, framework: "0.0.0").description)
-			}
-
-			it("should pass through ObjC framework URLs") {
-				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldObjc.framework", withExtension: nil)!
-				let result = Project(directoryURL: Bundle(for: type(of: self)).bundleURL).compatibleFrameworkURL(frameworkURL).single()
-
-				expect(result?.value) == frameworkURL
-			}
-		}
-
 		describe("loadCombinedCartfile") {
 			it("should load a combined Cartfile when only a Cartfile is present") {
 				let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfileOnly", withExtension: nil)!

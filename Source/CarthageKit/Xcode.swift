@@ -64,6 +64,26 @@ internal func isSwiftFramework(_ frameworkURL: URL) -> SignalProducer<Bool, Swif
 	return SignalProducer(value: frameworkURL.swiftmoduleURL() != nil)
 }
 
+/// Emits the framework URL if it matches the local Swift version and errors if not.
+internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL) -> SignalProducer<URL, SwiftVersionError> {
+	return SignalProducer.combineLatest(swiftVersion, frameworkSwiftVersion(frameworkURL))
+		.flatMap(.merge) { swiftVersion, frameworkVersion in
+			return swiftVersion == frameworkVersion
+				? SignalProducer(value: frameworkURL)
+				: SignalProducer(error: .incompatibleFrameworkSwiftVersions(local: swiftVersion, framework: frameworkVersion))
+	}
+}
+
+/// Emits the framework URL if it is compatible with the build environment and errors if not.
+internal func checkFrameworkCompatibility(_ frameworkURL: URL) -> SignalProducer<URL, SwiftVersionError> {
+	return isSwiftFramework(frameworkURL)
+		.flatMap(.merge) { isSwift in
+			return isSwift
+				? checkSwiftFrameworkCompatibility(frameworkURL)
+				: SignalProducer(value: frameworkURL)
+		}
+}
+
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
 public func xcodebuildTask(_ tasks: [String], _ buildArguments: BuildArguments) -> Task {
