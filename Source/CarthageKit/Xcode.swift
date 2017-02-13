@@ -33,7 +33,7 @@ private func determineSwiftVersion() -> SignalProducer<String, SwiftVersionError
 }
 
 /// Parses output of `swift --version` for the version string.
-internal func parseSwiftVersionCommand(output: String?) -> String? {
+private func parseSwiftVersionCommand(output: String?) -> String? {
 	guard
 		let output = output,
 		let regex = try? NSRegularExpression(pattern: "Apple Swift version (.+) \\(", options: []),
@@ -67,10 +67,10 @@ internal func isSwiftFramework(_ frameworkURL: URL) -> SignalProducer<Bool, Swif
 /// Emits the framework URL if it matches the local Swift version and errors if not.
 internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL) -> SignalProducer<URL, SwiftVersionError> {
 	return SignalProducer.combineLatest(swiftVersion, frameworkSwiftVersion(frameworkURL))
-		.flatMap(.merge) { swiftVersion, frameworkVersion in
-			return swiftVersion == frameworkVersion
-				? SignalProducer(value: frameworkURL)
-				: SignalProducer(error: .incompatibleFrameworkSwiftVersions(local: swiftVersion, framework: frameworkVersion))
+		.attemptMap() { localSwiftVersion, frameworkSwiftVersion in
+			return localSwiftVersion == frameworkSwiftVersion
+				? .success(frameworkURL)
+				: .failure(.incompatibleFrameworkSwiftVersions(local: localSwiftVersion, framework: frameworkSwiftVersion))
 	}
 }
 
