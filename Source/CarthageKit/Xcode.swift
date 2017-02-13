@@ -694,40 +694,27 @@ public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOpti
 						observer.send(value: .success(initialValue))
 					})
 			}
+			.collectTaskEvents()
+			.flatMapTaskEvents(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
+				guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
+					return .empty
+				}
+				return createVersionFile(for: dependency, platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL)
+					.flatMapError { _ in .empty }
+			}
+			// Discard any Success values, since we want to
+			// use our initial value instead of waiting for
+			// completion.
+			.map { taskEvent -> TaskEvent<(ProjectLocator, String)> in
+				let ignoredValue = (ProjectLocator.workspace(URL(string: ".")!), "")
+				return taskEvent.map { _ in ignoredValue}
+			}
+			.filter { taskEvent in
+				taskEvent.value == nil
+			}
 			.startWithSignal({ (signal, signalDisposable) in
 				disposable += signalDisposable
-
-				let ignoredValue = (ProjectLocator.workspace(URL(string: ".")!), "")
-				
-				let eventSignal: Signal<TaskEvent<(ProjectLocator, String)>, CarthageError> = signal
-					// Discard any Success values, since we want to
-					// use our initial value instead of waiting for
-					// completion.
-					.map { (taskEvent: TaskEvent<URL>) -> TaskEvent<(ProjectLocator, String)> in
-						return taskEvent.map { _ in ignoredValue }
-					}
-					.filter { taskEvent in
-						return taskEvent.value == nil
-					}
-				
-				let versionFileSignal: Signal<TaskEvent<(ProjectLocator, String)>, CarthageError> = signal
-						.ignoreTaskData()
-						.collect()
-						.flatMap(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
-							guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
-								return .empty
-							}
-							return createVersionFile(for: dependency, platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL)
-								.flatMapError { _ in .empty }
-						}
-						.map { _ -> TaskEvent<(ProjectLocator, String)> in
-							return .success(ignoredValue)
-						}
-						.filter { taskEvent in
-							return false
-						}
-				
-				Signal.merge([eventSignal, versionFileSignal]).observe(observer)
+				signal.observe(observer)
 			})
 	}
 }
@@ -832,6 +819,42 @@ extension SignalProducerProtocol where Value == URL, Error == CarthageError {
 
 				return copyProduct(fileURL, resolvedDestinationURL)
 			}
+	}
+}
+
+private extension SignalProducer where Value: TaskEventType {
+	/// Collect all TaskEvent success values and then send as a single array and complete.
+	/// standard output and standard error data events are still sent as they are received.
+	func collectTaskEvents() -> SignalProducer<TaskEvent<[Value.T]>, Error> {
+		return lift { $0.collectTaskEvents() }
+	}
+}
+
+private extension Signal where Value: TaskEventType {
+	/// Collect all TaskEvent success values and then send as a single array and complete.
+	/// standard output and standard error data events are still sent as they are received.
+	func collectTaskEvents() -> Signal<TaskEvent<[Value.T]>, Error> {
+		var taskValues: [Value.T] = []
+
+		return Signal<TaskEvent<[Value.T]>, Error> { observer in
+			return self.observe { event in
+				switch event {
+				case let .value(value):
+					if let taskValue = value.value {
+						taskValues.append(taskValue)
+					} else {
+						observer.send(value: value.map { [$0] })
+					}
+				case .completed:
+					observer.send(value: .success(taskValues))
+					observer.sendCompleted()
+				case let .failed(error):
+					observer.send(error: error)
+				case .interrupted:
+					observer.sendInterrupted()
+				}
+			}
+		}
 	}
 }
 

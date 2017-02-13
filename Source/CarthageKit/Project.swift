@@ -757,7 +757,8 @@ public final class Project {
 					self.dependencyProjects(for: dependency),
 					versionFileMatches(dependency, platforms: options.platforms, rootDirectoryURL: self.directoryURL)
 				)
-			}.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
+			}
+			.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
 				let (nextDependency, projects, matches) = nextGroup
 				let dependenciesIncludingNext = includedDependencies + [nextDependency]
 				let projectsToBeBuilt = Set(includedDependencies.map { $0.project })
