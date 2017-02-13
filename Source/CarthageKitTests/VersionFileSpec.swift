@@ -116,7 +116,7 @@ class VersionFileSpec: QuickSpec {
 			expect(iosFramework["md5"]).to(equal("TestMD5"))
 		}
 
-		func validate(file: VersionFile, matches: Bool, platform: Platform, commitish: String, xcodeVersion: String, md5s: SignalProducer<String?, CarthageError>, fileName: FileString = #file, line: UInt = #line) {
+		func validate(file: VersionFile, matches: Bool, platform: Platform, commitish: String, xcodeVersion: String, md5s: [String?], fileName: FileString = #file, line: UInt = #line) {
 			_ = file.satisfies(platform: platform, commitish: commitish, xcodeVersion: xcodeVersion, md5s: md5s)
 				.on(value: { didMatch in
 					expect(didMatch, file: fileName, line: line).to(equal(matches))
@@ -129,22 +129,22 @@ class VersionFileSpec: QuickSpec {
 			let versionFile = VersionFile(url: versionFileURL)!
 
 			// Everything matches
-			validate(file: versionFile, matches: true, platform: .iOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: SignalProducer(["ios-framework1-md5", "ios-framework2-md5"]))
+			validate(file: versionFile, matches: true, platform: .iOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: ["ios-framework1-md5", "ios-framework2-md5"])
 
 			// One framework missing
-			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: SignalProducer(["ios-framework1-md5", nil]))
+			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: ["ios-framework1-md5", nil])
 
 			// Mismatched commitish
-			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.1", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: SignalProducer(["ios-framework1-md5", "ios-framework2-md5"]))
+			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.1", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: ["ios-framework1-md5", "ios-framework2-md5"])
 
 			// Mismatched xcode version
-			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.0", xcodeVersion: "Xcode 8.3\nBuild version 8C3000", md5s: SignalProducer(["ios-framework1-md5", "ios-framework2-md5"]))
+			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.0", xcodeVersion: "Xcode 8.3\nBuild version 8C3000", md5s: ["ios-framework1-md5", "ios-framework2-md5"])
 
 			// Version file has empty array for platform
-			validate(file: versionFile, matches: true, platform: .tvOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: SignalProducer([nil, nil]))
+			validate(file: versionFile, matches: true, platform: .tvOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: [nil, nil])
 
 			// Version file has no entry for platform, should match
-			validate(file: versionFile, matches: false, platform: .watchOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: SignalProducer([nil, nil]))
+			validate(file: versionFile, matches: false, platform: .watchOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", md5s: [nil, nil])
 		}
 	}
 }

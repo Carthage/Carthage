@@ -120,25 +120,26 @@ struct VersionFile {
 			return SignalProducer(value: false)
 		}
 		
-		let md5s = self.md5s(for: cachedFrameworks, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
-		return self.satisfies(platform: platform, commitish: commitish, xcodeVersion: xcodeVersion, md5s: md5s)
+		return self.md5s(for: cachedFrameworks, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
+			.collect()
+			.flatMap(.concat) { md5s in
+				return self.satisfies(platform: platform, commitish: commitish, xcodeVersion: xcodeVersion, md5s: md5s)
+			}
 	}
 
-	func satisfies(platform: Platform, commitish: String, xcodeVersion: String, md5s: SignalProducer<String?, CarthageError>) -> SignalProducer<Bool, CarthageError> {
+	func satisfies(platform: Platform, commitish: String, xcodeVersion: String, md5s: [String?]) -> SignalProducer<Bool, CarthageError> {
 		guard let cachedFrameworks = self[platform], commitish == self.commitish, xcodeVersion == self.xcodeVersion else {
 			return SignalProducer(value: false)
 		}
-		
-		let cachedmd5s = SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
-			.map { cachedFramework in
-				return cachedFramework.md5
+
+		return SignalProducer<(String?, CachedFramework), CarthageError>(Swift.zip(md5s, cachedFrameworks))
+			.map { (md5, cachedFramework) -> Bool in
+				guard let md5 = md5 else {
+					return false
+				}
+				return md5 == cachedFramework.md5
 			}
-		
-		return SignalProducer.zip(md5s, cachedmd5s)
-			.map { (md5, cachedmd5) in
-				return md5 == cachedmd5
-			}
-			.reduce(true) { (result, current) in
+			.reduce(true) { (result, current) -> Bool in
 				return result && current
 			}
 	}
