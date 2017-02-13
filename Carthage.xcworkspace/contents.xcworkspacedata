@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:XCDBLD.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:Carthage.xcodeproj">
    </FileRef>
    <FileRef
