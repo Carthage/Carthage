@@ -17,13 +17,6 @@ public enum Platform: String {
 	/// All supported build platforms.
 	public static let supportedPlatforms: [Platform] = [ .macOS, .iOS, .watchOS, .tvOS ]
 
-	/// The relative path at which binaries corresponding to this platform will
-	/// be stored.
-	public var relativePath: String {
-		let subfolderName = rawValue
-		return (CarthageBinariesFolderPath as NSString).appendingPathComponent(subfolderName)
-	}
-
 	/// The SDKs that need to be built for this platform.
 	public var SDKs: [SDK] {
 		switch self {

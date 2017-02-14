@@ -17,9 +17,4 @@ public enum MachOType: String {
 
 	/// Static library binary.
 	case staticlib = "staticlib"
-
-	/// Attempts to parse a Mach-O type from a string returned from `xcodebuild`.
-	public static func from(string: String) -> Result<MachOType, CarthageError> {
-		return Result(self.init(rawValue: string), failWith: .parseError(description: "unexpected Mach-O type \"\(string)\""))
-	}
 }
