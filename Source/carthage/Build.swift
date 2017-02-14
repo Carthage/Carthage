@@ -75,24 +75,13 @@ public struct BuildCommand: CommandProtocol {
 			.flatMap(.merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
 				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 
-				var buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
+				let buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
 					.flatten(.concat)
 
-				let stderrHandle = FileHandle.standardError
+				let stderrHandle = options.isVerbose ? FileHandle.standardError : stdoutHandle
 
 				let formatting = options.colorOptions.formatting
 				
-				if !options.isVerbose {
-					buildProgress = buildProgress.filter { event in
-						switch event {
-						case .launch, .success:
-							return true
-						case .standardOutput, .standardError:
-							return false
-						}
-					}
-				}
-
 				return buildProgress
 					.mapError { error -> CarthageError in
 						if case let .buildFailed(taskError, _) = error {
