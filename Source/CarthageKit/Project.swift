@@ -870,9 +870,9 @@ public final class Project {
 						// Edge case warning on file system case-sensitivity. If a differently-cased file system object exists in git
 						// and is stored on a case-sensitive file system (like the Sierra preview of APFS), we currently preempt
 						// the non-conflicting symlink. Probably, nobody actually desires or needs the opposite behavior.
-						components.filter {
+						!components.contains {
 							dependency.name.caseInsensitiveCompare($0) == .orderedSame
-						}.isEmpty
+						}
 					}
 					.map { $0.name }
 
