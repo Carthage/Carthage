@@ -268,12 +268,63 @@ class ProjectSpec: QuickSpec {
 				assertProjectEvent(commitish: commitish) { expect($0).to(beNil()) }
 			}
 
-			it ("should not fetch twice in a row, even if no commitish is given") {
+			it("should not fetch twice in a row, even if no commitish is given") {
 				// Clone first
 				expect(cloneOrFetch().wait().error).to(beNil())
 
 				assertProjectEvent { expect($0?.isFetching) == true }
 				assertProjectEvent(clearFetchTime: false) { expect($0).to(beNil())}
+			}
+		}
+
+		describe("downloadBinaryFrameworkDefinition") {
+
+			var project: Project!
+			let testDefinitionURL = Bundle(for: type(of: self)).url(forResource: "successful", withExtension: "json")!
+
+			beforeEach {
+				project = Project(directoryURL: URL(string: "file://fake")!)
+			}
+
+			it("should return definition") {
+				let actualDefinition = project.downloadBinaryFrameworkDefinition(url: testDefinitionURL).first()?.value
+
+				let expectedBinaryProject = BinaryProject(versions: [
+					PinnedVersion("1.0"): URL(string: "https://my.domain.com/release/1.0.0/framework.zip")!,
+					PinnedVersion("1.0.1"): URL(string: "https://my.domain.com/release/1.0.1/framework.zip")!,
+				])
+				expect(actualDefinition).to(equal(expectedBinaryProject))
+			}
+
+			it("should return read failed if unable to download") {
+				let actualError = project.downloadBinaryFrameworkDefinition(url: URL(string: "file:///thisfiledoesnotexist.json")!).first()?.error
+
+				switch actualError {
+				case .some(.readFailed): break
+				default:
+					fail("expected read failed error")
+				}
+			}
+
+			it("should return an invalid binary JSON error if unable to parse file") {
+				let invalidDependencyURL = Bundle(for: type(of: self)).url(forResource: "invalid", withExtension: "json")!
+
+				let actualError = project.downloadBinaryFrameworkDefinition(url: invalidDependencyURL).first()?.error
+
+				switch actualError {
+				case .some(CarthageError.invalidBinaryJSON(invalidDependencyURL, BinaryJSONError.invalidJSON(_))): break
+				default:
+					fail("expected invalid binary JSON error")
+				}
+			}
+
+			it("should broadcast downloading framework definition event") {
+				var events = [ProjectEvent]()
+				project.projectEvents.observeValues { events.append($0) }
+
+				_ = project.downloadBinaryFrameworkDefinition(url: testDefinitionURL).first()
+
+				expect(events).to(equal([ProjectEvent.downloadingBinaryFrameworkDefinition(ProjectIdentifier.binary(testDefinitionURL), testDefinitionURL)]))
 			}
 		}
 	}

@@ -47,7 +47,7 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 ##### If you're building for OS X
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
-1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one.
+1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled framework.
 1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 
 Additionally, you'll need to copy debug symbols for debugging and crash reporting on OS X.
@@ -59,7 +59,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 ##### If you're building for iOS, tvOS, or watchOS
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
-1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one.
+1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one or download a pre-compiled framework.
 1. On your application targets’ “General” settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script in which you specify your shell (ex: `bin/sh`), add the following contents to the script area below the shell:
 
@@ -175,7 +175,7 @@ Tags without any version number, or with any characters following the version nu
 
 ### Archive prebuilt frameworks into one zip file
 
-Carthage can automatically use prebuilt frameworks, instead of building from scratch, if they are attached to a [GitHub Release](https://help.github.com/articles/about-releases/) on your project’s repository.
+Carthage can automatically use prebuilt frameworks, instead of building from scratch, if they are attached to a [GitHub Release](https://help.github.com/articles/about-releases/) on your project’s repository or via a binary project definition file.
 
 To offer prebuilt frameworks for a specific tag, the binaries for _all_ supported platforms should be zipped up together into _one_ archive, and that archive should be attached to a published Release corresponding to that tag. The attachment should include `.framework` in its name (e.g., `ReactiveCocoa.framework.zip`), to indicate to Carthage that it contains binaries.
 

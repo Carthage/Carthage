@@ -51,11 +51,17 @@ public struct Cartfile {
 
 			switch Dependency<VersionSpecifier>.from(scanner) {
 			case let .success(dep):
+				if case .binary = dep.project, case .gitReference = dep.version {
+					result = .failure(CarthageError.parseError(description: "binary dependencies cannot have a git reference for the version specifier in line: \(scanner.currentLine)"))
+					stop = true
+					return
+				}
 				dependencies.append(dep)
 
 			case let .failure(error):
-				result = .failure(error)
+				result = .failure(CarthageError(scannableError: error))
 				stop = true
+				return
 			}
 
 			if scanner.scanString(commentIndicator, into: nil) {
@@ -164,7 +170,7 @@ public struct ResolvedCartfile {
 				cartfile.dependencies.insert(dep)
 
 			case let .failure(error):
-				result = .failure(error)
+				result = .failure(CarthageError(scannableError: error))
 				break scannerLoop
 			}
 		}
@@ -190,6 +196,9 @@ public enum ProjectIdentifier: Comparable {
 	/// An arbitrary Git repository.
 	case git(GitURL)
 
+	/// A binary-only framework
+	case binary(URL)
+
 	/// The unique, user-visible name for this project.
 	public var name: String {
 		switch self {
@@ -198,6 +207,9 @@ public enum ProjectIdentifier: Comparable {
 
 		case let .git(url):
 			return url.name ?? url.urlString
+
+		case let .binary(url):
+			return url.lastPathComponent.stripping(suffix: ".json")
 		}
 	}
 
@@ -214,6 +226,9 @@ public func ==(_ lhs: ProjectIdentifier, _ rhs: ProjectIdentifier) -> Bool {
 		return left == right
 
 	case let (.git(left), .git(right)):
+		return left == right
+
+	case let (.binary(left), .binary(right)):
 		return left == right
 
 	default:
@@ -233,14 +248,17 @@ extension ProjectIdentifier: Hashable {
 
 		case let .git(url):
 			return url.hashValue
+
+		case let .binary(url):
+			return url.hashValue
 		}
 	}
 }
 
 extension ProjectIdentifier: Scannable {
 	/// Attempts to parse a ProjectIdentifier.
-	public static func from(_ scanner: Scanner) -> Result<ProjectIdentifier, CarthageError> {
-		let parser: (String) -> Result<ProjectIdentifier, CarthageError>
+	public static func from(_ scanner: Scanner) -> Result<ProjectIdentifier, ScannableError> {
+		let parser: (String) -> Result<ProjectIdentifier, ScannableError>
 
 		if scanner.scanString("github", into: nil) {
 			parser = { repoIdentifier in
@@ -250,23 +268,35 @@ extension ProjectIdentifier: Scannable {
 			parser = { urlString in
 				return .success(self.git(GitURL(urlString)))
 			}
+		} else if scanner.scanString("binary", into: nil) {
+			parser = { urlString in
+				if let url = URL(string: urlString) {
+					if url.scheme == "https" {
+						return .success(self.binary(url))
+					} else {
+						return .failure(ScannableError(message: "non-https URL found for dependency type `binary`", currentLine: scanner.currentLine))
+					}
+				} else {
+					return .failure(ScannableError(message: "invalid URL found for dependency type `binary`", currentLine: scanner.currentLine))
+				}
+			}
 		} else {
-			return .failure(CarthageError.parseError(description: "unexpected dependency type in line: \(scanner.currentLine)"))
+			return .failure(ScannableError(message: "unexpected dependency type", currentLine: scanner.currentLine))
 		}
 
 		if !scanner.scanString("\"", into: nil) {
-			return .failure(CarthageError.parseError(description: "expected string after dependency type in line: \(scanner.currentLine)"))
+			return .failure(ScannableError(message: "expected string after dependency type", currentLine: scanner.currentLine))
 		}
 
 		var address: NSString? = nil
 		if !scanner.scanUpTo("\"", into: &address) || !scanner.scanString("\"", into: nil) {
-			return .failure(CarthageError.parseError(description: "empty or unterminated string after dependency type in line: \(scanner.currentLine)"))
+			return .failure(ScannableError(message: "empty or unterminated string after dependency type", currentLine: scanner.currentLine))
 		}
 
 		if let address = address {
 			return parser(address as String)
 		} else {
-			return .failure(CarthageError.parseError(description: "empty string after dependency type in line: \(scanner.currentLine)"))
+			return .failure(ScannableError(message: "empty string after dependency type", currentLine: scanner.currentLine))
 		}
 	}
 }
@@ -287,8 +317,32 @@ extension ProjectIdentifier: CustomStringConvertible {
 
 		case let .git(url):
 			return "git \"\(url)\""
+
+		case let .binary(url):
+			return "binary \"\(url.absoluteString)\""
 		}
 	}
+}
+
+extension ProjectIdentifier {
+
+	/// Returns the URL that the project's remote repository exists at.
+	func gitURL(preferHTTPS: Bool) -> GitURL? {
+		switch self {
+		case let .gitHub(repository):
+			if preferHTTPS {
+				return repository.httpsURL
+			} else {
+				return repository.sshURL
+			}
+
+		case let .git(url):
+			return url
+		case .binary:
+			return nil
+		}
+	}
+	
 }
 
 /// Represents a single dependency of a project.
@@ -315,7 +369,7 @@ public func ==<V>(_ lhs: Dependency<V>, _ rhs: Dependency<V>) -> Bool {
 
 extension Dependency where V: Scannable {
 	/// Attempts to parse a Dependency specification.
-	public static func from(_ scanner: Scanner) -> Result<Dependency, CarthageError> {
+	public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
 		return ProjectIdentifier.from(scanner).flatMap { identifier in
 			return V.from(scanner).map { specifier in self.init(project: identifier, version: specifier) }
 		}

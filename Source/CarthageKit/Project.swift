@@ -94,7 +94,7 @@ public let CarthageProjectBinaryAssetContentTypes = [
 ]
 
 /// Describes an event occurring to or with a project.
-public enum ProjectEvent {
+public enum ProjectEvent: Equatable {
 	/// The project is beginning to clone.
 	case cloning(ProjectIdentifier)
 
@@ -103,6 +103,9 @@ public enum ProjectEvent {
 	
 	/// The project is being checked out to the specified revision.
 	case checkingOut(ProjectIdentifier, String)
+
+	/// The project is downloading a binary-only framework definition.
+	case downloadingBinaryFrameworkDefinition(ProjectIdentifier, URL)
 
 	/// Any available binaries for the specified release of the project are
 	/// being downloaded. This may still be followed by `CheckingOut` event if
@@ -126,6 +129,27 @@ public enum ProjectEvent {
 	
 	/// Building an uncached project.
 	case buildingUncached(ProjectIdentifier)
+}
+
+public func == (lhs: ProjectEvent, rhs: ProjectEvent) -> Bool {
+	switch (lhs, rhs) {
+	case let (.cloning(left), .cloning(right)):
+		return left == right
+	case let (.fetching(left), .fetching(right)):
+		return left == right
+	case let (.checkingOut(leftIdentifier, leftRevision), .checkingOut(rightIdentifier, rightRevision)):
+		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+	case let (.downloadingBinaryFrameworkDefinition(leftIdentifier, leftURL), .downloadingBinaryFrameworkDefinition(rightIdentifier, rightURL)):
+		return leftIdentifier == rightIdentifier && leftURL == rightURL
+	case let (.downloadingBinaries(leftIdentifier, leftRevision), .downloadingBinaries(rightIdentifier, rightRevision)):
+		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+	case let (.skippedDownloadingBinaries(leftIdentifier, leftRevision), .skippedDownloadingBinaries(rightIdentifier, rightRevision)):
+		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+	case let (.skippedBuilding(leftIdentifier, leftRevision), .skippedBuilding(rightIdentifier, rightRevision)):
+		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+	default:
+		return false
+	}
 }
 
 /// Represents a project that is using Carthage.
@@ -174,11 +198,16 @@ public final class Project {
 	}
 
 	private typealias CachedVersions = [ProjectIdentifier: [PinnedVersion]]
+	private typealias CachedBinaryProjects = [URL: BinaryProject]
 
 	/// Caches versions to avoid expensive lookups, and unnecessary
 	/// fetching/cloning.
 	private var cachedVersions: CachedVersions = [:]
 	private let cachedVersionsQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cachedVersionsQueue")
+
+	// Cache the binary project definitions in memory to avoid redownloading during carthage operation
+	private var cachedBinaryProjects: CachedBinaryProjects = [:]
+	private let cachedBinaryProjectsQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cachedBinaryProjectsQueue")
 
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.
@@ -288,19 +317,52 @@ public final class Project {
 			.startOnQueue(gitOperationQueue)
 	}
 
+	func downloadBinaryFrameworkDefinition(url: URL) -> SignalProducer<BinaryProject, CarthageError> {
+
+		return SignalProducer.attempt {
+				return .success(self.cachedBinaryProjects)
+			}
+			.flatMap(.merge) { binaryProjectsByURL -> SignalProducer<BinaryProject, CarthageError> in
+				if let binaryProject = binaryProjectsByURL[url] {
+					return SignalProducer(value: binaryProject)
+				} else {
+					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(url), url))
+
+					return URLSession.shared.reactive.data(with: URLRequest(url: url))
+						.mapError { return CarthageError.readFailed(url, $0 as NSError) }
+						.attemptMap { (data, urlResponse) in
+							return BinaryProject.from(jsonData: data, url: url).mapError { error in
+								return CarthageError.invalidBinaryJSON(url, error)
+						}
+					}
+					.on(value: { binaryProject in
+							self.cachedBinaryProjects[url] = binaryProject
+					})
+
+				}
+			}
+			.startOnQueue(self.cachedBinaryProjectsQueue)
+	}
+
 	/// Sends all versions available for the given project.
 	///
 	/// This will automatically clone or fetch the project's repository as
 	/// necessary.
 	private func versions(for project: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
-		let fetchVersions = cloneOrFetchDependency(project)
-			.flatMap(.merge) { repositoryURL in listTags(repositoryURL) }
-			.map { PinnedVersion($0) }
-			.collect()
-			.on(value: { newVersions in
-				self.cachedVersions[project] = newVersions
-			})
-			.flatMap(.concat) { versions in SignalProducer<PinnedVersion, CarthageError>(versions) }
+
+		let fetchVersions: SignalProducer<PinnedVersion, CarthageError>
+
+		switch project {
+		case .git(_), .gitHub(_):
+			fetchVersions = cloneOrFetchDependency(project)
+				.flatMap(.merge) { repositoryURL in listTags(repositoryURL) }
+				.map { PinnedVersion($0) }
+		case let .binary(url):
+			fetchVersions = downloadBinaryFrameworkDefinition(url: url)
+				.flatMap(.concat) { binaryProject -> SignalProducer<PinnedVersion, CarthageError> in
+					return SignalProducer(binaryProject.versions.keys)
+				}
+		}
 
 		return SignalProducer.attempt {
 				return .success(self.cachedVersions)
@@ -310,6 +372,11 @@ public final class Project {
 					return SignalProducer(versions)
 				} else {
 					return fetchVersions
+						.collect()
+						.on(value: { newVersions in
+							self.cachedVersions[project] = newVersions
+						})
+						.flatMap(.concat) { versions in SignalProducer<PinnedVersion, CarthageError>(versions) }
 				}
 			}
 			.startOnQueue(cachedVersionsQueue)
@@ -325,16 +392,24 @@ public final class Project {
 	
 	/// Loads the dependencies for the given dependency, at the given version.
 	private func dependencies(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> {
-		let revision = dependency.version.commitish
-		return self.cloneOrFetchDependency(dependency.project, commitish: revision)
-			.flatMap(.concat) { repositoryURL in
-				return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
+
+		switch dependency.project {
+		case .git, .gitHub:
+			let revision = dependency.version.commitish
+			return self.cloneOrFetchDependency(dependency.project, commitish: revision)
+				.flatMap(.concat) { repositoryURL in
+					return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
+				}
+				.flatMapError { _ in .empty }
+				.attemptMap(Cartfile.from(string:))
+				.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
+					return SignalProducer(cartfile.dependencies)
 			}
-			.flatMapError { _ in .empty }
-			.attemptMap(Cartfile.from(string:))
-			.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
-				return SignalProducer(cartfile.dependencies)
-			}
+		case .binary:
+			// Binary-only frameworks do not support dependencies
+			return .empty
+		}
+
 	}
 
 	/// Attempts to resolve a Git reference to a version.
@@ -435,6 +510,39 @@ public final class Project {
 			.then(shouldCheckout ? checkoutResolvedDependencies(dependenciesToUpdate) : .empty)
 	}
 
+	/// Unzips the file at the given URL and copies the frameworks, DSYM and bcsymbolmap files into the corresponding folders
+	/// for the project.
+	///
+	/// Sends the temporary URL of the unzipped directory
+	private func unzipAndCopyBinaryFrameworks(zipFile: URL) -> SignalProducer<URL, CarthageError> {
+		return SignalProducer<URL, CarthageError>(value: zipFile)
+			.flatMap(.concat, transform: unzip(archive:))
+			.flatMap(.concat) { directoryURL in
+				return frameworksInDirectory(directoryURL)
+					.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
+					.flatMap(.merge) { frameworkURL in
+						return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
+							.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
+					}
+					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
+		}
+	}
+
+	/// Removes the file located at the given URL
+	///
+	/// Sends empty value on successful removal
+	private func removeItem(at url: URL) -> SignalProducer<(), CarthageError> {
+		return SignalProducer<URL, CarthageError>(value: url)
+			.attemptMap({ (url: URL) -> Result<(), CarthageError> in
+				do {
+					try FileManager.default.removeItem(at: url)
+					return .success()
+				} catch let error as NSError {
+					return .failure(.writeFailed(url, error))
+				}
+			})
+	}
+
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
@@ -459,31 +567,16 @@ public final class Project {
 							}
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
 						}
-						.flatMap(.concat, transform: unzip(archive:))
-						.flatMap(.concat) { directoryURL in
-							return frameworksInDirectory(directoryURL)
-								.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
-								.flatMap(.merge) { frameworkURL in
-									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
-										.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
-								}
-								.on(completed: {
-									_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
-								})
-								.then(SignalProducer<URL, CarthageError>(value: directoryURL))
-						}
-						.attemptMap { (temporaryDirectoryURL: URL) -> Result<Bool, CarthageError> in
-							do {
-								try FileManager.default.removeItem(at: temporaryDirectoryURL)
-								return .success(true)
-							} catch let error as NSError {
-								return .failure(.writeFailed(temporaryDirectoryURL, error))
-							}
-						}
+						.flatMap(.concat) { self.unzipAndCopyBinaryFrameworks(zipFile: $0) }
+						.on(completed: {
+							_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
+						})
+						.flatMap(.concat) { self.removeItem(at: $0) }
+						.map { true }
 						.concat(value: false)
 						.take(first: 1)
 
-				case .git:
+				case .git, .binary:
 					return SignalProducer(value: false)
 				}
 			}
@@ -590,11 +683,11 @@ public final class Project {
 				var submodule: Submodule?
 				
 				if var foundSubmodule = submodulesByPath[project.relativePath] {
-					foundSubmodule.url = repositoryURLForProject(project, preferHTTPS: self.preferHTTPS)
+					foundSubmodule.url = project.gitURL(preferHTTPS: self.preferHTTPS)!
 					foundSubmodule.sha = revision
 					submodule = foundSubmodule
 				} else if self.useSubmodules {
-					submodule = Submodule(name: project.relativePath, path: project.relativePath, url: repositoryURLForProject(project, preferHTTPS: self.preferHTTPS), sha: revision)
+					submodule = Submodule(name: project.relativePath, path: project.relativePath, url: project.gitURL(preferHTTPS: self.preferHTTPS)!, sha: revision)
 				}
 				
 				if let submodule = submodule {
@@ -672,26 +765,73 @@ public final class Project {
 					.flatMap(.concat) { dependency -> SignalProducer<(), CarthageError> in
 						let project = dependency.project
 
-						let submoduleFound = submodulesByPath[project.relativePath] != nil
-						let checkoutOrCloneDependency = self.checkoutOrCloneDependency(dependency, submodulesByPath: submodulesByPath)
+						switch project {
+						case .git, .gitHub:
 
-						// Disable binary downloads for the dependency if that
-						// is already checked out as a submodule.
-						if submoduleFound {
-							return checkoutOrCloneDependency
+							let submoduleFound = submodulesByPath[project.relativePath] != nil
+							let checkoutOrCloneDependency = self.checkoutOrCloneDependency(dependency, submodulesByPath: submodulesByPath)
+
+							// Disable binary downloads for the dependency if that
+							// is already checked out as a submodule.
+							if submoduleFound {
+								return checkoutOrCloneDependency
+							}
+
+							return self.installBinariesForProject(project, atRevision: dependency.version.commitish)
+								.flatMap(.merge) { installed -> SignalProducer<(), CarthageError> in
+									if installed {
+										return .empty
+									} else {
+										return checkoutOrCloneDependency
+									}
+							}
+
+						case let .binary(url):
+							return self.installBinariesForBinaryProject(url: url, pinnedVersion: dependency.version)
 						}
 
-						return self.installBinariesForProject(project, atRevision: dependency.version.commitish)
-							.flatMap(.merge) { installed -> SignalProducer<(), CarthageError> in
-								if installed {
-									return .empty
-								} else {
-									return checkoutOrCloneDependency
-								}
-							}
+
 					}
 			}
 			.then(SignalProducer<(), CarthageError>.empty)
+	}
+
+	private func installBinariesForBinaryProject(url: URL, pinnedVersion: PinnedVersion) -> SignalProducer<(), CarthageError> {
+
+		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(pinnedVersion))
+			.mapError { CarthageError(scannableError: $0) }
+			.combineLatest(with: self.downloadBinaryFrameworkDefinition(url: url))
+			.attemptMap { (semanticVersion, binaryProject) -> Result<(SemanticVersion, URL), CarthageError> in
+				guard let frameworkURL = binaryProject.versions[pinnedVersion] else {
+					return .failure(CarthageError.requiredVersionNotFound(ProjectIdentifier.binary(url), VersionSpecifier.exactly(semanticVersion)))
+				}
+
+				return .success((semanticVersion, frameworkURL))
+			}
+			.flatMap(.concat) { (semanticVersion, frameworkURL) in
+				return self.downloadBinary(project: ProjectIdentifier.binary(url), version: semanticVersion, url: frameworkURL)
+			}
+			.flatMap(.concat) { self.unzipAndCopyBinaryFrameworks(zipFile: $0) }
+			.flatMap(.concat) { self.removeItem(at: $0) }
+	}
+
+	/// Downloads the binary only framework file. Sends the URL to each downloaded zip, after it has been moved to a
+	/// less temporary location.
+	private func downloadBinary(project: ProjectIdentifier, version: SemanticVersion, url: URL) -> SignalProducer<URL, CarthageError> {
+		let fileName = url.lastPathComponent
+		let fileURL = fileURLToCachedBinaryProject(project, version, fileName)
+
+		if FileManager.default.fileExists(atPath: fileURL.path) {
+			return SignalProducer(value: fileURL)
+		} else {
+
+			return URLSession.shared.reactive.download(with: URLRequest(url: url))
+				.on(started: {
+					self._projectEventsObserver.send(value: .downloadingBinaries(project, version.description))
+				})
+				.mapError { CarthageError.readFailed(url, $0 as NSError) }
+				.flatMap(.concat) { (downloadURL, _) in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
+		}
 	}
 
 	/// Creates symlink between the dependency checkouts and the root checkouts
@@ -811,6 +951,12 @@ public final class Project {
 private func fileURLToCachedBinary(_ project: ProjectIdentifier, _ release: Release, _ asset: Release.Asset) -> URL {
 	// ~/Library/Caches/org.carthage.CarthageKit/binaries/ReactiveCocoa/v2.3.1/1234-ReactiveCocoa.framework.zip
 	return CarthageDependencyAssetsURL.appendingPathComponent("\(project.name)/\(release.tag)/\(asset.id)-\(asset.name)", isDirectory: false)
+}
+
+/// Constructs a file URL to where the binary only framework download should be cached
+private func fileURLToCachedBinaryProject(_ project: ProjectIdentifier, _ semanticVersion: SemanticVersion, _ fileName: String) -> URL{
+	// ~/Library/Caches/org.carthage.CarthageKit/binaries/MyBinaryProjectFramework/2.3.1/MyBinaryProject.framework.zip
+	return CarthageDependencyAssetsURL.appendingPathComponent("\(project.name)/\(semanticVersion)/\(fileName)")
 }
 
 /// Caches the downloaded binary at the given URL, moving it to the other URL
@@ -978,22 +1124,6 @@ private func repositoryFileURLForProject(_ project: ProjectIdentifier, baseURL: 
 	return baseURL.appendingPathComponent(project.name, isDirectory: true)
 }
 
-
-/// Returns the URL that the project's remote repository exists at.
-private func repositoryURLForProject(_ project: ProjectIdentifier, preferHTTPS: Bool) -> GitURL {
-	switch project {
-	case let .gitHub(repository):
-		if preferHTTPS {
-			return repository.httpsURL
-		} else {
-			return repository.sshURL
-		}
-
-	case let .git(url):
-		return url
-	}
-}
-
 /// Returns the string representing a relative path from a dependency project back to the root
 internal func relativeLinkDestinationForDependencyProject(_ dependency: ProjectIdentifier, subdirectory: String) -> String {
 	let dependencySubdirectoryPath = (dependency.relativePath as NSString).appendingPathComponent(subdirectory)
@@ -1025,7 +1155,7 @@ public func cloneOrFetchProject(_ project: ProjectIdentifier, preferHTTPS: Bool,
 				return .failure(.writeFailed(destinationURL, error))
 			}
 
-			return .success(repositoryURLForProject(project, preferHTTPS: preferHTTPS))
+			return .success(project.gitURL(preferHTTPS: preferHTTPS)!)
 		}
 		.flatMap(.merge) { remoteURL -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 			return isGitRepository(repositoryURL)
