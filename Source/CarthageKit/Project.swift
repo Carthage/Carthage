@@ -848,20 +848,22 @@ public final class Project {
 
 		return self.dependencyProjects(for: dependency)
 			.zip(with: // file system objects which might conflict with symlinks
-				fileSystemObjects(for: dependency, withRepository: repositoryURL, at: CarthageProjectCheckoutsPath, pathTransformWhereNilResultsWillBeEliminated: { path in
-					let componentsRelativeToDirectoryURL = {
-						return URL(string: $0, relativeTo: self.directoryURL)?.standardizedFileURL.carthage_pathComponents
+				list(treeish: dependency.version.commitish, atPath: CarthageProjectCheckoutsPath, inRepository: repositoryURL)
+					.flatMap(.merge) { (path: String) -> SignalProducer<String, CarthageError> in
+						let componentsRelativeToDirectoryURL = {
+							return URL(string: $0, relativeTo: self.directoryURL)?.standardizedFileURL.carthage_pathComponents
+						}
+						if
+							let components = componentsRelativeToDirectoryURL(path),
+							let comparator = componentsRelativeToDirectoryURL(CarthageProjectCheckoutsPath),
+							Array(components.dropLast(1)) == comparator // file system object is contained (shallowly) by `CarthageProjectCheckoutsPath`
+						{
+							return .init(value: components.last!)
+						} else {
+							return .empty
+						}
 					}
-					if
-						let components = componentsRelativeToDirectoryURL(path),
-						let comparator = componentsRelativeToDirectoryURL(CarthageProjectCheckoutsPath),
-						Array(components.dropLast(1)) == comparator
-					{
-						return components.last!
-					} else {
-						return nil
-					}
-				})
+					.collect()
 			)
 			.attemptMap { (dependencies: Set<ProjectIdentifier>, components: [String]) -> Result<(), CarthageError> in
 				let names = dependencies

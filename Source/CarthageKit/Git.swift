@@ -378,20 +378,17 @@ private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keyS
 }
 
 /// Git’s representation of file system objects at a path relative to the repository root.
-///
-/// - parameter pathTransformWhereNilResultsWillBeEliminated: Defaults to identity function. Only ever used for one thing, but parameterized for unit testing purposes.
-internal func fileSystemObjects(for dependency: Dependency<PinnedVersion>, withRepository repositoryURL: URL, at pathList: String, pathTransformWhereNilResultsWillBeEliminated: @escaping (String) -> String? = { $0 }) -> SignalProducer<[String], CarthageError> {
+internal func list(treeish: String, atPath path: String, inRepository repositoryURL: URL) -> SignalProducer<String, CarthageError> {
 	return launchGitTask(
-		// ls-tree, because `ls-files` returns no output (for all instances I've seen) on bare repos.
+		// `ls-tree`, because `ls-files` returns no output (for all instances I’ve seen) on bare repos.
 		// flag “-z” enables output separated by the nul character (`\0`).
-		[ "ls-tree", "-z", "-r", "--full-name", "--name-only", dependency.version.commitish, pathList ],
+		[ "ls-tree", "-z", "-r", "--full-name", "--name-only", treeish, path ],
 		repositoryFileURL: repositoryURL
 	)
-		.map { (output: String) -> [String] in
-			output.characters.lazy
-				.split(separator: "\0")
-				.map { String($0) }
-				.flatMap(pathTransformWhereNilResultsWillBeEliminated)
+		.flatMap(.merge) { (output: String) -> SignalProducer<String, CarthageError> in
+			SignalProducer(
+				output.characters.lazy.split(separator: "\0").map { String($0) }
+			)
 		}
 }
 
