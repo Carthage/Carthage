@@ -29,6 +29,11 @@
 		BE02925D1E4036C8004FB579 /* XCDBLDExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0292481E403355004FB579 /* XCDBLDExtensions.swift */; };
 		BE624F491E13424400EAEFC9 /* DuplicateDependenciesCartfile in Resources */ = {isa = PBXBuildFile; fileRef = BE624F471E1341E900EAEFC9 /* DuplicateDependenciesCartfile */; };
 		BEA86F9F1C9F914A0049360B /* Curry.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076641C8A1FD800ABD373 /* Curry.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		BF3199C01E32E078007DC0D1 /* ProjectIdentifierSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3199BF1E32E078007DC0D1 /* ProjectIdentifierSpec.swift */; };
+		BF6E5DA91E41860700C63D39 /* successful.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6E5DA81E41860700C63D39 /* successful.json */; };
+		BF6E5DAB1E41863500C63D39 /* invalid.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6E5DAA1E41863500C63D39 /* invalid.json */; };
+		BF7A1A0B1E3A7AE9008CBCC5 /* BinaryProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */; };
+		BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */; };
 		BEA86FA01C9F91500049360B /* Tentacle.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076651C8A1FD800ABD373 /* Tentacle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BEB076661C8A1FD800ABD373 /* Curry.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076641C8A1FD800ABD373 /* Curry.framework */; };
 		BEB076671C8A1FD800ABD373 /* Tentacle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076651C8A1FD800ABD373 /* Tentacle.framework */; };
@@ -185,6 +190,11 @@
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
 		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
+		BF3199BF1E32E078007DC0D1 /* ProjectIdentifierSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectIdentifierSpec.swift; sourceTree = "<group>"; };
+		BF6E5DA81E41860700C63D39 /* successful.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = successful.json; sourceTree = "<group>"; };
+		BF6E5DAA1E41863500C63D39 /* invalid.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = invalid.json; sourceTree = "<group>"; };
+		BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProject.swift; sourceTree = "<group>"; };
+		BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProjectSpec.swift; sourceTree = "<group>"; };
 		BE0292481E403355004FB579 /* XCDBLDExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XCDBLDExtensions.swift; sourceTree = "<group>"; };
 		BE02925A1E40363B004FB579 /* XCDBLD.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = XCDBLD.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE624F471E1341E900EAEFC9 /* DuplicateDependenciesCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = DuplicateDependenciesCartfile; sourceTree = "<group>"; };
@@ -301,6 +311,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		BF6E5DA71E4185DA00C63D39 /* BinaryOnly */ = {
+			isa = PBXGroup;
+			children = (
+				BF6E5DA81E41860700C63D39 /* successful.json */,
+				BF6E5DAA1E41863500C63D39 /* invalid.json */,
+			);
+			path = BinaryOnly;
+			sourceTree = "<group>";
+		};
 		14A7BF461AA810A300C70ABB /* DuplicateDependencies */ = {
 			isa = PBXGroup;
 			children = (
@@ -460,6 +479,7 @@
 				3A0472F21C782B4000097EC7 /* Algorithms.swift */,
 				D069CA231A4E3B2700314A85 /* Archive.swift */,
 				CD3E530A1DE33095002C135C /* Availability.swift */,
+				BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */,
 				CDF9D3701CF1E54200DF5A6F /* BuildOptions.swift */,
 				CDE559281E12263A00ED7F5F /* BuildSettings.swift */,
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
@@ -504,9 +524,11 @@
 			children = (
 				3A0472F41C782D1D00097EC7 /* AlgorithmsSpec.swift */,
 				D0C6E5731A57040B00A5E3E7 /* ArchiveSpec.swift */,
+				BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */,
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
 				89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */,
 				CDA0B6C91C468E67006C499C /* GitSpec.swift */,
+				BF3199BF1E32E078007DC0D1 /* ProjectIdentifierSpec.swift */,
 				549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */,
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
 				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
@@ -520,6 +542,7 @@
 		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				BF6E5DA71E4185DA00C63D39 /* BinaryOnly */,
 				14A7BF461AA810A300C70ABB /* DuplicateDependencies */,
 				D0C6E5751A57042100A5E3E7 /* CartfilePrivateOnly.zip */,
 				D01F8A4B19EA28FE00643E7C /* Nimble.framework */,
@@ -635,7 +658,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "Carthage" */;
+			buildConfigurationList = D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "carthage" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -670,7 +693,9 @@
 				BE624F491E13424400EAEFC9 /* DuplicateDependenciesCartfile in Resources */,
 				D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */,
 				D0F551DC1A0D71AB0093311F /* TestCartfile.resolved in Resources */,
+				BF6E5DA91E41860700C63D39 /* successful.json in Resources */,
 				D0C6E5761A57042100A5E3E7 /* CartfilePrivateOnly.zip in Resources */,
+				BF6E5DAB1E41863500C63D39 /* invalid.json in Resources */,
 				CDCE1CC41C170E8A00B2ED88 /* TestResolvedCartfile.resolved in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -755,6 +780,7 @@
 			files = (
 				D0AAAB4A19FAEDB4007B24B3 /* Errors.swift in Sources */,
 				D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */,
+				BF7A1A0B1E3A7AE9008CBCC5 /* BinaryProject.swift in Sources */,
 				D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */,
 				BE02925D1E4036C8004FB579 /* XCDBLDExtensions.swift in Sources */,
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
@@ -784,9 +810,11 @@
 				89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */,
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
 				3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */,
+				BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */,
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,
 				549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */,
 				D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */,
+				BF3199C01E32E078007DC0D1 /* ProjectIdentifierSpec.swift in Sources */,
 				CDA0B6CA1C468E67006C499C /* GitSpec.swift in Sources */,
 				CD1FE6581DD85A140016639E /* Swift3Shims.swift in Sources */,
 			);
@@ -1044,7 +1072,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "Carthage" */ = {
+		D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "carthage" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0D1211D19E87861005E4BAA /* Debug */,

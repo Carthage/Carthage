@@ -145,6 +145,14 @@ class CartfileSpec: QuickSpec {
 			let dupe5 = dupes[2]
 			expect(dupe5) == ProjectIdentifier.gitHub(Repository(owner: "5", name: "5"))
 		}
+
+		it("should not allow a binary framework with git reference") {
+
+			let testCartfile = "binary \"https://server.com/myproject\" \"gitreference\""
+			let result = Cartfile.from(string: testCartfile)
+
+			expect(result.error).to(equal(CarthageError.parseError(description: "binary dependencies cannot have a git reference for the version specifier in line: binary \"https://server.com/myproject\" \"gitreference\"")))
+		}
 	}
 }
 

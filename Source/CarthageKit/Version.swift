@@ -47,7 +47,7 @@ public struct SemanticVersion: VersionType, Comparable {
 	fileprivate static let versionCharacterSet = CharacterSet(charactersIn: "0123456789.")
 
 	/// Attempts to parse a semantic version from a PinnedVersion.
-	public static func from(_ pinnedVersion: PinnedVersion) -> Result<SemanticVersion, CarthageError> {
+	public static func from(_ pinnedVersion: PinnedVersion) -> Result<SemanticVersion, ScannableError> {
 		let scanner = Scanner(string: pinnedVersion.commitish)
 
 		// Skip leading characters, like "v" or "version-" or anything like
@@ -60,7 +60,7 @@ public struct SemanticVersion: VersionType, Comparable {
 			} else {
 				// Disallow versions like "1.0a5", because we only support
 				// SemVer right now.
-				return .failure(CarthageError.parseError(description: "syntax of version \"\(version)\" is unsupported"))
+				return .failure(ScannableError(message: "syntax of version \"\(version)\" is unsupported", currentLine: scanner.currentLine))
 			}
 		}
 	}
@@ -69,10 +69,10 @@ public struct SemanticVersion: VersionType, Comparable {
 extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
-	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, CarthageError> {
+	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, ScannableError> {
 		var version: NSString? = nil
 		guard scanner.scanCharacters(from: versionCharacterSet, into: &version), let unwrapped = version else {
-			return .failure(.parseError(description: "expected version in line: \(scanner.currentLine)"))
+			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
 		}
 
 		let components = (unwrapped as String)
@@ -80,7 +80,7 @@ extension SemanticVersion: Scannable {
 			.split(omittingEmptySubsequences: true) { $0 == "." }
 			.map(String.init)
 		if components.isEmpty {
-			return .failure(.parseError(description: "expected version in line: \(scanner.currentLine)"))
+			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
 		}
 
 		func parseVersion(at index: Int) -> Int? {
@@ -88,11 +88,11 @@ extension SemanticVersion: Scannable {
 		}
 
 		guard let major = parseVersion(at: 0) else {
-			return .failure(.parseError(description: "expected major version number in \"\(unwrapped)\""))
+			return .failure(ScannableError(message: "expected major version number", currentLine: scanner.currentLine))
 		}
 
 		guard let minor = parseVersion(at: 1) else {
-			return .failure(.parseError(description: "expected minor version number in \"\(unwrapped)\""))
+			return .failure(ScannableError(message: "expected minor version number", currentLine: scanner.currentLine))
 		}
 
 		let patch = parseVersion(at: 2) ?? 0
@@ -140,18 +140,18 @@ public func ==(_ lhs: PinnedVersion, _ rhs: PinnedVersion) -> Bool {
 }
 
 extension PinnedVersion: Scannable {
-	public static func from(_ scanner: Scanner) -> Result<PinnedVersion, CarthageError> {
+	public static func from(_ scanner: Scanner) -> Result<PinnedVersion, ScannableError> {
 		if !scanner.scanString("\"", into: nil) {
-			return .failure(CarthageError.parseError(description: "expected pinned version in line: \(scanner.currentLine)"))
+			return .failure(ScannableError(message: "expected pinned version", currentLine: scanner.currentLine))
 		}
 
 		var commitish: NSString? = nil
 		if !scanner.scanUpTo("\"", into: &commitish) || commitish == nil {
-			return .failure(CarthageError.parseError(description: "empty pinned version in line: \(scanner.currentLine)"))
+			return .failure(ScannableError(message: "empty pinned version", currentLine: scanner.currentLine))
 		}
 
 		if !scanner.scanString("\"", into: nil) {
-			return .failure(CarthageError.parseError(description: "unterminated pinned version in line: \(scanner.currentLine)"))
+			return .failure(ScannableError(message: "unterminated pinned version", currentLine: scanner.currentLine))
 		}
 
 		return .success(self.init(commitish! as String))
@@ -251,7 +251,7 @@ public func ==(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Bool {
 
 extension VersionSpecifier: Scannable {
 	/// Attempts to parse a VersionSpecifier.
-	public static func from(_ scanner: Scanner) -> Result<VersionSpecifier, CarthageError> {
+	public static func from(_ scanner: Scanner) -> Result<VersionSpecifier, ScannableError> {
 		if scanner.scanString("==", into: nil) {
 			return SemanticVersion.from(scanner).map { .exactly($0) }
 		} else if scanner.scanString(">=", into: nil) {
@@ -261,11 +261,11 @@ extension VersionSpecifier: Scannable {
 		} else if scanner.scanString("\"", into: nil) {
 			var refName: NSString? = nil
 			if !scanner.scanUpTo("\"", into: &refName) || refName == nil {
-				return .failure(CarthageError.parseError(description: "expected Git reference name in line: \(scanner.currentLine)"))
+				return .failure(ScannableError(message: "expected Git reference name", currentLine: scanner.currentLine))
 			}
 
 			if !scanner.scanString("\"", into: nil) {
-				return .failure(CarthageError.parseError(description: "unterminated Git reference name in line: \(scanner.currentLine)"))
+				return .failure(ScannableError(message: "unterminated Git reference name", currentLine: scanner.currentLine))
 			}
 
 			return .success(.gitReference(refName! as String))

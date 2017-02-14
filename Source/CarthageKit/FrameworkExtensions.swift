@@ -26,6 +26,16 @@ extension String {
 			observer.sendCompleted()
 		}
 	}
+
+	/// Strips off a trailing string, if present.
+	internal func stripping(suffix: String) -> String {
+		if hasSuffix(suffix) {
+			let end = characters.index(endIndex, offsetBy: -suffix.characters.count)
+			return self[startIndex..<end]
+		} else {
+			return self
+		}
+	}
 }
 
 /// Merges `rhs` into `lhs` and returns the result.
@@ -305,6 +315,43 @@ extension Reactive where Base: FileManager {
 			}
 
 			observer.sendCompleted()
+		}
+	}
+}
+
+private let defaultSessionError = NSError(domain: CarthageKitBundleIdentifier,
+                                          code: 1,
+                                          userInfo: nil)
+
+extension Reactive where Base: URLSession {
+	/// Returns a SignalProducer which performs a downloadTask associated with an
+	/// `NSURLSession`
+	///
+	/// - parameters:
+	///   - request: A request that will be performed when the producer is
+	///              started
+	///
+	/// - returns: A producer that will execute the given request once for each
+	///            invocation of `start()`.
+	///
+	/// - note: This method will not send an error event in the case of a server
+	///         side error (i.e. when a response with status code other than
+	///         200...299 is received).
+	internal func download(with request: URLRequest) -> SignalProducer<(URL, URLResponse), AnyError> {
+		return SignalProducer { [base = self.base] observer, disposable in
+			let task = base.downloadTask(with: request) { url, response, error in
+				if let url = url, let response = response {
+					observer.send(value: (url, response))
+					observer.sendCompleted()
+				} else {
+					observer.send(error: AnyError(error ?? defaultSessionError))
+				}
+			}
+
+			disposable += {
+				task.cancel()
+			}
+			task.resume()
 		}
 	}
 }

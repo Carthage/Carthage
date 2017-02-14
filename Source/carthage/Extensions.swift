@@ -104,6 +104,9 @@ internal struct ProjectEventSink {
 		case let .checkingOut(project, revision):
 			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(project.name) + " at " + formatting.quote(revision))
 
+		case let .downloadingBinaryFrameworkDefinition(project, url):
+			carthage.println(formatting.bullets + "Downloading binary-only framework " + formatting.projectName(project.name) + " at " + formatting.quote(url.absoluteString))
+
 		case let .downloadingBinaries(project, release):
 			carthage.println(formatting.bullets + "Downloading " + formatting.projectName(project.name) + ".framework binary at " + formatting.quote(release))
 
