@@ -434,11 +434,11 @@ public final class Project {
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-	private func installBinariesForProject(_ project: ProjectIdentifier, atRevision revision: String) -> SignalProducer<Bool, CarthageError> {
+	private func installBinariesForProject(_ project: ProjectIdentifier, atRevision revision: String) -> SignalProducer<Bool, NoError> {
 		return SignalProducer.attempt {
 				return .success(self.useBinaries)
 			}
-			.flatMap(.merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
+			.flatMap(.merge) { useBinaries -> SignalProducer<Bool, NoError> in
 				if !useBinaries {
 					return SignalProducer(value: false)
 				}
@@ -456,17 +456,9 @@ public final class Project {
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
 						}
 						.flatMap(.concat, transform: unzip(archive:))
+						.mapError { AnyError($0) }
 						.flatMap(.concat) { directoryURL in
-							return frameworksInDirectory(directoryURL)
-								.flatMap(.merge) { url in
-									return checkFrameworkCompatibility(url)
-										.mapError { error in CarthageError.internalError(description: error.description) }
-								}
-								.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
-								.flatMap(.merge) { frameworkURL in
-									return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
-										.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
-								}
+							return self.copyFrameworkFilesFrom(directoryURL)
 								.on(completed: {
 									_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
 								}, disposed: {
@@ -487,7 +479,28 @@ public final class Project {
 			}
 	}
 
-	/// Downloads any binaries and debug symbols that may be able to be used 
+	/// Copies the framework files from the given directory `URL` if they are compatible with the local build environment.
+	/// Sends the directory `URL` if successful or an error otherwise.
+	private func copyFrameworkFilesFrom(_ directoryURL: URL) -> SignalProducer<URL, AnyError> {
+		return frameworksInDirectory(directoryURL)
+			.mapError { AnyError($0) }
+			.flatMap(.merge) { frameworkURL in
+				return checkFrameworkCompatibility(frameworkURL)
+					.mapError { AnyError($0) }
+			}
+			.flatMap(.merge) { frameworkURL in
+				return self.copyFrameworkToBuildFolder(frameworkURL)
+					.mapError { AnyError($0) }
+			}
+			.flatMap(.merge) { frameworkURL in
+				return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
+					.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
+					.mapError { AnyError($0) }
+			}
+			.then(SignalProducer<URL, AnyError>(value: directoryURL))
+	}
+
+	/// Downloads any binaries and debug symbols that may be able to be used
 	/// instead of a repository checkout.
 	///
 	/// Sends the URL to each downloaded zip, after it has been moved to a
