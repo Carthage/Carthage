@@ -86,6 +86,9 @@ public enum CarthageError: Error, Equatable {
 
 	/// An error occurred while shelling out.
 	case taskError(TaskError)
+
+	/// An internal error occurred
+	case internalError(description: String)
 }
 
 private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
@@ -147,6 +150,9 @@ public func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
 		return la == ra && lb == rb
 	
 	case let (.taskError(left), .taskError(right)):
+		return left == right
+
+	case let (.internalError(left), .internalError(right)):
 		return left == right
 
 	default:
@@ -291,6 +297,9 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .taskError(taskError):
 			return taskError.description
+
+		case let .internalError(description):
+			return description
 		}
 	}
 }
