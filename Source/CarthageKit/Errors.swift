@@ -13,7 +13,7 @@ import Tentacle
 import XCDBLD
 
 /// Possible errors that can originate from Carthage.
-public enum CarthageError: Error, Equatable {
+public enum CarthageError: Error {
 	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: ProjectIdentifier?)
 
 	/// One or more arguments was invalid.
@@ -31,7 +31,7 @@ public enum CarthageError: Error, Equatable {
 	/// No existent version could be found to satisfy the version specifier for
 	/// a dependency.
 	case requiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
-	
+
 	/// No entry could be found in Cartfile for a dependency with this name.
 	case unknownDependencies([String])
 
@@ -49,6 +49,9 @@ public enum CarthageError: Error, Equatable {
 
 	/// An error occurred parsing a Carthage file.
 	case parseError(description: String)
+
+	/// An error occurred parsing the binary-only framework definition file
+	case invalidBinaryJSON(URL, BinaryJSONError)
 
 	// An expected environment variable wasn't found.
 	case missingEnvironmentVariable(variable: String)
@@ -76,12 +79,12 @@ public enum CarthageError: Error, Equatable {
 
 	// There was a cycle between dependencies in the associated graph.
 	case dependencyCycle([ProjectIdentifier: Set<ProjectIdentifier>])
-	
+
 	/// A request to the GitHub API failed.
 	case gitHubAPIRequestFailed(Client.Error)
-	
+
 	case gitHubAPITimeout
-	
+
 	case buildFailed(TaskError, log: URL?)
 
 	/// An error occurred while shelling out.
@@ -91,72 +94,83 @@ public enum CarthageError: Error, Equatable {
 	case internalError(description: String)
 }
 
+public extension CarthageError {
+	init(scannableError: ScannableError) {
+		self = .parseError(description: "\(scannableError)")
+	}
+}
+
 private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
 	return lhs.specifier == rhs.specifier && lhs.fromProject == rhs.fromProject
 }
 
-public func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
-	switch (lhs, rhs) {
-	case let (.invalidArgument(left), .invalidArgument(right)):
-		return left == right
-	
-	case let (.missingBuildSetting(left), .missingBuildSetting(right)):
-		return left == right
-	
-	case let (.incompatibleRequirements(left, la, lb), .incompatibleRequirements(right, ra, rb)):
-		let specifiersEqual = (la == ra && lb == rb) || (la == rb && rb == la)
-		return left == right && specifiersEqual
-	
-	case let (.taggedVersionNotFound(left), .taggedVersionNotFound(right)):
-		return left == right
+extension CarthageError: Equatable {
+	public static func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
+		switch (lhs, rhs) {
+		case let (.invalidArgument(left), .invalidArgument(right)):
+			return left == right
 
-	case let (.requiredVersionNotFound(left, leftVersion), .requiredVersionNotFound(right, rightVersion)):
-		return left == right && leftVersion == rightVersion
-	
-	case let (.repositoryCheckoutFailed(la, lb, lc), .repositoryCheckoutFailed(ra, rb, rc)):
-		return la == ra && lb == rb && lc == rc
-	
-	case let (.readFailed(la, lb), .readFailed(ra, rb)):
-		return la == ra && lb == rb
-	
-	case let (.writeFailed(la, lb), .writeFailed(ra, rb)):
-		return la == ra && lb == rb
-	
-	case let (.parseError(left), .parseError(right)):
-		return left == right
-	
-	case let (.missingEnvironmentVariable(left), .missingEnvironmentVariable(right)):
-		return left == right
-	
-	case let (.invalidArchitectures(left), .invalidArchitectures(right)):
-		return left == right
+		case let (.missingBuildSetting(left), .missingBuildSetting(right)):
+			return left == right
 
-	case let (.noSharedFrameworkSchemes(la, lb), .noSharedFrameworkSchemes(ra, rb)):
-		return la == ra && lb == rb
+		case let (.incompatibleRequirements(left, la, lb), .incompatibleRequirements(right, ra, rb)):
+			let specifiersEqual = (la == ra && lb == rb) || (la == rb && rb == la)
+			return left == right && specifiersEqual
 
-	case let (.noSharedSchemes(la, lb), .noSharedSchemes(ra, rb)):
-		return la == ra && lb == rb
-	
-	case let (.duplicateDependencies(left), .duplicateDependencies(right)):
-		return left.sorted() == right.sorted()
-	
-	case let (.gitHubAPIRequestFailed(left), .gitHubAPIRequestFailed(right)):
-		return left == right
-		
-	case (.gitHubAPITimeout, .gitHubAPITimeout):
-		return true
-		
-	case let (.buildFailed(la, lb), .buildFailed(ra, rb)):
-		return la == ra && lb == rb
-	
-	case let (.taskError(left), .taskError(right)):
-		return left == right
+		case let (.taggedVersionNotFound(left), .taggedVersionNotFound(right)):
+			return left == right
 
-	case let (.internalError(left), .internalError(right)):
-		return left == right
+		case let (.requiredVersionNotFound(left, leftVersion), .requiredVersionNotFound(right, rightVersion)):
+			return left == right && leftVersion == rightVersion
 
-	default:
-		return false
+		case let (.repositoryCheckoutFailed(la, lb, lc), .repositoryCheckoutFailed(ra, rb, rc)):
+			return la == ra && lb == rb && lc == rc
+
+		case let (.readFailed(la, lb), .readFailed(ra, rb)):
+			return la == ra && lb == rb
+
+		case let (.writeFailed(la, lb), .writeFailed(ra, rb)):
+			return la == ra && lb == rb
+
+		case let (.parseError(left), .parseError(right)):
+			return left == right
+
+		case let (.invalidBinaryJSON(leftUrl, leftError), .invalidBinaryJSON(rightUrl, rightError)):
+			return leftUrl == rightUrl && leftError == rightError
+
+		case let (.missingEnvironmentVariable(left), .missingEnvironmentVariable(right)):
+			return left == right
+
+		case let (.invalidArchitectures(left), .invalidArchitectures(right)):
+			return left == right
+
+		case let (.noSharedFrameworkSchemes(la, lb), .noSharedFrameworkSchemes(ra, rb)):
+			return la == ra && lb == rb
+
+		case let (.noSharedSchemes(la, lb), .noSharedSchemes(ra, rb)):
+			return la == ra && lb == rb
+
+		case let (.duplicateDependencies(left), .duplicateDependencies(right)):
+			return left.sorted() == right.sorted()
+
+		case let (.gitHubAPIRequestFailed(left), .gitHubAPIRequestFailed(right)):
+			return left == right
+
+		case (.gitHubAPITimeout, .gitHubAPITimeout):
+			return true
+
+		case let (.buildFailed(la, lb), .buildFailed(ra, rb)):
+			return la == ra && lb == rb
+
+		case let (.taskError(left), .taskError(right)):
+			return left == right
+
+		case let (.internalError(left), .internalError(right)):
+			return left == right
+
+		default:
+			return false
+		}
 	}
 }
 
@@ -211,6 +225,9 @@ extension CarthageError: CustomStringConvertible {
 		case let .parseError(description):
 			return "Parse error: \(description)"
 
+		case let .invalidBinaryJSON(url, error):
+			return "Unable to parse binary-only framework JSON at \(url) due to error: \(error)"
+
 		case let .invalidArchitectures(description):
 			return "Invalid architecture: \(description)"
 
@@ -231,7 +248,7 @@ extension CarthageError: CustomStringConvertible {
 			case let .gitHub(repository):
 				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
 
-			case .git:
+			case .git, .binary:
 				break
 			}
 
@@ -247,7 +264,7 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .xcodebuildTimeout(project):
 			return "xcodebuild timed out while trying to read \(project) 😭"
-			
+
 		case let .duplicateDependencies(duplicateDeps):
 			let deps = duplicateDeps
 				.sorted() // important to match expected order in test cases
@@ -271,16 +288,16 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .gitHubAPIRequestFailed(message):
 			return "GitHub API request failed: \(message)"
-			
+
 		case .gitHubAPITimeout:
 			return "GitHub API timed out"
-			
+
 		case let .unknownDependencies(names):
 			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile."
 
 		case let .unresolvedDependencies(names):
 			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile.resolved – please run `carthage update` if the dependency is contained in the project's Cartfile."
-			
+
 		case let .buildFailed(taskError, log):
 			var message = "Build Failed\n"
 			if case let .shellTaskFailed(task, exitCode, _) = taskError {
@@ -304,8 +321,85 @@ extension CarthageError: CustomStringConvertible {
 	}
 }
 
+/// Error parsing strings into types, used in Scannable protocol
+public struct ScannableError: Error {
+	let message: String
+	let currentLine: String?
+
+	public init(message: String, currentLine: String? = nil) {
+		self.message = message
+		self.currentLine = currentLine
+	}
+
+}
+
+extension ScannableError: CustomStringConvertible {
+	public var description: String {
+		return "\(message) in line: \(currentLine)"
+	}
+}
+
+extension ScannableError: Equatable {
+	public static func == (lhs: ScannableError, rhs: ScannableError) -> Bool {
+		return lhs.description == rhs.description && lhs.currentLine == rhs.currentLine
+	}
+}
+
+/// Error parsing a binary-only framework JSON file, used in CarthageError.invalidBinaryJSON.
+public enum BinaryJSONError: Error {
+
+	/// Unable to parse the JSON.
+	case invalidJSON(NSError?)
+
+	/// Unable to parse a semantic version from a framework entry.
+	case invalidVersion(ScannableError)
+
+	/// Unable to parse a URL from a framework entry.
+	case invalidURL(String)
+
+	/// URL is non-HTTPS
+	case nonHTTPSURL(URL)
+}
+
+extension BinaryJSONError: CustomStringConvertible {
+	public var description: String {
+		switch self {
+		case let .invalidJSON(error):
+			return "invalid JSON: \(error)"
+		case let .invalidVersion(error):
+			return "unable to parse semantic version: \(error)"
+		case let .invalidURL(string):
+			return "invalid URL: \(string)"
+		case let .nonHTTPSURL(url):
+			return "specified URL '\(url)' must be HTTPS"
+		}
+	}
+}
+
+extension BinaryJSONError: Equatable {
+	public static func == (lhs: BinaryJSONError, rhs: BinaryJSONError) -> Bool {
+		switch (lhs, rhs) {
+		case let (.invalidJSON(left), .invalidJSON(right)):
+			return left == right
+
+		case let (.invalidVersion(left), .invalidVersion(right)):
+			return left == right
+
+		case let (.invalidURL(left), .invalidURL(right)):
+			return left == right
+
+		case let (.nonHTTPSURL(left), .nonHTTPSURL(right)):
+			return left == right
+
+		default:
+			return false
+		}
+	}
+}
+
+
 /// A duplicate dependency, used in CarthageError.duplicateDependencies.
-public struct DuplicateDependency: Comparable {
+public struct DuplicateDependency {
 	/// The duplicate dependency as a project.
 	public let project: ProjectIdentifier
 
@@ -338,30 +432,32 @@ extension DuplicateDependency: CustomStringConvertible {
 	}
 }
 
-public func == (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
-	return lhs.project == rhs.project && lhs.locations == rhs.locations
-}
-
-public func < (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
-	if lhs.description < rhs.description {
-		return true
+extension DuplicateDependency: Comparable {
+	public static func == (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
+		return lhs.project == rhs.project && lhs.locations == rhs.locations
 	}
 
-	if lhs.locations.count < rhs.locations.count {
-		return true
-	}
-	else if lhs.locations.count > rhs.locations.count {
-		return false
-	}
-
-	for (lhsLocation, rhsLocation) in zip(lhs.locations, rhs.locations) {
-		if lhsLocation < rhsLocation {
+	public static func < (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
+		if lhs.description < rhs.description {
 			return true
 		}
-		else if lhsLocation > rhsLocation {
+
+		if lhs.locations.count < rhs.locations.count {
+			return true
+		}
+		else if lhs.locations.count > rhs.locations.count {
 			return false
 		}
-	}
 
-	return false
+		for (lhsLocation, rhsLocation) in zip(lhs.locations, rhs.locations) {
+			if lhsLocation < rhsLocation {
+				return true
+			}
+			else if lhsLocation > rhsLocation {
+				return false
+			}
+		}
+
+		return false
+	}
 }

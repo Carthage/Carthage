@@ -39,8 +39,8 @@ extension Repository {
 	}
 
 	/// The URL for filing a new GitHub issue for this repository.
-	public var newIssueURL: NSURL {
-		return NSURL(string: "\(server)/\(owner)/\(name)/issues/new")!
+	public var newIssueURL: URL {
+		return URL(string: "\(server)/\(owner)/\(name)/issues/new")!
 	}
 	
 	/// Matches an identifier of the form "owner/name".
@@ -49,13 +49,13 @@ extension Repository {
 	/// Parses repository information out of a string of the form "owner/name"
 	/// for the github.com, or the form "http(s)://hostname/owner/name" for
 	/// Enterprise instances.
-	public static func fromIdentifier(_ identifier: String) -> Result<Repository, CarthageError> {
+	public static func fromIdentifier(_ identifier: String) -> Result<Repository, ScannableError> {
 		// GitHub.com
 		let range = NSRange(location: 0, length: identifier.utf16.count)
 		if let match = NWORegex.firstMatch(in: identifier, range: range) {
 			let owner = (identifier as NSString).substring(with: match.rangeAt(1))
 			let name = (identifier as NSString).substring(with: match.rangeAt(2))
-			return .success(self.init(owner: owner, name: stripGitSuffix(name)))
+			return .success(self.init(owner: owner, name: strippingGitSuffix(name)))
 		}
 
 		// GitHub Enterprise
@@ -72,14 +72,14 @@ extension Repository {
 			// If the host name starts with “github.com”, that is not an enterprise
 			// one.
 			if host == "github.com" || host == "www.github.com" {
-				return .success(self.init(owner: owner, name: stripGitSuffix(name)))
+				return .success(self.init(owner: owner, name: strippingGitSuffix(name)))
 			} else {
 				let baseURL = url.deletingLastPathComponent().deletingLastPathComponent()
-				return .success(self.init(server: .enterprise(url: baseURL), owner: owner, name: stripGitSuffix(name)))
+				return .success(self.init(server: .enterprise(url: baseURL), owner: owner, name: strippingGitSuffix(name)))
 			}
 		}
 
-		return .failure(CarthageError.parseError(description: "invalid GitHub repository identifier \"\(identifier)\""))
+		return .failure(ScannableError(message: "invalid GitHub repository identifier \"\(identifier)\""))
 	}
 }
 
