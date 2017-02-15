@@ -94,7 +94,7 @@ public let CarthageProjectBinaryAssetContentTypes = [
 ]
 
 /// Describes an event occurring to or with a project.
-public enum ProjectEvent: Equatable {
+public enum ProjectEvent {
 	/// The project is beginning to clone.
 	case cloning(ProjectIdentifier)
 
@@ -122,24 +122,26 @@ public enum ProjectEvent: Equatable {
 	case skippedBuilding(ProjectIdentifier, String)
 }
 
-public func == (lhs: ProjectEvent, rhs: ProjectEvent) -> Bool {
-	switch (lhs, rhs) {
-	case let (.cloning(left), .cloning(right)):
-		return left == right
-	case let (.fetching(left), .fetching(right)):
-		return left == right
-	case let (.checkingOut(leftIdentifier, leftRevision), .checkingOut(rightIdentifier, rightRevision)):
-		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
-	case let (.downloadingBinaryFrameworkDefinition(leftIdentifier, leftURL), .downloadingBinaryFrameworkDefinition(rightIdentifier, rightURL)):
-		return leftIdentifier == rightIdentifier && leftURL == rightURL
-	case let (.downloadingBinaries(leftIdentifier, leftRevision), .downloadingBinaries(rightIdentifier, rightRevision)):
-		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
-	case let (.skippedDownloadingBinaries(leftIdentifier, leftRevision), .skippedDownloadingBinaries(rightIdentifier, rightRevision)):
-		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
-	case let (.skippedBuilding(leftIdentifier, leftRevision), .skippedBuilding(rightIdentifier, rightRevision)):
-		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
-	default:
-		return false
+extension ProjectEvent: Equatable {
+	public static func == (lhs: ProjectEvent, rhs: ProjectEvent) -> Bool {
+		switch (lhs, rhs) {
+		case let (.cloning(left), .cloning(right)):
+			return left == right
+		case let (.fetching(left), .fetching(right)):
+			return left == right
+		case let (.checkingOut(leftIdentifier, leftRevision), .checkingOut(rightIdentifier, rightRevision)):
+			return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+		case let (.downloadingBinaryFrameworkDefinition(leftIdentifier, leftURL), .downloadingBinaryFrameworkDefinition(rightIdentifier, rightURL)):
+			return leftIdentifier == rightIdentifier && leftURL == rightURL
+		case let (.downloadingBinaries(leftIdentifier, leftRevision), .downloadingBinaries(rightIdentifier, rightRevision)):
+			return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+		case let (.skippedDownloadingBinaries(leftIdentifier, leftRevision), .skippedDownloadingBinaries(rightIdentifier, rightRevision)):
+			return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+		case let (.skippedBuilding(leftIdentifier, leftRevision), .skippedBuilding(rightIdentifier, rightRevision)):
+			return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+		default:
+			return false
+		}
 	}
 }
 

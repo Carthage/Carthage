@@ -200,7 +200,7 @@ public struct BuildCommand: CommandProtocol {
 }
 
 /// Represents the user's chosen platform to build for.
-public enum BuildPlatform: Equatable {
+public enum BuildPlatform {
 	/// Build for all available platforms.
 	case all
 
@@ -245,16 +245,18 @@ public enum BuildPlatform: Equatable {
 	}
 }
 
-public func ==(_ lhs: BuildPlatform, _ rhs: BuildPlatform) -> Bool {
-	switch (lhs, rhs) {
-	case let (.multiple(left), .multiple(right)):
-		return left == right
+extension BuildPlatform: Equatable {
+	public static func ==(_ lhs: BuildPlatform, _ rhs: BuildPlatform) -> Bool {
+		switch (lhs, rhs) {
+		case let (.multiple(left), .multiple(right)):
+			return left == right
 
-	case (.all, .all), (.iOS, .iOS), (.macOS, .macOS), (.watchOS, .watchOS), (.tvOS, .tvOS):
-		return true
+		case (.all, .all), (.iOS, .iOS), (.macOS, .macOS), (.watchOS, .watchOS), (.tvOS, .tvOS):
+			return true
 
-	case _:
-		return false
+		case _:
+			return false
+		}
 	}
 }
 

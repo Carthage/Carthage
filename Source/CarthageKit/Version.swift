@@ -14,7 +14,7 @@ import ReactiveSwift
 public protocol VersionType: Hashable {}
 
 /// A semantic version.
-public struct SemanticVersion: VersionType, Comparable {
+public struct SemanticVersion: VersionType {
 	/// The major version.
 	///
 	/// Increments to this component represent incompatible API changes.
@@ -101,12 +101,14 @@ extension SemanticVersion: Scannable {
 	}
 }
 
-public func <(_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
-	return lhs.components.lexicographicallyPrecedes(rhs.components)
-}
+extension SemanticVersion: Comparable {
+	public static func <(_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
+		return lhs.components.lexicographicallyPrecedes(rhs.components)
+	}
 
-public func ==(_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
-	return lhs.components == rhs.components
+	public static func ==(_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
+		return lhs.components == rhs.components
+	}
 }
 
 extension SemanticVersion: Hashable {
@@ -133,10 +135,10 @@ public struct PinnedVersion: VersionType {
 	public var hashValue: Int {
 		return commitish.hashValue
 	}
-}
 
-public func ==(_ lhs: PinnedVersion, _ rhs: PinnedVersion) -> Bool {
-	return lhs.commitish == rhs.commitish
+	public static func ==(_ lhs: PinnedVersion, _ rhs: PinnedVersion) -> Bool {
+		return lhs.commitish == rhs.commitish
+	}
 }
 
 extension PinnedVersion: Scannable {
@@ -225,27 +227,27 @@ public enum VersionSpecifier: VersionType {
 			return commitish.hashValue
 		}
 	}
-}
 
-public func ==(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Bool {
-	switch (lhs, rhs) {
-	case (.any, .any):
-		return true
+	public static func ==(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Bool {
+		switch (lhs, rhs) {
+		case (.any, .any):
+			return true
 
-	case let (.exactly(left), .exactly(right)):
-		return left == right
+		case let (.exactly(left), .exactly(right)):
+			return left == right
 
-	case let (.atLeast(left), .atLeast(right)):
-		return left == right
+		case let (.atLeast(left), .atLeast(right)):
+			return left == right
 
-	case let (.compatibleWith(left), .compatibleWith(right)):
-		return left == right
+		case let (.compatibleWith(left), .compatibleWith(right)):
+			return left == right
 
-	case let (.gitReference(left), .gitReference(right)):
-		return left == right
+		case let (.gitReference(left), .gitReference(right)):
+			return left == right
 
-	default:
-		return false
+		default:
+			return false
+		}
 	}
 }
 
