@@ -29,14 +29,14 @@
 		BE02925D1E4036C8004FB579 /* XCDBLDExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0292481E403355004FB579 /* XCDBLDExtensions.swift */; };
 		BE624F491E13424400EAEFC9 /* DuplicateDependenciesCartfile in Resources */ = {isa = PBXBuildFile; fileRef = BE624F471E1341E900EAEFC9 /* DuplicateDependenciesCartfile */; };
 		BEA86F9F1C9F914A0049360B /* Curry.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076641C8A1FD800ABD373 /* Curry.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		BEA86FA01C9F91500049360B /* Tentacle.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076651C8A1FD800ABD373 /* Tentacle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		BEB076661C8A1FD800ABD373 /* Curry.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076641C8A1FD800ABD373 /* Curry.framework */; };
+		BEB076671C8A1FD800ABD373 /* Tentacle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076651C8A1FD800ABD373 /* Tentacle.framework */; };
 		BF3199C01E32E078007DC0D1 /* ProjectIdentifierSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3199BF1E32E078007DC0D1 /* ProjectIdentifierSpec.swift */; };
 		BF6E5DA91E41860700C63D39 /* successful.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6E5DA81E41860700C63D39 /* successful.json */; };
 		BF6E5DAB1E41863500C63D39 /* invalid.json in Resources */ = {isa = PBXBuildFile; fileRef = BF6E5DAA1E41863500C63D39 /* invalid.json */; };
 		BF7A1A0B1E3A7AE9008CBCC5 /* BinaryProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */; };
 		BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */; };
-		BEA86FA01C9F91500049360B /* Tentacle.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076651C8A1FD800ABD373 /* Tentacle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		BEB076661C8A1FD800ABD373 /* Curry.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076641C8A1FD800ABD373 /* Curry.framework */; };
-		BEB076671C8A1FD800ABD373 /* Tentacle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BEB076651C8A1FD800ABD373 /* Tentacle.framework */; };
 		CD1FE6531DD366620016639E /* Runes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; };
 		CD1FE6541DD367920016639E /* Runes.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CD1FE6561DD857570016639E /* Swift3Shims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1FE6551DD857570016639E /* Swift3Shims.swift */; };
@@ -190,16 +190,16 @@
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
 		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
-		BF3199BF1E32E078007DC0D1 /* ProjectIdentifierSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectIdentifierSpec.swift; sourceTree = "<group>"; };
-		BF6E5DA81E41860700C63D39 /* successful.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = successful.json; sourceTree = "<group>"; };
-		BF6E5DAA1E41863500C63D39 /* invalid.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = invalid.json; sourceTree = "<group>"; };
-		BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProject.swift; sourceTree = "<group>"; };
-		BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProjectSpec.swift; sourceTree = "<group>"; };
 		BE0292481E403355004FB579 /* XCDBLDExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XCDBLDExtensions.swift; sourceTree = "<group>"; };
 		BE02925A1E40363B004FB579 /* XCDBLD.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = XCDBLD.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE624F471E1341E900EAEFC9 /* DuplicateDependenciesCartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = DuplicateDependenciesCartfile; sourceTree = "<group>"; };
 		BEB076641C8A1FD800ABD373 /* Curry.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Curry.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEB076651C8A1FD800ABD373 /* Tentacle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Tentacle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		BF3199BF1E32E078007DC0D1 /* ProjectIdentifierSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectIdentifierSpec.swift; sourceTree = "<group>"; };
+		BF6E5DA81E41860700C63D39 /* successful.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = successful.json; sourceTree = "<group>"; };
+		BF6E5DAA1E41863500C63D39 /* invalid.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = invalid.json; sourceTree = "<group>"; };
+		BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProject.swift; sourceTree = "<group>"; };
+		BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProjectSpec.swift; sourceTree = "<group>"; };
 		CD1FE6521DD366620016639E /* Runes.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Runes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD1FE6551DD857570016639E /* Swift3Shims.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Swift3Shims.swift; sourceTree = "<group>"; };
 		CD28C99C1E11846200322AF7 /* ProductType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProductType.swift; sourceTree = "<group>"; };
@@ -311,15 +311,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		BF6E5DA71E4185DA00C63D39 /* BinaryOnly */ = {
-			isa = PBXGroup;
-			children = (
-				BF6E5DA81E41860700C63D39 /* successful.json */,
-				BF6E5DAA1E41863500C63D39 /* invalid.json */,
-			);
-			path = BinaryOnly;
-			sourceTree = "<group>";
-		};
 		14A7BF461AA810A300C70ABB /* DuplicateDependencies */ = {
 			isa = PBXGroup;
 			children = (
@@ -355,6 +346,15 @@
 				BE02925A1E40363B004FB579 /* XCDBLD.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		BF6E5DA71E4185DA00C63D39 /* BinaryOnly */ = {
+			isa = PBXGroup;
+			children = (
+				BF6E5DA81E41860700C63D39 /* successful.json */,
+				BF6E5DAA1E41863500C63D39 /* invalid.json */,
+			);
+			path = BinaryOnly;
 			sourceTree = "<group>";
 		};
 		D0D1210F19E87861005E4BAA = {
@@ -641,7 +641,7 @@
 			attributes = {
 				LastSwiftMigration = 0700;
 				LastSwiftUpdateCheck = 0700;
-				LastUpgradeCheck = 0710;
+				LastUpgradeCheck = 0820;
 				ORGANIZATIONNAME = Carthage;
 				TargetAttributes = {
 					D0D1216C19E87B05005E4BAA = {
@@ -658,7 +658,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "carthage" */;
+			buildConfigurationList = D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "Carthage" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -863,6 +863,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212619E878CC005E4BAA /* Debug.xcconfig */;
 			buildSettings = {
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -875,6 +877,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212819E878CC005E4BAA /* Release.xcconfig */;
 			buildSettings = {
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				SWIFT_VERSION = 3.0;
@@ -885,10 +889,10 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
-				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
@@ -902,10 +906,10 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
-				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
@@ -947,6 +951,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212719E878CC005E4BAA /* Profile.xcconfig */;
 			buildSettings = {
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				SWIFT_VERSION = 3.0;
@@ -957,10 +963,10 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
-				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
@@ -988,6 +994,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1212919E878CC005E4BAA /* Test.xcconfig */;
 			buildSettings = {
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				SWIFT_VERSION = 3.0;
@@ -998,10 +1006,10 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = D0D1213719E878CC005E4BAA /* Mac-Framework.xcconfig */;
 			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
-				EMBEDDED_CONTENT_CONTAINS_SWIFT = YES;
 				FRAMEWORK_VERSION = A;
 				INFOPLIST_FILE = Source/CarthageKit/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
@@ -1072,7 +1080,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "carthage" */ = {
+		D0D1211319E87861005E4BAA /* Build configuration list for PBXProject "Carthage" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D0D1211D19E87861005E4BAA /* Debug */,
