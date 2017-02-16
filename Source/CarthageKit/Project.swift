@@ -579,6 +579,7 @@ public final class Project {
 							self._projectEventsObserver.send(value: .skippedInstallingBinaries(project: project, error: error))
 							return SignalProducer(value: false)
 						}
+						.concat(value: false)
 						.take(first: 1)
 
 				case .git, .binary:
