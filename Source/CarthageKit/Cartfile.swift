@@ -189,7 +189,7 @@ extension ResolvedCartfile: CustomStringConvertible {
 }
 
 /// Uniquely identifies a project that can be used as a dependency.
-public enum ProjectIdentifier: Comparable {
+public enum ProjectIdentifier {
 	/// A repository hosted on GitHub.com.
 	case gitHub(Repository)
 
@@ -220,24 +220,26 @@ public enum ProjectIdentifier: Comparable {
 	}
 }
 
-public func ==(_ lhs: ProjectIdentifier, _ rhs: ProjectIdentifier) -> Bool {
-	switch (lhs, rhs) {
-	case let (.gitHub(left), .gitHub(right)):
-		return left == right
+extension ProjectIdentifier: Comparable {
+	public static func ==(_ lhs: ProjectIdentifier, _ rhs: ProjectIdentifier) -> Bool {
+		switch (lhs, rhs) {
+		case let (.gitHub(left), .gitHub(right)):
+			return left == right
 
-	case let (.git(left), .git(right)):
-		return left == right
+		case let (.git(left), .git(right)):
+			return left == right
 
-	case let (.binary(left), .binary(right)):
-		return left == right
+		case let (.binary(left), .binary(right)):
+			return left == right
 
-	default:
-		return false
+		default:
+			return false
+		}
 	}
-}
 
-public func <(_ lhs: ProjectIdentifier, _ rhs: ProjectIdentifier) -> Bool {
-	return lhs.name.caseInsensitiveCompare(rhs.name) == .orderedAscending
+	public static func <(_ lhs: ProjectIdentifier, _ rhs: ProjectIdentifier) -> Bool {
+		return lhs.name.caseInsensitiveCompare(rhs.name) == .orderedAscending
+	}
 }
 
 extension ProjectIdentifier: Hashable {
@@ -346,7 +348,7 @@ extension ProjectIdentifier {
 }
 
 /// Represents a single dependency of a project.
-public struct Dependency<V: VersionType>: Hashable {
+public struct Dependency<V: VersionType> {
 	/// The project corresponding to this dependency.
 	public let project: ProjectIdentifier
 
@@ -357,14 +359,16 @@ public struct Dependency<V: VersionType>: Hashable {
 		self.project = project
 		self.version = version
 	}
-	
+}
+
+extension Dependency: Hashable {
+	public static func ==<V>(_ lhs: Dependency<V>, _ rhs: Dependency<V>) -> Bool {
+		return lhs.project == rhs.project && lhs.version == rhs.version
+	}
+
 	public var hashValue: Int {
 		return project.hashValue ^ version.hashValue
 	}
-}
-
-public func ==<V>(_ lhs: Dependency<V>, _ rhs: Dependency<V>) -> Bool {
-	return lhs.project == rhs.project && lhs.version == rhs.version
 }
 
 extension Dependency where V: Scannable {

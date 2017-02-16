@@ -76,24 +76,13 @@ public struct BuildCommand: CommandProtocol {
 			.flatMap(.merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
 				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 
-				var buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
+				let buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
 					.flatten(.concat)
 
-				let stderrHandle = FileHandle.standardError
+				let stderrHandle = options.isVerbose ? FileHandle.standardError : stdoutHandle
 
 				let formatting = options.colorOptions.formatting
 				
-				if !options.isVerbose {
-					buildProgress = buildProgress.filter { event in
-						switch event {
-						case .launch, .success:
-							return true
-						case .standardOutput, .standardError:
-							return false
-						}
-					}
-				}
-
 				return buildProgress
 					.mapError { error -> CarthageError in
 						if case let .buildFailed(taskError, _) = error {
@@ -212,7 +201,7 @@ public struct BuildCommand: CommandProtocol {
 }
 
 /// Represents the user's chosen platform to build for.
-public enum BuildPlatform: Equatable {
+public enum BuildPlatform {
 	/// Build for all available platforms.
 	case all
 
@@ -257,16 +246,18 @@ public enum BuildPlatform: Equatable {
 	}
 }
 
-public func ==(_ lhs: BuildPlatform, _ rhs: BuildPlatform) -> Bool {
-	switch (lhs, rhs) {
-	case let (.multiple(left), .multiple(right)):
-		return left == right
+extension BuildPlatform: Equatable {
+	public static func ==(_ lhs: BuildPlatform, _ rhs: BuildPlatform) -> Bool {
+		switch (lhs, rhs) {
+		case let (.multiple(left), .multiple(right)):
+			return left == right
 
-	case (.all, .all), (.iOS, .iOS), (.macOS, .macOS), (.watchOS, .watchOS), (.tvOS, .tvOS):
-		return true
+		case (.all, .all), (.iOS, .iOS), (.macOS, .macOS), (.watchOS, .watchOS), (.tvOS, .tvOS):
+			return true
 
-	case _:
-		return false
+		case _:
+			return false
+		}
 	}
 }
 
