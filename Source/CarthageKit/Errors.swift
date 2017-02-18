@@ -31,7 +31,7 @@ public enum CarthageError: Error {
 	/// No existent version could be found to satisfy the version specifier for
 	/// a dependency.
 	case requiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
-	
+
 	/// No entry could be found in Cartfile for a dependency with this name.
 	case unknownDependencies([String])
 
@@ -79,16 +79,19 @@ public enum CarthageError: Error {
 
 	// There was a cycle between dependencies in the associated graph.
 	case dependencyCycle([ProjectIdentifier: Set<ProjectIdentifier>])
-	
+
 	/// A request to the GitHub API failed.
 	case gitHubAPIRequestFailed(Client.Error)
-	
+
 	case gitHubAPITimeout
 
 	case buildFailed(TaskError, log: URL?)
 
 	/// An error occurred while shelling out.
 	case taskError(TaskError)
+
+	/// An internal error occurred
+	case internalError(description: String)
 }
 
 public extension CarthageError {
@@ -106,29 +109,29 @@ extension CarthageError: Equatable {
 		switch (lhs, rhs) {
 		case let (.invalidArgument(left), .invalidArgument(right)):
 			return left == right
-		
+
 		case let (.missingBuildSetting(left), .missingBuildSetting(right)):
 			return left == right
-		
+
 		case let (.incompatibleRequirements(left, la, lb), .incompatibleRequirements(right, ra, rb)):
 			let specifiersEqual = (la == ra && lb == rb) || (la == rb && rb == la)
 			return left == right && specifiersEqual
-		
+
 		case let (.taggedVersionNotFound(left), .taggedVersionNotFound(right)):
 			return left == right
 
 		case let (.requiredVersionNotFound(left, leftVersion), .requiredVersionNotFound(right, rightVersion)):
 			return left == right && leftVersion == rightVersion
-		
+
 		case let (.repositoryCheckoutFailed(la, lb, lc), .repositoryCheckoutFailed(ra, rb, rc)):
 			return la == ra && lb == rb && lc == rc
-		
+
 		case let (.readFailed(la, lb), .readFailed(ra, rb)):
 			return la == ra && lb == rb
-		
+
 		case let (.writeFailed(la, lb), .writeFailed(ra, rb)):
 			return la == ra && lb == rb
-		
+
 		case let (.parseError(left), .parseError(right)):
 			return left == right
 
@@ -137,7 +140,7 @@ extension CarthageError: Equatable {
 
 		case let (.missingEnvironmentVariable(left), .missingEnvironmentVariable(right)):
 			return left == right
-		
+
 		case let (.invalidArchitectures(left), .invalidArchitectures(right)):
 			return left == right
 
@@ -146,13 +149,13 @@ extension CarthageError: Equatable {
 
 		case let (.noSharedSchemes(la, lb), .noSharedSchemes(ra, rb)):
 			return la == ra && lb == rb
-		
+
 		case let (.duplicateDependencies(left), .duplicateDependencies(right)):
 			return left.sorted() == right.sorted()
-		
+
 		case let (.gitHubAPIRequestFailed(left), .gitHubAPIRequestFailed(right)):
 			return left == right
-			
+
 		case (.gitHubAPITimeout, .gitHubAPITimeout):
 			return true
 
@@ -161,7 +164,10 @@ extension CarthageError: Equatable {
 
 		case let (.taskError(left), .taskError(right)):
 			return left == right
-		
+
+		case let (.internalError(left), .internalError(right)):
+			return left == right
+
 		default:
 			return false
 		}
@@ -258,7 +264,7 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .xcodebuildTimeout(project):
 			return "xcodebuild timed out while trying to read \(project) 😭"
-			
+
 		case let .duplicateDependencies(duplicateDeps):
 			let deps = duplicateDeps
 				.sorted() // important to match expected order in test cases
@@ -282,10 +288,10 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .gitHubAPIRequestFailed(message):
 			return "GitHub API request failed: \(message)"
-			
+
 		case .gitHubAPITimeout:
 			return "GitHub API timed out"
-			
+
 		case let .unknownDependencies(names):
 			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile."
 
@@ -308,6 +314,9 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .taskError(taskError):
 			return taskError.description
+
+		case let .internalError(description):
+			return description
 		}
 	}
 }
@@ -448,7 +457,7 @@ extension DuplicateDependency: Comparable {
 				return false
 			}
 		}
-		
+
 		return false
 	}
 }
