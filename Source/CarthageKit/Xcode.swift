@@ -16,6 +16,74 @@ import XCDBLD
 /// to the working directory).
 public let CarthageBinariesFolderPath = "Carthage/Build"
 
+/// Emits the currect Swift version
+internal let swiftVersion: SignalProducer<String, SwiftVersionError> = { return determineSwiftVersion().replayLazily(upTo: 1) }()
+
+/// Attempts to determine the local version of swift
+private func determineSwiftVersion() -> SignalProducer<String, SwiftVersionError> {
+	let taskDescription = Task("/usr/bin/env", arguments: ["xcrun", "swift", "--version"])
+
+	return taskDescription.launch(standardInput: nil)
+		.ignoreTaskData()
+		.mapError { _ in SwiftVersionError.unknownLocalSwiftVersion }
+		.map { data -> String? in
+			return parseSwiftVersionCommand(output: String(data: data, encoding: .utf8))
+		}
+		.attemptMap { Result($0, failWith: SwiftVersionError.unknownLocalSwiftVersion) }
+}
+
+/// Parses output of `swift --version` for the version string.
+private func parseSwiftVersionCommand(output: String?) -> String? {
+	guard
+		let output = output,
+		let regex = try? NSRegularExpression(pattern: "Apple Swift version (.+) \\(", options: []),
+		let matchRange = regex.firstMatch(in: output, options: [], range: NSRange(location: 0, length: output.characters.count))?.rangeAt(1)
+		else {
+			return nil
+	}
+
+	return (output as NSString).substring(with: matchRange)
+}
+
+/// Determines the Swift version of a framework at a given `URL`.
+internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, SwiftVersionError> {
+	guard
+		let swiftHeaderURL = frameworkURL.swiftHeaderURL(),
+		let data = try? Data(contentsOf: swiftHeaderURL),
+		let contents = String(data: data, encoding: .utf8),
+		let swiftVersion = parseSwiftVersionCommand(output: contents)
+		else {
+			return SignalProducer(error: .unknownFrameworkSwiftVersion)
+	}
+
+	return SignalProducer(value: swiftVersion)
+}
+
+/// Determines whether a framework was built with Swift
+internal func isSwiftFramework(_ frameworkURL: URL) -> SignalProducer<Bool, SwiftVersionError> {
+	return SignalProducer(value: frameworkURL.swiftmoduleURL() != nil)
+}
+
+/// Emits the framework URL if it matches the local Swift version and errors if not.
+internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL) -> SignalProducer<URL, SwiftVersionError> {
+	return SignalProducer.combineLatest(swiftVersion, frameworkSwiftVersion(frameworkURL))
+		.attemptMap() { localSwiftVersion, frameworkSwiftVersion in
+			return localSwiftVersion == frameworkSwiftVersion
+				? .success(frameworkURL)
+				: .failure(.incompatibleFrameworkSwiftVersions(local: localSwiftVersion, framework: frameworkSwiftVersion))
+	}
+}
+
+/// Emits the framework URL if it is compatible with the build environment and errors if not.
+internal func checkFrameworkCompatibility(_ frameworkURL: URL) -> SignalProducer<URL, SwiftVersionError> {
+	return isSwiftFramework(frameworkURL)
+		.flatMap(.merge) { isSwift in
+			return isSwift
+				? checkSwiftFrameworkCompatibility(frameworkURL)
+				: SignalProducer(value: frameworkURL)
+		}
+}
+
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
 public func xcodebuildTask(_ tasks: [String], _ buildArguments: BuildArguments) -> Task {

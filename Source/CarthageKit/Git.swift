@@ -15,7 +15,7 @@ import ReactiveTask
 public let CarthageRequiredGitVersion = "2.3.0"
 
 /// Represents a URL for a Git remote.
-public struct GitURL: Equatable {
+public struct GitURL {
 	/// The string representation of the URL.
 	public let urlString: String
 
@@ -27,11 +27,11 @@ public struct GitURL: Equatable {
 
 		if let parsedURL = parsedURL, let host = parsedURL.host {
 			// Normal, valid URL.
-			let path = stripGitSuffix(parsedURL.carthage_path)
+			let path = strippingGitSuffix(parsedURL.carthage_path)
 			return "\(host)\(path)"
 		} else if urlString.hasPrefix("/") {
 			// Local path.
-			return stripGitSuffix(urlString)
+			return strippingGitSuffix(urlString)
 		} else {
 			// scp syntax.
 			var strippedURLString = urlString
@@ -46,7 +46,7 @@ public struct GitURL: Equatable {
 				strippedURLString.removeSubrange(strippedURLString.startIndex...index)
 			}
 
-			var path = stripGitSuffix(strippedURLString)
+			var path = strippingGitSuffix(strippedURLString)
 			if !path.hasPrefix("/") {
 				// This probably isn't strictly legit, but we'll have a forward
 				// slash for other URL types.
@@ -64,7 +64,7 @@ public struct GitURL: Equatable {
 		return components
 			.last
 			.map(String.init)
-			.map(stripGitSuffix)
+			.map(strippingGitSuffix)
 	}
 
 	public init(_ urlString: String) {
@@ -73,17 +73,14 @@ public struct GitURL: Equatable {
 }
 
 /// Strips any trailing .git in the given name, if one exists.
-public func stripGitSuffix(_ string: String) -> String {
-	if string.hasSuffix(".git") {
-		let end = string.characters.index(string.endIndex, offsetBy: -4)
-		return string[string.startIndex..<end]
-	} else {
-		return string
-	}
+public func strippingGitSuffix(_ string: String) -> String {
+	return string.stripping(suffix: ".git")
 }
 
-public func ==(_ lhs: GitURL, _ rhs: GitURL) -> Bool {
-	return lhs.normalizedURLString == rhs.normalizedURLString
+extension GitURL: Equatable {
+	public static func ==(_ lhs: GitURL, _ rhs: GitURL) -> Bool {
+		return lhs.normalizedURLString == rhs.normalizedURLString
+	}
 }
 
 extension GitURL: Hashable {
@@ -99,7 +96,7 @@ extension GitURL: CustomStringConvertible {
 }
 
 /// A Git submodule.
-public struct Submodule: Equatable {
+public struct Submodule {
 	/// The name of the submodule. Usually (but not always) the same as the
 	/// path.
 	public let name: String
@@ -121,11 +118,11 @@ public struct Submodule: Equatable {
 	}
 }
 
-public func ==(_ lhs: Submodule, _ rhs: Submodule) -> Bool {
-	return lhs.name == rhs.name && lhs.path == rhs.path && lhs.url == rhs.url && lhs.sha == rhs.sha
-}
-
 extension Submodule: Hashable {
+	public static func ==(_ lhs: Submodule, _ rhs: Submodule) -> Bool {
+		return lhs.name == rhs.name && lhs.path == rhs.path && lhs.url == rhs.url && lhs.sha == rhs.sha
+	}
+
 	public var hashValue: Int {
 		return name.hashValue
 	}
