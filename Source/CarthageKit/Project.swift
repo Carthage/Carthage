@@ -11,6 +11,7 @@ import Result
 import ReactiveSwift
 import Tentacle
 import XCDBLD
+import ReactiveTask
 
 /// Carthage's bundle identifier.
 public let CarthageKitBundleIdentifier = Bundle(for: Project.self).bundleIdentifier!
@@ -31,13 +32,13 @@ private let fallbackDependenciesURL: URL = {
 /// ~/Library/Caches/org.carthage.CarthageKit/
 private let CarthageUserCachesURL: URL = {
 	let fileManager = FileManager.default
-	
+
 	let urlResult: Result<URL, NSError> = `try` { (error: NSErrorPointer) -> URL? in
 		return try? fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
 	}.flatMap { cachesURL in
 		let dependenciesURL = cachesURL.appendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
 		let dependenciesPath = dependenciesURL.carthage_absoluteString
-		
+
 		if fileManager.fileExists(atPath: dependenciesPath, isDirectory:nil) {
 			if fileManager.isWritableFile(atPath: dependenciesPath) {
 				return Result(value: dependenciesURL)
@@ -94,13 +95,13 @@ public let CarthageProjectBinaryAssetContentTypes = [
 ]
 
 /// Describes an event occurring to or with a project.
-public enum ProjectEvent: Equatable {
+public enum ProjectEvent {
 	/// The project is beginning to clone.
 	case cloning(ProjectIdentifier)
 
 	/// The project is beginning a fetch.
 	case fetching(ProjectIdentifier)
-	
+
 	/// The project is being checked out to the specified revision.
 	case checkingOut(ProjectIdentifier, String)
 
@@ -120,26 +121,32 @@ public enum ProjectEvent: Equatable {
 	/// Building the project is being skipped, since the project is not sharing
 	/// any framework schemes.
 	case skippedBuilding(ProjectIdentifier, String)
+
+	/// Installing of a binary framework is being skipped because of an inability
+	/// to verify that it was built with a compatible Swift version.
+	case skippedInstallingBinaries(project: ProjectIdentifier, error: Error)
 }
 
-public func == (lhs: ProjectEvent, rhs: ProjectEvent) -> Bool {
-	switch (lhs, rhs) {
-	case let (.cloning(left), .cloning(right)):
-		return left == right
-	case let (.fetching(left), .fetching(right)):
-		return left == right
-	case let (.checkingOut(leftIdentifier, leftRevision), .checkingOut(rightIdentifier, rightRevision)):
-		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
-	case let (.downloadingBinaryFrameworkDefinition(leftIdentifier, leftURL), .downloadingBinaryFrameworkDefinition(rightIdentifier, rightURL)):
-		return leftIdentifier == rightIdentifier && leftURL == rightURL
-	case let (.downloadingBinaries(leftIdentifier, leftRevision), .downloadingBinaries(rightIdentifier, rightRevision)):
-		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
-	case let (.skippedDownloadingBinaries(leftIdentifier, leftRevision), .skippedDownloadingBinaries(rightIdentifier, rightRevision)):
-		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
-	case let (.skippedBuilding(leftIdentifier, leftRevision), .skippedBuilding(rightIdentifier, rightRevision)):
-		return leftIdentifier == rightIdentifier && leftRevision == rightRevision
-	default:
-		return false
+extension ProjectEvent: Equatable {
+	public static func == (lhs: ProjectEvent, rhs: ProjectEvent) -> Bool {
+		switch (lhs, rhs) {
+		case let (.cloning(left), .cloning(right)):
+			return left == right
+		case let (.fetching(left), .fetching(right)):
+			return left == right
+		case let (.checkingOut(leftIdentifier, leftRevision), .checkingOut(rightIdentifier, rightRevision)):
+			return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+		case let (.downloadingBinaryFrameworkDefinition(leftIdentifier, leftURL), .downloadingBinaryFrameworkDefinition(rightIdentifier, rightURL)):
+			return leftIdentifier == rightIdentifier && leftURL == rightURL
+		case let (.downloadingBinaries(leftIdentifier, leftRevision), .downloadingBinaries(rightIdentifier, rightRevision)):
+			return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+		case let (.skippedDownloadingBinaries(leftIdentifier, leftRevision), .skippedDownloadingBinaries(rightIdentifier, rightRevision)):
+			return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+		case let (.skippedBuilding(leftIdentifier, leftRevision), .skippedBuilding(rightIdentifier, rightRevision)):
+			return leftIdentifier == rightIdentifier && leftRevision == rightRevision
+		default:
+			return false
+		}
 	}
 }
 
@@ -168,7 +175,7 @@ public final class Project {
 	/// Whether to download binaries for dependencies, or just check out their
 	/// repositories.
 	public var useBinaries = false
-	
+
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
 	public let projectEvents: Signal<ProjectEvent, NoError>
@@ -219,7 +226,7 @@ public final class Project {
 				return false
 			}
 		}
-		
+
 		let cartfile = SignalProducer.attempt {
 				return Cartfile.from(file: cartfileURL)
 			}
@@ -376,11 +383,11 @@ public final class Project {
 				if versions.isEmpty {
 					return SignalProducer(error: .taggedVersionNotFound(project))
 				}
-				
+
 				return SignalProducer(versions)
 			}
 	}
-	
+
 	/// Loads the dependencies for the given dependency, at the given version.
 	private func dependencies(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> {
 
@@ -445,7 +452,7 @@ public final class Project {
 			.map(Set.init)
 			.map(ResolvedCartfile.init)
 	}
-	
+
 	/// Attempts to determine which of the project's Carthage
 	/// dependencies are out of date.
 	///
@@ -502,7 +509,7 @@ public final class Project {
 	}
 
 	/// Unzips the file at the given URL and copies the frameworks, DSYM and bcsymbolmap files into the corresponding folders
-	/// for the project.
+	/// for the project. This step will also check framework compatibility.
 	///
 	/// Sends the temporary URL of the unzipped directory
 	private func unzipAndCopyBinaryFrameworks(zipFile: URL) -> SignalProducer<URL, CarthageError> {
@@ -510,6 +517,10 @@ public final class Project {
 			.flatMap(.concat, transform: unzip(archive:))
 			.flatMap(.concat) { directoryURL in
 				return frameworksInDirectory(directoryURL)
+					.flatMap(.merge) { url in
+						return checkFrameworkCompatibility(url)
+							.mapError { error in CarthageError.internalError(description: error.description) }
+					}
 					.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
 					.flatMap(.merge) { frameworkURL in
 						return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
@@ -564,6 +575,10 @@ public final class Project {
 						})
 						.flatMap(.concat) { self.removeItem(at: $0) }
 						.map { true }
+						.flatMapError { error in
+							self._projectEventsObserver.send(value: .skippedInstallingBinaries(project: project, error: error))
+							return SignalProducer(value: false)
+						}
 						.concat(value: false)
 						.take(first: 1)
 
@@ -573,7 +588,7 @@ public final class Project {
 			}
 	}
 
-	/// Downloads any binaries and debug symbols that may be able to be used 
+	/// Downloads any binaries and debug symbols that may be able to be used
 	/// instead of a repository checkout.
 	///
 	/// Sends the URL to each downloaded zip, after it has been moved to a
@@ -588,7 +603,7 @@ public final class Project {
 				switch error {
 				case .doesNotExist:
 					return .empty
-					
+
 				case let .apiError(_, _, error):
 					// Log the GitHub API request failure, not to error out,
 					// because that should not be fatal error.
@@ -648,7 +663,7 @@ public final class Project {
 		return dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
 	}
-	
+
 	/// Copies any *.bcsymbolmap files matching the given framework and contained
 	/// within the given directory URL to the directory that the framework
 	/// resides within.
@@ -671,11 +686,11 @@ public final class Project {
 		return cloneOrFetchDependency(project, commitish: revision)
 			.flatMap(.merge) { repositoryURL -> SignalProducer<(), CarthageError> in
 				let workingDirectoryURL = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true)
-				
+
 				/// The submodule for an already existing submodule at dependency project’s path
 				/// or the submodule to be added at this path given the `--use-submodules` flag.
 				let submodule: Submodule?
-				
+
 				if var foundSubmodule = submodulesByPath[project.relativePath] {
 					foundSubmodule.url = project.gitURL(preferHTTPS: self.preferHTTPS)!
 					foundSubmodule.sha = revision
@@ -687,7 +702,7 @@ public final class Project {
 				}
 
 				let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
-				
+
 				if let submodule = submodule {
 					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
 					// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
@@ -710,7 +725,7 @@ public final class Project {
 				self._projectEventsObserver.send(value: .checkingOut(project, revision))
 			})
 	}
-	
+
 	public func buildOrderForResolvedCartfile(_ cartfile: ResolvedCartfile, dependenciesToInclude: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		typealias DependencyGraph = [ProjectIdentifier: Set<ProjectIdentifier>]
 		// A resolved cartfile already has all the recursive dependencies. All we need to do is sort
@@ -757,7 +772,7 @@ public final class Project {
 				submodulesByPath[submodule.path] = submodule
 				return submodulesByPath
 			}
-		
+
 		return loadResolvedCartfile()
 			.flatMap(.merge) { resolvedCartfile in
 				return self

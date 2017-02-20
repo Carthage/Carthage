@@ -39,8 +39,8 @@ extension Repository {
 	}
 
 	/// The URL for filing a new GitHub issue for this repository.
-	public var newIssueURL: NSURL {
-		return NSURL(string: "\(server)/\(owner)/\(name)/issues/new")!
+	public var newIssueURL: URL {
+		return URL(string: "\(server)/\(owner)/\(name)/issues/new")!
 	}
 	
 	/// Matches an identifier of the form "owner/name".
