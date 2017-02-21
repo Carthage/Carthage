@@ -126,7 +126,7 @@ If you need to reclaim disk space, you can safely delete this folder, or any of 
 
 ## Binary Project Specification
 
-For depenencies that do not have source code available, a binary project specification can be used to list the locations and versions of compiled frameworks.  This data **must** be available via `https` and could be served from a static file or dynamically.
+For dependencies that do not have source code available, a binary project specification can be used to list the locations and versions of compiled frameworks.  This data **must** be available via `https` and could be served from a static file or dynamically.
 
 * The JSON structure is a top-level dictionary with the key-value pairs of version / location.
 * The version **must** be a semantic version.  Git branches, tags and commits are not valid.
