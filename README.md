@@ -84,6 +84,10 @@ When archiving your application for submission to the App Store or TestFlight, X
 
 Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.resolved][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.resolved][]**, because anyone else using the project will need that file to build the same framework versions.
 
+##### Swift binary framework download compatibility
+
+Carthage will check to make sure that downloaded Swift (and mixed Objective-C/Swift) frameworks were built with the same version of Swift that is in use locally. If there is a version mismatch, Carthage will proceed to build the framework from source. If the framework cannot be built from source, Carthage will fail.
+
 ### Running a project that uses Carthage
 
 After you’ve finished the above steps and pushed your changes, other users of the project only need to fetch the repository and run `carthage bootstrap` to get started with the frameworks you’ve added.
@@ -269,12 +273,6 @@ Want to advertise that your project can be used with Carthage? You can add a com
 
 ##### DWARFs symbol problem
 Pre-built framework cannot be debugged using step execution on other machine than on which the framework was built. Simply `carthage bootstrap/build/update --no-use-binaries` should fix this, but for more automated workaround, see [#924](https://github.com/Carthage/Carthage/issues/924). Dupe [rdar://23551273](http://www.openradar.me/23551273) if you want Apple to fix the root cause of this problem.
-
-##### Compile Errors
-
-If, having built & imported the dependencies into the project, you get an error which begins: ```Module file was created by an older (newer) version of the compiler``` ... it may be that Carthage downloaded and used an existing compiled binary from the remote repo which is not compatible with the local machine.
-
-To force Carthage to compile from source itself for those libraries, append the flag ```--no-use-binaries``` to the ```carthage bootstrap/build/update``` command.  For example: ```carthage bootstrap --no-use-binaries```
 
 ## CarthageKit
 

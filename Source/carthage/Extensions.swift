@@ -100,7 +100,7 @@ internal struct ProjectEventSink {
 
 		case let .fetching(project):
 			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(project.name))
-			
+
 		case let .checkingOut(project, revision):
 			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(project.name) + " at " + formatting.quote(revision))
 
@@ -113,15 +113,18 @@ internal struct ProjectEventSink {
 		case let .skippedDownloadingBinaries(project, message):
 			carthage.println(formatting.bullets + "Skipped downloading " + formatting.projectName(project.name) + ".framework binary due to the error:\n\t" + formatting.quote(message))
 
+		case let .skippedInstallingBinaries(project, error):
+			carthage.println(formatting.bullets + "Skipped installing " + formatting.projectName(project.name) + ".framework binary due to the error:\n\t" + formatting.quote(String(describing: error)))
+
 		case let .skippedBuilding(project, message):
 			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(project.name) + " due to the error:\n" + message)
-			
+
 		case let .skippedBuildingCached(project):
 			carthage.println(formatting.bullets + "Valid cache found for " + formatting.projectName(project.name) + ", skipping build")
-			
+
 		case let .rebuildingCached(project):
 			carthage.println(formatting.bullets + "Invalid cache found for " + formatting.projectName(project.name) + ", rebuilding with all downstream dependencies")
-			
+
 		case let .buildingUncached(project):
 			carthage.println(formatting.bullets + "No cache found for " + formatting.projectName(project.name) + ", building with all downstream dependencies")
 		}

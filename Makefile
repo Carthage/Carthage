@@ -3,6 +3,7 @@ PREFIX?=/usr/local
 
 XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage' DSTROOT=$(TEMPORARY_FOLDER)
 
+INTERNAL_PACKAGE=CarthageApp.pkg
 OUTPUT_PACKAGE=Carthage.pkg
 OUTPUT_FRAMEWORK=CarthageKit.framework
 OUTPUT_FRAMEWORK_ZIP=CarthageKit.framework.zip
@@ -16,6 +17,7 @@ BINARIES_FOLDER=/usr/local/bin
 
 VERSION_STRING=$(shell agvtool what-marketing-version -terse1)
 COMPONENTS_PLIST=Source/carthage/Components.plist
+DISTRIBUTION_PLIST=Source/carthage/Distribution.plist
 
 .PHONY: all bootstrap clean install package test uninstall
 
@@ -29,13 +31,14 @@ test: clean bootstrap
 	xcodebuild $(XCODEFLAGS) test
 
 clean:
+	rm -f "$(INTERNAL_PACKAGE)"
 	rm -f "$(OUTPUT_PACKAGE)"
 	rm -f "$(OUTPUT_FRAMEWORK_ZIP)"
 	rm -rf "$(TEMPORARY_FOLDER)"
 	xcodebuild $(XCODEFLAGS) clean
 
 install: package
-	sudo installer -pkg Carthage.pkg -target /
+	sudo installer -pkg $(OUTPUT_PACKAGE) -target /
 
 uninstall:
 	rm -rf "$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)"
@@ -62,6 +65,11 @@ package: installables
 		--install-location "/" \
 		--root "$(TEMPORARY_FOLDER)" \
 		--version "$(VERSION_STRING)" \
-		"$(OUTPUT_PACKAGE)"
-	
+		"$(INTERNAL_PACKAGE)"
+
+	productbuild \
+  	--distribution "$(DISTRIBUTION_PLIST)" \
+  	--package-path "$(INTERNAL_PACKAGE)" \
+   	"$(OUTPUT_PACKAGE)"
+
 	(cd "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" && zip -q -r --symlinks - "$(OUTPUT_FRAMEWORK)") > "$(OUTPUT_FRAMEWORK_ZIP)"
