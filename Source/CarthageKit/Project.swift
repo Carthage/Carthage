@@ -296,8 +296,8 @@ public final class Project {
 	}
 
 	/// Produces the sub dependencies of the given dependency
-	func dependencyProjects(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Set<ProjectIdentifier>, CarthageError> {
-		return self.dependencies(for: dependency)
+	func dependencyProjects(for dependency: Dependency<PinnedVersion>, usingCheckout: Bool) -> SignalProducer<Set<ProjectIdentifier>, CarthageError> {
+		return self.dependencies(for: dependency, usingCheckout: usingCheckout)
 			.map { $0.project }
 			.collect()
 			.map { Set($0) }
@@ -398,20 +398,31 @@ public final class Project {
 	}
 
 	/// Loads the dependencies for the given dependency, at the given version.
-	private func dependencies(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> {
+	private func dependencies(for dependency: Dependency<PinnedVersion>, usingCheckout: Bool) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> {
 
 		switch dependency.project {
 		case .git, .gitHub:
-			let revision = dependency.version.commitish
-			return self.cloneOrFetchDependency(dependency.project, commitish: revision)
-				.flatMap(.concat) { repositoryURL in
-					return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
-				}
-				.flatMapError { _ in .empty }
-				.attemptMap(Cartfile.from(string:))
+			let cartfileProducer: SignalProducer<Cartfile, CarthageError>
+			if usingCheckout {
+				let cartfileURL = self.directoryURL.appendingPathComponent(dependency.project.relativePath).appendingPathComponent(CarthageProjectCartfilePath)
+
+				cartfileProducer = SignalProducer<Cartfile, CarthageError>
+					.attempt {
+						return Cartfile.from(file: cartfileURL).recover(with: Cartfile.from(string: "")) // Ignore errors as the cartfile may not exist if it's a leaf in the dependency graph.
+					}
+			} else {
+				let revision = dependency.version.commitish
+				cartfileProducer = self.cloneOrFetchDependency(dependency.project, commitish: revision)
+					.flatMap(.concat) { repositoryURL in
+						return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
+					}
+					.flatMapError { _ in .empty }
+					.attemptMap(Cartfile.from(string:))
+			}
+			return cartfileProducer
 				.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
 					return SignalProducer(cartfile.dependencies)
-			}
+				}
 		case .binary:
 			// Binary-only frameworks do not support dependencies
 			return .empty
@@ -442,7 +453,10 @@ public final class Project {
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
 	public func updatedResolvedCartfile(_ dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
-		let resolver = Resolver(versionsForDependency: versions(for:), dependenciesForDependency: dependencies(for:), resolvedGitReference: resolvedGitReference)
+		let dependenciesForDependency = { dependency in
+			return self.dependencies(for: dependency, usingCheckout: false)
+		}
+		let resolver = Resolver(versionsForDependency: versions(for:), dependenciesForDependency: dependenciesForDependency, resolvedGitReference: resolvedGitReference)
 
 		let resolvedCartfile: SignalProducer<ResolvedCartfile?, CarthageError> = loadResolvedCartfile()
 			.map(Optional.init)
@@ -710,7 +724,7 @@ public final class Project {
 						.startOnQueue(self.gitOperationQueue)
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
-						.then(self.dependencyProjects(for: dependency))
+						.then(self.dependencyProjects(for: dependency, usingCheckout: true))
 						.flatMap(.merge) { dependencies in
 							return self.symlinkCheckoutPathsForDependencyProject(dependency.project, subDependencies: dependencies, rootDirectoryURL: self.directoryURL)
 						}
@@ -721,7 +735,7 @@ public final class Project {
 			})
 	}
 
-	public func buildOrderForResolvedCartfile(_ cartfile: ResolvedCartfile, dependenciesToInclude: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	public func buildOrderForResolvedCartfile(_ cartfile: ResolvedCartfile, usingCheckout: Bool, dependenciesToInclude: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
 		typealias DependencyGraph = [ProjectIdentifier: Set<ProjectIdentifier>]
 		// A resolved cartfile already has all the recursive dependencies. All we need to do is sort
 		// out the relationships between them. Loading the cartfile will each will give us its
@@ -729,7 +743,7 @@ public final class Project {
 		// dependencies before the projects that depend on them.
 		return SignalProducer<Dependency<PinnedVersion>, CarthageError>(cartfile.dependencies)
 			.flatMap(.merge) { (dependency: Dependency<PinnedVersion>) -> SignalProducer<DependencyGraph, CarthageError> in
-				return self.dependencyProjects(for: dependency)
+				return self.dependencyProjects(for: dependency, usingCheckout: usingCheckout)
 					.map { dependencies in
 						[dependency.project: dependencies]
 					}
@@ -771,7 +785,7 @@ public final class Project {
 		return loadResolvedCartfile()
 			.flatMap(.merge) { resolvedCartfile in
 				return self
-					.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToCheckout)
+					.buildOrderForResolvedCartfile(resolvedCartfile, usingCheckout: false, dependenciesToInclude: dependenciesToCheckout)
 					.collect()
 			}
 			.zip(with: submodulesSignal)
@@ -904,12 +918,12 @@ public final class Project {
 	public func buildCheckedOutDependenciesWithOptions(_ options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.concat) { resolvedCartfile -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
-				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
+				return self.buildOrderForResolvedCartfile(resolvedCartfile, usingCheckout: true, dependenciesToInclude: dependenciesToBuild)
 			}
 			.flatMap(.concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>, Bool?), CarthageError> in
 				return SignalProducer.combineLatest(
 					SignalProducer(value: dependency),
-					self.dependencyProjects(for: dependency),
+					self.dependencyProjects(for: dependency, usingCheckout: true),
 					versionFileMatches(dependency, platforms: options.platforms, rootDirectoryURL: self.directoryURL)
 				)
 			}
