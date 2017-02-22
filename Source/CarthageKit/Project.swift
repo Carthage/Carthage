@@ -403,12 +403,14 @@ public final class Project {
 		switch dependency.project {
 		case .git, .gitHub:
 			let cartfileProducer: SignalProducer<Cartfile, CarthageError>
-			if usingCheckout {
-				let cartfileURL = self.directoryURL.appendingPathComponent(dependency.project.relativePath).appendingPathComponent(CarthageProjectCartfilePath)
-
+			let dependencyCheckoutURL = self.directoryURL.appendingPathComponent(dependency.project.relativePath)
+			 // If the checkout directory doesn't exist, it may be a binary download, so fall back to fetching the cartfile
+			if usingCheckout && FileManager.default.fileExists(atPath: dependencyCheckoutURL.path) {
+				let cartfileURL = dependencyCheckoutURL.appendingPathComponent(CarthageProjectCartfilePath)
 				cartfileProducer = SignalProducer<Cartfile, CarthageError>
 					.attempt {
-						return Cartfile.from(file: cartfileURL).recover(with: Cartfile.from(string: "")) // Ignore errors as the cartfile may not exist if it's a leaf in the dependency graph.
+						// Ignore errors since the cartfile may not exist if it's a leaf in the dependency graph.
+						return Cartfile.from(file: cartfileURL).recover(with: Cartfile.from(string: ""))
 					}
 			} else {
 				let revision = dependency.version.commitish
