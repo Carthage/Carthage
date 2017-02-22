@@ -12,9 +12,113 @@ import Nimble
 import Quick
 import ReactiveSwift
 import Tentacle
+import Result
+import ReactiveTask
+import XCDBLD
 
 class ProjectSpec: QuickSpec {
 	override func spec() {
+		describe("createAndCheckVersionFiles") {
+			let directoryURL = Bundle(for: type(of: self)).url(forResource: "DependencyTest", withExtension: nil)!
+			let buildDirectoryURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
+			
+			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true) -> Set<String> {
+				var builtSchemes: [String] = []
+				
+				let project = Project(directoryURL: directoryURL)
+				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, toolchain: "com.apple.dt.toolchain.Swift_2_3", cacheBuilds: cacheBuilds))
+					.flatten(.concat)
+					.ignoreTaskData()
+					.on(value: { (project, scheme) in
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+						builtSchemes.append(scheme)
+					})
+					.wait()
+				expect(result.error).to(beNil())
+				
+				return Set(builtSchemes)
+			}
+			
+			func overwriteFramework(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL) {
+				let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
+				let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
+				let binaryURL = frameworkURL.appendingPathComponent(frameworkName, isDirectory: false)
+				
+				let data = "junkdata".data(using: .utf8)!
+				try! data.write(to: binaryURL, options: .atomic)
+			}
+			
+			beforeEach {
+				let _ = try? FileManager.default.removeItem(at: buildDirectoryURL)
+			}
+			
+			it("should not rebuild cached frameworks unless instructed to ignore cached builds") {
+				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
+				
+				let result1 = buildDependencyTest(platforms: [.macOS])
+				expect(result1).to(equal(expected))
+				
+				let result2 = buildDependencyTest(platforms: [.macOS])
+				expect(result2).to(equal(Set<String>()))
+				
+				let result3 = buildDependencyTest(platforms: [.macOS], cacheBuilds: false)
+				expect(result3).to(equal(expected))
+			}
+			
+			it("should rebuild cached frameworks (and dependencies) whose md5 does not match the version file") {
+				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
+				
+				let result1 = buildDependencyTest(platforms: [.macOS])
+				expect(result1).to(equal(expected))
+				
+				overwriteFramework("Prelude", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+				
+				let result2 = buildDependencyTest(platforms: [.macOS])
+				expect(result2).to(equal(expected))
+			}
+			
+			it("should rebuild cached frameworks (and dependencies) whose version does not match the version file") {
+				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
+				
+				let result1 = buildDependencyTest(platforms: [.macOS])
+				expect(result1).to(equal(expected))
+				
+				let preludeVersionFileURL = buildDirectoryURL.appendingPathComponent(".Prelude.version", isDirectory: false)
+				let preludeVersionFilePath = preludeVersionFileURL.path
+				
+				let json = try! String(contentsOf: preludeVersionFileURL, encoding: .utf8)
+				let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"1.6.0\"", with: "\"commitish\" : \"1.6.1\"")
+				let _ = try! modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
+				
+				let result2 = buildDependencyTest(platforms: [.macOS])
+				expect(result2).to(equal(expected))
+			}
+			
+			it("should not rebuild cached frameworks unnecessarily") {
+				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
+				
+				let result1 = buildDependencyTest(platforms: [.macOS])
+				expect(result1).to(equal(expected))
+				
+				overwriteFramework("Either", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+				
+				let result2 = buildDependencyTest(platforms: [.macOS])
+				expect(result2).to(equal(["Either-Mac", "Madness-Mac"]))
+			}
+			
+			it("should rebuild a framework for all platforms even a cached framework is invalid for only a single platform") {
+				let expected: Set = ["Prelude-Mac", "Prelude-iOS", "Either-Mac", "Either-iOS", "Madness-Mac", "Madness-iOS"]
+				
+				let result1 = buildDependencyTest()
+				expect(result1).to(equal(expected))
+				
+				overwriteFramework("Madness", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+				
+				let result2 = buildDependencyTest()
+				expect(result2).to(equal(["Madness-Mac", "Madness-iOS"]))
+			}
+		}
+		
 		describe("loadCombinedCartfile") {
 			it("should load a combined Cartfile when only a Cartfile is present") {
 				let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfileOnly", withExtension: nil)!

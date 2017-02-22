@@ -140,6 +140,10 @@ If you want to work on your dependencies during development, and want them to be
 
 Note that you should be [using submodules](#using-submodules-for-dependencies) before doing this, because plain checkouts [should not be modified][Carthage/Checkouts] directly.
 
+### Caching builds
+
+By default Carthage will rebuild a dependency regardless of whether it's the same resolved version as before. Passing the `--cache-builds` will cause carthage to avoid rebuilding a dependency if it can. See information on [version files][VersionFile] for details on how carthage performs this caching. 
+
 ### Bash/Zsh/Fish completion
 
 Auto completion of Carthage commands and options are available as documented in [Bash/Zsh/Fish Completion][Bash/Zsh/Fish Completion].
@@ -289,3 +293,4 @@ Header backdrop photo is released under the [CC BY-NC-SA 2.0](https://creativeco
 [Carthage/Checkouts]: Documentation/Artifacts.md#carthagecheckouts
 [Bash/Zsh/Fish Completion]: Documentation/BashZshFishCompletion.md
 [CarthageKit]: Source/CarthageKit
+[VersionFile]: Documentation/VersionFile.md
