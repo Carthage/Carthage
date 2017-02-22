@@ -47,7 +47,7 @@ public enum CarthageError: Error {
 	/// Failed to write a file or directory at the given URL.
 	case writeFailed(URL, NSError?)
 
-	/// An error occurred parsing a Carthage file.
+	/// An error occurred parsing a Carthage file or task result
 	case parseError(description: String)
 
 	/// An error occurred parsing the binary-only framework definition file

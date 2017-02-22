@@ -15,10 +15,10 @@ import ReactiveTask
 import XCDBLD
 
 extension BuildOptions: OptionsProtocol {
-	public static func create(_ configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> BuildOptions {
-		return { buildPlatform in { toolchain in { derivedDataPath in
-			return self.init(configuration: configuration, platforms: buildPlatform.platforms, toolchain: toolchain, derivedDataPath: derivedDataPath)
-		} } }
+	public static func create(_ configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> (Bool) -> BuildOptions {
+		return { buildPlatform in { toolchain in { derivedDataPath in { cacheBuilds in
+			return self.init(configuration: configuration, platforms: buildPlatform.platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, cacheBuilds: cacheBuilds)
+		} } } }
 	}
 
 	public static func evaluate(_ m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
@@ -31,6 +31,7 @@ extension BuildOptions: OptionsProtocol {
 			<*> m <| Option(key: "platform", defaultValue: .all, usage: "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')" + addendum)
 			<*> m <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 			<*> m <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
+			<*> m <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
 	}
 }
 
@@ -144,7 +145,7 @@ public struct BuildCommand: CommandProtocol {
 			return buildProducer
 		} else {
 			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions)
-				.flatMapError { error -> SignalProducer<BuildSchemeProducer, CarthageError> in
+				.flatMapError { error -> BuildSchemeProducer in
 					switch error {
 					case let .noSharedFrameworkSchemes(project, _):
 						// Log that building the current project is being skipped.
@@ -155,7 +156,7 @@ public struct BuildCommand: CommandProtocol {
 						return SignalProducer(error: error)
 					}
 				}
-			return buildProducer.concat(currentProducers)
+			return buildProducer.concat(value: currentProducers)
 		}
 	}
 

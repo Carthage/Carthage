@@ -118,13 +118,22 @@ public enum ProjectEvent {
 	/// or rate-limiting.
 	case skippedDownloadingBinaries(ProjectIdentifier, String)
 
+	/// Installing of a binary framework is being skipped because of an inability
+	/// to verify that it was built with a compatible Swift version.
+	case skippedInstallingBinaries(project: ProjectIdentifier, error: Error)
+
 	/// Building the project is being skipped, since the project is not sharing
 	/// any framework schemes.
 	case skippedBuilding(ProjectIdentifier, String)
 
-	/// Installing of a binary framework is being skipped because of an inability
-	/// to verify that it was built with a compatible Swift version.
-	case skippedInstallingBinaries(project: ProjectIdentifier, error: Error)
+	/// Building the project is being skipped because it is cached.
+	case skippedBuildingCached(ProjectIdentifier)
+
+	/// Rebuilding a cached project because of a version file/framework mismatch.
+	case rebuildingCached(ProjectIdentifier)
+
+	/// Building an uncached project.
+	case buildingUncached(ProjectIdentifier)
 }
 
 extension ProjectEvent: Equatable {
@@ -888,12 +897,45 @@ public final class Project {
 
 	/// Attempts to build each Carthage dependency that has been checked out,
 	/// optionally they are limited by the given list of dependency names.
+	/// Cached dependencies whose dependency trees are also cached will not
+	/// be rebuilt unless otherwise specified via build options.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
 	public func buildCheckedOutDependenciesWithOptions(_ options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
-			.flatMap(.merge) { resolvedCartfile in
+			.flatMap(.concat) { resolvedCartfile -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
+			}
+			.flatMap(.concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>, Bool?), CarthageError> in
+				return SignalProducer.combineLatest(
+					SignalProducer(value: dependency),
+					self.dependencyProjects(for: dependency),
+					versionFileMatches(dependency, platforms: options.platforms, rootDirectoryURL: self.directoryURL)
+				)
+			}
+			.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
+				let (nextDependency, projects, matches) = nextGroup
+				let dependenciesIncludingNext = includedDependencies + [nextDependency]
+				let projectsToBeBuilt = Set(includedDependencies.map { $0.project })
+				guard options.cacheBuilds && projects.intersection(projectsToBeBuilt).isEmpty else {
+					return dependenciesIncludingNext
+				}
+
+				guard let versionFileMatches = matches else {
+					self._projectEventsObserver.send(value: .buildingUncached(nextDependency.project))
+					return dependenciesIncludingNext
+				}
+
+				if versionFileMatches {
+					self._projectEventsObserver.send(value: .skippedBuildingCached(nextDependency.project))
+					return includedDependencies
+				} else {
+					self._projectEventsObserver.send(value: .rebuildingCached(nextDependency.project))
+					return dependenciesIncludingNext
+				}
+			}
+			.flatMap(.concat) { dependencies in
+				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(dependencies)
 			}
 			.flatMap(.concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true).carthage_path
@@ -901,7 +943,7 @@ public final class Project {
 					return .empty
 				}
 
-				return buildDependencyProject(dependency.project, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+				return buildDependencyProject(dependency, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
 						switch error {
 						case .noSharedFrameworkSchemes:
