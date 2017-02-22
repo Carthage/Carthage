@@ -19,7 +19,7 @@ public struct BuildOptions {
 	/// The path to the custom derived data folder.
 	public var derivedDataPath: String?
 	/// Rebuild even if cached builds exist.
-	public let cacheBuilds: Bool
+	public var cacheBuilds: Bool
 
 	public init(configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil, cacheBuilds: Bool = true) {
 		self.configuration = configuration

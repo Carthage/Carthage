@@ -953,10 +953,10 @@ public final class Project {
 				}
 
 				var options = options
-				let baseUrl = options.derivedDataPath.flatMap(URL.init(string:)) ?? CarthageDependencyDerivedDataURL
-				let derivedDataPerDependency = baseUrl.appendingPathComponent(project.name, isDirectory: true)
+				let baseURL = options.derivedDataPath.flatMap(URL.init(string:)) ?? CarthageDependencyDerivedDataURL
+				let derivedDataPerDependency = baseURL.appendingPathComponent(project.name, isDirectory: true)
 				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version, isDirectory: true)
-				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().carthage_path
+				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
 				return buildDependencyProject(dependency, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
