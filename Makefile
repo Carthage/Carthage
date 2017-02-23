@@ -15,7 +15,7 @@ CARTHAGE_EXECUTABLE=$(BUILT_BUNDLE)/Contents/MacOS/carthage
 FRAMEWORKS_FOLDER=/Library/Frameworks
 BINARIES_FOLDER=/usr/local/bin
 
-VERSION_STRING=$(shell agvtool what-marketing-version -terse1)
+VERSION_STRING=$(shell git describe --abbrev=0 --tags)
 COMPONENTS_PLIST=Source/carthage/Components.plist
 DISTRIBUTION_PLIST=Source/carthage/Distribution.plist
 
