@@ -523,7 +523,13 @@ public final class Project {
 	/// Sends the temporary URL of the unzipped directory
 	private func unzipAndCopyBinaryFrameworks(zipFile: URL) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer<URL, CarthageError>(value: zipFile)
-			.flatMap(.concat, transform: unzip(archive:))
+			.flatMap(.concat) { fileURL -> SignalProducer<URL, CarthageError> in
+				if fileURL.pathExtension == "gz" {
+					return untargz(archive: fileURL)
+				} else {
+					return unzip(archive: fileURL)
+				}
+			}
 			.flatMap(.concat) { directoryURL in
 				return frameworksInDirectory(directoryURL)
 					.flatMap(.merge) { url in
