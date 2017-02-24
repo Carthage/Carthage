@@ -1,9 +1,0 @@
-#!/bin/bash -e
-
-main()
-{
-    local version=$(git describe --tags)
-    /usr/libexec/PlistBuddy -c "Set CFBundleShortVersionString $version" "${BUILT_PRODUCTS_DIR}/CarthageKit.framework/Resources/Info.plist"
-}
-
-main
