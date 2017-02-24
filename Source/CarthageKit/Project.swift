@@ -75,6 +75,12 @@ public let CarthageDependencyAssetsURL: URL = CarthageUserCachesURL.appendingPat
 /// ~/Library/Caches/org.carthage.CarthageKit/dependencies/
 public let CarthageDependencyRepositoriesURL: URL = CarthageUserCachesURL.appendingPathComponent("dependencies", isDirectory: true)
 
+/// The file URL to the directory in which per-dependency derived data
+/// directories will be stored.
+///
+/// ~/Library/Caches/org.carthage.CarthageKit/DerivedData/
+public let CarthageDependencyDerivedDataURL: URL = CarthageUserCachesURL.appendingPathComponent("DerivedData", isDirectory: true)
+
 /// The relative path to a project's Cartfile.
 public let CarthageProjectCartfilePath = "Cartfile"
 
@@ -974,10 +980,19 @@ public final class Project {
 				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(dependencies)
 			}
 			.flatMap(.concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
-				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true).carthage_path
+				let project = dependency.project
+				let version = dependency.version.commitish
+
+				let dependencyPath = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true).path
 				if !FileManager.default.fileExists(atPath: dependencyPath) {
 					return .empty
 				}
+
+				var options = options
+				let baseURL = options.derivedDataPath.flatMap(URL.init(string:)) ?? CarthageDependencyDerivedDataURL
+				let derivedDataPerDependency = baseURL.appendingPathComponent(project.name, isDirectory: true)
+				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version, isDirectory: true)
+				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
 				return buildDependencyProject(dependency, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.flatMapError { error in
@@ -986,7 +1001,7 @@ public final class Project {
 							// Log that building the dependency is being skipped,
 							// not to error out with `.noSharedFrameworkSchemes`
 							// to continue building other dependencies.
-							self._projectEventsObserver.send(value: .skippedBuilding(dependency.project, error.description))
+							self._projectEventsObserver.send(value: .skippedBuilding(project, error.description))
 							return .empty
 
 						default:
