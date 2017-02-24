@@ -695,7 +695,10 @@ public final class Project {
 		return cloneOrFetchDependency(project, commitish: revision)
 			.flatMap(.merge) { repositoryURL -> SignalProducer<(), CarthageError> in
 				let workingDirectoryURL = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true)
-				var submodule: Submodule?
+
+				/// The submodule for an already existing submodule at dependency project’s path
+				/// or the submodule to be added at this path given the `--use-submodules` flag.
+				let submodule: Submodule?
 
 				if var foundSubmodule = submodulesByPath[project.relativePath] {
 					foundSubmodule.url = project.gitURL(preferHTTPS: self.preferHTTPS)!
@@ -703,17 +706,28 @@ public final class Project {
 					submodule = foundSubmodule
 				} else if self.useSubmodules {
 					submodule = Submodule(name: project.relativePath, path: project.relativePath, url: project.gitURL(preferHTTPS: self.preferHTTPS)!, sha: revision)
+				} else {
+					submodule = nil
 				}
 
+				let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
+
 				if let submodule = submodule {
+					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
+					// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
 					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.carthage_path))
 						.startOnQueue(self.gitOperationQueue)
+						.then(symlinkCheckoutPaths)
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
-						.then(self.dependencyProjects(for: dependency))
-						.flatMap(.merge) { dependencies in
-							return self.symlinkCheckoutPathsForDependencyProject(dependency.project, subDependencies: dependencies, rootDirectoryURL: self.directoryURL)
-						}
+						// For checkouts of “ideally bare” repositories of `dependency`, we add its submodules by cloning ourselves, after symlinking.
+						.then(symlinkCheckoutPaths)
+						.then(
+							submodulesInRepository(repositoryURL, revision: revision)
+								.flatMap(.merge) {
+									cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL)
+								}
+						)
 				}
 			}
 			.on(started: {
@@ -850,39 +864,49 @@ public final class Project {
 	}
 
 	/// Creates symlink between the dependency checkouts and the root checkouts
-	private func symlinkCheckoutPathsForDependencyProject(_ dependency: ProjectIdentifier, subDependencies: Set<ProjectIdentifier>, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-		let rootCheckoutsURL = rootDirectoryURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
-		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
+	private func symlinkCheckoutPaths(for dependency: Dependency<PinnedVersion>, withRepository repositoryURL: URL, atRootDirectory rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
-		let subDependencyNames = subDependencies.map { $0.name }
 		let fileManager = FileManager.default
 
-		let symlinksProducer = SignalProducer<String, CarthageError>(subDependencyNames)
-			.filter { name in
-				let checkoutURL = rootCheckoutsURL.appendingPathComponent(name)
-				do {
-					return try checkoutURL.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory ?? false
-				} catch {
-					return false
-				}
-			}
-			.attemptMap { name -> Result<(), CarthageError> in
-				let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
-				let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
-				let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: subdirectoryPath)
-				do {
-					try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.carthage_path, withDestinationPath: linkDestinationPath)
-				} catch let error as NSError {
-					if !(error.domain == NSCocoaErrorDomain && error.code == NSFileWriteFileExistsError) {
-						return .failure(.writeFailed(dependencyCheckoutURL, error))
+		return self.dependencyProjects(for: dependency)
+			.zip(with: // file system objects which might conflict with symlinks
+				list(treeish: dependency.version.commitish, atPath: CarthageProjectCheckoutsPath, inRepository: repositoryURL)
+					.flatMap(.merge) { (path: String) -> SignalProducer<String, CarthageError> in
+						let componentsRelativeToDirectoryURL = {
+							return URL(string: $0, relativeTo: self.directoryURL)?.standardizedFileURL.carthage_pathComponents
+						}
+						if
+							let components = componentsRelativeToDirectoryURL(path),
+							let comparator = componentsRelativeToDirectoryURL(CarthageProjectCheckoutsPath),
+							Array(components.dropLast(1)) == comparator // file system object is contained (shallowly) by `CarthageProjectCheckoutsPath`
+						{
+							return .init(value: components.last!)
+						} else {
+							return .empty
+						}
 					}
-				}
-				return .success()
-			}
+					.collect()
+			)
+			.attemptMap { (dependencies: Set<ProjectIdentifier>, components: [String]) -> Result<(), CarthageError> in
+				let names = dependencies
+					.filter { dependency in
+						// Filter out dependencies with names matching (case-insensitively) file system objects from git in `CarthageProjectCheckoutsPath`.
+						// Edge case warning on file system case-sensitivity. If a differently-cased file system object exists in git
+						// and is stored on a case-sensitive file system (like the Sierra preview of APFS), we currently preempt
+						// the non-conflicting symlink. Probably, nobody actually desires or needs the opposite behavior.
+						!components.contains {
+							dependency.name.caseInsensitiveCompare($0) == .orderedSame
+						}
+					}
+					.map { $0.name }
 
-		return SignalProducer<(), CarthageError>
-			.attempt {
+				// If no `CarthageProjectCheckoutsPath`-housed symlinks are needed,
+				// return early after potentially adding submodules
+				// (which could be outside `CarthageProjectCheckoutsPath`).
+				if names.isEmpty { return .success() }
+
 				do {
 					try fileManager.createDirectory(at: dependencyCheckoutsURL, withIntermediateDirectories: true)
 				} catch let error as NSError {
@@ -890,9 +914,21 @@ public final class Project {
 						return .failure(.writeFailed(dependencyCheckoutsURL, error))
 					}
 				}
+
+				for name in names {
+					let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
+					let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
+					let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency.project, subdirectory: subdirectoryPath)
+
+					do {
+						try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.carthage_path, withDestinationPath: linkDestinationPath)
+					} catch let error as NSError {
+						return .failure(.writeFailed(dependencyCheckoutURL, error))
+					}
+				}
+
 				return .success()
 			}
-			.then(symlinksProducer)
 	}
 
 	/// Attempts to build each Carthage dependency that has been checked out,

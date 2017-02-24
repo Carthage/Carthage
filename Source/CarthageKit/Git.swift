@@ -262,7 +262,9 @@ public func contentsOfFileInRepository(_ repositoryFileURL: URL, _ path: String,
 /// Checks out the working tree of the given (ideally bare) repository, at the
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
-public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDirectoryURL: URL, revision: String = "HEAD", shouldCloneSubmodule: @escaping (Submodule) -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
+///
+/// Submodules of the working tree must be handled seperately.
+public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDirectoryURL: URL, revision: String = "HEAD") -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt { () -> Result<[String: String], CarthageError> in
 			do {
 				try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true)
@@ -275,21 +277,7 @@ public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDir
 			return .success(environment)
 		}
 		.flatMap(.concat) { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
-		.then(cloneSubmodulesForRepository(repositoryFileURL, workingDirectoryURL, revision: revision, shouldCloneSubmodule: shouldCloneSubmodule))
-}
-
-/// Clones matching submodules for the given repository at the specified
-/// revision, into the given working directory.
-public func cloneSubmodulesForRepository(_ repositoryFileURL: URL, _ workingDirectoryURL: URL, revision: String = "HEAD", shouldCloneSubmodule: @escaping (Submodule) -> Bool = { _ in true }) -> SignalProducer<(), CarthageError> {
-	return submodulesInRepository(repositoryFileURL, revision: revision)
-		.flatMap(.concat) { submodule -> SignalProducer<(), CarthageError> in
-			if shouldCloneSubmodule(submodule) {
-				return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL)
-			} else {
-				return .empty
-			}
-		}
-		.filter { _ in false }
+		.then(SignalProducer<(), CarthageError>.empty)
 }
 
 /// Clones the given submodule into the working directory of its parent
@@ -389,6 +377,21 @@ private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keyS
 
 		observer.sendCompleted()
 	}
+}
+
+/// Git’s representation of file system objects at a path relative to the repository root.
+internal func list(treeish: String, atPath path: String, inRepository repositoryURL: URL) -> SignalProducer<String, CarthageError> {
+	return launchGitTask(
+		// `ls-tree`, because `ls-files` returns no output (for all instances I’ve seen) on bare repos.
+		// flag “-z” enables output separated by the nul character (`\0`).
+		[ "ls-tree", "-z", "-r", "--full-name", "--name-only", treeish, path ],
+		repositoryFileURL: repositoryURL
+	)
+		.flatMap(.merge) { (output: String) -> SignalProducer<String, CarthageError> in
+			SignalProducer(
+				output.characters.lazy.split(separator: "\0").map { String($0) }
+			)
+		}
 }
 
 /// Determines the SHA that the submodule at the given path is pinned to, in the
