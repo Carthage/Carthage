@@ -25,7 +25,7 @@ class ArchiveSpec: QuickSpec {
 			let archiveURL = Bundle(for: type(of: self)).url(forResource: "CartfilePrivateOnly", withExtension: "zip")!
 
 			it("should unzip archive to a temporary directory") {
-				let result = unzip(archive: archiveURL).single()
+				let result = unarchive(archive: archiveURL).single()
 				expect(result).notTo(beNil())
 				expect(result?.error).to(beNil())
 
@@ -73,7 +73,7 @@ class ArchiveSpec: QuickSpec {
 				let result = zip(paths: [ innerFilePath, outerFilePath ], into: archiveURL, workingDirectory: temporaryURL.carthage_path).wait()
 				expect(result.error).to(beNil())
 
-				let unzipResult = unzip(archive: archiveURL).single()
+				let unzipResult = unarchive(archive: archiveURL).single()
 				expect(unzipResult).notTo(beNil())
 				expect(unzipResult?.error).to(beNil())
 
@@ -104,7 +104,7 @@ class ArchiveSpec: QuickSpec {
 				let result = zip(paths: [ symlinkPath, destinationPath ], into: archiveURL, workingDirectory: temporaryURL.carthage_path).wait()
 				expect(result.error).to(beNil())
 
-				let unzipResult = unzip(archive: archiveURL).single()
+				let unzipResult = unarchive(archive: archiveURL).single()
 				expect(unzipResult).notTo(beNil())
 				expect(unzipResult?.error).to(beNil())
 
