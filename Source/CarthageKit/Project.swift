@@ -527,9 +527,9 @@ public final class Project {
 	/// for the project. This step will also check framework compatibility.
 	///
 	/// Sends the temporary URL of the unzipped directory
-	private func unzipAndCopyBinaryFrameworks(zipFile: URL) -> SignalProducer<URL, CarthageError> {
+	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer<URL, CarthageError>(value: zipFile)
-			.flatMap(.concat, transform: unzip(archive:))
+			.flatMap(.concat, transform: unarchive(archive:))
 			.flatMap(.concat) { directoryURL in
 				return frameworksInDirectory(directoryURL)
 					.flatMap(.merge) { url in
@@ -584,7 +584,7 @@ public final class Project {
 							}
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
 						}
-						.flatMap(.concat) { self.unzipAndCopyBinaryFrameworks(zipFile: $0) }
+						.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0) }
 						.on(completed: {
 							_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
 						})
@@ -846,7 +846,7 @@ public final class Project {
 			.flatMap(.concat) { (semanticVersion, frameworkURL) in
 				return self.downloadBinary(project: ProjectIdentifier.binary(url), version: semanticVersion, url: frameworkURL)
 			}
-			.flatMap(.concat) { self.unzipAndCopyBinaryFrameworks(zipFile: $0) }
+			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0) }
 			.flatMap(.concat) { self.removeItem(at: $0) }
 	}
 
