@@ -102,13 +102,13 @@ If you’ve modified your [Cartfile][], or you want to update to the newest vers
 If you only want to update one , or specific, dependencies, pass them as a space-separated list to the `update` command. e.g.
 
 ```
-carthage update Box
+carthage update Result
 ```
 
 or 
 
 ```
-carthage update Box Result
+carthage update Argo Result
 ```
 
 ### Nested dependencies
