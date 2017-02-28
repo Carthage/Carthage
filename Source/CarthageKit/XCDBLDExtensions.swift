@@ -38,7 +38,7 @@ extension ProjectLocator {
 						return !directoriesToSkip.contains { $0.hasSubdirectory(url) }
 					}
 			}
-			.map { url -> ProjectLocator? in
+			.filterMap { url -> ProjectLocator? in
 				if let uti = url.typeIdentifier.value {
 					if (UTTypeConformsTo(uti as CFString, "com.apple.dt.document.workspace" as CFString)) {
 						return .workspace(url)
@@ -48,7 +48,6 @@ extension ProjectLocator {
 				}
 				return nil
 			}
-			.skipNil()
 			.collect()
 			.map { $0.sorted() }
 			.flatMap(.merge) { SignalProducer<ProjectLocator, CarthageError>($0) }
