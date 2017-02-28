@@ -50,6 +50,13 @@ class ProjectSpec: QuickSpec {
 			
 			beforeEach {
 				let _ = try? FileManager.default.removeItem(at: buildDirectoryURL)
+				// Pre-fetch the repos so we have a cache for the given tags
+				let sourceRepoUrl = directoryURL.appendingPathComponent("SourceRepos")
+				["TestFramework1", "TestFramework2", "TestFramework3"].forEach { repo in
+					let urlPath = sourceRepoUrl.appendingPathComponent(repo).path
+					let _ = cloneOrFetchProject(.git(GitURL(urlPath)), preferHTTPS: false)
+						.wait()
+				}
 			}
 			
 			it("should not rebuild cached frameworks unless instructed to ignore cached builds") {
