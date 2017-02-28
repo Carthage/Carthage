@@ -88,6 +88,12 @@ Along the way, Carthage will have created some [build artifacts][Artifacts]. The
 
 Carthage will check to make sure that downloaded Swift (and mixed Objective-C/Swift) frameworks were built with the same version of Swift that is in use locally. If there is a version mismatch, Carthage will proceed to build the framework from source. If the framework cannot be built from source, Carthage will fail.
 
+Because Carthage uses the output of `xcrun swift --version` to determine the local Swift version, make sure to run Carthage commands with the Swift toolchain that you intend to use. For many use cases, nothing additional is needed. However, for example, if you are building a Swift 2.3 project using Xcode 8.x, one approach to specifying your default `swift` for `carthage bootstrap` is to use the following command:
+
+```
+TOOLCHAINS=com.apple.dt.toolchain.Swift_2_3 carthage bootstrap
+```
+
 ### Running a project that uses Carthage
 
 After you’ve finished the above steps and pushed your changes, other users of the project only need to fetch the repository and run `carthage bootstrap` to get started with the frameworks you’ve added.
