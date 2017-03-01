@@ -20,8 +20,10 @@ public func localVersion() -> SemanticVersion {
 
 public func remoteVersion() -> SemanticVersion? {
 	let latestRemoteVersion = Client(.dotCom)
-		.releases(in: Repository(owner: "Carthage", name: "Carthage"), perPage: 1)
-		.map { _, releases in releases.first! }
+		.releases(in: Repository(owner: "Carthage", name: "Carthage"), perPage: 2)
+		.map { _, releases in
+			return releases.first { !$0.isDraft }!
+		}
 		.mapError(CarthageError.gitHubAPIRequestFailed)
 		.attemptMap { release -> Result<SemanticVersion, CarthageError> in
 			return SemanticVersion.from(Scanner(string: release.tag)).mapError(CarthageError.init(scannableError:))
