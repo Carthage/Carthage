@@ -26,7 +26,7 @@ class ProjectSpec: QuickSpec {
 				var builtSchemes: [String] = []
 				
 				let project = Project(directoryURL: directoryURL)
-				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, toolchain: "com.apple.dt.toolchain.Swift_2_3", cacheBuilds: cacheBuilds))
+				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds))
 					.flatten(.concat)
 					.ignoreTaskData()
 					.on(value: { (project, scheme) in
@@ -41,8 +41,8 @@ class ProjectSpec: QuickSpec {
 			
 			func overwriteFramework(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL) {
 				let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
-				let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
-				let binaryURL = frameworkURL.appendingPathComponent(frameworkName, isDirectory: false)
+				let frameworkURL = platformURL.appendingPathComponent("\(frameworkName)_\(platformName).framework", isDirectory: false)
+				let binaryURL = frameworkURL.appendingPathComponent("\(frameworkName)_\(platformName)", isDirectory: false)
 				
 				let data = "junkdata".data(using: .utf8)!
 				try! data.write(to: binaryURL, options: .atomic)
@@ -50,10 +50,17 @@ class ProjectSpec: QuickSpec {
 			
 			beforeEach {
 				let _ = try? FileManager.default.removeItem(at: buildDirectoryURL)
+				// Pre-fetch the repos so we have a cache for the given tags
+				let sourceRepoUrl = directoryURL.appendingPathComponent("SourceRepos")
+				["TestFramework1", "TestFramework2", "TestFramework3"].forEach { repo in
+					let urlPath = sourceRepoUrl.appendingPathComponent(repo).path
+					let _ = cloneOrFetchProject(.git(GitURL(urlPath)), preferHTTPS: false)
+						.wait()
+				}
 			}
 			
 			it("should not rebuild cached frameworks unless instructed to ignore cached builds") {
-				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
+				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac"]
 				
 				let result1 = buildDependencyTest(platforms: [.macOS])
 				expect(result1).to(equal(expected))
@@ -66,28 +73,28 @@ class ProjectSpec: QuickSpec {
 			}
 			
 			it("should rebuild cached frameworks (and dependencies) whose md5 does not match the version file") {
-				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
+				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac"]
 				
 				let result1 = buildDependencyTest(platforms: [.macOS])
 				expect(result1).to(equal(expected))
 				
-				overwriteFramework("Prelude", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+				overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 				
 				let result2 = buildDependencyTest(platforms: [.macOS])
 				expect(result2).to(equal(expected))
 			}
 			
 			it("should rebuild cached frameworks (and dependencies) whose version does not match the version file") {
-				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
+				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac"]
 				
 				let result1 = buildDependencyTest(platforms: [.macOS])
 				expect(result1).to(equal(expected))
 				
-				let preludeVersionFileURL = buildDirectoryURL.appendingPathComponent(".Prelude.version", isDirectory: false)
+				let preludeVersionFileURL = buildDirectoryURL.appendingPathComponent(".TestFramework3.version", isDirectory: false)
 				let preludeVersionFilePath = preludeVersionFileURL.path
 				
 				let json = try! String(contentsOf: preludeVersionFileURL, encoding: .utf8)
-				let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"1.6.0\"", with: "\"commitish\" : \"1.6.1\"")
+				let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"v1.0\"", with: "\"commitish\" : \"v1.1\"")
 				let _ = try! modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
 				
 				let result2 = buildDependencyTest(platforms: [.macOS])
@@ -95,27 +102,27 @@ class ProjectSpec: QuickSpec {
 			}
 			
 			it("should not rebuild cached frameworks unnecessarily") {
-				let expected: Set = ["Prelude-Mac", "Either-Mac", "Madness-Mac"]
+				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac"]
 				
 				let result1 = buildDependencyTest(platforms: [.macOS])
 				expect(result1).to(equal(expected))
 				
-				overwriteFramework("Either", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+				overwriteFramework("TestFramework2", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 				
 				let result2 = buildDependencyTest(platforms: [.macOS])
-				expect(result2).to(equal(["Either-Mac", "Madness-Mac"]))
+				expect(result2).to(equal(["TestFramework1_Mac", "TestFramework2_Mac"]))
 			}
 			
 			it("should rebuild a framework for all platforms even a cached framework is invalid for only a single platform") {
-				let expected: Set = ["Prelude-Mac", "Prelude-iOS", "Either-Mac", "Either-iOS", "Madness-Mac", "Madness-iOS"]
+				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac", "TestFramework1_iOS", "TestFramework2_iOS", "TestFramework3_iOS"]
 				
 				let result1 = buildDependencyTest()
 				expect(result1).to(equal(expected))
 				
-				overwriteFramework("Madness", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+				overwriteFramework("TestFramework1", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 				
 				let result2 = buildDependencyTest()
-				expect(result2).to(equal(["Madness-Mac", "Madness-iOS"]))
+				expect(result2).to(equal(["TestFramework1_Mac", "TestFramework1_iOS"]))
 			}
 		}
 		
