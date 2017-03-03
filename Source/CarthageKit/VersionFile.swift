@@ -258,14 +258,15 @@ private func md5ForFileAtURL(_ frameworkFileURL: URL) -> SignalProducer<String, 
 	guard FileManager.default.fileExists(atPath: frameworkFileURL.path) else {
 		return SignalProducer(error: .readFailed(frameworkFileURL, nil))
 	}
-	let task = Task("/usr/bin/env", arguments: ["md5", "-q", frameworkFileURL.path])
+	let task = Task("/usr/bin/shasum", arguments: ["-a", "256", frameworkFileURL.path])
 	return task.launch()
 		.mapError(CarthageError.taskError)
 		.ignoreTaskData()
 		.attemptMap { data in
-			guard let md5Str = String(data: data, encoding: .utf8) else {
+			guard let taskOutput = String(data: data, encoding: .utf8) else {
 				return .failure(.readFailed(frameworkFileURL, nil))
 			}
-			return .success(md5Str.trimmingCharacters(in: .whitespacesAndNewlines))
+			let hashStr = taskOutput.components(separatedBy: CharacterSet.whitespaces)[0]
+			return .success(hashStr.trimmingCharacters(in: .whitespacesAndNewlines))
 		}
 }
