@@ -4,17 +4,17 @@
   "iOS": [
     {
       "name": "TestFramework1",
-      "md5": "ios-framework1-md5"
+      "hash": "ios-framework1-hash"
     },
     {
       "name": "TestFramework2",
-      "md5": "ios-framework2-md5"
+      "hash": "ios-framework2-hash"
     }
   ],
   "Mac": [
     {
       "name": "TestFramework1",
-      "md5": "mac-framework1-md5"
+      "hash": "mac-framework1-hash"
     }
   ],
   "tvOS": []
