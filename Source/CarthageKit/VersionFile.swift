@@ -17,15 +17,15 @@ import XCDBLD
 
 struct CachedFramework {
 	let name: String
-	let md5: String
+	let hash: String
 	
 	static let nameKey = "name"
-	static let md5Key = "md5"
+	static let hashKey = "hash"
 	
 	func toJSONObject() -> Any {
 		return [
 			CachedFramework.nameKey: name,
-			CachedFramework.md5Key: md5
+			CachedFramework.hashKey: hash
 		]
 	}
 }
@@ -34,7 +34,7 @@ extension CachedFramework: Decodable {
 	static func decode(_ j: JSON) -> Decoded<CachedFramework> {
 		return curry(self.init)
 			<^> j <| CachedFramework.nameKey
-			<*> j <| CachedFramework.md5Key
+			<*> j <| CachedFramework.hashKey
 	}
 }
 
@@ -91,12 +91,12 @@ struct VersionFile {
 			let jsonData = try? Data(contentsOf: url),
 			let json = try? JSONSerialization.jsonObject(with: jsonData, options: .allowFragments),
 			let versionFile: VersionFile = Argo.decode(json) else {
-			return nil
+				return nil
 		}
 		self = versionFile
 	}
 	
-	func md5s(for cachedFrameworks: [CachedFramework], platform: Platform, binariesDirectoryURL: URL) -> SignalProducer<String?, CarthageError> {
+	func hashes(for cachedFrameworks: [CachedFramework], platform: Platform, binariesDirectoryURL: URL) -> SignalProducer<String?, CarthageError> {
 		return SignalProducer(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<String?, CarthageError> in
 				let frameworkName = cachedFramework.name
@@ -105,9 +105,9 @@ struct VersionFile {
 					.resolvingSymlinksInPath()
 					.appendingPathComponent("\(frameworkName).framework", isDirectory: true)
 					.appendingPathComponent("\(frameworkName)", isDirectory: false)
-				return md5ForFileAtURL(frameworkBinaryURL)
-					.map { md5 -> String? in
-						return md5
+				return hashForFileAtURL(frameworkBinaryURL)
+					.map { hash -> String? in
+						return hash
 					}
 					.flatMapError { _ in
 						return SignalProducer(value: nil)
@@ -120,24 +120,24 @@ struct VersionFile {
 			return SignalProducer(value: false)
 		}
 		
-		return self.md5s(for: cachedFrameworks, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
+		return self.hashes(for: cachedFrameworks, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
 			.collect()
-			.flatMap(.concat) { md5s in
-				return self.satisfies(platform: platform, commitish: commitish, xcodeVersion: xcodeVersion, md5s: md5s)
+			.flatMap(.concat) { hashes in
+				return self.satisfies(platform: platform, commitish: commitish, xcodeVersion: xcodeVersion, hashes: hashes)
 			}
 	}
 
-	func satisfies(platform: Platform, commitish: String, xcodeVersion: String, md5s: [String?]) -> SignalProducer<Bool, CarthageError> {
+	func satisfies(platform: Platform, commitish: String, xcodeVersion: String, hashes: [String?]) -> SignalProducer<Bool, CarthageError> {
 		guard let cachedFrameworks = self[platform], commitish == self.commitish, xcodeVersion == self.xcodeVersion else {
 			return SignalProducer(value: false)
 		}
 
-		return SignalProducer<(String?, CachedFramework), CarthageError>(Swift.zip(md5s, cachedFrameworks))
-			.map { (md5, cachedFramework) -> Bool in
-				guard let md5 = md5 else {
+		return SignalProducer<(String?, CachedFramework), CarthageError>(Swift.zip(hashes, cachedFrameworks))
+			.map { (hash, cachedFramework) -> Bool in
+				guard let hash = hash else {
 					return false
 				}
-				return md5 == cachedFramework.md5
+				return hash == cachedFramework.hash
 			}
 			.reduce(true) { (result, current) -> Bool in
 				return result && current
@@ -170,8 +170,8 @@ extension VersionFile: Decodable {
 
 /// Creates a version file for the current dependency in the
 /// Carthage/Build directory which associates its commitish with
-/// the MD5s of the built frameworks for each platform in order
-/// to allow those frameworks to be skipped in future builds.
+/// the hashes (e.g. SHA256) of the built frameworks for each platform
+/// in order to allow those frameworks to be skipped in future builds.
 ///
 /// Returns a signal that succeeds once the file has been created.
 public func createVersionFile(for dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
@@ -204,9 +204,9 @@ public func createVersionFile(for dependency: Dependency<PinnedVersion>, platfor
 				let platformName = url.deletingLastPathComponent().lastPathComponent
 				let frameworkName = url.deletingPathExtension().lastPathComponent
 				let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
-				return md5ForFileAtURL(frameworkURL)
-					.on(value: { md5 in
-						let cachedFramework = CachedFramework(name: frameworkName, md5: md5)
+				return hashForFileAtURL(frameworkURL)
+					.on(value: { hash in
+						let cachedFramework = CachedFramework(name: frameworkName, hash: hash)
 						if var frameworks = platformCaches[platformName] {
 							frameworks.append(cachedFramework)
 							platformCaches[platformName] = frameworks
@@ -254,18 +254,19 @@ public func versionFileMatches(_ dependency: Dependency<PinnedVersion>, platform
 		}
 }
 
-private func md5ForFileAtURL(_ frameworkFileURL: URL) -> SignalProducer<String, CarthageError> {
+private func hashForFileAtURL(_ frameworkFileURL: URL) -> SignalProducer<String, CarthageError> {
 	guard FileManager.default.fileExists(atPath: frameworkFileURL.path) else {
 		return SignalProducer(error: .readFailed(frameworkFileURL, nil))
 	}
-	let task = Task("/usr/bin/env", arguments: ["md5", "-q", frameworkFileURL.path])
+	let task = Task("/usr/bin/shasum", arguments: ["-a", "256", frameworkFileURL.path])
 	return task.launch()
 		.mapError(CarthageError.taskError)
 		.ignoreTaskData()
 		.attemptMap { data in
-			guard let md5Str = String(data: data, encoding: .utf8) else {
+			guard let taskOutput = String(data: data, encoding: .utf8) else {
 				return .failure(.readFailed(frameworkFileURL, nil))
 			}
-			return .success(md5Str.trimmingCharacters(in: .whitespacesAndNewlines))
+			let hashStr = taskOutput.components(separatedBy: CharacterSet.whitespaces)[0]
+			return .success(hashStr.trimmingCharacters(in: .whitespacesAndNewlines))
 		}
 }
