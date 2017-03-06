@@ -60,7 +60,7 @@ extension Repository {
 
 		// GitHub Enterprise
 		breakpoint: if let url = URL(string: identifier), let host = url.host {
-			var pathComponents = url.carthage_pathComponents.filter { $0 != "/" }
+			var pathComponents = url.pathComponents.filter { $0 != "/" }
 			guard pathComponents.count >= 2 else {
 				break breakpoint
 			}

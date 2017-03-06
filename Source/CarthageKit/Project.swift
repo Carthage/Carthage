@@ -881,7 +881,7 @@ public final class Project {
 				list(treeish: dependency.version.commitish, atPath: CarthageProjectCheckoutsPath, inRepository: repositoryURL)
 					.flatMap(.merge) { (path: String) -> SignalProducer<String, CarthageError> in
 						let componentsRelativeToDirectoryURL = {
-							return URL(string: $0, relativeTo: self.directoryURL)?.standardizedFileURL.carthage_pathComponents
+							return URL(string: $0, relativeTo: self.directoryURL)?.standardizedFileURL.pathComponents
 						}
 						if
 							let components = componentsRelativeToDirectoryURL(path),
@@ -1122,7 +1122,7 @@ private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, C
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
 		.filter { url in
 			// Skip nested frameworks
-			let frameworksInURL = url.carthage_pathComponents.filter { pathComponent in
+			let frameworksInURL = url.pathComponents.filter { pathComponent in
 				return (pathComponent as NSString).pathExtension == "framework"
 			}
 			return frameworksInURL.count == 1
