@@ -581,39 +581,3 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 			}
 		}
 }
-
-/// Moves an item within a Git repository, or within a simple directory if a Git
-/// repository is not found.
-///
-/// Sends the new URL of the item after moving.
-public func moveItemInPossibleRepository(_ repositoryFileURL: URL, fromPath: String, toPath: String) -> SignalProducer<URL, CarthageError> {
-	let toURL = repositoryFileURL.appendingPathComponent(toPath)
-	let parentDirectoryURL = toURL.deletingLastPathComponent()
-
-	return SignalProducer<(), CarthageError>.attempt {
-			do {
-				try FileManager.default.createDirectory(at: parentDirectoryURL, withIntermediateDirectories: true)
-			} catch let error as NSError {
-				return .failure(CarthageError.writeFailed(parentDirectoryURL, error))
-			}
-
-			return .success(())
-		}
-		.then(isGitRepository(repositoryFileURL)
-			.promoteErrors(CarthageError.self))
-		.flatMap(.merge) { isRepository -> SignalProducer<URL, CarthageError> in
-			if isRepository {
-				return launchGitTask([ "mv", "-k", fromPath, toPath ], repositoryFileURL: repositoryFileURL)
-					.then(SignalProducer<URL, CarthageError>(value: toURL))
-			} else {
-				let fromURL = repositoryFileURL.appendingPathComponent(fromPath)
-
-				do {
-					try FileManager.default.moveItem(at: fromURL, to: toURL)
-					return SignalProducer(value: toURL)
-				} catch let error as NSError {
-					return SignalProducer(error: .writeFailed(toURL, error))
-				}
-			}
-		}
-}
