@@ -193,7 +193,7 @@ class ProjectSpec: QuickSpec {
 			let temporaryURL = URL(fileURLWithPath: temporaryPath, isDirectory: true)
 			let repositoryURL = temporaryURL.appendingPathComponent("carthage1191", isDirectory: true)
 			let cacheDirectoryURL = temporaryURL.appendingPathComponent("cache", isDirectory: true)
-			let projectIdentifier = ProjectIdentifier.git(GitURL(repositoryURL.carthage_absoluteString))
+			let projectIdentifier = ProjectIdentifier.git(GitURL(repositoryURL.absoluteString))
 
 			func initRepository() {
 				expect { try FileManager.default.createDirectory(atPath: repositoryURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())

@@ -83,7 +83,7 @@ class XcodeSpec: QuickSpec {
 			func relativePathsForProjectsInDirectory(_ directoryURL: URL) -> [String] {
 				let result = ProjectLocator
 					.locate(in: directoryURL)
-					.map { $0.fileURL.carthage_absoluteString.substring(from: directoryURL.carthage_absoluteString.endIndex) }
+					.map { $0.fileURL.absoluteString.substring(from: directoryURL.absoluteString.endIndex) }
 					.collect()
 					.first()
 				expect(result?.error).to(beNil())
