@@ -28,7 +28,7 @@ bootstrap:
 	git submodule update --init --recursive
 
 test: clean bootstrap
-	xcodebuild $(XCODEFLAGS) test
+	xcodebuild $(XCODEFLAGS) -configuration Release ENABLE_TESTABILITY=YES test
 
 clean:
 	rm -f "$(INTERNAL_PACKAGE)"

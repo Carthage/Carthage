@@ -132,25 +132,7 @@ extension SignalProducerProtocol {
 	/// Sends each value that occurs on `producer` combined with each value that
 	/// occurs on `otherProducer` (repeats included).
 	fileprivate func permute<U>(with otherProducer: SignalProducer<U, Error>) -> SignalProducer<(Value, U), Error> {
-		// This should be the implementation of this method:
-		// return lift(Signal.permute(with:))(otherProducer)
-		//
-		// However, due to a Swift miscompilation (with `-O`) we need to inline `lift` here.
-		// See https://github.com/ReactiveCocoa/ReactiveCocoa/issues/2751 for more details.
-		//
-		// This can be reverted once tests with -O don't crash.
-
-		return SignalProducer { observer, outerDisposable in
-			self.startWithSignal { signal, disposable in
-				outerDisposable.add(disposable)
-
-				otherProducer.startWithSignal { otherSignal, otherDisposable in
-					outerDisposable.add(otherDisposable)
-
-					signal.permute(with: otherSignal).observe(observer)
-				}
-			}
-		}
+		return lift(Signal.permute(with:))(otherProducer)
 	}
 	
 	/// Sends a boolean of whether the producer succeeded or failed.
