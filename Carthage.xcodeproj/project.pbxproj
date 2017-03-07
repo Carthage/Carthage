@@ -49,6 +49,7 @@
 		CD1FE6581DD85A140016639E /* Swift3Shims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1FE6551DD857570016639E /* Swift3Shims.swift */; };
 		CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD28C99C1E11846200322AF7 /* ProductType.swift */; };
 		CD3E530B1DE33095002C135C /* Availability.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3E530A1DE33095002C135C /* Availability.swift */; };
+		CD9F3D931E6E6FC000B98A1A /* BinaryJSONError.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9F3D921E6E6FC000B98A1A /* BinaryJSONError.swift */; };
 		CDA0B6CA1C468E67006C499C /* GitSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA0B6C91C468E67006C499C /* GitSpec.swift */; };
 		CDB099241E6DC2D40030B4A8 /* ScannableError.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB099231E6DC2D40030B4A8 /* ScannableError.swift */; };
 		CDCE1CC41C170E8A00B2ED88 /* TestResolvedCartfile.resolved in Resources */ = {isa = PBXBuildFile; fileRef = CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */; };
@@ -216,6 +217,7 @@
 		CD1FE6551DD857570016639E /* Swift3Shims.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Swift3Shims.swift; sourceTree = "<group>"; };
 		CD28C99C1E11846200322AF7 /* ProductType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProductType.swift; sourceTree = "<group>"; };
 		CD3E530A1DE33095002C135C /* Availability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Availability.swift; sourceTree = "<group>"; };
+		CD9F3D921E6E6FC000B98A1A /* BinaryJSONError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryJSONError.swift; sourceTree = "<group>"; };
 		CDA0B6C91C468E67006C499C /* GitSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitSpec.swift; sourceTree = "<group>"; };
 		CDB099231E6DC2D40030B4A8 /* ScannableError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScannableError.swift; sourceTree = "<group>"; };
 		CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestResolvedCartfile.resolved; sourceTree = "<group>"; };
@@ -493,6 +495,7 @@
 				3A0472F21C782B4000097EC7 /* Algorithms.swift */,
 				D069CA231A4E3B2700314A85 /* Archive.swift */,
 				CD3E530A1DE33095002C135C /* Availability.swift */,
+				CD9F3D921E6E6FC000B98A1A /* BinaryJSONError.swift */,
 				BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */,
 				CDF9D3701CF1E54200DF5A6F /* BuildOptions.swift */,
 				CDE559281E12263A00ED7F5F /* BuildSettings.swift */,
@@ -819,6 +822,7 @@
 				3BE5BD9A1E4E5A7B00DDDC45 /* SwiftVersionError.swift in Sources */,
 				D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */,
 				D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */,
+				CD9F3D931E6E6FC000B98A1A /* BinaryJSONError.swift in Sources */,
 				CD3E530B1DE33095002C135C /* Availability.swift in Sources */,
 				3A0472F31C782B4000097EC7 /* Algorithms.swift in Sources */,
 				D0A2025E1B114D1000C71375 /* ProducerQueue.swift in Sources */,
