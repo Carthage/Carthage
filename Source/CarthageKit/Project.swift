@@ -879,20 +879,7 @@ public final class Project {
 		return self.dependencyProjects(for: dependency)
 			.zip(with: // file system objects which might conflict with symlinks
 				list(treeish: dependency.version.commitish, atPath: CarthageProjectCheckoutsPath, inRepository: repositoryURL)
-					.flatMap(.merge) { (path: String) -> SignalProducer<String, CarthageError> in
-						let componentsRelativeToDirectoryURL = {
-							return URL(string: $0, relativeTo: self.directoryURL)?.standardizedFileURL.pathComponents
-						}
-						if
-							let components = componentsRelativeToDirectoryURL(path),
-							let comparator = componentsRelativeToDirectoryURL(CarthageProjectCheckoutsPath),
-							Array(components.dropLast(1)) == comparator // file system object is contained (shallowly) by `CarthageProjectCheckoutsPath`
-						{
-							return .init(value: components.last!)
-						} else {
-							return .empty
-						}
-					}
+					.map { (path: String) in (path as NSString).lastPathComponent }
 					.collect()
 			)
 			.attemptMap { (dependencies: Set<ProjectIdentifier>, components: [String]) -> Result<(), CarthageError> in
