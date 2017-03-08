@@ -913,6 +913,24 @@ public final class Project {
 					let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
 					let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency.project, subdirectory: subdirectoryPath)
 
+					let dependencyCheckoutURLResource = try? dependencyCheckoutURL.resourceValues(forKeys: [
+						.isSymbolicLinkKey,
+						.isDirectoryKey
+					])
+
+					if dependencyCheckoutURLResource?.isSymbolicLink == .some(true) {
+						_ = dependencyCheckoutURL.carthage_path.withCString(Darwin.unlink)
+					} else if dependencyCheckoutURLResource?.isDirectory == .some(true) {
+						// older version of carthage wrote this directory?
+						// user wrote this directory, unaware of the precedent not to circumvent carthage’s management?
+						// directory exists as the result of rogue process or gamma ray?
+
+						// TODO: explore possibility of messaging user, informing that deleting said directory will result
+						// in symlink creation with carthage versions greater than 0.20.0, maybe with more broad advice on
+						// “from scratch” reproducability.
+						continue
+					}
+
 					do {
 						try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.carthage_path, withDestinationPath: linkDestinationPath)
 					} catch let error as NSError {
