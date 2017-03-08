@@ -37,7 +37,7 @@ private let CarthageUserCachesURL: URL = {
 		return try? fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
 	}.flatMap { cachesURL in
 		let dependenciesURL = cachesURL.appendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
-		let dependenciesPath = dependenciesURL.carthage_absoluteString
+		let dependenciesPath = dependenciesURL.absoluteString
 
 		if fileManager.fileExists(atPath: dependenciesPath, isDirectory:nil) {
 			if fileManager.isWritableFile(atPath: dependenciesPath) {
