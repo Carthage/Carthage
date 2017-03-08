@@ -10,9 +10,5 @@ import Foundation
 		var carthage_path: String {
 			return path
 		}
-
-		var carthage_lastPathComponent: String {
-			return lastPathComponent
-		}
 	}
 #endif

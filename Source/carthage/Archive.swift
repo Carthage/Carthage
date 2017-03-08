@@ -91,7 +91,7 @@ public struct ArchiveCommand: CommandProtocol {
 					let dSYM = (framework.relativePath as NSString).appendingPathExtension("dSYM")!
 					let bcsymbolmapsProducer = BCSymbolMapsForFramework(URL(fileURLWithPath: framework.absolutePath))
 						// generate relative paths for the bcsymbolmaps so they print nicely
-						.map { url in ((framework.relativePath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(url.carthage_lastPathComponent) }
+						.map { url in ((framework.relativePath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(url.lastPathComponent) }
 					let extraFilesProducer = SignalProducer(value: dSYM)
 						.concat(bcsymbolmapsProducer)
 						.filter { relativePath in FileManager.default.fileExists(atPath: framework.absolutePath) }

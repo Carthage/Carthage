@@ -254,7 +254,7 @@ private func mergeModuleIntoModule(_ sourceModuleDirectoryURL: URL, _ destinatio
 	return FileManager.default.reactive
 		.enumerator(at: sourceModuleDirectoryURL, includingPropertiesForKeys: [], options: [ .skipsSubdirectoryDescendants, .skipsHiddenFiles ], catchErrors: true)
 		.attemptMap { _, url -> Result<URL, CarthageError> in
-			let lastComponent: String = url.carthage_lastPathComponent
+			let lastComponent = url.lastPathComponent
 			let destinationURL = destinationModuleDirectoryURL.appendingPathComponent(lastComponent).resolvingSymlinksInPath()
 
 			do {
@@ -582,7 +582,7 @@ public func buildScheme(_ scheme: String, withOptions options: BuildOptions, inP
 public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<TaskEvent<URL>, CarthageError> {
 	let dSYMURL = builtProductURL.appendingPathExtension("dSYM")
 
-	let executableName = builtProductURL.deletingPathExtension().carthage_lastPathComponent
+	let executableName = builtProductURL.deletingPathExtension().lastPathComponent
 	if !executableName.isEmpty {
 		let executable = builtProductURL.appendingPathComponent(executableName).carthage_path
 		let dSYM = dSYMURL.carthage_path
@@ -881,7 +881,7 @@ extension SignalProducerProtocol where Value == URL, Error == CarthageError {
 		return producer
 			.filter { fileURL in (try? fileURL.checkResourceIsReachable()) ?? false }
 			.flatMap(.merge) { fileURL -> SignalProducer<URL, CarthageError> in
-				let fileName = fileURL.carthage_lastPathComponent
+				let fileName = fileURL.lastPathComponent
 				let destinationURL = directoryURL.appendingPathComponent(fileName, isDirectory: false)
 				let resolvedDestinationURL = destinationURL.resolvingSymlinksInPath()
 
@@ -1131,7 +1131,7 @@ private func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 		}
 
 	case .dSYM?:
-		let binaryName = packageURL.deletingPathExtension().deletingPathExtension().carthage_lastPathComponent
+		let binaryName = packageURL.deletingPathExtension().deletingPathExtension().lastPathComponent
 		if !binaryName.isEmpty {
 			let binaryURL = packageURL.appendingPathComponent("Contents/Resources/DWARF/\(binaryName)")
 			return .success(binaryURL)
