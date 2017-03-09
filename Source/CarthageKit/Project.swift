@@ -918,9 +918,9 @@ public final class Project {
 						.isDirectoryKey
 					])
 
-					if dependencyCheckoutURLResource?.isSymbolicLink == .some(true) {
+					if dependencyCheckoutURLResource?.isSymbolicLink == true {
 						_ = dependencyCheckoutURL.carthage_path.withCString(Darwin.unlink)
-					} else if dependencyCheckoutURLResource?.isDirectory == .some(true) {
+					} else if dependencyCheckoutURLResource?.isDirectory == true {
 						// older version of carthage wrote this directory?
 						// user wrote this directory, unaware of the precedent not to circumvent carthage’s management?
 						// directory exists as the result of rogue process or gamma ray?
