@@ -248,7 +248,7 @@ extension CarthageError: CustomStringConvertible {
 			case let .gitHub(repository):
 				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
 
-			case .git, .binary:
+			case .git, .binary, .carthage:
 				break
 			}
 

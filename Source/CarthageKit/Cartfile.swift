@@ -170,8 +170,11 @@ public struct ResolvedCartfile {
 		scannerLoop: while !scanner.isAtEnd {
 			switch Dependency<PinnedVersion>.from(scanner) {
 			case let .success(dep):
-				cartfile.dependencies.insert(dep)
-
+				if case let .carthage(version) = dep.project {
+					cartfile.version = version
+				} else {
+					cartfile.dependencies.insert(dep)
+				}
 			case let .failure(error):
 				result = .failure(CarthageError(scannableError: error))
 				break scannerLoop
@@ -203,6 +206,9 @@ public enum ProjectIdentifier {
 
 	/// A binary-only framework
 	case binary(URL)
+	
+	/// Cartage version
+	case carthage(SemanticVersion)
 
 	/// The unique, user-visible name for this project.
 	public var name: String {
@@ -215,6 +221,8 @@ public enum ProjectIdentifier {
 
 		case let .binary(url):
 			return url.lastPathComponent.stripping(suffix: ".json")
+		case let .carthage(version):
+			return "Carthage \(version.description)"
 		}
 	}
 
@@ -258,6 +266,8 @@ extension ProjectIdentifier: Hashable {
 
 		case let .binary(url):
 			return url.hashValue
+		case let .carthage(version):
+			return version.hashValue
 		}
 	}
 }
@@ -274,6 +284,10 @@ extension ProjectIdentifier: Scannable {
 		} else if scanner.scanString("git", into: nil) {
 			parser = { urlString in
 				return .success(self.git(GitURL(urlString)))
+			}
+		} else if scanner.scanString("carthage", into: nil) {
+			parser = { urlString in
+				return .success(self.carthage(SemanticVersion(major: 32, minor: 17, patch: 34))) // FIXME parse the right version, maybe
 			}
 		} else if scanner.scanString("binary", into: nil) {
 			parser = { urlString in
@@ -327,6 +341,8 @@ extension ProjectIdentifier: CustomStringConvertible {
 
 		case let .binary(url):
 			return "binary \"\(url.absoluteString)\""
+		case let .carthage(version):
+			return "carthage \(version.description)"
 		}
 	}
 }
@@ -345,7 +361,7 @@ extension ProjectIdentifier {
 
 		case let .git(url):
 			return url
-		case .binary:
+		case .binary, .carthage:
 			return nil
 		}
 	}
