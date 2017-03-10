@@ -1000,17 +1000,19 @@ public final class Project {
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
 				return buildDependencyProject(dependency, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
-					.flatMapError { error in
-						switch error {
-						case .noSharedFrameworkSchemes:
-							// Log that building the dependency is being skipped,
-							// not to error out with `.noSharedFrameworkSchemes`
-							// to continue building other dependencies.
-							self._projectEventsObserver.send(value: .skippedBuilding(project, error.description))
-							return .empty
+					.map { producer in
+						return producer .flatMapError { error in
+							switch error {
+							case .noSharedFrameworkSchemes:
+								// Log that building the dependency is being skipped,
+								// not to error out with `.noSharedFrameworkSchemes`
+								// to continue building other dependencies.
+								self._projectEventsObserver.send(value: .skippedBuilding(project, error.description))
+								return .empty
 
-						default:
-							return SignalProducer(error: error)
+							default:
+								return SignalProducer(error: error)
+							}
 						}
 					}
 			}
