@@ -287,7 +287,8 @@ extension ProjectIdentifier: Scannable {
 			}
 		} else if scanner.scanString("carthage", into: nil) {
 			parser = { urlString in
-				return .success(self.carthage(SemanticVersion(major: 32, minor: 17, patch: 34))) // FIXME parse the right version, maybe
+				return SemanticVersion.from(Scanner(string: urlString))
+					.map(self.carthage)
 			}
 		} else if scanner.scanString("binary", into: nil) {
 			parser = { urlString in
@@ -396,7 +397,17 @@ extension Dependency where V: Scannable {
 	/// Attempts to parse a Dependency specification.
 	public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
 		return ProjectIdentifier.from(scanner).flatMap { identifier in
-			return V.from(scanner).map { specifier in self.init(project: identifier, version: specifier) }
+			return V.from(scanner)
+				.map { specifier in self.init(project: identifier, version: specifier) }
+				.flatMapError { error in
+					switch identifier {
+					case let .carthage(version):
+						return V.from(Scanner(string: version.description))
+							.map { self.init(project: identifier, version: $0) }
+					default:
+						return .failure(error)
+					}
+				}
 		}
 	}
 }
