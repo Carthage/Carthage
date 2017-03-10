@@ -23,7 +23,7 @@
 		67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; };
 		67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		67C870081A7A04E100F6647C /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C870071A7A04E100F6647C /* Formatting.swift */; };
-		7AB62B051E73057D00E3BD4F /* CarthageKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB62B041E73057D00E3BD4F /* CarthageKit.swift */; };
+		7AFF7AB61E7315D500D7793C /* CarthageKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB62B041E73057D00E3BD4F /* CarthageKit.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
 		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
@@ -824,6 +824,7 @@
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */,
 				CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */,
+				7AFF7AB61E7315D500D7793C /* CarthageKit.swift in Sources */,
 				CDF94D951E71144300200486 /* DuplicateDependency.swift in Sources */,
 				CD1FE6571DD857570016639E /* Swift3Shims.swift in Sources */,
 				3BE5BD9A1E4E5A7B00DDDC45 /* SwiftVersionError.swift in Sources */,
@@ -863,7 +864,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7AB62B051E73057D00E3BD4F /* CarthageKit.swift in Sources */,
 				67C870081A7A04E100F6647C /* Formatting.swift in Sources */,
 				D02DB8E01A4BC9B600097CDE /* Fetch.swift in Sources */,
 				5482DAF11A3849D700197FB8 /* CopyFrameworks.swift in Sources */,

@@ -143,7 +143,6 @@ public struct PinnedVersion: VersionType {
 
 extension PinnedVersion: Scannable {
 	public static func from(_ scanner: Scanner) -> Result<PinnedVersion, ScannableError> {
-		print("Current line = \(scanner.currentLine)")
 		if !scanner.scanString("\"", into: nil) {
 			return .failure(ScannableError(message: "expected pinned version", currentLine: scanner.currentLine))
 		}

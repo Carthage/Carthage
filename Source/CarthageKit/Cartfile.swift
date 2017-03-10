@@ -402,7 +402,7 @@ extension Dependency where V: Scannable {
 				.flatMapError { error in
 					switch identifier {
 					case let .carthage(version):
-						return V.from(Scanner(string: version.description))
+						return V.from(Scanner(string: "\"\(version.description)\""))
 							.map { self.init(project: identifier, version: $0) }
 					default:
 						return .failure(error)
