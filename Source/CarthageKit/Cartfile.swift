@@ -192,7 +192,7 @@ extension ResolvedCartfile: CustomStringConvertible {
 			.map { $0.description + "\n" }
 			.joined(separator: "")
 		
-		return "carthage \(version?.description ?? "no-version")\n\(dependenciesDescription)"
+		return "carthage \"\(version?.description ?? "no-version")\"\n\(dependenciesDescription)"
 	}
 }
 
@@ -222,7 +222,7 @@ public enum ProjectIdentifier {
 		case let .binary(url):
 			return url.lastPathComponent.stripping(suffix: ".json")
 		case let .carthage(version):
-			return "Carthage \(version.description)"
+			return "carthage \"\(version.description)\""
 		}
 	}
 
