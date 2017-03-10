@@ -2,9 +2,6 @@
 
 setup() {
     cd $BATS_TMPDIR
-    rm -rf Result
-    git clone -b 3.1.0 https://github.com/antitypical/Result.git
-    cd Result
 }
 
 teardown() {
