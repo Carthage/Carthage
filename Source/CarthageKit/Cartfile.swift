@@ -139,6 +139,9 @@ public struct ResolvedCartfile {
 	/// The dependencies listed in the Cartfile.resolved.
 	public var dependencies: Set<Dependency<PinnedVersion>>
 	
+	/// Version of Carthage used to generate the `Cartfile.resolved`
+	public var version: SemanticVersion?
+	
 	/// The version of each project
 	public var versions: [ProjectIdentifier: PinnedVersion] {
 		var versions: [ProjectIdentifier: PinnedVersion] = [:]
@@ -181,10 +184,12 @@ public struct ResolvedCartfile {
 
 extension ResolvedCartfile: CustomStringConvertible {
 	public var description: String {
-		return dependencies
+		let dependenciesDescription = dependencies
 			.sorted { $0.project.description < $1.project.description }
 			.map { $0.description + "\n" }
 			.joined(separator: "")
+		
+		return "carthage \(version?.description ?? "no-version")\n\(dependenciesDescription)"
 	}
 }
 
