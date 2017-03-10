@@ -879,20 +879,7 @@ public final class Project {
 		return self.dependencyProjects(for: dependency)
 			.zip(with: // file system objects which might conflict with symlinks
 				list(treeish: dependency.version.commitish, atPath: CarthageProjectCheckoutsPath, inRepository: repositoryURL)
-					.flatMap(.merge) { (path: String) -> SignalProducer<String, CarthageError> in
-						let componentsRelativeToDirectoryURL = {
-							return URL(string: $0, relativeTo: self.directoryURL)?.standardizedFileURL.pathComponents
-						}
-						if
-							let components = componentsRelativeToDirectoryURL(path),
-							let comparator = componentsRelativeToDirectoryURL(CarthageProjectCheckoutsPath),
-							Array(components.dropLast(1)) == comparator // file system object is contained (shallowly) by `CarthageProjectCheckoutsPath`
-						{
-							return .init(value: components.last!)
-						} else {
-							return .empty
-						}
-					}
+					.map { (path: String) in (path as NSString).lastPathComponent }
 					.collect()
 			)
 			.attemptMap { (dependencies: Set<ProjectIdentifier>, components: [String]) -> Result<(), CarthageError> in
@@ -925,6 +912,24 @@ public final class Project {
 					let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
 					let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
 					let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency.project, subdirectory: subdirectoryPath)
+
+					let dependencyCheckoutURLResource = try? dependencyCheckoutURL.resourceValues(forKeys: [
+						.isSymbolicLinkKey,
+						.isDirectoryKey
+					])
+
+					if dependencyCheckoutURLResource?.isSymbolicLink == true {
+						_ = dependencyCheckoutURL.carthage_path.withCString(Darwin.unlink)
+					} else if dependencyCheckoutURLResource?.isDirectory == true {
+						// older version of carthage wrote this directory?
+						// user wrote this directory, unaware of the precedent not to circumvent carthage’s management?
+						// directory exists as the result of rogue process or gamma ray?
+
+						// TODO: explore possibility of messaging user, informing that deleting said directory will result
+						// in symlink creation with carthage versions greater than 0.20.0, maybe with more broad advice on
+						// “from scratch” reproducability.
+						continue
+					}
 
 					do {
 						try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.carthage_path, withDestinationPath: linkDestinationPath)

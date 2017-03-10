@@ -380,11 +380,15 @@ private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keyS
 }
 
 /// Git’s representation of file system objects at a path relative to the repository root.
+///
+/// - parameter path: Path separators at the end of `path` have significance of outputting directory contents.
+///                   Thankfully, multiple contiguous path separators seem to have no adverse effects.
+/// - note: Previously, `path` was recursed through — now, just iterated.
 internal func list(treeish: String, atPath path: String, inRepository repositoryURL: URL) -> SignalProducer<String, CarthageError> {
 	return launchGitTask(
 		// `ls-tree`, because `ls-files` returns no output (for all instances I’ve seen) on bare repos.
 		// flag “-z” enables output separated by the nul character (`\0`).
-		[ "ls-tree", "-z", "-r", "--full-name", "--name-only", treeish, path ],
+		[ "ls-tree", "-z", "--full-name", "--name-only", treeish, path ],
 		repositoryFileURL: repositoryURL
 	)
 		.flatMap(.merge) { (output: String) -> SignalProducer<String, CarthageError> in
