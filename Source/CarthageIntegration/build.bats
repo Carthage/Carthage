@@ -11,7 +11,7 @@ teardown() {
     cd $BATS_TEST_DIRNAME
 }
 
-@test "carthage build skips " {
+@test "carthage build skips dependencies with no shared schemes" {
     cat >| Cartfile <<-EOF
 github "AFNetworking/AFNetworking" == 2.6.3
 github "mdiep/MMMarkdown" == 0.5.5
