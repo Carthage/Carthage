@@ -449,7 +449,7 @@ public final class Project {
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func updatedResolvedCartfile(_ dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
+	public func updatedResolvedCartfile(version: String, _ dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
 		let resolver = Resolver(versionsForDependency: versions(for:), dependenciesForDependency: dependencies(for:), resolvedGitReference: resolvedGitReference)
 
 		let resolvedCartfile: SignalProducer<ResolvedCartfile?, CarthageError> = loadResolvedCartfile()
@@ -467,7 +467,13 @@ public final class Project {
 			}
 			.collect()
 			.map(Set.init)
-			.map(ResolvedCartfile.init)
+			.map { dependencies in
+				var resolved = ResolvedCartfile(dependencies: dependencies)
+				resolved.version = SemanticVersion.from(Scanner(string: version)).value
+				
+				return resolved
+			}
+		
 	}
 
 	/// Attempts to determine which of the project's Carthage
@@ -481,7 +487,7 @@ public final class Project {
 
 		let currentDependencies = loadResolvedCartfile()
 			.map { $0.dependencies }
-		let updatedDependencies = updatedResolvedCartfile()
+		let updatedDependencies = updatedResolvedCartfile(version: carthageVersion())
 			.map { $0.dependencies }
 		let outdatedDependencies = SignalProducer.combineLatest(currentDependencies, updatedDependencies)
 			.map { (currentDependencies, updatedDependencies) -> [OutdatedDependency] in
@@ -518,7 +524,7 @@ public final class Project {
 	/// changes will be reflected in Cartfile.resolved, and also in the working
 	/// directory checkouts if the given parameter is true.
 	public func updateDependencies(shouldCheckout: Bool = true, dependenciesToUpdate: [String]? = nil) -> SignalProducer<(), CarthageError> {
-		return updatedResolvedCartfile(dependenciesToUpdate)
+		return updatedResolvedCartfile(version: carthageVersion(), dependenciesToUpdate)
 			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}
