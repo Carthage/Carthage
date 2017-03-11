@@ -1001,7 +1001,7 @@ public final class Project {
 
 				return buildDependencyProject(dependency, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.map { producer in
-						return producer .flatMapError { error in
+						return producer.flatMapError { error in
 							switch error {
 							case .noSharedFrameworkSchemes:
 								// Log that building the dependency is being skipped,
