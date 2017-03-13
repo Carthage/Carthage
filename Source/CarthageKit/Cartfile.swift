@@ -168,6 +168,18 @@ public struct ResolvedCartfile {
 
 		let scanner = Scanner(string: string)
 		scannerLoop: while !scanner.isAtEnd {
+			if scanner.scanString("carthage", into: nil) {
+				print("We have a carthage line!")
+				switch SemanticVersion.from(scanner) {
+				case let .success(version):
+					cartfile.version = version
+					continue scannerLoop
+				case let .failure(error):
+					result = .failure(CarthageError(scannableError: error))
+					break scannerLoop
+				}
+			}
+			
 			switch Dependency<PinnedVersion>.from(scanner) {
 			case let .success(dep):
 				if case let .carthage(version) = dep.project {
@@ -399,16 +411,15 @@ extension Dependency where V: Scannable {
 		return ProjectIdentifier.from(scanner).flatMap { identifier in
 			return V.from(scanner)
 				.map { specifier in self.init(project: identifier, version: specifier) }
-				.flatMapError { error in
-					print("Got error = \(error)")
-					switch identifier {
-					case let .carthage(version):
-						return V.from(Scanner(string: "\"\(version.description)\""))
-							.map { self.init(project: identifier, version: $0) }
-					default:
-						return .failure(error)
-					}
-				}
+//				.flatMapError { error in
+//					switch identifier {
+//					case let .carthage(version):
+//						return V.from(Scanner(string: "\"\(version.description)\""))
+//							.map { self.init(project: identifier, version: $0) }
+//					default:
+//						return .failure(error)
+//					}
+//				}
 		}
 	}
 }
