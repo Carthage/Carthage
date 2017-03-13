@@ -400,6 +400,7 @@ extension Dependency where V: Scannable {
 			return V.from(scanner)
 				.map { specifier in self.init(project: identifier, version: specifier) }
 				.flatMapError { error in
+					print("Got error = \(error)")
 					switch identifier {
 					case let .carthage(version):
 						return V.from(Scanner(string: "\"\(version.description)\""))
