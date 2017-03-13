@@ -56,7 +56,7 @@ public struct ArchiveCommand: CommandProtocol {
 							if !schemes.isEmpty {
 								return .init(schemes)
 							} else {
-								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.carthage_path)), []))
+								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), []))
 							}
 						}
 				}

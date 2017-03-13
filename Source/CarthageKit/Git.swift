@@ -27,7 +27,7 @@ public struct GitURL {
 
 		if let parsedURL = parsedURL, let host = parsedURL.host {
 			// Normal, valid URL.
-			let path = strippingGitSuffix(parsedURL.carthage_path)
+			let path = strippingGitSuffix(parsedURL.path)
 			return "\(host)\(path)"
 		} else if urlString.hasPrefix("/") {
 			// Local path.
@@ -169,7 +169,7 @@ public func launchGitTask(_ arguments: [String], repositoryFileURL: URL? = nil, 
 	var updatedEnvironment = environment ?? ProcessInfo.processInfo.environment 
 	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
 
-	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.carthage_path, environment: updatedEnvironment)
+	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
 
 	return taskDescription.launch(standardInput: standardInput)
 		.ignoreTaskData()
@@ -206,7 +206,7 @@ public func cloneRepository(_ cloneURL: GitURL, _ destinationURL: URL, isBare: B
 		arguments.append("--bare")
 	}
 
-	return launchGitTask(arguments + [ "--quiet", cloneURL.urlString, destinationURL.carthage_path ])
+	return launchGitTask(arguments + [ "--quiet", cloneURL.urlString, destinationURL.path ])
 		.on(completed: { FetchCache.updateLastFetchTime(forURL: cloneURL) })
 }
 
@@ -273,7 +273,7 @@ public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDir
 			}
 
 			var environment = ProcessInfo.processInfo.environment
-			environment["GIT_WORK_TREE"] = workingDirectoryURL.carthage_path
+			environment["GIT_WORK_TREE"] = workingDirectoryURL.path
 			return .success(environment)
 		}
 		.flatMap(.concat) { environment in launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment) }
@@ -291,7 +291,7 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 			do {
 				name = try url.resourceValues(forKeys: [ .nameKey ]).name
 			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(url.carthage_path)", underlyingError: error))
+				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not enumerate name of descendant at \(url.path)", underlyingError: error))
 			}
 
 			if name != ".git" {
@@ -302,10 +302,10 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 			do {
 				isDirectory = try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory
 				if isDirectory == nil {
-					return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(url.carthage_path) is a directory", underlyingError: nil))
+					return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(url.path) is a directory", underlyingError: nil))
 				}
 			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(url.carthage_path) is a directory", underlyingError: error))
+				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not determine whether \(url.path) is a directory", underlyingError: error))
 			}
 
 			if let directory = isDirectory, directory {
@@ -316,7 +316,7 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 				try FileManager.default.removeItem(at: url)
 				return .empty
 			} catch let error as NSError {
-				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(url.carthage_path)", underlyingError: error))
+				return SignalProducer(error: CarthageError.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: "could not remove \(url.path)", underlyingError: error))
 			}
 		}
 
@@ -506,7 +506,7 @@ public func commitExistsInRepository(_ repositoryFileURL: URL, revision: String 
 private func ensureDirectoryExistsAtURL(_ fileURL: URL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer { observer, disposable in
 		var isDirectory: ObjCBool = false
-		if FileManager.default.fileExists(atPath: fileURL.carthage_path, isDirectory: &isDirectory) && isDirectory.boolValue {
+		if FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDirectory) && isDirectory.boolValue {
 			observer.sendCompleted()
 		} else {
 			observer.send(error: .readFailed(fileURL, nil))
@@ -540,7 +540,7 @@ public func isGitRepository(_ directoryURL: URL) -> SignalProducer<Bool, NoError
 			if (relativeOrAbsoluteGitDirectory as NSString).isAbsolutePath {
 				absoluteGitDirectory = relativeOrAbsoluteGitDirectory
 			} else {
-				absoluteGitDirectory = directoryURL.appendingPathComponent(relativeOrAbsoluteGitDirectory).carthage_path
+				absoluteGitDirectory = directoryURL.appendingPathComponent(relativeOrAbsoluteGitDirectory).path
 			}
 			var isDirectory: ObjCBool = false
 			let directoryExists = absoluteGitDirectory.map { FileManager.default.fileExists(atPath: $0, isDirectory: &isDirectory) } ?? false
@@ -557,7 +557,7 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 	return isGitRepository(submoduleDirectoryURL)
 		.map { isRepository in
 			// Check if the submodule is initialized/updated already.
-			return isRepository && FileManager.default.fileExists(atPath: submoduleDirectoryURL.appendingPathComponent(".git").carthage_path)
+			return isRepository && FileManager.default.fileExists(atPath: submoduleDirectoryURL.appendingPathComponent(".git").path)
 		}
 		.flatMap(.merge) { submoduleExists -> SignalProducer<(), CarthageError> in
 			if submoduleExists {

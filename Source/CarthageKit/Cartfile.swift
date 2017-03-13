@@ -103,7 +103,7 @@ public struct Cartfile {
 						.map { dependency in
 							return DuplicateDependency(
 								project: dependency.project,
-								locations: [ cartfileURL.carthage_path ]
+								locations: [ cartfileURL.path ]
 							)
 						}
 					return .duplicateDependencies(dependencies)

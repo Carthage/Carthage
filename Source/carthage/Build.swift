@@ -93,7 +93,7 @@ public struct BuildCommand: CommandProtocol {
 					}
 					.on(
 						started: {
-							if let path = temporaryURL?.carthage_path {
+							if let path = temporaryURL?.path {
 								carthage.println(formatting.bullets + "xcodebuild output can be found in " + formatting.path(path))
 							}
 						},

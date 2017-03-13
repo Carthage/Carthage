@@ -246,7 +246,7 @@ public final class Project {
 				return Cartfile.from(file: cartfileURL)
 			}
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
-				if isNoSuchFileError(error) && FileManager.default.fileExists(atPath: privateCartfileURL.carthage_path) {
+				if isNoSuchFileError(error) && FileManager.default.fileExists(atPath: privateCartfileURL.path) {
 					return SignalProducer(value: Cartfile())
 				}
 
@@ -643,7 +643,7 @@ public final class Project {
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(project, release, asset)
 
-						if FileManager.default.fileExists(atPath: fileURL.carthage_path) {
+						if FileManager.default.fileExists(atPath: fileURL.path) {
 							return SignalProducer(value: fileURL)
 						} else {
 							return client.download(asset: asset)
@@ -721,7 +721,7 @@ public final class Project {
 				if let submodule = submodule {
 					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
 					// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
-					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.carthage_path))
+					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
 						.startOnQueue(self.gitOperationQueue)
 						.then(symlinkCheckoutPaths)
 				} else {
@@ -919,7 +919,7 @@ public final class Project {
 					])
 
 					if dependencyCheckoutURLResource?.isSymbolicLink == true {
-						_ = dependencyCheckoutURL.carthage_path.withCString(Darwin.unlink)
+						_ = dependencyCheckoutURL.path.withCString(Darwin.unlink)
 					} else if dependencyCheckoutURLResource?.isDirectory == true {
 						// older version of carthage wrote this directory?
 						// user wrote this directory, unaware of the precedent not to circumvent carthage’s management?
@@ -932,7 +932,7 @@ public final class Project {
 					}
 
 					do {
-						try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.carthage_path, withDestinationPath: linkDestinationPath)
+						try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.path, withDestinationPath: linkDestinationPath)
 					} catch let error as NSError {
 						return .failure(.writeFailed(dependencyCheckoutURL, error))
 					}
