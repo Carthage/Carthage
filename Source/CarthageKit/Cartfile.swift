@@ -169,7 +169,6 @@ public struct ResolvedCartfile {
 		let scanner = Scanner(string: string)
 		scannerLoop: while !scanner.isAtEnd {
 			if scanner.scanString("carthage", into: nil) {
-				print("We have a carthage line!")
 				switch SemanticVersion.from(scanner) {
 				case let .success(version):
 					cartfile.version = version
