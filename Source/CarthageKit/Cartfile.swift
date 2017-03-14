@@ -182,11 +182,7 @@ public struct ResolvedCartfile {
 			
 			switch Dependency<PinnedVersion>.from(scanner) {
 			case let .success(dep):
-				if case let .carthage(version) = dep.project {
-					cartfile.version = version
-				} else {
-					cartfile.dependencies.insert(dep)
-				}
+				cartfile.dependencies.insert(dep)
 			case let .failure(error):
 				result = .failure(CarthageError(scannableError: error))
 				break scannerLoop
@@ -219,9 +215,6 @@ public enum ProjectIdentifier {
 	/// A binary-only framework
 	case binary(URL)
 	
-	/// Cartage version
-	case carthage(SemanticVersion)
-
 	/// The unique, user-visible name for this project.
 	public var name: String {
 		switch self {
@@ -233,8 +226,6 @@ public enum ProjectIdentifier {
 
 		case let .binary(url):
 			return url.lastPathComponent.stripping(suffix: ".json")
-		case let .carthage(version):
-			return "carthage \"\(version.description)\""
 		}
 	}
 
@@ -278,8 +269,6 @@ extension ProjectIdentifier: Hashable {
 
 		case let .binary(url):
 			return url.hashValue
-		case let .carthage(version):
-			return version.hashValue
 		}
 	}
 }
@@ -296,11 +285,6 @@ extension ProjectIdentifier: Scannable {
 		} else if scanner.scanString("git", into: nil) {
 			parser = { urlString in
 				return .success(self.git(GitURL(urlString)))
-			}
-		} else if scanner.scanString("carthage", into: nil) {
-			parser = { urlString in
-				return SemanticVersion.from(Scanner(string: urlString))
-					.map(self.carthage)
 			}
 		} else if scanner.scanString("binary", into: nil) {
 			parser = { urlString in
@@ -354,8 +338,6 @@ extension ProjectIdentifier: CustomStringConvertible {
 
 		case let .binary(url):
 			return "binary \"\(url.absoluteString)\""
-		case let .carthage(version):
-			return "carthage \(version.description)"
 		}
 	}
 }
@@ -374,7 +356,7 @@ extension ProjectIdentifier {
 
 		case let .git(url):
 			return url
-		case .binary, .carthage:
+		case .binary:
 			return nil
 		}
 	}
@@ -411,15 +393,6 @@ extension Dependency where V: Scannable {
 		return ProjectIdentifier.from(scanner).flatMap { identifier in
 			return V.from(scanner)
 				.map { specifier in self.init(project: identifier, version: specifier) }
-//				.flatMapError { error in
-//					switch identifier {
-//					case let .carthage(version):
-//						return V.from(Scanner(string: "\"\(version.description)\""))
-//							.map { self.init(project: identifier, version: $0) }
-//					default:
-//						return .failure(error)
-//					}
-//				}
 		}
 	}
 }

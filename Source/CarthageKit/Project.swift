@@ -375,8 +375,6 @@ public final class Project {
 				.flatMap(.concat) { binaryProject -> SignalProducer<PinnedVersion, CarthageError> in
 					return SignalProducer(binaryProject.versions.keys)
 				}
-		case .carthage:
-			return .empty
 		}
 
 		return SignalProducer.attempt {
@@ -420,7 +418,7 @@ public final class Project {
 				.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
 					return SignalProducer(cartfile.dependencies)
 			}
-		case .binary, .carthage:
+		case .binary:
 			// Binary-only frameworks do not support dependencies
 			return .empty
 		}
@@ -605,7 +603,7 @@ public final class Project {
 						.concat(value: false)
 						.take(first: 1)
 
-				case .git, .binary, .carthage:
+				case .git, .binary:
 					return SignalProducer(value: false)
 				}
 			}
@@ -831,8 +829,6 @@ public final class Project {
 
 						case let .binary(url):
 							return self.installBinariesForBinaryProject(url: url, pinnedVersion: dependency.version)
-						case .carthage:
-							return .empty
 						}
 
 
