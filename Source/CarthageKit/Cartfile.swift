@@ -214,7 +214,7 @@ public enum ProjectIdentifier {
 
 	/// A binary-only framework
 	case binary(URL)
-	
+
 	/// The unique, user-visible name for this project.
 	public var name: String {
 		switch self {
