@@ -455,7 +455,7 @@ public func buildScheme(_ scheme: String, withOptions options: BuildOptions, inP
 
 						// Do not copy build products that originate from the current project's own carthage dependencies
 						let projectURL = URL(fileURLWithPath: projectPath)
-						let dependencyCheckoutDir = workingDirectoryURL.appendingPathComponent(CarthageProjectCheckoutsPath)
+						let dependencyCheckoutDir = workingDirectoryURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true)
 						return !dependencyCheckoutDir.hasSubdirectory(projectURL)
 					}
 					.collect()
