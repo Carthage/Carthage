@@ -270,11 +270,11 @@ class XcodeSpec: QuickSpec {
 				.wait()
 			expect(result.error).to(beNil())
 
-			let reactiveSwiftPath = _buildFolderURL.appendingPathComponent("Mac/TestFramework1.framework").path
-			let resultPath = _buildFolderURL.appendingPathComponent("Mac/TestFramework2.framework").path
+			let framework1Path = _buildFolderURL.appendingPathComponent("Mac/TestFramework1.framework").path
+			let framework2Path = _buildFolderURL.appendingPathComponent("Mac/TestFramework2.framework").path
 
-			expect(reactiveSwiftPath).to(beExistingDirectory())
-			expect(resultPath).notTo(beExistingDirectory())
+			expect(framework1Path).to(beExistingDirectory())
+			expect(framework2Path).notTo(beExistingDirectory())
 		}
 
 		it("should error out with .noSharedFrameworkSchemes if there is no shared framework schemes") {
