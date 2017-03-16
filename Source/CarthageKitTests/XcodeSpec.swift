@@ -256,6 +256,27 @@ class XcodeSpec: QuickSpec {
 			}
 		}
 
+		it("should not copy build products from nested dependencies produced by workspace") {
+			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "WorkspaceWithDependency", withExtension: nil)!
+			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
+
+			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
+
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]))
+				.ignoreTaskData()
+				.on(value: { (project, scheme) in
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+			expect(result.error).to(beNil())
+
+			let framework1Path = _buildFolderURL.appendingPathComponent("Mac/TestFramework1.framework").path
+			let framework2Path = _buildFolderURL.appendingPathComponent("Mac/TestFramework2.framework").path
+
+			expect(framework1Path).to(beExistingDirectory())
+			expect(framework2Path).notTo(beExistingDirectory())
+		}
+
 		it("should error out with .noSharedFrameworkSchemes if there is no shared framework schemes") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "Swell-0.5.0", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)

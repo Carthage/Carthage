@@ -448,12 +448,15 @@ public func buildScheme(_ scheme: String, withOptions options: BuildOptions, inP
 
 				return BuildSettings.loadWithArguments(argsForLoading)
 					.filter { settings in
-						// Only copy build products for the framework type we care about.
-						if let frameworkType = settings.frameworkType.value {
-							return shouldBuildFrameworkType(frameworkType)
-						} else {
+						// Only copy build products that are dynamic frameworks
+						guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
 							return false
 						}
+
+						// Do not copy build products that originate from the current project's own carthage dependencies
+						let projectURL = URL(fileURLWithPath: projectPath)
+						let dependencyCheckoutDir = workingDirectoryURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true)
+						return !dependencyCheckoutDir.hasSubdirectory(projectURL)
 					}
 					.collect()
 					.flatMap(.concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in

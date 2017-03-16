@@ -208,6 +208,11 @@ public struct BuildSettings {
 	public var adHocCodeSigningAllowed: Result<Bool, CarthageError> {
 		return self["AD_HOC_CODE_SIGNING_ALLOWED"].map { $0 == "YES" }
 	}
+
+	/// Attempts to determine the path to the project that contains the current target
+	public var projectPath: Result<String, CarthageError> {
+		return self["PROJECT_FILE_PATH"]
+	}
 }
 
 extension BuildSettings: CustomStringConvertible {
