@@ -416,7 +416,7 @@ public final class Project {
 				.flatMapError { _ in .empty }
 				.attemptMap(Cartfile.from(string:))
 				.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
-					return SignalProducer(cartfile.dependencies)
+					return SignalProducer(cartfile.dependencies.map { Dependency(project: $0.key, version: $0.value) })
 			}
 		case .binary:
 			// Binary-only frameworks do not support dependencies
@@ -458,13 +458,16 @@ public final class Project {
 			.zip(loadCombinedCartfile(), resolvedCartfile)
 			.flatMap(.merge) { cartfile, resolvedCartfile in
 				return resolver.resolve(
-					dependencies: cartfile.dependencies,
-					lastResolved: resolvedCartfile?.versions,
+					dependencies: Set(cartfile.dependencies.map { Dependency(project: $0.key, version: $0.value) }),
+					lastResolved: resolvedCartfile?.dependencies,
 					dependenciesToUpdate: dependenciesToUpdate
 				)
 			}
-			.collect()
-			.map(Set.init)
+			.reduce([:]) { result, dependency in
+				var copy = result
+				copy[dependency.project] = dependency.version
+				return copy
+			}
 			.map(ResolvedCartfile.init)
 	}
 
@@ -473,24 +476,19 @@ public final class Project {
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func outdatedDependencies(_ includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], CarthageError> {
-		typealias PinnedDependency = Dependency<PinnedVersion>
-		typealias OutdatedDependency = (PinnedDependency, PinnedDependency)
+	public func outdatedDependencies(_ includeNestedDependencies: Bool) -> SignalProducer<[(ProjectIdentifier, PinnedVersion, PinnedVersion)], CarthageError> {
+		typealias OutdatedDependency = (ProjectIdentifier, PinnedVersion, PinnedVersion)
 
-		let currentDependencies = loadResolvedCartfile()
-			.map { $0.dependencies }
-		let updatedDependencies = updatedResolvedCartfile()
-			.map { $0.dependencies }
-		let outdatedDependencies = SignalProducer.combineLatest(currentDependencies, updatedDependencies)
+		let outdatedDependencies = SignalProducer
+			.combineLatest(
+				loadResolvedCartfile(),
+				updatedResolvedCartfile()
+			)
+			.map { ($0.dependencies, $1.dependencies) }
 			.map { (currentDependencies, updatedDependencies) -> [OutdatedDependency] in
-				var currentDependenciesDictionary = [ProjectIdentifier: PinnedDependency]()
-				for dependency in currentDependencies {
-					currentDependenciesDictionary[dependency.project] = dependency
-				}
-
-				return updatedDependencies.flatMap { updated -> OutdatedDependency? in
-					if let resolved = currentDependenciesDictionary[updated.project], resolved.version != updated.version {
-						return (resolved, updated)
+				return updatedDependencies.flatMap { (project, version) -> OutdatedDependency? in
+					if let resolved = currentDependencies[project], resolved != version {
+						return (project, resolved, version)
 					} else {
 						return nil
 					}
@@ -501,13 +499,14 @@ public final class Project {
 			return outdatedDependencies
 		}
 
-		let explicitDependencyProjects = loadCombinedCartfile()
-			.map { $0.dependencies.map { $0.project } }
-
-		return SignalProducer.combineLatest(outdatedDependencies, explicitDependencyProjects)
-			.map { (oudatedDependencies, explicitDependencyProjects) -> [OutdatedDependency] in
-				return oudatedDependencies.filter { resolved, updated in
-					return explicitDependencyProjects.contains(resolved.project)
+		return SignalProducer
+			.combineLatest(
+				outdatedDependencies,
+				loadCombinedCartfile()
+			)
+			.map { (oudatedDependencies, combinedCartfile) -> [OutdatedDependency] in
+				return oudatedDependencies.filter { project, resolved, updated in
+					return combinedCartfile.dependencies[project] != nil
 				}
 		}
 	}
@@ -747,11 +746,11 @@ public final class Project {
 		// out the relationships between them. Loading the cartfile will each will give us its
 		// dependencies. Building a recursive lookup table with this information will let us sort
 		// dependencies before the projects that depend on them.
-		return SignalProducer<Dependency<PinnedVersion>, CarthageError>(cartfile.dependencies)
-			.flatMap(.merge) { (dependency: Dependency<PinnedVersion>) -> SignalProducer<DependencyGraph, CarthageError> in
-				return self.dependencyProjects(for: dependency)
+		return SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError>(cartfile.dependencies.map { $0 })
+			.flatMap(.merge) { (dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<DependencyGraph, CarthageError> in
+				return self.dependencyProjects(for: Dependency(project: dependency, version: version))
 					.map { dependencies in
-						[dependency.project: dependencies]
+						[dependency: dependencies]
 					}
 			}
 			.reduce([:]) { (working: DependencyGraph, next: DependencyGraph) in
@@ -768,9 +767,10 @@ public final class Project {
 					return SignalProducer(error: .dependencyCycle(graph))
 				}
 
-				let sortedDependencies = cartfile.dependencies
-					.filter { dependency in sortedProjects.contains(dependency.project) }
-					.sorted { left, right in sortedProjects.index(of: left.project)! < sortedProjects.index(of: right.project)! }
+				let sortedDependencies = cartfile.dependencies.keys
+					.filter { dependency in sortedProjects.contains(dependency) }
+					.sorted { left, right in sortedProjects.index(of: left)! < sortedProjects.index(of: right)! }
+					.map { Dependency(project: $0, version: cartfile.dependencies[$0]!) }
 
 				return SignalProducer(sortedDependencies)
 			}

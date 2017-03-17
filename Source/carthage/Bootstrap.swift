@@ -32,7 +32,7 @@ public struct BootstrapCommand: CommandProtocol {
 					checkDependencies = project
 						.loadResolvedCartfile()
 						.flatMap(.concat) { resolvedCartfile -> SignalProducer<(), CarthageError> in
-							let resolvedDependencyNames = resolvedCartfile.dependencies.map { $0.project.name.lowercased() }
+							let resolvedDependencyNames = resolvedCartfile.dependencies.keys.map { $0.name.lowercased() }
 							let unresolvedDependencyNames = Set(depsToUpdate.map { $0.lowercased() }).subtracting(resolvedDependencyNames)
 							
 							if !unresolvedDependencyNames.isEmpty {

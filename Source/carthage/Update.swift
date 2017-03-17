@@ -81,7 +81,7 @@ public struct UpdateCommand: CommandProtocol {
 					checkDependencies = project
 						.loadCombinedCartfile()
 						.flatMap(.concat) { cartfile -> SignalProducer<(), CarthageError> in
-							let dependencyNames = cartfile.dependencies.map { $0.project.name.lowercased() }
+							let dependencyNames = cartfile.dependencies.keys.map { $0.name.lowercased() }
 							let unknownDependencyNames = Set(depsToUpdate.map { $0.lowercased() }).subtracting(dependencyNames)
 							
 							if !unknownDependencyNames.isEmpty {
