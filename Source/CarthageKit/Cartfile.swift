@@ -197,9 +197,9 @@ extension ResolvedCartfile: CustomStringConvertible {
 		let dependenciesDescription = dependencies
 			.sorted { $0.project.description < $1.project.description }
 			.map { $0.description + "\n" }
-			.joined(separator: "")
+			.joined()
 		
-		return "carthage \"\(version?.description ?? "no-version")\"\n\(dependenciesDescription)"
+		return (version?.description.appending("\n") ?? "")  + dependenciesDescription
 	}
 }
 
