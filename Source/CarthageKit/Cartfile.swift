@@ -199,7 +199,13 @@ extension ResolvedCartfile: CustomStringConvertible {
 			.map { $0.description + "\n" }
 			.joined()
 		
-		return (version?.description.appending("\n") ?? "")  + dependenciesDescription
+		var result = ""
+		if let description = version?.description {
+			result += description
+		}
+		result += dependenciesDescription
+		
+		return result
 	}
 }
 
