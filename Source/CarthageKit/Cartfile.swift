@@ -139,7 +139,7 @@ public struct ResolvedCartfile {
 	/// The dependencies listed in the Cartfile.resolved.
 	public var dependencies: Set<Dependency<PinnedVersion>>
 	
-	/// Version of Carthage used to generate the `Cartfile.resolved`
+	/// Version of Carthage printed into the `Cartfile.resolved` file
 	public var version: SemanticVersion?
 	
 	/// The version of each project
