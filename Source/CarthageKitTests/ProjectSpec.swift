@@ -135,7 +135,7 @@ class ProjectSpec: QuickSpec {
 				
 				let dependencies = result?.value?.dependencies
 				expect(dependencies?.count) == 1
-				expect(dependencies?.first?.project.name) == "Carthage"
+				expect(dependencies?.keys.first?.name) == "Carthage"
 			}
 
 			it("should load a combined Cartfile when only a Cartfile.private is present") {
@@ -146,7 +146,7 @@ class ProjectSpec: QuickSpec {
 
 				let dependencies = result?.value?.dependencies
 				expect(dependencies?.count) == 1
-				expect(dependencies?.first?.project.name) == "Carthage"
+				expect(dependencies?.keys.first?.name) == "Carthage"
 			}
 
 			it("should detect duplicate dependencies across Cartfile and Cartfile.private") {
@@ -196,7 +196,7 @@ class ProjectSpec: QuickSpec {
 			let projectIdentifier = ProjectIdentifier.git(GitURL(repositoryURL.absoluteString))
 
 			func initRepository() {
-				expect { try FileManager.default.createDirectory(atPath: repositoryURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
+				expect { try FileManager.default.createDirectory(atPath: repositoryURL.path, withIntermediateDirectories: true) }.notTo(throwError())
 				_ = launchGitTask([ "init" ], repositoryFileURL: repositoryURL).wait()
 			}
 
@@ -226,7 +226,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			beforeEach {
-				expect { try FileManager.default.createDirectory(atPath: temporaryURL.carthage_path, withIntermediateDirectories: true) }.notTo(throwError())
+				expect { try FileManager.default.createDirectory(atPath: temporaryURL.path, withIntermediateDirectories: true) }.notTo(throwError())
 				initRepository()
 			}
 

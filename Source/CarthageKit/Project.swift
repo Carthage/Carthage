@@ -246,7 +246,7 @@ public final class Project {
 				return Cartfile.from(file: cartfileURL)
 			}
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
-				if isNoSuchFileError(error) && FileManager.default.fileExists(atPath: privateCartfileURL.carthage_path) {
+				if isNoSuchFileError(error) && FileManager.default.fileExists(atPath: privateCartfileURL.path) {
 					return SignalProducer(value: Cartfile())
 				}
 
@@ -416,7 +416,7 @@ public final class Project {
 				.flatMapError { _ in .empty }
 				.attemptMap(Cartfile.from(string:))
 				.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
-					return SignalProducer(cartfile.dependencies)
+					return SignalProducer(cartfile.dependencies.map { Dependency(project: $0.key, version: $0.value) })
 			}
 		case .binary:
 			// Binary-only frameworks do not support dependencies
@@ -458,20 +458,22 @@ public final class Project {
 			.zip(loadCombinedCartfile(), resolvedCartfile)
 			.flatMap(.merge) { cartfile, resolvedCartfile in
 				return resolver.resolve(
-					dependencies: cartfile.dependencies,
-					lastResolved: resolvedCartfile?.versions,
+					dependencies: Set(cartfile.dependencies.map { Dependency(project: $0.key, version: $0.value) }),
+					lastResolved: resolvedCartfile?.dependencies,
 					dependenciesToUpdate: dependenciesToUpdate
 				)
 			}
-			.collect()
-			.map(Set.init)
+			.reduce([:]) { result, dependency in
+				var copy = result
+				copy[dependency.project] = dependency.version
+				return copy
+			}
 			.map { dependencies in
 				var resolved = ResolvedCartfile(dependencies: dependencies)
 				resolved.version = SemanticVersion.from(Scanner(string: version)).value
 				
 				return resolved
 			}
-		
 	}
 
 	/// Attempts to determine which of the project's Carthage
@@ -479,24 +481,19 @@ public final class Project {
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func outdatedDependencies(_ includeNestedDependencies: Bool) -> SignalProducer<[(Dependency<PinnedVersion>, Dependency<PinnedVersion>)], CarthageError> {
-		typealias PinnedDependency = Dependency<PinnedVersion>
-		typealias OutdatedDependency = (PinnedDependency, PinnedDependency)
+	public func outdatedDependencies(_ includeNestedDependencies: Bool) -> SignalProducer<[(ProjectIdentifier, PinnedVersion, PinnedVersion)], CarthageError> {
+		typealias OutdatedDependency = (ProjectIdentifier, PinnedVersion, PinnedVersion)
 
-		let currentDependencies = loadResolvedCartfile()
-			.map { $0.dependencies }
-		let updatedDependencies = updatedResolvedCartfile(version: carthageVersion())
-			.map { $0.dependencies }
-		let outdatedDependencies = SignalProducer.combineLatest(currentDependencies, updatedDependencies)
+		let outdatedDependencies = SignalProducer
+			.combineLatest(
+				loadResolvedCartfile(),
+				updatedResolvedCartfile()
+			)
+			.map { ($0.dependencies, $1.dependencies) }
 			.map { (currentDependencies, updatedDependencies) -> [OutdatedDependency] in
-				var currentDependenciesDictionary = [ProjectIdentifier: PinnedDependency]()
-				for dependency in currentDependencies {
-					currentDependenciesDictionary[dependency.project] = dependency
-				}
-
-				return updatedDependencies.flatMap { updated -> OutdatedDependency? in
-					if let resolved = currentDependenciesDictionary[updated.project], resolved.version != updated.version {
-						return (resolved, updated)
+				return updatedDependencies.flatMap { (project, version) -> OutdatedDependency? in
+					if let resolved = currentDependencies[project], resolved != version {
+						return (project, resolved, version)
 					} else {
 						return nil
 					}
@@ -507,13 +504,14 @@ public final class Project {
 			return outdatedDependencies
 		}
 
-		let explicitDependencyProjects = loadCombinedCartfile()
-			.map { $0.dependencies.map { $0.project } }
-
-		return SignalProducer.combineLatest(outdatedDependencies, explicitDependencyProjects)
-			.map { (oudatedDependencies, explicitDependencyProjects) -> [OutdatedDependency] in
-				return oudatedDependencies.filter { resolved, updated in
-					return explicitDependencyProjects.contains(resolved.project)
+		return SignalProducer
+			.combineLatest(
+				outdatedDependencies,
+				loadCombinedCartfile()
+			)
+			.map { (oudatedDependencies, combinedCartfile) -> [OutdatedDependency] in
+				return oudatedDependencies.filter { project, resolved, updated in
+					return combinedCartfile.dependencies[project] != nil
 				}
 		}
 	}
@@ -649,7 +647,7 @@ public final class Project {
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(project, release, asset)
 
-						if FileManager.default.fileExists(atPath: fileURL.carthage_path) {
+						if FileManager.default.fileExists(atPath: fileURL.path) {
 							return SignalProducer(value: fileURL)
 						} else {
 							return client.download(asset: asset)
@@ -727,7 +725,7 @@ public final class Project {
 				if let submodule = submodule {
 					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
 					// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
-					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.carthage_path))
+					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
 						.startOnQueue(self.gitOperationQueue)
 						.then(symlinkCheckoutPaths)
 				} else {
@@ -753,11 +751,11 @@ public final class Project {
 		// out the relationships between them. Loading the cartfile will each will give us its
 		// dependencies. Building a recursive lookup table with this information will let us sort
 		// dependencies before the projects that depend on them.
-		return SignalProducer<Dependency<PinnedVersion>, CarthageError>(cartfile.dependencies)
-			.flatMap(.merge) { (dependency: Dependency<PinnedVersion>) -> SignalProducer<DependencyGraph, CarthageError> in
-				return self.dependencyProjects(for: dependency)
+		return SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError>(cartfile.dependencies.map { $0 })
+			.flatMap(.merge) { (dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<DependencyGraph, CarthageError> in
+				return self.dependencyProjects(for: Dependency(project: dependency, version: version))
 					.map { dependencies in
-						[dependency.project: dependencies]
+						[dependency: dependencies]
 					}
 			}
 			.reduce([:]) { (working: DependencyGraph, next: DependencyGraph) in
@@ -774,9 +772,10 @@ public final class Project {
 					return SignalProducer(error: .dependencyCycle(graph))
 				}
 
-				let sortedDependencies = cartfile.dependencies
-					.filter { dependency in sortedProjects.contains(dependency.project) }
-					.sorted { left, right in sortedProjects.index(of: left.project)! < sortedProjects.index(of: right.project)! }
+				let sortedDependencies = cartfile.dependencies.keys
+					.filter { dependency in sortedProjects.contains(dependency) }
+					.sorted { left, right in sortedProjects.index(of: left)! < sortedProjects.index(of: right)! }
+					.map { Dependency(project: $0, version: cartfile.dependencies[$0]!) }
 
 				return SignalProducer(sortedDependencies)
 			}
@@ -885,20 +884,7 @@ public final class Project {
 		return self.dependencyProjects(for: dependency)
 			.zip(with: // file system objects which might conflict with symlinks
 				list(treeish: dependency.version.commitish, atPath: CarthageProjectCheckoutsPath, inRepository: repositoryURL)
-					.flatMap(.merge) { (path: String) -> SignalProducer<String, CarthageError> in
-						let componentsRelativeToDirectoryURL = {
-							return URL(string: $0, relativeTo: self.directoryURL)?.standardizedFileURL.pathComponents
-						}
-						if
-							let components = componentsRelativeToDirectoryURL(path),
-							let comparator = componentsRelativeToDirectoryURL(CarthageProjectCheckoutsPath),
-							Array(components.dropLast(1)) == comparator // file system object is contained (shallowly) by `CarthageProjectCheckoutsPath`
-						{
-							return .init(value: components.last!)
-						} else {
-							return .empty
-						}
-					}
+					.map { (path: String) in (path as NSString).lastPathComponent }
 					.collect()
 			)
 			.attemptMap { (dependencies: Set<ProjectIdentifier>, components: [String]) -> Result<(), CarthageError> in
@@ -932,8 +918,26 @@ public final class Project {
 					let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
 					let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency.project, subdirectory: subdirectoryPath)
 
+					let dependencyCheckoutURLResource = try? dependencyCheckoutURL.resourceValues(forKeys: [
+						.isSymbolicLinkKey,
+						.isDirectoryKey
+					])
+
+					if dependencyCheckoutURLResource?.isSymbolicLink == true {
+						_ = dependencyCheckoutURL.path.withCString(Darwin.unlink)
+					} else if dependencyCheckoutURLResource?.isDirectory == true {
+						// older version of carthage wrote this directory?
+						// user wrote this directory, unaware of the precedent not to circumvent carthage’s management?
+						// directory exists as the result of rogue process or gamma ray?
+
+						// TODO: explore possibility of messaging user, informing that deleting said directory will result
+						// in symlink creation with carthage versions greater than 0.20.0, maybe with more broad advice on
+						// “from scratch” reproducability.
+						continue
+					}
+
 					do {
-						try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.carthage_path, withDestinationPath: linkDestinationPath)
+						try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.path, withDestinationPath: linkDestinationPath)
 					} catch let error as NSError {
 						return .failure(.writeFailed(dependencyCheckoutURL, error))
 					}
@@ -1001,17 +1005,19 @@ public final class Project {
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
 				return buildDependencyProject(dependency, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
-					.flatMapError { error in
-						switch error {
-						case .noSharedFrameworkSchemes:
-							// Log that building the dependency is being skipped,
-							// not to error out with `.noSharedFrameworkSchemes`
-							// to continue building other dependencies.
-							self._projectEventsObserver.send(value: .skippedBuilding(project, error.description))
-							return .empty
+					.map { producer in
+						return producer.flatMapError { error in
+							switch error {
+							case .noSharedFrameworkSchemes:
+								// Log that building the dependency is being skipped,
+								// not to error out with `.noSharedFrameworkSchemes`
+								// to continue building other dependencies.
+								self._projectEventsObserver.send(value: .skippedBuilding(project, error.description))
+								return .empty
 
-						default:
-							return SignalProducer(error: error)
+							default:
+								return SignalProducer(error: error)
+							}
 						}
 					}
 			}

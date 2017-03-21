@@ -18,9 +18,9 @@ public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
-	public var dependencies: Set<Dependency<VersionSpecifier>>
+	public var dependencies: [ProjectIdentifier: VersionSpecifier]
 
-	public init(dependencies: Set<Dependency<VersionSpecifier>> = []) {
+	public init(dependencies: [ProjectIdentifier: VersionSpecifier] = [:]) {
 		self.dependencies = dependencies
 	}
 
@@ -32,7 +32,8 @@ public struct Cartfile {
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func from(string: String) -> Result<Cartfile, CarthageError> {
-		var dependencies: [Dependency<VersionSpecifier>] = []
+		var dependencies: [ProjectIdentifier: VersionSpecifier] = [:]
+		var duplicates: [ProjectIdentifier] = []
 		var result: Result<(), CarthageError> = .success(())
 
 		let commentIndicator = "#"
@@ -49,14 +50,18 @@ public struct Cartfile {
 				return
 			}
 
-			switch Dependency<VersionSpecifier>.from(scanner) {
-			case let .success(dep):
-				if case .binary = dep.project, case .gitReference = dep.version {
+			switch ProjectIdentifier.from(scanner).fanout(VersionSpecifier.from(scanner)) {
+			case let .success((dependency, version)):
+				if case .binary = dependency, case .gitReference = version {
 					result = .failure(CarthageError.parseError(description: "binary dependencies cannot have a git reference for the version specifier in line: \(scanner.currentLine)"))
 					stop = true
 					return
 				}
-				dependencies.append(dep)
+				if dependencies[dependency] == nil {
+					dependencies[dependency] = version
+				} else {
+					duplicates.append(dependency)
+				}
 
 			case let .failure(error):
 				result = .failure(CarthageError(scannableError: error))
@@ -76,15 +81,10 @@ public struct Cartfile {
 		}
 
 		return result.flatMap { _ in
-			let dupes = buildCountedSet(dependencies.map { $0.project })
-				.filter { $0.1 > 1 }
-				.map { $0.0 }
-				.map { DuplicateDependency(project: $0, locations: []) }
-			
-			if !dupes.isEmpty {
-				return .failure(.duplicateDependencies(dupes))
+			if !duplicates.isEmpty {
+				return .failure(.duplicateDependencies(duplicates.map { DuplicateDependency(project: $0, locations: []) }))
 			}
-			return .success(Cartfile(dependencies: Set(dependencies)))
+			return .success(Cartfile(dependencies: dependencies))
 		}
 	}
 
@@ -103,7 +103,7 @@ public struct Cartfile {
 						.map { dependency in
 							return DuplicateDependency(
 								project: dependency.project,
-								locations: [ cartfileURL.carthage_path ]
+								locations: [ cartfileURL.path ]
 							)
 						}
 					return .duplicateDependencies(dependencies)
@@ -115,7 +115,9 @@ public struct Cartfile {
 
 	/// Appends the contents of another Cartfile to that of the receiver.
 	public mutating func append(_ cartfile: Cartfile) {
-		dependencies.formUnion(cartfile.dependencies)
+		for (dependency, version) in cartfile.dependencies {
+			dependencies[dependency] = version
+		}
 	}
 }
 
@@ -128,8 +130,8 @@ extension Cartfile: CustomStringConvertible {
 /// Returns an array containing projects that are listed as dependencies
 /// in both arguments.
 public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [ProjectIdentifier] {
-	let projects1 = cartfile1.dependencies.map { $0.project }
-	let projects2 = cartfile2.dependencies.map { $0.project }
+	let projects1 = cartfile1.dependencies.keys
+	let projects2 = cartfile2.dependencies.keys
 	return Array(Set(projects1).intersection(Set(projects2)))
 }
 
@@ -137,21 +139,12 @@ public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) ->
 /// checked out for each dependency.
 public struct ResolvedCartfile {
 	/// The dependencies listed in the Cartfile.resolved.
-	public var dependencies: Set<Dependency<PinnedVersion>>
-	
-	/// Version of Carthage printed into the `Cartfile.resolved` file
-	public var version: SemanticVersion?
-	
-	/// The version of each project
-	public var versions: [ProjectIdentifier: PinnedVersion] {
-		var versions: [ProjectIdentifier: PinnedVersion] = [:]
-		for dependency in dependencies {
-			versions[dependency.project] = dependency.version
-		}
-		return versions
-	}
+	public var dependencies: [ProjectIdentifier: PinnedVersion]
 
-	public init(dependencies: Set<Dependency<PinnedVersion>>) {
+  /// Version of Carthage printed into the `Cartfile.resolved` file
+	public var version: SemanticVersion?
+
+	public init(dependencies: [ProjectIdentifier: PinnedVersion]) {
 		self.dependencies = dependencies
 	}
 
@@ -163,7 +156,7 @@ public struct ResolvedCartfile {
 
 	/// Attempts to parse Cartfile.resolved information from a string.
 	public static func from(string: String) -> Result<ResolvedCartfile, CarthageError> {
-		var cartfile = self.init(dependencies: [])
+		var cartfile = self.init(dependencies: [:])
 		var result: Result<(), CarthageError> = .success(())
 
 		let scanner = Scanner(string: string)
@@ -178,11 +171,12 @@ public struct ResolvedCartfile {
 					break scannerLoop
 				}
 			}
-			
-			switch Dependency<PinnedVersion>.from(scanner) {
-			case let .success(dep):
-				cartfile.dependencies.insert(dep)
-			case let .failure(error):
+
+      switch ProjectIdentifier.from(scanner).fanout(PinnedVersion.from(scanner)) {
+			case let .success((dep, version)):
+				cartfile.dependencies[dep] = version
+
+      case let .failure(error):
 				result = .failure(CarthageError(scannableError: error))
 				break scannerLoop
 			}
@@ -195,11 +189,11 @@ public struct ResolvedCartfile {
 extension ResolvedCartfile: CustomStringConvertible {
 	public var description: String {
 		let dependenciesDescription = dependencies
-			.sorted { $0.project.description < $1.project.description }
-			.map { $0.description + "\n" }
-			.joined()
-		
-		var result = ""
+			.sorted { $0.key.description < $1.key.description }
+			.map { "\($0.key) \($0.value)\n" }
+			.joined(separator: "")
+    
+    var result = ""
 		if let description = version?.description {
 			result += "carthage \(description)\n"
 		}
