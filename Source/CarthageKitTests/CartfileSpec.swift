@@ -24,50 +24,23 @@ class CartfileSpec: QuickSpec {
 
 			let cartfile = result.value!
 
-			let depReactiveCocoa = Dependency<VersionSpecifier>(
-				project: ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
-				version: .atLeast(SemanticVersion(major: 2, minor: 3, patch: 1))
-			)
-
-			let depMantle = Dependency<VersionSpecifier>(
-				project: .gitHub(Repository(owner: "Mantle", name: "Mantle")),
-				version: .compatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0))
-			)
-
-			let depLibextobjc = Dependency<VersionSpecifier>(
-				project: .gitHub(Repository(owner: "jspahrsummers", name: "libextobjc")),
-				version: .exactly(SemanticVersion(major: 0, minor: 4, patch: 1))
-			)
-
-			let depConfigs = Dependency<VersionSpecifier>(
-				project: .gitHub(Repository(owner: "jspahrsummers", name: "xcconfigs")),
-				version: .any
-			)
-
-			let depCharts = Dependency<VersionSpecifier>(
-				project: .gitHub(Repository(owner: "danielgindi", name: "ios-charts")),
-				version: .any
-			)
-
-			let depErrorTranslations = Dependency<VersionSpecifier>(
-				project: .gitHub(Repository(server: .enterprise(url: URL(string: "https://enterprise.local/ghe")!), owner: "desktop", name: "git-error-translations")),
-				version: .any
-			)
-
-			let depErrorTranslations2 = Dependency<VersionSpecifier>(
-				project: .git(GitURL("https://enterprise.local/desktop/git-error-translations2.git")),
-				version: .gitReference("development")
-			)
+			let reactiveCocoa = ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
+			let mantle = ProjectIdentifier.gitHub(Repository(owner: "Mantle", name: "Mantle"))
+			let libextobjc = ProjectIdentifier.gitHub(Repository(owner: "jspahrsummers", name: "libextobjc"))
+			let xcconfigs = ProjectIdentifier.gitHub(Repository(owner: "jspahrsummers", name: "xcconfigs"))
+			let iosCharts = ProjectIdentifier.gitHub(Repository(owner: "danielgindi", name: "ios-charts"))
+			let errorTranslations = ProjectIdentifier.gitHub(Repository(server: .enterprise(url: URL(string: "https://enterprise.local/ghe")!), owner: "desktop", name: "git-error-translations"))
+			let errorTranslations2 = ProjectIdentifier.git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))
 			
-			expect(cartfile.dependencies) == Set([
-				depReactiveCocoa,
-				depMantle,
-				depLibextobjc,
-				depConfigs,
-				depCharts,
-				depErrorTranslations,
-				depErrorTranslations2,
-			])
+			expect(cartfile.dependencies) == [
+				reactiveCocoa: .atLeast(SemanticVersion(major: 2, minor: 3, patch: 1)),
+				mantle: .compatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0)),
+				libextobjc: .exactly(SemanticVersion(major: 0, minor: 4, patch: 1)),
+				xcconfigs: .any,
+				iosCharts: .any,
+				errorTranslations: .any,
+				errorTranslations2: .gitReference("development"),
+			]
 		}
 
 		it("should parse a Cartfile.resolved") {
@@ -79,14 +52,8 @@ class CartfileSpec: QuickSpec {
 
 			let resolvedCartfile = result.value!
 			expect(resolvedCartfile.dependencies) == [
-				Dependency(
-					project: .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
-					version: PinnedVersion("v2.3.1")
-				),
-				Dependency(
-					project: .git(GitURL("https://github.com/Mantle/Mantle.git")),
-					version: PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47")
-				),
+				.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
+				.git(GitURL("https://github.com/Mantle/Mantle.git")): PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47"),
 			]
 		}
 
@@ -105,7 +72,7 @@ class CartfileSpec: QuickSpec {
 			let projects = dupes
 				.map { $0.project }
 				.sorted { $0.description < $1.description }
-			expect(dupes.count) == 2
+			expect(dupes.count) == 3
 			
 			let self2Dupe = projects[0]
 			expect(self2Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self2", name: "self2"))
@@ -160,19 +127,11 @@ class ResolvedCartfileSpec: QuickSpec {
 	override func spec() {
 		describe("description") {
 			it("should output dependencies alphabetically") {
-				let result = Dependency(
-					project: .gitHub(Repository(owner: "antitypical", name: "Result")),
-					version: PinnedVersion("3.0.0")
-				)
-				let reactiveCocoa = Dependency(
-					project: .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
-					version: PinnedVersion("v2.3.1")
-				)
-				let reactiveSwift = Dependency(
-					project: .gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveSwift")),
-					version: PinnedVersion("v1.0.0")
-				)
-				let resolvedCartfile = ResolvedCartfile(dependencies: [ result, reactiveSwift, reactiveCocoa ])
+				let resolvedCartfile = ResolvedCartfile(dependencies: [
+					.gitHub(Repository(owner: "antitypical", name: "Result")): PinnedVersion("3.0.0"),
+					.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveSwift")): PinnedVersion("v1.0.0"),
+					.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
+				])
 				
 				expect(resolvedCartfile.description) == "github \"ReactiveCocoa/ReactiveCocoa\" \"v2.3.1\"\ngithub \"ReactiveCocoa/ReactiveSwift\" \"v1.0.0\"\ngithub \"antitypical/Result\" \"3.0.0\"\n"
 			}
