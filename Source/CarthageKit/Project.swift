@@ -463,7 +463,7 @@ public final class Project {
 					dependenciesToUpdate: dependenciesToUpdate
 				)
 			}
-			.reduce([:]) { result, dependency in
+			.reduce([ProjectIdentifier:PinnedVersion]()) { result, dependency in
 				var copy = result
 				copy[dependency.project] = dependency.version
 				return copy
@@ -487,7 +487,7 @@ public final class Project {
 		let outdatedDependencies = SignalProducer
 			.combineLatest(
 				loadResolvedCartfile(),
-				updatedResolvedCartfile()
+				updatedResolvedCartfile(version: carthageVersion())
 			)
 			.map { ($0.dependencies, $1.dependencies) }
 			.map { (currentDependencies, updatedDependencies) -> [OutdatedDependency] in
