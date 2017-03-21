@@ -201,7 +201,7 @@ extension ResolvedCartfile: CustomStringConvertible {
 		
 		var result = ""
 		if let description = version?.description {
-			result += description
+			result += "carthage \(description)\n"
 		}
 		result += dependenciesDescription
 		
