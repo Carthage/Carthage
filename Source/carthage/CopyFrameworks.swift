@@ -41,7 +41,7 @@ public struct CopyFrameworksCommand: CommandProtocol {
 						}
 					}
 					// Copy as many frameworks as possible in parallel.
-					.observe(on: QueueScheduler(name: "org.carthage.CarthageKit.CopyFrameworks.copy"))
+					.start(on: QueueScheduler(name: "org.carthage.CarthageKit.CopyFrameworks.copy"))
 			}
 			.waitOnCommand()
 	}
