@@ -19,7 +19,7 @@ public struct CopyFrameworksCommand: CommandProtocol {
 
 	public func run(_ options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
 		return inputFiles()
-			.flatMap(.concat) { frameworkPath -> SignalProducer<(), CarthageError> in
+			.flatMap(.merge) { frameworkPath -> SignalProducer<(), CarthageError> in
 				let frameworkName = (frameworkPath as NSString).lastPathComponent
 
 				let source = Result(URL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.invalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
@@ -39,7 +39,9 @@ public struct CopyFrameworksCommand: CommandProtocol {
 										.then(SignalProducer<(), CarthageError>.empty)
 								}
 						}
-				}
+					}
+					// Copy as many frameworks as possible in parallel.
+					.start(on: QueueScheduler(name: "org.carthage.CarthageKit.CopyFrameworks.copy"))
 			}
 			.waitOnCommand()
 	}
