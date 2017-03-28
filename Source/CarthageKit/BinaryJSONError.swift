@@ -1,3 +1,5 @@
+import Foundation
+
 /// Error parsing a binary-only framework JSON file, used in CarthageError.invalidBinaryJSON.
 public enum BinaryJSONError: Error {
 

@@ -1,3 +1,4 @@
+import Foundation
 import Result
 
 public struct BinaryProject {
