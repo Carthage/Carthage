@@ -39,7 +39,7 @@ extension CachedFramework: Decodable {
 }
 
 struct VersionFile {
-	let commitish: String
+	let commitish: String?
 	let xcodeVersion: String
 	
 	let macOS: [CachedFramework]?
@@ -49,6 +49,9 @@ struct VersionFile {
 	
 	static let commitishKey = "commitish"
 	static let xcodeVersionKey = "xcodeVersion"
+
+	/// The extension representing a serialized VersionFile.
+	static let pathExtension = "version"
 
 	subscript(_ platform: Platform) -> [CachedFramework]? {
 		switch platform {
@@ -65,9 +68,11 @@ struct VersionFile {
 	
 	func toJSONObject() -> Any {
 		var dict: [String: Any] = [
-			VersionFile.commitishKey : commitish,
 			VersionFile.xcodeVersionKey : xcodeVersion
 		]
+		if let commitish = self.commitish {
+			dict[VersionFile.commitishKey] = commitish
+		}
 		for platform in Platform.supportedPlatforms {
 			if let caches = self[platform] {
 				dict[platform.rawValue] = caches.map { $0.toJSONObject() }
@@ -76,7 +81,7 @@ struct VersionFile {
 		return dict
 	}
 	
-	init(commitish: String, xcodeVersion: String, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
+	init(commitish: String?, xcodeVersion: String, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
 		self.commitish = commitish
 		self.xcodeVersion = xcodeVersion
 		
@@ -115,8 +120,8 @@ struct VersionFile {
 			}
 	}
 
-	func satisfies(platform: Platform, commitish: String, xcodeVersion: String, binariesDirectoryURL: URL) -> SignalProducer<Bool, CarthageError> {
-		guard let cachedFrameworks = self[platform] else {
+	func satisfies(platform: Platform, commitish: String?, xcodeVersion: String, binariesDirectoryURL: URL) -> SignalProducer<Bool, CarthageError> {
+		guard let cachedFrameworks = self[platform], let commitish = commitish else {
 			return SignalProducer(value: false)
 		}
 		
@@ -154,18 +159,73 @@ struct VersionFile {
 			return .failure(.writeFailed(url, error))
 		}
 	}
+
+	func isForFrameworksNamed(_ names: [String]) -> Bool {
+		let firstMatchingFramework = [self.macOS, self.iOS, self.tvOS, self.watchOS]
+			.lazy
+			.flatMap { $0 }
+			.joined()
+			.first { cachedFramework in names.contains(cachedFramework.name) }
+
+		return firstMatchingFramework != nil
+	}
+
+	func updating(commitish: String? = nil) -> VersionFile {
+		return VersionFile(
+			commitish: commitish ?? self.commitish,
+			xcodeVersion: self.xcodeVersion,
+			macOS: self.macOS,
+			iOS: self.iOS,
+			watchOS: self.watchOS,
+			tvOS: self.tvOS)
+	}
 }
 
 extension VersionFile: Decodable {
 	static func decode(_ j: JSON) -> Decoded<VersionFile> {
 		return curry(self.init)
-			<^> j <| VersionFile.commitishKey
+			<^> j <|? VersionFile.commitishKey
 			<*> j <| VersionFile.xcodeVersionKey
 			<*> j <||? Platform.macOS.rawValue
 			<*> j <||? Platform.iOS.rawValue
 			<*> j <||? Platform.watchOS.rawValue
 			<*> j <||? Platform.tvOS.rawValue
 	}
+}
+
+/// The sentinel filename for a serialized VersionFile representing the version 
+/// of the current project when a build was performed that did not skip the
+/// current project.
+///
+/// This file always has a nil commitish field as the current commitish is 
+/// unknown at the time of a build for the current project.
+private let CurrentBuildFilename = "CurrentBuild"
+
+/// Whether the file at the given URL is the current build's version file.
+public func isCurrentBuildVersionFile(atURL url: URL) -> Bool {
+	guard isVersionFile(atURL: url) else {
+		return false
+	}
+
+	return url.deletingPathExtension().lastPathComponent == ".\(CurrentBuildFilename)"
+}
+
+/// Returns the framework name for the version file at the given URL,
+public func isVersionFile(atURL url: URL, forFrameworksNamed frameworkNames: [String] ) -> Bool {
+	guard isVersionFile(atURL: url), let versionFile = VersionFile(url: url) else {
+		return false
+	}
+
+	return versionFile.isForFrameworksNamed(frameworkNames)
+}
+
+public func isVersionFile(atURL url: URL) -> Bool {
+	return url.pathExtension == VersionFile.pathExtension
+}
+
+/// Creates a version file for the current (non-dependency) build.
+public func createCurrentVersionFile(platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+	return createVersionFileForCommitish(dependencyName: CurrentBuildFilename, platforms: platforms, buildProducts: buildProducts, rootDirectoryURL: rootDirectoryURL)
 }
 
 /// Creates a version file for the current dependency in the
@@ -175,6 +235,10 @@ extension VersionFile: Decodable {
 ///
 /// Returns a signal that succeeds once the file has been created.
 public func createVersionFile(for dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+	return createVersionFileForCommitish(dependency.version.commitish, dependencyName: dependency.project.name, platforms: platforms, buildProducts: buildProducts, rootDirectoryURL: rootDirectoryURL)
+}
+
+private func createVersionFileForCommitish(_ commitish: String? = nil, dependencyName: String, platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	var platformCaches: [String: [CachedFramework]] = [:]
 
 	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
@@ -185,10 +249,10 @@ public func createVersionFile(for dependency: Dependency<PinnedVersion>, platfor
 	let writeVersionFile = currentXcodeVersion()
 		.attemptMap { xcodeVersion -> Result<(), CarthageError> in
 			let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
-			let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
+			let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
 
 			let versionFile = VersionFile(
-				commitish: dependency.version.commitish,
+				commitish: commitish,
 				xcodeVersion: xcodeVersion,
 				macOS: platformCaches[Platform.macOS.rawValue],
 				iOS: platformCaches[Platform.iOS.rawValue],
@@ -231,7 +295,7 @@ public func createVersionFile(for dependency: Dependency<PinnedVersion>, platfor
 /// skipped or false if there is a mismatch of some kind.
 public func versionFileMatches(_ dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, rootDirectoryURL: URL) -> SignalProducer<Bool?, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
-	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
+	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).\(VersionFile.pathExtension)")
 	guard let versionFile = VersionFile(url: versionFileURL) else {
 		return SignalProducer(value: nil)
 	}
