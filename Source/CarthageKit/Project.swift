@@ -540,7 +540,11 @@ public final class Project {
 					.flatMap(.merge) { frameworkURL in
 						return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
 							.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
-							.then(self.copyVersionFilesToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL, projectName: projectName, commitish: commitish))
+							.then(SignalProducer<URL, CarthageError>(value: frameworkURL))
+					}
+					.collect()
+					.flatMap(.concat) { frameworkURLs in
+						return self.copyOrCreateVersionFilesForFrameworks(frameworkURLs, fromDirectoryURL: directoryURL, projectName: projectName, commitish: commitish)
 					}
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 		}
@@ -694,17 +698,31 @@ public final class Project {
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
 	}
 
-	/// Copies any *.version files representing the given framework and 
-	/// contained within the given directory URL to the build directory that the
-	/// framework resides within.
+	/// If all given frameworks for the provided project have a correponding 
+	/// .version file within the provided directory URL, copies them to the
+	/// directory above the frameworks.
 	///
-	/// If no version files files are found for the given framework, completes 
-	/// with no values.
-	///
-	/// Sends the URLs of the version files after copying.
-	public func copyVersionFilesToBuildFolderForFramework(_ frameworkURL: URL, fromDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<URL, CarthageError> {
-		return versionFilesForFramework(frameworkURL, inDirectoryURL: directoryURL, projectName: projectName, commitish: commitish)
+	/// If one or more of the provided frameworks does not have a corresponding
+	/// .version file, creates an abbreviated version file representing all of
+	/// the version files without the xcodeVersion field populated (as it can
+	/// not be known).
+	public func copyOrCreateVersionFilesForFrameworks(_ frameworkURLs: [URL], fromDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<(), CarthageError> {
+		return SignalProducer(frameworkURLs)
+			.flatMap(.merge) { frameworkURL in
+				return locateOrCreateVersionFileForFramework(frameworkURL, inDirectoryURL: directoryURL, projectName: projectName, commitish: commitish)
+			}
+			.collect()
+			.map { Set($0) }
+			.flatten()
 			.copyFileURLsIntoDirectory(self.directoryURL.appendingPathComponent(CarthageBinariesFolderPath))
+			.then(SignalProducer<(), CarthageError>.empty)
+			.flatMapError { error in
+				guard case .internalError(_) = error else {
+					return SignalProducer<(), CarthageError>(error: error)
+				}
+
+				return createVersionFileForCommitish(commitish, dependencyName: projectName, platforms: Set(Platform.supportedPlatforms), buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
+			}
 	}
 
 	/// Checks out the given dependency into its intended working directory,
@@ -1213,14 +1231,14 @@ private func versionFilesInDirectory(_ directoryURL: URL) -> SignalProducer<URL,
 }
 
 /// Sends the URL of the first version file found that corresponds to the given 
-/// framework name located within the provided directory, else completes with no
-/// value if there is none that matches those criteria.
+/// framework located within the provided directory, else errors with an
+/// .internalError if there is none that matches those criteria.
 ///
 /// If the found version file represents a framework that was built with the
 /// "no skip current" option, it is not sent. Rather, a copy of it is sent with
 /// the provided dependency name as its filename and commitish as its commitish
 /// field.
-private func versionFilesForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<URL, CarthageError> {
+private func locateOrCreateVersionFileForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<URL, CarthageError> {
 	let frameworkName = frameworkURL.deletingPathExtension().lastPathComponent
 
 	return versionFilesInDirectory(directoryURL)
@@ -1243,6 +1261,7 @@ private func versionFilesForFramework(_ frameworkURL: URL, inDirectoryURL direct
 				.map { $0.appendingPathComponent(".\(projectName).\(VersionFile.pathExtension)") }
 				.attempt { url in file.versionFile.updating(commitish: commitish).write(to: url) }
 		}
+		.concat(SignalProducer<URL, CarthageError>(error: .internalError(description: "No version file found for \(projectName), one will be generated")))
 		.take(first: 1)
 }
 

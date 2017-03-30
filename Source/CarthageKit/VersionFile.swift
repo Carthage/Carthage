@@ -40,7 +40,7 @@ extension CachedFramework: Decodable {
 
 struct VersionFile {
 	let commitish: String?
-	let xcodeVersion: String
+	let xcodeVersion: String?
 	
 	let macOS: [CachedFramework]?
 	let iOS: [CachedFramework]?
@@ -67,9 +67,10 @@ struct VersionFile {
 	}
 	
 	func toJSONObject() -> Any {
-		var dict: [String: Any] = [
-			VersionFile.xcodeVersionKey : xcodeVersion
-		]
+		var dict: [String: Any] = [:]
+		if let xcodeVersion = self.xcodeVersion {
+			dict[VersionFile.xcodeVersionKey] = xcodeVersion
+		}
 		if let commitish = self.commitish {
 			dict[VersionFile.commitishKey] = commitish
 		}
@@ -81,7 +82,7 @@ struct VersionFile {
 		return dict
 	}
 	
-	init(commitish: String?, xcodeVersion: String, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
+	init(commitish: String?, xcodeVersion: String?, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
 		self.commitish = commitish
 		self.xcodeVersion = xcodeVersion
 		
@@ -120,8 +121,8 @@ struct VersionFile {
 			}
 	}
 
-	func satisfies(platform: Platform, commitish: String?, xcodeVersion: String, binariesDirectoryURL: URL) -> SignalProducer<Bool, CarthageError> {
-		guard let cachedFrameworks = self[platform], let commitish = commitish else {
+	func satisfies(platform: Platform, commitish: String?, xcodeVersion: String?, binariesDirectoryURL: URL) -> SignalProducer<Bool, CarthageError> {
+		guard let cachedFrameworks = self[platform], let commitish = commitish, let xcodeVersion = xcodeVersion else {
 			return SignalProducer(value: false)
 		}
 		
@@ -185,7 +186,7 @@ extension VersionFile: Decodable {
 	static func decode(_ j: JSON) -> Decoded<VersionFile> {
 		return curry(self.init)
 			<^> j <|? VersionFile.commitishKey
-			<*> j <| VersionFile.xcodeVersionKey
+			<*> j <|? VersionFile.xcodeVersionKey
 			<*> j <||? Platform.macOS.rawValue
 			<*> j <||? Platform.iOS.rawValue
 			<*> j <||? Platform.watchOS.rawValue
@@ -225,7 +226,9 @@ public func isVersionFile(atURL url: URL) -> Bool {
 
 /// Creates a version file for the current (non-dependency) build.
 public func createCurrentVersionFile(platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	return createVersionFileForCommitish(dependencyName: CurrentBuildFilename, platforms: platforms, buildProducts: buildProducts, rootDirectoryURL: rootDirectoryURL)
+	return currentXcodeVersion().flatMap(.concat) { xcodeVersion in
+		return createVersionFileForCommitish(xcodeVersion: xcodeVersion, dependencyName: CurrentBuildFilename, platforms: platforms, buildProducts: buildProducts, rootDirectoryURL: rootDirectoryURL)
+	}
 }
 
 /// Creates a version file for the current dependency in the
@@ -235,10 +238,19 @@ public func createCurrentVersionFile(platforms: Set<Platform>, buildProducts: [U
 ///
 /// Returns a signal that succeeds once the file has been created.
 public func createVersionFile(for dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	return createVersionFileForCommitish(dependency.version.commitish, dependencyName: dependency.project.name, platforms: platforms, buildProducts: buildProducts, rootDirectoryURL: rootDirectoryURL)
+	return currentXcodeVersion().flatMap(.concat) { xcodeVersion in
+		createVersionFileForCommitish(dependency.version.commitish, xcodeVersion: xcodeVersion, dependencyName: dependency.project.name, platforms: platforms, buildProducts: buildProducts, rootDirectoryURL: rootDirectoryURL)
+	}
 }
 
-private func createVersionFileForCommitish(_ commitish: String? = nil, dependencyName: String, platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+/// Creates a version file for the dependency in the given root directory with:
+/// - The given commitish, if it is known
+/// - The given Xcode version, if it is known
+/// - The provided project name
+/// - The location of the built frameworks products for all platforms
+///
+/// Returns a signal that succeeds once the file has been created.
+public func createVersionFileForCommitish(_ commitish: String? = nil, xcodeVersion: String? = nil, dependencyName: String, platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	var platformCaches: [String: [CachedFramework]] = [:]
 
 	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
@@ -246,20 +258,19 @@ private func createVersionFileForCommitish(_ commitish: String? = nil, dependenc
 		platformCaches[platform.rawValue] = []
 	}
 	
-	let writeVersionFile = currentXcodeVersion()
-		.attemptMap { xcodeVersion -> Result<(), CarthageError> in
-			let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
-			let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
+	let writeVersionFile = SignalProducer.attempt { () -> Result<(), CarthageError> in
+		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
+		let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
 
-			let versionFile = VersionFile(
-				commitish: commitish,
-				xcodeVersion: xcodeVersion,
-				macOS: platformCaches[Platform.macOS.rawValue],
-				iOS: platformCaches[Platform.iOS.rawValue],
-				watchOS: platformCaches[Platform.watchOS.rawValue],
-				tvOS: platformCaches[Platform.tvOS.rawValue])
+		let versionFile = VersionFile(
+			commitish: commitish,
+			xcodeVersion: xcodeVersion,
+			macOS: platformCaches[Platform.macOS.rawValue],
+			iOS: platformCaches[Platform.iOS.rawValue],
+			watchOS: platformCaches[Platform.watchOS.rawValue],
+			tvOS: platformCaches[Platform.tvOS.rawValue])
 
-			return versionFile.write(to: versionFileURL)
+		return versionFile.write(to: versionFileURL)
 	}
 
 	if !buildProducts.isEmpty {
