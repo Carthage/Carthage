@@ -165,7 +165,7 @@ private func versionFilesWithOptions(_ options: ArchiveCommand.Options, framewor
 	let frameworkNames = frameworkPaths.map { frameworkPath in (frameworkPath as NSString).deletingPathExtension }
 
 	return FileManager.default.reactive
-		.enumerator(at: directoryURL, options: [ .skipsSubdirectoryDescendants ])
+		.enumerator(at: directoryURL, options: [ .skipsSubdirectoryDescendants ], catchErrors: true)
 		.filter { _, url in isVersionFile(atURL:url, forFrameworksNamed:frameworkNames) }
 		.map { _, url in (CarthageBinariesFolderPath as NSString).appendingPathComponent(url.lastPathComponent) }
 }
