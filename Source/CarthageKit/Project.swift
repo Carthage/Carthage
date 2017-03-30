@@ -703,9 +703,9 @@ public final class Project {
 	/// directory above the frameworks.
 	///
 	/// If one or more of the provided frameworks does not have a corresponding
-	/// .version file, creates an abbreviated version file representing all of
-	/// the version files without the xcodeVersion field populated (as it can
-	/// not be known).
+	/// .version file, creates an abbreviated version file for all of the
+	/// provided frameworks. It does not have xcodeVersion field populated (as
+	/// it is not known).
 	public func copyOrCreateVersionFilesForFrameworks(_ frameworkURLs: [URL], fromDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<(), CarthageError> {
 		return SignalProducer(frameworkURLs)
 			.flatMap(.merge) { frameworkURL in
