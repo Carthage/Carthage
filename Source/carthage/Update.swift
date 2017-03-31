@@ -19,11 +19,12 @@ public struct UpdateCommand: CommandProtocol {
 		public let isVerbose: Bool
 		public let buildOptions: CarthageKit.BuildOptions
 		public let checkoutOptions: CheckoutCommand.Options
+		public let logPath: String
 		public let dependenciesToUpdate: [String]?
 
 		/// The build options corresponding to these options.
 		public var buildCommandOptions: BuildCommand.Options {
-			return BuildCommand.Options(buildOptions: buildOptions, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, isVerbose: isVerbose, directoryPath: checkoutOptions.directoryPath, dependenciesToBuild: dependenciesToUpdate)
+			return BuildCommand.Options(buildOptions: buildOptions, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, isVerbose: isVerbose, directoryPath: checkoutOptions.directoryPath, logPath: logPath, dependenciesToBuild: dependenciesToUpdate)
 		}
 
 		/// If `checkoutAfterUpdate` and `buildAfterUpdate` are both true, this will
@@ -38,10 +39,10 @@ public struct UpdateCommand: CommandProtocol {
 			}
 		}
 
-		public static func create(_ checkoutAfterUpdate: Bool) -> (Bool) -> (Bool) -> (BuildOptions) -> (CheckoutCommand.Options) -> Options {
-			return { buildAfterUpdate in { isVerbose in {  buildOptions in { checkoutOptions in
-				return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, isVerbose: isVerbose, buildOptions: buildOptions, checkoutOptions: checkoutOptions, dependenciesToUpdate: checkoutOptions.dependenciesToCheckout)
-			} } } }
+		public static func create(_ checkoutAfterUpdate: Bool) -> (Bool) -> (Bool) -> (String) -> (BuildOptions) -> (CheckoutCommand.Options) -> Options {
+			return { buildAfterUpdate in { isVerbose in { logPath in {  buildOptions in { checkoutOptions in
+				return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, isVerbose: isVerbose, buildOptions: buildOptions, checkoutOptions: checkoutOptions, logPath: logPath, dependenciesToUpdate: checkoutOptions.dependenciesToCheckout)
+			} } } } }
 		}
 
 		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
@@ -49,6 +50,7 @@ public struct UpdateCommand: CommandProtocol {
 				<*> m <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 				<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)")
 				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
+				<*> m <| Option(key: "log-path", defaultValue: BuildCommand.defaultLogPath, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> BuildOptions.evaluate(m, addendum: "\n(ignored if --no-build option is present)")
 				<*> CheckoutCommand.Options.evaluate(m, useBinariesAddendum: "\n(ignored if --no-build or --toolchain option is present)", dependenciesUsage: "the dependency names to update, checkout and build")
 		}
