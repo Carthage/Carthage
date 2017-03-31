@@ -3,6 +3,6 @@ github "Carthage/ReactiveTask" ~> 0.11.1
 github "Carthage/Commandant" ~> 0.12
 github "jdhealy/PrettyColors" ~> 5.0
 github "ReactiveCocoa/ReactiveSwift" ~> 1.1
-github "mdiep/Tentacle" ~> 0.5.1
+github "mdiep/Tentacle" "avoid-swift-3·1-compiler-crash"
 github "thoughtbot/Argo" ~> 4.1
 github "thoughtbot/Runes" ~> 4.0.1
