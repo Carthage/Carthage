@@ -10,6 +10,11 @@ matrix:
   include:
     - os: osx
       language: objective-c
+      osx_image: xcode8.3
+      script: make test
+      env: JOB=CI_BUILD_TEST
+    - os: osx
+      language: objective-c
       osx_image: xcode8.2
       script: make test
       env: JOB=CI_BUILD_TEST
