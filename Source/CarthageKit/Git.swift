@@ -451,8 +451,14 @@ public func gitRootDirectoryForRepository(_ repositoryFileURL: URL) -> SignalPro
 				return SignalProducer(value: repositoryFileURL)
 			} else {
 				return launchGitTask([ "rev-parse", "--show-toplevel" ], repositoryFileURL: repositoryFileURL)
-					.map { $0.trimmingCharacters(in: .newlines) }
-					.map { URL(string: $0)! }
+					.attemptMap { output in
+						let trimmedPath = output.trimmingCharacters(in: .newlines)
+						guard FileManager.default.isReadableFile(atPath: trimmedPath) else {
+							// can’t return `.readFailed` because we might crash when initializing the URL to give it.
+							return .failure(.internalError(description: "Unreadable file path output from git: " + output.debugDescription))
+						}
+						return .success(URL(fileURLWithPath: trimmedPath))
+					}
 			}
 		}
 }
