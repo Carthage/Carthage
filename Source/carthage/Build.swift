@@ -42,10 +42,10 @@ public struct BuildCommand: CommandProtocol {
 		public let colorOptions: ColorOptions
 		public let isVerbose: Bool
 		public let directoryPath: String
-		public let logPath: String
+		public let logPath: String?
 		public let dependenciesToBuild: [String]?
 
-		public static func create(_ buildOptions: BuildOptions) -> (Bool) -> (ColorOptions) -> (Bool) -> (String) -> (String) -> ([String]) -> Options {
+		public static func create(_ buildOptions: BuildOptions) -> (Bool) -> (ColorOptions) -> (Bool) -> (String) -> (String?) -> ([String]) -> Options {
 			return { skipCurrent in { colorOptions in { isVerbose in { directoryPath in { logPath in { dependenciesToBuild in
 				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
 				return self.init(buildOptions: buildOptions, skipCurrent: skipCurrent, colorOptions: colorOptions, isVerbose: isVerbose, directoryPath: directoryPath, logPath: logPath, dependenciesToBuild: dependenciesToBuild)
@@ -59,7 +59,7 @@ public struct BuildCommand: CommandProtocol {
 				<*> ColorOptions.evaluate(m)
 				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
-				<*> m <| Option(key: "log-path", defaultValue: BuildCommand.defaultLogPath, usage: "path to the xcode build output. A temporary file is used by default")
+				<*> m <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> m <| Argument(defaultValue: [], usage: "the dependency names to build")
 		}
 	}
@@ -72,8 +72,6 @@ public struct BuildCommand: CommandProtocol {
 			.waitOnCommand()
 	}
 
-	/// Path template where xcode build log files are sent
-	public static let defaultLogPath = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-xcodebuild.XXXXXX.log")
 	
 	/// Builds a project with the given options.
 	public func buildWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
@@ -167,23 +165,23 @@ public struct BuildCommand: CommandProtocol {
 
 	/// Opens a temporary file on disk, returning a handle and the URL to the
 	/// file.
-	private func openLogFile(_ path: String) -> SignalProducer<(FileHandle, URL), NSError> {
+	private func openLogFile(_ path: String?) -> SignalProducer<(FileHandle, URL), NSError> {
 		return SignalProducer.attempt {
 			let logFD: Int32
 			let logPath: String
 			
-			if path == BuildCommand.defaultLogPath {
-				var temporaryDirectoryTemplate: ContiguousArray<CChar> = path.utf8CString
+			if let path = path {
+				logFD = FileHandle(forUpdatingAtPath: path)?.fileDescriptor ?? -1
+				logPath = path
+			} else {
+				var temporaryDirectoryTemplate: ContiguousArray<CChar>
+				temporaryDirectoryTemplate = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-xcodebuild.XXXXXX.log").utf8CString
 				logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (template: inout UnsafeMutableBufferPointer<CChar>) -> Int32 in
 					return mkstemps(template.baseAddress, 4)
 				}
 				logPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
 					return String(validatingUTF8: ptr.baseAddress!)!
 				}
-			}
-			else {
-				logFD = FileHandle(forUpdatingAtPath: path)?.fileDescriptor ?? -1
-				logPath = path
 			}
 
 			if logFD < 0 {
