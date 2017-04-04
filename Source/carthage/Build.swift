@@ -42,13 +42,14 @@ public struct BuildCommand: CommandProtocol {
 		public let colorOptions: ColorOptions
 		public let isVerbose: Bool
 		public let directoryPath: String
+		public let logPath: String?
 		public let dependenciesToBuild: [String]?
 
-		public static func create(_ buildOptions: BuildOptions) -> (Bool) -> (ColorOptions) -> (Bool) -> (String) -> ([String]) -> Options {
-			return { skipCurrent in { colorOptions in { isVerbose in { directoryPath in { dependenciesToBuild in
+		public static func create(_ buildOptions: BuildOptions) -> (Bool) -> (ColorOptions) -> (Bool) -> (String) -> (String?) -> ([String]) -> Options {
+			return { skipCurrent in { colorOptions in { isVerbose in { directoryPath in { logPath in { dependenciesToBuild in
 				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
-				return self.init(buildOptions: buildOptions, skipCurrent: skipCurrent, colorOptions: colorOptions, isVerbose: isVerbose, directoryPath: directoryPath, dependenciesToBuild: dependenciesToBuild)
-			} } } } }
+				return self.init(buildOptions: buildOptions, skipCurrent: skipCurrent, colorOptions: colorOptions, isVerbose: isVerbose, directoryPath: directoryPath, logPath: logPath, dependenciesToBuild: dependenciesToBuild)
+			} } } } } }
 		}
 
 		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
@@ -58,6 +59,7 @@ public struct BuildCommand: CommandProtocol {
 				<*> ColorOptions.evaluate(m)
 				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> m <| Argument(defaultValue: [], usage: "the dependency names to build")
 		}
 	}
@@ -70,6 +72,7 @@ public struct BuildCommand: CommandProtocol {
 			.waitOnCommand()
 	}
 
+	
 	/// Builds a project with the given options.
 	public func buildWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
@@ -162,23 +165,31 @@ public struct BuildCommand: CommandProtocol {
 
 	/// Opens a temporary file on disk, returning a handle and the URL to the
 	/// file.
-	private func openTemporaryFile() -> SignalProducer<(FileHandle, URL), NSError> {
+	private func openLogFile(_ path: String?) -> SignalProducer<(FileHandle, URL), NSError> {
 		return SignalProducer.attempt {
-			var temporaryDirectoryTemplate: ContiguousArray<CChar> = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-xcodebuild.XXXXXX.log").utf8CString
-			let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (template: inout UnsafeMutableBufferPointer<CChar>) -> Int32 in
-				return mkstemps(template.baseAddress, 4)
+			let logFD: Int32
+			let logPath: String
+			
+			if let path = path {
+				logFD = FileHandle(forUpdatingAtPath: path)?.fileDescriptor ?? -1
+				logPath = path
+			} else {
+				var temporaryDirectoryTemplate: ContiguousArray<CChar>
+				temporaryDirectoryTemplate = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-xcodebuild.XXXXXX.log").utf8CString
+				logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (template: inout UnsafeMutableBufferPointer<CChar>) -> Int32 in
+					return mkstemps(template.baseAddress, 4)
+				}
+				logPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
+					return String(validatingUTF8: ptr.baseAddress!)!
+				}
 			}
 
 			if logFD < 0 {
 				return .failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
 			}
 
-			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
-				return String(validatingUTF8: ptr.baseAddress!)!
-			}
-
 			let handle = FileHandle(fileDescriptor: logFD, closeOnDealloc: true)
-			let fileURL = URL(fileURLWithPath: temporaryPath, isDirectory: false)
+			let fileURL = URL(fileURLWithPath: logPath, isDirectory: false)
 			return .success((handle, fileURL))
 		}
 	}
@@ -190,7 +201,7 @@ public struct BuildCommand: CommandProtocol {
 			let out: (FileHandle, URL?) = (FileHandle.standardOutput, nil)
 			return SignalProducer(value: out)
 		} else {
-			return openTemporaryFile()
+			return openLogFile(options.logPath)
 				.map { handle, url in (handle, Optional(url)) }
 				.mapError { error in
 					let temporaryDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
