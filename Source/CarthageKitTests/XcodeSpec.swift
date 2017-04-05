@@ -33,7 +33,7 @@ class XcodeSpec: QuickSpec {
 			_ = try? FileManager.default.removeItem(at: targetFolderURL)
 		}
 
-		describe("determingSwiftInformation") {
+		describe("determineSwiftInformation:") {
 			let currentSwiftVersion = swiftVersion.single()?.value
 			let testSwiftFramework = "Quick.framework"
 			let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
