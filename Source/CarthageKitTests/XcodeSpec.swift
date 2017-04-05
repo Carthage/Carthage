@@ -59,6 +59,7 @@ class XcodeSpec: QuickSpec {
 			it("should determine a framework's Swift version") {
 				let result = frameworkSwiftVersion(testSwiftFrameworkURL).single()
 
+				expect(FileManager.default.fileExists(atPath: testSwiftFrameworkURL.path)) == true
 				expect(result?.value) == currentSwiftVersion
 			}
 
