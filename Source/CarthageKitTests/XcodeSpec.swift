@@ -17,8 +17,6 @@ import Tentacle
 import XCDBLD
 
 class XcodeSpec: QuickSpec {
-	static let currentSwiftVersion = "3.0.2"
-
 	override func spec() {
 		// The fixture is maintained at https://github.com/ikesyo/carthage-fixtures-ReactiveCocoaLayout
 		let directoryURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
@@ -35,7 +33,8 @@ class XcodeSpec: QuickSpec {
 			_ = try? FileManager.default.removeItem(at: targetFolderURL)
 		}
 
-		describe("determingSwiftInformation") {
+		describe("determineSwiftInformation:") {
+			let currentSwiftVersion = swiftVersion.single()?.value
 			let testSwiftFramework = "Quick.framework"
 			let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
 			let testSwiftFrameworkURL = currentDirectory.appendingPathComponent(testSwiftFramework)
@@ -53,15 +52,15 @@ class XcodeSpec: QuickSpec {
 				expect(result?.value) == false
 			}
 
-			it("determines the local Swift version") {
-				let result = swiftVersion.single()
-				expect(result?.value) == XcodeSpec.currentSwiftVersion
+			it("should determine a value for the local swift version") {
+				expect(currentSwiftVersion?.isEmpty) == false
 			}
 
 			it("should determine a framework's Swift version") {
 				let result = frameworkSwiftVersion(testSwiftFrameworkURL).single()
 
-				expect(result?.value) == XcodeSpec.currentSwiftVersion
+				expect(FileManager.default.fileExists(atPath: testSwiftFrameworkURL.path)) == true
+				expect(result?.value) == currentSwiftVersion
 			}
 
 			it("should determine when a Swift framework is compatible") {
@@ -75,7 +74,7 @@ class XcodeSpec: QuickSpec {
 				let result = checkSwiftFrameworkCompatibility(frameworkURL).single()
 
 				expect(result?.value).to(beNil())
-				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: XcodeSpec.currentSwiftVersion, framework: "0.0.0")
+				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: currentSwiftVersion ?? "", framework: "0.0.0")
 			}
 		}
 
