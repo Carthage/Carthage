@@ -699,7 +699,7 @@ public final class Project {
 	}
 
 	/// Creates an abbreviated .version file for all of the provided frameworks.
-	/// It does not have a populatedxcodeVersion field (as it is unknown for
+	/// It does not have a populated xcodeVersion field (as it is unknown for
 	/// prebuilt binares).
 	public func createVersionFilesForFrameworks(_ frameworkURLs: [URL], fromDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<(), CarthageError> {
 		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
