@@ -159,16 +159,6 @@ struct VersionFile {
 			return .failure(.writeFailed(url, error))
 		}
 	}
-
-	func isForFrameworksNamed(_ names: [String]) -> Bool {
-		let firstMatchingFramework = [self.macOS, self.iOS, self.tvOS, self.watchOS]
-			.lazy
-			.flatMap { $0 }
-			.joined()
-			.first { cachedFramework in names.contains(cachedFramework.name) }
-
-		return firstMatchingFramework != nil
-	}
 }
 
 extension VersionFile: Decodable {
