@@ -58,12 +58,10 @@ private func untargz(archive fileURL: URL, to destinationDirectoryURL: URL) -> S
 		.then(SignalProducer<(), CarthageError>.empty)
 }
 
-private let ArchiveTemplate = "carthage-archive.XXXXXX"
-
 /// Unzips the archive at the given file URL into a temporary directory, then
 /// sends the file URL to that directory.
 private func unzip(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
-	return FileManager.default.reactive.createTemporaryDirectoryWithTemplate(ArchiveTemplate)
+	return createTemporaryDirectory()
 		.flatMap(.merge) { directoryURL in
 			return unzip(archive: fileURL, to: directoryURL)
 				.then(SignalProducer<URL, CarthageError>(value: directoryURL))
@@ -73,9 +71,29 @@ private func unzip(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
 /// Untars the gzipped archive at the given file URL into a temporary directory, 
 /// then sends the file URL to that directory.
 private func untargz(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
-	return FileManager.default.reactive.createTemporaryDirectoryWithTemplate(ArchiveTemplate)
+	return createTemporaryDirectory()
 		.flatMap(.merge) { directoryURL in
 			return untargz(archive: fileURL, to: directoryURL)
 				.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 		}
+}
+
+private func createTemporaryDirectory() -> SignalProducer<URL, CarthageError> {
+	return SignalProducer.attempt { () -> Result<String, CarthageError> in
+			var temporaryDirectoryTemplate: ContiguousArray<CChar> = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-archive.XXXXXX").utf8CString
+			let result: UnsafeMutablePointer<Int8>? = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (template: inout UnsafeMutableBufferPointer<CChar>) -> UnsafeMutablePointer<CChar> in
+				return mkdtemp(template.baseAddress)
+			}
+
+			if result == nil {
+				return .failure(.taskError(.posixError(errno)))
+			}
+
+			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
+				return String(validatingUTF8: ptr.baseAddress!)!
+			}
+
+			return .success(temporaryPath)
+			}
+			.map { URL(fileURLWithPath: $0, isDirectory: true) }
 }

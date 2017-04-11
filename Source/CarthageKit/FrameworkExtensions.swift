@@ -313,39 +313,6 @@ extension Reactive where Base: FileManager {
 			observer.sendCompleted()
 		}
 	}
-
-	/// Creates a temporary directory with the given template name. Sends the
-	/// URL of the temporary directory and completes if successful, else errors.
-	///
-	/// The template name should adhere to the format required by the mkdtemp()
-	/// function.
-	public func createTemporaryDirectoryWithTemplate(_ template: String) -> SignalProducer<URL, CarthageError> {
-		return SignalProducer.attempt { [base = self.base] () -> Result<String, CarthageError> in
-			let temporaryDirectory: NSString
-			if #available(OSXApplicationExtension 10.12, *) {
-				temporaryDirectory = base.temporaryDirectory.path as NSString
-			} else {
-				temporaryDirectory = NSTemporaryDirectory() as NSString
-			}
-
-			var temporaryDirectoryTemplate: ContiguousArray<CChar> = temporaryDirectory.appendingPathComponent(template).utf8CString
-
-			let result: UnsafeMutablePointer<Int8>? = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (template: inout UnsafeMutableBufferPointer<CChar>) -> UnsafeMutablePointer<CChar> in
-				return mkdtemp(template.baseAddress)
-			}
-
-			if result == nil {
-				return .failure(.taskError(.posixError(errno)))
-			}
-
-			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
-				return String(validatingUTF8: ptr.baseAddress!)!
-			}
-
-			return .success(temporaryPath)
-			}
-			.map { URL(fileURLWithPath: $0, isDirectory: true) }
-	}
 }
 
 private let defaultSessionError = NSError(domain: CarthageKitBundleIdentifier,
