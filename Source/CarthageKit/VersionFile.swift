@@ -39,7 +39,7 @@ extension CachedFramework: Decodable {
 }
 
 struct VersionFile {
-	let commitish: String?
+	let commitish: String
 	let xcodeVersion: String?
 	
 	let macOS: [CachedFramework]?
@@ -67,12 +67,11 @@ struct VersionFile {
 	}
 	
 	func toJSONObject() -> Any {
-		var dict: [String: Any] = [:]
+		var dict: [String: Any] = [
+			VersionFile.commitishKey : commitish
+		]
 		if let xcodeVersion = self.xcodeVersion {
 			dict[VersionFile.xcodeVersionKey] = xcodeVersion
-		}
-		if let commitish = self.commitish {
-			dict[VersionFile.commitishKey] = commitish
 		}
 		for platform in Platform.supportedPlatforms {
 			if let caches = self[platform] {
@@ -82,7 +81,7 @@ struct VersionFile {
 		return dict
 	}
 	
-	init(commitish: String?, xcodeVersion: String?, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
+	init(commitish: String, xcodeVersion: String?, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
 		self.commitish = commitish
 		self.xcodeVersion = xcodeVersion
 		
@@ -121,8 +120,8 @@ struct VersionFile {
 			}
 	}
 
-	func satisfies(platform: Platform, commitish: String?, xcodeVersion: String?, binariesDirectoryURL: URL) -> SignalProducer<Bool, CarthageError> {
-		guard let cachedFrameworks = self[platform], let commitish = commitish, let xcodeVersion = xcodeVersion else {
+	func satisfies(platform: Platform, commitish: String, xcodeVersion: String?, binariesDirectoryURL: URL) -> SignalProducer<Bool, CarthageError> {
+		guard let cachedFrameworks = self[platform], let xcodeVersion = xcodeVersion else {
 			return SignalProducer(value: false)
 		}
 		
@@ -170,45 +169,18 @@ struct VersionFile {
 
 		return firstMatchingFramework != nil
 	}
-
-	func updating(commitish: String? = nil) -> VersionFile {
-		return VersionFile(
-			commitish: commitish ?? self.commitish,
-			xcodeVersion: self.xcodeVersion,
-			macOS: self.macOS,
-			iOS: self.iOS,
-			watchOS: self.watchOS,
-			tvOS: self.tvOS)
-	}
 }
 
 extension VersionFile: Decodable {
 	static func decode(_ j: JSON) -> Decoded<VersionFile> {
 		return curry(self.init)
-			<^> j <|? VersionFile.commitishKey
+			<^> j <| VersionFile.commitishKey
 			<*> j <|? VersionFile.xcodeVersionKey
 			<*> j <||? Platform.macOS.rawValue
 			<*> j <||? Platform.iOS.rawValue
 			<*> j <||? Platform.watchOS.rawValue
 			<*> j <||? Platform.tvOS.rawValue
 	}
-}
-
-/// The sentinel filename for a serialized VersionFile representing the version 
-/// of the current project when a build was performed that did not skip the
-/// current project.
-///
-/// This file always has a nil commitish field as the current commitish is 
-/// unknown at the time of a build for the current project.
-private let CurrentBuildFilename = "CurrentBuild"
-
-/// Whether the file at the given URL is the current build's version file.
-public func isCurrentBuildVersionFile(atURL url: URL) -> Bool {
-	guard isVersionFile(atURL: url) else {
-		return false
-	}
-
-	return url.deletingPathExtension().lastPathComponent == ".\(CurrentBuildFilename)"
 }
 
 /// Returns the framework name for the version file at the given URL,
@@ -250,7 +222,7 @@ public func createVersionFile(for dependency: Dependency<PinnedVersion>, platfor
 /// - The location of the built frameworks products for all platforms
 ///
 /// Returns a signal that succeeds once the file has been created.
-public func createVersionFileForCommitish(_ commitish: String? = nil, xcodeVersion: String? = nil, dependencyName: String, platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+public func createVersionFileForCommitish(_ commitish: String? = nil, xcodeVersion: String? = nil, dependencyName: String, platforms: Set<Platform> = Set(Platform.supportedPlatforms), buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	var platformCaches: [String: [CachedFramework]] = [:]
 
 	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms

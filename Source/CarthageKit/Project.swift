@@ -522,9 +522,9 @@ public final class Project {
 			.then(shouldCheckout ? checkoutResolvedDependencies(dependenciesToUpdate) : .empty)
 	}
 
-	/// Unzips the file at the given URL and copies the frameworks, DSYM and 
-	/// bcsymbolmap files, and version files into the corresponding folders for
-	/// the project. This step will also check framework compatibility.
+	/// Unzips the file at the given URL and copies the frameworks, DSYM and
+	/// for the project. This step will also check framework compatibility and
+	/// create a version file for the given frameworks.
 	///
 	/// Sends the temporary URL of the unzipped directory
 	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL, projectName: String, commitish: String) -> SignalProducer<URL, CarthageError> {
@@ -544,7 +544,7 @@ public final class Project {
 					}
 					.collect()
 					.flatMap(.concat) { frameworkURLs in
-						return self.copyOrCreateVersionFilesForFrameworks(frameworkURLs, fromDirectoryURL: directoryURL, projectName: projectName, commitish: commitish)
+						return self.createVersionFilesForFrameworks(frameworkURLs, fromDirectoryURL: directoryURL, projectName: projectName, commitish: commitish)
 					}
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 		}
@@ -698,31 +698,11 @@ public final class Project {
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
 	}
 
-	/// If all given frameworks for the provided project have a correponding 
-	/// .version file within the provided directory URL, copies them to the
-	/// directory above the frameworks.
-	///
-	/// If one or more of the provided frameworks does not have a corresponding
-	/// .version file, creates an abbreviated version file for all of the
-	/// provided frameworks. It does not have xcodeVersion field populated (as
-	/// it is not known).
-	public func copyOrCreateVersionFilesForFrameworks(_ frameworkURLs: [URL], fromDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<(), CarthageError> {
-		return SignalProducer(frameworkURLs)
-			.flatMap(.merge) { frameworkURL in
-				return locateOrCreateVersionFileForFramework(frameworkURL, inDirectoryURL: directoryURL, projectName: projectName, commitish: commitish)
-			}
-			.collect()
-			.map { Set($0) }
-			.flatten()
-			.copyFileURLsIntoDirectory(self.directoryURL.appendingPathComponent(CarthageBinariesFolderPath))
-			.then(SignalProducer<(), CarthageError>.empty)
-			.flatMapError { error in
-				guard case .internalError(_) = error else {
-					return SignalProducer<(), CarthageError>(error: error)
-				}
-
-				return createVersionFileForCommitish(commitish, dependencyName: projectName, platforms: Set(Platform.supportedPlatforms), buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
-			}
+	/// Creates an abbreviated .version file for all of the provided frameworks.
+	/// It does not have a populatedxcodeVersion field (as it is unknown for
+	/// prebuilt binares).
+	public func createVersionFilesForFrameworks(_ frameworkURLs: [URL], fromDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<(), CarthageError> {
+		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
 	}
 
 	/// Checks out the given dependency into its intended working directory,
@@ -1113,7 +1093,7 @@ private func cacheDownloadedBinary(_ downloadURL: URL, toURL cachedURL: URL) -> 
 /// given type identifier. If no type identifier is provided, all files are sent.
 private func filesInDirectory(_ directoryURL: URL, _ typeIdentifier: String? = nil) -> SignalProducer<URL, CarthageError> {
 	let producer = FileManager.default.reactive
-		.enumerator(at: directoryURL, includingPropertiesForKeys: [ .typeIdentifierKey ], options: [ .skipsPackageDescendants ], catchErrors: true)
+		.enumerator(at: directoryURL, includingPropertiesForKeys: [ .typeIdentifierKey ], options: [ .skipsHiddenFiles, .skipsPackageDescendants ], catchErrors: true)
 		.map { enumerator, url in url }
 	if let typeIdentifier = typeIdentifier {
 		return producer
@@ -1228,41 +1208,6 @@ private func BCSymbolMapsForFramework(_ frameworkURL: URL, inDirectoryURL direct
 private func versionFilesInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL)
 		.filter(isVersionFile(atURL:))
-}
-
-/// Sends the URL of the first version file found that corresponds to the given 
-/// framework located within the provided directory, else errors with an
-/// .internalError if there is none that matches those criteria.
-///
-/// If the found version file represents a framework that was built with the
-/// "no skip current" option, it is not sent. Rather, a copy of it is sent with
-/// the provided dependency name as its filename and commitish as its commitish
-/// field.
-private func locateOrCreateVersionFileForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<URL, CarthageError> {
-	let frameworkName = frameworkURL.deletingPathExtension().lastPathComponent
-
-	return versionFilesInDirectory(directoryURL)
-		.filterMap { url -> (versionFile: VersionFile, url: URL)? in
-			guard let versionFile = VersionFile(url: url) else {
-				return nil
-			}
-
-			return (versionFile, url)
-		}
-		.filter { file in
-			file.versionFile.isForFrameworksNamed([frameworkName])
-		}
-		.flatMap(.concat) { file -> SignalProducer<URL, CarthageError> in
-			guard isCurrentBuildVersionFile(atURL: file.url) else {
-				return SignalProducer(value: file.url)
-			}
-
-			return FileManager.default.reactive.createTemporaryDirectoryWithTemplate("carthage-checkout.XXXXXX")
-				.map { $0.appendingPathComponent(".\(projectName).\(VersionFile.pathExtension)") }
-				.attempt { url in file.versionFile.updating(commitish: commitish).write(to: url) }
-		}
-		.concat(SignalProducer<URL, CarthageError>(error: .internalError(description: "No version file found for \(projectName), one will be generated")))
-		.take(first: 1)
 }
 
 /// Returns the file URL at which the given project's repository will be
