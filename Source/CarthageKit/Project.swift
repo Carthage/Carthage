@@ -1204,12 +1204,6 @@ private func BCSymbolMapsForFramework(_ frameworkURL: URL, inDirectoryURL direct
 	}
 }
 
-/// Sends the URL to each version file found in the given directory.
-private func versionFilesInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
-	return filesInDirectory(directoryURL)
-		.filter(isVersionFile(atURL:))
-}
-
 /// Returns the file URL at which the given project's repository will be
 /// located.
 private func repositoryFileURLForProject(_ project: ProjectIdentifier, baseURL: URL = CarthageDependencyRepositoriesURL) -> URL {

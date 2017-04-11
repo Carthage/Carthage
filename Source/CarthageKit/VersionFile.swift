@@ -183,26 +183,6 @@ extension VersionFile: Decodable {
 	}
 }
 
-/// Returns the framework name for the version file at the given URL,
-public func isVersionFile(atURL url: URL, forFrameworksNamed frameworkNames: [String] ) -> Bool {
-	guard isVersionFile(atURL: url), let versionFile = VersionFile(url: url) else {
-		return false
-	}
-
-	return versionFile.isForFrameworksNamed(frameworkNames)
-}
-
-public func isVersionFile(atURL url: URL) -> Bool {
-	return url.pathExtension == VersionFile.pathExtension
-}
-
-/// Creates a version file for the current (non-dependency) build.
-public func createCurrentVersionFile(platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	return currentXcodeVersion().flatMap(.concat) { xcodeVersion in
-		return createVersionFileForCommitish(xcodeVersion: xcodeVersion, dependencyName: CurrentBuildFilename, platforms: platforms, buildProducts: buildProducts, rootDirectoryURL: rootDirectoryURL)
-	}
-}
-
 /// Creates a version file for the current dependency in the
 /// Carthage/Build directory which associates its commitish with
 /// the hashes (e.g. SHA256) of the built frameworks for each platform
@@ -216,13 +196,13 @@ public func createVersionFile(for dependency: Dependency<PinnedVersion>, platfor
 }
 
 /// Creates a version file for the dependency in the given root directory with:
-/// - The given commitish, if it is known
+/// - The given commitish
 /// - The given Xcode version, if it is known
 /// - The provided project name
 /// - The location of the built frameworks products for all platforms
 ///
 /// Returns a signal that succeeds once the file has been created.
-public func createVersionFileForCommitish(_ commitish: String? = nil, xcodeVersion: String? = nil, dependencyName: String, platforms: Set<Platform> = Set(Platform.supportedPlatforms), buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+public func createVersionFileForCommitish(_ commitish: String, xcodeVersion: String? = nil, dependencyName: String, platforms: Set<Platform> = Set(Platform.supportedPlatforms), buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	var platformCaches: [String: [CachedFramework]] = [:]
 
 	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms

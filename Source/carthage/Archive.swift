@@ -89,24 +89,21 @@ public struct ArchiveCommand: CommandProtocol {
 				.filter { filePath in FileManager.default.fileExists(atPath: filePath.absolutePath) }
 				.flatMap(.merge) { framework -> SignalProducer<String, CarthageError> in
 					let dSYM = (framework.relativePath as NSString).appendingPathExtension("dSYM")!
-
 					let bcsymbolmapsProducer = BCSymbolMapsForFramework(URL(fileURLWithPath: framework.absolutePath))
 						// generate relative paths for the bcsymbolmaps so they print nicely
 						.map { url in ((framework.relativePath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(url.lastPathComponent) }
-
 					let extraFilesProducer = SignalProducer(value: dSYM)
 						.concat(bcsymbolmapsProducer)
 						.filter { relativePath in FileManager.default.fileExists(atPath: framework.absolutePath) }
-
 					return SignalProducer(value: framework.relativePath)
 						.concat(extraFilesProducer)
 				}
-				.concat(versionFilesWithOptions(options, frameworkPaths: frameworks))
 				.on(value: { path in
 					carthage.println(formatting.bullets + "Found " + formatting.path(path))
 				})
 				.collect()
 				.flatMap(.merge) { paths -> SignalProducer<(), CarthageError> in
+					
 					let foundFrameworks = paths
 						.lazy
 						.map { ($0 as NSString).lastPathComponent }
@@ -117,7 +114,7 @@ public struct ArchiveCommand: CommandProtocol {
 						return SignalProducer(error: error)
 					}
 
-					let outputPath = outputPathWithOptions(options, frameworkPaths: frameworks)
+					let outputPath = outputPathWithOptions(options, frameworks: frameworks)
 					let outputURL = URL(fileURLWithPath: outputPath, isDirectory: false)
 
 					_ = try? FileManager
@@ -134,9 +131,9 @@ public struct ArchiveCommand: CommandProtocol {
 }
 
 /// Returns an appropriate output file path for the resulting zip file using
-/// the given option and framework paths.
-private func outputPathWithOptions(_ options: ArchiveCommand.Options, frameworkPaths: [String]) -> String {
-	let defaultOutputPath = "\(frameworkPaths.first!).zip"
+/// the given option and frameworks.
+private func outputPathWithOptions(_ options: ArchiveCommand.Options, frameworks: [String]) -> String {
+	let defaultOutputPath = "\(frameworks.first!).zip"
 
 	return options.outputPath.map { path -> String in
 		if path.hasSuffix("/") {
@@ -154,18 +151,4 @@ private func outputPathWithOptions(_ options: ArchiveCommand.Options, frameworkP
 			return path
 		}
 	} ?? defaultOutputPath
-}
-
-/// Sends the relative path of the version files for the frameworks at the
-/// provided paths.
-private func versionFilesWithOptions(_ options: ArchiveCommand.Options, frameworkPaths: [String]) -> SignalProducer<String, CarthageError> {
-	let directoryPath = (options.directoryPath as NSString).appendingPathComponent(CarthageBinariesFolderPath)
-	let directoryURL = URL(fileURLWithPath: directoryPath, isDirectory: true)
-
-	let frameworkNames = frameworkPaths.map { frameworkPath in (frameworkPath as NSString).deletingPathExtension }
-
-	return FileManager.default.reactive
-		.enumerator(at: directoryURL, options: [ .skipsSubdirectoryDescendants ], catchErrors: true)
-		.filter { _, url in isVersionFile(atURL:url, forFrameworksNamed:frameworkNames) }
-		.map { _, url in (CarthageBinariesFolderPath as NSString).appendingPathComponent(url.lastPathComponent) }
 }
