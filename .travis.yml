@@ -4,8 +4,6 @@ git:
 branches:
   only:
     - master
-before_script:
-  - xcrun simctl delete BE8E0914-5B5F-45C2-8C99-879894AF72B0
 matrix:
   include:
     - os: osx
