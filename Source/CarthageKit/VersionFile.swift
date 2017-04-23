@@ -93,19 +93,15 @@ struct VersionFile {
 	}
 
 	func frameworkURL(for cachedFramework: CachedFramework, platform: Platform, binariesDirectoryURL: URL) -> URL {
-		let frameworkName = cachedFramework.name
-
 		return binariesDirectoryURL
 			.appendingPathComponent(platform.rawValue, isDirectory: true)
 			.resolvingSymlinksInPath()
-			.appendingPathComponent("\(frameworkName).framework", isDirectory: true)
+			.appendingPathComponent("\(cachedFramework.name).framework", isDirectory: true)
 	}
 
 	func frameworkBinaryURL(for cachedFramework: CachedFramework, platform: Platform, binariesDirectoryURL: URL) -> URL {
-		let frameworkName = cachedFramework.name
-
 		return frameworkURL(for: cachedFramework, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
-			.appendingPathComponent("\(frameworkName)", isDirectory: false)
+			.appendingPathComponent("\(cachedFramework.name)", isDirectory: false)
 	}
 
 	/// Sends the hashes of the provided cached framework's binaries in the
@@ -126,9 +122,11 @@ struct VersionFile {
 	}
 
 	/// Sends values indicating whether the provided cached frameworks match the
-	/// given local Swift version, in the order of the provided cahed frameworks.
+	/// given local Swift version, in the order of the provided cached
+	/// frameworks.
 	///
-	/// Non-Swift frameworks are considered as matching.
+	/// Non-Swift frameworks are considered as matching the local Swift version,
+	/// as they will be compatible with it by definition.
 	func swiftVersionMatches(for cachedFrameworks: [CachedFramework], platform: Platform, binariesDirectoryURL: URL, localSwiftVersion: String) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<Bool, CarthageError> in
