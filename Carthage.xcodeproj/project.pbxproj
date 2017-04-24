@@ -770,15 +770,14 @@
 			files = (
 			);
 			inputPaths = (
-				"$(TARGET_NAME)/fixtures",
 			);
 			name = "Copy Fixtures";
 			outputPaths = (
-				"$(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = ". script/copy-fixtures";
+			shellPath = "/bin/sh -ex";
+			shellScript = "$SRCROOT/script/copy-fixtures";
+			showEnvVarsInLog = 0;
 		};
 		D0E7B65719E9C7C700EDBA4D /* Extract CLI Tool */ = {
 			isa = PBXShellScriptBuildPhase;

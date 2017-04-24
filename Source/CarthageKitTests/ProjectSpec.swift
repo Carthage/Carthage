@@ -47,6 +47,23 @@ class ProjectSpec: QuickSpec {
 				let data = "junkdata".data(using: .utf8)!
 				try! data.write(to: binaryURL, options: .atomic)
 			}
+
+			func overwriteSwiftVersion(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL, withVersion version: String) {
+				let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
+				let frameworkURL = platformURL.appendingPathComponent("\(frameworkName)_\(platformName).framework", isDirectory: false)
+				let swiftHeaderURL = frameworkURL.swiftHeaderURL()!
+
+				let swiftVersionResult = swiftVersion.first()!
+				expect(swiftVersionResult.error).to(beNil())
+
+				var header = try! String(contentsOf: swiftHeaderURL)
+
+				let range = header.range(of: swiftVersionResult.value!)!
+
+				header.replaceSubrange(range, with: version)
+
+				try! header.write(to: swiftHeaderURL, atomically: true, encoding: header.fastestEncoding)
+			}
 			
 			beforeEach {
 				let _ = try? FileManager.default.removeItem(at: buildDirectoryURL)
@@ -79,7 +96,7 @@ class ProjectSpec: QuickSpec {
 				expect(result1).to(equal(expected))
 				
 				overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
-				
+
 				let result2 = buildDependencyTest(platforms: [.macOS])
 				expect(result2).to(equal(expected))
 			}
@@ -100,7 +117,19 @@ class ProjectSpec: QuickSpec {
 				let result2 = buildDependencyTest(platforms: [.macOS])
 				expect(result2).to(equal(expected))
 			}
-			
+
+			it("should rebuild cached frameworks (and dependencies) whose swift version does not match the local swift version") {
+				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac"]
+				
+				let result1 = buildDependencyTest(platforms: [.macOS])
+				expect(result1).to(equal(expected))
+				
+				overwriteSwiftVersion("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL, withVersion: "1.0")
+
+				let result2 = buildDependencyTest(platforms: [.macOS])
+				expect(result2).to(equal(expected))
+			}
+
 			it("should not rebuild cached frameworks unnecessarily") {
 				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac"]
 				
