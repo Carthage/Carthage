@@ -1063,20 +1063,6 @@ public func BCSymbolMapsForFramework(_ frameworkURL: URL) -> SignalProducer<URL,
 		}
 }
 
-/// Sends a string representing the currently active version of Xcode, as given by xcodebuild
-public func currentXcodeVersion() -> SignalProducer<String, CarthageError> {
-	let task = Task("/usr/bin/xcrun", arguments: ["xcodebuild", "-version"])
-	return task.launch()
-		.mapError(CarthageError.taskError)
-		.ignoreTaskData()
-		.attemptMap { data in
-			guard let versionString = String(data: data, encoding: .utf8) else {
-				return .failure(.parseError(description: "Could not get xcode version"))
-			}
-			return .success(versionString.trimmingCharacters(in: .whitespacesAndNewlines))
-		}
-}
-
 /// Sends a set of UUIDs for each architecture present in the given URL.
 private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, CarthageError> {
 	let dwarfdumpTask = Task("/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", url.path ])
