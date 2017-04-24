@@ -150,17 +150,15 @@ struct VersionFile {
 		guard let cachedFrameworks = self[platform] else {
 			return SignalProducer(value: false)
 		}
-		
-		return SignalProducer
-			.zip(
-				self.hashes(for: cachedFrameworks, platform: platform, binariesDirectoryURL: binariesDirectoryURL),
-				self.swiftVersionMatches(for: cachedFrameworks, platform: platform, binariesDirectoryURL: binariesDirectoryURL, localSwiftVersion: localSwiftVersion)
-			)
-			.collect()
-			.flatMap(.concat) { hashesAndswiftVersionMatches -> SignalProducer<Bool, CarthageError> in
-				let hashes = hashesAndswiftVersionMatches.map { $0.0 }
-				let swiftVersionMatches = hashesAndswiftVersionMatches.map { $0.1 }
 
+		let hashes = self.hashes(for: cachedFrameworks, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
+			.collect()
+
+		let swiftVersionMatches = self.swiftVersionMatches(for: cachedFrameworks, platform: platform, binariesDirectoryURL: binariesDirectoryURL, localSwiftVersion: localSwiftVersion)
+			.collect()
+
+		return SignalProducer.zip(hashes, swiftVersionMatches)
+			.flatMap(.concat) { hashes, swiftVersionMatches -> SignalProducer<Bool, CarthageError> in
 				return self.satisfies(platform: platform, commitish: commitish, hashes: hashes, swiftVersionMatches: swiftVersionMatches)
 			}
 	}
