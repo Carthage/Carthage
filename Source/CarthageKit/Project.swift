@@ -523,8 +523,9 @@ public final class Project {
 	}
 
 	/// Unzips the file at the given URL and copies the frameworks, DSYM and
-	/// for the project. This step will also check framework compatibility and
-	/// create a version file for the given frameworks.
+	/// bcsymbolmap files into the corresponding folders for the project. This
+	/// step will also check framework compatibility and create a version file
+	/// for the given frameworks.
 	///
 	/// Sends the temporary URL of the unzipped directory
 	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL, projectName: String, commitish: String) -> SignalProducer<URL, CarthageError> {
