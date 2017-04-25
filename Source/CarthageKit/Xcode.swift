@@ -1092,7 +1092,7 @@ private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, Carthag
 				var uuidString: NSString?
 				scanner.scanCharacters(from: uuidCharacterSet, into: &uuidString)
 
-				if let uuidString = uuidString as? String, let uuid = UUID(uuidString: uuidString) {
+				if let uuidString = uuidString as String?, let uuid = UUID(uuidString: uuidString) {
 					uuids.insert(uuid)
 				}
 

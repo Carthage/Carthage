@@ -21,7 +21,7 @@ private func gitHubUserAgent() -> String {
 		?? "unknown"
 
 	let identifier = bundle.bundleIdentifier
-	return "\(identifier)/\(version)"
+	return "\(String(describing: identifier))/\(version)"
 }
 
 extension Repository {

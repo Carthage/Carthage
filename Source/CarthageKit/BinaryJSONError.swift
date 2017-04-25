@@ -18,7 +18,7 @@ extension BinaryJSONError: CustomStringConvertible {
 	public var description: String {
 		switch self {
 		case let .invalidJSON(error):
-			return "invalid JSON: \(error)"
+			return "invalid JSON: \(String(describing: error))"
 		case let .invalidVersion(error):
 			return "unable to parse semantic version: \(error)"
 		case let .invalidURL(string):

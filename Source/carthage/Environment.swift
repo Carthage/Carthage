@@ -29,7 +29,7 @@ internal struct Terminal {
 	
 	/// Whether terminal type is `dumb`.
 	static var isDumb: Bool {
-		return (terminalType?.caseInsensitiveCompare("dumb") == .orderedSame) ?? false
+		return terminalType?.caseInsensitiveCompare("dumb") == .orderedSame
 	}
 	
 	/// Whether STDOUT is a TTY.

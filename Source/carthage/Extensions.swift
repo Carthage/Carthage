@@ -17,7 +17,14 @@ import ReactiveSwift
 import ReactiveTask
 
 private let outputQueue = { () -> DispatchQueue in
-	let queue = DispatchQueue(label: "org.carthage.carthage.outputQueue", target: .global(priority: .high))
+	let targetQueue: DispatchQueue
+	if #available(macOS 10.10, *) {
+		targetQueue = .global(qos: .userInitiated)
+	} else {
+		targetQueue = .global(priority: .high)
+	}
+
+	let queue = DispatchQueue(label: "org.carthage.carthage.outputQueue", target: targetQueue)
 
 	atexit_b {
 		queue.sync(flags: .barrier) {}
