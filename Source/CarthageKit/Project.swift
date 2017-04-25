@@ -698,9 +698,7 @@ public final class Project {
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
 	}
 
-	/// Creates an abbreviated .version file for all of the provided frameworks.
-	/// It does not have a populated xcodeVersion field (as it is unknown for
-	/// prebuilt binares).
+	/// Creates a .version file for all of the provided frameworks.
 	public func createVersionFilesForFrameworks(_ frameworkURLs: [URL], fromDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<(), CarthageError> {
 		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
 	}
