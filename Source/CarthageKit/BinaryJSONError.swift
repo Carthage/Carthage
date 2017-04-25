@@ -2,7 +2,7 @@
 public enum BinaryJSONError: Error {
 
 	/// Unable to parse the JSON.
-	case invalidJSON(NSError?)
+	case invalidJSON(NSError)
 
 	/// Unable to parse a semantic version from a framework entry.
 	case invalidVersion(ScannableError)
@@ -18,7 +18,7 @@ extension BinaryJSONError: CustomStringConvertible {
 	public var description: String {
 		switch self {
 		case let .invalidJSON(error):
-			return "invalid JSON: \(String(describing: error))"
+			return "invalid JSON: \(error)"
 		case let .invalidVersion(error):
 			return "unable to parse semantic version: \(error)"
 		case let .invalidURL(string):
