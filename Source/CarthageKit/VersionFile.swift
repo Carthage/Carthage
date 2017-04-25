@@ -48,6 +48,9 @@ struct VersionFile {
 	
 	static let commitishKey = "commitish"
 
+	/// The extension representing a serialized VersionFile.
+	static let pathExtension = "version"
+
 	subscript(_ platform: Platform) -> [CachedFramework]? {
 		switch platform {
 		case .macOS:
@@ -72,7 +75,7 @@ struct VersionFile {
 		}
 		return dict
 	}
-	
+
 	init(commitish: String, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
 		self.commitish = commitish
 		
@@ -215,19 +218,29 @@ extension VersionFile: Decodable {
 ///
 /// Returns a signal that succeeds once the file has been created.
 public func createVersionFile(for dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+	return createVersionFileForCommitish(dependency.version.commitish, dependencyName: dependency.project.name, platforms: platforms, buildProducts: buildProducts, rootDirectoryURL: rootDirectoryURL)
+}
+
+/// Creates a version file for the dependency in the given root directory with:
+/// - The given commitish
+/// - The provided project name
+/// - The location of the built frameworks products for all platforms
+///
+/// Returns a signal that succeeds once the file has been created.
+public func createVersionFileForCommitish(_ commitish: String, dependencyName: String, platforms: Set<Platform> = Set(Platform.supportedPlatforms), buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	var platformCaches: [String: [CachedFramework]] = [:]
 
 	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
 	for platform in platformsToCache {
 		platformCaches[platform.rawValue] = []
 	}
-	
+
 	let writeVersionFile = SignalProducer<(), CarthageError>.attempt {
 		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
-		let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
+		let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
 
 		let versionFile = VersionFile(
-			commitish: dependency.version.commitish,
+			commitish: commitish,
 			macOS: platformCaches[Platform.macOS.rawValue],
 			iOS: platformCaches[Platform.iOS.rawValue],
 			watchOS: platformCaches[Platform.watchOS.rawValue],
@@ -269,7 +282,7 @@ public func createVersionFile(for dependency: Dependency<PinnedVersion>, platfor
 /// skipped or false if there is a mismatch of some kind.
 public func versionFileMatches(_ dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, rootDirectoryURL: URL) -> SignalProducer<Bool?, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
-	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).version")
+	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).\(VersionFile.pathExtension)")
 	guard let versionFile = VersionFile(url: versionFileURL) else {
 		return SignalProducer(value: nil)
 	}

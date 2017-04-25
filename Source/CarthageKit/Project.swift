@@ -522,11 +522,13 @@ public final class Project {
 			.then(shouldCheckout ? checkoutResolvedDependencies(dependenciesToUpdate) : .empty)
 	}
 
-	/// Unzips the file at the given URL and copies the frameworks, DSYM and bcsymbolmap files into the corresponding folders
-	/// for the project. This step will also check framework compatibility.
+	/// Unzips the file at the given URL and copies the frameworks, DSYM and
+	/// bcsymbolmap files into the corresponding folders for the project. This
+	/// step will also check framework compatibility and create a version file
+	/// for the given frameworks.
 	///
 	/// Sends the temporary URL of the unzipped directory
-	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL) -> SignalProducer<URL, CarthageError> {
+	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL, projectName: String, commitish: String) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer<URL, CarthageError>(value: zipFile)
 			.flatMap(.concat, transform: unarchive(archive:))
 			.flatMap(.concat) { directoryURL in
@@ -539,6 +541,11 @@ public final class Project {
 					.flatMap(.merge) { frameworkURL in
 						return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
 							.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
+							.then(SignalProducer<URL, CarthageError>(value: frameworkURL))
+					}
+					.collect()
+					.flatMap(.concat) { frameworkURLs in
+						return self.createVersionFilesForFrameworks(frameworkURLs, fromDirectoryURL: directoryURL, projectName: projectName, commitish: commitish)
 					}
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 		}
@@ -583,7 +590,7 @@ public final class Project {
 							}
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
 						}
-						.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0) }
+						.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: project.name, commitish: revision) }
 						.on(completed: {
 							_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
 						})
@@ -690,6 +697,11 @@ public final class Project {
 		let destinationDirectoryURL = frameworkURL.deletingLastPathComponent()
 		return BCSymbolMapsForFramework(frameworkURL, inDirectoryURL: directoryURL)
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
+	}
+
+	/// Creates a .version file for all of the provided frameworks.
+	public func createVersionFilesForFrameworks(_ frameworkURLs: [URL], fromDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<(), CarthageError> {
+		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
 	}
 
 	/// Checks out the given dependency into its intended working directory,
@@ -822,7 +834,7 @@ public final class Project {
 							}
 
 						case let .binary(url):
-							return self.installBinariesForBinaryProject(url: url, pinnedVersion: dependency.version)
+							return self.installBinariesForBinaryProject(url: url, pinnedVersion: dependency.version, projectName: project.name)
 						}
 
 
@@ -831,7 +843,7 @@ public final class Project {
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
 
-	private func installBinariesForBinaryProject(url: URL, pinnedVersion: PinnedVersion) -> SignalProducer<(), CarthageError> {
+	private func installBinariesForBinaryProject(url: URL, pinnedVersion: PinnedVersion, projectName: String) -> SignalProducer<(), CarthageError> {
 
 		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(pinnedVersion))
 			.mapError { CarthageError(scannableError: $0) }
@@ -846,7 +858,7 @@ public final class Project {
 			.flatMap(.concat) { (semanticVersion, frameworkURL) in
 				return self.downloadBinary(project: ProjectIdentifier.binary(url), version: semanticVersion, url: frameworkURL)
 			}
-			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0) }
+			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: projectName, commitish: pinnedVersion.commitish) }
 			.flatMap(.concat) { self.removeItem(at: $0) }
 	}
 
