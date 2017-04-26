@@ -159,7 +159,7 @@ private func inputFiles() -> SignalProducer<String, CarthageError> {
 		}
 	}
 
-	return SignalProducer<Int, CarthageError>(result: count)
+	return SignalProducer(result: count)
 		.flatMap(.merge) { SignalProducer<Int, CarthageError>(0..<$0) }
 		.attemptMap { getEnvironmentVariable("SCRIPT_INPUT_FILE_\($0)") }
 		.uniqueValues()
