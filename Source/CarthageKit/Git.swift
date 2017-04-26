@@ -370,7 +370,7 @@ private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keyS
 				continue
 			}
 
-			if let key = key as? String {
+			if let key = key as String? {
 				observer.send(value: (key, value))
 			}
 		}

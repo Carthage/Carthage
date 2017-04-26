@@ -2,7 +2,7 @@
 public enum BinaryJSONError: Error {
 
 	/// Unable to parse the JSON.
-	case invalidJSON(NSError?)
+	case invalidJSON(NSError)
 
 	/// Unable to parse a semantic version from a framework entry.
 	case invalidVersion(ScannableError)
