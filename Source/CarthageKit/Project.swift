@@ -447,7 +447,7 @@ public final class Project {
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func updatedResolvedCartfile(_ dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
+	public func updatedResolvedCartfile(version: String, _ dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
 		let resolver = Resolver(versionsForDependency: versions(for:), dependenciesForDependency: dependencies(for:), resolvedGitReference: resolvedGitReference)
 
 		let resolvedCartfile: SignalProducer<ResolvedCartfile?, CarthageError> = loadResolvedCartfile()
@@ -463,12 +463,17 @@ public final class Project {
 					dependenciesToUpdate: dependenciesToUpdate
 				)
 			}
-			.reduce([:]) { result, dependency in
+			.reduce([ProjectIdentifier:PinnedVersion]()) { result, dependency in
 				var copy = result
 				copy[dependency.project] = dependency.version
 				return copy
 			}
-			.map(ResolvedCartfile.init)
+			.map { dependencies in
+				var resolved = ResolvedCartfile(dependencies: dependencies)
+				resolved.version = SemanticVersion.from(Scanner(string: version)).value
+				
+				return resolved
+			}
 	}
 
 	/// Attempts to determine which of the project's Carthage
@@ -482,7 +487,7 @@ public final class Project {
 		let outdatedDependencies = SignalProducer
 			.combineLatest(
 				loadResolvedCartfile(),
-				updatedResolvedCartfile()
+				updatedResolvedCartfile(version: carthageVersion())
 			)
 			.map { ($0.dependencies, $1.dependencies) }
 			.map { (currentDependencies, updatedDependencies) -> [OutdatedDependency] in
@@ -515,7 +520,7 @@ public final class Project {
 	/// changes will be reflected in Cartfile.resolved, and also in the working
 	/// directory checkouts if the given parameter is true.
 	public func updateDependencies(shouldCheckout: Bool = true, dependenciesToUpdate: [String]? = nil) -> SignalProducer<(), CarthageError> {
-		return updatedResolvedCartfile(dependenciesToUpdate)
+		return updatedResolvedCartfile(version: carthageVersion(), dependenciesToUpdate)
 			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}

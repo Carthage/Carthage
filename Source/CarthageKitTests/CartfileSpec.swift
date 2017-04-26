@@ -55,6 +55,8 @@ class CartfileSpec: QuickSpec {
 				.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
 				.git(GitURL("https://github.com/Mantle/Mantle.git")): PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47"),
 			]
+			
+			expect(resolvedCartfile.version) == SemanticVersion(major: 0, minor: 20, patch: 0)
 		}
 
 		it("should detect duplicate dependencies in a single Cartfile") {

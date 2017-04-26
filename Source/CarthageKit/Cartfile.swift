@@ -140,7 +140,10 @@ public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) ->
 public struct ResolvedCartfile {
 	/// The dependencies listed in the Cartfile.resolved.
 	public var dependencies: [ProjectIdentifier: PinnedVersion]
-	
+
+  /// Version of Carthage printed into the `Cartfile.resolved` file
+	public var version: SemanticVersion?
+
 	public init(dependencies: [ProjectIdentifier: PinnedVersion]) {
 		self.dependencies = dependencies
 	}
@@ -158,11 +161,22 @@ public struct ResolvedCartfile {
 
 		let scanner = Scanner(string: string)
 		scannerLoop: while !scanner.isAtEnd {
-			switch ProjectIdentifier.from(scanner).fanout(PinnedVersion.from(scanner)) {
+			if scanner.scanString("carthage", into: nil) {
+				switch SemanticVersion.from(scanner) {
+				case let .success(version):
+					cartfile.version = version
+					continue scannerLoop
+				case let .failure(error):
+					result = .failure(CarthageError(scannableError: error))
+					break scannerLoop
+				}
+			}
+
+      switch ProjectIdentifier.from(scanner).fanout(PinnedVersion.from(scanner)) {
 			case let .success((dep, version)):
 				cartfile.dependencies[dep] = version
 
-			case let .failure(error):
+      case let .failure(error):
 				result = .failure(CarthageError(scannableError: error))
 				break scannerLoop
 			}
@@ -174,10 +188,18 @@ public struct ResolvedCartfile {
 
 extension ResolvedCartfile: CustomStringConvertible {
 	public var description: String {
-		return dependencies
+		let dependenciesDescription = dependencies
 			.sorted { $0.key.description < $1.key.description }
 			.map { "\($0.key) \($0.value)\n" }
 			.joined(separator: "")
+    
+    var result = ""
+		if let description = version?.description {
+			result += "carthage \(description)\n"
+		}
+		result += dependenciesDescription
+		
+		return result
 	}
 }
 
@@ -368,7 +390,8 @@ extension Dependency where V: Scannable {
 	/// Attempts to parse a Dependency specification.
 	public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
 		return ProjectIdentifier.from(scanner).flatMap { identifier in
-			return V.from(scanner).map { specifier in self.init(project: identifier, version: specifier) }
+			return V.from(scanner)
+				.map { specifier in self.init(project: identifier, version: specifier) }
 		}
 	}
 }
