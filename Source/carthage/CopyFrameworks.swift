@@ -165,7 +165,8 @@ private func inputFiles() -> SignalProducer<String, CarthageError> {
 				return SignalProducer(result: getEnvironmentVariable("SCRIPT_INPUT_FILE_\(index)"))
 			}
 
-			return SignalProducer<SignalProducer<String, CarthageError>, CarthageError>(variables)
-				.flatten(.concat)
+			return SignalProducer.zip(variables)
+				.map { Set($0) }
+				.flatMap(.concat) { SignalProducer<String, CarthageError>($0) }
 		}
 }
