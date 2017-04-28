@@ -34,7 +34,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		describe("determineSwiftInformation:") {
-			let currentSwiftVersion = swiftVersion.single()?.value
+			let currentSwiftVersion = swiftVersion().single()?.value
 			let testSwiftFramework = "Quick.framework"
 			let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
 			let testSwiftFrameworkURL = currentDirectory.appendingPathComponent(testSwiftFramework)
@@ -64,14 +64,14 @@ class XcodeSpec: QuickSpec {
 			}
 
 			it("should determine when a Swift framework is compatible") {
-				let result = checkSwiftFrameworkCompatibility(testSwiftFrameworkURL).single()
+				let result = checkSwiftFrameworkCompatibility(testSwiftFrameworkURL, usingToolchain: nil).single()
 
 				expect(result?.value) == testSwiftFrameworkURL
 			}
 
 			it("should determine when a Swift framework is incompatible") {
 				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldSwift.framework", withExtension: nil)!
-				let result = checkSwiftFrameworkCompatibility(frameworkURL).single()
+				let result = checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: nil).single()
 
 				expect(result?.value).to(beNil())
 				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: currentSwiftVersion ?? "", framework: "0.0.0")

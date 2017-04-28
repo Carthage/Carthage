@@ -514,12 +514,12 @@ public final class Project {
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in Cartfile.resolved, and also in the working
 	/// directory checkouts if the given parameter is true.
-	public func updateDependencies(shouldCheckout: Bool = true, dependenciesToUpdate: [String]? = nil) -> SignalProducer<(), CarthageError> {
+	public func updateDependencies(shouldCheckout: Bool = true, buildOptions: BuildOptions, dependenciesToUpdate: [String]? = nil) -> SignalProducer<(), CarthageError> {
 		return updatedResolvedCartfile(dependenciesToUpdate)
 			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}
-			.then(shouldCheckout ? checkoutResolvedDependencies(dependenciesToUpdate) : .empty)
+			.then(shouldCheckout ? checkoutResolvedDependencies(dependenciesToUpdate, buildOptions: buildOptions) : .empty)
 	}
 
 	/// Unzips the file at the given URL and copies the frameworks, DSYM and
@@ -528,13 +528,13 @@ public final class Project {
 	/// for the given frameworks.
 	///
 	/// Sends the temporary URL of the unzipped directory
-	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL, projectName: String, commitish: String) -> SignalProducer<URL, CarthageError> {
+	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL, projectName: String, commitish: String, toolchain: String?) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer<URL, CarthageError>(value: zipFile)
 			.flatMap(.concat, transform: unarchive(archive:))
 			.flatMap(.concat) { directoryURL in
 				return frameworksInDirectory(directoryURL)
 					.flatMap(.merge) { url in
-						return checkFrameworkCompatibility(url)
+						return checkFrameworkCompatibility(url, usingToolchain: toolchain)
 							.mapError { error in CarthageError.internalError(description: error.description) }
 					}
 					.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
@@ -569,7 +569,7 @@ public final class Project {
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-	private func installBinariesForProject(_ project: ProjectIdentifier, atRevision revision: String) -> SignalProducer<Bool, CarthageError> {
+	private func installBinariesForProject(_ project: ProjectIdentifier, atRevision revision: String, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer.attempt {
 				return .success(self.useBinaries)
 			}
@@ -590,7 +590,7 @@ public final class Project {
 							}
 							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
 						}
-						.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: project.name, commitish: revision) }
+						.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: project.name, commitish: revision, toolchain: toolchain) }
 						.on(completed: {
 							_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
 						})
@@ -790,7 +790,7 @@ public final class Project {
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
 	/// optionally they are limited by the given list of dependency names.
-	public func checkoutResolvedDependencies(_ dependenciesToCheckout: [String]? = nil) -> SignalProducer<(), CarthageError> {
+	public func checkoutResolvedDependencies(_ dependenciesToCheckout: [String]? = nil, buildOptions: BuildOptions?) -> SignalProducer<(), CarthageError> {
 		/// Determine whether the repository currently holds any submodules (if
 		/// it even is a repository).
 		let submodulesSignal = submodulesInRepository(self.directoryURL)
@@ -824,7 +824,7 @@ public final class Project {
 								return checkoutOrCloneDependency
 							}
 
-							return self.installBinariesForProject(project, atRevision: dependency.version.commitish)
+							return self.installBinariesForProject(project, atRevision: dependency.version.commitish, toolchain: buildOptions?.toolchain)
 								.flatMap(.merge) { installed -> SignalProducer<(), CarthageError> in
 									if installed {
 										return .empty
@@ -834,7 +834,7 @@ public final class Project {
 							}
 
 						case let .binary(url):
-							return self.installBinariesForBinaryProject(url: url, pinnedVersion: dependency.version, projectName: project.name)
+							return self.installBinariesForBinaryProject(url: url, pinnedVersion: dependency.version, projectName: project.name, toolchain: buildOptions?.toolchain)
 						}
 
 
@@ -843,7 +843,7 @@ public final class Project {
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
 
-	private func installBinariesForBinaryProject(url: URL, pinnedVersion: PinnedVersion, projectName: String) -> SignalProducer<(), CarthageError> {
+	private func installBinariesForBinaryProject(url: URL, pinnedVersion: PinnedVersion, projectName: String, toolchain: String?) -> SignalProducer<(), CarthageError> {
 
 		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(pinnedVersion))
 			.mapError { CarthageError(scannableError: $0) }
@@ -858,7 +858,7 @@ public final class Project {
 			.flatMap(.concat) { (semanticVersion, frameworkURL) in
 				return self.downloadBinary(project: ProjectIdentifier.binary(url), version: semanticVersion, url: frameworkURL)
 			}
-			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: projectName, commitish: pinnedVersion.commitish) }
+			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: projectName, commitish: pinnedVersion.commitish, toolchain: toolchain) }
 			.flatMap(.concat) { self.removeItem(at: $0) }
 	}
 
@@ -969,7 +969,7 @@ public final class Project {
 				return SignalProducer.combineLatest(
 					SignalProducer(value: dependency),
 					self.dependencyProjects(for: dependency),
-					versionFileMatches(dependency, platforms: options.platforms, rootDirectoryURL: self.directoryURL)
+					versionFileMatches(dependency, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
 				)
 			}
 			.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in

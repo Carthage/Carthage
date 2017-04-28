@@ -53,7 +53,7 @@ class ProjectSpec: QuickSpec {
 				let frameworkURL = platformURL.appendingPathComponent("\(frameworkName)_\(platformName).framework", isDirectory: false)
 				let swiftHeaderURL = frameworkURL.swiftHeaderURL()!
 
-				let swiftVersionResult = swiftVersion.first()!
+				let swiftVersionResult = swiftVersion().first()!
 				expect(swiftVersionResult.error).to(beNil())
 
 				var header = try! String(contentsOf: swiftHeaderURL)

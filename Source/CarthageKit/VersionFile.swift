@@ -280,7 +280,7 @@ public func createVersionFileForCommitish(_ commitish: String, dependencyName: S
 /// Returns an optional bool which is nil if no version file exists,
 /// otherwise true if the version file matches and the build can be
 /// skipped or false if there is a mismatch of some kind.
-public func versionFileMatches(_ dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, rootDirectoryURL: URL) -> SignalProducer<Bool?, CarthageError> {
+public func versionFileMatches(_ dependency: Dependency<PinnedVersion>, platforms: Set<Platform>, rootDirectoryURL: URL, toolchain: String?) -> SignalProducer<Bool?, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.project.name).\(VersionFile.pathExtension)")
 	guard let versionFile = VersionFile(url: versionFileURL) else {
@@ -290,7 +290,7 @@ public func versionFileMatches(_ dependency: Dependency<PinnedVersion>, platform
 
 	let platformsToCheck = platforms.isEmpty ? Set<Platform>(Platform.supportedPlatforms) : platforms
 
-	return swiftVersion
+	return swiftVersion(usingToolchain: toolchain)
 		.mapError { error in CarthageError.internalError(description: error.description) }
 		.flatMap(.concat) { localSwiftVersion in
 			return SignalProducer<Platform, CarthageError>(platformsToCheck)
