@@ -96,7 +96,7 @@ public struct UpdateCommand: CommandProtocol {
 				}
 				
 				let updateDependencies = project.updateDependencies(
-					shouldCheckout: options.checkoutAfterUpdate,
+					shouldCheckout: options.checkoutAfterUpdate, buildOptions: options.buildOptions,
 					dependenciesToUpdate: options.dependenciesToUpdate
 				)
 				

@@ -17,11 +17,13 @@ import XCDBLD
 public let CarthageBinariesFolderPath = "Carthage/Build"
 
 /// Emits the currect Swift version
-internal let swiftVersion: SignalProducer<String, SwiftVersionError> = { return determineSwiftVersion().replayLazily(upTo: 1) }()
+internal func swiftVersion(usingToolchain toolchain: String? = nil) -> SignalProducer<String, SwiftVersionError> {
+	return determineSwiftVersion(usingToolchain: toolchain).replayLazily(upTo: 1)
+}
 
 /// Attempts to determine the local version of swift
-private func determineSwiftVersion() -> SignalProducer<String, SwiftVersionError> {
-	let taskDescription = Task("/usr/bin/env", arguments: ["xcrun", "swift", "--version"])
+private func determineSwiftVersion(usingToolchain toolchain: String?) -> SignalProducer<String, SwiftVersionError> {
+	let taskDescription = Task("/usr/bin/env", arguments: compilerVersionArguments(usingToolchain: toolchain))
 
 	return taskDescription.launch(standardInput: nil)
 		.ignoreTaskData()
@@ -30,6 +32,14 @@ private func determineSwiftVersion() -> SignalProducer<String, SwiftVersionError
 			return parseSwiftVersionCommand(output: String(data: data, encoding: .utf8))
 		}
 		.attemptMap { Result($0, failWith: SwiftVersionError.unknownLocalSwiftVersion) }
+}
+
+private func compilerVersionArguments(usingToolchain toolchain: String?) -> [String] {
+	if let toolchain = toolchain {
+		return ["xcrun", "--toolchain", toolchain, "swift", "--version"]
+	} else {
+		return ["xcrun", "swift", "--version"]
+	}
 }
 
 /// Parses output of `swift --version` for the version string.
@@ -65,8 +75,8 @@ internal func isSwiftFramework(_ frameworkURL: URL) -> SignalProducer<Bool, Swif
 }
 
 /// Emits the framework URL if it matches the local Swift version and errors if not.
-internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL) -> SignalProducer<URL, SwiftVersionError> {
-	return SignalProducer.combineLatest(swiftVersion, frameworkSwiftVersion(frameworkURL))
+internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
+	return SignalProducer.combineLatest(swiftVersion(usingToolchain: toolchain), frameworkSwiftVersion(frameworkURL))
 		.attemptMap() { localSwiftVersion, frameworkSwiftVersion in
 			return localSwiftVersion == frameworkSwiftVersion
 				? .success(frameworkURL)
@@ -75,11 +85,11 @@ internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL) -> SignalPro
 }
 
 /// Emits the framework URL if it is compatible with the build environment and errors if not.
-internal func checkFrameworkCompatibility(_ frameworkURL: URL) -> SignalProducer<URL, SwiftVersionError> {
+internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
 	return isSwiftFramework(frameworkURL)
 		.flatMap(.merge) { isSwift in
 			return isSwift
-				? checkSwiftFrameworkCompatibility(frameworkURL)
+				? checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: toolchain)
 				: SignalProducer(value: frameworkURL)
 		}
 }
