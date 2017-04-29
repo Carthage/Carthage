@@ -836,7 +836,7 @@ public final class Project {
 							return self.installBinariesForBinaryProject(url: url, pinnedVersion: dependency.version, projectName: project.name, toolchain: buildOptions?.toolchain)
 						}
 					}
-					// Checkout as many project as possible in parallel.
+					// Checkout as many projects as possible in parallel.
 					.flatMap(.merge) { $0.start(on: QueueScheduler(name: "org.carthage.CarthageKit.checkout")) }
 			}
 			.then(SignalProducer<(), CarthageError>.empty)
