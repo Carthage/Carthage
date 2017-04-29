@@ -808,7 +808,7 @@ public final class Project {
 			.zip(with: submodulesSignal)
 			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
 				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(dependencies)
-					.flatMap(.concat) { dependency -> SignalProducer<(), CarthageError> in
+					.map { dependency -> SignalProducer<(), CarthageError> in
 						let project = dependency.project
 
 						switch project {
@@ -835,9 +835,9 @@ public final class Project {
 						case let .binary(url):
 							return self.installBinariesForBinaryProject(url: url, pinnedVersion: dependency.version, projectName: project.name, toolchain: buildOptions?.toolchain)
 						}
-
-
 					}
+					// Checkout as many project as possible in parallel.
+					.flatMap(.merge) { $0.start(on: QueueScheduler(name: "org.carthage.CarthageKit.checkout")) }
 			}
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
