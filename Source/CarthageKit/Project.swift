@@ -311,8 +311,6 @@ public final class Project {
 			.take(first: 1)
 	}
 
-	private let gitOperationQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.gitOperationQueue")
-
 	/// Clones the given dependency to the global repositories folder, or fetches
 	/// inside it if it has already been cloned.
 	///
@@ -327,7 +325,6 @@ public final class Project {
 			})
 			.map { _, url in url }
 			.take(last: 1)
-			.startOnQueue(gitOperationQueue)
 	}
 
 	func downloadBinaryFrameworkDefinition(url: URL) -> SignalProducer<BinaryProject, CarthageError> {
@@ -703,6 +700,8 @@ public final class Project {
 	public func createVersionFilesForFrameworks(_ frameworkURLs: [URL], fromDirectoryURL directoryURL: URL, projectName: String, commitish: String) -> SignalProducer<(), CarthageError> {
 		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
 	}
+
+	private let gitOperationQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.gitOperationQueue")
 
 	/// Checks out the given dependency into its intended working directory,
 	/// cloning it first if need be.
