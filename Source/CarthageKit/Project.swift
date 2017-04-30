@@ -969,7 +969,7 @@ public final class Project {
 				return SignalProducer.combineLatest(
 					SignalProducer(value: dependency),
 					self.dependencyProjects(for: dependency),
-					versionFileMatches(dependency, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
+					versionFileMatches(dependency.project, version: dependency.version, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
 				)
 			}
 			.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
@@ -1011,7 +1011,7 @@ public final class Project {
 				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version, isDirectory: true)
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
-				return buildDependencyProject(dependency, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+				return buildDependencyProject(dependency.project, version: dependency.version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.map { producer in
 						return producer.flatMapError { error in
 							switch error {

@@ -113,8 +113,7 @@ class XcodeSpec: QuickSpec {
 			let version = PinnedVersion("0.1")
 
 			for project in dependencies {
-				let dependency = Dependency<PinnedVersion>(project: project, version: version)
-				let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+				let result = buildDependencyProject(project, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 					.flatten(.concat)
 					.ignoreTaskData()
 					.on(value: { (project, scheme) in
@@ -304,8 +303,7 @@ class XcodeSpec: QuickSpec {
 		it("should build for one platform") {
 			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let dependency = Dependency<PinnedVersion>(project: project, version: version)
-			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
+			let result = buildDependencyProject(project, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { (project, scheme) in
@@ -327,8 +325,7 @@ class XcodeSpec: QuickSpec {
 		it("should build for multiple platforms") {
 			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let dependency = Dependency<PinnedVersion>(project: project, version: version)
-			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
+			let result = buildDependencyProject(project, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { (project, scheme) in
@@ -370,14 +367,13 @@ class XcodeSpec: QuickSpec {
 		it("should symlink the build directory") {
 			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let dependency = Dependency<PinnedVersion>(project: project, version: version)
 
-			let dependencyURL =	directoryURL.appendingPathComponent(dependency.project.relativePath)
+			let dependencyURL =	directoryURL.appendingPathComponent(project.relativePath)
 			// Build
 			let buildURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 			let dependencyBuildURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildDependencyProject(project, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { (project, scheme) in
