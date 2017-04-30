@@ -619,17 +619,17 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(_ dependency: Dependency<PinnedVersion>, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)
+public func buildDependencyProject(_ dependency: ProjectIdentifier, version: PinnedVersion, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
-	return symlinkBuildPathForDependencyProject(dependency.project, rootDirectoryURL: rootDirectoryURL)
+	return symlinkBuildPathForDependencyProject(dependency, rootDirectoryURL: rootDirectoryURL)
 		.map { _ -> BuildSchemeProducer in
-			return buildInDirectory(dependencyURL, withOptions: options, dependency: dependency, rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
+			return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
 				.mapError { error in
-					switch (dependency.project, error) {
+					switch (dependency, error) {
 					case let (_, .noSharedFrameworkSchemes(_, platforms)):
-						return .noSharedFrameworkSchemes(dependency.project, platforms)
+						return .noSharedFrameworkSchemes(dependency, platforms)
 
 					case let (.gitHub(repo), .noSharedSchemes(project, _)):
 						return .noSharedSchemes(project, repo)
@@ -705,7 +705,7 @@ private func symlinkBuildPathForDependencyProject(_ dependency: ProjectIdentifie
 /// Builds the any shared framework schemes found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
-public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: Dependency<PinnedVersion>? = nil, rootDirectoryURL: URL? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> BuildSchemeProducer {
+public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: (project: ProjectIdentifier, version: PinnedVersion)? = nil, rootDirectoryURL: URL? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> BuildSchemeProducer {
 	precondition(directoryURL.isFileURL)
 
 	return BuildSchemeProducer { observer, disposable in
@@ -780,7 +780,7 @@ public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOpti
 				guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
 					return .empty
 				}
-				return createVersionFile(for: dependency, platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL)
+				return createVersionFile(for: dependency.project, version: dependency.version, platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL)
 					.flatMapError { _ in .empty }
 			}
 			// Discard any Success values, since we want to
