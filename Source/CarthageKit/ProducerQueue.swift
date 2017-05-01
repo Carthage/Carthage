@@ -46,6 +46,7 @@ internal final class ProducerQueue {
 
 				self.concurrentQueue.async {
 					if disposable.isDisposed {
+						self.semaphore.signal()
 						return
 					}
 
