@@ -302,8 +302,8 @@ public final class Project {
 	}
 
 	/// Produces the sub dependencies of the given dependency
-	func dependencyProjects(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Set<ProjectIdentifier>, CarthageError> {
-		return self.dependencies(for: dependency)
+	func dependencyProjects(for dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<Set<ProjectIdentifier>, CarthageError> {
+		return self.dependencies(for: dependency, version: version)
 			.map { $0.project }
 			.collect()
 			.map { Set($0) }
@@ -404,12 +404,12 @@ public final class Project {
 	}
 
 	/// Loads the dependencies for the given dependency, at the given version.
-	private func dependencies(for dependency: Dependency<PinnedVersion>) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> {
+	private func dependencies(for dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> {
 
-		switch dependency.project {
+		switch dependency {
 		case .git, .gitHub:
-			let revision = dependency.version.commitish
-			return self.cloneOrFetchDependency(dependency.project, commitish: revision)
+			let revision = version.commitish
+			return self.cloneOrFetchDependency(dependency, commitish: revision)
 				.flatMap(.concat) { repositoryURL in
 					return contentsOfFileInRepository(repositoryURL, CarthageProjectCartfilePath, revision: revision)
 				}
@@ -448,7 +448,7 @@ public final class Project {
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
 	public func updatedResolvedCartfile(_ dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
-		let resolver = Resolver(versionsForDependency: versions(for:), dependenciesForDependency: dependencies(for:), resolvedGitReference: resolvedGitReference)
+		let resolver = Resolver(versionsForDependency: versions(for:), dependenciesForDependency: dependencies(for:version:), resolvedGitReference: resolvedGitReference)
 
 		let resolvedCartfile: SignalProducer<ResolvedCartfile?, CarthageError> = loadResolvedCartfile()
 			.map(Optional.init)
@@ -465,7 +465,7 @@ public final class Project {
 			}
 			.reduce([:]) { result, dependency in
 				var copy = result
-				copy[dependency.project] = dependency.version
+				copy[dependency.0] = dependency.1
 				return copy
 			}
 			.map(ResolvedCartfile.init)
@@ -706,28 +706,27 @@ public final class Project {
 
 	/// Checks out the given dependency into its intended working directory,
 	/// cloning it first if need be.
-	private func checkoutOrCloneDependency(_ dependency: Dependency<PinnedVersion>, submodulesByPath: [String: Submodule]) -> SignalProducer<(), CarthageError> {
-		let project = dependency.project
-		let revision = dependency.version.commitish
-		return cloneOrFetchDependency(project, commitish: revision)
+	private func checkoutOrCloneDependency(_ dependency: ProjectIdentifier, version: PinnedVersion, submodulesByPath: [String: Submodule]) -> SignalProducer<(), CarthageError> {
+		let revision = version.commitish
+		return cloneOrFetchDependency(dependency, commitish: revision)
 			.flatMap(.merge) { repositoryURL -> SignalProducer<(), CarthageError> in
-				let workingDirectoryURL = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true)
+				let workingDirectoryURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 
 				/// The submodule for an already existing submodule at dependency project’s path
 				/// or the submodule to be added at this path given the `--use-submodules` flag.
 				let submodule: Submodule?
 
-				if var foundSubmodule = submodulesByPath[project.relativePath] {
-					foundSubmodule.url = project.gitURL(preferHTTPS: self.preferHTTPS)!
+				if var foundSubmodule = submodulesByPath[dependency.relativePath] {
+					foundSubmodule.url = dependency.gitURL(preferHTTPS: self.preferHTTPS)!
 					foundSubmodule.sha = revision
 					submodule = foundSubmodule
 				} else if self.useSubmodules {
-					submodule = Submodule(name: project.relativePath, path: project.relativePath, url: project.gitURL(preferHTTPS: self.preferHTTPS)!, sha: revision)
+					submodule = Submodule(name: dependency.relativePath, path: dependency.relativePath, url: dependency.gitURL(preferHTTPS: self.preferHTTPS)!, sha: revision)
 				} else {
 					submodule = nil
 				}
 
-				let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
+				let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, version: version, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
 
 				if let submodule = submodule {
 					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
@@ -748,7 +747,7 @@ public final class Project {
 				}
 			}
 			.on(started: {
-				self._projectEventsObserver.send(value: .checkingOut(project, revision))
+				self._projectEventsObserver.send(value: .checkingOut(dependency, revision))
 			})
 	}
 
@@ -760,7 +759,7 @@ public final class Project {
 		// dependencies before the projects that depend on them.
 		return SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError>(cartfile.dependencies.map { $0 })
 			.flatMap(.merge) { (dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<DependencyGraph, CarthageError> in
-				return self.dependencyProjects(for: Dependency(project: dependency, version: version))
+				return self.dependencyProjects(for: dependency, version: version)
 					.map { dependencies in
 						[dependency: dependencies]
 					}
@@ -816,7 +815,7 @@ public final class Project {
 						case .git, .gitHub:
 
 							let submoduleFound = submodulesByPath[project.relativePath] != nil
-							let checkoutOrCloneDependency = self.checkoutOrCloneDependency(dependency, submodulesByPath: submodulesByPath)
+							let checkoutOrCloneDependency = self.checkoutOrCloneDependency(dependency.project, version: dependency.version, submodulesByPath: submodulesByPath)
 
 							// Disable binary downloads for the dependency if that
 							// is already checked out as a submodule.
@@ -882,15 +881,15 @@ public final class Project {
 	}
 
 	/// Creates symlink between the dependency checkouts and the root checkouts
-	private func symlinkCheckoutPaths(for dependency: Dependency<PinnedVersion>, withRepository repositoryURL: URL, atRootDirectory rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)
+	private func symlinkCheckoutPaths(for dependency: ProjectIdentifier, version: PinnedVersion, withRepository repositoryURL: URL, atRootDirectory rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
 		let fileManager = FileManager.default
 
-		return self.dependencyProjects(for: dependency)
+		return self.dependencyProjects(for: dependency, version: version)
 			.zip(with: // file system objects which might conflict with symlinks
-				list(treeish: dependency.version.commitish, atPath: CarthageProjectCheckoutsPath, inRepository: repositoryURL)
+				list(treeish: version.commitish, atPath: CarthageProjectCheckoutsPath, inRepository: repositoryURL)
 					.map { (path: String) in (path as NSString).lastPathComponent }
 					.collect()
 			)
@@ -923,7 +922,7 @@ public final class Project {
 				for name in names {
 					let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
 					let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
-					let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency.project, subdirectory: subdirectoryPath)
+					let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: subdirectoryPath)
 
 					let dependencyCheckoutURLResource = try? dependencyCheckoutURL.resourceValues(forKeys: [
 						.isSymbolicLinkKey,
@@ -968,7 +967,7 @@ public final class Project {
 			.flatMap(.concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>, Bool?), CarthageError> in
 				return SignalProducer.combineLatest(
 					SignalProducer(value: dependency),
-					self.dependencyProjects(for: dependency),
+					self.dependencyProjects(for: dependency.project, version: dependency.version),
 					versionFileMatches(dependency.project, version: dependency.version, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
 				)
 			}

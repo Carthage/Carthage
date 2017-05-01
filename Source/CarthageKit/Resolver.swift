@@ -14,7 +14,7 @@ import ReactiveSwift
 public struct Resolver {
 	private let versionsForDependency: (ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError>
 	private let resolvedGitReference: (ProjectIdentifier, String) -> SignalProducer<PinnedVersion, CarthageError>
-	private let dependenciesForDependency: (Dependency<PinnedVersion>) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError>
+	private let dependenciesForDependency: (ProjectIdentifier, PinnedVersion) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError>
 
 	/// Instantiates a dependency graph resolver with the given behaviors.
 	///
@@ -26,7 +26,7 @@ public struct Resolver {
 	///                        latest object.
 	public init(
 		versionsForDependency: @escaping (ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError>,
-		dependenciesForDependency: @escaping (Dependency<PinnedVersion>) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError>,
+		dependenciesForDependency: @escaping (ProjectIdentifier, PinnedVersion) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError>,
 		resolvedGitReference: @escaping (ProjectIdentifier, String) -> SignalProducer<PinnedVersion, CarthageError>
 	) {
 		self.versionsForDependency = versionsForDependency
@@ -43,11 +43,11 @@ public struct Resolver {
 		dependencies: Set<Dependency<VersionSpecifier>>,
 		lastResolved: [ProjectIdentifier: PinnedVersion]? = nil,
 		dependenciesToUpdate: [String]? = nil
-	) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	) -> SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError> {
 		return graphs(for: dependencies, dependencyOf: nil, basedOnGraph: DependencyGraph())
 			.take(first: 1)
 			.observe(on: QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.resolve"))
-			.flatMap(.merge) { graph -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+			.flatMap(.merge) { graph -> SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError> in
 				let orderedNodes = graph.orderedNodes.map { node -> DependencyNode in
 					node.dependencies = graph.edges[node] ?? []
 					return node
@@ -59,25 +59,25 @@ public struct Resolver {
 					let lastResolved = lastResolved,
 					!dependenciesToUpdate.isEmpty else {
 					// All the dependencies are affected.
-					return orderedNodesProducer.map { node in node.dependencyVersion }
+					return orderedNodesProducer.map { node in node.pinnedDependency }
 				}
 
 				// When target dependencies are specified
-				return orderedNodesProducer.filterMap { node -> Dependency<PinnedVersion>? in
+				return orderedNodesProducer.filterMap { node -> (ProjectIdentifier, PinnedVersion)? in
 					// A dependency included in the targets should be affected.
 					if dependenciesToUpdate.contains(node.project.name) {
-						return node.dependencyVersion
+						return node.pinnedDependency
 					}
 
 					// Nested dependencies of the targets should also be affected.
 					if graph.dependencies(dependenciesToUpdate, containsNestedDependencyOfNode: node) {
-						return node.dependencyVersion
+						return node.pinnedDependency
 					}
 
 					// The dependencies which are not related to the targets
 					// should not be affected, so use the last resolved version.
 					if let version = lastResolved[node.project] {
-						return Dependency(project: node.project, version: version)
+						return (node.project, version)
 					}
 
 					// Skip newly added nodes which are not in the targets.
@@ -134,7 +134,7 @@ public struct Resolver {
 	private func graphsForDependenciesOfNode(_ node: DependencyNode, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		let scheduler = QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.graphsForDependenciesOfNode")
 
-		return dependenciesForDependency(node.dependencyVersion)
+		return dependenciesForDependency(node.project, node.proposedVersion)
 			.start(on: scheduler)
 			.collect()
 			.concat(value: [])
@@ -475,8 +475,8 @@ private class DependencyNode: Comparable {
 	var dependencies: Set<DependencyNode> = []
 
 	/// A Dependency equivalent to this node.
-	var dependencyVersion: Dependency<PinnedVersion> {
-		return Dependency(project: project, version: proposedVersion)
+	var pinnedDependency: (ProjectIdentifier, PinnedVersion) {
+		return (project, proposedVersion)
 	}
 
 	init(project: ProjectIdentifier, proposedVersion: PinnedVersion, versionSpecifier: VersionSpecifier) {

@@ -53,8 +53,8 @@ private struct DB {
 		}
 	}
 	
-	func dependencies(for dependency: CarthageKit.Dependency<PinnedVersion>) -> SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError> {
-		if let dependencies = self.versions[dependency.project]?[dependency.version] {
+	func dependencies(for dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<CarthageKit.Dependency<VersionSpecifier>, CarthageError> {
+		if let dependencies = self.versions[dependency]?[version] {
 			return .init(dependencies.map { CarthageKit.Dependency(project: $0.0, version: $0.1) })
 		} else {
 			return .empty
@@ -76,7 +76,7 @@ private struct DB {
 	) -> Result<[(ProjectIdentifier, PinnedVersion)], CarthageError> {
 		let resolver = Resolver(
 			versionsForDependency: self.versions(for:),
-			dependenciesForDependency: self.dependencies(for:),
+			dependenciesForDependency: self.dependencies(for:version:),
 			resolvedGitReference: self.resolvedGitReference(_:reference:)
 		)
 		var set = Set<CarthageKit.Dependency<VersionSpecifier>>()
@@ -89,7 +89,6 @@ private struct DB {
 				lastResolved: resolved,
 				dependenciesToUpdate: updating.map { $0.name }
 			)
-			.map { ($0.project, $0.version) }
 			.collect()
 			.first()!
 	}
