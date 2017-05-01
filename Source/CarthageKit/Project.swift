@@ -844,6 +844,8 @@ public final class Project {
 							return self.installBinariesForBinaryProject(url: url, pinnedVersion: dependency.version, projectName: project.name, toolchain: buildOptions?.toolchain)
 						}
 					}
+					// TODO: Migrate to flatMap(.concurrent(...)) when it's
+					// available in ReactiveSwift.
 					.flatMap(.merge) { self.checkoutQueue.enqueue($0) }
 			}
 			.then(SignalProducer<(), CarthageError>.empty)
