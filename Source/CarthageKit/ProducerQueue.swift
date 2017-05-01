@@ -8,42 +8,56 @@
 
 import ReactiveSwift
 
-/// Serializes the execution of SignalProducers, like flatten(.concat), but
-/// without all needing to be enqueued in the same context.
+/// Serializes or parallelizes (up to a limit) the execution of many 
+/// SignalProducers, like flatten(.concat) or flatten(.merge), but without all
+/// needing to be enqueued in the same context.
 ///
 /// This allows you to manually enqueue producers from any code that has access
 /// to the queue object, instead of being required to funnel all producers
 /// through a single producer-of-producers.
 internal final class ProducerQueue {
-	private let queue: DispatchQueue
+	private let concurrentQueue: DispatchQueue
+	private let serialQueue: DispatchQueue
+	private let semaphore: DispatchSemaphore
 
-	/// Initializes a queue with the given debug name.
-	init(name: String) {
-		queue = DispatchQueue(label: name)
+	/// Initializes a queue with the given debug name and a limit indicating the
+	/// maximum number of producers that can be executing concurrently.
+	init(name: String, limit: Int = 1) {
+		concurrentQueue = DispatchQueue(label: name.appending(".concurrent"), attributes: .concurrent)
+		serialQueue = DispatchQueue(label: name.appending(".serial"))
+		semaphore = DispatchSemaphore(value: limit)
 	}
 
-	/// Creates a SignalProducer that will enqueue the given producer when
-	/// started, wait until the queue is empty to begin work, and block other
-	/// work while executing.
+	/// Creates a SignalProducer that will enqueue the given producer when 
+	/// started.
 	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
 		return SignalProducer { observer, disposable in
-			self.queue.async {
+			self.serialQueue.async {
 				if disposable.isDisposed {
 					return
 				}
 
-				// Prevent further operations from starting until we're
-				// done.
-				self.queue.suspend()
+				// Prevent more than the limit of operations from occurring
+				// concurrently.
+				//
+				// Block the serial queue to prevent creating a new thread on 
+				// the concurrent queue just to immediately block it.
+				self.semaphore.wait()
 
-				producer.startWithSignal { signal, signalDisposable in
-					disposable.add(signalDisposable)
+				self.concurrentQueue.async {
+					if disposable.isDisposed {
+						return
+					}
 
-					signal.observe { event in
-						observer.action(event)
+					producer.startWithSignal { signal, signalDisposable in
+						disposable.add(signalDisposable)
 
-						if event.isTerminating {
-							self.queue.resume()
+						signal.observe { event in
+							observer.action(event)
+
+							if event.isTerminating {
+								self.semaphore.signal()
+							}
 						}
 					}
 				}

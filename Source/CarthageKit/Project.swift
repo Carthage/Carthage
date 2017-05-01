@@ -311,6 +311,10 @@ public final class Project {
 			.take(first: 1)
 	}
 
+	/// Limits the number of concurrent clones/fetches to the number of active
+	/// processors.
+	private let cloneOrFetchQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cloneOrFetchDependency", limit: ProcessInfo.processInfo.activeProcessorCount)
+
 	/// Clones the given dependency to the global repositories folder, or fetches
 	/// inside it if it has already been cloned.
 	///
@@ -325,6 +329,7 @@ public final class Project {
 			})
 			.map { _, url in url }
 			.take(last: 1)
+			.startOnQueue(cloneOrFetchQueue)
 	}
 
 	func downloadBinaryFrameworkDefinition(url: URL) -> SignalProducer<BinaryProject, CarthageError> {
@@ -786,6 +791,10 @@ public final class Project {
 			}
 	}
 
+	/// Limits the number of concurrent checkouts to the number of active 
+	/// processors.
+	let checkoutQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.checkoutResolvedDependencies", limit: ProcessInfo.processInfo.activeProcessorCount)
+
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
 	/// optionally they are limited by the given list of dependency names.
 	public func checkoutResolvedDependencies(_ dependenciesToCheckout: [String]? = nil, buildOptions: BuildOptions?) -> SignalProducer<(), CarthageError> {
@@ -835,8 +844,7 @@ public final class Project {
 							return self.installBinariesForBinaryProject(url: url, pinnedVersion: dependency.version, projectName: project.name, toolchain: buildOptions?.toolchain)
 						}
 					}
-					// Checkout as many projects as possible in parallel.
-					.flatMap(.merge) { $0.start(on: QueueScheduler(name: "org.carthage.CarthageKit.checkout")) }
+					.flatMap(.merge) { self.checkoutQueue.enqueue($0) }
 			}
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
