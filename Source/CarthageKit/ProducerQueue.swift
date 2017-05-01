@@ -23,8 +23,8 @@ internal final class ProducerQueue {
 	/// Initializes a queue with the given debug name and a limit indicating the
 	/// maximum number of producers that can be executing concurrently.
 	init(name: String, limit: Int = 1) {
-		concurrentQueue = DispatchQueue(label: name.appending(".concurrent"), attributes: .concurrent)
-		serialQueue = DispatchQueue(label: name.appending(".serial"))
+		concurrentQueue = DispatchQueue(label: name.appending(".concurrent"), qos: .userInitiated, attributes: .concurrent)
+		serialQueue = DispatchQueue(label: name.appending(".serial"), qos: .default)
 		semaphore = DispatchSemaphore(value: limit)
 	}
 
