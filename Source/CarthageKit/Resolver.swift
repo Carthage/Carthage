@@ -14,7 +14,7 @@ import ReactiveSwift
 public struct Resolver {
 	private let versionsForDependency: (ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError>
 	private let resolvedGitReference: (ProjectIdentifier, String) -> SignalProducer<PinnedVersion, CarthageError>
-	private let dependenciesForDependency: (ProjectIdentifier, PinnedVersion) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError>
+	private let dependenciesForDependency: (ProjectIdentifier, PinnedVersion) -> SignalProducer<(ProjectIdentifier, VersionSpecifier), CarthageError>
 
 	/// Instantiates a dependency graph resolver with the given behaviors.
 	///
@@ -26,7 +26,7 @@ public struct Resolver {
 	///                        latest object.
 	public init(
 		versionsForDependency: @escaping (ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError>,
-		dependenciesForDependency: @escaping (ProjectIdentifier, PinnedVersion) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError>,
+		dependenciesForDependency: @escaping (ProjectIdentifier, PinnedVersion) -> SignalProducer<(ProjectIdentifier, VersionSpecifier), CarthageError>,
 		resolvedGitReference: @escaping (ProjectIdentifier, String) -> SignalProducer<PinnedVersion, CarthageError>
 	) {
 		self.versionsForDependency = versionsForDependency
@@ -40,7 +40,7 @@ public struct Resolver {
 	/// Sends each recursive dependency with its resolved version, in the order
 	/// that they should be built.
 	public func resolve(
-		dependencies: Set<Dependency<VersionSpecifier>>,
+		dependencies: [ProjectIdentifier: VersionSpecifier],
 		lastResolved: [ProjectIdentifier: PinnedVersion]? = nil,
 		dependenciesToUpdate: [String]? = nil
 	) -> SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError> {
@@ -93,29 +93,29 @@ public struct Resolver {
 	/// `dependencies`. Each array represents one possible permutation of those
 	/// dependencies (chosen from among the versions that actually exist for
 	/// each).
-	private func nodePermutations(for dependencies: Set<Dependency<VersionSpecifier>>) -> SignalProducer<[DependencyNode], CarthageError> {
+	private func nodePermutations(for dependencies: [ProjectIdentifier: VersionSpecifier]) -> SignalProducer<[DependencyNode], CarthageError> {
 		let scheduler = QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.nodePermutations")
 
 		return SignalProducer(dependencies)
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
 				return SignalProducer(value: dependency)
 					.flatMap(.concat) { dependency -> SignalProducer<PinnedVersion, CarthageError> in
-						if case let .gitReference(refName) = dependency.version {
-							return self.resolvedGitReference(dependency.project, refName)
+						if case let .gitReference(refName) = dependency.value {
+							return self.resolvedGitReference(dependency.key, refName)
 						}
 
 						return self
-							.versionsForDependency(dependency.project)
-							.filter { dependency.version.isSatisfied(by: $0) }
+							.versionsForDependency(dependency.key)
+							.filter { dependency.value.isSatisfied(by: $0) }
 					}
 					.start(on: scheduler)
 					.observe(on: scheduler)
-					.map { DependencyNode(project: dependency.project, proposedVersion: $0, versionSpecifier: dependency.version) }
+					.map { DependencyNode(project: dependency.key, proposedVersion: $0, versionSpecifier: dependency.value) }
 					.collect()
 					.map { $0.sorted() }
 					.flatMap(.concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
 						if nodes.isEmpty {
-							return SignalProducer(error: CarthageError.requiredVersionNotFound(dependency.project, dependency.version))
+							return SignalProducer(error: CarthageError.requiredVersionNotFound(dependency.key, dependency.value))
 						} else {
 							return SignalProducer(nodes)
 						}
@@ -136,12 +136,16 @@ public struct Resolver {
 
 		return dependenciesForDependency(node.project, node.proposedVersion)
 			.start(on: scheduler)
-			.collect()
-			.concat(value: [])
+			.reduce([:]) { (result, dependency) in
+				var copy = result
+				copy[dependency.0] = dependency.1
+				return copy
+			}
+			.concat(value: [:])
 			.take(first: 1)
 			.observe(on: scheduler)
 			.flatMap(.concat) { dependencies in
-				return self.graphs(for: Set(dependencies), dependencyOf: node, basedOnGraph: inputGraph)
+				return self.graphs(for: dependencies, dependencyOf: node, basedOnGraph: inputGraph)
 			}
 	}
 	
@@ -150,7 +154,7 @@ public struct Resolver {
 	/// specified node (or as a root otherwise).
 	///
 	/// This is a helper method, and not meant to be called from outside.
-	private func graphs(for dependencies: Set<Dependency<VersionSpecifier>>, dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
+	private func graphs(for dependencies: [ProjectIdentifier: VersionSpecifier], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		return nodePermutations(for: dependencies)
 			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
 				return self

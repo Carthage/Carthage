@@ -304,7 +304,7 @@ public final class Project {
 	/// Produces the sub dependencies of the given dependency
 	func dependencyProjects(for dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<Set<ProjectIdentifier>, CarthageError> {
 		return self.dependencies(for: dependency, version: version)
-			.map { $0.project }
+			.map { $0.0 }
 			.collect()
 			.map { Set($0) }
 			.concat(value: Set())
@@ -404,7 +404,7 @@ public final class Project {
 	}
 
 	/// Loads the dependencies for the given dependency, at the given version.
-	private func dependencies(for dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> {
+	private func dependencies(for dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<(ProjectIdentifier, VersionSpecifier), CarthageError> {
 
 		switch dependency {
 		case .git, .gitHub:
@@ -415,8 +415,8 @@ public final class Project {
 				}
 				.flatMapError { _ in .empty }
 				.attemptMap(Cartfile.from(string:))
-				.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
-					return SignalProducer(cartfile.dependencies.map { Dependency(project: $0.key, version: $0.value) })
+				.flatMap(.concat) { cartfile -> SignalProducer<(ProjectIdentifier, VersionSpecifier), CarthageError> in
+					return SignalProducer(cartfile.dependencies.map { ($0.0, $0.1) })
 			}
 		case .binary:
 			// Binary-only frameworks do not support dependencies
@@ -458,7 +458,7 @@ public final class Project {
 			.zip(loadCombinedCartfile(), resolvedCartfile)
 			.flatMap(.merge) { cartfile, resolvedCartfile in
 				return resolver.resolve(
-					dependencies: Set(cartfile.dependencies.map { Dependency(project: $0.key, version: $0.value) }),
+					dependencies: cartfile.dependencies,
 					lastResolved: resolvedCartfile?.dependencies,
 					dependenciesToUpdate: dependenciesToUpdate
 				)
