@@ -68,7 +68,10 @@ fileprivate final class ManuallyFinishingOperation: BlockOperation {
 
 	init(_ block: @escaping (ManuallyFinishingOperation) -> Void) {
 		super.init()
-		addExecutionBlock { block(self) }
+		// This operation is retained by containing OperationQueue until it is
+		// finished, so no need to capture self within the execution block.
+		unowned let unownedSelf = self
+		addExecutionBlock { block(unownedSelf) }
 	}
 }
 
