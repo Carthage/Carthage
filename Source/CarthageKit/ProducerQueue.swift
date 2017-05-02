@@ -54,7 +54,7 @@ internal final class ProducerQueue {
 	}
 }
 
-/// An block operation that can only be finish by setting its _isFinished
+/// An block operation that can only be finished by setting its _isFinished
 /// property to true.
 fileprivate final class ManuallyFinishingOperation: BlockOperation {
 	override var isFinished: Bool {
