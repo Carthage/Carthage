@@ -16,15 +16,15 @@ import ReactiveSwift
 /// to the queue object, instead of being required to funnel all producers
 /// through a single producer-of-producers.
 internal final class ProducerQueue {
-    private let operationQueue: OperationQueue
+	private let operationQueue: OperationQueue
 
 	/// Initializes a queue with the given debug name and a limit indicating the
 	/// maximum number of producers that can be executing concurrently.
-    init(name: String, limit: Int = 1) {
-        operationQueue = OperationQueue()
+	init(name: String, limit: Int = 1) {
+		operationQueue = OperationQueue()
 		operationQueue.name = name
-        operationQueue.maxConcurrentOperationCount = limit
-    }
+		operationQueue.maxConcurrentOperationCount = limit
+	}
 
 	/// Creates a SignalProducer that will enqueue the given producer when 
 	/// started.
@@ -57,19 +57,19 @@ internal final class ProducerQueue {
 /// An block operation that can only be finish by setting its _isFinished
 /// property to true.
 fileprivate final class ManuallyFinishingOperation: BlockOperation {
-    override var isFinished: Bool {
-        return _isFinished && super.isFinished
-    }
+	override var isFinished: Bool {
+		return _isFinished && super.isFinished
+	}
 
-    var _isFinished: Bool = false {
-        willSet { willChangeValue(forKey: "isFinished") }
-        didSet { didChangeValue(forKey: "isFinished") }
-    }
+	var _isFinished: Bool = false {
+		willSet { willChangeValue(forKey: "isFinished") }
+		didSet { didChangeValue(forKey: "isFinished") }
+	}
 
-    init(_ block: @escaping (ManuallyFinishingOperation) -> Void) {
-        super.init()
-        addExecutionBlock { block(self) }
-    }
+	init(_ block: @escaping (ManuallyFinishingOperation) -> Void) {
+		super.init()
+		addExecutionBlock { block(self) }
+	}
 }
 
 extension SignalProducerProtocol {
