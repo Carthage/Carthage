@@ -216,11 +216,11 @@ public final class Project {
 	/// Caches versions to avoid expensive lookups, and unnecessary
 	/// fetching/cloning.
 	private var cachedVersions: CachedVersions = [:]
-	private let cachedVersionsQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cachedVersionsQueue")
+	private let cachedVersionsQueue = SerialProducerQueue(name: "org.carthage.CarthageKit.Project.cachedVersionsQueue")
 
 	// Cache the binary project definitions in memory to avoid redownloading during carthage operation
 	private var cachedBinaryProjects: CachedBinaryProjects = [:]
-	private let cachedBinaryProjectsQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cachedBinaryProjectsQueue")
+	private let cachedBinaryProjectsQueue = SerialProducerQueue(name: "org.carthage.CarthageKit.Project.cachedBinaryProjectsQueue")
 
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.
@@ -311,7 +311,9 @@ public final class Project {
 			.take(first: 1)
 	}
 
-	private let gitOperationQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.gitOperationQueue")
+	/// Limits the number of concurrent clones/fetches to the number of active
+	/// processors.
+	private let cloneOrFetchQueue = ConcurrentProducerQueue(name: "org.carthage.CarthageKit.Project.cloneOrFetchDependency", limit: ProcessInfo.processInfo.activeProcessorCount)
 
 	/// Clones the given dependency to the global repositories folder, or fetches
 	/// inside it if it has already been cloned.
@@ -327,7 +329,7 @@ public final class Project {
 			})
 			.map { _, url in url }
 			.take(last: 1)
-			.startOnQueue(gitOperationQueue)
+			.startOnQueue(cloneOrFetchQueue)
 	}
 
 	func downloadBinaryFrameworkDefinition(url: URL) -> SignalProducer<BinaryProject, CarthageError> {
@@ -704,6 +706,8 @@ public final class Project {
 		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
 	}
 
+	private let gitOperationQueue = SerialProducerQueue(name: "org.carthage.CarthageKit.Project.gitOperationQueue")
+
 	/// Checks out the given dependency into its intended working directory,
 	/// cloning it first if need be.
 	private func checkoutOrCloneDependency(_ dependency: Dependency, version: PinnedVersion, submodulesByPath: [String: Submodule]) -> SignalProducer<(), CarthageError> {
@@ -787,6 +791,10 @@ public final class Project {
 			}
 	}
 
+	/// Limits the number of concurrent checkouts to the number of active 
+	/// processors.
+	let checkoutQueue = ConcurrentProducerQueue(name: "org.carthage.CarthageKit.Project.checkoutResolvedDependencies", limit: ProcessInfo.processInfo.activeProcessorCount)
+
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
 	/// optionally they are limited by the given list of dependency names.
 	public func checkoutResolvedDependencies(_ dependenciesToCheckout: [String]? = nil, buildOptions: BuildOptions?) -> SignalProducer<(), CarthageError> {
@@ -808,7 +816,7 @@ public final class Project {
 			.zip(with: submodulesSignal)
 			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
 				return SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies)
-					.flatMap(.concat) { (dependency, version) -> SignalProducer<(), CarthageError> in
+					.map { (dependency, version) -> SignalProducer<(), CarthageError> in
 						switch dependency {
 						case .git, .gitHub:
 
@@ -833,9 +841,10 @@ public final class Project {
 						case let .binary(url):
 							return self.installBinariesForBinaryProject(url: url, pinnedVersion: version, projectName: dependency.name, toolchain: buildOptions?.toolchain)
 						}
-
-
 					}
+					// TODO: Migrate to flatMap(.concurrent(...)) when it's
+					// available in ReactiveSwift.
+					.flatMap(.merge) { self.checkoutQueue.enqueue($0) }
 			}
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
