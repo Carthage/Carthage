@@ -304,7 +304,7 @@ public final class Project {
 	/// Produces the sub dependencies of the given dependency
 	func dependencyProjects(for dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<Set<ProjectIdentifier>, CarthageError> {
 		return self.dependencies(for: dependency, version: version)
-			.map { $0.project }
+			.map { $0.0 }
 			.collect()
 			.map { Set($0) }
 			.concat(value: Set())
@@ -406,7 +406,7 @@ public final class Project {
 	}
 
 	/// Loads the dependencies for the given dependency, at the given version.
-	private func dependencies(for dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> {
+	private func dependencies(for dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<(ProjectIdentifier, VersionSpecifier), CarthageError> {
 
 		switch dependency {
 		case .git, .gitHub:
@@ -417,8 +417,8 @@ public final class Project {
 				}
 				.flatMapError { _ in .empty }
 				.attemptMap(Cartfile.from(string:))
-				.flatMap(.concat) { cartfile -> SignalProducer<Dependency<VersionSpecifier>, CarthageError> in
-					return SignalProducer(cartfile.dependencies.map { Dependency(project: $0.key, version: $0.value) })
+				.flatMap(.concat) { cartfile -> SignalProducer<(ProjectIdentifier, VersionSpecifier), CarthageError> in
+					return SignalProducer(cartfile.dependencies.map { ($0.0, $0.1) })
 			}
 		case .binary:
 			// Binary-only frameworks do not support dependencies
@@ -460,7 +460,7 @@ public final class Project {
 			.zip(loadCombinedCartfile(), resolvedCartfile)
 			.flatMap(.merge) { cartfile, resolvedCartfile in
 				return resolver.resolve(
-					dependencies: Set(cartfile.dependencies.map { Dependency(project: $0.key, version: $0.value) }),
+					dependencies: cartfile.dependencies,
 					lastResolved: resolvedCartfile?.dependencies,
 					dependenciesToUpdate: dependenciesToUpdate
 				)
@@ -755,7 +755,7 @@ public final class Project {
 			})
 	}
 
-	public func buildOrderForResolvedCartfile(_ cartfile: ResolvedCartfile, dependenciesToInclude: [String]? = nil) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> {
+	public func buildOrderForResolvedCartfile(_ cartfile: ResolvedCartfile, dependenciesToInclude: [String]? = nil) -> SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError> {
 		typealias DependencyGraph = [ProjectIdentifier: Set<ProjectIdentifier>]
 		// A resolved cartfile already has all the recursive dependencies. All we need to do is sort
 		// out the relationships between them. Loading the cartfile will each will give us its
@@ -773,7 +773,7 @@ public final class Project {
 				next.forEach { result.updateValue($1, forKey: $0) }
 				return result
 			}
-			.flatMap(.latest) { (graph: DependencyGraph) -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+			.flatMap(.latest) { (graph: DependencyGraph) -> SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError> in
 				let projectsToInclude = Set(graph
 					.map { project, _ in project }
 					.filter { project in dependenciesToInclude?.contains(project.name) ?? false })
@@ -785,7 +785,7 @@ public final class Project {
 				let sortedDependencies = cartfile.dependencies.keys
 					.filter { dependency in sortedProjects.contains(dependency) }
 					.sorted { left, right in sortedProjects.index(of: left)! < sortedProjects.index(of: right)! }
-					.map { Dependency(project: $0, version: cartfile.dependencies[$0]!) }
+					.map { ($0, cartfile.dependencies[$0]!) }
 
 				return SignalProducer(sortedDependencies)
 			}
@@ -815,15 +815,13 @@ public final class Project {
 			}
 			.zip(with: submodulesSignal)
 			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
-				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(dependencies)
-					.map { dependency -> SignalProducer<(), CarthageError> in
-						let project = dependency.project
-
-						switch project {
+				return SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError>(dependencies)
+					.map { (dependency, version) -> SignalProducer<(), CarthageError> in
+						switch dependency {
 						case .git, .gitHub:
 
-							let submoduleFound = submodulesByPath[project.relativePath] != nil
-							let checkoutOrCloneDependency = self.checkoutOrCloneDependency(dependency.project, version: dependency.version, submodulesByPath: submodulesByPath)
+							let submoduleFound = submodulesByPath[dependency.relativePath] != nil
+							let checkoutOrCloneDependency = self.checkoutOrCloneDependency(dependency, version: version, submodulesByPath: submodulesByPath)
 
 							// Disable binary downloads for the dependency if that
 							// is already checked out as a submodule.
@@ -831,7 +829,7 @@ public final class Project {
 								return checkoutOrCloneDependency
 							}
 
-							return self.installBinariesForProject(project, atRevision: dependency.version.commitish, toolchain: buildOptions?.toolchain)
+							return self.installBinariesForProject(dependency, atRevision: version.commitish, toolchain: buildOptions?.toolchain)
 								.flatMap(.merge) { installed -> SignalProducer<(), CarthageError> in
 									if installed {
 										return .empty
@@ -841,7 +839,7 @@ public final class Project {
 							}
 
 						case let .binary(url):
-							return self.installBinariesForBinaryProject(url: url, pinnedVersion: dependency.version, projectName: project.name, toolchain: buildOptions?.toolchain)
+							return self.installBinariesForBinaryProject(url: url, pinnedVersion: version, projectName: dependency.name, toolchain: buildOptions?.toolchain)
 						}
 					}
 					// TODO: Migrate to flatMap(.concurrent(...)) when it's
@@ -970,56 +968,57 @@ public final class Project {
 	/// Returns a producer-of-producers representing each scheme being built.
 	public func buildCheckedOutDependenciesWithOptions(_ options: BuildOptions, dependenciesToBuild: [String]? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
-			.flatMap(.concat) { resolvedCartfile -> SignalProducer<Dependency<PinnedVersion>, CarthageError> in
+			.flatMap(.concat) { resolvedCartfile -> SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError> in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
 			}
-			.flatMap(.concat) { dependency -> SignalProducer<(Dependency<PinnedVersion>, Set<ProjectIdentifier>, Bool?), CarthageError> in
+			.flatMap(.concat) { (dependency, version) -> SignalProducer<((ProjectIdentifier, PinnedVersion), Set<ProjectIdentifier>, Bool?), CarthageError> in
 				return SignalProducer.combineLatest(
-					SignalProducer(value: dependency),
-					self.dependencyProjects(for: dependency.project, version: dependency.version),
-					versionFileMatches(dependency.project, version: dependency.version, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
+					SignalProducer(value: (dependency, version)),
+					self.dependencyProjects(for: dependency, version: version),
+					versionFileMatches(dependency, version: version, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
 				)
 			}
-			.reduce([]) { (includedDependencies, nextGroup) -> [Dependency<PinnedVersion>] in
+			.reduce([:]) { (includedDependencies, nextGroup) -> [ProjectIdentifier: PinnedVersion] in
 				let (nextDependency, projects, matches) = nextGroup
-				let dependenciesIncludingNext = includedDependencies + [nextDependency]
-				let projectsToBeBuilt = Set(includedDependencies.map { $0.project })
+
+				var dependenciesIncludingNext = includedDependencies
+				dependenciesIncludingNext[nextDependency.0] = nextDependency.1
+
+				let projectsToBeBuilt = Set(includedDependencies.keys)
+
 				guard options.cacheBuilds && projects.intersection(projectsToBeBuilt).isEmpty else {
 					return dependenciesIncludingNext
 				}
 
 				guard let versionFileMatches = matches else {
-					self._projectEventsObserver.send(value: .buildingUncached(nextDependency.project))
+					self._projectEventsObserver.send(value: .buildingUncached(nextDependency.0))
 					return dependenciesIncludingNext
 				}
 
 				if versionFileMatches {
-					self._projectEventsObserver.send(value: .skippedBuildingCached(nextDependency.project))
+					self._projectEventsObserver.send(value: .skippedBuildingCached(nextDependency.0))
 					return includedDependencies
 				} else {
-					self._projectEventsObserver.send(value: .rebuildingCached(nextDependency.project))
+					self._projectEventsObserver.send(value: .rebuildingCached(nextDependency.0))
 					return dependenciesIncludingNext
 				}
 			}
 			.flatMap(.concat) { dependencies in
-				return SignalProducer<Dependency<PinnedVersion>, CarthageError>(dependencies)
+				return SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError>(dependencies.map { ($0.0, $0.1) })
 			}
-			.flatMap(.concat) { dependency -> SignalProducer<BuildSchemeProducer, CarthageError> in
-				let project = dependency.project
-				let version = dependency.version.commitish
-
-				let dependencyPath = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true).path
+			.flatMap(.concat) { (dependency, version) -> SignalProducer<BuildSchemeProducer, CarthageError> in
+				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true).path
 				if !FileManager.default.fileExists(atPath: dependencyPath) {
 					return .empty
 				}
 
 				var options = options
 				let baseURL = options.derivedDataPath.flatMap(URL.init(string:)) ?? CarthageDependencyDerivedDataURL
-				let derivedDataPerDependency = baseURL.appendingPathComponent(project.name, isDirectory: true)
-				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version, isDirectory: true)
+				let derivedDataPerDependency = baseURL.appendingPathComponent(dependency.name, isDirectory: true)
+				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version.commitish, isDirectory: true)
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
-				return buildDependencyProject(dependency.project, version: dependency.version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+				return buildDependencyProject(dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.map { producer in
 						return producer.flatMapError { error in
 							switch error {
@@ -1027,7 +1026,7 @@ public final class Project {
 								// Log that building the dependency is being skipped,
 								// not to error out with `.noSharedFrameworkSchemes`
 								// to continue building other dependencies.
-								self._projectEventsObserver.send(value: .skippedBuilding(project, error.description))
+								self._projectEventsObserver.send(value: .skippedBuilding(dependency, error.description))
 								return .empty
 
 							default:
