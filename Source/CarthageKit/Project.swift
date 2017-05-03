@@ -216,11 +216,11 @@ public final class Project {
 	/// Caches versions to avoid expensive lookups, and unnecessary
 	/// fetching/cloning.
 	private var cachedVersions: CachedVersions = [:]
-	private let cachedVersionsQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cachedVersionsQueue")
+	private let cachedVersionsQueue = SerialProducerQueue(name: "org.carthage.CarthageKit.Project.cachedVersionsQueue")
 
 	// Cache the binary project definitions in memory to avoid redownloading during carthage operation
 	private var cachedBinaryProjects: CachedBinaryProjects = [:]
-	private let cachedBinaryProjectsQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cachedBinaryProjectsQueue")
+	private let cachedBinaryProjectsQueue = SerialProducerQueue(name: "org.carthage.CarthageKit.Project.cachedBinaryProjectsQueue")
 
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.
@@ -313,7 +313,7 @@ public final class Project {
 
 	/// Limits the number of concurrent clones/fetches to the number of active
 	/// processors.
-	private let cloneOrFetchQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.cloneOrFetchDependency", limit: ProcessInfo.processInfo.activeProcessorCount)
+	private let cloneOrFetchQueue = ConcurrentProducerQueue(name: "org.carthage.CarthageKit.Project.cloneOrFetchDependency", limit: ProcessInfo.processInfo.activeProcessorCount)
 
 	/// Clones the given dependency to the global repositories folder, or fetches
 	/// inside it if it has already been cloned.
@@ -706,7 +706,7 @@ public final class Project {
 		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
 	}
 
-	private let gitOperationQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.gitOperationQueue")
+	private let gitOperationQueue = SerialProducerQueue(name: "org.carthage.CarthageKit.Project.gitOperationQueue")
 
 	/// Checks out the given dependency into its intended working directory,
 	/// cloning it first if need be.
@@ -793,7 +793,7 @@ public final class Project {
 
 	/// Limits the number of concurrent checkouts to the number of active 
 	/// processors.
-	let checkoutQueue = ProducerQueue(name: "org.carthage.CarthageKit.Project.checkoutResolvedDependencies", limit: ProcessInfo.processInfo.activeProcessorCount)
+	let checkoutQueue = ConcurrentProducerQueue(name: "org.carthage.CarthageKit.Project.checkoutResolvedDependencies", limit: ProcessInfo.processInfo.activeProcessorCount)
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
 	/// optionally they are limited by the given list of dependency names.

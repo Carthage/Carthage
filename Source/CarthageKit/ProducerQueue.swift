@@ -8,14 +8,69 @@
 
 import ReactiveSwift
 
-/// Serializes or parallelizes (up to a limit) the execution of many
-/// SignalProducers, like flatten(.concat) or flatten(.merge), but without all
-/// needing to be enqueued in the same context.
+/// Manages the execution of SignalProducers, like the flatten(...) operator,
+/// but without all needing to be enqueued in the same context.
 ///
 /// This allows you to manually enqueue producers from any code that has access
 /// to the queue object, instead of being required to funnel all producers
 /// through a single producer-of-producers.
-internal final class ProducerQueue {
+internal protocol ProducerQueue {
+	/// Creates a SignalProducer that will enqueue the given producer when
+	/// started, wait until the queue is has room to begin work, and block other
+	/// work while executing.
+	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error>
+}
+
+extension SignalProducerProtocol {
+	/// Shorthand for enqueuing the given producer upon the given queue.
+	internal func startOnQueue(_ queue: ProducerQueue) -> SignalProducer<Value, Error> {
+		return queue.enqueue(self.producer)
+	}
+}
+
+/// Serializes the execution of SignalProducers, like flatten(.concat), but
+/// without all needing to be enqueued in the same context.
+internal final class SerialProducerQueue: ProducerQueue {
+	private let queue: DispatchQueue
+
+	/// Initializes a queue with the given debug name.
+	init(name: String) {
+		queue = DispatchQueue(label: name)
+	}
+
+	/// Creates a SignalProducer that will enqueue the given producer when
+	/// started, wait until the queue is empty to begin work, and block other
+	/// work while executing.
+	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
+		return SignalProducer { observer, disposable in
+			self.queue.async {
+				if disposable.isDisposed {
+					return
+				}
+
+				// Prevent further operations from starting until we're
+				// done.
+				self.queue.suspend()
+
+				producer.startWithSignal { signal, signalDisposable in
+					disposable.add(signalDisposable)
+
+					signal.observe { event in
+						observer.action(event)
+
+						if event.isTerminating {
+							self.queue.resume()
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+/// Parallelizes (up to a limit) the execution of many SignalProducers, like
+/// flatten(.merge), but without all needing to be enqueued in the same context.
+internal final class ConcurrentProducerQueue: ProducerQueue {
 	private let operationQueue: OperationQueue
 
 	/// Initializes a queue with the given debug name and a limit indicating the
@@ -30,7 +85,7 @@ internal final class ProducerQueue {
 	/// started.
 	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
 		return SignalProducer { observer, disposable in
-			let operation = ManuallyFinishingOperation { operation in
+			let operation = Operation { operation in
 				if disposable.isDisposed {
 					operation._isFinished = true
 					return
@@ -52,32 +107,25 @@ internal final class ProducerQueue {
 			self.operationQueue.addOperation(operation)
 		}
 	}
-}
 
-/// An block operation that can only be finished by setting its _isFinished
-/// property to true.
-fileprivate final class ManuallyFinishingOperation: BlockOperation {
-	override var isFinished: Bool {
-		return _isFinished && super.isFinished
-	}
+	/// An block operation that can only be finished by setting its _isFinished
+	/// property to true.
+	fileprivate final class Operation: BlockOperation {
+		override var isFinished: Bool {
+			return _isFinished && super.isFinished
+		}
 
-	var _isFinished: Bool = false {
-		willSet { willChangeValue(forKey: "isFinished") }
-		didSet { didChangeValue(forKey: "isFinished") }
-	}
+		var _isFinished: Bool = false {
+			willSet { willChangeValue(forKey: "isFinished") }
+			didSet { didChangeValue(forKey: "isFinished") }
+		}
 
-	init(_ block: @escaping (ManuallyFinishingOperation) -> Void) {
-		super.init()
-		// This operation is retained by containing OperationQueue until it is
-		// finished, so no need to capture self within the execution block.
-		unowned let unownedSelf = self
-		addExecutionBlock { block(unownedSelf) }
-	}
-}
-
-extension SignalProducerProtocol {
-	/// Shorthand for enqueuing the given producer upon the given queue.
-	internal func startOnQueue(_ queue: ProducerQueue) -> SignalProducer<Value, Error> {
-		return queue.enqueue(self.producer)
+		init(_ block: @escaping (Operation) -> Void) {
+			super.init()
+			// This operation is retained by containing OperationQueue until it is
+			// finished, so no need to capture self within the execution block.
+			unowned let unownedSelf = self
+			addExecutionBlock { block(unownedSelf) }
+		}
 	}
 }
