@@ -619,7 +619,7 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 /// places its build product into the root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(_ dependency: ProjectIdentifier, version: PinnedVersion, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func buildDependencyProject(_ dependency: Dependency, version: PinnedVersion, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
@@ -645,7 +645,7 @@ public func buildDependencyProject(_ dependency: ProjectIdentifier, version: Pin
 /// Creates symlink between the dependency build folder and the root build folder
 ///
 /// Returns a signal indicating success
-private func symlinkBuildPathForDependencyProject(_ dependency: ProjectIdentifier, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+private func symlinkBuildPathForDependencyProject(_ dependency: Dependency, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt {
 		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
@@ -705,7 +705,7 @@ private func symlinkBuildPathForDependencyProject(_ dependency: ProjectIdentifie
 /// Builds the any shared framework schemes found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
-public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: (project: ProjectIdentifier, version: PinnedVersion)? = nil, rootDirectoryURL: URL? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> BuildSchemeProducer {
+public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: (project: Dependency, version: PinnedVersion)? = nil, rootDirectoryURL: URL? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> BuildSchemeProducer {
 	precondition(directoryURL.isFileURL)
 
 	return BuildSchemeProducer { observer, disposable in

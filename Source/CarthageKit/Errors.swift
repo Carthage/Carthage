@@ -14,7 +14,7 @@ import XCDBLD
 
 /// Possible errors that can originate from Carthage.
 public enum CarthageError: Error {
-	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: ProjectIdentifier?)
+	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: Dependency?)
 
 	/// One or more arguments was invalid.
 	case invalidArgument(description: String)
@@ -23,14 +23,14 @@ public enum CarthageError: Error {
 	case missingBuildSetting(String)
 
 	/// Incompatible version specifiers were given for a dependency.
-	case incompatibleRequirements(ProjectIdentifier, VersionRequirement, VersionRequirement)
+	case incompatibleRequirements(Dependency, VersionRequirement, VersionRequirement)
 
 	/// No tagged versions could be found for the dependency.
-	case taggedVersionNotFound(ProjectIdentifier)
+	case taggedVersionNotFound(Dependency)
 
 	/// No existent version could be found to satisfy the version specifier for
 	/// a dependency.
-	case requiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
+	case requiredVersionNotFound(Dependency, VersionSpecifier)
 
 	/// No entry could be found in Cartfile for a dependency with this name.
 	case unknownDependencies([String])
@@ -64,7 +64,7 @@ public enum CarthageError: Error {
 
 	/// The project is not sharing any framework schemes, so Carthage cannot
 	/// discover them.
-	case noSharedFrameworkSchemes(ProjectIdentifier, Set<Platform>)
+	case noSharedFrameworkSchemes(Dependency, Set<Platform>)
 
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
@@ -78,7 +78,7 @@ public enum CarthageError: Error {
 	case duplicateDependencies([DuplicateDependency])
 
 	// There was a cycle between dependencies in the associated graph.
-	case dependencyCycle([ProjectIdentifier: Set<ProjectIdentifier>])
+	case dependencyCycle([Dependency: Set<Dependency>])
 
 	/// A request to the GitHub API failed.
 	case gitHubAPIRequestFailed(Client.Error)
@@ -237,14 +237,14 @@ extension CarthageError: CustomStringConvertible {
 		case let .missingEnvironmentVariable(variable):
 			return "Environment variable not set: \(variable)"
 
-		case let .noSharedFrameworkSchemes(projectIdentifier, platforms):
-			var description = "Dependency \"\(projectIdentifier.name)\" has no shared framework schemes"
+		case let .noSharedFrameworkSchemes(Dependency, platforms):
+			var description = "Dependency \"\(Dependency.name)\" has no shared framework schemes"
 			if !platforms.isEmpty {
 				let platformsString = platforms.map { $0.description }.joined(separator: ", ")
 				description += " for any of the platforms: \(platformsString)"
 			}
 
-			switch projectIdentifier {
+			switch Dependency {
 			case let .gitHub(repository):
 				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
 

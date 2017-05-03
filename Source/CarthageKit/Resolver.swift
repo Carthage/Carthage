@@ -12,9 +12,9 @@ import ReactiveSwift
 
 /// Responsible for resolving acyclic dependency graphs.
 public struct Resolver {
-	private let versionsForDependency: (ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError>
-	private let resolvedGitReference: (ProjectIdentifier, String) -> SignalProducer<PinnedVersion, CarthageError>
-	private let dependenciesForDependency: (ProjectIdentifier, PinnedVersion) -> SignalProducer<(ProjectIdentifier, VersionSpecifier), CarthageError>
+	private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
+	private let resolvedGitReference: (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
+	private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
 
 	/// Instantiates a dependency graph resolver with the given behaviors.
 	///
@@ -25,9 +25,9 @@ public struct Resolver {
 	/// resolvedGitReference - Resolves an arbitrary Git reference to the
 	///                        latest object.
 	public init(
-		versionsForDependency: @escaping (ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError>,
-		dependenciesForDependency: @escaping (ProjectIdentifier, PinnedVersion) -> SignalProducer<(ProjectIdentifier, VersionSpecifier), CarthageError>,
-		resolvedGitReference: @escaping (ProjectIdentifier, String) -> SignalProducer<PinnedVersion, CarthageError>
+		versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
+		dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
+		resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
 	) {
 		self.versionsForDependency = versionsForDependency
 		self.dependenciesForDependency = dependenciesForDependency
@@ -40,14 +40,14 @@ public struct Resolver {
 	/// Sends each recursive dependency with its resolved version, in the order
 	/// that they should be built.
 	public func resolve(
-		dependencies: [ProjectIdentifier: VersionSpecifier],
-		lastResolved: [ProjectIdentifier: PinnedVersion]? = nil,
+		dependencies: [Dependency: VersionSpecifier],
+		lastResolved: [Dependency: PinnedVersion]? = nil,
 		dependenciesToUpdate: [String]? = nil
-	) -> SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError> {
+	) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> {
 		return graphs(for: dependencies, dependencyOf: nil, basedOnGraph: DependencyGraph())
 			.take(first: 1)
 			.observe(on: QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.resolve"))
-			.flatMap(.merge) { graph -> SignalProducer<(ProjectIdentifier, PinnedVersion), CarthageError> in
+			.flatMap(.merge) { graph -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				let orderedNodes = graph.orderedNodes.map { node -> DependencyNode in
 					node.dependencies = graph.edges[node] ?? []
 					return node
@@ -63,7 +63,7 @@ public struct Resolver {
 				}
 
 				// When target dependencies are specified
-				return orderedNodesProducer.filterMap { node -> (ProjectIdentifier, PinnedVersion)? in
+				return orderedNodesProducer.filterMap { node -> (Dependency, PinnedVersion)? in
 					// A dependency included in the targets should be affected.
 					if dependenciesToUpdate.contains(node.project.name) {
 						return node.pinnedDependency
@@ -93,7 +93,7 @@ public struct Resolver {
 	/// `dependencies`. Each array represents one possible permutation of those
 	/// dependencies (chosen from among the versions that actually exist for
 	/// each).
-	private func nodePermutations(for dependencies: [ProjectIdentifier: VersionSpecifier]) -> SignalProducer<[DependencyNode], CarthageError> {
+	private func nodePermutations(for dependencies: [Dependency: VersionSpecifier]) -> SignalProducer<[DependencyNode], CarthageError> {
 		let scheduler = QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.nodePermutations")
 
 		return SignalProducer(dependencies)
@@ -154,7 +154,7 @@ public struct Resolver {
 	/// specified node (or as a root otherwise).
 	///
 	/// This is a helper method, and not meant to be called from outside.
-	private func graphs(for dependencies: [ProjectIdentifier: VersionSpecifier], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
+	private func graphs(for dependencies: [Dependency: VersionSpecifier], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		return nodePermutations(for: dependencies)
 			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
 				return self
@@ -461,7 +461,7 @@ private func mergeGraphs
 /// A node in, or being considered for, an acyclic dependency graph.
 private class DependencyNode: Comparable {
 	/// The project that this node refers to.
-	let project: ProjectIdentifier
+	let project: Dependency
 
 	/// The version of the dependency that this node represents.
 	///
@@ -479,11 +479,11 @@ private class DependencyNode: Comparable {
 	var dependencies: Set<DependencyNode> = []
 
 	/// A Dependency equivalent to this node.
-	var pinnedDependency: (ProjectIdentifier, PinnedVersion) {
+	var pinnedDependency: (Dependency, PinnedVersion) {
 		return (project, proposedVersion)
 	}
 
-	init(project: ProjectIdentifier, proposedVersion: PinnedVersion, versionSpecifier: VersionSpecifier) {
+	init(project: Dependency, proposedVersion: PinnedVersion, versionSpecifier: VersionSpecifier) {
 		precondition(versionSpecifier.isSatisfied(by: proposedVersion))
 
 		self.project = project

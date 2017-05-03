@@ -217,7 +217,7 @@ extension VersionFile: Decodable {
 /// in order to allow those frameworks to be skipped in future builds.
 ///
 /// Returns a signal that succeeds once the file has been created.
-public func createVersionFile(for dependency: ProjectIdentifier, version: PinnedVersion, platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+public func createVersionFile(for dependency: Dependency, version: PinnedVersion, platforms: Set<Platform>, buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	return createVersionFileForCommitish(version.commitish, dependencyName: dependency.name, platforms: platforms, buildProducts: buildProducts, rootDirectoryURL: rootDirectoryURL)
 }
 
@@ -280,7 +280,7 @@ public func createVersionFileForCommitish(_ commitish: String, dependencyName: S
 /// Returns an optional bool which is nil if no version file exists,
 /// otherwise true if the version file matches and the build can be
 /// skipped or false if there is a mismatch of some kind.
-public func versionFileMatches(_ dependency: ProjectIdentifier, version: PinnedVersion, platforms: Set<Platform>, rootDirectoryURL: URL, toolchain: String?) -> SignalProducer<Bool?, CarthageError> {
+public func versionFileMatches(_ dependency: Dependency, version: PinnedVersion, platforms: Set<Platform>, rootDirectoryURL: URL, toolchain: String?) -> SignalProducer<Bool?, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.name).\(VersionFile.pathExtension)")
 	guard let versionFile = VersionFile(url: versionFileURL) else {

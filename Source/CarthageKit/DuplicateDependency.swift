@@ -1,7 +1,7 @@
 /// A duplicate dependency, used in CarthageError.duplicateDependencies.
 public struct DuplicateDependency {
 	/// The duplicate dependency as a project.
-	public let project: ProjectIdentifier
+	public let dependency: Dependency
 
 	/// The locations where the dependency was found as duplicate.
 	public let locations: [String]
@@ -10,15 +10,15 @@ public struct DuplicateDependency {
 	// cannot be used in test cases, so we reimplement it as public. We are also
 	// sorting locations, which makes sure that we can match them in a
 	// test case.
-	public init(project: ProjectIdentifier, locations: [String]) {
-		self.project = project
+	public init(dependency: Dependency, locations: [String]) {
+		self.dependency = dependency
 		self.locations = locations.sorted(by: <)
 	}
 }
 
 extension DuplicateDependency: CustomStringConvertible {
 	public var description: String {
-		return "\(project) \(printableLocations)"
+		return "\(dependency) \(printableLocations)"
 	}
 
 	private var printableLocations: String {
@@ -34,7 +34,7 @@ extension DuplicateDependency: CustomStringConvertible {
 
 extension DuplicateDependency: Comparable {
 	public static func == (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
-		return lhs.project == rhs.project && lhs.locations == rhs.locations
+		return lhs.dependency == rhs.dependency && lhs.locations == rhs.locations
 	}
 
 	public static func < (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
