@@ -237,14 +237,14 @@ extension CarthageError: CustomStringConvertible {
 		case let .missingEnvironmentVariable(variable):
 			return "Environment variable not set: \(variable)"
 
-		case let .noSharedFrameworkSchemes(Dependency, platforms):
-			var description = "Dependency \"\(Dependency.name)\" has no shared framework schemes"
+		case let .noSharedFrameworkSchemes(dependency, platforms):
+			var description = "Dependency \"\(dependency.name)\" has no shared framework schemes"
 			if !platforms.isEmpty {
 				let platformsString = platforms.map { $0.description }.joined(separator: ", ")
 				description += " for any of the platforms: \(platformsString)"
 			}
 
-			switch Dependency {
+			switch dependency {
 			case let .gitHub(repository):
 				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
 
