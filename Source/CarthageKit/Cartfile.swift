@@ -320,7 +320,7 @@ extension Dependency: CustomStringConvertible {
 
 extension Dependency {
 
-	/// Returns the URL that the project's remote repository exists at.
+	/// Returns the URL that the dependency's remote repository exists at.
 	func gitURL(preferHTTPS: Bool) -> GitURL? {
 		switch self {
 		case let .gitHub(repository):
