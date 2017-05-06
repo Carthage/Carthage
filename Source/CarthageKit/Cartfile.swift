@@ -127,9 +127,8 @@ extension Cartfile: CustomStringConvertible {
 	}
 }
 
-/// Returns an array containing projects that are listed as dependencies
-/// in both arguments.
-public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [Dependency] {
+/// Returns an array containing dependencies that are listed in both arguments.
+public func duplicateDependenciesIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [Dependency] {
 	let projects1 = cartfile1.dependencies.keys
 	let projects2 = cartfile2.dependencies.keys
 	return Array(Set(projects1).intersection(Set(projects2)))

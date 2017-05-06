@@ -100,7 +100,7 @@ class CartfileSpec: QuickSpec {
 			let cartfile2 = result2.value!
 			expect(cartfile2.dependencies.count) == 3
 
-			let dupes = duplicateProjectsIn(cartfile, cartfile2).sorted { $0.description < $1.description }
+			let dupes = duplicateDependenciesIn(cartfile, cartfile2).sorted { $0.description < $1.description }
 			expect(dupes.count) == 3
 
 			let dupe1 = dupes[0]

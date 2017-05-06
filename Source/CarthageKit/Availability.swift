@@ -38,7 +38,7 @@ extension ResolvedCartfile {
 	public mutating func appendCartfile(_ cartfile: Cartfile) { fatalError() }
 }
 
-@available(*, unavailable, renamed: "duplicateProjectsIn(_:_:)")
+@available(*, unavailable, renamed: "duplicateDependenciesIn(_:_:)")
 public func duplicateProjectsInCartfiles(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [Dependency] { fatalError() }
 
 @available(*, unavailable, renamed: "Dependency")
