@@ -187,8 +187,8 @@ class ProjectSpec: QuickSpec {
 				expect(resultError).notTo(beNil())
 
 				let makeDependency: (String, String, [String]) -> DuplicateDependency = { (repoOwner, repoName, locations) in
-					let project = ProjectIdentifier.gitHub(Repository(owner: repoOwner, name: repoName))
-					return DuplicateDependency(project: project, locations: locations)
+					let dependency = Dependency.gitHub(Repository(owner: repoOwner, name: repoName))
+					return DuplicateDependency(dependency: dependency, locations: locations)
 				}
 
 				let locations = ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]
@@ -222,7 +222,7 @@ class ProjectSpec: QuickSpec {
 			let temporaryURL = URL(fileURLWithPath: temporaryPath, isDirectory: true)
 			let repositoryURL = temporaryURL.appendingPathComponent("carthage1191", isDirectory: true)
 			let cacheDirectoryURL = temporaryURL.appendingPathComponent("cache", isDirectory: true)
-			let projectIdentifier = ProjectIdentifier.git(GitURL(repositoryURL.absoluteString))
+			let dependency = Dependency.git(GitURL(repositoryURL.absoluteString))
 
 			func initRepository() {
 				expect { try FileManager.default.createDirectory(atPath: repositoryURL.path, withIntermediateDirectories: true) }.notTo(throwError())
@@ -239,7 +239,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			func cloneOrFetch(commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
-				return cloneOrFetchProject(projectIdentifier, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
+				return cloneOrFetchProject(dependency, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
 			}
 
 			func assertProjectEvent(commitish: String? = nil, clearFetchTime: Bool = true, action: @escaping (ProjectEvent?) -> ()) {
@@ -360,7 +360,7 @@ class ProjectSpec: QuickSpec {
 
 				_ = project.downloadBinaryFrameworkDefinition(url: testDefinitionURL).first()
 
-				expect(events).to(equal([ProjectEvent.downloadingBinaryFrameworkDefinition(ProjectIdentifier.binary(testDefinitionURL), testDefinitionURL)]))
+				expect(events).to(equal([ProjectEvent.downloadingBinaryFrameworkDefinition(Dependency.binary(testDefinitionURL), testDefinitionURL)]))
 			}
 		}
 	}

@@ -107,8 +107,8 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for all platforms") {
 			let dependencies = [
-				ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes")),
-				ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
+				Dependency.gitHub(Repository(owner: "github", name: "Archimedes")),
+				Dependency.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
 			]
 			let version = PinnedVersion("0.1")
 
@@ -301,7 +301,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for one platform") {
-			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
+			let project = Dependency.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 			let result = buildDependencyProject(project, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
 				.flatten(.concat)
@@ -323,7 +323,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for multiple platforms") {
-			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
+			let project = Dependency.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 			let result = buildDependencyProject(project, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
 				.flatten(.concat)
@@ -365,7 +365,7 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should symlink the build directory") {
-			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
+			let project = Dependency.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 
 			let dependencyURL =	directoryURL.appendingPathComponent(project.relativePath)

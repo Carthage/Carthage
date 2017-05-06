@@ -14,11 +14,11 @@ import ReactiveSwift
 import Result
 import Tentacle
 
-private let git1 = ProjectIdentifier.git(GitURL("https://example.com/repo1"))
-private let git2 = ProjectIdentifier.git(GitURL("https://example.com/repo2.git"))
-private let github1 = ProjectIdentifier.gitHub(Repository(owner: "gob", name: "1"))
-private let github2 = ProjectIdentifier.gitHub(Repository(owner: "gob", name: "2"))
-private let github3 = ProjectIdentifier.gitHub(Repository(owner: "gob", name: "3"))
+private let git1 = Dependency.git(GitURL("https://example.com/repo1"))
+private let git2 = Dependency.git(GitURL("https://example.com/repo2.git"))
+private let github1 = Dependency.gitHub(Repository(owner: "gob", name: "1"))
+private let github2 = Dependency.gitHub(Repository(owner: "gob", name: "2"))
+private let github3 = Dependency.gitHub(Repository(owner: "gob", name: "3"))
 
 private extension PinnedVersion {
 	static let v0_1_0 = PinnedVersion("v0.1.0")
@@ -42,10 +42,10 @@ private extension SemanticVersion {
 }
 
 private struct DB {
-	var versions: [ProjectIdentifier: [PinnedVersion: [ProjectIdentifier: VersionSpecifier]]]
-	var references: [ProjectIdentifier: [String: PinnedVersion]] = [:]
+	var versions: [Dependency: [PinnedVersion: [Dependency: VersionSpecifier]]]
+	var references: [Dependency: [String: PinnedVersion]] = [:]
 	
-	func versions(for dependency: ProjectIdentifier) -> SignalProducer<PinnedVersion, CarthageError> {
+	func versions(for dependency: Dependency) -> SignalProducer<PinnedVersion, CarthageError> {
 		if let versions = self.versions[dependency] {
 			return .init(versions.keys)
 		} else {
@@ -53,7 +53,7 @@ private struct DB {
 		}
 	}
 	
-	func dependencies(for dependency: ProjectIdentifier, version: PinnedVersion) -> SignalProducer<(ProjectIdentifier, VersionSpecifier), CarthageError> {
+	func dependencies(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
 		if let dependencies = self.versions[dependency]?[version] {
 			return .init(dependencies.map { ($0.0, $0.1) })
 		} else {
@@ -61,7 +61,7 @@ private struct DB {
 		}
 	}
 	
-	func resolvedGitReference(_ project: ProjectIdentifier, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
+	func resolvedGitReference(_ project: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
 		if let version = references[project]?[reference] {
 			return .init(value: version)
 		} else {
@@ -70,10 +70,10 @@ private struct DB {
 	}
 	
 	func resolve(
-		_ dependencies: [ProjectIdentifier: VersionSpecifier],
-		resolved: [ProjectIdentifier: PinnedVersion] = [:],
-		updating: Set<ProjectIdentifier> = []
-	) -> Result<[(ProjectIdentifier, PinnedVersion)], CarthageError> {
+		_ dependencies: [Dependency: VersionSpecifier],
+		resolved: [Dependency: PinnedVersion] = [:],
+		updating: Set<Dependency> = []
+	) -> Result<[(Dependency, PinnedVersion)], CarthageError> {
 		let resolver = Resolver(
 			versionsForDependency: self.versions(for:),
 			dependenciesForDependency: self.dependencies(for:version:),
@@ -91,7 +91,7 @@ private struct DB {
 }
 
 extension DB: ExpressibleByDictionaryLiteral {
-	init(dictionaryLiteral elements: (ProjectIdentifier, [PinnedVersion: [ProjectIdentifier: VersionSpecifier]])...) {
+	init(dictionaryLiteral elements: (Dependency, [PinnedVersion: [Dependency: VersionSpecifier]])...) {
 		self.init(versions: [:], references: [:])
 		for (key, value) in elements {
 			versions[key] = value

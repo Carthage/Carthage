@@ -24,13 +24,13 @@ class CartfileSpec: QuickSpec {
 
 			let cartfile = result.value!
 
-			let reactiveCocoa = ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
-			let mantle = ProjectIdentifier.gitHub(Repository(owner: "Mantle", name: "Mantle"))
-			let libextobjc = ProjectIdentifier.gitHub(Repository(owner: "jspahrsummers", name: "libextobjc"))
-			let xcconfigs = ProjectIdentifier.gitHub(Repository(owner: "jspahrsummers", name: "xcconfigs"))
-			let iosCharts = ProjectIdentifier.gitHub(Repository(owner: "danielgindi", name: "ios-charts"))
-			let errorTranslations = ProjectIdentifier.gitHub(Repository(server: .enterprise(url: URL(string: "https://enterprise.local/ghe")!), owner: "desktop", name: "git-error-translations"))
-			let errorTranslations2 = ProjectIdentifier.git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))
+			let reactiveCocoa = Dependency.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
+			let mantle = Dependency.gitHub(Repository(owner: "Mantle", name: "Mantle"))
+			let libextobjc = Dependency.gitHub(Repository(owner: "jspahrsummers", name: "libextobjc"))
+			let xcconfigs = Dependency.gitHub(Repository(owner: "jspahrsummers", name: "xcconfigs"))
+			let iosCharts = Dependency.gitHub(Repository(owner: "danielgindi", name: "ios-charts"))
+			let errorTranslations = Dependency.gitHub(Repository(server: .enterprise(url: URL(string: "https://enterprise.local/ghe")!), owner: "desktop", name: "git-error-translations"))
+			let errorTranslations2 = Dependency.git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))
 			
 			expect(cartfile.dependencies) == [
 				reactiveCocoa: .atLeast(SemanticVersion(major: 2, minor: 3, patch: 1)),
@@ -70,15 +70,15 @@ class CartfileSpec: QuickSpec {
 			}
 			
 			let projects = dupes
-				.map { $0.project }
+				.map { $0.dependency }
 				.sorted { $0.description < $1.description }
 			expect(dupes.count) == 3
 			
 			let self2Dupe = projects[0]
-			expect(self2Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self2", name: "self2"))
+			expect(self2Dupe) == Dependency.gitHub(Repository(owner: "self2", name: "self2"))
 			
 			let self3Dupe = projects[1]
-			expect(self3Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self3", name: "self3"))
+			expect(self3Dupe) == Dependency.gitHub(Repository(owner: "self3", name: "self3"))
 		}
 
 		it("should detect duplicate dependencies across two Cartfiles") {
@@ -104,13 +104,13 @@ class CartfileSpec: QuickSpec {
 			expect(dupes.count) == 3
 
 			let dupe1 = dupes[0]
-			expect(dupe1) == ProjectIdentifier.gitHub(Repository(owner: "1", name: "1"))
+			expect(dupe1) == Dependency.gitHub(Repository(owner: "1", name: "1"))
 
 			let dupe3 = dupes[1]
-			expect(dupe3) == ProjectIdentifier.gitHub(Repository(owner: "3", name: "3"))
+			expect(dupe3) == Dependency.gitHub(Repository(owner: "3", name: "3"))
 
 			let dupe5 = dupes[2]
-			expect(dupe5) == ProjectIdentifier.gitHub(Repository(owner: "5", name: "5"))
+			expect(dupe5) == Dependency.gitHub(Repository(owner: "5", name: "5"))
 		}
 
 		it("should not allow a binary framework with git reference") {
