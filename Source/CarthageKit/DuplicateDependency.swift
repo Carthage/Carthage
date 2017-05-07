@@ -1,6 +1,6 @@
 /// A duplicate dependency, used in CarthageError.duplicateDependencies.
 public struct DuplicateDependency {
-	/// The duplicate dependency as a project.
+	/// The duplicate dependency
 	public let dependency: Dependency
 
 	/// The locations where the dependency was found as duplicate.

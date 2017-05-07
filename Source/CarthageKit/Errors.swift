@@ -14,7 +14,7 @@ import XCDBLD
 
 /// Possible errors that can originate from Carthage.
 public enum CarthageError: Error {
-	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: Dependency?)
+	public typealias VersionRequirement = (specifier: VersionSpecifier, fromDependency: Dependency?)
 
 	/// One or more arguments was invalid.
 	case invalidArgument(description: String)
@@ -101,7 +101,7 @@ public extension CarthageError {
 }
 
 private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
-	return lhs.specifier == rhs.specifier && lhs.fromProject == rhs.fromProject
+	return lhs.specifier == rhs.specifier && lhs.fromDependency == rhs.fromDependency
 }
 
 extension CarthageError: Equatable {
@@ -202,8 +202,8 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case let .incompatibleRequirements(dependency, first, second):
-			let requirement: (VersionRequirement) -> String = { specifier, fromProject in
-				return "\(specifier)" + (fromProject.map { " (\($0))" } ?? "")
+			let requirement: (VersionRequirement) -> String = { specifier, fromDependency in
+				return "\(specifier)" + (fromDependency.map { " (\($0))" } ?? "")
 			}
 			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(requirement(first))\n\t\(requirement(second))"
 

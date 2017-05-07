@@ -615,15 +615,15 @@ public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<Tas
 /// begins, then complete or error when building terminates.
 public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator, String)>, CarthageError>
 
-/// Attempts to build the dependency identified by the given project, then
-/// places its build product into the root directory given.
+/// Attempts to build the dependency, then places its build product into the
+/// root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(_ dependency: Dependency, version: PinnedVersion, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func build(dependency: Dependency, version: PinnedVersion, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
-	return symlinkBuildPathForDependencyProject(dependency, rootDirectoryURL: rootDirectoryURL)
+	return symlinkBuildPath(for: dependency, rootDirectoryURL: rootDirectoryURL)
 		.map { _ -> BuildSchemeProducer in
 			return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
 				.mapError { error in
@@ -645,7 +645,7 @@ public func buildDependencyProject(_ dependency: Dependency, version: PinnedVers
 /// Creates symlink between the dependency build folder and the root build folder
 ///
 /// Returns a signal indicating success
-private func symlinkBuildPathForDependencyProject(_ dependency: Dependency, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt {
 		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
@@ -691,7 +691,7 @@ private func symlinkBuildPathForDependencyProject(_ dependency: Dependency, root
 				return .failure(.writeFailed(dependencyBinariesURL, error))
 			}
 		} else {
-			let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: CarthageBinariesFolderPath)
+			let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: CarthageBinariesFolderPath)
 			do {
 				try fileManager.createSymbolicLink(atPath: dependencyBinariesURL.path, withDestinationPath: linkDestinationPath)
 			} catch let error as NSError {
@@ -705,7 +705,7 @@ private func symlinkBuildPathForDependencyProject(_ dependency: Dependency, root
 /// Builds the any shared framework schemes found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
-public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: (project: Dependency, version: PinnedVersion)? = nil, rootDirectoryURL: URL? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> BuildSchemeProducer {
+public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: (dependency: Dependency, version: PinnedVersion)? = nil, rootDirectoryURL: URL? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> BuildSchemeProducer {
 	precondition(directoryURL.isFileURL)
 
 	return BuildSchemeProducer { observer, disposable in
@@ -780,7 +780,7 @@ public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOpti
 				guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
 					return .empty
 				}
-				return createVersionFile(for: dependency.project, version: dependency.version, platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL)
+				return createVersionFile(for: dependency.dependency, version: dependency.version, platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL)
 					.flatMapError { _ in .empty }
 			}
 			// Discard any Success values, since we want to

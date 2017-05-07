@@ -65,7 +65,7 @@ public struct Resolver {
 				// When target dependencies are specified
 				return orderedNodesProducer.filterMap { node -> (Dependency, PinnedVersion)? in
 					// A dependency included in the targets should be affected.
-					if dependenciesToUpdate.contains(node.project.name) {
+					if dependenciesToUpdate.contains(node.dependency.name) {
 						return node.pinnedDependency
 					}
 
@@ -76,8 +76,8 @@ public struct Resolver {
 
 					// The dependencies which are not related to the targets
 					// should not be affected, so use the last resolved version.
-					if let version = lastResolved[node.project] {
-						return (node.project, version)
+					if let version = lastResolved[node.dependency] {
+						return (node.dependency, version)
 					}
 
 					// Skip newly added nodes which are not in the targets.
@@ -110,7 +110,7 @@ public struct Resolver {
 					}
 					.start(on: scheduler)
 					.observe(on: scheduler)
-					.map { DependencyNode(project: dependency.key, proposedVersion: $0, versionSpecifier: dependency.value) }
+					.map { DependencyNode(dependency: dependency.key, proposedVersion: $0, versionSpecifier: dependency.value) }
 					.collect()
 					.map { $0.sorted() }
 					.flatMap(.concat) { nodes -> SignalProducer<DependencyNode, CarthageError> in
@@ -134,7 +134,7 @@ public struct Resolver {
 	private func graphsForDependenciesOfNode(_ node: DependencyNode, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		let scheduler = QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.graphsForDependenciesOfNode")
 
-		return dependenciesForDependency(node.project, node.proposedVersion)
+		return dependenciesForDependency(node.dependency, node.proposedVersion)
 			.start(on: scheduler)
 			.reduce([:]) { (result, dependency) in
 				var copy = result
@@ -255,7 +255,7 @@ private struct DependencyGraph: Equatable {
 				return false
 			} else {
 				// If all else fails, compare names.
-				return lhs.project.name < rhs.project.name
+				return lhs.dependency.name < rhs.dependency.name
 			}
 		}
 	}
@@ -282,7 +282,7 @@ private struct DependencyGraph: Equatable {
 					node = existingNode
 					node.versionSpecifier = newSpecifier
 				} else {
-					return .failure(CarthageError.requiredVersionNotFound(node.project, newSpecifier))
+					return .failure(CarthageError.requiredVersionNotFound(node.dependency, newSpecifier))
 				}
 			} else if existingNode.proposedVersion != node.proposedVersion {
 				// The guard condition above is required for enabling to build a
@@ -297,9 +297,9 @@ private struct DependencyGraph: Equatable {
 					.filter { _, value in value.contains(existingNode) }
 					.map { $0.0 }
 					.first
-				let first = (existingNode.versionSpecifier, existingDependencyOf?.project)
-				let second = (node.versionSpecifier, dependencyOf?.project)
-				return .failure(CarthageError.incompatibleRequirements(node.project, first, second))
+				let first = (existingNode.versionSpecifier, existingDependencyOf?.dependency)
+				let second = (node.versionSpecifier, dependencyOf?.dependency)
+				return .failure(CarthageError.incompatibleRequirements(node.dependency, first, second))
 			}
 		} else {
 			allNodes.insert(node)
@@ -365,7 +365,7 @@ private struct DependencyGraph: Equatable {
 	func dependencies(_ dependencies: [String], containsNestedDependencyOfNode node: DependencyNode) -> Bool {
 		return edges.lazy
 			.filter { edge, nodeSet in
-				return dependencies.contains(edge.project.name) && nodeSet.contains(node)
+				return dependencies.contains(edge.dependency.name) && nodeSet.contains(node)
 			}
 			.map { _ in true }
 			.first ?? false
@@ -413,7 +413,7 @@ extension DependencyGraph: CustomStringConvertible {
 		str += "\n\nEdges:"
 
 		for (node, dependencies) in edges {
-			str += "\n\t\(node.project) ->"
+			str += "\n\t\(node.dependency) ->"
 			for dep in dependencies {
 				str += "\n\t\t\(dep)"
 			}
@@ -460,8 +460,8 @@ private func mergeGraphs
 
 /// A node in, or being considered for, an acyclic dependency graph.
 private class DependencyNode: Comparable {
-	/// The project that this node refers to.
-	let project: Dependency
+	/// The dependency that this node refers to.
+	let dependency: Dependency
 
 	/// The version of the dependency that this node represents.
 	///
@@ -480,13 +480,13 @@ private class DependencyNode: Comparable {
 
 	/// A Dependency equivalent to this node.
 	var pinnedDependency: (Dependency, PinnedVersion) {
-		return (project, proposedVersion)
+		return (dependency, proposedVersion)
 	}
 
-	init(project: Dependency, proposedVersion: PinnedVersion, versionSpecifier: VersionSpecifier) {
+	init(dependency: Dependency, proposedVersion: PinnedVersion, versionSpecifier: VersionSpecifier) {
 		precondition(versionSpecifier.isSatisfied(by: proposedVersion))
 
-		self.project = project
+		self.dependency = dependency
 		self.proposedVersion = proposedVersion
 		self.versionSpecifier = versionSpecifier
 	}
@@ -501,17 +501,17 @@ private func <(_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
 }
 
 private func ==(_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
-	return lhs.project == rhs.project
+	return lhs.dependency == rhs.dependency
 }
 
 extension DependencyNode: Hashable {
 	fileprivate var hashValue: Int {
-		return project.hashValue
+		return dependency.hashValue
 	}
 }
 
 extension DependencyNode: CustomStringConvertible {
 	fileprivate var description: String {
-		return "\(project) @ \(proposedVersion) (restricted to \(versionSpecifier))"
+		return "\(dependency) @ \(proposedVersion) (restricted to \(versionSpecifier))"
 	}
 }

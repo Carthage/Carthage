@@ -112,8 +112,8 @@ class XcodeSpec: QuickSpec {
 			]
 			let version = PinnedVersion("0.1")
 
-			for project in dependencies {
-				let result = buildDependencyProject(project, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			for dependency in dependencies {
+				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 					.flatten(.concat)
 					.ignoreTaskData()
 					.on(value: { (project, scheme) in
@@ -134,10 +134,10 @@ class XcodeSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			// Verify that the build products exist at the top level.
-			var projectNames = dependencies.map { project in project.name }
-			projectNames.append("ReactiveCocoaLayout")
+			var dependencyNames = dependencies.map { dependency in dependency.name }
+			dependencyNames.append("ReactiveCocoaLayout")
 
-			for dependency in projectNames {
+			for dependency in dependencyNames {
 				let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path
 				let macdSYMPath = (macPath as NSString).appendingPathExtension("dSYM")!
 				let iOSPath = buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path
@@ -301,9 +301,9 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for one platform") {
-			let project = Dependency.gitHub(Repository(owner: "github", name: "Archimedes"))
+			let dependency = Dependency.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let result = buildDependencyProject(project, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
+			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { (project, scheme) in
@@ -314,18 +314,18 @@ class XcodeSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			// Verify that the build product exists at the top level.
-			let path = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").path
+			let path = buildFolderURL.appendingPathComponent("Mac/\(dependency.name).framework").path
 			expect(path).to(beExistingDirectory())
 
 			// Verify that the other platform wasn't built.
-			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").path
+			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(dependency.name).framework").path
 			expect(FileManager.default.fileExists(atPath: incorrectPath, isDirectory: nil)) == false
 		}
 
 		it("should build for multiple platforms") {
-			let project = Dependency.gitHub(Repository(owner: "github", name: "Archimedes"))
+			let dependency = Dependency.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let result = buildDependencyProject(project, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
+			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { (project, scheme) in
@@ -337,8 +337,8 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the build products of all specified platforms exist 
 			// at the top level.
-			let macPath = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").path
-			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").path
+			let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency.name).framework").path
+			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(dependency.name).framework").path
 
 			for path in [ macPath, iosPath ] {
 				expect(path).to(beExistingDirectory())
@@ -365,15 +365,15 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should symlink the build directory") {
-			let project = Dependency.gitHub(Repository(owner: "github", name: "Archimedes"))
+			let dependency = Dependency.gitHub(Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 
-			let dependencyURL =	directoryURL.appendingPathComponent(project.relativePath)
+			let dependencyURL =	directoryURL.appendingPathComponent(dependency.relativePath)
 			// Build
 			let buildURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 			let dependencyBuildURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			let result = buildDependencyProject(project, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { (project, scheme) in
