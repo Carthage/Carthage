@@ -623,7 +623,7 @@ public func build(dependency: Dependency, version: PinnedVersion, _ rootDirector
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
-	return symlinkBuildPathForDependencyProject(dependency, rootDirectoryURL: rootDirectoryURL)
+	return symlinkBuildPath(for: dependency, rootDirectoryURL: rootDirectoryURL)
 		.map { _ -> BuildSchemeProducer in
 			return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
 				.mapError { error in
@@ -645,7 +645,7 @@ public func build(dependency: Dependency, version: PinnedVersion, _ rootDirector
 /// Creates symlink between the dependency build folder and the root build folder
 ///
 /// Returns a signal indicating success
-private func symlinkBuildPathForDependencyProject(_ dependency: Dependency, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt {
 		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
