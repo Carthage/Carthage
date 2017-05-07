@@ -615,11 +615,11 @@ public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<Tas
 /// begins, then complete or error when building terminates.
 public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator, String)>, CarthageError>
 
-/// Attempts to build the dependency identified by the given project, then
-/// places its build product into the root directory given.
+/// Attempts to build the dependency, then places its build product into the
+/// root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(_ dependency: Dependency, version: PinnedVersion, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+public func build(dependency: Dependency, version: PinnedVersion, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 

@@ -1018,7 +1018,7 @@ public final class Project {
 				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version.commitish, isDirectory: true)
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
-				return buildDependencyProject(dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+				return build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
 					.map { producer in
 						return producer.flatMapError { error in
 							switch error {
