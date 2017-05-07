@@ -126,7 +126,7 @@ public enum ProjectEvent {
 
 	/// Installing of a binary framework is being skipped because of an inability
 	/// to verify that it was built with a compatible Swift version.
-	case skippedInstallingBinaries(project: Dependency, error: Error)
+	case skippedInstallingBinaries(dependency: Dependency, error: Error)
 
 	/// Building the project is being skipped, since the project is not sharing
 	/// any framework schemes.
@@ -363,13 +363,13 @@ public final class Project {
 	///
 	/// This will automatically clone or fetch the project's repository as
 	/// necessary.
-	private func versions(for project: Dependency) -> SignalProducer<PinnedVersion, CarthageError> {
+	private func versions(for dependency: Dependency) -> SignalProducer<PinnedVersion, CarthageError> {
 
 		let fetchVersions: SignalProducer<PinnedVersion, CarthageError>
 
-		switch project {
+		switch dependency {
 		case .git(_), .gitHub(_):
-			fetchVersions = cloneOrFetchDependency(project)
+			fetchVersions = cloneOrFetchDependency(dependency)
 				.flatMap(.merge) { repositoryURL in listTags(repositoryURL) }
 				.map { PinnedVersion($0) }
 		case let .binary(url):
@@ -383,13 +383,13 @@ public final class Project {
 				return .success(self.cachedVersions)
 			}
 			.flatMap(.merge) { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
-				if let versions = versionsByProject[project] {
+				if let versions = versionsByProject[dependency] {
 					return SignalProducer(versions)
 				} else {
 					return fetchVersions
 						.collect()
 						.on(value: { newVersions in
-							self.cachedVersions[project] = newVersions
+							self.cachedVersions[dependency] = newVersions
 						})
 						.flatMap(.concat) { versions in SignalProducer<PinnedVersion, CarthageError>(versions) }
 				}
@@ -398,7 +398,7 @@ public final class Project {
 			.collect()
 			.flatMap(.concat) { versions -> SignalProducer<PinnedVersion, CarthageError> in
 				if versions.isEmpty {
-					return SignalProducer(error: .taggedVersionNotFound(project))
+					return SignalProducer(error: .taggedVersionNotFound(dependency))
 				}
 
 				return SignalProducer(versions)
@@ -428,9 +428,9 @@ public final class Project {
 	}
 
 	/// Attempts to resolve a Git reference to a version.
-	private func resolvedGitReference(_ project: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
-		let repositoryURL = repositoryFileURLForProject(project)
-		return cloneOrFetchDependency(project, commitish: reference)
+	private func resolvedGitReference(_ dependency: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
+		let repositoryURL = repositoryFileURLForProject(dependency)
+		return cloneOrFetchDependency(dependency, commitish: reference)
 			.flatMap(.concat) { _ in
 				return resolveTagInRepository(repositoryURL, reference)
 					.map { _ in
@@ -599,7 +599,7 @@ public final class Project {
 						.flatMap(.concat) { self.removeItem(at: $0) }
 						.map { true }
 						.flatMapError { error in
-							self._projectEventsObserver.send(value: .skippedInstallingBinaries(project: project, error: error))
+							self._projectEventsObserver.send(value: .skippedInstallingBinaries(dependency: project, error: error))
 							return SignalProducer(value: false)
 						}
 						.concat(value: false)
@@ -862,7 +862,7 @@ public final class Project {
 				return .success((semanticVersion, frameworkURL))
 			}
 			.flatMap(.concat) { (semanticVersion, frameworkURL) in
-				return self.downloadBinary(project: Dependency.binary(url), version: semanticVersion, url: frameworkURL)
+				return self.downloadBinary(dependency: Dependency.binary(url), version: semanticVersion, url: frameworkURL)
 			}
 			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: projectName, commitish: pinnedVersion.commitish, toolchain: toolchain) }
 			.flatMap(.concat) { self.removeItem(at: $0) }
@@ -870,9 +870,9 @@ public final class Project {
 
 	/// Downloads the binary only framework file. Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
-	private func downloadBinary(project: Dependency, version: SemanticVersion, url: URL) -> SignalProducer<URL, CarthageError> {
+	private func downloadBinary(dependency: Dependency, version: SemanticVersion, url: URL) -> SignalProducer<URL, CarthageError> {
 		let fileName = url.lastPathComponent
-		let fileURL = fileURLToCachedBinaryProject(project, version, fileName)
+		let fileURL = fileURLToCachedBinaryProject(dependency, version, fileName)
 
 		if FileManager.default.fileExists(atPath: fileURL.path) {
 			return SignalProducer(value: fileURL)
@@ -880,7 +880,7 @@ public final class Project {
 
 			return URLSession.shared.reactive.download(with: URLRequest(url: url))
 				.on(started: {
-					self._projectEventsObserver.send(value: .downloadingBinaries(project, version.description))
+					self._projectEventsObserver.send(value: .downloadingBinaries(dependency, version.description))
 				})
 				.mapError { CarthageError.readFailed(url, $0 as NSError) }
 				.flatMap(.concat) { (downloadURL, _) in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
@@ -1040,9 +1040,9 @@ public final class Project {
 
 /// Constructs a file URL to where the binary corresponding to the given
 /// arguments should live.
-private func fileURLToCachedBinary(_ project: Dependency, _ release: Release, _ asset: Release.Asset) -> URL {
+private func fileURLToCachedBinary(_ dependency: Dependency, _ release: Release, _ asset: Release.Asset) -> URL {
 	// ~/Library/Caches/org.carthage.CarthageKit/binaries/ReactiveCocoa/v2.3.1/1234-ReactiveCocoa.framework.zip
-	return CarthageDependencyAssetsURL.appendingPathComponent("\(project.name)/\(release.tag)/\(asset.id)-\(asset.name)", isDirectory: false)
+	return CarthageDependencyAssetsURL.appendingPathComponent("\(dependency.name)/\(release.tag)/\(asset.id)-\(asset.name)", isDirectory: false)
 }
 
 /// Constructs a file URL to where the binary only framework download should be cached

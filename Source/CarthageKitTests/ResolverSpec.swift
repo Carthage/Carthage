@@ -61,8 +61,8 @@ private struct DB {
 		}
 	}
 	
-	func resolvedGitReference(_ project: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
-		if let version = references[project]?[reference] {
+	func resolvedGitReference(_ dependency: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
+		if let version = references[dependency]?[reference] {
 			return .init(value: version)
 		} else {
 			return .empty

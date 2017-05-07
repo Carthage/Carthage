@@ -705,7 +705,7 @@ private func symlinkBuildPathForDependencyProject(_ dependency: Dependency, root
 /// Builds the any shared framework schemes found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
-public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: (project: Dependency, version: PinnedVersion)? = nil, rootDirectoryURL: URL? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> BuildSchemeProducer {
+public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: (dependency: Dependency, version: PinnedVersion)? = nil, rootDirectoryURL: URL? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> BuildSchemeProducer {
 	precondition(directoryURL.isFileURL)
 
 	return BuildSchemeProducer { observer, disposable in
@@ -780,7 +780,7 @@ public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOpti
 				guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
 					return .empty
 				}
-				return createVersionFile(for: dependency.project, version: dependency.version, platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL)
+				return createVersionFile(for: dependency.dependency, version: dependency.version, platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL)
 					.flatMapError { _ in .empty }
 			}
 			// Discard any Success values, since we want to

@@ -69,15 +69,15 @@ class CartfileSpec: QuickSpec {
 				return
 			}
 			
-			let projects = dupes
+			let dependencies = dupes
 				.map { $0.dependency }
 				.sorted { $0.description < $1.description }
 			expect(dupes.count) == 3
 			
-			let self2Dupe = projects[0]
+			let self2Dupe = dependencies[0]
 			expect(self2Dupe) == Dependency.gitHub(Repository(owner: "self2", name: "self2"))
 			
-			let self3Dupe = projects[1]
+			let self3Dupe = dependencies[1]
 			expect(self3Dupe) == Dependency.gitHub(Repository(owner: "self3", name: "self3"))
 		}
 
