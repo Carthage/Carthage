@@ -929,7 +929,7 @@ public final class Project {
 				for name in names {
 					let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
 					let subdirectoryPath = (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
-					let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: subdirectoryPath)
+					let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: subdirectoryPath)
 
 					let dependencyCheckoutURLResource = try? dependencyCheckoutURL.resourceValues(forKeys: [
 						.isSymbolicLinkKey,
@@ -1216,8 +1216,8 @@ private func repositoryFileURL(for dependency: Dependency, baseURL: URL = Cartha
 	return baseURL.appendingPathComponent(dependency.name, isDirectory: true)
 }
 
-/// Returns the string representing a relative path from a dependency project back to the root
-internal func relativeLinkDestinationForDependencyProject(_ dependency: Dependency, subdirectory: String) -> String {
+/// Returns the string representing a relative path from a dependency back to the root
+internal func relativeLinkDestination(for dependency: Dependency, subdirectory: String) -> String {
 	let dependencySubdirectoryPath = (dependency.relativePath as NSString).appendingPathComponent(subdirectory)
 	let componentsForGettingTheHellOutOfThisRelativePath = Array(repeating: "..", count: (dependencySubdirectoryPath as NSString).pathComponents.count - 1)
 

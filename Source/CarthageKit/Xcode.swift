@@ -691,7 +691,7 @@ private func symlinkBuildPathForDependencyProject(_ dependency: Dependency, root
 				return .failure(.writeFailed(dependencyBinariesURL, error))
 			}
 		} else {
-			let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: CarthageBinariesFolderPath)
+			let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: CarthageBinariesFolderPath)
 			do {
 				try fileManager.createSymbolicLink(atPath: dependencyBinariesURL.path, withDestinationPath: linkDestinationPath)
 			} catch let error as NSError {
