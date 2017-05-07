@@ -14,7 +14,7 @@ import XCDBLD
 
 /// Possible errors that can originate from Carthage.
 public enum CarthageError: Error {
-	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: Dependency?)
+	public typealias VersionRequirement = (specifier: VersionSpecifier, fromDependency: Dependency?)
 
 	/// One or more arguments was invalid.
 	case invalidArgument(description: String)
@@ -101,7 +101,7 @@ public extension CarthageError {
 }
 
 private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
-	return lhs.specifier == rhs.specifier && lhs.fromProject == rhs.fromProject
+	return lhs.specifier == rhs.specifier && lhs.fromDependency == rhs.fromDependency
 }
 
 extension CarthageError: Equatable {
