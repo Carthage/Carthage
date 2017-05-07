@@ -302,7 +302,7 @@ public final class Project {
 	}
 
 	/// Produces the sub dependencies of the given dependency
-	func dependencyProjects(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<Set<Dependency>, CarthageError> {
+	fileprivate func dependencies(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<Set<Dependency>, CarthageError> {
 		return self.dependencies(for: dependency, version: version)
 			.map { $0.0 }
 			.collect()
@@ -763,7 +763,7 @@ public final class Project {
 		// dependencies before the projects that depend on them.
 		return SignalProducer<(Dependency, PinnedVersion), CarthageError>(cartfile.dependencies.map { $0 })
 			.flatMap(.merge) { (dependency: Dependency, version: PinnedVersion) -> SignalProducer<DependencyGraph, CarthageError> in
-				return self.dependencyProjects(for: dependency, version: version)
+				return self.dependencies(for: dependency, version: version)
 					.map { dependencies in
 						[dependency: dependencies]
 					}
@@ -894,7 +894,7 @@ public final class Project {
 		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(CarthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
 		let fileManager = FileManager.default
 
-		return self.dependencyProjects(for: dependency, version: version)
+		return self.dependencies(for: dependency, version: version)
 			.zip(with: // file system objects which might conflict with symlinks
 				list(treeish: version.commitish, atPath: CarthageProjectCheckoutsPath, inRepository: repositoryURL)
 					.map { (path: String) in (path as NSString).lastPathComponent }
@@ -974,7 +974,7 @@ public final class Project {
 			.flatMap(.concat) { (dependency, version) -> SignalProducer<((Dependency, PinnedVersion), Set<Dependency>, Bool?), CarthageError> in
 				return SignalProducer.combineLatest(
 					SignalProducer(value: (dependency, version)),
-					self.dependencyProjects(for: dependency, version: version),
+					self.dependencies(for: dependency, version: version),
 					versionFileMatches(dependency, version: version, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
 				)
 			}
