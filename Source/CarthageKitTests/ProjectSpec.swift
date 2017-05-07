@@ -71,7 +71,7 @@ class ProjectSpec: QuickSpec {
 				let sourceRepoUrl = directoryURL.appendingPathComponent("SourceRepos")
 				["TestFramework1", "TestFramework2", "TestFramework3"].forEach { repo in
 					let urlPath = sourceRepoUrl.appendingPathComponent(repo).path
-					let _ = cloneOrFetchProject(.git(GitURL(urlPath)), preferHTTPS: false)
+					let _ = cloneOrFetch(dependency: .git(GitURL(urlPath)), preferHTTPS: false)
 						.wait()
 				}
 			}
@@ -239,7 +239,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			func cloneOrFetch(commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
-				return cloneOrFetchProject(dependency, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
+				return CarthageKit.cloneOrFetch(dependency: dependency, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
 			}
 
 			func assertProjectEvent(commitish: String? = nil, clearFetchTime: Bool = true, action: @escaping (ProjectEvent?) -> ()) {

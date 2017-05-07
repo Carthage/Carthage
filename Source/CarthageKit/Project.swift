@@ -320,8 +320,8 @@ public final class Project {
 	///
 	/// Returns a signal which will send the URL to the repository's folder on
 	/// disk once cloning or fetching has completed.
-	private func cloneOrFetchDependency(_ project: Dependency, commitish: String? = nil) -> SignalProducer<URL, CarthageError> {
-		return cloneOrFetchProject(project, preferHTTPS: self.preferHTTPS, commitish: commitish)
+	private func cloneOrFetchDependency(_ dependency: Dependency, commitish: String? = nil) -> SignalProducer<URL, CarthageError> {
+		return cloneOrFetch(dependency: dependency, preferHTTPS: self.preferHTTPS, commitish: commitish)
 			.on(value: { event, _ in
 				if let event = event {
 					self._projectEventsObserver.send(value: event)
@@ -1236,9 +1236,9 @@ internal func relativeLinkDestination(for dependency: Dependency, subdirectory: 
 /// Returns a signal which will send the operation type once started, and
 /// the URL to where the repository's folder will exist on disk, then complete
 /// when the operation completes.
-public func cloneOrFetchProject(_ project: Dependency, preferHTTPS: Bool, destinationURL: URL = CarthageDependencyRepositoriesURL, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
+public func cloneOrFetch(dependency: Dependency, preferHTTPS: Bool, destinationURL: URL = CarthageDependencyRepositoriesURL, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
 	let fileManager = FileManager.default
-	let repositoryURL = repositoryFileURL(for: project, baseURL: destinationURL)
+	let repositoryURL = repositoryFileURL(for: dependency, baseURL: destinationURL)
 
 	return SignalProducer.attempt { () -> Result<GitURL, CarthageError> in
 			do {
@@ -1247,7 +1247,7 @@ public func cloneOrFetchProject(_ project: Dependency, preferHTTPS: Bool, destin
 				return .failure(.writeFailed(destinationURL, error))
 			}
 
-			return .success(project.gitURL(preferHTTPS: preferHTTPS)!)
+			return .success(dependency.gitURL(preferHTTPS: preferHTTPS)!)
 		}
 		.flatMap(.merge) { remoteURL -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 			return isGitRepository(repositoryURL)
@@ -1258,7 +1258,7 @@ public func cloneOrFetchProject(_ project: Dependency, preferHTTPS: Bool, destin
 								return SignalProducer(value: (nil, repositoryURL))
 							}
 
-							return SignalProducer(value: (.fetching(project), repositoryURL))
+							return SignalProducer(value: (.fetching(dependency), repositoryURL))
 								.concat(
 									fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
 										.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
@@ -1287,7 +1287,7 @@ public func cloneOrFetchProject(_ project: Dependency, preferHTTPS: Bool, destin
 						// (Could happen if the process is killed during a previous directory creation)
 						// So we remove it, then clone
 						_ = try? fileManager.removeItem(at: repositoryURL)
-						return SignalProducer(value: (.cloning(project), repositoryURL))
+						return SignalProducer(value: (.cloning(dependency), repositoryURL))
 							.concat(
 								cloneRepository(remoteURL, repositoryURL)
 									.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
