@@ -429,7 +429,7 @@ public final class Project {
 
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(_ dependency: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
-		let repositoryURL = repositoryFileURLForProject(dependency)
+		let repositoryURL = repositoryFileURL(for: dependency)
 		return cloneOrFetchDependency(dependency, commitish: reference)
 			.flatMap(.concat) { _ in
 				return resolveTagInRepository(repositoryURL, reference)
@@ -1212,8 +1212,8 @@ private func BCSymbolMapsForFramework(_ frameworkURL: URL, inDirectoryURL direct
 
 /// Returns the file URL at which the given project's repository will be
 /// located.
-private func repositoryFileURLForProject(_ project: Dependency, baseURL: URL = CarthageDependencyRepositoriesURL) -> URL {
-	return baseURL.appendingPathComponent(project.name, isDirectory: true)
+private func repositoryFileURL(for dependency: Dependency, baseURL: URL = CarthageDependencyRepositoriesURL) -> URL {
+	return baseURL.appendingPathComponent(dependency.name, isDirectory: true)
 }
 
 /// Returns the string representing a relative path from a dependency project back to the root
@@ -1238,7 +1238,7 @@ internal func relativeLinkDestinationForDependencyProject(_ dependency: Dependen
 /// when the operation completes.
 public func cloneOrFetchProject(_ project: Dependency, preferHTTPS: Bool, destinationURL: URL = CarthageDependencyRepositoriesURL, commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
 	let fileManager = FileManager.default
-	let repositoryURL = repositoryFileURLForProject(project, baseURL: destinationURL)
+	let repositoryURL = repositoryFileURL(for: project, baseURL: destinationURL)
 
 	return SignalProducer.attempt { () -> Result<GitURL, CarthageError> in
 			do {
