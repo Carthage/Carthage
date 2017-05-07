@@ -774,20 +774,20 @@ public final class Project {
 				return result
 			}
 			.flatMap(.latest) { (graph: DependencyGraph) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
-				let projectsToInclude = Set(graph
-					.map { project, _ in project }
-					.filter { project in dependenciesToInclude?.contains(project.name) ?? false })
+				let dependenciesToInclude = Set(graph
+					.map { dependency, _ in dependency }
+					.filter { dependency in dependenciesToInclude?.contains(dependency.name) ?? false })
 
-				guard let sortedProjects = topologicalSort(graph, nodes: projectsToInclude) else {
+				guard let sortedDependencies = topologicalSort(graph, nodes: dependenciesToInclude) else {
 					return SignalProducer(error: .dependencyCycle(graph))
 				}
 
-				let sortedDependencies = cartfile.dependencies.keys
-					.filter { dependency in sortedProjects.contains(dependency) }
-					.sorted { left, right in sortedProjects.index(of: left)! < sortedProjects.index(of: right)! }
+				let sortedPinnedDependencies = cartfile.dependencies.keys
+					.filter { dependency in sortedDependencies.contains(dependency) }
+					.sorted { left, right in sortedDependencies.index(of: left)! < sortedDependencies.index(of: right)! }
 					.map { ($0, cartfile.dependencies[$0]!) }
 
-				return SignalProducer(sortedDependencies)
+				return SignalProducer(sortedPinnedDependencies)
 			}
 	}
 

@@ -202,8 +202,8 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case let .incompatibleRequirements(dependency, first, second):
-			let requirement: (VersionRequirement) -> String = { specifier, fromProject in
-				return "\(specifier)" + (fromProject.map { " (\($0))" } ?? "")
+			let requirement: (VersionRequirement) -> String = { specifier, fromDependency in
+				return "\(specifier)" + (fromDependency.map { " (\($0))" } ?? "")
 			}
 			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(requirement(first))\n\t\(requirement(second))"
 

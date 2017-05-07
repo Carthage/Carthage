@@ -112,8 +112,8 @@ class XcodeSpec: QuickSpec {
 			]
 			let version = PinnedVersion("0.1")
 
-			for project in dependencies {
-				let result = build(dependency: project, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			for dependency in dependencies {
+				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 					.flatten(.concat)
 					.ignoreTaskData()
 					.on(value: { (project, scheme) in
@@ -134,10 +134,10 @@ class XcodeSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			// Verify that the build products exist at the top level.
-			var projectNames = dependencies.map { project in project.name }
-			projectNames.append("ReactiveCocoaLayout")
+			var dependencyNames = dependencies.map { dependency in dependency.name }
+			dependencyNames.append("ReactiveCocoaLayout")
 
-			for dependency in projectNames {
+			for dependency in dependencyNames {
 				let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path
 				let macdSYMPath = (macPath as NSString).appendingPathExtension("dSYM")!
 				let iOSPath = buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path
