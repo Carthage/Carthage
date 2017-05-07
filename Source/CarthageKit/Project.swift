@@ -585,12 +585,12 @@ public final class Project {
 				switch dependency {
 				case let .gitHub(repository):
 					let client = Client(repository: repository)
-					return self.downloadMatchingBinariesForProject(dependency, atRevision: revision, fromRepository: repository, client: client)
+					return self.downloadMatchingBinaries(for: dependency, atRevision: revision, fromRepository: repository, client: client)
 						.flatMapError { error -> SignalProducer<URL, CarthageError> in
 							if !client.isAuthenticated {
 								return SignalProducer(error: error)
 							}
-							return self.downloadMatchingBinariesForProject(dependency, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
+							return self.downloadMatchingBinaries(for: dependency, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
 						}
 						.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, commitish: revision, toolchain: toolchain) }
 						.on(completed: {
@@ -616,7 +616,7 @@ public final class Project {
 	///
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
-	private func downloadMatchingBinariesForProject(_ project: Dependency, atRevision revision: String, fromRepository repository: Repository, client: Client) -> SignalProducer<URL, CarthageError> {
+	private func downloadMatchingBinaries(for dependency: Dependency, atRevision revision: String, fromRepository repository: Repository, client: Client) -> SignalProducer<URL, CarthageError> {
 		return client.release(forTag: revision, in: repository)
 			.map { _, release in release }
 			.filter { release in
@@ -630,7 +630,7 @@ public final class Project {
 				case let .apiError(_, _, error):
 					// Log the GitHub API request failure, not to error out,
 					// because that should not be fatal error.
-					self._projectEventsObserver.send(value: .skippedDownloadingBinaries(project, error.message))
+					self._projectEventsObserver.send(value: .skippedDownloadingBinaries(dependency, error.message))
 					return .empty
 
 				default:
@@ -638,7 +638,7 @@ public final class Project {
 				}
 			}
 			.on(value: { release in
-				self._projectEventsObserver.send(value: .downloadingBinaries(project, release.nameWithFallback))
+				self._projectEventsObserver.send(value: .downloadingBinaries(dependency, release.nameWithFallback))
 			})
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(release.assets)
@@ -649,7 +649,7 @@ public final class Project {
 						return CarthageProjectBinaryAssetContentTypes.contains(asset.contentType)
 					}
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
-						let fileURL = fileURLToCachedBinary(project, release, asset)
+						let fileURL = fileURLToCachedBinary(dependency, release, asset)
 
 						if FileManager.default.fileExists(atPath: fileURL.path) {
 							return SignalProducer(value: fileURL)
