@@ -571,7 +571,7 @@ public final class Project {
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-	private func installBinariesForProject(_ project: Dependency, atRevision revision: String, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
+	private func installBinaries(for dependency: Dependency, atRevision revision: String, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer.attempt {
 				return .success(self.useBinaries)
 			}
@@ -580,26 +580,26 @@ public final class Project {
 					return SignalProducer(value: false)
 				}
 
-				let checkoutDirectoryURL = self.directoryURL.appendingPathComponent(project.relativePath, isDirectory: true)
+				let checkoutDirectoryURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 
-				switch project {
+				switch dependency {
 				case let .gitHub(repository):
 					let client = Client(repository: repository)
-					return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: client)
+					return self.downloadMatchingBinariesForProject(dependency, atRevision: revision, fromRepository: repository, client: client)
 						.flatMapError { error -> SignalProducer<URL, CarthageError> in
 							if !client.isAuthenticated {
 								return SignalProducer(error: error)
 							}
-							return self.downloadMatchingBinariesForProject(project, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
+							return self.downloadMatchingBinariesForProject(dependency, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
 						}
-						.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: project.name, commitish: revision, toolchain: toolchain) }
+						.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, commitish: revision, toolchain: toolchain) }
 						.on(completed: {
 							_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
 						})
 						.flatMap(.concat) { self.removeItem(at: $0) }
 						.map { true }
 						.flatMapError { error in
-							self._projectEventsObserver.send(value: .skippedInstallingBinaries(dependency: project, error: error))
+							self._projectEventsObserver.send(value: .skippedInstallingBinaries(dependency: dependency, error: error))
 							return SignalProducer(value: false)
 						}
 						.concat(value: false)
@@ -829,7 +829,7 @@ public final class Project {
 								return checkoutOrCloneDependency
 							}
 
-							return self.installBinariesForProject(dependency, atRevision: version.commitish, toolchain: buildOptions?.toolchain)
+							return self.installBinaries(for: dependency, atRevision: version.commitish, toolchain: buildOptions?.toolchain)
 								.flatMap(.merge) { installed -> SignalProducer<(), CarthageError> in
 									if installed {
 										return .empty
