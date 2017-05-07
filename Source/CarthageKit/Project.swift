@@ -382,8 +382,8 @@ public final class Project {
 		return SignalProducer.attempt {
 				return .success(self.cachedVersions)
 			}
-			.flatMap(.merge) { versionsByProject -> SignalProducer<PinnedVersion, CarthageError> in
-				if let versions = versionsByProject[dependency] {
+			.flatMap(.merge) { versionsByDependency -> SignalProducer<PinnedVersion, CarthageError> in
+				if let versions = versionsByDependency[dependency] {
 					return SignalProducer(versions)
 				} else {
 					return fetchVersions
