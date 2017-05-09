@@ -21,8 +21,7 @@ guard ensureGitVersion().first()?.value == true else {
 }
 
 if let remoteVersion = remoteVersion(), localVersion() < remoteVersion {
-	let formatting = ColorOptions.Formatting(true)
-	carthage.println(formatting.bullets + "Please update to the latest Carthage version: \(remoteVersion). You currently are on \(localVersion())")
+	fputs("Please update to the latest Carthage version: \(remoteVersion). You currently are on \(localVersion())" + "\n", stderr)
 }
 
 if let carthagePath = Bundle.main.executablePath {
