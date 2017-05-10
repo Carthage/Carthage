@@ -121,12 +121,6 @@ public struct Cartfile {
 	}
 }
 
-extension Cartfile: CustomStringConvertible {
-	public var description: String {
-		return dependencies.description
-	}
-}
-
 /// Returns an array containing dependencies that are listed in both arguments.
 public func duplicateDependenciesIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [Dependency] {
 	let projects1 = cartfile1.dependencies.keys
