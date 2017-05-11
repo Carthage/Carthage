@@ -466,13 +466,13 @@ public func gitRootDirectoryForRepository(_ repositoryFileURL: URL) -> SignalPro
 /// Returns each submodule found in the given repository revision, or an empty
 /// signal if none exist.
 public func submodulesInRepository(_ repositoryFileURL: URL, revision: String = "HEAD") -> SignalProducer<Submodule, CarthageError> {
-	return gitmodulesEntriesInRepository(repositoryFileURL, revision: revision)
-		.flatMap(.concat) { name, path, url in
-			return gitRootDirectoryForRepository(repositoryFileURL)
-				.flatMap(.concat) { actualRepoURL in
+	return gitRootDirectoryForRepository(repositoryFileURL)
+		.flatMap(.concat) { actualRepoURL in
+			return gitmodulesEntriesInRepository(repositoryFileURL, revision: revision)
+				.flatMap(.concat) { name, path, url in
 					return submoduleSHAForPath(actualRepoURL, path, revision: revision)
 						.map { sha in Submodule(name: name, path: path, url: url, sha: sha) }
-			}
+				}
 		}
 }
 
