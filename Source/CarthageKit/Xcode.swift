@@ -589,19 +589,19 @@ public func buildScheme(_ scheme: String, withOptions options: BuildOptions, inP
 		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
 			return UUIDsForFramework(builtProductURL)
 				.collect()
-				.flatMap(.concat) { uuids -> SignalProducer<URL, CarthageError> in
+				.flatMap(.concat) { uuids -> SignalProducer<TaskEvent<URL>, CarthageError> in
 					// Only attempt to create debug info if there is at least 
 					// one dSYM architecture UUID in the framework. This can 
 					// occur if the framework is a static framework packaged 
 					// like a dynamic framework.
 					if uuids.isEmpty {
-						return SignalProducer(value: builtProductURL)
+						return .empty
 					}
 
 					return createDebugInformation(builtProductURL)
-						.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
 				}
-			}
+				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
+		}
 }
 
 /// Creates a dSYM for the provided dynamic framework.
