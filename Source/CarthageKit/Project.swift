@@ -978,13 +978,13 @@ public final class Project {
 					versionFileMatches(dependency, version: version, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
 				)
 			}
-			.reduce([:]) { (includedDependencies, nextGroup) -> [Dependency: PinnedVersion] in
+			.reduce([]) { (includedDependencies, nextGroup) -> [(Dependency, PinnedVersion)] in
 				let (nextDependency, projects, matches) = nextGroup
 
 				var dependenciesIncludingNext = includedDependencies
-				dependenciesIncludingNext[nextDependency.0] = nextDependency.1
+				dependenciesIncludingNext.append(nextDependency)
 
-				let projectsToBeBuilt = Set(includedDependencies.keys)
+				let projectsToBeBuilt = Set(includedDependencies.map { $0.0 })
 
 				guard options.cacheBuilds && projects.intersection(projectsToBeBuilt).isEmpty else {
 					return dependenciesIncludingNext
@@ -1004,7 +1004,7 @@ public final class Project {
 				}
 			}
 			.flatMap(.concat) { dependencies in
-				return SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies.map { ($0.0, $0.1) })
+				return SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies)
 			}
 			.flatMap(.concat) { (dependency, version) -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true).path
