@@ -587,11 +587,24 @@ public func buildScheme(_ scheme: String, withOptions options: BuildOptions, inP
 			}
 		}
 		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
-			return createDebugInformation(builtProductURL)
+			return UUIDsForFramework(builtProductURL)
+				.collect()
+				.flatMap(.concat) { uuids -> SignalProducer<TaskEvent<URL>, CarthageError> in
+					// Only attempt to create debug info if there is at least 
+					// one dSYM architecture UUID in the framework. This can 
+					// occur if the framework is a static framework packaged 
+					// like a dynamic framework.
+					if uuids.isEmpty {
+						return .empty
+					}
+
+					return createDebugInformation(builtProductURL)
+				}
 				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
 		}
 }
 
+/// Creates a dSYM for the provided dynamic framework.
 public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<TaskEvent<URL>, CarthageError> {
 	let dSYMURL = builtProductURL.appendingPathExtension("dSYM")
 
@@ -639,7 +652,6 @@ public func build(dependency: Dependency, version: PinnedVersion, _ rootDirector
 					}
 				}
 		}
-
 }
 
 /// Creates symlink between the dependency build folder and the root build folder
@@ -1081,6 +1093,11 @@ private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, Carthag
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
 		.map { String(data: $0, encoding: .utf8) ?? "" }
+		// If there are no dSYMs (the output is empty but has a zero exit 
+		// status), complete with no values. This can occur if this is a "fake"
+		// framework, meaning a static framework packaged like a dynamic 
+		// framework.
+		.filter { !$0.isEmpty }
 		.flatMap(.merge) { output -> SignalProducer<Set<UUID>, CarthageError> in
 			// UUIDs are letters, decimals, or hyphens.
 			var uuidCharacterSet = CharacterSet()
