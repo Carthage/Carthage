@@ -240,7 +240,7 @@ class XcodeSpec: QuickSpec {
 			}
 		}
 
-		it("should skip projects without shared dynamic framework schems") {
+		it("should skip projects without shared framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)

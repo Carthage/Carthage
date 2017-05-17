@@ -274,7 +274,7 @@ private func mergeModuleIntoModule(_ sourceModuleDirectoryURL: URL, _ destinatio
 
 /// Determines whether the specified framework type should be built automatically.
 private func shouldBuildFrameworkType(_ frameworkType: FrameworkType?) -> Bool {
-	return frameworkType == .dynamic
+	return frameworkType != nil
 }
 
 /// Determines whether the given scheme should be built automatically.
@@ -296,7 +296,7 @@ private func shouldBuildScheme(_ buildArguments: BuildArguments, _ forPlatforms:
 			}
 		}
 		.filter(shouldBuildFrameworkType)
-		// If we find any dynamic framework target, we should indeed build this scheme.
+		// If we find any framework target, we should indeed build this scheme.
 		.map { _ in true }
 		// Otherwise, nope.
 		.concat(value: false)
@@ -601,7 +601,7 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 
 			return BuildSettings.load(with: argsForLoading)
 				.filter { settings in
-					// Only copy build products that are dynamic frameworks
+					// Only copy build products that are frameworks
 					guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
 						return false
 					}
