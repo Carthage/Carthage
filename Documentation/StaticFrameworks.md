@@ -1,9 +1,9 @@
 # Build static frameworks to speed up your app’s launch times
-Carthage supports building static frameworks in place of dynamic libraries when used in concert with Keith Smiley’s `ld.py` script, published [here](https://github.com/keith/swift-staticlibs/blob/master/ld.py). If you have many dynamic frameworks, you may have noticed that your application launch times can be quite slow relative to other applications. To alleviate this slowdown, Apple suggests that you embed [at most six dynamic frameworks](https://developer.apple.com/videos/play/wwdc2016/406/?time=1794) into your applications. Unfortunately, Xcode has not supported building static Swift libraries out of the box since Apple made that recommendation, so it is a bit tricky to follow this advice. The goal of this guide is to show you how to reduce the number of embedded dynamic libraries in your application with some simple wrappers around Carthage.
+Carthage supports building static frameworks in place of dynamic frameworks when used in concert with Keith Smiley’s `ld.py` script, published [here](https://github.com/keith/swift-staticlibs/blob/master/ld.py). If you have many dynamic frameworks, you may have noticed that your application launch times can be quite slow relative to other applications. To alleviate this slowdown, Apple suggests that you embed [at most six dynamic frameworks](https://developer.apple.com/videos/play/wwdc2016/406/?time=1794) into your applications. Unfortunately, Xcode has not supported building static Swift frameworks out of the box since Apple made that recommendation, so it is a bit tricky to follow this advice. The goal of this guide is to show you how to reduce the number of embedded dynamic frameworks in your application with some simple wrappers around Carthage.
 
 Since you’re going to be rebuilding dynamic frameworks as static frameworks, make sure that when you perform a `carthage checkout`,  `carthage bootstrap`, or `carthage update` from this point forward, you are supplying the `--no-use-binaries` flag to `carthage`. This will ensure that Carthage doesn’t download prebuilt dyamic frameworks and place them into your `Carthage/Build` directory, since you won’t be needing them anyways.
 
-To build static libraries we suggest wrapping invocations of `carthage build` with a script that looks something like this:
+To build static frameworks with Carthage, we suggest wrapping invocations of `carthage build` with a script that looks something like this:
 
 ```bash
 #!/bin/sh -e
@@ -32,19 +32,19 @@ To double-check that Carthage is building static frameworks, you can inspect the
 ```bash
 file Carthage/Build/iOS/ReactiveCocoa.framework/ReactiveCocoa
 ```
-If the output includes `current ar archive`, congratulations—you’ve just built a static library using Carthage. If you see `Mach-O dynamically linked shared library`, something went wrong with your script—please double-check that you’ve followed the instructions above.
+If the output includes `current ar archive`, congratulations—you’ve just built a static framework using Carthage. If you see `Mach-O dynamically linked shared library`, something went wrong with your script—please double-check that you’ve followed the instructions above.
 
 Now that you have Carthage build static frameworks, there are two ways to integrate them into your existing projects:
 
 ## Linking many static frameworks into your application binary
-If you’re linking static frameworks into your existing application, it should be as simple as dragging and dropping the `.framework` files into the "Link Binary with Libraries" build phase, just as with dynamic libraries. If you see any new failure, please refer to the below troubleshooting sections.
+If you’re linking static frameworks into your existing application, it should be as simple as dragging and dropping the `.framework` files into the "Link Binary with Libraries" build phase, just as with dynamic frameworks. If you see any new failure, please refer to the below troubleshooting sections.
 
-If you were previously building these frameworks as dynamic libraries, make sure that you no longer embed them into your package's `Frameworks` folder via the `carthage copy-frameworks` command, as this is not necessary with static frameworks.
+If you were previously building these frameworks as dynamic frameworks, make sure that you no longer embed them into your package's `Frameworks` folder via the `carthage copy-frameworks` command, as this is not necessary with static frameworks.
 
 ## Merging your static frameworks into a single larger dynamic framework
 If your application has plugins or app extensions that need to share many frameworks, it may work best to merge many static frameworks together into one larger dynamic framework to share effectively between your targets. To do so, create a framework target in your Xcode project that your application and each of the other relevant targets depend on. Then, drag and drop the static `.framework` files that you want to merge into this binary into the "Link Binary with Libraries" build step of this new merged framework target.
 
-To ensure that this new merged framework is a true merge of all of its dependent static frameworks, you should include the `-all_load`  flag in its `OTHER_LDFLAGS` build setting. This forces the linker to merge the full static library into the framework, rather than just the parts that are used by the framework. If you don’t do this, consumers of the merged framework will have linker errors with undefined symbols.
+To ensure that this new merged framework is a true merge of all of its dependent static frameworks, you should include the `-all_load`  flag in its `OTHER_LDFLAGS` build setting. This forces the linker to merge the full static framework into the dynamic framework, rather than just the parts that are used by the framework. If you don’t do this, consumers of the merged framework will have linker errors with undefined symbols.
 
 ## Linker flags
 If any of your frameworks contain Objective-C extensions, you will need to supply the `-ObjC` flag in your `OTHER_LDFLAGS` build setting to ensure that they’re successfully invoked. If you do not supply this flag, you will see a runtime crash whenever an Objective-C extension is invoked.
