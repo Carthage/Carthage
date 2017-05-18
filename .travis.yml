@@ -25,6 +25,13 @@ matrix:
       language: objective-c
       osx_image: xcode8.2
       script:
+        - swift build -c release -Xswiftc -static-stdlib
+        - .build/release/carthage version
+      env: JOB=CI_BUILD_SWIFTPM
+    - os: osx
+      language: objective-c
+      osx_image: xcode8.2
+      script:
         - brew uninstall carthage
         - HOMEBREW_NO_AUTO_UPDATE=1 brew install bats
         - make install
