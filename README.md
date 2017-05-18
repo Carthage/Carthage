@@ -118,7 +118,7 @@ If you only want to update one , or specific, dependencies, pass them as a space
 carthage update Box
 ```
 
-or 
+or
 
 ```
 carthage update Box Result
@@ -148,7 +148,7 @@ Note that you should be [using submodules](#using-submodules-for-dependencies) b
 
 ### Caching builds
 
-By default Carthage will rebuild a dependency regardless of whether it's the same resolved version as before. Passing the `--cache-builds` will cause carthage to avoid rebuilding a dependency if it can. See information on [version files][VersionFile] for details on how carthage performs this caching. 
+By default Carthage will rebuild a dependency regardless of whether it's the same resolved version as before. Passing the `--cache-builds` will cause carthage to avoid rebuilding a dependency if it can. See information on [version files][VersionFile] for details on how carthage performs this caching.
 
 Note: At this time `--cache-builds` is incompatible with `--use-submodules`. Using both will result in working copy and committed changes to your submodule dependency not being correctly rebuilt. See [#1785](https://github.com/Carthage/Carthage/issues/1785) for details.
 
@@ -196,7 +196,7 @@ You can perform the archiving operation above with the `carthage archive` comman
 ```sh
 carthage build --no-skip-current
 carthage archive YourFrameworkName
-```    
+```
 
 Draft Releases will be automatically ignored, even if they correspond to the desired tag.
 
@@ -209,17 +209,17 @@ It is possible to use travis-ci in order to build and upload your tagged release
 1. Create `.travis.yml` file at the root of your repository based on that template. Set `FRAMEWORK_NAME` to the correct value.
 
 	Replace PROJECT_PLACEHOLDER and SCHEME_PLACEHOLDER
-	
+
 	If you are using a *workspace* instead of a *project* remove the xcode_project line and uncomment the xcode_workspace line.
-	
+
 	The project should be in the format: MyProject.xcodeproj
-	
+
 	The workspace should be in the format: MyWorkspace.xcworkspace
-	
+
 	Feel free to update the `xcode_sdk` value to another SDK, note that testing on iphoneos SDK would require you to upload a code signing identity
 
 	For more informations you can visit [travis docs for objective-c projects](https://docs.travis-ci.com/user/languages/objective-c)
-	
+
 	```YAML
 	language: objective-c
 	osx_image: xcode7.3
@@ -228,7 +228,7 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	xcode_scheme: <SCHEME_PLACEHOLDER>
 	xcode_sdk: iphonesimulator9.3
 	env:
-	  global: 
+	  global:
 	    - FRAMEWORK_NAME=<THIS_IS_A_PLACEHOLDER_REPLACE_ME>
 	before_install:
 	  - brew update
@@ -236,7 +236,7 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	before_script:
 	  # bootstrap the dependencies for the project
 	  # you can remove if you don't have dependencies
-	  - carthage bootstrap	
+	  - carthage bootstrap
 	before_deploy:
 	  - carthage build --no-skip-current
 	  - carthage archive $FRAMEWORK_NAME
@@ -245,26 +245,30 @@ It is possible to use travis-ci in order to build and upload your tagged release
 
 	This command will encode your github credentials into the .travis.yml file in order to let travis upload the release to github.com
 	When prompted for the file to upload, enter $FRAMEWORK_NAME.framework.zip
-	
+
 1. Update the deploy section to run on tags:
-	
-	In `.travis.yml` locate: 
-	
+
+	In `.travis.yml` locate:
+
 	```YAML
-	on: 
+	on:
 	  repo: repo/repo
 	```
-		
+
 	And add `tags: true` and `skip_cleanup: true`:
-		
+
 	```YAML
 	skip_cleanup: true
 	on:
 	  repo: repo/repo
 	  tags: true
 	```
-	
+
 	That will let travis know to create a deployment when a new tag is pushed and prevent travis to cleanup the generated zip file
+
+### Build static frameworks to speed up your app’s launch times
+
+If you embed many dynamic frameworks into your app, its pre-main launch times may be quite slow. Carthage is able to help alleviate this slowdown by building your dynamic frameworks as static frameworks instead. This allows you to link them directly into your application or merge them together into a larger dynamic framework with a few simple modifications to your workflow. See the [StaticFrameworks][StaticFrameworks] doc for details.
 
 ### Declare your compatibility
 
@@ -302,3 +306,4 @@ Header backdrop photo is released under the [CC BY-NC-SA 2.0](https://creativeco
 [Bash/Zsh/Fish Completion]: Documentation/BashZshFishCompletion.md
 [CarthageKit]: Source/CarthageKit
 [VersionFile]: Documentation/VersionFile.md
+[StaticFrameworks]: Documentation/StaticFrameworks.md
