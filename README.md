@@ -268,7 +268,11 @@ It is possible to use travis-ci in order to build and upload your tagged release
 
 ### Build static frameworks to speed up your app’s launch times
 
-If you embed many dynamic frameworks into your app, its pre-main launch times may be quite slow. Carthage is able to help mitigate this by building your dynamic frameworks as static frameworks instead. Static frameworks can be linked directly into your application or merged together into a larger dynamic framework with a few simple modifications to your workflow, which can result in dramatic recuctions in pre-main lauch times. See the [StaticFrameworks][StaticFrameworks] doc for details.
+If you embed many dynamic frameworks into your app, its pre-main launch times may be quite slow. Carthage is able to help mitigate this by building your dynamic frameworks as static frameworks instead. Static frameworks can be linked directly into your application or merged together into a larger dynamic framework with a few simple modifications to your workflow, which can result in dramatic reductions in pre-main lauch times. See the [StaticFrameworks][StaticFrameworks] doc for details.
+
+*Please note that a few caveats apply to this approach:*
+- Swift static frameworks are not officially supported by Apple
+- This is an advanced workflow that is not built into Carthage, YMMV
 
 ### Declare your compatibility
 
