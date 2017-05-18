@@ -14,7 +14,7 @@ import XCDBLD
 import ReactiveTask
 
 /// Carthage's bundle identifier.
-public let CarthageKitBundleIdentifier = Bundle(for: Project.self).bundleIdentifier!
+public let CarthageKitBundleIdentifier: String = "org.carthage.CarthageKit"
 
 /// The fallback dependencies URL to be used in case
 /// the intended ~/Library/Caches/org.carthage.CarthageKit cannot

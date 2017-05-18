@@ -6,6 +6,8 @@
 //  Copyright (c) 2015 Carthage. All rights reserved.
 //
 
+import Dispatch
+import Foundation
 import ReactiveSwift
 
 /// Manages the execution of SignalProducers, like the flatten(...) operator,
