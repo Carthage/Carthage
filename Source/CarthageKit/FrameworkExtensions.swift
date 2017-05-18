@@ -322,7 +322,7 @@ extension Reactive where Base: FileManager {
 	public func createTemporaryDirectoryWithTemplate(_ template: String) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer.attempt { [base = self.base] () -> Result<String, CarthageError> in
 			let temporaryDirectory: NSString
-			if #available(OSXApplicationExtension 10.12, *) {
+			if #available(macOS 10.12, *) {
 				temporaryDirectory = base.temporaryDirectory.path as NSString
 			} else {
 				temporaryDirectory = NSTemporaryDirectory() as NSString
