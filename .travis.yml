@@ -1,6 +1,9 @@
 install: true
 git:
   submodules: false
+cache:
+  directories:
+    - Packages # SwiftPM
 branches:
   only:
     - master
