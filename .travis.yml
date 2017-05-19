@@ -25,7 +25,7 @@ matrix:
       language: objective-c
       osx_image: xcode8.2
       script:
-        - swift build -c release -Xswiftc -static-stdlib
+        - make swiftpm
         - .build/release/carthage version
       env: JOB=CI_BUILD_SWIFTPM
     - os: osx

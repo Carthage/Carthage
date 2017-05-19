@@ -73,3 +73,6 @@ package: installables
    	"$(OUTPUT_PACKAGE)"
 
 	(cd "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" && zip -q -r --symlinks - "$(OUTPUT_FRAMEWORK)") > "$(OUTPUT_FRAMEWORK_ZIP)"
+
+swiftpm:
+	swift build -c release -Xswiftc -static-stdlib
