@@ -14,7 +14,7 @@ import Result
 import Tentacle
 
 public func localVersion() -> SemanticVersion {
-	let versionString = "0.22.0"
+	let versionString = "0.23.0"
 	return SemanticVersion.from(Scanner(string: versionString)).value!
 }
 
