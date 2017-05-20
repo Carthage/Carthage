@@ -960,6 +960,22 @@ public final class Project {
 			}
 	}
 
+	public func generateSwiftPackageManagerXcodeProjectIfAvailable(forDependencyAt dependencyPath: String) -> SignalProducer<(), NoError> {
+		let files = (try? FileManager.default.contentsOfDirectory(atPath: dependencyPath)) ?? []
+
+		let hasXcodeProjectFile = files.lazy.filter { $0.hasSuffix(".xcodeproj") || $0.hasSuffix(".xcworkspace") }.first != nil
+		guard !hasXcodeProjectFile else { return .init(value: ()) }
+
+		let hasPackageFile = files.lazy.filter { $0 == "Package.swift" }.first != nil
+		guard hasPackageFile else { return .init(value: ()) }
+
+		let task = Task("/usr/bin/swift", arguments: [ "package", "generate-xcodeproj" ], workingDirectoryPath: dependencyPath)
+		return task.launch()
+			.ignoreTaskData()
+			.map { _ in }
+			.flatMapError { _ in .init(value: ()) }
+	}
+
 	/// Attempts to build each Carthage dependency that has been checked out,
 	/// optionally they are limited by the given list of dependency names.
 	/// Cached dependencies whose dependency trees are also cached will not
@@ -1018,7 +1034,10 @@ public final class Project {
 				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version.commitish, isDirectory: true)
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
-				return build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+				return self.generateSwiftPackageManagerXcodeProjectIfAvailable(forDependencyAt: dependencyPath)
+					.flatMap(.concat) { _ in
+						build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+					}
 					.map { producer in
 						return producer.flatMapError { error in
 							switch error {
