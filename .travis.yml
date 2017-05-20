@@ -16,12 +16,7 @@ matrix:
       env: JOB=CI_BUILD_TEST
     - os: osx
       language: objective-c
-      osx_image: xcode8.2
-      script: make test
-      env: JOB=CI_BUILD_TEST
-    - os: osx
-      language: objective-c
-      osx_image: xcode8.2
+      osx_image: xcode8.3
       script: make package
       env: JOB=CI_BUILD_PACKAGE
     - os: osx
@@ -33,7 +28,7 @@ matrix:
       env: JOB=CI_BUILD_SWIFTPM
     - os: osx
       language: objective-c
-      osx_image: xcode8.2
+      osx_image: xcode8.3
       script:
         - brew uninstall carthage
         - HOMEBREW_NO_AUTO_UPDATE=1 brew install bats
