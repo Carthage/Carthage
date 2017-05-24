@@ -68,7 +68,7 @@ public enum CarthageError: Error {
 
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
-	case noSharedSchemes(ProjectLocator, Repository?)
+	case noSharedSchemes(ProjectLocator, (Server, Repository)?)
 
 	/// Timeout whilst running `xcodebuild`
 	case xcodebuildTimeout(ProjectLocator)
@@ -148,7 +148,12 @@ extension CarthageError: Equatable {
 			return la == ra && lb == rb
 
 		case let (.noSharedSchemes(la, lb), .noSharedSchemes(ra, rb)):
-			return la == ra && lb == rb
+			guard la == ra else { return false }
+			switch (lb, rb) {
+			case (nil, nil): return true
+			case let ((lb1, lb2)?, (rb1, rb2)?): return lb1 == rb1 && lb2 == rb2
+			default: return false
+			}
 
 		case let (.duplicateDependencies(left), .duplicateDependencies(right)):
 			return left.sorted() == right.sorted()
@@ -245,8 +250,8 @@ extension CarthageError: CustomStringConvertible {
 			}
 
 			switch dependency {
-			case let .gitHub(repository):
-				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
+			case let .gitHub(server, repository):
+				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(server.newIssueURL(for: repository).absoluteString)"
 
 			case .git, .binary:
 				break
@@ -254,10 +259,10 @@ extension CarthageError: CustomStringConvertible {
 
 			return description
 
-		case let .noSharedSchemes(project, repository):
+		case let .noSharedSchemes(project, serverAndRepository):
 			var description = "Project \"\(project)\" has no shared schemes"
-			if let repository = repository {
-				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
+			if let (server, repository) = serverAndRepository {
+				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(server.newIssueURL(for: repository).absoluteString)"
 			}
 
 			return description

@@ -583,14 +583,14 @@ public final class Project {
 				let checkoutDirectoryURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 
 				switch dependency {
-				case let .gitHub(repository):
-					let client = Client(repository: repository)
+				case let .gitHub(server, repository):
+					let client = Client(server: server, repository: repository)
 					return self.downloadMatchingBinaries(for: dependency, atRevision: revision, fromRepository: repository, client: client)
 						.flatMapError { error -> SignalProducer<URL, CarthageError> in
 							if !client.isAuthenticated {
 								return SignalProducer(error: error)
 							}
-							return self.downloadMatchingBinaries(for: dependency, atRevision: revision, fromRepository: repository, client: Client(repository: repository, isAuthenticated: false))
+							return self.downloadMatchingBinaries(for: dependency, atRevision: revision, fromRepository: repository, client: Client(server: server, repository: repository, isAuthenticated: false))
 						}
 						.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, commitish: revision, toolchain: toolchain) }
 						.on(completed: {
@@ -617,7 +617,7 @@ public final class Project {
 	/// Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
 	private func downloadMatchingBinaries(for dependency: Dependency, atRevision revision: String, fromRepository repository: Repository, client: Client) -> SignalProducer<URL, CarthageError> {
-		return client.release(forTag: revision, in: repository)
+		return client.execute(repository.release(forTag: revision))
 			.map { _, release in release }
 			.filter { release in
 				return !release.isDraft && !release.assets.isEmpty

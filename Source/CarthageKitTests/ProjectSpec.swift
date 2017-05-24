@@ -204,7 +204,7 @@ class ProjectSpec: QuickSpec {
 				expect(resultError).notTo(beNil())
 
 				let makeDependency: (String, String, [String]) -> DuplicateDependency = { (repoOwner, repoName, locations) in
-					let dependency = Dependency.gitHub(Repository(owner: repoOwner, name: repoName))
+					let dependency = Dependency.gitHub(.dotCom, Repository(owner: repoOwner, name: repoName))
 					return DuplicateDependency(dependency: dependency, locations: locations)
 				}
 
