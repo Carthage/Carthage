@@ -3,7 +3,8 @@ git:
   submodules: false
 cache:
   directories:
-    - Packages # SwiftPM
+    - .build/checkouts # SwiftPM
+    - .build/repositories # SwiftPM
 branches:
   only:
     - master
@@ -21,7 +22,7 @@ matrix:
       env: JOB=CI_BUILD_PACKAGE
     - os: osx
       language: objective-c
-      osx_image: xcode8.2
+      osx_image: xcode8.3
       script:
         - make swiftpm
         - .build/release/carthage version
