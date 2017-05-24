@@ -9,5 +9,5 @@ destination="${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}"
 for fixture in "carthage-fixtures-ReactiveCocoaLayout-master" "CartfileOnly" "CartfilePrivateOnly" "NoCartfile" "SchemeDiscoverySampleForCarthage-0.2" "Swell-0.5.0" "SampleMultipleSubprojects" "SampleGitSubmodule" "DependencyTest" "WorkspaceWithDependency"
 do
 	rm -Rf "$destination/$fixture"
-	unzip -q -d "$destination" "${SRCROOT}/Source/CarthageKitTests/fixtures/$fixture"
+	unzip -q -d "$destination" "${SRCROOT}/Tests/CarthageKitTests/fixtures/$fixture"
 done

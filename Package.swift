@@ -19,9 +19,8 @@ let package = Package(
     ],
     exclude: [
         "Source/CarthageIntegration",
-        "Source/CarthageKitTests",
         "Source/Scripts",
-        "Source/XCDBLDTests",
         "Source/carthage/swift-is-crashy.c",
+        "Tests/CarthageKitTests/FakeOldObjc.framework",
     ]
 )
