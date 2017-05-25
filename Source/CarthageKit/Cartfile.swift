@@ -176,8 +176,8 @@ extension ResolvedCartfile: CustomStringConvertible {
 
 /// Uniquely identifies a project that can be used as a dependency.
 public enum Dependency {
-	/// A repository hosted on GitHub.com.
-	case gitHub(Repository)
+	/// A repository hosted on GitHub.com or GitHub Enterprise.
+	case gitHub(Server, Repository)
 
 	/// An arbitrary Git repository.
 	case git(GitURL)
@@ -188,7 +188,7 @@ public enum Dependency {
 	/// The unique, user-visible name for this project.
 	public var name: String {
 		switch self {
-		case let .gitHub(repo):
+		case let .gitHub(_, repo):
 			return repo.name
 
 		case let .git(url):
@@ -231,8 +231,8 @@ extension Dependency: Comparable {
 extension Dependency: Hashable {
 	public var hashValue: Int {
 		switch self {
-		case let .gitHub(repo):
-			return repo.hashValue
+		case let .gitHub(server, repo):
+			return server.hashValue ^ repo.hashValue
 
 		case let .git(url):
 			return url.hashValue
@@ -250,7 +250,7 @@ extension Dependency: Scannable {
 
 		if scanner.scanString("github", into: nil) {
 			parser = { repoIdentifier in
-				return Repository.fromIdentifier(repoIdentifier).map { self.gitHub($0) }
+				return Repository.fromIdentifier(repoIdentifier).map { self.gitHub($0, $1) }
 			}
 		} else if scanner.scanString("git", into: nil) {
 			parser = { urlString in
@@ -292,14 +292,14 @@ extension Dependency: Scannable {
 extension Dependency: CustomStringConvertible {
 	public var description: String {
 		switch self {
-		case let .gitHub(repo):
+		case let .gitHub(server, repo):
 			let repoDescription: String
-			switch repo.server {
+			switch server {
 			case .dotCom:
 				repoDescription = "\(repo.owner)/\(repo.name)"
 
 			case .enterprise:
-				repoDescription = "\(repo.url)"
+				repoDescription = "\(server.url(for: repo))"
 			}
 			return "github \"\(repoDescription)\""
 
@@ -317,11 +317,11 @@ extension Dependency {
 	/// Returns the URL that the dependency's remote repository exists at.
 	func gitURL(preferHTTPS: Bool) -> GitURL? {
 		switch self {
-		case let .gitHub(repository):
+		case let .gitHub(server, repository):
 			if preferHTTPS {
-				return repository.httpsURL
+				return server.httpsURL(for: repository)
 			} else {
-				return repository.sshURL
+				return server.sshURL(for: repository)
 			}
 
 		case let .git(url):

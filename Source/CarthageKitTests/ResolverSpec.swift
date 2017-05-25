@@ -16,9 +16,9 @@ import Tentacle
 
 private let git1 = Dependency.git(GitURL("https://example.com/repo1"))
 private let git2 = Dependency.git(GitURL("https://example.com/repo2.git"))
-private let github1 = Dependency.gitHub(Repository(owner: "gob", name: "1"))
-private let github2 = Dependency.gitHub(Repository(owner: "gob", name: "2"))
-private let github3 = Dependency.gitHub(Repository(owner: "gob", name: "3"))
+private let github1 = Dependency.gitHub(.dotCom, Repository(owner: "gob", name: "1"))
+private let github2 = Dependency.gitHub(.dotCom, Repository(owner: "gob", name: "2"))
+private let github3 = Dependency.gitHub(.dotCom, Repository(owner: "gob", name: "3"))
 
 private extension PinnedVersion {
 	static let v0_1_0 = PinnedVersion("v0.1.0")

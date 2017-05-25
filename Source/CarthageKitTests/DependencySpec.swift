@@ -52,18 +52,17 @@ class DependencySpec: QuickSpec {
 			context ("github") {
 
 				it("should equal the name of a github.com repo") {
-					let dependency = Dependency.gitHub(Repository(owner: "owner", name: "name"))
+					let dependency = Dependency.gitHub(.dotCom, Repository(owner: "owner", name: "name"))
 
 					expect(dependency.name).to(equal("name"))
 				}
 
 				it("should equal the name of an enterprise github repo") {
 					let enterpriseRepo = Repository(
-						server: .enterprise(url: URL(string: "http://server.com")!),
 						owner: "owner",
 						name: "name")
 
-					let dependency = Dependency.gitHub(enterpriseRepo)
+					let dependency = Dependency.gitHub(.enterprise(url: URL(string: "http://server.com")!), enterpriseRepo)
 
 					expect(dependency.name).to(equal("name"))
 				}
@@ -118,7 +117,7 @@ class DependencySpec: QuickSpec {
 					let dependency = Dependency.from(scanner).value
 
 					let expectedRepo = Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")
-					expect(dependency).to(equal(Dependency.gitHub(expectedRepo)))
+					expect(dependency).to(equal(Dependency.gitHub(.dotCom, expectedRepo)))
 				}
 
 				it("should read a github.com dependency with full url") {
@@ -127,7 +126,7 @@ class DependencySpec: QuickSpec {
 					let dependency = Dependency.from(scanner).value
 
 					let expectedRepo = Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")
-					expect(dependency).to(equal(Dependency.gitHub(expectedRepo)))
+					expect(dependency).to(equal(Dependency.gitHub(.dotCom, expectedRepo)))
 				}
 
 				it("should read an enterprise github dependency") {
@@ -136,10 +135,9 @@ class DependencySpec: QuickSpec {
 					let dependency = Dependency.from(scanner).value
 
 					let expectedRepo = Repository(
-						server: .enterprise(url: URL(string: "http://mysupercoolinternalwebhost.com")!),
 						owner: "ReactiveCocoa",
 						name: "ReactiveCocoa")
-					expect(dependency).to(equal(Dependency.gitHub(expectedRepo)))
+					expect(dependency).to(equal(Dependency.gitHub(.enterprise(url: URL(string: "http://mysupercoolinternalwebhost.com")!), expectedRepo)))
 				}
 
 				it("should fail with invalid github.com dependency") {

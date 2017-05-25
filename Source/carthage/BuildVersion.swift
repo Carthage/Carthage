@@ -20,7 +20,7 @@ public func localVersion() -> SemanticVersion {
 
 public func remoteVersion() -> SemanticVersion? {
 	let latestRemoteVersion = Client(.dotCom)
-		.releases(in: Repository(owner: "Carthage", name: "Carthage"), perPage: 2)
+		.execute(Repository(owner: "Carthage", name: "Carthage").releases, perPage: 2)
 		.map { _, releases in
 			return releases.first { !$0.isDraft }!
 		}

@@ -24,38 +24,40 @@ private func gitHubUserAgent() -> String {
 	return "\(String(describing: identifier))/\(version)"
 }
 
+extension Server {
+	/// The URL that should be used for cloning the given repository over HTTPS.
+	public func httpsURL(for repository: Repository) -> GitURL {
+		let auth = tokenFromEnvironment(forServer: self).map { "\($0)@" } ?? ""
+		let scheme = url.scheme!
+
+		return GitURL("\(scheme)://\(auth)\(url.host!)/\(repository.owner)/\(repository.name).git")
+	}
+
+	/// The URL that should be used for cloning the given repository over SSH.
+	public func sshURL(for repository: Repository) -> GitURL {
+		return GitURL("ssh://git@\(url.host!)/\(repository.owner)/\(repository.name).git")
+	}
+
+	/// The URL for filing a new GitHub issue for the given repository.
+	public func newIssueURL(for repository: Repository) -> URL {
+		return URL(string: "\(self)/\(repository.owner)/\(repository.name)/issues/new")!
+	}
+}
+
 extension Repository {
-	/// The URL that should be used for cloning this repository over HTTPS.
-	public var httpsURL: GitURL {
-		let auth = tokenFromEnvironment(forServer: server).map { "\($0)@" } ?? ""
-		let scheme = server.url.scheme!
-
-		return GitURL("\(scheme)://\(auth)\(server.url.host!)/\(owner)/\(name).git")
-	}
-
-	/// The URL that should be used for cloning this repository over SSH.
-	public var sshURL: GitURL {
-		return GitURL("ssh://git@\(server.url.host!)/\(owner)/\(name).git")
-	}
-
-	/// The URL for filing a new GitHub issue for this repository.
-	public var newIssueURL: URL {
-		return URL(string: "\(server)/\(owner)/\(name)/issues/new")!
-	}
-	
 	/// Matches an identifier of the form "owner/name".
 	private static let NWORegex = try! NSRegularExpression(pattern: "^([\\-\\.\\w]+)/([\\-\\.\\w]+)$", options: [])
 
 	/// Parses repository information out of a string of the form "owner/name"
 	/// for the github.com, or the form "http(s)://hostname/owner/name" for
 	/// Enterprise instances.
-	public static func fromIdentifier(_ identifier: String) -> Result<Repository, ScannableError> {
+	public static func fromIdentifier(_ identifier: String) -> Result<(Server, Repository), ScannableError> {
 		// GitHub.com
 		let range = NSRange(location: 0, length: identifier.utf16.count)
 		if let match = NWORegex.firstMatch(in: identifier, range: range) {
 			let owner = (identifier as NSString).substring(with: match.rangeAt(1))
 			let name = (identifier as NSString).substring(with: match.rangeAt(2))
-			return .success(self.init(owner: owner, name: strippingGitSuffix(name)))
+			return .success((.dotCom, self.init(owner: owner, name: strippingGitSuffix(name))))
 		}
 
 		// GitHub Enterprise
@@ -72,10 +74,10 @@ extension Repository {
 			// If the host name starts with “github.com”, that is not an enterprise
 			// one.
 			if host == "github.com" || host == "www.github.com" {
-				return .success(self.init(owner: owner, name: strippingGitSuffix(name)))
+				return .success((.dotCom, self.init(owner: owner, name: strippingGitSuffix(name))))
 			} else {
 				let baseURL = url.deletingLastPathComponent().deletingLastPathComponent()
-				return .success(self.init(server: .enterprise(url: baseURL), owner: owner, name: strippingGitSuffix(name)))
+				return .success((.enterprise(url: baseURL), self.init(owner: owner, name: strippingGitSuffix(name))))
 			}
 		}
 
@@ -163,12 +165,10 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 }
 
 extension Client {
-	convenience init(repository: Repository, isAuthenticated: Bool = true) {
+	convenience init(server: Server, isAuthenticated: Bool = true) {
 		if Client.userAgent == nil {
 			Client.userAgent = gitHubUserAgent()
 		}
-		
-		let server = repository.server
 		
 		if !isAuthenticated {
 			self.init(server)
