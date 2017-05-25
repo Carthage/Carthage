@@ -584,13 +584,13 @@ public final class Project {
 
 				switch dependency {
 				case let .gitHub(server, repository):
-					let client = Client(server: server, repository: repository)
+					let client = Client(server: server)
 					return self.downloadMatchingBinaries(for: dependency, atRevision: revision, fromRepository: repository, client: client)
 						.flatMapError { error -> SignalProducer<URL, CarthageError> in
 							if !client.isAuthenticated {
 								return SignalProducer(error: error)
 							}
-							return self.downloadMatchingBinaries(for: dependency, atRevision: revision, fromRepository: repository, client: Client(server: server, repository: repository, isAuthenticated: false))
+							return self.downloadMatchingBinaries(for: dependency, atRevision: revision, fromRepository: repository, client: Client(server: server, isAuthenticated: false))
 						}
 						.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, commitish: revision, toolchain: toolchain) }
 						.on(completed: {

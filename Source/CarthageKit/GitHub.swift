@@ -165,7 +165,7 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 }
 
 extension Client {
-	convenience init(server: Server, repository: Repository, isAuthenticated: Bool = true) {
+	convenience init(server: Server, isAuthenticated: Bool = true) {
 		if Client.userAgent == nil {
 			Client.userAgent = gitHubUserAgent()
 		}
