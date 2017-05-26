@@ -555,7 +555,7 @@
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
 			name = CarthageKitTests;
-			path = Source/CarthageKitTests;
+			path = Tests/CarthageKitTests;
 			sourceTree = "<group>";
 		};
 		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
@@ -954,7 +954,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
+				INFOPLIST_FILE = Tests/CarthageKitTests/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -968,7 +968,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
+				INFOPLIST_FILE = Tests/CarthageKitTests/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -1011,7 +1011,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
+				INFOPLIST_FILE = Tests/CarthageKitTests/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -1054,7 +1054,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = Source/CarthageKitTests/Info.plist;
+				INFOPLIST_FILE = Tests/CarthageKitTests/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

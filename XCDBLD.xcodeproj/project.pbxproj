@@ -223,7 +223,7 @@
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
 			name = XCDBLDTests;
-			path = Source/XCDBLDTests;
+			path = Tests/XCDBLDTests;
 			sourceTree = "<group>";
 		};
 		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
@@ -445,7 +445,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = Source/XCDBLDTests/Info.plist;
+				INFOPLIST_FILE = Tests/XCDBLDTests/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -460,7 +460,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = Source/XCDBLDTests/Info.plist;
+				INFOPLIST_FILE = Tests/XCDBLDTests/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -504,7 +504,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = Source/XCDBLDTests/Info.plist;
+				INFOPLIST_FILE = Tests/XCDBLDTests/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -548,7 +548,7 @@
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = Source/XCDBLDTests/Info.plist;
+				INFOPLIST_FILE = Tests/XCDBLDTests/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.carthage.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
