@@ -2,6 +2,7 @@ TEMPORARY_FOLDER?=/tmp/Carthage.dst
 PREFIX?=/usr/local
 
 XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage' DSTROOT=$(TEMPORARY_FOLDER)
+XCODEBUILD_FORMATTER=cat
 
 INTERNAL_PACKAGE=CarthageApp.pkg
 OUTPUT_PACKAGE=Carthage.pkg
@@ -22,20 +23,20 @@ DISTRIBUTION_PLIST=Source/carthage/Distribution.plist
 .PHONY: all bootstrap clean install package test uninstall
 
 all: bootstrap
-	xcodebuild $(XCODEFLAGS) build
+	set -o pipefail && xcodebuild $(XCODEFLAGS) build | $(XCODEBUILD_FORMATTER)
 
 bootstrap:
 	git submodule update --init --recursive
 
 test: clean bootstrap
-	xcodebuild $(XCODEFLAGS) -configuration Release ENABLE_TESTABILITY=YES test
+	set -o pipefail && xcodebuild $(XCODEFLAGS) -configuration Release ENABLE_TESTABILITY=YES test | $(XCODEBUILD_FORMATTER)
 
 clean:
 	rm -f "$(INTERNAL_PACKAGE)"
 	rm -f "$(OUTPUT_PACKAGE)"
 	rm -f "$(OUTPUT_FRAMEWORK_ZIP)"
 	rm -rf "$(TEMPORARY_FOLDER)"
-	xcodebuild $(XCODEFLAGS) clean
+	set -o pipefail && xcodebuild $(XCODEFLAGS) clean | $(XCODEBUILD_FORMATTER)
 
 install: package
 	sudo installer -pkg $(OUTPUT_PACKAGE) -target /
@@ -45,7 +46,7 @@ uninstall:
 	rm -f "$(BINARIES_FOLDER)/carthage"
 
 installables: clean bootstrap
-	xcodebuild $(XCODEFLAGS) install
+	set -o pipefail && xcodebuild $(XCODEFLAGS) install | $(XCODEBUILD_FORMATTER)
 
 	mkdir -p "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)"
 	mv -f "$(CARTHAGEKIT_BUNDLE)" "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)"
