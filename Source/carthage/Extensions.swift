@@ -81,13 +81,6 @@ extension GitURL: ArgumentProtocol {
 	public static func from(string: String) -> GitURL? {
 		return self.init(string)
 	}
-
-	#if swift(>=3)
-	#else
-	public static func fromString(string: String) -> GitURL? {
-		return from(string)
-	}
-	#endif
 }
 
 /// Logs project events put into the sink.

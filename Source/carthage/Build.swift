@@ -338,11 +338,4 @@ extension BuildPlatform: ArgumentProtocol {
 			return .multiple(buildPlatforms)
 		}
 	}
-
-	#if swift(>=3)
-	#else
-	public static func fromString(string: String) -> BuildPlatform? {
-		return from(string)
-	}
-	#endif
 }

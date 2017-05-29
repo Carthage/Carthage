@@ -12,13 +12,6 @@ import Nimble
 import Quick
 import ReactiveSwift
 
-#if swift(>=3)
-#else
-	internal func type<T>(of t: T) -> T.Type {
-		return t.dynamicType
-	}
-#endif
-
 class ArchiveSpec: QuickSpec {
 	override func spec() {
 		describe("unzipping") {
