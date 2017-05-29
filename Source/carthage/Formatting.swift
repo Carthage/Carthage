@@ -46,13 +46,6 @@ public enum ColorArgument: String, ArgumentProtocol, CustomStringConvertible {
 	public static func from(string: String) -> ColorArgument? {
 		return self.init(rawValue: string.lowercased())
 	}
-
-	#if swift(>=3)
-	#else
-	public static func fromString(string: String) -> ColorArgument? {
-		return from(string)
-	}
-	#endif
 }
 
 /// Options for whether to color and format terminal output.
