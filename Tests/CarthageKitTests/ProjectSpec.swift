@@ -333,7 +333,7 @@ class ProjectSpec: QuickSpec {
 		describe("downloadBinaryFrameworkDefinition") {
 
 			var project: Project!
-			let testDefinitionURL = Bundle(for: type(of: self)).url(forResource: "successful", withExtension: "json")!
+			let testDefinitionURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/successful", withExtension: "json")!
 
 			beforeEach {
 				project = Project(directoryURL: URL(string: "file://fake")!)
@@ -360,7 +360,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should return an invalid binary JSON error if unable to parse file") {
-				let invalidDependencyURL = Bundle(for: type(of: self)).url(forResource: "invalid", withExtension: "json")!
+				let invalidDependencyURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/invalid", withExtension: "json")!
 
 				let actualError = project.downloadBinaryFrameworkDefinition(url: invalidDependencyURL).first()?.error
 
