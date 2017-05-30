@@ -20,10 +20,22 @@
       "version": "3.0.0"
     },
     {
+      "package": "Nimble",
+      "reason": null,
+      "repositoryURL": "https://github.com/Quick/Nimble.git",
+      "version": "6.1.0"
+    },
+    {
       "package": "PrettyColors",
       "reason": null,
       "repositoryURL": "https://github.com/jdhealy/PrettyColors.git",
       "version": "5.0.0"
+    },
+    {
+      "package": "Quick",
+      "reason": null,
+      "repositoryURL": "https://github.com/Quick/Quick.git",
+      "version": "1.1.0"
     },
     {
       "package": "ReactiveSwift",
