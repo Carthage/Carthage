@@ -21,6 +21,6 @@ let package = Package(
         "Source/CarthageIntegration",
         "Source/Scripts",
         "Source/carthage/swift-is-crashy.c",
-        "Tests/CarthageKitTests/FakeOldObjc.framework",
+        "Tests/CarthageKitTests/Resources/FakeOldObjc.framework",
     ]
 )

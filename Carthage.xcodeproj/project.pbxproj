@@ -178,8 +178,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		14A7BF471AA810B200C70ABB /* Cartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Cartfile; path = DuplicateDependencies/Cartfile; sourceTree = "<group>"; };
-		14A7BF481AA810B200C70ABB /* Cartfile.private */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Cartfile.private; path = DuplicateDependencies/Cartfile.private; sourceTree = "<group>"; };
+		14A7BF471AA810B200C70ABB /* Cartfile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Cartfile; sourceTree = "<group>"; };
+		14A7BF481AA810B200C70ABB /* Cartfile.private */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Cartfile.private; sourceTree = "<group>"; };
 		3A0472F21C782B4000097EC7 /* Algorithms.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Algorithms.swift; sourceTree = "<group>"; };
 		3A0472F41C782D1D00097EC7 /* AlgorithmsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlgorithmsSpec.swift; sourceTree = "<group>"; };
 		3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeOldObjc.framework; sourceTree = "<group>"; };
@@ -331,7 +331,7 @@
 				14A7BF471AA810B200C70ABB /* Cartfile */,
 				14A7BF481AA810B200C70ABB /* Cartfile.private */,
 			);
-			name = DuplicateDependencies;
+			path = DuplicateDependencies;
 			sourceTree = "<group>";
 		};
 		5499CA981A2394BD00783309 /* Supporting Files */ = {
@@ -369,6 +369,22 @@
 				BF6E5DAA1E41863500C63D39 /* invalid.json */,
 			);
 			path = BinaryOnly;
+			sourceTree = "<group>";
+		};
+		CD6500D61EDD30FC00C2C3FB /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				BF6E5DA71E4185DA00C63D39 /* BinaryOnly */,
+				14A7BF461AA810A300C70ABB /* DuplicateDependencies */,
+				3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */,
+				3B19041D1E4CFE3900A866AD /* FakeOldSwift.framework */,
+				D0AAAB5419FB1062007B24B3 /* TestCartfile */,
+				D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */,
+				CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */,
+				B1F27D3F1E4541A1002D4754 /* TestVersionFile */,
+				BE624F471E1341E900EAEFC9 /* DuplicateDependenciesCartfile */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		D0D1210F19E87861005E4BAA = {
@@ -561,20 +577,12 @@
 		D0D1217C19E87B05005E4BAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				BF6E5DA71E4185DA00C63D39 /* BinaryOnly */,
-				14A7BF461AA810A300C70ABB /* DuplicateDependencies */,
+				CD6500D61EDD30FC00C2C3FB /* Resources */,
 				D0C6E5751A57042100A5E3E7 /* CartfilePrivateOnly.zip */,
-				3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */,
-				3B19041D1E4CFE3900A866AD /* FakeOldSwift.framework */,
 				D01F8A4B19EA28FE00643E7C /* Nimble.framework */,
 				D01F8A4619EA28F600643E7C /* Nimble.framework */,
 				D01F8A4719EA28F600643E7C /* Quick.framework */,
 				D0D1217D19E87B05005E4BAA /* Info.plist */,
-				D0AAAB5419FB1062007B24B3 /* TestCartfile */,
-				D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */,
-				CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */,
-				B1F27D3F1E4541A1002D4754 /* TestVersionFile */,
-				BE624F471E1341E900EAEFC9 /* DuplicateDependenciesCartfile */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
