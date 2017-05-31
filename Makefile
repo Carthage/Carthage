@@ -84,3 +84,7 @@ swiftpm_test:
 	cp Tests/CarthageKitTests/fixtures/CartfilePrivateOnly.zip ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
 	script/copy-fixtures ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
 	SWIFTPM_TEST_Carthage=YES swift test --skip-build
+
+swiftpm_install: swiftpm
+	mkdir -p "$(PREFIX)/bin"
+	cp -f ./.build/release/carthage "$(PREFIX)/bin/"
