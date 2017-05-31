@@ -749,7 +749,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = "/bin/sh -ex";
-			shellScript = "$SRCROOT/script/copy-fixtures";
+			shellScript = "$SRCROOT/script/copy-fixtures \\\n  \"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\n";
 			showEnvVarsInLog = 0;
 		};
 		D0E7B65719E9C7C700EDBA4D /* Extract CLI Tool */ = {

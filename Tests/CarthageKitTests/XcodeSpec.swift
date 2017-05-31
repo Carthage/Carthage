@@ -35,15 +35,19 @@ class XcodeSpec: QuickSpec {
 
 		describe("determineSwiftInformation:") {
 			let currentSwiftVersion = swiftVersion().single()?.value
+			#if !SWIFT_PACKAGE
 			let testSwiftFramework = "Quick.framework"
 			let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
 			let testSwiftFrameworkURL = currentDirectory.appendingPathComponent(testSwiftFramework)
+			#endif
 
+			#if !SWIFT_PACKAGE
 			it("should determine that a Swift framework is a Swift framework") {
 				let result = isSwiftFramework(testSwiftFrameworkURL).single()
 
 				expect(result?.value) == true
 			}
+			#endif
 
 			it("should determine that an ObjC framework is not a Swift framework") {
 				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldObjc.framework", withExtension: nil)!
@@ -56,18 +60,22 @@ class XcodeSpec: QuickSpec {
 				expect(currentSwiftVersion?.isEmpty) == false
 			}
 
+			#if !SWIFT_PACKAGE
 			it("should determine a framework's Swift version") {
 				let result = frameworkSwiftVersion(testSwiftFrameworkURL).single()
 
 				expect(FileManager.default.fileExists(atPath: testSwiftFrameworkURL.path)) == true
 				expect(result?.value) == currentSwiftVersion
 			}
+			#endif
 
+			#if !SWIFT_PACKAGE
 			it("should determine when a Swift framework is compatible") {
 				let result = checkSwiftFrameworkCompatibility(testSwiftFrameworkURL, usingToolchain: nil).single()
 
 				expect(result?.value) == testSwiftFrameworkURL
 			}
+			#endif
 
 			it("should determine when a Swift framework is incompatible") {
 				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldSwift.framework", withExtension: nil)!

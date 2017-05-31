@@ -76,3 +76,11 @@ package: installables
 
 swiftpm:
 	swift build -c release -Xswiftc -static-stdlib
+
+swiftpm_test:
+	rm -rf ./.build/debug/CarthagePackageTests.xctest
+	SWIFTPM_TEST_Carthage=YES swift test --specifier "" # Make SwiftPM just build the test bundle without running it
+	cp -R Tests/CarthageKitTests/Resources ./.build/debug/CarthagePackageTests.xctest/Contents
+	cp Tests/CarthageKitTests/fixtures/CartfilePrivateOnly.zip ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
+	script/copy-fixtures ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
+	SWIFTPM_TEST_Carthage=YES swift test --skip-build

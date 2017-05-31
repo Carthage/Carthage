@@ -4,10 +4,16 @@
 # be added to the Carthage workspace. This avoids confusing Xcode with
 # "subprojects" that are actually just originating from a fixture.
 
-destination="${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}"
+if [[ -z $1 ]]; then
+    echo "Error: You must pass a destination directory."
+    exit 1
+fi
+
+current=$(cd "$(dirname $0)" && pwd)
+destination="$1"
 
 for fixture in "carthage-fixtures-ReactiveCocoaLayout-master" "CartfileOnly" "CartfilePrivateOnly" "NoCartfile" "SchemeDiscoverySampleForCarthage-0.2" "Swell-0.5.0" "SampleMultipleSubprojects" "SampleGitSubmodule" "DependencyTest" "WorkspaceWithDependency"
 do
 	rm -Rf "$destination/$fixture"
-	unzip -q -d "$destination" "${SRCROOT}/Tests/CarthageKitTests/fixtures/$fixture"
+	unzip -q -d "$destination" "$current/../Tests/CarthageKitTests/fixtures/$fixture"
 done
