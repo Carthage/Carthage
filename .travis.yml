@@ -43,6 +43,16 @@ matrix:
         - bats Source/CarthageIntegration
       env:
         - JOB=INTEGRATION_TESTS
+    - os: osx
+      language: objective-c
+      osx_image: xcode8.3
+      script:
+        - brew uninstall carthage
+        - HOMEBREW_NO_AUTO_UPDATE=1 brew install bats        
+        - make swiftpm_install
+        - bats Source/CarthageIntegration
+      env:
+        - JOB=INTEGRATION_TESTS_SWIFTPM
 notifications:
   email: false
   slack:
