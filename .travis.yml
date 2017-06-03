@@ -13,12 +13,12 @@ matrix:
     - os: osx
       language: objective-c
       osx_image: xcode8.3
-      script: make test
+      script: make test XCODEBUILD_FORMATTER=xcpretty
       env: JOB=CI_BUILD_TEST
     - os: osx
       language: objective-c
       osx_image: xcode8.3
-      script: make package
+      script: make package XCODEBUILD_FORMATTER=xcpretty
       env: JOB=CI_BUILD_PACKAGE
     - os: osx
       language: objective-c
@@ -39,7 +39,7 @@ matrix:
       script:
         - brew uninstall carthage
         - HOMEBREW_NO_AUTO_UPDATE=1 brew install bats
-        - make install
+        - make install XCODEBUILD_FORMATTER=xcpretty
         - bats Source/CarthageIntegration
       env:
         - JOB=INTEGRATION_TESTS
