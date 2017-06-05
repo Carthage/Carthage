@@ -3,7 +3,7 @@
 load "Utilities/git-commit"
 
 extract-test-frameworks-one-and-two() {
-	unzip ${BATS_TEST_DIRNAME:?}/../CarthageKitTests/fixtures/DependencyTest.zip 'DependencyTest/SourceRepos/TestFramework[12]/*' -d "${BATS_TMPDIR:?}"
+	unzip ${BATS_TEST_DIRNAME:?}/../../Tests/CarthageKitTests/fixtures/DependencyTest.zip 'DependencyTest/SourceRepos/TestFramework[12]/*' -d "${BATS_TMPDIR:?}"
 }
 
 branch-test-frameworks-one-and-two() {

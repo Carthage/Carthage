@@ -370,7 +370,7 @@ private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keyS
 				continue
 			}
 
-			if let key = key as? String {
+			if let key = key as String? {
 				observer.send(value: (key, value))
 			}
 		}
@@ -466,13 +466,20 @@ public func gitRootDirectoryForRepository(_ repositoryFileURL: URL) -> SignalPro
 /// Returns each submodule found in the given repository revision, or an empty
 /// signal if none exist.
 public func submodulesInRepository(_ repositoryFileURL: URL, revision: String = "HEAD") -> SignalProducer<Submodule, CarthageError> {
-	return gitmodulesEntriesInRepository(repositoryFileURL, revision: revision)
-		.flatMap(.concat) { name, path, url in
+	return isGitRepository(repositoryFileURL)
+		.flatMap(.concat) { isRepository -> SignalProducer<URL, CarthageError> in
+			guard isRepository else {
+				return .empty
+			}
+
 			return gitRootDirectoryForRepository(repositoryFileURL)
-				.flatMap(.concat) { actualRepoURL in
+		}
+		.flatMap(.concat) { actualRepoURL in
+			return gitmodulesEntriesInRepository(repositoryFileURL, revision: revision)
+				.flatMap(.concat) { name, path, url in
 					return submoduleSHAForPath(actualRepoURL, path, revision: revision)
 						.map { sha in Submodule(name: name, path: path, url: url, sha: sha) }
-			}
+				}
 		}
 }
 

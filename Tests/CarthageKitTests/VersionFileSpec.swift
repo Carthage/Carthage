@@ -25,7 +25,6 @@ class VersionFileSpec: QuickSpec {
 			let versionFile = file!
 
 			expect(versionFile.commitish).to(equal("v1.0"))
-			expect(versionFile.xcodeVersion).to(equal("Xcode 8.2.1\nBuild version 8C1002"))
 
 			// Check multiple frameworks
 			let iOSCache = versionFile.iOS
@@ -55,7 +54,7 @@ class VersionFileSpec: QuickSpec {
 
 		it("should write and read back a version file correctly") {
 			let framework = CachedFramework(name: "TestFramework", hash: "TestHASH")
-			let versionFile = VersionFile(commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", macOS: nil, iOS: [framework], watchOS: nil, tvOS: nil)
+			let versionFile = VersionFile(commitish: "v1.0", macOS: nil, iOS: [framework], watchOS: nil, tvOS: nil)
 
 			let versionFileURL = Bundle(for: type(of: self)).resourceURL!.appendingPathComponent("TestWriteVersionFile")
 
@@ -69,7 +68,6 @@ class VersionFileSpec: QuickSpec {
 			expect(newVersionFile).notTo(beNil())
 
 			expect(newVersionFile!.commitish).to(equal(versionFile.commitish))
-			expect(newVersionFile!.xcodeVersion).to(equal(versionFile.xcodeVersion))
 
 			expect(newVersionFile!.iOS).toNot(beNil())
 			let newCachedFramework = newVersionFile!.iOS!
@@ -81,7 +79,6 @@ class VersionFileSpec: QuickSpec {
 		it("should encode and decode correctly") {
 
 			let jsonDictionary: [String: Any] = [
-				"xcodeVersion": "Xcode 8.2.1\nBuild version 8C1002",
 				"commitish": "v1.0",
 				"iOS": [
 					[
@@ -96,7 +93,6 @@ class VersionFileSpec: QuickSpec {
 
 			let versionFile = file!
 			expect(versionFile.commitish).to(equal("v1.0"))
-			expect(versionFile.xcodeVersion).to(equal("Xcode 8.2.1\nBuild version 8C1002"))
 
 			// Check multiple frameworks
 			let iOSCache = versionFile.iOS
@@ -109,15 +105,14 @@ class VersionFileSpec: QuickSpec {
 			expect(value).notTo(beNil())
 			let newJSONDictionary = value!
 
-			expect((newJSONDictionary["xcodeVersion"] as! String)).to(equal("Xcode 8.2.1\nBuild version 8C1002"))
 			expect((newJSONDictionary["commitish"] as! String)).to(equal("v1.0"))
 			let iosFramework = (newJSONDictionary["iOS"] as! [Any])[0] as! [String: String]
 			expect(iosFramework["name"]).to(equal("TestFramework"))
 			expect(iosFramework["hash"]).to(equal("TestHASH"))
 		}
 
-		func validate(file: VersionFile, matches: Bool, platform: Platform, commitish: String, xcodeVersion: String, hashes: [String?], fileName: FileString = #file, line: UInt = #line) {
-			_ = file.satisfies(platform: platform, commitish: commitish, xcodeVersion: xcodeVersion, hashes: hashes)
+		func validate(file: VersionFile, matches: Bool, platform: Platform, commitish: String, hashes: [String?], swiftVersionMatches: [Bool], fileName: FileString = #file, line: UInt = #line) {
+			_ = file.satisfies(platform: platform, commitish: commitish, hashes: hashes, swiftVersionMatches: swiftVersionMatches)
 				.on(value: { didMatch in
 					expect(didMatch, file: fileName, line: line).to(equal(matches))
 				})
@@ -129,22 +124,22 @@ class VersionFileSpec: QuickSpec {
 			let versionFile = VersionFile(url: versionFileURL)!
 
 			// Everything matches
-			validate(file: versionFile, matches: true, platform: .iOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", hashes: ["ios-framework1-hash", "ios-framework2-hash"])
+			validate(file: versionFile, matches: true, platform: .iOS, commitish: "v1.0", hashes: ["ios-framework1-hash", "ios-framework2-hash"], swiftVersionMatches: [true, true])
 
 			// One framework missing
-			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", hashes: ["ios-framework1-hash", nil])
+			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.0", hashes: ["ios-framework1-hash", nil], swiftVersionMatches: [true, true])
+
+			// One Swift version mismatch
+			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.0", hashes: ["ios-framework1-hash", "ios-framework2-hash"], swiftVersionMatches: [true, false])
 
 			// Mismatched commitish
-			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.1", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", hashes: ["ios-framework1-hash", "ios-framework2-hash"])
-
-			// Mismatched xcode version
-			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.0", xcodeVersion: "Xcode 8.3\nBuild version 8C3000", hashes: ["ios-framework1-hash", "ios-framework2-hash"])
+			validate(file: versionFile, matches: false, platform: .iOS, commitish: "v1.1", hashes: ["ios-framework1-hash", "ios-framework2-hash"], swiftVersionMatches: [true, true])
 
 			// Version file has empty array for platform
-			validate(file: versionFile, matches: true, platform: .tvOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", hashes: [nil, nil])
+			validate(file: versionFile, matches: true, platform: .tvOS, commitish: "v1.0", hashes: [nil, nil], swiftVersionMatches: [true, true])
 
 			// Version file has no entry for platform, should match
-			validate(file: versionFile, matches: false, platform: .watchOS, commitish: "v1.0", xcodeVersion: "Xcode 8.2.1\nBuild version 8C1002", hashes: [nil, nil])
+			validate(file: versionFile, matches: false, platform: .watchOS, commitish: "v1.0", hashes: [nil, nil], swiftVersionMatches: [true, true])
 		}
 	}
 }

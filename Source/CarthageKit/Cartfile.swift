@@ -18,9 +18,9 @@ public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
 	/// The dependencies listed in the Cartfile.
-	public var dependencies: [ProjectIdentifier: VersionSpecifier]
+	public var dependencies: [Dependency: VersionSpecifier]
 
-	public init(dependencies: [ProjectIdentifier: VersionSpecifier] = [:]) {
+	public init(dependencies: [Dependency: VersionSpecifier] = [:]) {
 		self.dependencies = dependencies
 	}
 
@@ -32,8 +32,8 @@ public struct Cartfile {
 
 	/// Attempts to parse Cartfile information from a string.
 	public static func from(string: String) -> Result<Cartfile, CarthageError> {
-		var dependencies: [ProjectIdentifier: VersionSpecifier] = [:]
-		var duplicates: [ProjectIdentifier] = []
+		var dependencies: [Dependency: VersionSpecifier] = [:]
+		var duplicates: [Dependency] = []
 		var result: Result<(), CarthageError> = .success(())
 
 		let commentIndicator = "#"
@@ -50,7 +50,7 @@ public struct Cartfile {
 				return
 			}
 
-			switch ProjectIdentifier.from(scanner).fanout(VersionSpecifier.from(scanner)) {
+			switch Dependency.from(scanner).fanout(VersionSpecifier.from(scanner)) {
 			case let .success((dependency, version)):
 				if case .binary = dependency, case .gitReference = version {
 					result = .failure(CarthageError.parseError(description: "binary dependencies cannot have a git reference for the version specifier in line: \(scanner.currentLine)"))
@@ -82,7 +82,7 @@ public struct Cartfile {
 
 		return result.flatMap { _ in
 			if !duplicates.isEmpty {
-				return .failure(.duplicateDependencies(duplicates.map { DuplicateDependency(project: $0, locations: []) }))
+				return .failure(.duplicateDependencies(duplicates.map { DuplicateDependency(dependency: $0, locations: []) }))
 			}
 			return .success(Cartfile(dependencies: dependencies))
 		}
@@ -100,9 +100,9 @@ public struct Cartfile {
 					}
 					
 					let dependencies = dupes
-						.map { dependency in
+						.map { dupe in
 							return DuplicateDependency(
-								project: dependency.project,
+								dependency: dupe.dependency,
 								locations: [ cartfileURL.path ]
 							)
 						}
@@ -121,15 +121,8 @@ public struct Cartfile {
 	}
 }
 
-extension Cartfile: CustomStringConvertible {
-	public var description: String {
-		return dependencies.description
-	}
-}
-
-/// Returns an array containing projects that are listed as dependencies
-/// in both arguments.
-public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [ProjectIdentifier] {
+/// Returns an array containing dependencies that are listed in both arguments.
+public func duplicateDependenciesIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [Dependency] {
 	let projects1 = cartfile1.dependencies.keys
 	let projects2 = cartfile2.dependencies.keys
 	return Array(Set(projects1).intersection(Set(projects2)))
@@ -139,9 +132,9 @@ public func duplicateProjectsIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) ->
 /// checked out for each dependency.
 public struct ResolvedCartfile {
 	/// The dependencies listed in the Cartfile.resolved.
-	public var dependencies: [ProjectIdentifier: PinnedVersion]
+	public var dependencies: [Dependency: PinnedVersion]
 	
-	public init(dependencies: [ProjectIdentifier: PinnedVersion]) {
+	public init(dependencies: [Dependency: PinnedVersion]) {
 		self.dependencies = dependencies
 	}
 
@@ -158,7 +151,7 @@ public struct ResolvedCartfile {
 
 		let scanner = Scanner(string: string)
 		scannerLoop: while !scanner.isAtEnd {
-			switch ProjectIdentifier.from(scanner).fanout(PinnedVersion.from(scanner)) {
+			switch Dependency.from(scanner).fanout(PinnedVersion.from(scanner)) {
 			case let .success((dep, version)):
 				cartfile.dependencies[dep] = version
 
@@ -182,9 +175,9 @@ extension ResolvedCartfile: CustomStringConvertible {
 }
 
 /// Uniquely identifies a project that can be used as a dependency.
-public enum ProjectIdentifier {
-	/// A repository hosted on GitHub.com.
-	case gitHub(Repository)
+public enum Dependency {
+	/// A repository hosted on GitHub.com or GitHub Enterprise.
+	case gitHub(Server, Repository)
 
 	/// An arbitrary Git repository.
 	case git(GitURL)
@@ -195,7 +188,7 @@ public enum ProjectIdentifier {
 	/// The unique, user-visible name for this project.
 	public var name: String {
 		switch self {
-		case let .gitHub(repo):
+		case let .gitHub(_, repo):
 			return repo.name
 
 		case let .git(url):
@@ -213,8 +206,8 @@ public enum ProjectIdentifier {
 	}
 }
 
-extension ProjectIdentifier: Comparable {
-	public static func ==(_ lhs: ProjectIdentifier, _ rhs: ProjectIdentifier) -> Bool {
+extension Dependency: Comparable {
+	public static func ==(_ lhs: Dependency, _ rhs: Dependency) -> Bool {
 		switch (lhs, rhs) {
 		case let (.gitHub(left), .gitHub(right)):
 			return left == right
@@ -230,16 +223,16 @@ extension ProjectIdentifier: Comparable {
 		}
 	}
 
-	public static func <(_ lhs: ProjectIdentifier, _ rhs: ProjectIdentifier) -> Bool {
+	public static func <(_ lhs: Dependency, _ rhs: Dependency) -> Bool {
 		return lhs.name.caseInsensitiveCompare(rhs.name) == .orderedAscending
 	}
 }
 
-extension ProjectIdentifier: Hashable {
+extension Dependency: Hashable {
 	public var hashValue: Int {
 		switch self {
-		case let .gitHub(repo):
-			return repo.hashValue
+		case let .gitHub(server, repo):
+			return server.hashValue ^ repo.hashValue
 
 		case let .git(url):
 			return url.hashValue
@@ -250,14 +243,14 @@ extension ProjectIdentifier: Hashable {
 	}
 }
 
-extension ProjectIdentifier: Scannable {
-	/// Attempts to parse a ProjectIdentifier.
-	public static func from(_ scanner: Scanner) -> Result<ProjectIdentifier, ScannableError> {
-		let parser: (String) -> Result<ProjectIdentifier, ScannableError>
+extension Dependency: Scannable {
+	/// Attempts to parse a Dependency.
+	public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
+		let parser: (String) -> Result<Dependency, ScannableError>
 
 		if scanner.scanString("github", into: nil) {
 			parser = { repoIdentifier in
-				return Repository.fromIdentifier(repoIdentifier).map { self.gitHub($0) }
+				return Repository.fromIdentifier(repoIdentifier).map { self.gitHub($0, $1) }
 			}
 		} else if scanner.scanString("git", into: nil) {
 			parser = { urlString in
@@ -296,17 +289,17 @@ extension ProjectIdentifier: Scannable {
 	}
 }
 
-extension ProjectIdentifier: CustomStringConvertible {
+extension Dependency: CustomStringConvertible {
 	public var description: String {
 		switch self {
-		case let .gitHub(repo):
+		case let .gitHub(server, repo):
 			let repoDescription: String
-			switch repo.server {
+			switch server {
 			case .dotCom:
 				repoDescription = "\(repo.owner)/\(repo.name)"
 
 			case .enterprise:
-				repoDescription = "\(repo.url)"
+				repoDescription = "\(server.url(for: repo))"
 			}
 			return "github \"\(repoDescription)\""
 
@@ -319,16 +312,16 @@ extension ProjectIdentifier: CustomStringConvertible {
 	}
 }
 
-extension ProjectIdentifier {
+extension Dependency {
 
-	/// Returns the URL that the project's remote repository exists at.
+	/// Returns the URL that the dependency's remote repository exists at.
 	func gitURL(preferHTTPS: Bool) -> GitURL? {
 		switch self {
-		case let .gitHub(repository):
+		case let .gitHub(server, repository):
 			if preferHTTPS {
-				return repository.httpsURL
+				return server.httpsURL(for: repository)
 			} else {
-				return repository.sshURL
+				return server.sshURL(for: repository)
 			}
 
 		case let .git(url):
@@ -338,43 +331,4 @@ extension ProjectIdentifier {
 		}
 	}
 	
-}
-
-/// Represents a single dependency of a project.
-public struct Dependency<V: VersionType> {
-	/// The project corresponding to this dependency.
-	public let project: ProjectIdentifier
-
-	/// The version(s) that are required to satisfy this dependency.
-	public var version: V
-
-	public init(project: ProjectIdentifier, version: V) {
-		self.project = project
-		self.version = version
-	}
-}
-
-extension Dependency: Hashable {
-	public static func ==<V>(_ lhs: Dependency<V>, _ rhs: Dependency<V>) -> Bool {
-		return lhs.project == rhs.project && lhs.version == rhs.version
-	}
-
-	public var hashValue: Int {
-		return project.hashValue ^ version.hashValue
-	}
-}
-
-extension Dependency where V: Scannable {
-	/// Attempts to parse a Dependency specification.
-	public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
-		return ProjectIdentifier.from(scanner).flatMap { identifier in
-			return V.from(scanner).map { specifier in self.init(project: identifier, version: specifier) }
-		}
-	}
-}
-
-extension Dependency: CustomStringConvertible {
-	public var description: String {
-		return "\(project) \(version)"
-	}
 }

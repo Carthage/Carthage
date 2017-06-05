@@ -18,11 +18,11 @@ import XCDBLD
 
 class ProjectSpec: QuickSpec {
 	override func spec() {
-		describe("createAndCheckVersionFiles") {
+		describe("buildCheckedOutDependenciesWithOptions") {
 			let directoryURL = Bundle(for: type(of: self)).url(forResource: "DependencyTest", withExtension: nil)!
 			let buildDirectoryURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 			
-			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true) -> Set<String> {
+			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true) -> [String] {
 				var builtSchemes: [String] = []
 				
 				let project = Project(directoryURL: directoryURL)
@@ -36,93 +36,139 @@ class ProjectSpec: QuickSpec {
 					.wait()
 				expect(result.error).to(beNil())
 				
-				return Set(builtSchemes)
+				return builtSchemes
 			}
-			
-			func overwriteFramework(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL) {
-				let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
-				let frameworkURL = platformURL.appendingPathComponent("\(frameworkName)_\(platformName).framework", isDirectory: false)
-				let binaryURL = frameworkURL.appendingPathComponent("\(frameworkName)_\(platformName)", isDirectory: false)
-				
-				let data = "junkdata".data(using: .utf8)!
-				try! data.write(to: binaryURL, options: .atomic)
-			}
-			
+
 			beforeEach {
 				let _ = try? FileManager.default.removeItem(at: buildDirectoryURL)
 				// Pre-fetch the repos so we have a cache for the given tags
 				let sourceRepoUrl = directoryURL.appendingPathComponent("SourceRepos")
 				["TestFramework1", "TestFramework2", "TestFramework3"].forEach { repo in
 					let urlPath = sourceRepoUrl.appendingPathComponent(repo).path
-					let _ = cloneOrFetchProject(.git(GitURL(urlPath)), preferHTTPS: false)
+					let _ = cloneOrFetch(dependency: .git(GitURL(urlPath)), preferHTTPS: false)
 						.wait()
 				}
 			}
-			
-			it("should not rebuild cached frameworks unless instructed to ignore cached builds") {
-				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac"]
-				
-				let result1 = buildDependencyTest(platforms: [.macOS])
-				expect(result1).to(equal(expected))
-				
-				let result2 = buildDependencyTest(platforms: [.macOS])
-				expect(result2).to(equal(Set<String>()))
-				
-				let result3 = buildDependencyTest(platforms: [.macOS], cacheBuilds: false)
-				expect(result3).to(equal(expected))
+
+			it("should build frameworks in the correct order") {
+				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
+				let iOSExpected = ["TestFramework3_iOS", "TestFramework2_iOS", "TestFramework1_iOS"]
+
+				let result = buildDependencyTest(platforms: [], cacheBuilds: false)
+
+				expect(result.filter{ $0.contains("Mac") }).to(equal(macOSexpected))
+				expect(result.filter{ $0.contains("iOS") }).to(equal(iOSExpected))
+				expect(Set(result)).to(equal(Set<String>(macOSexpected + iOSExpected)))
 			}
-			
-			it("should rebuild cached frameworks (and dependencies) whose hash does not match the version file") {
-				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac"]
+
+			describe("createAndCheckVersionFiles") {
+				func overwriteFramework(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL) {
+					let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
+					let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
+					let binaryURL = frameworkURL.appendingPathComponent("\(frameworkName)", isDirectory: false)
+					
+					let data = "junkdata".data(using: .utf8)!
+					try! data.write(to: binaryURL, options: .atomic)
+				}
+
+				func overwriteSwiftVersion(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL, withVersion version: String) {
+					let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
+					let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
+					let swiftHeaderURL = frameworkURL.swiftHeaderURL()!
+
+					let swiftVersionResult = swiftVersion().first()!
+					expect(swiftVersionResult.error).to(beNil())
+
+					var header = try! String(contentsOf: swiftHeaderURL)
+
+					let range = header.range(of: swiftVersionResult.value!)!
+
+					header.replaceSubrange(range, with: version)
+
+					try! header.write(to: swiftHeaderURL, atomically: true, encoding: header.fastestEncoding)
+				}
 				
-				let result1 = buildDependencyTest(platforms: [.macOS])
-				expect(result1).to(equal(expected))
+				it("should not rebuild cached frameworks unless instructed to ignore cached builds") {
+					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
+					
+					let result1 = buildDependencyTest(platforms: [.macOS])
+					expect(result1).to(equal(expected))
+					
+					let result2 = buildDependencyTest(platforms: [.macOS])
+					expect(result2).to(equal([]))
+					
+					let result3 = buildDependencyTest(platforms: [.macOS], cacheBuilds: false)
+					expect(result3).to(equal(expected))
+				}
 				
-				overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+				it("should rebuild cached frameworks (and dependencies) whose hash does not match the version file") {
+					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
+					
+					let result1 = buildDependencyTest(platforms: [.macOS])
+					expect(result1).to(equal(expected))
+					
+					overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+
+					let result2 = buildDependencyTest(platforms: [.macOS])
+					expect(result2).to(equal(expected))
+				}
 				
-				let result2 = buildDependencyTest(platforms: [.macOS])
-				expect(result2).to(equal(expected))
-			}
-			
-			it("should rebuild cached frameworks (and dependencies) whose version does not match the version file") {
-				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac"]
+				it("should rebuild cached frameworks (and dependencies) whose version does not match the version file") {
+					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
+					
+					let result1 = buildDependencyTest(platforms: [.macOS])
+					expect(result1).to(equal(expected))
+					
+					let preludeVersionFileURL = buildDirectoryURL.appendingPathComponent(".TestFramework3.version", isDirectory: false)
+					let preludeVersionFilePath = preludeVersionFileURL.path
+					
+					let json = try! String(contentsOf: preludeVersionFileURL, encoding: .utf8)
+					let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"v1.0\"", with: "\"commitish\" : \"v1.1\"")
+					let _ = try! modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
+					
+					let result2 = buildDependencyTest(platforms: [.macOS])
+					expect(result2).to(equal(expected))
+				}
+
+				it("should rebuild cached frameworks (and dependencies) whose swift version does not match the local swift version") {
+					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
+					
+					let result1 = buildDependencyTest(platforms: [.macOS])
+					expect(result1).to(equal(expected))
+					
+					overwriteSwiftVersion("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL, withVersion: "1.0")
+
+					let result2 = buildDependencyTest(platforms: [.macOS])
+					expect(result2).to(equal(expected))
+				}
+
+				it("should not rebuild cached frameworks unnecessarily") {
+					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
+					
+					let result1 = buildDependencyTest(platforms: [.macOS])
+					expect(result1).to(equal(expected))
+					
+					overwriteFramework("TestFramework2", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					
+					let result2 = buildDependencyTest(platforms: [.macOS])
+					expect(result2).to(equal(["TestFramework2_Mac", "TestFramework1_Mac"]))
+				}
 				
-				let result1 = buildDependencyTest(platforms: [.macOS])
-				expect(result1).to(equal(expected))
-				
-				let preludeVersionFileURL = buildDirectoryURL.appendingPathComponent(".TestFramework3.version", isDirectory: false)
-				let preludeVersionFilePath = preludeVersionFileURL.path
-				
-				let json = try! String(contentsOf: preludeVersionFileURL, encoding: .utf8)
-				let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"v1.0\"", with: "\"commitish\" : \"v1.1\"")
-				let _ = try! modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
-				
-				let result2 = buildDependencyTest(platforms: [.macOS])
-				expect(result2).to(equal(expected))
-			}
-			
-			it("should not rebuild cached frameworks unnecessarily") {
-				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac"]
-				
-				let result1 = buildDependencyTest(platforms: [.macOS])
-				expect(result1).to(equal(expected))
-				
-				overwriteFramework("TestFramework2", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
-				
-				let result2 = buildDependencyTest(platforms: [.macOS])
-				expect(result2).to(equal(["TestFramework1_Mac", "TestFramework2_Mac"]))
-			}
-			
-			it("should rebuild a framework for all platforms even a cached framework is invalid for only a single platform") {
-				let expected: Set = ["TestFramework1_Mac", "TestFramework2_Mac", "TestFramework3_Mac", "TestFramework1_iOS", "TestFramework2_iOS", "TestFramework3_iOS"]
-				
-				let result1 = buildDependencyTest()
-				expect(result1).to(equal(expected))
-				
-				overwriteFramework("TestFramework1", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
-				
-				let result2 = buildDependencyTest()
-				expect(result2).to(equal(["TestFramework1_Mac", "TestFramework1_iOS"]))
+				it("should rebuild a framework for all platforms even a cached framework is invalid for only a single platform") {
+					let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
+					let iOSExpected = ["TestFramework3_iOS", "TestFramework2_iOS", "TestFramework1_iOS"]
+					
+					let result1 = buildDependencyTest()
+					expect(result1.filter{ $0.contains("Mac") }).to(equal(macOSexpected))
+					expect(result1.filter{ $0.contains("iOS") }).to(equal(iOSExpected))
+					expect(Set(result1)).to(equal(Set<String>(macOSexpected + iOSExpected)))
+					
+					overwriteFramework("TestFramework1", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					
+					let result2 = buildDependencyTest()
+					expect(result2.filter{ $0.contains("Mac") }).to(equal(["TestFramework1_Mac"]))
+					expect(result2.filter{ $0.contains("iOS") }).to(equal(["TestFramework1_iOS"]))
+				}
 			}
 		}
 		
@@ -158,8 +204,8 @@ class ProjectSpec: QuickSpec {
 				expect(resultError).notTo(beNil())
 
 				let makeDependency: (String, String, [String]) -> DuplicateDependency = { (repoOwner, repoName, locations) in
-					let project = ProjectIdentifier.gitHub(Repository(owner: repoOwner, name: repoName))
-					return DuplicateDependency(project: project, locations: locations)
+					let dependency = Dependency.gitHub(.dotCom, Repository(owner: repoOwner, name: repoName))
+					return DuplicateDependency(dependency: dependency, locations: locations)
 				}
 
 				let locations = ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]
@@ -193,7 +239,7 @@ class ProjectSpec: QuickSpec {
 			let temporaryURL = URL(fileURLWithPath: temporaryPath, isDirectory: true)
 			let repositoryURL = temporaryURL.appendingPathComponent("carthage1191", isDirectory: true)
 			let cacheDirectoryURL = temporaryURL.appendingPathComponent("cache", isDirectory: true)
-			let projectIdentifier = ProjectIdentifier.git(GitURL(repositoryURL.absoluteString))
+			let dependency = Dependency.git(GitURL(repositoryURL.absoluteString))
 
 			func initRepository() {
 				expect { try FileManager.default.createDirectory(atPath: repositoryURL.path, withIntermediateDirectories: true) }.notTo(throwError())
@@ -210,7 +256,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			func cloneOrFetch(commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
-				return cloneOrFetchProject(projectIdentifier, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
+				return CarthageKit.cloneOrFetch(dependency: dependency, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
 			}
 
 			func assertProjectEvent(commitish: String? = nil, clearFetchTime: Bool = true, action: @escaping (ProjectEvent?) -> ()) {
@@ -287,7 +333,7 @@ class ProjectSpec: QuickSpec {
 		describe("downloadBinaryFrameworkDefinition") {
 
 			var project: Project!
-			let testDefinitionURL = Bundle(for: type(of: self)).url(forResource: "successful", withExtension: "json")!
+			let testDefinitionURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/successful", withExtension: "json")!
 
 			beforeEach {
 				project = Project(directoryURL: URL(string: "file://fake")!)
@@ -314,7 +360,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should return an invalid binary JSON error if unable to parse file") {
-				let invalidDependencyURL = Bundle(for: type(of: self)).url(forResource: "invalid", withExtension: "json")!
+				let invalidDependencyURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/invalid", withExtension: "json")!
 
 				let actualError = project.downloadBinaryFrameworkDefinition(url: invalidDependencyURL).first()?.error
 
@@ -331,7 +377,7 @@ class ProjectSpec: QuickSpec {
 
 				_ = project.downloadBinaryFrameworkDefinition(url: testDefinitionURL).first()
 
-				expect(events).to(equal([ProjectEvent.downloadingBinaryFrameworkDefinition(ProjectIdentifier.binary(testDefinitionURL), testDefinitionURL)]))
+				expect(events).to(equal([ProjectEvent.downloadingBinaryFrameworkDefinition(Dependency.binary(testDefinitionURL), testDefinitionURL)]))
 			}
 		}
 	}

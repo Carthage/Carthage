@@ -17,7 +17,14 @@ import ReactiveSwift
 import ReactiveTask
 
 private let outputQueue = { () -> DispatchQueue in
-	let queue = DispatchQueue(label: "org.carthage.carthage.outputQueue", target: .global(priority: .high))
+	let targetQueue: DispatchQueue
+	if #available(macOS 10.10, *) {
+		targetQueue = .global(qos: .userInitiated)
+	} else {
+		targetQueue = .global(priority: .high)
+	}
+
+	let queue = DispatchQueue(label: "org.carthage.carthage.outputQueue", target: targetQueue)
 
 	atexit_b {
 		queue.sync(flags: .barrier) {}
@@ -74,13 +81,6 @@ extension GitURL: ArgumentProtocol {
 	public static func from(string: String) -> GitURL? {
 		return self.init(string)
 	}
-
-	#if swift(>=3)
-	#else
-	public static func fromString(string: String) -> GitURL? {
-		return from(string)
-	}
-	#endif
 }
 
 /// Logs project events put into the sink.
@@ -95,38 +95,38 @@ internal struct ProjectEventSink {
 		let formatting = colorOptions.formatting
 		
 		switch event {
-		case let .cloning(project):
-			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(project.name))
+		case let .cloning(dependency):
+			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(dependency.name))
 
-		case let .fetching(project):
-			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(project.name))
+		case let .fetching(dependency):
+			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(dependency.name))
 
-		case let .checkingOut(project, revision):
-			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(project.name) + " at " + formatting.quote(revision))
+		case let .checkingOut(dependency, revision):
+			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(dependency.name) + " at " + formatting.quote(revision))
 
-		case let .downloadingBinaryFrameworkDefinition(project, url):
-			carthage.println(formatting.bullets + "Downloading binary-only framework " + formatting.projectName(project.name) + " at " + formatting.quote(url.absoluteString))
+		case let .downloadingBinaryFrameworkDefinition(dependency, url):
+			carthage.println(formatting.bullets + "Downloading binary-only framework " + formatting.projectName(dependency.name) + " at " + formatting.quote(url.absoluteString))
 
-		case let .downloadingBinaries(project, release):
-			carthage.println(formatting.bullets + "Downloading " + formatting.projectName(project.name) + ".framework binary at " + formatting.quote(release))
+		case let .downloadingBinaries(dependency, release):
+			carthage.println(formatting.bullets + "Downloading " + formatting.projectName(dependency.name) + ".framework binary at " + formatting.quote(release))
 
-		case let .skippedDownloadingBinaries(project, message):
-			carthage.println(formatting.bullets + "Skipped downloading " + formatting.projectName(project.name) + ".framework binary due to the error:\n\t" + formatting.quote(message))
+		case let .skippedDownloadingBinaries(dependency, message):
+			carthage.println(formatting.bullets + "Skipped downloading " + formatting.projectName(dependency.name) + ".framework binary due to the error:\n\t" + formatting.quote(message))
 
-		case let .skippedInstallingBinaries(project, error):
-			carthage.println(formatting.bullets + "Skipped installing " + formatting.projectName(project.name) + ".framework binary due to the error:\n\t" + formatting.quote(String(describing: error)))
+		case let .skippedInstallingBinaries(dependency, error):
+			carthage.println(formatting.bullets + "Skipped installing " + formatting.projectName(dependency.name) + ".framework binary due to the error:\n\t" + formatting.quote(String(describing: error)))
 
-		case let .skippedBuilding(project, message):
-			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(project.name) + " due to the error:\n" + message)
+		case let .skippedBuilding(dependency, message):
+			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(dependency.name) + " due to the error:\n" + message)
 
-		case let .skippedBuildingCached(project):
-			carthage.println(formatting.bullets + "Valid cache found for " + formatting.projectName(project.name) + ", skipping build")
+		case let .skippedBuildingCached(dependency):
+			carthage.println(formatting.bullets + "Valid cache found for " + formatting.projectName(dependency.name) + ", skipping build")
 
-		case let .rebuildingCached(project):
-			carthage.println(formatting.bullets + "Invalid cache found for " + formatting.projectName(project.name) + ", rebuilding with all downstream dependencies")
+		case let .rebuildingCached(dependency):
+			carthage.println(formatting.bullets + "Invalid cache found for " + formatting.projectName(dependency.name) + ", rebuilding with all downstream dependencies")
 
-		case let .buildingUncached(project):
-			carthage.println(formatting.bullets + "No cache found for " + formatting.projectName(project.name) + ", building with all downstream dependencies")
+		case let .buildingUncached(dependency):
+			carthage.println(formatting.bullets + "No cache found for " + formatting.projectName(dependency.name) + ", building with all downstream dependencies")
 		}
 	}
 }

@@ -14,7 +14,7 @@ import XCDBLD
 
 /// Possible errors that can originate from Carthage.
 public enum CarthageError: Error {
-	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: ProjectIdentifier?)
+	public typealias VersionRequirement = (specifier: VersionSpecifier, fromDependency: Dependency?)
 
 	/// One or more arguments was invalid.
 	case invalidArgument(description: String)
@@ -23,14 +23,14 @@ public enum CarthageError: Error {
 	case missingBuildSetting(String)
 
 	/// Incompatible version specifiers were given for a dependency.
-	case incompatibleRequirements(ProjectIdentifier, VersionRequirement, VersionRequirement)
+	case incompatibleRequirements(Dependency, VersionRequirement, VersionRequirement)
 
 	/// No tagged versions could be found for the dependency.
-	case taggedVersionNotFound(ProjectIdentifier)
+	case taggedVersionNotFound(Dependency)
 
 	/// No existent version could be found to satisfy the version specifier for
 	/// a dependency.
-	case requiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
+	case requiredVersionNotFound(Dependency, VersionSpecifier)
 
 	/// No entry could be found in Cartfile for a dependency with this name.
 	case unknownDependencies([String])
@@ -64,11 +64,11 @@ public enum CarthageError: Error {
 
 	/// The project is not sharing any framework schemes, so Carthage cannot
 	/// discover them.
-	case noSharedFrameworkSchemes(ProjectIdentifier, Set<Platform>)
+	case noSharedFrameworkSchemes(Dependency, Set<Platform>)
 
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
-	case noSharedSchemes(ProjectLocator, Repository?)
+	case noSharedSchemes(ProjectLocator, (Server, Repository)?)
 
 	/// Timeout whilst running `xcodebuild`
 	case xcodebuildTimeout(ProjectLocator)
@@ -78,7 +78,7 @@ public enum CarthageError: Error {
 	case duplicateDependencies([DuplicateDependency])
 
 	// There was a cycle between dependencies in the associated graph.
-	case dependencyCycle([ProjectIdentifier: Set<ProjectIdentifier>])
+	case dependencyCycle([Dependency: Set<Dependency>])
 
 	/// A request to the GitHub API failed.
 	case gitHubAPIRequestFailed(Client.Error)
@@ -101,7 +101,7 @@ public extension CarthageError {
 }
 
 private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
-	return lhs.specifier == rhs.specifier && lhs.fromProject == rhs.fromProject
+	return lhs.specifier == rhs.specifier && lhs.fromDependency == rhs.fromDependency
 }
 
 extension CarthageError: Equatable {
@@ -148,7 +148,12 @@ extension CarthageError: Equatable {
 			return la == ra && lb == rb
 
 		case let (.noSharedSchemes(la, lb), .noSharedSchemes(ra, rb)):
-			return la == ra && lb == rb
+			guard la == ra else { return false }
+			switch (lb, rb) {
+			case (nil, nil): return true
+			case let ((lb1, lb2)?, (rb1, rb2)?): return lb1 == rb1 && lb2 == rb2
+			default: return false
+			}
 
 		case let (.duplicateDependencies(left), .duplicateDependencies(right)):
 			return left.sorted() == right.sorted()
@@ -202,8 +207,8 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case let .incompatibleRequirements(dependency, first, second):
-			let requirement: (VersionRequirement) -> String = { specifier, fromProject in
-				return "\(specifier)" + (fromProject.map { " (\($0))" } ?? "")
+			let requirement: (VersionRequirement) -> String = { specifier, fromDependency in
+				return "\(specifier)" + (fromDependency.map { " (\($0))" } ?? "")
 			}
 			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(requirement(first))\n\t\(requirement(second))"
 
@@ -237,16 +242,16 @@ extension CarthageError: CustomStringConvertible {
 		case let .missingEnvironmentVariable(variable):
 			return "Environment variable not set: \(variable)"
 
-		case let .noSharedFrameworkSchemes(projectIdentifier, platforms):
-			var description = "Dependency \"\(projectIdentifier.name)\" has no shared framework schemes"
+		case let .noSharedFrameworkSchemes(dependency, platforms):
+			var description = "Dependency \"\(dependency.name)\" has no shared framework schemes"
 			if !platforms.isEmpty {
 				let platformsString = platforms.map { $0.description }.joined(separator: ", ")
 				description += " for any of the platforms: \(platformsString)"
 			}
 
-			switch projectIdentifier {
-			case let .gitHub(repository):
-				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
+			switch dependency {
+			case let .gitHub(server, repository):
+				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(server.newIssueURL(for: repository).absoluteString)"
 
 			case .git, .binary:
 				break
@@ -254,10 +259,10 @@ extension CarthageError: CustomStringConvertible {
 
 			return description
 
-		case let .noSharedSchemes(project, repository):
+		case let .noSharedSchemes(project, serverAndRepository):
 			var description = "Project \"\(project)\" has no shared schemes"
-			if let repository = repository {
-				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
+			if let (server, repository) = serverAndRepository {
+				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(server.newIssueURL(for: repository).absoluteString)"
 			}
 
 			return description

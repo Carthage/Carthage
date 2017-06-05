@@ -34,16 +34,20 @@ class XcodeSpec: QuickSpec {
 		}
 
 		describe("determineSwiftInformation:") {
-			let currentSwiftVersion = swiftVersion.single()?.value
+			let currentSwiftVersion = swiftVersion().single()?.value
+			#if !SWIFT_PACKAGE
 			let testSwiftFramework = "Quick.framework"
 			let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
 			let testSwiftFrameworkURL = currentDirectory.appendingPathComponent(testSwiftFramework)
+			#endif
 
+			#if !SWIFT_PACKAGE
 			it("should determine that a Swift framework is a Swift framework") {
 				let result = isSwiftFramework(testSwiftFrameworkURL).single()
 
 				expect(result?.value) == true
 			}
+			#endif
 
 			it("should determine that an ObjC framework is not a Swift framework") {
 				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldObjc.framework", withExtension: nil)!
@@ -56,22 +60,26 @@ class XcodeSpec: QuickSpec {
 				expect(currentSwiftVersion?.isEmpty) == false
 			}
 
+			#if !SWIFT_PACKAGE
 			it("should determine a framework's Swift version") {
 				let result = frameworkSwiftVersion(testSwiftFrameworkURL).single()
 
 				expect(FileManager.default.fileExists(atPath: testSwiftFrameworkURL.path)) == true
 				expect(result?.value) == currentSwiftVersion
 			}
+			#endif
 
+			#if !SWIFT_PACKAGE
 			it("should determine when a Swift framework is compatible") {
-				let result = checkSwiftFrameworkCompatibility(testSwiftFrameworkURL).single()
+				let result = checkSwiftFrameworkCompatibility(testSwiftFrameworkURL, usingToolchain: nil).single()
 
 				expect(result?.value) == testSwiftFrameworkURL
 			}
+			#endif
 
 			it("should determine when a Swift framework is incompatible") {
 				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldSwift.framework", withExtension: nil)!
-				let result = checkSwiftFrameworkCompatibility(frameworkURL).single()
+				let result = checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: nil).single()
 
 				expect(result?.value).to(beNil())
 				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: currentSwiftVersion ?? "", framework: "0.0.0")
@@ -107,14 +115,13 @@ class XcodeSpec: QuickSpec {
 
 		it("should build for all platforms") {
 			let dependencies = [
-				ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes")),
-				ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
+				Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes")),
+				Dependency.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")),
 			]
 			let version = PinnedVersion("0.1")
 
-			for project in dependencies {
-				let dependency = Dependency<PinnedVersion>(project: project, version: version)
-				let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			for dependency in dependencies {
+				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 					.flatten(.concat)
 					.ignoreTaskData()
 					.on(value: { (project, scheme) in
@@ -135,10 +142,10 @@ class XcodeSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			// Verify that the build products exist at the top level.
-			var projectNames = dependencies.map { project in project.name }
-			projectNames.append("ReactiveCocoaLayout")
+			var dependencyNames = dependencies.map { dependency in dependency.name }
+			dependencyNames.append("ReactiveCocoaLayout")
 
-			for dependency in projectNames {
+			for dependency in dependencyNames {
 				let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path
 				let macdSYMPath = (macPath as NSString).appendingPathExtension("dSYM")!
 				let iOSPath = buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path
@@ -302,10 +309,9 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build for one platform") {
-			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
+			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let dependency = Dependency<PinnedVersion>(project: project, version: version)
-			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
+			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { (project, scheme) in
@@ -316,19 +322,18 @@ class XcodeSpec: QuickSpec {
 			expect(result.error).to(beNil())
 
 			// Verify that the build product exists at the top level.
-			let path = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").path
+			let path = buildFolderURL.appendingPathComponent("Mac/\(dependency.name).framework").path
 			expect(path).to(beExistingDirectory())
 
 			// Verify that the other platform wasn't built.
-			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").path
+			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(dependency.name).framework").path
 			expect(FileManager.default.fileExists(atPath: incorrectPath, isDirectory: nil)) == false
 		}
 
 		it("should build for multiple platforms") {
-			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
+			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let dependency = Dependency<PinnedVersion>(project: project, version: version)
-			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
+			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { (project, scheme) in
@@ -340,8 +345,8 @@ class XcodeSpec: QuickSpec {
 
 			// Verify that the build products of all specified platforms exist 
 			// at the top level.
-			let macPath = buildFolderURL.appendingPathComponent("Mac/\(project.name).framework").path
-			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(project.name).framework").path
+			let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency.name).framework").path
+			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(dependency.name).framework").path
 
 			for path in [ macPath, iosPath ] {
 				expect(path).to(beExistingDirectory())
@@ -368,16 +373,15 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should symlink the build directory") {
-			let project = ProjectIdentifier.gitHub(Repository(owner: "github", name: "Archimedes"))
+			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let dependency = Dependency<PinnedVersion>(project: project, version: version)
 
-			let dependencyURL =	directoryURL.appendingPathComponent(dependency.project.relativePath)
+			let dependencyURL =	directoryURL.appendingPathComponent(dependency.relativePath)
 			// Build
 			let buildURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 			let dependencyBuildURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			let result = buildDependencyProject(dependency, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { (project, scheme) in

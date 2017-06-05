@@ -14,13 +14,13 @@ import Result
 import Tentacle
 
 public func localVersion() -> SemanticVersion {
-	let versionString = Bundle(identifier: CarthageKitBundleIdentifier)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
+	let versionString = "0.23.0"
 	return SemanticVersion.from(Scanner(string: versionString)).value!
 }
 
 public func remoteVersion() -> SemanticVersion? {
 	let latestRemoteVersion = Client(.dotCom)
-		.releases(in: Repository(owner: "Carthage", name: "Carthage"), perPage: 2)
+		.execute(Repository(owner: "Carthage", name: "Carthage").releases, perPage: 2)
 		.map { _, releases in
 			return releases.first { !$0.isDraft }!
 		}

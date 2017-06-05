@@ -163,34 +163,43 @@ public struct BuildCommand: CommandProtocol {
 		}
 	}
 
-	/// Opens a temporary file on disk, returning a handle and the URL to the
+	/// Opens an existing file, if provided, or creates a temporary file if not, returning a handle and the URL to the
 	/// file.
-	private func openLogFile(_ path: String?) -> SignalProducer<(FileHandle, URL), NSError> {
+	private func openLogFile(_ path: String?) -> SignalProducer<(FileHandle, URL), CarthageError> {
 		return SignalProducer.attempt {
-			let logFD: Int32
-			let logPath: String
-			
 			if let path = path {
-				logFD = FileHandle(forUpdatingAtPath: path)?.fileDescriptor ?? -1
-				logPath = path
+				if !FileManager.default.fileExists(atPath: path) {
+					FileManager.default.createFile(atPath: path, contents: nil, attributes: nil)
+				}
+				
+				let fileURL = URL(fileURLWithPath: path, isDirectory: false)
+				
+				guard let handle = FileHandle(forUpdatingAtPath: path) else {
+					let error = NSError(domain: CarthageKitBundleIdentifier,
+					                    code: 1,
+					                    userInfo: [NSLocalizedDescriptionKey: "Unable to open file handle for file at \(path)"])
+					return .failure(.writeFailed(fileURL, error))
+				}
+				
+				return .success((handle, fileURL))
 			} else {
 				var temporaryDirectoryTemplate: ContiguousArray<CChar>
 				temporaryDirectoryTemplate = (NSTemporaryDirectory() as NSString).appendingPathComponent("carthage-xcodebuild.XXXXXX.log").utf8CString
-				logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (template: inout UnsafeMutableBufferPointer<CChar>) -> Int32 in
+				let logFD = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (template: inout UnsafeMutableBufferPointer<CChar>) -> Int32 in
 					return mkstemps(template.baseAddress, 4)
 				}
-				logPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
+				let logPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
 					return String(validatingUTF8: ptr.baseAddress!)!
 				}
+				if logFD < 0 {
+					return .failure(.writeFailed(URL(fileURLWithPath: logPath, isDirectory: false), NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil)))
+				}
+				
+				let handle = FileHandle(fileDescriptor: logFD, closeOnDealloc: true)
+				let fileURL = URL(fileURLWithPath: logPath, isDirectory: false)
+				
+				return .success((handle, fileURL))
 			}
-
-			if logFD < 0 {
-				return .failure(NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil))
-			}
-
-			let handle = FileHandle(fileDescriptor: logFD, closeOnDealloc: true)
-			let fileURL = URL(fileURLWithPath: logPath, isDirectory: false)
-			return .success((handle, fileURL))
 		}
 	}
 
@@ -203,10 +212,6 @@ public struct BuildCommand: CommandProtocol {
 		} else {
 			return openLogFile(options.logPath)
 				.map { handle, url in (handle, Optional(url)) }
-				.mapError { error in
-					let temporaryDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-					return .writeFailed(temporaryDirectoryURL, error)
-				}
 		}
 	}
 }
@@ -338,11 +343,4 @@ extension BuildPlatform: ArgumentProtocol {
 			return .multiple(buildPlatforms)
 		}
 	}
-
-	#if swift(>=3)
-	#else
-	public static func fromString(string: String) -> BuildPlatform? {
-		return from(string)
-	}
-	#endif
 }

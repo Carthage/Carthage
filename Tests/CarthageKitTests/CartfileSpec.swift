@@ -24,13 +24,13 @@ class CartfileSpec: QuickSpec {
 
 			let cartfile = result.value!
 
-			let reactiveCocoa = ProjectIdentifier.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
-			let mantle = ProjectIdentifier.gitHub(Repository(owner: "Mantle", name: "Mantle"))
-			let libextobjc = ProjectIdentifier.gitHub(Repository(owner: "jspahrsummers", name: "libextobjc"))
-			let xcconfigs = ProjectIdentifier.gitHub(Repository(owner: "jspahrsummers", name: "xcconfigs"))
-			let iosCharts = ProjectIdentifier.gitHub(Repository(owner: "danielgindi", name: "ios-charts"))
-			let errorTranslations = ProjectIdentifier.gitHub(Repository(server: .enterprise(url: URL(string: "https://enterprise.local/ghe")!), owner: "desktop", name: "git-error-translations"))
-			let errorTranslations2 = ProjectIdentifier.git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))
+			let reactiveCocoa = Dependency.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
+			let mantle = Dependency.gitHub(.dotCom, Repository(owner: "Mantle", name: "Mantle"))
+			let libextobjc = Dependency.gitHub(.dotCom, Repository(owner: "jspahrsummers", name: "libextobjc"))
+			let xcconfigs = Dependency.gitHub(.dotCom, Repository(owner: "jspahrsummers", name: "xcconfigs"))
+			let iosCharts = Dependency.gitHub(.dotCom, Repository(owner: "danielgindi", name: "ios-charts"))
+			let errorTranslations = Dependency.gitHub(.enterprise(url: URL(string: "https://enterprise.local/ghe")!), Repository(owner: "desktop", name: "git-error-translations"))
+			let errorTranslations2 = Dependency.git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))
 			
 			expect(cartfile.dependencies) == [
 				reactiveCocoa: .atLeast(SemanticVersion(major: 2, minor: 3, patch: 1)),
@@ -52,7 +52,7 @@ class CartfileSpec: QuickSpec {
 
 			let resolvedCartfile = result.value!
 			expect(resolvedCartfile.dependencies) == [
-				.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
+				.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
 				.git(GitURL("https://github.com/Mantle/Mantle.git")): PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47"),
 			]
 		}
@@ -69,16 +69,16 @@ class CartfileSpec: QuickSpec {
 				return
 			}
 			
-			let projects = dupes
-				.map { $0.project }
+			let dependencies = dupes
+				.map { $0.dependency }
 				.sorted { $0.description < $1.description }
 			expect(dupes.count) == 3
 			
-			let self2Dupe = projects[0]
-			expect(self2Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self2", name: "self2"))
+			let self2Dupe = dependencies[0]
+			expect(self2Dupe) == Dependency.gitHub(.dotCom, Repository(owner: "self2", name: "self2"))
 			
-			let self3Dupe = projects[1]
-			expect(self3Dupe) == ProjectIdentifier.gitHub(Repository(owner: "self3", name: "self3"))
+			let self3Dupe = dependencies[1]
+			expect(self3Dupe) == Dependency.gitHub(.dotCom, Repository(owner: "self3", name: "self3"))
 		}
 
 		it("should detect duplicate dependencies across two Cartfiles") {
@@ -100,17 +100,17 @@ class CartfileSpec: QuickSpec {
 			let cartfile2 = result2.value!
 			expect(cartfile2.dependencies.count) == 3
 
-			let dupes = duplicateProjectsIn(cartfile, cartfile2).sorted { $0.description < $1.description }
+			let dupes = duplicateDependenciesIn(cartfile, cartfile2).sorted { $0.description < $1.description }
 			expect(dupes.count) == 3
 
 			let dupe1 = dupes[0]
-			expect(dupe1) == ProjectIdentifier.gitHub(Repository(owner: "1", name: "1"))
+			expect(dupe1) == Dependency.gitHub(.dotCom, Repository(owner: "1", name: "1"))
 
 			let dupe3 = dupes[1]
-			expect(dupe3) == ProjectIdentifier.gitHub(Repository(owner: "3", name: "3"))
+			expect(dupe3) == Dependency.gitHub(.dotCom, Repository(owner: "3", name: "3"))
 
 			let dupe5 = dupes[2]
-			expect(dupe5) == ProjectIdentifier.gitHub(Repository(owner: "5", name: "5"))
+			expect(dupe5) == Dependency.gitHub(.dotCom, Repository(owner: "5", name: "5"))
 		}
 
 		it("should not allow a binary framework with git reference") {
@@ -128,9 +128,9 @@ class ResolvedCartfileSpec: QuickSpec {
 		describe("description") {
 			it("should output dependencies alphabetically") {
 				let resolvedCartfile = ResolvedCartfile(dependencies: [
-					.gitHub(Repository(owner: "antitypical", name: "Result")): PinnedVersion("3.0.0"),
-					.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveSwift")): PinnedVersion("v1.0.0"),
-					.gitHub(Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
+					.gitHub(.dotCom, Repository(owner: "antitypical", name: "Result")): PinnedVersion("3.0.0"),
+					.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveSwift")): PinnedVersion("v1.0.0"),
+					.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
 				])
 				
 				expect(resolvedCartfile.description) == "github \"ReactiveCocoa/ReactiveCocoa\" \"v2.3.1\"\ngithub \"ReactiveCocoa/ReactiveSwift\" \"v1.0.0\"\ngithub \"antitypical/Result\" \"3.0.0\"\n"

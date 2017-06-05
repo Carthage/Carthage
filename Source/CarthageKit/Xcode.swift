@@ -17,11 +17,13 @@ import XCDBLD
 public let CarthageBinariesFolderPath = "Carthage/Build"
 
 /// Emits the currect Swift version
-internal let swiftVersion: SignalProducer<String, SwiftVersionError> = { return determineSwiftVersion().replayLazily(upTo: 1) }()
+internal func swiftVersion(usingToolchain toolchain: String? = nil) -> SignalProducer<String, SwiftVersionError> {
+	return determineSwiftVersion(usingToolchain: toolchain).replayLazily(upTo: 1)
+}
 
 /// Attempts to determine the local version of swift
-private func determineSwiftVersion() -> SignalProducer<String, SwiftVersionError> {
-	let taskDescription = Task("/usr/bin/env", arguments: ["xcrun", "swift", "--version"])
+private func determineSwiftVersion(usingToolchain toolchain: String?) -> SignalProducer<String, SwiftVersionError> {
+	let taskDescription = Task("/usr/bin/env", arguments: compilerVersionArguments(usingToolchain: toolchain))
 
 	return taskDescription.launch(standardInput: nil)
 		.ignoreTaskData()
@@ -30,6 +32,14 @@ private func determineSwiftVersion() -> SignalProducer<String, SwiftVersionError
 			return parseSwiftVersionCommand(output: String(data: data, encoding: .utf8))
 		}
 		.attemptMap { Result($0, failWith: SwiftVersionError.unknownLocalSwiftVersion) }
+}
+
+private func compilerVersionArguments(usingToolchain toolchain: String?) -> [String] {
+	if let toolchain = toolchain {
+		return ["xcrun", "--toolchain", toolchain, "swift", "--version"]
+	} else {
+		return ["xcrun", "swift", "--version"]
+	}
 }
 
 /// Parses output of `swift --version` for the version string.
@@ -65,8 +75,8 @@ internal func isSwiftFramework(_ frameworkURL: URL) -> SignalProducer<Bool, Swif
 }
 
 /// Emits the framework URL if it matches the local Swift version and errors if not.
-internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL) -> SignalProducer<URL, SwiftVersionError> {
-	return SignalProducer.combineLatest(swiftVersion, frameworkSwiftVersion(frameworkURL))
+internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
+	return SignalProducer.combineLatest(swiftVersion(usingToolchain: toolchain), frameworkSwiftVersion(frameworkURL))
 		.attemptMap() { localSwiftVersion, frameworkSwiftVersion in
 			return localSwiftVersion == frameworkSwiftVersion
 				? .success(frameworkURL)
@@ -75,11 +85,11 @@ internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL) -> SignalPro
 }
 
 /// Emits the framework URL if it is compatible with the build environment and errors if not.
-internal func checkFrameworkCompatibility(_ frameworkURL: URL) -> SignalProducer<URL, SwiftVersionError> {
+internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
 	return isSwiftFramework(frameworkURL)
 		.flatMap(.merge) { isSwift in
 			return isSwift
-				? checkSwiftFrameworkCompatibility(frameworkURL)
+				? checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: toolchain)
 				: SignalProducer(value: frameworkURL)
 		}
 }
@@ -577,11 +587,24 @@ public func buildScheme(_ scheme: String, withOptions options: BuildOptions, inP
 			}
 		}
 		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
-			return createDebugInformation(builtProductURL)
+			return UUIDsForFramework(builtProductURL)
+				.collect()
+				.flatMap(.concat) { uuids -> SignalProducer<TaskEvent<URL>, CarthageError> in
+					// Only attempt to create debug info if there is at least 
+					// one dSYM architecture UUID in the framework. This can 
+					// occur if the framework is a static framework packaged 
+					// like a dynamic framework.
+					if uuids.isEmpty {
+						return .empty
+					}
+
+					return createDebugInformation(builtProductURL)
+				}
 				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
 		}
 }
 
+/// Creates a dSYM for the provided dynamic framework.
 public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<TaskEvent<URL>, CarthageError> {
 	let dSYMURL = builtProductURL.appendingPathExtension("dSYM")
 
@@ -605,21 +628,21 @@ public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<Tas
 /// begins, then complete or error when building terminates.
 public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator, String)>, CarthageError>
 
-/// Attempts to build the dependency identified by the given project, then
-/// places its build product into the root directory given.
+/// Attempts to build the dependency, then places its build product into the
+/// root directory given.
 ///
 /// Returns producers in the same format as buildInDirectory().
-public func buildDependencyProject(_ dependency: Dependency<PinnedVersion>, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
-	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.project.relativePath, isDirectory: true)
+public func build(dependency: Dependency, version: PinnedVersion, _ rootDirectoryURL: URL, withOptions options: BuildOptions, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
-	return symlinkBuildPathForDependencyProject(dependency.project, rootDirectoryURL: rootDirectoryURL)
+	return symlinkBuildPath(for: dependency, rootDirectoryURL: rootDirectoryURL)
 		.map { _ -> BuildSchemeProducer in
-			return buildInDirectory(dependencyURL, withOptions: options, dependency: dependency, rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
+			return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
 				.mapError { error in
-					switch (dependency.project, error) {
+					switch (dependency, error) {
 					case let (_, .noSharedFrameworkSchemes(_, platforms)):
-						return .noSharedFrameworkSchemes(dependency.project, platforms)
+						return .noSharedFrameworkSchemes(dependency, platforms)
 
 					case let (.gitHub(repo), .noSharedSchemes(project, _)):
 						return .noSharedSchemes(project, repo)
@@ -629,13 +652,12 @@ public func buildDependencyProject(_ dependency: Dependency<PinnedVersion>, _ ro
 					}
 				}
 		}
-
 }
 
 /// Creates symlink between the dependency build folder and the root build folder
 ///
 /// Returns a signal indicating success
-private func symlinkBuildPathForDependencyProject(_ dependency: ProjectIdentifier, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt {
 		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(CarthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
@@ -681,7 +703,7 @@ private func symlinkBuildPathForDependencyProject(_ dependency: ProjectIdentifie
 				return .failure(.writeFailed(dependencyBinariesURL, error))
 			}
 		} else {
-			let linkDestinationPath = relativeLinkDestinationForDependencyProject(dependency, subdirectory: CarthageBinariesFolderPath)
+			let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: CarthageBinariesFolderPath)
 			do {
 				try fileManager.createSymbolicLink(atPath: dependencyBinariesURL.path, withDestinationPath: linkDestinationPath)
 			} catch let error as NSError {
@@ -695,7 +717,7 @@ private func symlinkBuildPathForDependencyProject(_ dependency: ProjectIdentifie
 /// Builds the any shared framework schemes found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
-public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: Dependency<PinnedVersion>? = nil, rootDirectoryURL: URL? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> BuildSchemeProducer {
+public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOptions, dependency: (dependency: Dependency, version: PinnedVersion)? = nil, rootDirectoryURL: URL? = nil, sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }) -> BuildSchemeProducer {
 	precondition(directoryURL.isFileURL)
 
 	return BuildSchemeProducer { observer, disposable in
@@ -770,7 +792,7 @@ public func buildInDirectory(_ directoryURL: URL, withOptions options: BuildOpti
 				guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
 					return .empty
 				}
-				return createVersionFile(for: dependency, platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL)
+				return createVersionFile(for: dependency.dependency, version: dependency.version, platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL)
 					.flatMapError { _ in .empty }
 			}
 			// Discard any Success values, since we want to
@@ -1063,20 +1085,6 @@ public func BCSymbolMapsForFramework(_ frameworkURL: URL) -> SignalProducer<URL,
 		}
 }
 
-/// Sends a string representing the currently active version of Xcode, as given by xcodebuild
-public func currentXcodeVersion() -> SignalProducer<String, CarthageError> {
-	let task = Task("/usr/bin/xcrun", arguments: ["xcodebuild", "-version"])
-	return task.launch()
-		.mapError(CarthageError.taskError)
-		.ignoreTaskData()
-		.attemptMap { data in
-			guard let versionString = String(data: data, encoding: .utf8) else {
-				return .failure(.parseError(description: "Could not get xcode version"))
-			}
-			return .success(versionString.trimmingCharacters(in: .whitespacesAndNewlines))
-		}
-}
-
 /// Sends a set of UUIDs for each architecture present in the given URL.
 private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, CarthageError> {
 	let dwarfdumpTask = Task("/usr/bin/xcrun", arguments: [ "dwarfdump", "--uuid", url.path ])
@@ -1085,6 +1093,11 @@ private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, Carthag
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
 		.map { String(data: $0, encoding: .utf8) ?? "" }
+		// If there are no dSYMs (the output is empty but has a zero exit 
+		// status), complete with no values. This can occur if this is a "fake"
+		// framework, meaning a static framework packaged like a dynamic 
+		// framework.
+		.filter { !$0.isEmpty }
 		.flatMap(.merge) { output -> SignalProducer<Set<UUID>, CarthageError> in
 			// UUIDs are letters, decimals, or hyphens.
 			var uuidCharacterSet = CharacterSet()
@@ -1106,7 +1119,7 @@ private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, Carthag
 				var uuidString: NSString?
 				scanner.scanCharacters(from: uuidCharacterSet, into: &uuidString)
 
-				if let uuidString = uuidString as? String, let uuid = UUID(uuidString: uuidString) {
+				if let uuidString = uuidString as String?, let uuid = UUID(uuidString: uuidString) {
 					uuids.insert(uuid)
 				}
 
