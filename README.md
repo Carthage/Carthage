@@ -64,7 +64,9 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
   ```sh
-  /usr/local/bin/carthage copy-frameworks
+  if [ "${CONFIGURATION}" = "Release" ]; then
+    /usr/local/bin/carthage copy-frameworks
+  fi
   ```
 
   and add the paths to the frameworks you want to use under “Input Files”, e.g.:
@@ -74,7 +76,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
   $(SRCROOT)/Carthage/Build/iOS/Result.framework
   $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
   ```
-  This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files and dSYMs are copied when archiving.
+  This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files and dSYMs are copied when archiving. This script will only run for your ```Release``` configuration to save time during development so make sure to change ```"${CONFIGURATION}" = "Release"``` in the script if you use a different configuration when submitting to the App Store.
 
 With the debug information copied into the built products directory, Xcode will be able to symbolicate the stack trace whenever you stop at a breakpoint. This will also enable you to step through third-party code in the debugger.
 
