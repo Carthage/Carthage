@@ -82,7 +82,7 @@ class XcodeSpec: QuickSpec {
 				let result = checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: nil).single()
 
 				expect(result?.value).to(beNil())
-				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: currentSwiftVersion ?? "", framework: "0.0.0")
+				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: currentSwiftVersion ?? "", framework: "swiftlang-800.0.63 clang-800.0.42.1")
 			}
 		}
 
