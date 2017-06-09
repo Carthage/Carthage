@@ -46,7 +46,7 @@ private func compilerVersionArguments(usingToolchain toolchain: String?) -> [Str
 private func parseSwiftVersionCommand(output: String?) -> String? {
 	guard
 		let output = output,
-		let regex = try? NSRegularExpression(pattern: "Apple Swift version (.+) \\(", options: []),
+		let regex = try? NSRegularExpression(pattern: "Apple Swift version .+ \\((.*)\\)", options: []),
 		let matchRange = regex.firstMatch(in: output, options: [], range: NSRange(location: 0, length: output.characters.count))?.rangeAt(1)
 		else {
 			return nil
