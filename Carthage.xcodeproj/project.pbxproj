@@ -38,6 +38,7 @@
 		A1411ED61EFC1BFD0060461F /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1411ED51EFC1BFD0060461F /* Constants.swift */; };
 		A940B2F520C0363F001C4C59 /* CartfileCommentsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = A940B2F320C033C9001C4C59 /* CartfileCommentsSpec.swift */; };
 		B17145F11F43F812006DC662 /* NewResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B17145EF1F43F797006DC662 /* NewResolver.swift */; };
+		A199B91C1EF2557300AE5933 /* Ignorefile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A199B91B1EF2557300AE5933 /* Ignorefile.swift */; };
 		B1F27D3E1E45382B002D4754 /* VersionFileSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F27D3D1E45382B002D4754 /* VersionFileSpec.swift */; };
 		B1F27D401E4541A1002D4754 /* TestVersionFile in Resources */ = {isa = PBXBuildFile; fileRef = B1F27D3F1E4541A1002D4754 /* TestVersionFile */; };
 		BE02925B1E40363B004FB579 /* XCDBLD.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE02925A1E40363B004FB579 /* XCDBLD.framework */; };
@@ -210,6 +211,7 @@
 		A14BB69B1EFA36B90077ABF4 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text; name = .swiftlint.yml; path = Tests/.swiftlint.yml; sourceTree = SOURCE_ROOT; };
 		A940B2F320C033C9001C4C59 /* CartfileCommentsSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartfileCommentsSpec.swift; sourceTree = "<group>"; };
 		B17145EF1F43F797006DC662 /* NewResolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NewResolver.swift; sourceTree = "<group>"; };
+		A199B91B1EF2557300AE5933 /* Ignorefile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Ignorefile.swift; sourceTree = "<group>"; };
 		B1F27D3D1E45382B002D4754 /* VersionFileSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionFileSpec.swift; sourceTree = "<group>"; };
 		B1F27D3F1E4541A1002D4754 /* TestVersionFile */ = {isa = PBXFileReference; explicitFileType = text.json; fileEncoding = 4; path = TestVersionFile; sourceTree = "<group>"; };
 		BE0292481E403355004FB579 /* XCDBLDExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XCDBLDExtensions.swift; sourceTree = "<group>"; };
@@ -525,6 +527,7 @@
 				88ED56D519ECE34900CBF5C4 /* Git.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
 				CD43D9DD1F43074000CD60F6 /* GitURL.swift */,
+				A199B91B1EF2557300AE5933 /* Ignorefile.swift */,
 				D0A2025D1B114D1000C71375 /* ProducerQueue.swift */,
 				CD28C99C1E11846200322AF7 /* ProductType.swift */,
 				F603929819EA29F80050A6AF /* Project.swift */,
@@ -846,6 +849,7 @@
 				D0DE89441A0F2D9B0030A3EC /* Scannable.swift in Sources */,
 				F162F3421D63D8A900809D7E /* VersionFile.swift in Sources */,
 				CDD7CF791F75ED88000E0EA5 /* Dependency.swift in Sources */,
+				A199B91C1EF2557300AE5933 /* Ignorefile.swift in Sources */,
 				BF7A1A0B1E3A7AE9008CBCC5 /* BinaryProject.swift in Sources */,
 				D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */,
 				CDB099241E6DC2D40030B4A8 /* ScannableError.swift in Sources */,
