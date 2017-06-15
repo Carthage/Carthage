@@ -94,6 +94,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 		return directoryURL.appendingPathComponent(Constants.Project.resolvedCartfilePath, isDirectory: false)
 	}
 
+	/// The file URL to the project's Cartfile.ignore.
+	public var ignorefileURL: URL {
+		return directoryURL.appendingPathComponent(Constants.Project.ignoreCartfilePath, isDirectory: false)
+	}
+
 	/// Whether to prefer HTTPS for cloning (vs. SSH).
 	public var preferHTTPS = true
 
@@ -195,6 +200,18 @@ public final class Project { // swiftlint:disable:this type_body_length
 			Result(attempt: { try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8) })
 				.mapError { .readFailed(self.resolvedCartfileURL, $0) }
 				.flatMap(ResolvedCartfile.from)
+		}
+	}
+
+	/// Reads the project's Cartfile.ignore.
+	public func loadIgnorefile() -> SignalProducer<Ignorefile, CarthageError> {
+		return SignalProducer.attempt {
+			do {
+				let ignorefileContents = try String(contentsOf: self.ignorefileURL, encoding: .utf8)
+				return Ignorefile.from(string: ignorefileContents)
+			} catch let error as NSError {
+				return .failure(.readFailed(self.ignorefileURL, error))
+			}
 		}
 	}
 
