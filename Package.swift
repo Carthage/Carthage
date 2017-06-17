@@ -32,7 +32,6 @@ let package = Package(
         return deps
     }(),
     exclude: [
-        "Source/CarthageIntegration",
         "Source/Scripts",
         "Source/carthage/swift-is-crashy.c",
         "Tests/CarthageKitTests/Resources/FakeOldObjc.framework",
