@@ -898,7 +898,7 @@ public func copyProduct(_ from: URL, _ to: URL) -> SignalProducer<URL, CarthageE
 	}
 }
 
-extension SignalProducerProtocol where Value == URL, Error == CarthageError {
+extension SignalProducer where Value == URL, Error == CarthageError {
 	/// Copies existing files sent from the producer into the given directory.
 	///
 	/// Returns a producer that will send locations where the copied files are.
