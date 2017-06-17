@@ -145,14 +145,46 @@ extension Client {
 			Client.userAgent = gitHubUserAgent()
 		}
 
+		let urlSession = URLSession.makeProxyConfiguredSession()
+
 		if !isAuthenticated {
-			self.init(server)
+			self.init(server, urlSession: urlSession)
 		} else if let token = tokenFromEnvironment(forServer: server) {
-			self.init(server, token: token)
+			self.init(server, token: token, urlSession: urlSession)
 		} else if let (username, password) = credentialsFromGit(forServer: server) {
-			self.init(server, username: username, password: password)
+			self.init(server, username: username, password: password, urlSession: urlSession)
 		} else {
-			self.init(server)
+			self.init(server, urlSession: urlSession)
 		}
+	}
+}
+
+extension URLSession {
+	public static func makeProxyConfiguredSession() -> URLSession {
+		let configuration = URLSessionConfiguration.default
+		let env = ProcessInfo.processInfo.environment
+
+		func getProxy() -> String? {
+			let candidates = [ "http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY" ]
+			return candidates.flatMap { env[$0] }.first
+		}
+
+		if let proxy = getProxy(), var components = URLComponents(string: proxy) {
+			var dictionary: [AnyHashable: Any] = [:]
+
+			if let port = components.port {
+				dictionary[kCFNetworkProxiesHTTPPort as AnyHashable] = port
+				dictionary[kCFNetworkProxiesHTTPSPort as AnyHashable] = port
+				components.port = nil
+			}
+			dictionary[kCFNetworkProxiesHTTPEnable as AnyHashable] = true
+			dictionary[kCFNetworkProxiesHTTPSEnable as AnyHashable] = true
+			dictionary[kCFNetworkProxiesHTTPProxy as AnyHashable] = components.url
+			dictionary[kCFNetworkProxiesHTTPSProxy as AnyHashable] = components.url
+
+			configuration.connectionProxyDictionary = dictionary
+		}
+
+		return URLSession(configuration: configuration)
 	}
 }
