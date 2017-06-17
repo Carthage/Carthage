@@ -81,6 +81,7 @@ public struct Cartfile {
 		}
 
 		return result.flatMap { _ in
+			print(duplicates)
 			if !duplicates.isEmpty {
 				return .failure(.duplicateDependencies(duplicates.map { DuplicateDependency(dependency: $0, locations: []) }))
 			}
@@ -254,7 +255,33 @@ extension Dependency: Scannable {
 			}
 		} else if scanner.scanString("git", into: nil) {
 			parser = { urlString in
-				return .success(self.git(GitURL(urlString)))
+				
+				// This is a dependency expressed as git "..."
+				let gitURL = GitURL(urlString)
+				
+				if gitURL.containsGithubDomain {
+					
+					let githubHostIdentifier = "github.com"
+					let gitbubHostScanner = Scanner(string: urlString)
+					gitbubHostScanner.scanUpTo(githubHostIdentifier, into:nil)
+					gitbubHostScanner.scanString(githubHostIdentifier, into: nil)
+					
+					// find an SCP or URL path separator
+					let separatorFound = (gitbubHostScanner.scanString("/", into: nil) || gitbubHostScanner.scanString(":", into: nil)) && !gitbubHostScanner.isAtEnd
+					
+					let startOfOwnerAndNameSubstring = gitbubHostScanner.scanLocation
+					
+					if separatorFound && startOfOwnerAndNameSubstring <= urlString.utf16.count {
+						let ownerAndNameSubstring = urlString[urlString.index(urlString.startIndex, offsetBy: startOfOwnerAndNameSubstring)..<urlString.endIndex]
+						return Repository.fromIdentifier(ownerAndNameSubstring as String).map { self.gitHub($0, $1) }
+					}
+					else {
+						return .failure(ScannableError(message: "invalid git URL found", currentLine: scanner.currentLine))
+					}
+				}
+				else {
+					return .success(self.git(gitURL))
+				}
 			}
 		} else if scanner.scanString("binary", into: nil) {
 			parser = { urlString in

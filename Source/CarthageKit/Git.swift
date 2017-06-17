@@ -70,6 +70,12 @@ public struct GitURL {
 	public init(_ urlString: String) {
 		self.urlString = urlString
 	}
+
+	public var containsGithubDomain: Bool {
+		
+		return self.urlString.contains("github.com")
+	}
+	
 }
 
 /// Strips any trailing .git in the given name, if one exists.

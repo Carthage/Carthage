@@ -53,7 +53,7 @@ class CartfileSpec: QuickSpec {
 			let resolvedCartfile = result.value!
 			expect(resolvedCartfile.dependencies) == [
 				.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
-				.git(GitURL("https://github.com/Mantle/Mantle.git")): PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47"),
+				.gitHub(.dotCom, Repository(owner: "Mantle", name: "Mantle")): PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47"),
 			]
 		}
 
