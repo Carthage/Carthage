@@ -40,7 +40,7 @@ private func unzip(archive fileURL: URL, to destinationDirectoryURL: URL) -> Sig
 	precondition(fileURL.isFileURL)
 	precondition(destinationDirectoryURL.isFileURL)
 
-	let task = Task("/usr/bin/env", arguments: [ "unzip", "-qq", "-d", destinationDirectoryURL.path, fileURL.path ])
+	let task = Task("/usr/bin/env", arguments: [ "unzip", "-uo", "-qq", "-d", destinationDirectoryURL.path, fileURL.path ])
 	return task.launch()
 		.mapError(CarthageError.taskError)
 		.then(SignalProducer<(), CarthageError>.empty)
