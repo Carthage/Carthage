@@ -23,7 +23,7 @@ internal protocol ProducerQueue {
 	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error>
 }
 
-extension SignalProducerProtocol {
+extension SignalProducer {
 	/// Shorthand for enqueuing the given producer upon the given queue.
 	internal func startOnQueue(_ queue: ProducerQueue) -> SignalProducer<Value, Error> {
 		return queue.enqueue(self.producer)

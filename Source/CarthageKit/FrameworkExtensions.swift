@@ -48,11 +48,11 @@ internal func combineDictionaries<K, V>(_ lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	return result
 }
 
-extension SignalProtocol {
+extension Signal {
 	/// Sends each value that occurs on `signal` combined with each value that
 	/// occurs on `otherSignal` (repeats included).
 	fileprivate func permute<U>(with otherSignal: Signal<U, Error>) -> Signal<(Value, U), Error> {
-		return Signal { observer in
+		return Signal<(Value, U), Error> { observer in
 			let lock = NSLock()
 			lock.name = "org.carthage.CarthageKit.permute"
 
@@ -128,7 +128,7 @@ extension SignalProtocol {
 	}
 }
 
-extension SignalProducerProtocol {
+extension SignalProducer {
 	/// Sends each value that occurs on `producer` combined with each value that
 	/// occurs on `otherProducer` (repeats included).
 	fileprivate func permute<U>(with otherProducer: SignalProducer<U, Error>) -> SignalProducer<(Value, U), Error> {
@@ -143,7 +143,7 @@ extension SignalProducerProtocol {
 	}
 }
 
-extension SignalProducerProtocol where Value: SignalProducerProtocol, Error == Value.Error {
+extension SignalProducer where Value: SignalProducerProtocol, Error == Value.Error {
 	/// Sends all permutations of the values from the inner producers, as they arrive.
 	///
 	/// If no producers are received, sends a single empty array then completes.
@@ -168,11 +168,11 @@ extension SignalProducerProtocol where Value: SignalProducerProtocol, Error == V
 	}
 }
 
-extension SignalProtocol where Value: EventProtocol, Value.Error == Error {
+extension Signal where Value: EventProtocol, Value.Error == Error {
 	/// Dematerializes the signal, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> Signal<Value.Value, Error> {
-		return Signal { observer in
+		return Signal<Value.Value, Error> { observer in
 			var receivedValue = false
 			var receivedError: Error? = nil
 
@@ -212,7 +212,7 @@ extension SignalProtocol where Value: EventProtocol, Value.Error == Error {
 	}
 }
 
-extension SignalProducerProtocol where Value: EventProtocol, Value.Error == Error {
+extension SignalProducer where Value: EventProtocol, Value.Error == Error {
 	/// Dematerializes the producer, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> SignalProducer<Value.Value, Error> {
