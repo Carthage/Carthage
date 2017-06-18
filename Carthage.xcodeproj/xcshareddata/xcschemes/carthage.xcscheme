@@ -86,10 +86,6 @@
             argument = "update"
             isEnabled = "YES">
          </CommandLineArgument>
-         <CommandLineArgument
-            argument = "checkout"
-            isEnabled = "NO">
-         </CommandLineArgument>
       </CommandLineArguments>
       <EnvironmentVariables>
          <EnvironmentVariable

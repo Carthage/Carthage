@@ -180,7 +180,7 @@ class DependencySpec: QuickSpec {
 						owner: "owner",
 						name: "name")
 					
-					expect(dependency).to(equal(Dependency.gitHub(.dotCom, expectedRepo)))
+					expect(dependency) == .gitHub(.dotCom, expectedRepo)
 				}
 				
 				it("should read a git dependency as github") {
@@ -192,7 +192,7 @@ class DependencySpec: QuickSpec {
 						owner: "owner",
 						name: "name")
 					
-					expect(dependency).to(equal(Dependency.gitHub(.dotCom, expectedRepo)))
+					expect(dependency) == .gitHub(.dotCom, expectedRepo)
 				}
 				
 				it("should read a git dependency as github") {
@@ -204,7 +204,7 @@ class DependencySpec: QuickSpec {
 						owner: "owner",
 						name: "name")
 					
-					expect(dependency).to(equal(Dependency.gitHub(.dotCom, expectedRepo)))
+					expect(dependency) == .gitHub(.dotCom, expectedRepo)
 				}
 
 				itBehavesLike("invalid dependency") { ["dependencyType": "git"] }
