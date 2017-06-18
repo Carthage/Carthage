@@ -170,6 +170,42 @@ class DependencySpec: QuickSpec {
 
 					expect(dependency).to(equal(Dependency.git(GitURL("mygiturl"))))
 				}
+				
+				it("should read a git dependency as github") {
+					let scanner = Scanner(string: "git \"ssh://git@github.com:owner/name\"")
+					
+					let dependency = Dependency.from(scanner).value
+					
+					let expectedRepo = Repository(
+						owner: "owner",
+						name: "name")
+					
+					expect(dependency) == .gitHub(.dotCom, expectedRepo)
+				}
+				
+				it("should read a git dependency as github") {
+					let scanner = Scanner(string: "git \"https://github.com/owner/name\"")
+					
+					let dependency = Dependency.from(scanner).value
+					
+					let expectedRepo = Repository(
+						owner: "owner",
+						name: "name")
+					
+					expect(dependency) == .gitHub(.dotCom, expectedRepo)
+				}
+				
+				it("should read a git dependency as github") {
+					let scanner = Scanner(string: "git \"git@github.com:owner/name\"")
+					
+					let dependency = Dependency.from(scanner).value
+					
+					let expectedRepo = Repository(
+						owner: "owner",
+						name: "name")
+					
+					expect(dependency) == .gitHub(.dotCom, expectedRepo)
+				}
 
 				itBehavesLike("invalid dependency") { ["dependencyType": "git"] }
 

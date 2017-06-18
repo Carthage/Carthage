@@ -206,6 +206,44 @@ public enum Dependency {
 	}
 }
 
+fileprivate extension Dependency {
+	
+	init(gitURL: GitURL) {
+		
+		let githubHostIdentifier = "github.com"
+		let urlString = gitURL.urlString
+		
+		if urlString.contains(githubHostIdentifier) {
+			let gitbubHostScanner = Scanner(string: urlString)
+			
+			gitbubHostScanner.scanUpTo(githubHostIdentifier, into:nil)
+			gitbubHostScanner.scanString(githubHostIdentifier, into: nil)
+			
+			// find an SCP or URL path separator
+			let separatorFound = (gitbubHostScanner.scanString("/", into: nil) || gitbubHostScanner.scanString(":", into: nil)) && !gitbubHostScanner.isAtEnd
+			
+			let startOfOwnerAndNameSubstring = gitbubHostScanner.scanLocation
+			
+			if separatorFound && startOfOwnerAndNameSubstring <= urlString.utf16.count {
+				let ownerAndNameSubstring = urlString[urlString.index(urlString.startIndex, offsetBy: startOfOwnerAndNameSubstring)..<urlString.endIndex]
+				
+				switch Repository.fromIdentifier(ownerAndNameSubstring as String) {
+				case .success(let server, let repository):
+					self = Dependency.gitHub(server, repository)
+				default:
+					self = Dependency.git(gitURL)
+				}
+				
+				return
+			}
+		}
+		
+		self = Dependency.git(gitURL)
+		
+		return
+	}
+}
+
 extension Dependency: Comparable {
 	public static func ==(_ lhs: Dependency, _ rhs: Dependency) -> Bool {
 		switch (lhs, rhs) {
@@ -254,7 +292,8 @@ extension Dependency: Scannable {
 			}
 		} else if scanner.scanString("git", into: nil) {
 			parser = { urlString in
-				return .success(self.git(GitURL(urlString)))
+				
+				return .success(Dependency(gitURL: GitURL(urlString)))
 			}
 		} else if scanner.scanString("binary", into: nil) {
 			parser = { urlString in
