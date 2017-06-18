@@ -56,9 +56,9 @@ class ProjectSpec: QuickSpec {
 
 				let result = buildDependencyTest(platforms: [], cacheBuilds: false)
 
-				expect(result.filter{ $0.contains("Mac") }).to(equal(macOSexpected))
-				expect(result.filter{ $0.contains("iOS") }).to(equal(iOSExpected))
-				expect(Set(result)).to(equal(Set<String>(macOSexpected + iOSExpected)))
+				expect(result.filter { $0.contains("Mac") }) == macOSexpected
+				expect(result.filter { $0.contains("iOS") }) == iOSExpected
+				expect(Set(result)) == Set<String>(macOSexpected + iOSExpected)
 			}
 
 			describe("createAndCheckVersionFiles") {
@@ -92,32 +92,32 @@ class ProjectSpec: QuickSpec {
 					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
 					
 					let result1 = buildDependencyTest(platforms: [.macOS])
-					expect(result1).to(equal(expected))
+					expect(result1) == expected
 					
 					let result2 = buildDependencyTest(platforms: [.macOS])
-					expect(result2).to(equal([]))
+					expect(result2) == []
 					
 					let result3 = buildDependencyTest(platforms: [.macOS], cacheBuilds: false)
-					expect(result3).to(equal(expected))
+					expect(result3) == expected
 				}
 				
 				it("should rebuild cached frameworks (and dependencies) whose hash does not match the version file") {
 					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
 					
 					let result1 = buildDependencyTest(platforms: [.macOS])
-					expect(result1).to(equal(expected))
+					expect(result1) == expected
 					
 					overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
-					expect(result2).to(equal(expected))
+					expect(result2) == expected
 				}
 				
 				it("should rebuild cached frameworks (and dependencies) whose version does not match the version file") {
 					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
 					
 					let result1 = buildDependencyTest(platforms: [.macOS])
-					expect(result1).to(equal(expected))
+					expect(result1) == expected
 					
 					let preludeVersionFileURL = buildDirectoryURL.appendingPathComponent(".TestFramework3.version", isDirectory: false)
 					let preludeVersionFilePath = preludeVersionFileURL.path
@@ -127,31 +127,31 @@ class ProjectSpec: QuickSpec {
 					let _ = try! modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
 					
 					let result2 = buildDependencyTest(platforms: [.macOS])
-					expect(result2).to(equal(expected))
+					expect(result2) == expected
 				}
 
 				it("should rebuild cached frameworks (and dependencies) whose swift version does not match the local swift version") {
 					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
 					
 					let result1 = buildDependencyTest(platforms: [.macOS])
-					expect(result1).to(equal(expected))
+					expect(result1) == expected
 					
 					overwriteSwiftVersion("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL, withVersion: "swiftlang-000.0.1 clang-000.0.0.1")
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
-					expect(result2).to(equal(expected))
+					expect(result2) == expected
 				}
 
 				it("should not rebuild cached frameworks unnecessarily") {
 					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
 					
 					let result1 = buildDependencyTest(platforms: [.macOS])
-					expect(result1).to(equal(expected))
+					expect(result1) == expected
 					
 					overwriteFramework("TestFramework2", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 					
 					let result2 = buildDependencyTest(platforms: [.macOS])
-					expect(result2).to(equal(["TestFramework2_Mac", "TestFramework1_Mac"]))
+					expect(result2) == ["TestFramework2_Mac", "TestFramework1_Mac"]
 				}
 				
 				it("should rebuild a framework for all platforms even a cached framework is invalid for only a single platform") {
@@ -159,15 +159,15 @@ class ProjectSpec: QuickSpec {
 					let iOSExpected = ["TestFramework3_iOS", "TestFramework2_iOS", "TestFramework1_iOS"]
 					
 					let result1 = buildDependencyTest()
-					expect(result1.filter{ $0.contains("Mac") }).to(equal(macOSexpected))
-					expect(result1.filter{ $0.contains("iOS") }).to(equal(iOSExpected))
-					expect(Set(result1)).to(equal(Set<String>(macOSexpected + iOSExpected)))
+					expect(result1.filter { $0.contains("Mac") }) == macOSexpected
+					expect(result1.filter { $0.contains("iOS") }) == iOSExpected
+					expect(Set(result1)) == Set<String>(macOSexpected + iOSExpected)
 					
 					overwriteFramework("TestFramework1", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 					
 					let result2 = buildDependencyTest()
-					expect(result2.filter{ $0.contains("Mac") }).to(equal(["TestFramework1_Mac"]))
-					expect(result2.filter{ $0.contains("iOS") }).to(equal(["TestFramework1_iOS"]))
+					expect(result2.filter { $0.contains("Mac") }) == ["TestFramework1_Mac"]
+					expect(result2.filter { $0.contains("iOS") }) == ["TestFramework1_iOS"]
 				}
 			}
 		}
@@ -346,7 +346,7 @@ class ProjectSpec: QuickSpec {
 					PinnedVersion("1.0"): URL(string: "https://my.domain.com/release/1.0.0/framework.zip")!,
 					PinnedVersion("1.0.1"): URL(string: "https://my.domain.com/release/1.0.1/framework.zip")!,
 				])
-				expect(actualDefinition).to(equal(expectedBinaryProject))
+				expect(actualDefinition) == expectedBinaryProject
 			}
 
 			it("should return read failed if unable to download") {
@@ -377,7 +377,7 @@ class ProjectSpec: QuickSpec {
 
 				_ = project.downloadBinaryFrameworkDefinition(url: testDefinitionURL).first()
 
-				expect(events).to(equal([ProjectEvent.downloadingBinaryFrameworkDefinition(Dependency.binary(testDefinitionURL), testDefinitionURL)]))
+				expect(events) == [.downloadingBinaryFrameworkDefinition(.binary(testDefinitionURL), testDefinitionURL)]
 			}
 		}
 	}

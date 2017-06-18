@@ -118,7 +118,7 @@ class CartfileSpec: QuickSpec {
 			let testCartfile = "binary \"https://server.com/myproject\" \"gitreference\""
 			let result = Cartfile.from(string: testCartfile)
 
-			expect(result.error).to(equal(CarthageError.parseError(description: "binary dependencies cannot have a git reference for the version specifier in line: binary \"https://server.com/myproject\" \"gitreference\"")))
+			expect(result.error) == .parseError(description: "binary dependencies cannot have a git reference for the version specifier in line: binary \"https://server.com/myproject\" \"gitreference\"")
 		}
 	}
 }
