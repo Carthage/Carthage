@@ -26,7 +26,7 @@ class DependencySpec: QuickSpec {
 				let error = Dependency.from(scanner).error
 
 				let expectedError = ScannableError(message: "expected string after dependency type", currentLine: dependencyType)
-				expect(error).to(equal(expectedError))
+				expect(error) == expectedError
 			}
 
 			it("should fail without closing quote on dependency") {
@@ -35,7 +35,7 @@ class DependencySpec: QuickSpec {
 				let error = Dependency.from(scanner).error
 
 				let expectedError = ScannableError(message: "empty or unterminated string after dependency type", currentLine: "\(dependencyType!) \"dependency")
-				expect(error).to(equal(expectedError))
+				expect(error) == expectedError
 			}
 
 			it("should fail with empty dependency") {
@@ -44,7 +44,7 @@ class DependencySpec: QuickSpec {
 				let error = Dependency.from(scanner).error
 
 				let expectedError = ScannableError(message: "empty or unterminated string after dependency type", currentLine: "\(dependencyType!) \" \"")
-				expect(error).to(equal(expectedError))
+				expect(error) == expectedError
 			}
 		}
 
@@ -54,7 +54,7 @@ class DependencySpec: QuickSpec {
 				it("should equal the name of a github.com repo") {
 					let dependency = Dependency.gitHub(.dotCom, Repository(owner: "owner", name: "name"))
 
-					expect(dependency.name).to(equal("name"))
+					expect(dependency.name) == "name"
 				}
 
 				it("should equal the name of an enterprise github repo") {
@@ -64,7 +64,7 @@ class DependencySpec: QuickSpec {
 
 					let dependency = Dependency.gitHub(.enterprise(url: URL(string: "http://server.com")!), enterpriseRepo)
 
-					expect(dependency.name).to(equal("name"))
+					expect(dependency.name) == "name"
 				}
 			}
 
@@ -73,19 +73,19 @@ class DependencySpec: QuickSpec {
 				it("should be the last component of the URL") {
 					let dependency = Dependency.git(GitURL("ssh://server.com/myproject"))
 
-					expect(dependency.name).to(equal("myproject"))
+					expect(dependency.name) == "myproject"
 				}
 
 				it("should not include the trailing git suffix") {
 					let dependency = Dependency.git(GitURL("ssh://server.com/myproject.git"))
 
-					expect(dependency.name).to(equal("myproject"))
+					expect(dependency.name) == "myproject"
 				}
 
 				it("should be the entire URL string if there is no last component") {
 					let dependency = Dependency.git(GitURL("whatisthisurleven"))
 
-					expect(dependency.name).to(equal("whatisthisurleven"))
+					expect(dependency.name) == "whatisthisurleven"
 				}
 
 			}
@@ -95,13 +95,13 @@ class DependencySpec: QuickSpec {
 				it("should be the last component of the URL") {
 					let dependency = Dependency.binary(URL(string: "https://server.com/myproject")!)
 
-					expect(dependency.name).to(equal("myproject"))
+					expect(dependency.name) == "myproject"
 				}
 
 				it("should not include the trailing git suffix") {
 					let dependency = Dependency.binary(URL(string: "https://server.com/myproject.json")!)
 
-					expect(dependency.name).to(equal("myproject"))
+					expect(dependency.name) == "myproject"
 				}
 
 			}
@@ -117,7 +117,7 @@ class DependencySpec: QuickSpec {
 					let dependency = Dependency.from(scanner).value
 
 					let expectedRepo = Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")
-					expect(dependency).to(equal(Dependency.gitHub(.dotCom, expectedRepo)))
+					expect(dependency) == .gitHub(.dotCom, expectedRepo)
 				}
 
 				it("should read a github.com dependency with full url") {
@@ -126,7 +126,7 @@ class DependencySpec: QuickSpec {
 					let dependency = Dependency.from(scanner).value
 
 					let expectedRepo = Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")
-					expect(dependency).to(equal(Dependency.gitHub(.dotCom, expectedRepo)))
+					expect(dependency) == .gitHub(.dotCom, expectedRepo)
 				}
 
 				it("should read an enterprise github dependency") {
@@ -137,7 +137,7 @@ class DependencySpec: QuickSpec {
 					let expectedRepo = Repository(
 						owner: "ReactiveCocoa",
 						name: "ReactiveCocoa")
-					expect(dependency).to(equal(Dependency.gitHub(.enterprise(url: URL(string: "http://mysupercoolinternalwebhost.com")!), expectedRepo)))
+					expect(dependency) == .gitHub(.enterprise(url: URL(string: "http://mysupercoolinternalwebhost.com")!), expectedRepo)
 				}
 
 				it("should fail with invalid github.com dependency") {
@@ -146,7 +146,7 @@ class DependencySpec: QuickSpec {
 					let error = Dependency.from(scanner).error
 
 					let expectedError = ScannableError(message: "invalid GitHub repository identifier \"Whatsthis\"")
-					expect(error).to(equal(expectedError))
+					expect(error) == expectedError
 				}
 
 				it("should fail with invalid enterprise github dependency") {
@@ -155,7 +155,7 @@ class DependencySpec: QuickSpec {
 					let error = Dependency.from(scanner).error
 
 					let expectedError = ScannableError(message: "invalid GitHub repository identifier \"http://mysupercoolinternalwebhost.com/ReactiveCocoa\"")
-					expect(error).to(equal(expectedError))
+					expect(error) == expectedError
 				}
 
 				itBehavesLike("invalid dependency") { ["dependencyType": "github"] }
@@ -168,7 +168,7 @@ class DependencySpec: QuickSpec {
 
 					let dependency = Dependency.from(scanner).value
 
-					expect(dependency).to(equal(Dependency.git(GitURL("mygiturl"))))
+					expect(dependency) == .git(GitURL("mygiturl"))
 				}
 
 				itBehavesLike("invalid dependency") { ["dependencyType": "git"] }
@@ -182,7 +182,7 @@ class DependencySpec: QuickSpec {
 
 					let dependency = Dependency.from(scanner).value
 
-					expect(dependency).to(equal(Dependency.binary(URL(string: "https://mysupercoolinternalwebhost.com/")!)))
+					expect(dependency) == .binary(URL(string: "https://mysupercoolinternalwebhost.com/")!)
 				}
 
 				it("should fail with non-https URL") {
@@ -190,7 +190,7 @@ class DependencySpec: QuickSpec {
 
 					let error = Dependency.from(scanner).error
 
-					expect(error).to(equal(ScannableError(message: "non-https URL found for dependency type `binary`", currentLine: "binary \"nope\"")))
+					expect(error) == ScannableError(message: "non-https URL found for dependency type `binary`", currentLine: "binary \"nope\"")
 				}
 
 				it("should fail with invalid URL") {
@@ -198,7 +198,7 @@ class DependencySpec: QuickSpec {
 
 					let error = Dependency.from(scanner).error
 
-					expect(error).to(equal(ScannableError(message: "invalid URL found for dependency type `binary`", currentLine: "binary \"nop@%@#^@e\"")))
+					expect(error) == ScannableError(message: "invalid URL found for dependency type `binary`", currentLine: "binary \"nop@%@#^@e\"")
 				}
 
 				itBehavesLike("invalid dependency") { ["dependencyType": "binary"] }

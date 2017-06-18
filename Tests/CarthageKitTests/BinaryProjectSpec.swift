@@ -26,7 +26,7 @@ class BinaryProjectSpec: QuickSpec {
 					PinnedVersion("1.0.1"): URL(string: "https://my.domain.com/release/1.0.1/framework.zip")!,
 				])
 
-				expect(actualBinaryProject).to(equal(expectedBinaryProject))
+				expect(actualBinaryProject) == expectedBinaryProject
 			}
 
 			it("should fail if string is not JSON") {
@@ -46,9 +46,12 @@ class BinaryProjectSpec: QuickSpec {
 
 				let actualError = BinaryProject.from(jsonData: jsonData, url: testUrl).error
 
-				expect(actualError).to(equal(BinaryJSONError.invalidJSON(NSError(domain: CarthageKitBundleIdentifier,
-				                                                                 code: 1,
-				                                                                 userInfo: [NSLocalizedDescriptionKey: "Binary definition was not expected type [String: String]"]))))
+				let error = NSError(
+					domain: CarthageKitBundleIdentifier,
+					code: 1,
+					userInfo: [NSLocalizedDescriptionKey: "Binary definition was not expected type [String: String]"]
+				)
+				expect(actualError) == .invalidJSON(error)
 			}
 
 			it("should fail with an invalid semantic version") {
@@ -56,7 +59,7 @@ class BinaryProjectSpec: QuickSpec {
 
 				let actualError = BinaryProject.from(jsonData: jsonData, url: testUrl).error
 
-				expect(actualError).to(equal(BinaryJSONError.invalidVersion(ScannableError(message: "expected minor version number", currentLine: "1.a"))))
+				expect(actualError) == .invalidVersion(ScannableError(message: "expected minor version number", currentLine: "1.a"))
 			}
 
 			it("should fail with a non-parseable URL") {
@@ -64,7 +67,7 @@ class BinaryProjectSpec: QuickSpec {
 
 				let actualError = BinaryProject.from(jsonData: jsonData, url: testUrl).error
 
-				expect(actualError).to(equal(BinaryJSONError.invalidURL("💩")))
+				expect(actualError) == .invalidURL("💩")
 			}
 
 			it("should fail with a non HTTPS url") {
@@ -72,7 +75,7 @@ class BinaryProjectSpec: QuickSpec {
 
 				let actualError = BinaryProject.from(jsonData: jsonData, url: testUrl).error
 
-				expect(actualError).to(equal(BinaryJSONError.nonHTTPSURL(URL(string: "http://my.domain.com/framework.zip")!)))
+				expect(actualError) == .nonHTTPSURL(URL(string: "http://my.domain.com/framework.zip")!)
 			}
 
 		}
