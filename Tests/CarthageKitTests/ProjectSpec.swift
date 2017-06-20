@@ -251,7 +251,7 @@ class ProjectSpec: QuickSpec {
 				return CarthageKit.cloneOrFetch(dependency: dependency, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
 			}
 
-			func assertProjectEvent(commitish: String? = nil, clearFetchTime: Bool = true, action: @escaping (ProjectEvent?) -> ()) {
+			func assertProjectEvent(commitish: String? = nil, clearFetchTime: Bool = true, action: @escaping (ProjectEvent?) -> Void) {
 				waitUntil { done in
 					if clearFetchTime {
 						FetchCache.clearFetchTimes()

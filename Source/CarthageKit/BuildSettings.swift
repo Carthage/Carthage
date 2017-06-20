@@ -52,7 +52,7 @@ public struct BuildSettings {
 					var currentSettings: [String: String] = [:]
 					var currentTarget: String?
 
-					let flushTarget = { () -> () in
+					let flushTarget = { () -> Void in
 						if let currentTarget = currentTarget {
 							let buildSettings = self.init(target: currentTarget, settings: currentSettings)
 							observer.send(value: buildSettings)
