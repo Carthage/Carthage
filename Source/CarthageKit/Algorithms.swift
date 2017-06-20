@@ -26,7 +26,7 @@
 ///
 /// Nodes that are equal from a topological perspective are sorted by the
 /// strict total order as defined by `Comparable`.
-public func topologicalSort<Node: Comparable>(_ graph: Dictionary<Node, Set<Node>>) -> [Node]? {
+public func topologicalSort<Node: Comparable>(_ graph: [Node: Set<Node>]) -> [Node]? {
 	// Maintain a list of nodes with no incoming edges (sources).
 	var sources = graph
 		.filter { _, incomingEdges in incomingEdges.isEmpty }
@@ -69,7 +69,7 @@ public func topologicalSort<Node: Comparable>(_ graph: Dictionary<Node, Set<Node
 /// given graph.
 ///
 /// Returns nil if the provided graph has a cycle or is malformed.
-public func topologicalSort<Node: Comparable>(_ graph: Dictionary<Node, Set<Node>>, nodes: Set<Node>) -> [Node]? {
+public func topologicalSort<Node: Comparable>(_ graph: [Node: Set<Node>], nodes: Set<Node>) -> [Node]? {
 	guard !nodes.isEmpty else { return topologicalSort(graph) }
 
 	precondition(nodes.isSubset(of: Set(graph.keys)))
@@ -85,11 +85,10 @@ public func topologicalSort<Node: Comparable>(_ graph: Dictionary<Node, Set<Node
 
 /// Returns the set of nodes that the given node in the provided graph has as
 /// its incoming nodes, both directly and transitively.
-private func transitiveIncomingNodes<Node: Equatable>(_ graph: Dictionary<Node, Set<Node>>, node: Node) -> Set<Node> {
+private func transitiveIncomingNodes<Node: Equatable>(_ graph: [Node: Set<Node>], node: Node) -> Set<Node> {
 	guard let nodes = graph[node] else { return Set() }
 
 	let incomingNodes = Set(nodes.flatMap { transitiveIncomingNodes(graph, node: $0) })
 
 	return nodes.union(incomingNodes)
 }
-
