@@ -1,11 +1,3 @@
-//
-//  Extensions.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-11-26.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 // This file contains extensions to anything that's not appropriate for
 // CarthageKit.
 

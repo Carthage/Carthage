@@ -1,11 +1,3 @@
-//
-//  ArchiveSpec.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2015-01-02.
-//  Copyright (c) 2015 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Foundation
 import Nimble

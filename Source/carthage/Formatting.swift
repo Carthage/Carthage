@@ -1,11 +1,3 @@
-//
-//  Formatting.swift
-//  Carthage
-//
-//  Created by J.D. Healy on 1/29/15.
-//  Copyright (c) 2015 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Foundation

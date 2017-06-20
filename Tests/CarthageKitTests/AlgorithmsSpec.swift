@@ -1,11 +1,3 @@
-//
-//  AlgorithmsSpec.swift
-//  Carthage
-//
-//  Created by Eric Horacek on 2/19/16.
-//  Copyright © 2016 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Nimble
 import Quick

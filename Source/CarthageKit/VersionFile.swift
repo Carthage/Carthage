@@ -1,11 +1,3 @@
-//
-//  VersionFile.swift
-//  Carthage
-//
-//  Created by Jason Boyle on 8/11/16.
-//  Copyright © 2016 Carthage. All rights reserved.
-//
-
 import Foundation
 import Runes
 import Argo

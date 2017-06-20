@@ -1,11 +1,3 @@
-//
-//  BuildVersion.swift
-//  Carthage
-//
-//  Created by Rodrigo Garcia on 10/15/16.
-//  Copyright © 2016 Carthage. All rights reserved.
-//
-
 import Foundation
 import CarthageKit
 import ReactiveSwift

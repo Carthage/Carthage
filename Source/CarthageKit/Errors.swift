@@ -1,11 +1,3 @@
-//
-//  Errors.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-10-24.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import Foundation
 import ReactiveSwift
 import ReactiveTask

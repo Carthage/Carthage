@@ -1,11 +1,3 @@
-//
-//  Checkout.swift
-//  Carthage
-//
-//  Created by Alan Rogers on 11/10/2014.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Foundation

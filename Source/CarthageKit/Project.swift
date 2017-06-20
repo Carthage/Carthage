@@ -1,11 +1,3 @@
-//
-//  Project.swift
-//  Carthage
-//
-//  Created by Alan Rogers on 12/10/2014.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import Foundation
 import Result
 import ReactiveSwift

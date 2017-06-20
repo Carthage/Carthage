@@ -1,11 +1,3 @@
-//
-//  BuildOptions.swift
-//  Carthage
-//
-//  Created by Syo Ikeda on 5/22/16.
-//  Copyright © 2016 Carthage. All rights reserved.
-//
-
 import XCDBLD
 
 /// The build options used for building `xcodebuild` command.
