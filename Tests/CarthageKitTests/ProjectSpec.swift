@@ -1,11 +1,3 @@
-//
-//  ProjectSpec.swift
-//  Carthage
-//
-//  Created by Robert Böhnke on 27/12/14.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 @testable import CarthageKit
 import Foundation
 import Nimble

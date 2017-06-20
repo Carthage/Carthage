@@ -1,11 +1,3 @@
-//
-//  ProducerQueue.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2015-05-23.
-//  Copyright (c) 2015 Carthage. All rights reserved.
-//
-
 import Dispatch
 import Foundation
 import ReactiveSwift

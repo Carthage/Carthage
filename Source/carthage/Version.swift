@@ -1,11 +1,3 @@
-//
-//  Version.swift
-//  Carthage
-//
-//  Created by Robert Böhnke on 19/11/14.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Foundation

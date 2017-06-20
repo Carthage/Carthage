@@ -1,11 +1,3 @@
-//
-//  SwiftVersionError.swift
-//  Carthage
-//
-//  Created by Scott Hoyt on 2/10/17.
-//  Copyright © 2017 Carthage. All rights reserved.
-//
-
 import Foundation
 
 internal enum SwiftVersionError: Error {

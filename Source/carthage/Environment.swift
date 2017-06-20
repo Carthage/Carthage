@@ -1,11 +1,3 @@
-//
-//  Environment.swift
-//  Carthage
-//
-//  Created by J.D. Healy on 2/6/15.
-//  Copyright (c) 2015 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Foundation
 import Result

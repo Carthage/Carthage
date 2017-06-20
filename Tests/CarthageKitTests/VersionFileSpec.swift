@@ -1,11 +1,3 @@
-//
-//  VersionFileSpec.swift
-//  Carthage
-//
-//  Created by Stephen Marquis on 2/3/17.
-//  Copyright © 2017 Carthage. All rights reserved.
-//
-
 import Foundation
 import Quick
 import Nimble

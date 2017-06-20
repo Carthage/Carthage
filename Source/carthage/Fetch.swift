@@ -1,11 +1,3 @@
-//
-//  Fetch.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-12-24.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Result

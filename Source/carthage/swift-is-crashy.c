@@ -1,11 +1,3 @@
-//
-//  swift-is-crashy.c
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2015-05-25.
-//  Copyright (c) 2015 Carthage. All rights reserved.
-//
-
 #include <errno.h>
 #include <execinfo.h>
 #include <signal.h>

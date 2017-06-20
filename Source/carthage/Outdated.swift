@@ -1,11 +1,3 @@
-//
-//  Outdated.swift
-//  Carthage
-//
-//  Created by Matt Prowse on 2015-06-24
-//  Copyright (c) 2015 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Foundation

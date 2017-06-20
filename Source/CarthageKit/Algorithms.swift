@@ -1,11 +1,3 @@
-//
-//  Algorithms.swift
-//  Carthage
-//
-//  Created by Eric Horacek on 2/19/16.
-//  Copyright © 2016 Carthage. All rights reserved.
-//
-
 /// Returns an array containing the topologically sorted nodes of the provided
 /// directed graph, or nil if the graph contains a cycle or is malformed.
 ///
