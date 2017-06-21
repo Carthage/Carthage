@@ -58,7 +58,7 @@ struct VersionFile {
 
 	func toJSONObject() -> Any {
 		var dict: [String: Any] = [
-			VersionFile.commitishKey : commitish,
+			VersionFile.commitishKey: commitish,
 		]
 		for platform in Platform.supportedPlatforms {
 			if let caches = self[platform] {

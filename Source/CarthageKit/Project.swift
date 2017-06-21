@@ -40,7 +40,7 @@ private let CarthageUserCachesURL: URL = {
 			}
 		} else {
 			return Result(attempt: {
-				try fileManager.createDirectory(at: dependenciesURL, withIntermediateDirectories: true, attributes: [FileAttributeKey.posixPermissions.rawValue : 0o755])
+				try fileManager.createDirectory(at: dependenciesURL, withIntermediateDirectories: true, attributes: [FileAttributeKey.posixPermissions.rawValue: 0o755])
 				return dependenciesURL
 			})
 		}
