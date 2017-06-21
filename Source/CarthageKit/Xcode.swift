@@ -500,7 +500,7 @@ public func buildScheme(_ scheme: String, withOptions options: BuildOptions, inP
 				sdks.insert(sdk)
 				sdksByPlatform.updateValue(sdks, forKey: platform)
 			} else {
-				sdksByPlatform[platform] = Set(arrayLiteral: sdk)
+				sdksByPlatform[platform] = [sdk]
 			}
 
 			return sdksByPlatform
