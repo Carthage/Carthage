@@ -62,7 +62,7 @@ extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
 	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, ScannableError> {
-		var version: NSString? = nil
+		var version: NSString?
 		guard scanner.scanCharacters(from: versionCharacterSet, into: &version), let unwrapped = version else {
 			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
 		}
@@ -139,7 +139,7 @@ extension PinnedVersion: Scannable {
 			return .failure(ScannableError(message: "expected pinned version", currentLine: scanner.currentLine))
 		}
 
-		var commitish: NSString? = nil
+		var commitish: NSString?
 		if !scanner.scanUpTo("\"", into: &commitish) || commitish == nil {
 			return .failure(ScannableError(message: "empty pinned version", currentLine: scanner.currentLine))
 		}
@@ -253,7 +253,7 @@ extension VersionSpecifier: Scannable {
 		} else if scanner.scanString("~>", into: nil) {
 			return SemanticVersion.from(scanner).map { .compatibleWith($0) }
 		} else if scanner.scanString("\"", into: nil) {
-			var refName: NSString? = nil
+			var refName: NSString?
 			if !scanner.scanUpTo("\"", into: &refName) || refName == nil {
 				return .failure(ScannableError(message: "expected Git reference name", currentLine: scanner.currentLine))
 			}

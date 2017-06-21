@@ -38,10 +38,10 @@ public struct BuildArguments {
 
 	/// The build setting whether the product includes only object code for
 	/// the native architecture.
-	public var onlyActiveArchitecture: Bool? = nil
+	public var onlyActiveArchitecture: Bool?
 
 	/// The build setting whether full bitcode should be embedded in the binary.
-	public var bitcodeGenerationMode: BitcodeGenerationMode? = nil
+	public var bitcodeGenerationMode: BitcodeGenerationMode?
 
 	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, derivedDataPath: String? = nil, sdk: SDK? = nil, toolchain: String? = nil) {
 		self.project = project
