@@ -5,6 +5,7 @@ import Result
 import ReactiveSwift
 import XCDBLD
 
+/// Type that encapsulates the configuration and evaluation of the `archive` subcommand.
 public struct ArchiveCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
 		public let outputPath: String?
@@ -18,12 +19,23 @@ public struct ArchiveCommand: CommandProtocol {
 			} } }
 		}
 
-		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+			let argumentUsage = "the names of the built frameworks to archive without any extension "
+				+ "(or blank to pick up the frameworks in the current project built by `--no-skip-current`)"
+
 			return create
-				<*> m <| Option(key: "output", defaultValue: nil, usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)")
-				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
-				<*> ColorOptions.evaluate(m)
-				<*> m <| Argument(defaultValue: [], usage: "the names of the built frameworks to archive without any extension (or blank to pick up the frameworks in the current project built by `--no-skip-current`)")
+				<*> mode <| Option(
+					key: "output",
+					defaultValue: nil,
+					usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)"
+				)
+				<*> mode <| Option(
+					key: "project-directory",
+					defaultValue: FileManager.default.currentDirectoryPath,
+					usage: "the directory containing the Carthage project"
+				)
+				<*> ColorOptions.evaluate(mode)
+				<*> mode <| Argument(defaultValue: [], usage: argumentUsage)
 		}
 	}
 
@@ -102,7 +114,10 @@ public struct ArchiveCommand: CommandProtocol {
 						.filter { $0.hasSuffix(".framework") }
 
 					if Set(foundFrameworks) != Set(frameworks) {
-						let error = CarthageError.invalidArgument(description: "Could not find any copies of \(frameworks.joined(separator: ", ")). Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
+						let error = CarthageError.invalidArgument(
+							description: "Could not find any copies of \(frameworks.joined(separator: ", ")). "
+								+ "Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'."
+						)
 						return SignalProducer(error: error)
 					}
 

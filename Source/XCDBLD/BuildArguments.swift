@@ -6,10 +6,10 @@ public struct BuildArguments {
 	/// binary.
 	public enum BitcodeGenerationMode: String {
 		/// Only bitcode marker will be embedded.
-		case marker = "marker"
+		case marker
 
 		/// Full bitcode will be embedded.
-		case bitcode = "bitcode"
+		case bitcode
 	}
 
 	/// The project to build.
@@ -43,7 +43,8 @@ public struct BuildArguments {
 	/// The build setting whether full bitcode should be embedded in the binary.
 	public var bitcodeGenerationMode: BitcodeGenerationMode?
 
-	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, derivedDataPath: String? = nil, sdk: SDK? = nil, toolchain: String? = nil) {
+	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil,
+	            derivedDataPath: String? = nil, sdk: SDK? = nil, toolchain: String? = nil) {
 		self.project = project
 		self.scheme = scheme
 		self.configuration = configuration

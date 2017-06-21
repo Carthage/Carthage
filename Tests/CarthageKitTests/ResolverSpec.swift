@@ -24,7 +24,7 @@ private extension PinnedVersion {
 	static let v3_0_0_beta_1 = PinnedVersion("v3.0.0-beta.1")
 }
 
-private extension SemanticVersion {
+extension SemanticVersion {
 	static let v0_1_0 = SemanticVersion(major: 0, minor: 1, patch: 0)
 	static let v1_0_0 = SemanticVersion(major: 1, minor: 0, patch: 0)
 	static let v1_1_0 = SemanticVersion(major: 1, minor: 1, patch: 0)
@@ -35,6 +35,7 @@ private extension SemanticVersion {
 }
 // swiftlint:enable no_extension_access_modifier
 
+// swiftlint:enable identifier_name
 private struct DB {
 	var versions: [Dependency: [PinnedVersion: [Dependency: VersionSpecifier]]]
 	var references: [Dependency: [String: PinnedVersion]] = [:]
@@ -278,7 +279,6 @@ class ResolverSpec: QuickSpec {
 				(github2, .v1_0_0),
 				(github1, .v1_0_0),
 			]
-
 		}
 
 		it("should correctly order transitive dependencies") {

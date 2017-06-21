@@ -38,7 +38,7 @@ extension Server {
 
 extension Repository {
 	/// Matches an identifier of the form "owner/name".
-	private static let NWORegex = try! NSRegularExpression(pattern: "^([\\-\\.\\w]+)/([\\-\\.\\w]+)$", options: [])
+	private static let nwoRegex = try! NSRegularExpression(pattern: "^([\\-\\.\\w]+)/([\\-\\.\\w]+)$", options: []) // swiftlint:disable:this force_try
 
 	/// Parses repository information out of a string of the form "owner/name"
 	/// for the github.com, or the form "http(s)://hostname/owner/name" for
@@ -46,7 +46,7 @@ extension Repository {
 	public static func fromIdentifier(_ identifier: String) -> Result<(Server, Repository), ScannableError> {
 		// GitHub.com
 		let range = NSRange(location: 0, length: identifier.utf16.count)
-		if let match = NWORegex.firstMatch(in: identifier, range: range) {
+		if let match = nwoRegex.firstMatch(in: identifier, range: range) {
 			let owner = (identifier as NSString).substring(with: match.rangeAt(1))
 			let name = (identifier as NSString).substring(with: match.rangeAt(2))
 			return .success((.dotCom, self.init(owner: owner, name: strippingGitSuffix(name))))
@@ -118,7 +118,7 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 			return nil
 		}
 		.first()?
-		.value ?? nil
+		.value ?? nil // swiftlint:disable:this redundant_nil_coalescing
 }
 
 private func tokenFromEnvironment(forServer server: Server) -> String? {
@@ -172,5 +172,4 @@ extension Client {
 			self.init(server)
 		}
 	}
-
 }

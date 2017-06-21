@@ -8,11 +8,13 @@ import Result
 import ReactiveTask
 import XCDBLD
 
+// swiftlint:disable:this force_try
+
 class ProjectSpec: QuickSpec {
 	override func spec() {
 		describe("buildCheckedOutDependenciesWithOptions") {
 			let directoryURL = Bundle(for: type(of: self)).url(forResource: "DependencyTest", withExtension: nil)!
-			let buildDirectoryURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
+			let buildDirectoryURL = directoryURL.appendingPathComponent(carthageBinariesFolderPath)
 
 			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true) -> [String] {
 				var builtSchemes: [String] = []
@@ -21,7 +23,7 @@ class ProjectSpec: QuickSpec {
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds))
 					.flatten(.concat)
 					.ignoreTaskData()
-					.on(value: { (project, scheme) in
+					.on(value: { project, scheme in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 						builtSchemes.append(scheme)
 					})
@@ -195,12 +197,12 @@ class ProjectSpec: QuickSpec {
 				let resultError = result?.error
 				expect(resultError).notTo(beNil())
 
-				let makeDependency: (String, String, [String]) -> DuplicateDependency = { (repoOwner, repoName, locations) in
+				let makeDependency: (String, String, [String]) -> DuplicateDependency = { repoOwner, repoName, locations in
 					let dependency = Dependency.gitHub(.dotCom, Repository(owner: repoOwner, name: repoName))
 					return DuplicateDependency(dependency: dependency, locations: locations)
 				}
 
-				let locations = ["\(CarthageProjectCartfilePath)", "\(CarthageProjectPrivateCartfilePath)"]
+				let locations = ["\(carthageProjectCartfilePath)", "\(carthageProjectPrivateCartfilePath)"]
 
 				let expectedError = CarthageError.duplicateDependencies([
 					makeDependency("1", "1", locations),
@@ -318,12 +320,11 @@ class ProjectSpec: QuickSpec {
 				expect(cloneOrFetch().wait().error).to(beNil())
 
 				assertProjectEvent { expect($0?.isFetching) == true }
-				assertProjectEvent(clearFetchTime: false) { expect($0).to(beNil())}
+				assertProjectEvent(clearFetchTime: false) { expect($0).to(beNil()) }
 			}
 		}
 
 		describe("downloadBinaryFrameworkDefinition") {
-
 			var project: Project!
 			let testDefinitionURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/successful", withExtension: "json")!
 
@@ -345,7 +346,9 @@ class ProjectSpec: QuickSpec {
 				let actualError = project.downloadBinaryFrameworkDefinition(url: URL(string: "file:///thisfiledoesnotexist.json")!).first()?.error
 
 				switch actualError {
-				case .some(.readFailed): break
+				case .some(.readFailed):
+					break
+
 				default:
 					fail("expected read failed error")
 				}
@@ -357,7 +360,9 @@ class ProjectSpec: QuickSpec {
 				let actualError = project.downloadBinaryFrameworkDefinition(url: invalidDependencyURL).first()?.error
 
 				switch actualError {
-				case .some(CarthageError.invalidBinaryJSON(invalidDependencyURL, BinaryJSONError.invalidJSON(_))): break
+				case .some(CarthageError.invalidBinaryJSON(invalidDependencyURL, BinaryJSONError.invalidJSON)):
+					break
+
 				default:
 					fail("expected invalid binary JSON error")
 				}

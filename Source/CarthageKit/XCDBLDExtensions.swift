@@ -16,7 +16,7 @@ extension Platform {
 	/// be stored.
 	public var relativePath: String {
 		let subfolderName = rawValue
-		return (CarthageBinariesFolderPath as NSString).appendingPathComponent(subfolderName)
+		return (carthageBinariesFolderPath as NSString).appendingPathComponent(subfolderName)
 	}
 }
 
@@ -29,7 +29,7 @@ extension ProjectLocator {
 
 		return gitmodulesEntriesInRepository(directoryURL, revision: nil)
 			.map { directoryURL.appendingPathComponent($0.path) }
-			.concat(value: directoryURL.appendingPathComponent(CarthageProjectCheckoutsPath))
+			.concat(value: directoryURL.appendingPathComponent(carthageProjectCheckoutsPath))
 			.collect()
 			.flatMap(.merge) { directoriesToSkip in
 				return FileManager.default.reactive

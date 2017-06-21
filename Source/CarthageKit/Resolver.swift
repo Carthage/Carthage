@@ -128,7 +128,7 @@ public struct Resolver {
 
 		return dependenciesForDependency(node.dependency, node.proposedVersion)
 			.start(on: scheduler)
-			.reduce([:]) { (result, dependency) in
+			.reduce([:]) { result, dependency in
 				var copy = result
 				copy[dependency.0] = dependency.1
 				return copy
@@ -146,7 +146,11 @@ public struct Resolver {
 	/// specified node (or as a root otherwise).
 	///
 	/// This is a helper method, and not meant to be called from outside.
-	private func graphs(for dependencies: [Dependency: VersionSpecifier], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
+	private func graphs(
+		for dependencies: [Dependency: VersionSpecifier],
+		dependencyOf: DependencyNode?,
+		basedOnGraph inputGraph: DependencyGraph
+	) -> SignalProducer<DependencyGraph, CarthageError> {
 		return nodePermutations(for: dependencies)
 			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
 				return self
@@ -163,7 +167,11 @@ public struct Resolver {
 	/// the specified node (or as a root otherwise).
 	///
 	/// This is a helper method, and not meant to be called from outside.
-	private func graphs(for nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
+	private func graphs(
+		for nodes: [DependencyNode],
+		dependencyOf: DependencyNode?,
+		basedOnGraph inputGraph: DependencyGraph
+	) -> SignalProducer<DependencyGraph, CarthageError> {
 		let scheduler = QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.graphs")
 
 		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError>
@@ -335,8 +343,7 @@ private struct DependencyGraph: Equatable {
 	mutating func addNodes
 		<C: Collection>
 		(_ nodes: C, dependenciesOf: DependencyNode?) -> Result<[DependencyNode], CarthageError>
-		where C.Iterator.Element == DependencyNode
-	{
+		where C.Iterator.Element == DependencyNode {
 		var newNodes: [DependencyNode] = []
 
 		for node in nodes {
@@ -422,8 +429,7 @@ extension DependencyGraph: CustomStringConvertible {
 private func mergeGraphs
 	<C: Collection>
 	(_ graphs: C) -> Result<DependencyGraph, CarthageError>
-	where C.Iterator.Element == DependencyGraph
-{
+	where C.Iterator.Element == DependencyGraph {
 	precondition(!graphs.isEmpty)
 
 	var result: Result<DependencyGraph, CarthageError> = .success(graphs.first!)

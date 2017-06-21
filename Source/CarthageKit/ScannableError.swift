@@ -7,7 +7,6 @@ public struct ScannableError: Error {
 		self.message = message
 		self.currentLine = currentLine
 	}
-
 }
 
 extension ScannableError: CustomStringConvertible {

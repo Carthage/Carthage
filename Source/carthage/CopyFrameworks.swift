@@ -4,6 +4,7 @@ import Foundation
 import Result
 import ReactiveSwift
 
+/// Type that encapsulates the configuration and evaluation of the `copy-frameworks` subcommand.
 public struct CopyFrameworksCommand: CommandProtocol {
 	public let verb = "copy-frameworks"
 	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
@@ -13,7 +14,13 @@ public struct CopyFrameworksCommand: CommandProtocol {
 			.flatMap(.merge) { frameworkPath -> SignalProducer<(), CarthageError> in
 				let frameworkName = (frameworkPath as NSString).lastPathComponent
 
-				let source = Result(URL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.invalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
+				let source = Result(
+					URL(fileURLWithPath: frameworkPath, isDirectory: true),
+					failWith: CarthageError.invalidArgument(
+						description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). "
+							+ "Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."
+					)
+				)
 				let target = frameworksFolder().map { $0.appendingPathComponent(frameworkName, isDirectory: true) }
 
 				return SignalProducer.combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
@@ -29,7 +36,7 @@ public struct CopyFrameworksCommand: CommandProtocol {
 									return SignalProducer.combineLatest(copyFrameworks, copydSYMs)
 										.then(SignalProducer<(), CarthageError>.empty)
 								}
-						}
+							}
 					}
 					// Copy as many frameworks as possible in parallel.
 					.start(on: QueueScheduler(name: "org.carthage.CarthageKit.CopyFrameworks.copy"))
@@ -49,7 +56,7 @@ private func copyFramework(_ source: URL, target: URL, validArchitectures: [Stri
 			} else {
 				return strip
 			}
-	}
+		}
 }
 
 private func shouldIgnoreFramework(_ framework: URL, validArchitectures: [String]) -> SignalProducer<Bool, CarthageError> {
@@ -60,7 +67,8 @@ private func shouldIgnoreFramework(_ framework: URL, validArchitectures: [String
 			validArchitectures.filter(architectures.contains)
 		}
 		.map { remainingArchitectures in
-			// If removing the useless architectures results in an empty fat file, wat means that the framework does not have a binary for the given architecture, ignore the framework.
+			// If removing the useless architectures results in an empty fat file, 
+			// wat means that the framework does not have a binary for the given architecture, ignore the framework.
 			remainingArchitectures.isEmpty
 		}
 }
@@ -74,8 +82,7 @@ private func copyDebugSymbolsForFramework(_ source: URL, validArchitectures: [St
 				.flatMap(.merge) { dSYMURL in
 					return stripDSYM(dSYMURL, keepingArchitectures: validArchitectures)
 				}
-	    }
-
+		}
 }
 
 private func copyBCSymbolMapsForFramework(_ frameworkURL: URL, fromDirectory directoryURL: URL) -> SignalProducer<URL, CarthageError> {
@@ -99,8 +106,7 @@ private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
 }
 
 private func codeSigningAllowed() -> Bool {
-	return getEnvironmentVariable("CODE_SIGNING_ALLOWED")
-		.map { $0 == "YES" }.value ?? false
+	return getEnvironmentVariable("CODE_SIGNING_ALLOWED").map { $0 == "YES" }.value ?? false
 }
 
 // The fix for https://github.com/Carthage/Carthage/issues/1259

@@ -3,8 +3,10 @@ import Foundation
 import Nimble
 import Quick
 
-class ProjectLocatorSpec: QuickSpec {
-	override func spec() {
+ // swiftlint:disable:this file_length
+
+class ProjectLocatorSpec: QuickSpec { // swiftlint:disable:this type_body_length
+	override func spec() { // swiftlint:disable:this function_body_length
 		describe("\(ProjectLocator.self)") {
 			describe("sorting") {
 				it("should put workspaces before projects") {
