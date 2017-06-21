@@ -1,0 +1,109 @@
+opt_in_rules:
+- attributes
+- closure_end_indentation
+- closure_spacing
+- empty_count
+- explicit_init
+- fatal_error_message
+- file_header
+- first_where
+- implicitly_unwrapped_optional
+- nimble_operator
+- no_extension_access_modifier
+- number_separator
+- operator_usage_whitespace
+- redundant_nil_coalescing
+- switch_case_on_newline
+
+disabled_rules:
+- file_length
+- function_body_length
+- type_body_length
+- vertical_parameter_alignment
+
+line_length: 160
+
+file_header:
+  required_pattern: ''
+
+trailing_comma:
+  mandatory_comma: true
+
+custom_rules:
+  closing_brace_whitespace:
+    included: ".*.swift"
+    regex: '(?:\n| {2,})\}\)? *\n *[^ \n\})\]]'
+    name: "Closing Brace Whitespace"
+    message: "Empty line required after closing curly braces if code with same indentation follows."
+    severity: warning
+  closure_params_parantheses:
+    included: ".*.swift"
+    regex: '\{\s*\([^):]+\)\s*in'
+    name: "Unnecessary Closure Params Parantheses"
+    message: "Don't use parantheses around non-typed parameters in a closure."
+    severity: warning
+  if_as_guard:
+    included: ".*.swift"
+    regex: '\n *if [^\{]+\{\s*return[^\n]*\n *\}(?! *else)'
+    name: "If as Guard"
+    message: "Don't use an if statement to just return – use guard for such cases instead."
+    severity: warning
+  late_force_unwrapping:
+    included: ".*.swift"
+    regex: '\(\S+\?\.\S+\)!'
+    name: "Late Force Unwrapping"
+    message: "Don't use ? first to force unwrap later – directly unwrap within the parantheses."
+    severity: warning
+  multiple_closure_params:
+    included: ".*.swift"
+    regex: '\} *\) *\{'
+    name: "Multiple Closure Params"
+    message: "Don't use multiple in-line closures – save one or more of them to variables instead."
+    severity: warning
+  single_line_guard:
+    included: ".*.swift"
+    regex: 'guard[^\{]{2,100}else\s*\{\s*\n\s*return.{2,60}\}'
+    name: "Single Line Guard"
+    message: "Use a single line guard for simple checks."
+    severity: warning
+  space_before_comment:
+    included: ".*.swift"
+    regex: '\n[ ]{0}[^\/ \n][^\n]*\n[ ]{0}\/\/|\n[ ]{4}[^\/ \n][^\n]*\n[ ]{4}\/\/|\n[ ]{8}[^\/ \n][^\n]*\n[ ]{8}\/\/|\n[ ]{16}[^\/ \n][^\n]*\n[ ]{16}\/\/|\n[ ]{20}[^\/ \n][^\n]*\n[ ]{20}\/\/|\n[ ]{24}[^\/ \n][^\n]*\n[ ]{24}\/\/'
+    name: "Space Before Comment"
+    message: "Always put a space line before a comment line and always comment code beforehand."
+    severity: warning
+  unnecessary_case_break:
+    included: ".*.swift"
+    regex: '(case |default)(?:[^\n\}]+\n){2,}\s*break *\n|\n *\n *break(?:\n *\n|\n *\})'
+    name: "Unnecessary Case Break"
+    message: "Don't use break in switch cases – Swift breaks by default."
+    severity: warning
+  unnecessary_nil_assignment:
+    included: ".*.swift"
+    regex: 'var \S+\s*:\s*[^\s]+\?\s*=\s*nil'
+    name: "Unnecessary Nil Assignment"
+    message: "Don't assign nil as a value when defining an optional type – it's nil by default."
+    severity: warning
+  vertical_whitespaces_around_mark:
+    included: ".*.swift"
+    regex: '\/\/\s*MARK:[^\n]*(\n)(?!\n)|(\n\n\n)[ \t]*\/\/\s*MARK:|[^\s{]\n[^\n\/]*\/\/\s*MARK:'
+    name: "Vertical Whitespaces Around MARK:"
+    message: "Include a single vertical whitespace (empty line) before and after MARK: comments."
+  vertical_whitespace_opening_braces:
+    included: ".*.swift"
+    regex: '[{(\[][ \t]*\n[ \t]*\n'
+    name: "Vertical Whitespace after Opening Braces"
+    message: "Don't include vertical whitespace (empty line) after opening braces."
+    severity: warning
+  vertical_whitespace_closing_braces:
+    included: ".*.swift"
+    regex: '\n[ \t]*\n[ \t]*[)}\]]'
+    name: "Vertical Whitespace before Closing Braces"
+    message: "Don't include vertical whitespace (empty line) before closing braces."
+    severity: warning
+  whitespace_comment_start:
+    included: ".*.swift"
+    regex: '[^:#][^:#]\/\/[^\s\/]'
+    name: "Whitespace Comment Start"
+    message: "A comment should always start with a whitespace."
+    severity: warning
