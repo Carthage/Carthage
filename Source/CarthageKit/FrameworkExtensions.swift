@@ -166,7 +166,7 @@ extension Signal where Value: EventProtocol, Value.Error == Error {
 	internal func dematerializeErrorsIfEmpty() -> Signal<Value.Value, Error> {
 		return Signal<Value.Value, Error> { observer in
 			var receivedValue = false
-			var receivedError: Error? = nil
+			var receivedError: Error?
 
 			return self.observe { event in
 				switch event {
