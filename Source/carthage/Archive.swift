@@ -86,7 +86,7 @@ public struct ArchiveCommand: CommandProtocol {
 						.map { url in ((framework.relativePath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(url.lastPathComponent) }
 					let extraFilesProducer = SignalProducer(value: dSYM)
 						.concat(bcsymbolmapsProducer)
-						.filter { relativePath in FileManager.default.fileExists(atPath: framework.absolutePath) }
+						.filter { _ in FileManager.default.fileExists(atPath: framework.absolutePath) }
 					return SignalProducer(value: framework.relativePath)
 						.concat(extraFilesProducer)
 				}

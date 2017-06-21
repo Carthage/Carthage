@@ -25,7 +25,7 @@ private let fallbackDependenciesURL: URL = {
 private let CarthageUserCachesURL: URL = {
 	let fileManager = FileManager.default
 
-	let urlResult: Result<URL, NSError> = `try` { (error: NSErrorPointer) -> URL? in
+	let urlResult: Result<URL, NSError> = `try` { _ -> URL? in
 		return try? fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
 	}.flatMap { cachesURL in
 		let dependenciesURL = cachesURL.appendingPathComponent(CarthageKitBundleIdentifier, isDirectory: true)
@@ -337,7 +337,7 @@ public final class Project {
 
 					return URLSession.shared.reactive.data(with: URLRequest(url: url))
 						.mapError { return CarthageError.readFailed(url, $0 as NSError) }
-						.attemptMap { (data, urlResponse) in
+						.attemptMap { data, _ in
 							return BinaryProject.from(jsonData: data, url: url).mapError { error in
 								return CarthageError.invalidBinaryJSON(url, error)
 						}
@@ -499,7 +499,7 @@ public final class Project {
 				loadCombinedCartfile()
 			)
 			.map { (oudatedDependencies, combinedCartfile) -> [OutdatedDependency] in
-				return oudatedDependencies.filter { project, resolved, updated in
+				return oudatedDependencies.filter { project, _, _ in
 					return combinedCartfile.dependencies[project] != nil
 				}
 		}
@@ -1092,7 +1092,7 @@ private func cacheDownloadedBinary(_ downloadURL: URL, toURL cachedURL: URL) -> 
 private func filesInDirectory(_ directoryURL: URL, _ typeIdentifier: String? = nil) -> SignalProducer<URL, CarthageError> {
 	let producer = FileManager.default.reactive
 		.enumerator(at: directoryURL, includingPropertiesForKeys: [ .typeIdentifierKey ], options: [ .skipsHiddenFiles, .skipsPackageDescendants ], catchErrors: true)
-		.map { enumerator, url in url }
+		.map { _, url in url }
 	if let typeIdentifier = typeIdentifier {
 		return producer
 			.filter { url in
