@@ -35,7 +35,9 @@ class BinaryProjectSpec: QuickSpec {
 				let actualError = BinaryProject.from(jsonData: jsonData, url: testUrl).error
 
 				switch actualError {
-				case .some(.invalidJSON(_)): break
+				case .some(.invalidJSON):
+					break
+
 				default:
 					fail("Expected invalidJSON error")
 				}
