@@ -2,11 +2,9 @@ import Foundation
 import Result
 
 public struct BinaryProject {
-
 	public var versions: [PinnedVersion: URL]
 
 	public static func from(jsonData: Data, url: URL) -> Result<BinaryProject, BinaryJSONError> {
-
 		return Result<Any, NSError>(attempt: { try JSONSerialization.jsonObject(with: jsonData, options: [])})
 			.mapError(BinaryJSONError.invalidJSON)
 			.flatMap { json in
@@ -16,7 +14,6 @@ public struct BinaryProject {
 				return Result(json as? [String: String], failWith: BinaryJSONError.invalidJSON(error))
 			}
 			.flatMap { (json: [String: String]) -> Result<BinaryProject, BinaryJSONError> in
-
 				var versions = [PinnedVersion: URL]()
 
 				for (key, value) in json {
@@ -40,8 +37,7 @@ public struct BinaryProject {
 				}
 
 				return .success(BinaryProject(versions: versions))
-		}
-
+			}
 	}
 }
 
@@ -50,4 +46,3 @@ extension BinaryProject: Equatable {
 		return lhs.versions == rhs.versions
 	}
 }
-
