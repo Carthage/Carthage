@@ -20,7 +20,7 @@ class XcodeSpec: QuickSpec {
 			_ = try? FileManager.default.removeItem(at: buildFolderURL)
 			expect { try FileManager.default.createDirectory(atPath: targetFolderURL.path, withIntermediateDirectories: true) }.notTo(throwError())
 		}
-		
+
 		afterEach {
 			_ = try? FileManager.default.removeItem(at: targetFolderURL)
 		}
@@ -171,32 +171,32 @@ class XcodeSpec: QuickSpec {
 
 			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
 			expect(strippingResult.value).notTo(beNil())
-			
+
 			let strippedArchitectures = architecturesInPackage(targetURL)
 				.collect()
 				.single()
-			
+
 			expect(strippedArchitectures?.value).notTo(contain("i386"))
 			expect(strippedArchitectures?.value).to(contain("armv7", "arm64"))
 
 			let modulesDirectoryURL = targetURL.appendingPathComponent("Modules", isDirectory: true)
 			expect(FileManager.default.fileExists(atPath: modulesDirectoryURL.path)) == false
-			
+
 			var output: String = ""
 			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path ])
-			
+
 			let codesignResult = codeSign.launch()
 				.on(value: { taskEvent in
 					switch taskEvent {
 					case let .standardError(data):
 						output += String(data: data, encoding: .utf8)!
-						
+
 					default:
 						break
 					}
 				})
 				.wait()
-			
+
 			expect(codesignResult.value).notTo(beNil())
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}

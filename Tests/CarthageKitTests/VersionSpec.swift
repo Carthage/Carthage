@@ -55,7 +55,7 @@ class VersionSpecifierSpec: QuickSpec {
 			let v2_1_1 = PinnedVersion("2.1.1")
 			let v2_2_0 = PinnedVersion("2.2.0")
 			let v3_0_0 = PinnedVersion("3.0.0")
-			
+
 			it("should allow all versions for .any") {
 				let specifier = VersionSpecifier.any
 				expect(specifier.isSatisfied(by: v1_3_2)) == true
@@ -107,7 +107,7 @@ class VersionSpecifierSpec: QuickSpec {
 			let v1_3_2 = SemanticVersion(major: 1, minor: 3, patch: 2)
 			let v2_1_1 = SemanticVersion(major: 2, minor: 1, patch: 1)
 			let v2_2_0 = SemanticVersion(major: 2, minor: 2, patch: 0)
-				
+
 			it("should return the tighter specifier when one is .any") {
 				testIntersection(.any, .any, expected: .any)
 				testIntersection(.any, .atLeast(v1_3_2), expected: .atLeast(v1_3_2))

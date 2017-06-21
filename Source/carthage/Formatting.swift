@@ -16,7 +16,7 @@ public enum ColorArgument: String, ArgumentProtocol, CustomStringConvertible {
 	case auto = "auto"
 	case never = "never"
 	case always = "always"
-	
+
 	/// Whether to color and format.
 	public var isColorful: Bool {
 		switch self {
@@ -28,13 +28,13 @@ public enum ColorArgument: String, ArgumentProtocol, CustomStringConvertible {
 			return Terminal.isTTY && !Terminal.isDumb
 		}
 	}
-	
+
 	public var description: String {
 		return self.rawValue
 	}
-	
+
 	public static let name = "color"
-	
+
 	public static func from(string: String) -> ColorArgument? {
 		return self.init(rawValue: string.lowercased())
 	}
@@ -44,7 +44,7 @@ public enum ColorArgument: String, ArgumentProtocol, CustomStringConvertible {
 public struct ColorOptions: OptionsProtocol {
 	let argument: ColorArgument
 	let formatting: Formatting
-	
+
 	public struct Formatting {
 		let isColorful: Bool
 		let bullets: String
@@ -52,11 +52,11 @@ public struct ColorOptions: OptionsProtocol {
 		let url: Wrap
 		let projectName: Wrap
 		let path: Wrap
-		
-		
+
+
 		/// Wraps a string with terminal colors and formatting or passes it through.
 		typealias Wrap = (_ string: String) -> String
-		
+
 		init(_ isColorful: Bool) {
 			self.isColorful = isColorful
 			bulletin      = wrap(isColorful, wrap: Color.Wrap(foreground: .blue, style: .bold))
@@ -76,11 +76,11 @@ public struct ColorOptions: OptionsProtocol {
 			return wrap(isColorful, wrap: Color.Wrap(foreground: .green))(quotationMark + string + quotationMark)
 		}
 	}
-	
+
 	public static func create(_ argument: ColorArgument) -> ColorOptions {
 		return self.init(argument: argument, formatting: Formatting(argument.isColorful))
 	}
-	
+
 	public static func evaluate(_ m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
 		return create
 			<*> m <| Option(key: "color", defaultValue: ColorArgument.auto, usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')")

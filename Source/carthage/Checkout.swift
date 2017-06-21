@@ -54,7 +54,7 @@ public struct CheckoutCommand: CommandProtocol {
 			return SignalProducer(value: project)
 		}
 	}
-	
+
 	public let verb = "checkout"
 	public let function = "Check out the project's dependencies"
 

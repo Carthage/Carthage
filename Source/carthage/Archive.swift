@@ -26,7 +26,7 @@ public struct ArchiveCommand: CommandProtocol {
 				<*> m <| Argument(defaultValue: [], usage: "the names of the built frameworks to archive without any extension (or blank to pick up the frameworks in the current project built by `--no-skip-current`)")
 		}
 	}
-	
+
 	public let verb = "archive"
 	public let function = "Archives built frameworks into a zip that Carthage can use"
 
@@ -95,12 +95,12 @@ public struct ArchiveCommand: CommandProtocol {
 				})
 				.collect()
 				.flatMap(.merge) { paths -> SignalProducer<(), CarthageError> in
-					
+
 					let foundFrameworks = paths
 						.lazy
 						.map { ($0 as NSString).lastPathComponent }
 						.filter { $0.hasSuffix(".framework") }
-					
+
 					if Set(foundFrameworks) != Set(frameworks) {
 						let error = CarthageError.invalidArgument(description: "Could not find any copies of \(frameworks.joined(separator: ", ")). Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
 						return SignalProducer(error: error)

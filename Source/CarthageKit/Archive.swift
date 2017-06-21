@@ -10,7 +10,7 @@ public func zip(paths: [String], into archiveURL: URL, workingDirectory: String)
 	precondition(archiveURL.isFileURL)
 
 	let task = Task("/usr/bin/env", arguments: [ "zip", "-q", "-r", "--symlinks", archiveURL.path ] + paths, workingDirectoryPath: workingDirectory)
-	
+
 	return task.launch()
 		.mapError(CarthageError.taskError)
 		.then(SignalProducer<(), CarthageError>.empty)

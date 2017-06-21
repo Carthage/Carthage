@@ -123,7 +123,7 @@ public struct PinnedVersion: VersionType {
 	public init(_ commitish: String) {
 		self.commitish = commitish
 	}
-	
+
 	public var hashValue: Int {
 		return commitish.hashValue
 	}
@@ -204,7 +204,7 @@ public enum VersionSpecifier: VersionType {
 			}
 		}
 	}
-	
+
 	public var hashValue: Int {
 		switch self {
 		case .any:

@@ -64,7 +64,7 @@ public struct BuildCommand: CommandProtocol {
 			.waitOnCommand()
 	}
 
-	
+
 	/// Builds a project with the given options.
 	public func buildWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
@@ -77,7 +77,7 @@ public struct BuildCommand: CommandProtocol {
 				let stderrHandle = options.isVerbose ? FileHandle.standardError : stdoutHandle
 
 				let formatting = options.colorOptions.formatting
-				
+
 				return buildProgress
 					.mapError { error -> CarthageError in
 						if case let .buildFailed(taskError, _) = error {
@@ -96,13 +96,13 @@ public struct BuildCommand: CommandProtocol {
 							switch taskEvent {
 							case let .launch(task):
 								stdoutHandle.write(task.description.data(using: .utf8)!)
-								
+
 							case let .standardOutput(data):
 								stdoutHandle.write(data)
-								
+
 							case let .standardError(data):
 								stderrHandle.write(data)
-								
+
 							case let .success(project, scheme):
 								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(project.description))
 							}
@@ -163,16 +163,16 @@ public struct BuildCommand: CommandProtocol {
 				if !FileManager.default.fileExists(atPath: path) {
 					FileManager.default.createFile(atPath: path, contents: nil, attributes: nil)
 				}
-				
+
 				let fileURL = URL(fileURLWithPath: path, isDirectory: false)
-				
+
 				guard let handle = FileHandle(forUpdatingAtPath: path) else {
 					let error = NSError(domain: CarthageKitBundleIdentifier,
 					                    code: 1,
 					                    userInfo: [NSLocalizedDescriptionKey: "Unable to open file handle for file at \(path)"])
 					return .failure(.writeFailed(fileURL, error))
 				}
-				
+
 				return .success((handle, fileURL))
 			} else {
 				var temporaryDirectoryTemplate: ContiguousArray<CChar>
@@ -186,10 +186,10 @@ public struct BuildCommand: CommandProtocol {
 				if logFD < 0 {
 					return .failure(.writeFailed(URL(fileURLWithPath: logPath, isDirectory: false), NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil)))
 				}
-				
+
 				let handle = FileHandle(fileDescriptor: logFD, closeOnDealloc: true)
 				let fileURL = URL(fileURLWithPath: logPath, isDirectory: false)
-				
+
 				return .success((handle, fileURL))
 			}
 		}

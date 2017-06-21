@@ -36,7 +36,7 @@ private extension SemanticVersion {
 private struct DB {
 	var versions: [Dependency: [PinnedVersion: [Dependency: VersionSpecifier]]]
 	var references: [Dependency: [String: PinnedVersion]] = [:]
-	
+
 	func versions(for dependency: Dependency) -> SignalProducer<PinnedVersion, CarthageError> {
 		if let versions = self.versions[dependency] {
 			return .init(versions.keys)
@@ -44,7 +44,7 @@ private struct DB {
 			return .init(error: .taggedVersionNotFound(dependency))
 		}
 	}
-	
+
 	func dependencies(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
 		if let dependencies = self.versions[dependency]?[version] {
 			return .init(dependencies.map { ($0.0, $0.1) })
@@ -52,7 +52,7 @@ private struct DB {
 			return .empty
 		}
 	}
-	
+
 	func resolvedGitReference(_ dependency: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
 		if let version = references[dependency]?[reference] {
 			return .init(value: version)
@@ -60,7 +60,7 @@ private struct DB {
 			return .empty
 		}
 	}
-	
+
 	func resolve(
 		_ dependencies: [Dependency: VersionSpecifier],
 		resolved: [Dependency: PinnedVersion] = [:],
@@ -130,14 +130,14 @@ class ResolverSpec: QuickSpec {
 					.v1_0_0: [:],
 				],
 			]
-			
+
 			let resolved = db.resolve([ github1: .exactly(.v0_1_0) ])
 			expect(resolved.value!) == [
 				(github2, .v1_0_0),
 				(github1, .v0_1_0),
 			]
 		}
-		
+
 		it("should resolve to the latest matching versions") {
 			let db: DB = [
 				github1: [
@@ -157,14 +157,14 @@ class ResolverSpec: QuickSpec {
 					.v2_0_1: [:],
 				],
 			]
-			
+
 			let resolved = db.resolve([ github1: .any ])
 			expect(resolved.value!) == [
 				(github2, .v2_0_1),
 				(github1, .v1_1_0),
 			]
 		}
-		
+
 		it("should resolve a subset when given specific dependencies") {
 			let db: DB = [
 				github1: [
@@ -188,7 +188,7 @@ class ResolverSpec: QuickSpec {
 					.v1_0_0: [:],
 				]
 			]
-			
+
 			let resolved = db.resolve(
 				[
 					github1: .any,
@@ -205,7 +205,7 @@ class ResolverSpec: QuickSpec {
 				(github1, .v1_0_0),
 			]
 		}
-		
+
 		pending("should resolve a subset when given specific dependencies that have constraints") {
 			let db: DB = [
 				github1: [
@@ -230,7 +230,7 @@ class ResolverSpec: QuickSpec {
 					.v1_2_0: [:],
 				]
 			]
-			
+
 			let resolved = db.resolve(
 				[ github1: .any ],
 				resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
@@ -246,7 +246,7 @@ class ResolverSpec: QuickSpec {
 		it("should resolve a Cartfile whose dependency is specified by both a branch name and a SHA which is the HEAD of that branch") {
 			let branch = "development"
 			let sha = "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"
-			
+
 			var db: DB = [
 				github1: [
 					.v1_0_0: [
@@ -269,14 +269,14 @@ class ResolverSpec: QuickSpec {
 					sha: PinnedVersion(sha),
 				],
 			]
-			
+
 			let resolved = db.resolve([ github1: .any, github2: .any ])
 			expect(resolved.value!) == [
 				(github3, PinnedVersion(sha)),
 				(github2, .v1_0_0),
 				(github1, .v1_0_0),
 			]
-			
+
 		}
 
 		it("should correctly order transitive dependencies") {
@@ -303,7 +303,7 @@ class ResolverSpec: QuickSpec {
 					.v1_0_0: [:],
 				],
 			]
-			
+
 			let resolved = db.resolve([ github1: .any ])
 			expect(resolved.value!) == [
 				(git2, .v1_0_0),
@@ -313,7 +313,7 @@ class ResolverSpec: QuickSpec {
 				(github1, .v1_0_0),
 			]
 		}
-		
+
 		pending("should fail if no versions match the requirements and prerelease versions exist") {
 			let db: DB = [
 				github1: [
@@ -323,7 +323,7 @@ class ResolverSpec: QuickSpec {
 					.v3_0_0_beta_1: [:],
 				],
 			]
-			
+
 			let resolved = db.resolve([ github1: .compatibleWith(.v3_0_0) ])
 			expect(resolved.value).to(beNil())
 			expect(resolved.error).notTo(beNil())

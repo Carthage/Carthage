@@ -31,7 +31,7 @@ public struct Cartfile {
 		let commentIndicator = "#"
 		string.enumerateLines { (line, stop) in
 			let scanner = Scanner(string: line)
-			
+
 			if scanner.scanString(commentIndicator, into: nil) {
 				// Skip the rest of the line.
 				return
@@ -90,7 +90,7 @@ public struct Cartfile {
 					guard case let .duplicateDependencies(dupes) = error else {
 						return error
 					}
-					
+
 					let dependencies = dupes
 						.map { dupe in
 							return DuplicateDependency(
@@ -125,7 +125,7 @@ public func duplicateDependenciesIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile
 public struct ResolvedCartfile {
 	/// The dependencies listed in the Cartfile.resolved.
 	public var dependencies: [Dependency: PinnedVersion]
-	
+
 	public init(dependencies: [Dependency: PinnedVersion]) {
 		self.dependencies = dependencies
 	}
@@ -199,39 +199,39 @@ public enum Dependency {
 }
 
 fileprivate extension Dependency {
-	
+
 	init(gitURL: GitURL) {
-		
+
 		let githubHostIdentifier = "github.com"
 		let urlString = gitURL.urlString
-		
+
 		if urlString.contains(githubHostIdentifier) {
 			let gitbubHostScanner = Scanner(string: urlString)
-			
+
 			gitbubHostScanner.scanUpTo(githubHostIdentifier, into:nil)
 			gitbubHostScanner.scanString(githubHostIdentifier, into: nil)
-			
+
 			// find an SCP or URL path separator
 			let separatorFound = (gitbubHostScanner.scanString("/", into: nil) || gitbubHostScanner.scanString(":", into: nil)) && !gitbubHostScanner.isAtEnd
-			
+
 			let startOfOwnerAndNameSubstring = gitbubHostScanner.scanLocation
-			
+
 			if separatorFound && startOfOwnerAndNameSubstring <= urlString.utf16.count {
 				let ownerAndNameSubstring = urlString[urlString.index(urlString.startIndex, offsetBy: startOfOwnerAndNameSubstring)..<urlString.endIndex]
-				
+
 				switch Repository.fromIdentifier(ownerAndNameSubstring as String) {
 				case .success(let server, let repository):
 					self = Dependency.gitHub(server, repository)
 				default:
 					self = Dependency.git(gitURL)
 				}
-				
+
 				return
 			}
 		}
-		
+
 		self = Dependency.git(gitURL)
-		
+
 		return
 	}
 }
@@ -284,7 +284,7 @@ extension Dependency: Scannable {
 			}
 		} else if scanner.scanString("git", into: nil) {
 			parser = { urlString in
-				
+
 				return .success(Dependency(gitURL: GitURL(urlString)))
 			}
 		} else if scanner.scanString("binary", into: nil) {
@@ -361,5 +361,5 @@ extension Dependency {
 			return nil
 		}
 	}
-	
+
 }

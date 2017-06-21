@@ -140,7 +140,7 @@ public struct Resolver {
 				return self.graphs(for: dependencies, dependencyOf: node, basedOnGraph: inputGraph)
 			}
 	}
-	
+
 	/// Recursively permutes `dependencies` and all dependencies thereof,
 	/// attaching each permutation to `inputGraph` as a dependency of the
 	/// specified node (or as a root otherwise).
@@ -165,7 +165,7 @@ public struct Resolver {
 	/// This is a helper method, and not meant to be called from outside.
 	private func graphs(for nodes: [DependencyNode], dependencyOf: DependencyNode?, basedOnGraph inputGraph: DependencyGraph) -> SignalProducer<DependencyGraph, CarthageError> {
 		let scheduler = QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.graphs")
-		
+
 		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError>
 			.attempt {
 				var graph = inputGraph
@@ -322,7 +322,7 @@ private struct DependencyGraph: Equatable {
 
 		return .success(node)
 	}
-	
+
 	/// Attempts to add the given nodes to the graph, optionally as a dependency
 	/// of another.
 	///
@@ -338,17 +338,17 @@ private struct DependencyGraph: Equatable {
 		where C.Iterator.Element == DependencyNode
 	{
 		var newNodes: [DependencyNode] = []
-		
+
 		for node in nodes {
 			switch self.addNode(node, dependencyOf: dependenciesOf) {
 			case let .success(newNode):
 				newNodes.append(newNode)
-				
+
 			case let .failure(error):
 				return Result(error: error)
 			}
 		}
-		
+
 		return Result(value: newNodes)
 	}
 
@@ -426,7 +426,7 @@ private func mergeGraphs
 	where C.Iterator.Element == DependencyGraph
 {
 	precondition(!graphs.isEmpty)
-	
+
 	var result: Result<DependencyGraph, CarthageError> = .success(graphs.first!)
 
 	for next in graphs {
