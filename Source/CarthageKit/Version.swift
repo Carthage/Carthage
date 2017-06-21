@@ -94,11 +94,11 @@ extension SemanticVersion: Scannable {
 }
 
 extension SemanticVersion: Comparable {
-	public static func <(_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
+	public static func < (_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
 		return lhs.components.lexicographicallyPrecedes(rhs.components)
 	}
 
-	public static func ==(_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
+	public static func == (_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
 		return lhs.components == rhs.components
 	}
 }
@@ -128,7 +128,7 @@ public struct PinnedVersion: VersionType {
 		return commitish.hashValue
 	}
 
-	public static func ==(_ lhs: PinnedVersion, _ rhs: PinnedVersion) -> Bool {
+	public static func == (_ lhs: PinnedVersion, _ rhs: PinnedVersion) -> Bool {
 		return lhs.commitish == rhs.commitish
 	}
 }
@@ -220,7 +220,7 @@ public enum VersionSpecifier: VersionType {
 		}
 	}
 
-	public static func ==(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Bool {
+	public static func == (_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Bool {
 		switch (lhs, rhs) {
 		case (.any, .any):
 			return true

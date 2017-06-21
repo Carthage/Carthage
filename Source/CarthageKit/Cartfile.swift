@@ -237,7 +237,7 @@ fileprivate extension Dependency {
 }
 
 extension Dependency: Comparable {
-	public static func ==(_ lhs: Dependency, _ rhs: Dependency) -> Bool {
+	public static func == (_ lhs: Dependency, _ rhs: Dependency) -> Bool {
 		switch (lhs, rhs) {
 		case let (.gitHub(left), .gitHub(right)):
 			return left == right
@@ -253,7 +253,7 @@ extension Dependency: Comparable {
 		}
 	}
 
-	public static func <(_ lhs: Dependency, _ rhs: Dependency) -> Bool {
+	public static func < (_ lhs: Dependency, _ rhs: Dependency) -> Bool {
 		return lhs.name.caseInsensitiveCompare(rhs.name) == .orderedAscending
 	}
 }
