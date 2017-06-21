@@ -85,7 +85,7 @@ class ArchiveSpec: QuickSpec {
 				let symlinkPath = "symlink"
 				expect { try FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: destinationPath) }.notTo(throwError())
 				expect { try FileManager.default.destinationOfSymbolicLink(atPath: symlinkPath) } == destinationPath
-				
+
 				let result = zip(paths: [ symlinkPath, destinationPath ], into: archiveURL, workingDirectory: temporaryURL.path).wait()
 				expect(result.error).to(beNil())
 

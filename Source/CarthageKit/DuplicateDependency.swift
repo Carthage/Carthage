@@ -57,7 +57,7 @@ extension DuplicateDependency: Comparable {
 				return false
 			}
 		}
-		
+
 		return false
 	}
 }

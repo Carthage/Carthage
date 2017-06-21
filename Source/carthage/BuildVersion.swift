@@ -22,6 +22,6 @@ public func remoteVersion() -> SemanticVersion? {
 		}
 		.timeout(after: 0.5, raising: CarthageError.gitHubAPITimeout, on: QueueScheduler.main)
 		.first()
-	
+
 	return latestRemoteVersion?.value
 }

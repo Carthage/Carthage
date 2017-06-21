@@ -52,15 +52,15 @@ class BuildArgumentsSpec: QuickSpec {
 			itCreatesBuildArguments("includes the configuration if one is given", arguments: ["-configuration", "exampleConfiguration"]) { subject in
 				subject.configuration = "exampleConfiguration"
 			}
-			
+
 			itCreatesBuildArguments("includes the derived data path", arguments: ["-derivedDataPath", "/path/to/derivedDataPath"]) { subject in
 				subject.derivedDataPath = "/path/to/derivedDataPath"
 			}
-			
+
 			itCreatesBuildArguments("includes empty derived data path", arguments: []) { subject in
 				subject.derivedDataPath = ""
 			}
-			
+
 			itCreatesBuildArguments("includes the the toolchain", arguments: ["-toolchain", "org.swift.3020160509a"]) { subject in
 				subject.toolchain = "org.swift.3020160509a"
 			}

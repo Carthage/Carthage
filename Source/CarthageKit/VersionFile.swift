@@ -10,10 +10,10 @@ import XCDBLD
 struct CachedFramework {
 	let name: String
 	let hash: String
-	
+
 	static let nameKey = "name"
 	static let hashKey = "hash"
-	
+
 	func toJSONObject() -> Any {
 		return [
 			CachedFramework.nameKey: name,
@@ -37,7 +37,7 @@ struct VersionFile {
 	let iOS: [CachedFramework]?
 	let watchOS: [CachedFramework]?
 	let tvOS: [CachedFramework]?
-	
+
 	static let commitishKey = "commitish"
 
 	/// The extension representing a serialized VersionFile.
@@ -55,7 +55,7 @@ struct VersionFile {
 			return tvOS
 		}
 	}
-	
+
 	func toJSONObject() -> Any {
 		var dict: [String: Any] = [
 			VersionFile.commitishKey : commitish,
@@ -70,13 +70,13 @@ struct VersionFile {
 
 	init(commitish: String, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
 		self.commitish = commitish
-		
+
 		self.macOS = macOS
 		self.iOS = iOS
 		self.watchOS = watchOS
 		self.tvOS = tvOS
 	}
-	
+
 	init?(url: URL) {
 		guard FileManager.default.fileExists(atPath: url.path),
 			let jsonData = try? Data(contentsOf: url),

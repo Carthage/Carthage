@@ -62,14 +62,14 @@ public struct UpdateCommand: CommandProtocol {
 				})
 		}
 	}
-	
+
 	public let verb = "update"
 	public let function = "Update and rebuild the project's dependencies"
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return options.loadProject()
 			.flatMap(.merge) { project -> SignalProducer<(), CarthageError> in
-				
+
 				let checkDependencies: SignalProducer<(), CarthageError>
 				if let depsToUpdate = options.dependenciesToUpdate {
 					checkDependencies = project
@@ -77,7 +77,7 @@ public struct UpdateCommand: CommandProtocol {
 						.flatMap(.concat) { cartfile -> SignalProducer<(), CarthageError> in
 							let dependencyNames = cartfile.dependencies.keys.map { $0.name.lowercased() }
 							let unknownDependencyNames = Set(depsToUpdate.map { $0.lowercased() }).subtracting(dependencyNames)
-							
+
 							if !unknownDependencyNames.isEmpty {
 								return SignalProducer(error: .unknownDependencies(unknownDependencyNames.sorted()))
 							}
@@ -86,12 +86,12 @@ public struct UpdateCommand: CommandProtocol {
 				} else {
 					checkDependencies = .empty
 				}
-				
+
 				let updateDependencies = project.updateDependencies(
 					shouldCheckout: options.checkoutAfterUpdate, buildOptions: options.buildOptions,
 					dependenciesToUpdate: options.dependenciesToUpdate
 				)
-				
+
 				return checkDependencies.then(updateDependencies)
 			}
 			.then(options.buildProducer)

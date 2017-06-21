@@ -20,13 +20,13 @@ public struct BuildArguments {
 
 	/// The configuration to use when building the project.
 	public var configuration: String?
-	
+
 	/// The path to the derived data.
 	public var derivedDataPath: String?
 
 	/// The platform SDK to build for.
 	public var sdk: SDK?
-	
+
 	/// The Swift toolchain to use.
 	public var toolchain: String?
 
@@ -71,7 +71,7 @@ public struct BuildArguments {
 		if let configuration = configuration {
 			args += [ "-configuration", configuration ]
 		}
-		
+
 		if let derivedDataPath = derivedDataPath {
 			let standarizedPath = URL(fileURLWithPath: (derivedDataPath as NSString).expandingTildeInPath).standardizedFileURL.path
 			if !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
@@ -90,7 +90,7 @@ public struct BuildArguments {
 				args += [ "-sdk", sdk.rawValue ]
 			}
 		}
-		
+
 		if let toolchain = toolchain {
 			args += [ "-toolchain", toolchain ]
 		}
@@ -118,7 +118,7 @@ public struct BuildArguments {
 		// Disable code signing requirement for all builds
 		// Frameworks get signed in the copy-frameworks action
 		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]
-		
+
 		args += [ "CARTHAGE=YES" ]
 
 		return args

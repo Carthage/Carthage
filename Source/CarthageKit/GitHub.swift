@@ -89,7 +89,7 @@ extension Release {
 
 private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 	let data = "url=\(server)".data(using: .utf8)!
-	
+
 	return launchGitTask([ "credential", "fill" ], standardInput: SignalProducer(value: data))
 		.flatMap(.concat) { string in
 			return string.linesProducer
@@ -104,7 +104,7 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 			if parts.count >= 2 {
 				let key = parts[0]
 				let value = parts[1]
-				
+
 				values[key] = value
 			}
 
@@ -114,7 +114,7 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 			if let username = values["username"], let password = values["password"] {
 				return (username, password)
 			}
-			
+
 			return nil
 		}
 		.first()?
@@ -152,7 +152,7 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 			}
 		return records[server.url.host!]
 	}
-	
+
 	return nil
 }
 
@@ -161,7 +161,7 @@ extension Client {
 		if Client.userAgent == nil {
 			Client.userAgent = gitHubUserAgent()
 		}
-		
+
 		if !isAuthenticated {
 			self.init(server)
 		} else if let token = tokenFromEnvironment(forServer: server) {
@@ -172,5 +172,5 @@ extension Client {
 			self.init(server)
 		}
 	}
-	
+
 }

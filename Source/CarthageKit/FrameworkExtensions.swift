@@ -126,7 +126,7 @@ extension SignalProducer {
 	fileprivate func permute<U>(with otherProducer: SignalProducer<U, Error>) -> SignalProducer<(Value, U), Error> {
 		return lift(Signal.permute(with:))(otherProducer)
 	}
-	
+
 	/// Sends a boolean of whether the producer succeeded or failed.
 	internal func succeeded() -> SignalProducer<Bool, NoError> {
 		return self

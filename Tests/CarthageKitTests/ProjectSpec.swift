@@ -13,10 +13,10 @@ class ProjectSpec: QuickSpec {
 		describe("buildCheckedOutDependenciesWithOptions") {
 			let directoryURL = Bundle(for: type(of: self)).url(forResource: "DependencyTest", withExtension: nil)!
 			let buildDirectoryURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
-			
+
 			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true) -> [String] {
 				var builtSchemes: [String] = []
-				
+
 				let project = Project(directoryURL: directoryURL)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds))
 					.flatten(.concat)
@@ -27,7 +27,7 @@ class ProjectSpec: QuickSpec {
 					})
 					.wait()
 				expect(result.error).to(beNil())
-				
+
 				return builtSchemes
 			}
 
@@ -58,7 +58,7 @@ class ProjectSpec: QuickSpec {
 					let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
 					let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
 					let binaryURL = frameworkURL.appendingPathComponent("\(frameworkName)", isDirectory: false)
-					
+
 					let data = "junkdata".data(using: .utf8)!
 					try! data.write(to: binaryURL, options: .atomic)
 				}
@@ -79,55 +79,55 @@ class ProjectSpec: QuickSpec {
 
 					try! header.write(to: swiftHeaderURL, atomically: true, encoding: header.fastestEncoding)
 				}
-				
+
 				it("should not rebuild cached frameworks unless instructed to ignore cached builds") {
 					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
-					
+
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
-					
+
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == []
-					
+
 					let result3 = buildDependencyTest(platforms: [.macOS], cacheBuilds: false)
 					expect(result3) == expected
 				}
-				
+
 				it("should rebuild cached frameworks (and dependencies) whose hash does not match the version file") {
 					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
-					
+
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
-					
+
 					overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
 				}
-				
+
 				it("should rebuild cached frameworks (and dependencies) whose version does not match the version file") {
 					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
-					
+
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
-					
+
 					let preludeVersionFileURL = buildDirectoryURL.appendingPathComponent(".TestFramework3.version", isDirectory: false)
 					let preludeVersionFilePath = preludeVersionFileURL.path
-					
+
 					let json = try! String(contentsOf: preludeVersionFileURL, encoding: .utf8)
 					let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"v1.0\"", with: "\"commitish\" : \"v1.1\"")
 					let _ = try! modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
-					
+
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
 				}
 
 				it("should rebuild cached frameworks (and dependencies) whose swift version does not match the local swift version") {
 					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
-					
+
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
-					
+
 					overwriteSwiftVersion("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL, withVersion: "swiftlang-000.0.1 clang-000.0.0.1")
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
@@ -136,41 +136,41 @@ class ProjectSpec: QuickSpec {
 
 				it("should not rebuild cached frameworks unnecessarily") {
 					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
-					
+
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
-					
+
 					overwriteFramework("TestFramework2", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
-					
+
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == ["TestFramework2_Mac", "TestFramework1_Mac"]
 				}
-				
+
 				it("should rebuild a framework for all platforms even a cached framework is invalid for only a single platform") {
 					let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
 					let iOSExpected = ["TestFramework3_iOS", "TestFramework2_iOS", "TestFramework1_iOS"]
-					
+
 					let result1 = buildDependencyTest()
 					expect(result1.filter { $0.contains("Mac") }) == macOSexpected
 					expect(result1.filter { $0.contains("iOS") }) == iOSExpected
 					expect(Set(result1)) == Set<String>(macOSexpected + iOSExpected)
-					
+
 					overwriteFramework("TestFramework1", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
-					
+
 					let result2 = buildDependencyTest()
 					expect(result2.filter { $0.contains("Mac") }) == ["TestFramework1_Mac"]
 					expect(result2.filter { $0.contains("iOS") }) == ["TestFramework1_iOS"]
 				}
 			}
 		}
-		
+
 		describe("loadCombinedCartfile") {
 			it("should load a combined Cartfile when only a Cartfile is present") {
 				let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfileOnly", withExtension: nil)!
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 				expect(result?.value).notTo(beNil())
-				
+
 				let dependencies = result?.value?.dependencies
 				expect(dependencies?.count) == 1
 				expect(dependencies?.keys.first?.name) == "Carthage"
@@ -210,12 +210,12 @@ class ProjectSpec: QuickSpec {
 
 				expect(resultError) == expectedError
 			}
-			
+
 			it("should error when neither a Cartfile nor a Cartfile.private exists") {
 				let directoryURL = Bundle(for: type(of: self)).url(forResource: "NoCartfile", withExtension: nil)!
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
-				
+
 				if case let .readFailed(_, underlyingError)? = result?.error {
 					expect(underlyingError?.domain) == NSCocoaErrorDomain
 					expect(underlyingError?.code) == NSFileReadNoSuchFileError

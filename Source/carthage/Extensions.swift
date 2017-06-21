@@ -61,7 +61,7 @@ extension SignalProducer where Error == CarthageError {
 		let result = producer
 			.then(SignalProducer<(), CarthageError>.empty)
 			.wait()
-		
+
 		Task.waitForAllTaskTermination()
 		return result
 	}
@@ -78,14 +78,14 @@ extension GitURL: ArgumentProtocol {
 /// Logs project events put into the sink.
 internal struct ProjectEventSink {
 	private let colorOptions: ColorOptions
-	
+
 	init(colorOptions: ColorOptions) {
 		self.colorOptions = colorOptions
 	}
-	
+
 	mutating func put(_ event: ProjectEvent) {
 		let formatting = colorOptions.formatting
-		
+
 		switch event {
 		case let .cloning(dependency):
 			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(dependency.name))

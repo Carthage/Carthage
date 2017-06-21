@@ -53,7 +53,7 @@ extension ProjectLocator {
 			.map { $0.sorted() }
 			.flatMap(.merge) { SignalProducer<ProjectLocator, CarthageError>($0) }
 	}
-	
+
 	/// Sends each scheme found in the receiver.
 	public func schemes() -> SignalProducer<String, CarthageError> {
 		let task = xcodebuildTask("-list", BuildArguments(project: self))
@@ -90,12 +90,12 @@ extension ProjectLocator {
 	}
 }
 
-extension SDK {	
+extension SDK {
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func from(string: String) -> Result<SDK, CarthageError> {
 		return Result(self.init(rawValue: string.lowercased()), failWith: .parseError(description: "unexpected SDK key \"\(string)\""))
 	}
-	
+
 	/// Split the given SDKs into simulator ones and device ones.
 	internal static func splitSDKs<S: Sequence>(_ sdks: S) -> (simulators: [SDK], devices: [SDK]) where S.Iterator.Element == SDK {
 		return (

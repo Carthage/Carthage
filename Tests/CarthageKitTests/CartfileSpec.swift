@@ -23,7 +23,7 @@ class CartfileSpec: QuickSpec {
 			let iosCharts = Dependency.gitHub(.dotCom, Repository(owner: "danielgindi", name: "ios-charts"))
 			let errorTranslations = Dependency.gitHub(.enterprise(url: URL(string: "https://enterprise.local/ghe")!), Repository(owner: "desktop", name: "git-error-translations"))
 			let errorTranslations2 = Dependency.git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))
-			
+
 			expect(cartfile.dependencies) == [
 				reactiveCocoa: .atLeast(SemanticVersion(major: 2, minor: 3, patch: 1)),
 				mantle: .compatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0)),
@@ -60,15 +60,15 @@ class CartfileSpec: QuickSpec {
 				fail("Cartfile should error with duplicate dependencies")
 				return
 			}
-			
+
 			let dependencies = dupes
 				.map { $0.dependency }
 				.sorted { $0.description < $1.description }
 			expect(dupes.count) == 3
-			
+
 			let self2Dupe = dependencies[0]
 			expect(self2Dupe) == Dependency.gitHub(.dotCom, Repository(owner: "self2", name: "self2"))
-			
+
 			let self3Dupe = dependencies[1]
 			expect(self3Dupe) == Dependency.gitHub(.dotCom, Repository(owner: "self3", name: "self3"))
 		}
@@ -124,7 +124,7 @@ class ResolvedCartfileSpec: QuickSpec {
 					.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveSwift")): PinnedVersion("v1.0.0"),
 					.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
 				])
-				
+
 				expect(resolvedCartfile.description) == "github \"ReactiveCocoa/ReactiveCocoa\" \"v2.3.1\"\ngithub \"ReactiveCocoa/ReactiveSwift\" \"v1.0.0\"\ngithub \"antitypical/Result\" \"3.0.0\"\n"
 			}
 		}

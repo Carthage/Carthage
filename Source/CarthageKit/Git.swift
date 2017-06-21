@@ -158,7 +158,7 @@ public struct FetchCache {
 /// of an existing repository.
 public func launchGitTask(_ arguments: [String], repositoryFileURL: URL? = nil, standardInput: SignalProducer<Data, NoError>? = nil, environment: [String: String]? = nil) -> SignalProducer<String, CarthageError> {
 	// See https://github.com/Carthage/Carthage/issues/219.
-	var updatedEnvironment = environment ?? ProcessInfo.processInfo.environment 
+	var updatedEnvironment = environment ?? ProcessInfo.processInfo.environment
 	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
 
 	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
@@ -289,7 +289,7 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 			if name != ".git" {
 				return .empty
 			}
-		
+
 			var isDirectory: Bool?
 			do {
 				isDirectory = try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory

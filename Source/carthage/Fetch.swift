@@ -21,7 +21,7 @@ public struct FetchCommand: CommandProtocol {
 				<*> m <| Argument(usage: "the Git repository that should be cloned or fetched")
 		}
 	}
-	
+
 	public let verb = "fetch"
 	public let function = "Clones or fetches a Git repository ahead of time"
 
