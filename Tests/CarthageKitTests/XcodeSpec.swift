@@ -169,7 +169,7 @@ class XcodeSpec: QuickSpec {
 			expect(resultURL?.value) == targetURL
 			expect(targetURL.path).to(beExistingDirectory())
 
-			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
+			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7", "arm64" ], codesigningIdentity: "-").wait()
 			expect(strippingResult.value).notTo(beNil())
 
 			let strippedArchitectures = architecturesInPackage(targetURL)
