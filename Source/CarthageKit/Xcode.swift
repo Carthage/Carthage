@@ -907,18 +907,18 @@ extension SignalProducer where Value == URL, Error == CarthageError {
 	}
 }
 
-private extension SignalProducer where Value: TaskEventType {
+extension SignalProducer where Value: TaskEventType {
 	/// Collect all TaskEvent success values and then send as a single array and complete.
 	/// standard output and standard error data events are still sent as they are received.
-	func collectTaskEvents() -> SignalProducer<TaskEvent<[Value.T]>, Error> {
+	fileprivate func collectTaskEvents() -> SignalProducer<TaskEvent<[Value.T]>, Error> {
 		return lift { $0.collectTaskEvents() }
 	}
 }
 
-private extension Signal where Value: TaskEventType {
+extension Signal where Value: TaskEventType {
 	/// Collect all TaskEvent success values and then send as a single array and complete.
 	/// standard output and standard error data events are still sent as they are received.
-	func collectTaskEvents() -> Signal<TaskEvent<[Value.T]>, Error> {
+	fileprivate func collectTaskEvents() -> Signal<TaskEvent<[Value.T]>, Error> {
 		var taskValues: [Value.T] = []
 
 		return Signal<TaskEvent<[Value.T]>, Error> { observer in

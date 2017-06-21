@@ -86,8 +86,8 @@ public enum CarthageError: Error {
 	case internalError(description: String)
 }
 
-public extension CarthageError {
-	init(scannableError: ScannableError) {
+extension CarthageError {
+	public init(scannableError: ScannableError) {
 		self = .parseError(description: "\(scannableError)")
 	}
 }

@@ -12,6 +12,7 @@ private let github1 = Dependency.gitHub(.dotCom, Repository(owner: "gob", name: 
 private let github2 = Dependency.gitHub(.dotCom, Repository(owner: "gob", name: "2"))
 private let github3 = Dependency.gitHub(.dotCom, Repository(owner: "gob", name: "3"))
 
+// swiftlint:disable no_extension_access_modifier
 private extension PinnedVersion {
 	static let v0_1_0 = PinnedVersion("v0.1.0")
 	static let v1_0_0 = PinnedVersion("v1.0.0")
@@ -32,6 +33,7 @@ private extension SemanticVersion {
 	static let v2_0_1 = SemanticVersion(major: 2, minor: 0, patch: 1)
 	static let v3_0_0 = SemanticVersion(major: 3, minor: 0, patch: 0)
 }
+// swiftlint:enable no_extension_access_modifier
 
 private struct DB {
 	var versions: [Dependency: [PinnedVersion: [Dependency: VersionSpecifier]]]

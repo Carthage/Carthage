@@ -198,10 +198,8 @@ public enum Dependency {
 	}
 }
 
-fileprivate extension Dependency {
-
-	init(gitURL: GitURL) {
-
+extension Dependency {
+	fileprivate init(gitURL: GitURL) {
 		let githubHostIdentifier = "github.com"
 		let urlString = gitURL.urlString
 
@@ -231,8 +229,6 @@ fileprivate extension Dependency {
 		}
 
 		self = Dependency.git(gitURL)
-
-		return
 	}
 }
 

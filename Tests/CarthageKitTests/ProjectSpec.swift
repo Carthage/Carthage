@@ -375,15 +375,15 @@ class ProjectSpec: QuickSpec {
 	}
 }
 
-private extension ProjectEvent {
-	var isCloning: Bool {
+extension ProjectEvent {
+	fileprivate var isCloning: Bool {
 		if case .cloning = self {
 			return true
 		}
 		return false
 	}
 
-	var isFetching: Bool {
+	fileprivate var isFetching: Bool {
 		if case .fetching = self {
 			return true
 		}
