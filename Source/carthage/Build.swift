@@ -64,7 +64,6 @@ public struct BuildCommand: CommandProtocol {
 			.waitOnCommand()
 	}
 
-
 	/// Builds a project with the given options.
 	public func buildWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)

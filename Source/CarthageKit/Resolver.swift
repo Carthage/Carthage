@@ -415,7 +415,6 @@ extension DependencyGraph: CustomStringConvertible {
 	}
 }
 
-
 /// Attempts to unify a collection of graphs.
 ///
 /// Returns the new graph, or an error if the graphs specify inconsistent
