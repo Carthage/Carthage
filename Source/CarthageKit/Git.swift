@@ -229,7 +229,7 @@ public func listTags(_ repositoryFileURL: URL) -> SignalProducer<String, Carthag
 		.flatMap(.concat) { (allTags: String) -> SignalProducer<String, CarthageError> in
 			return SignalProducer { observer, disposable in
 				let range = allTags.characters.startIndex..<allTags.characters.endIndex
-				allTags.enumerateSubstrings(in: range, options: [ .byLines, .reverse ]) { line, substringRange, enclosingRange, stop in
+				allTags.enumerateSubstrings(in: range, options: [ .byLines, .reverse ]) { line, _, _, stop in
 					if disposable.isDisposed {
 						stop = true
 					}
@@ -509,7 +509,7 @@ public func commitExistsInRepository(_ repositoryFileURL: URL, revision: String 
 /// NSTask throws a hissy fit (a.k.a. exception) if the working directory
 /// doesn't exist, so pre-emptively check for that.
 private func ensureDirectoryExistsAtURL(_ fileURL: URL) -> SignalProducer<(), CarthageError> {
-	return SignalProducer { observer, disposable in
+	return SignalProducer { observer, _ in
 		var isDirectory: ObjCBool = false
 		if FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDirectory) && isDirectory.boolValue {
 			observer.sendCompleted()
