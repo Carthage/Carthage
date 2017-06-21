@@ -360,7 +360,7 @@ public final class Project {
 		let fetchVersions: SignalProducer<PinnedVersion, CarthageError>
 
 		switch dependency {
-		case .git(_), .gitHub(_):
+		case .git, .gitHub:
 			fetchVersions = cloneOrFetchDependency(dependency)
 				.flatMap(.merge) { repositoryURL in listTags(repositoryURL) }
 				.map { PinnedVersion($0) }
