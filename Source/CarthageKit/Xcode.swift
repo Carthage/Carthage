@@ -949,7 +949,7 @@ private func stripArchitecture(_ frameworkURL: URL, _ architecture: String) -> S
 			return binaryURL(frameworkURL)
 		}
 		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
-			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path , binaryURL.path])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path, binaryURL.path])
 			return lipoTask.launch()
 				.mapError(CarthageError.taskError)
 		}
