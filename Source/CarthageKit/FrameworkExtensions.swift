@@ -260,14 +260,14 @@ extension URL {
 	internal func swiftHeaderURL() -> URL? {
 		let headersURL = self.appendingPathComponent("Headers", isDirectory: true).resolvingSymlinksInPath()
 		let dirContents = try? FileManager.default.contentsOfDirectory(at: headersURL, includingPropertiesForKeys: [], options: [])
-		return dirContents?.filter { $0.absoluteString.contains("-Swift.h") }.first
+		return dirContents?.first { $0.absoluteString.contains("-Swift.h") }
 	}
 
 	/// Returns the first `URL` to match `<self>/Modules/*.swiftmodule`. Otherwise `nil`.
 	internal func swiftmoduleURL() -> URL? {
 		let headersURL = self.appendingPathComponent("Modules", isDirectory: true).resolvingSymlinksInPath()
 		let dirContents = try? FileManager.default.contentsOfDirectory(at: headersURL, includingPropertiesForKeys: [], options: [])
-		return dirContents?.filter { $0.absoluteString.contains("swiftmodule") }.first
+		return dirContents?.first { $0.absoluteString.contains("swiftmodule") }
 	}
 }
 
