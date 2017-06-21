@@ -218,7 +218,7 @@ extension Scanner {
 		// Force Foundation types, so we don't have to use Swift's annoying
 		// string indexing.
 		let nsString = string as NSString
-		let scanRange: NSRange = NSMakeRange(scanLocation, 0)
+		let scanRange: NSRange = NSRange(location: scanLocation, length: 0)
 		let lineRange: NSRange = nsString.lineRange(for: scanRange)
 
 		return nsString.substring(with: lineRange)

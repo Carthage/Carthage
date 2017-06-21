@@ -68,7 +68,7 @@ public struct BuildSettings {
 							return
 						}
 
-						if let result = self.targetSettingsRegex.firstMatch(in: line, range: NSMakeRange(0, line.utf16.count)) {
+						if let result = self.targetSettingsRegex.firstMatch(in: line, range: NSRange(location: 0, length: line.utf16.count)) {
 							let targetRange = result.rangeAt(1)
 
 							flushTarget()
