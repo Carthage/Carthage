@@ -70,7 +70,7 @@ public func strippingGitSuffix(_ string: String) -> String {
 }
 
 extension GitURL: Equatable {
-	public static func ==(_ lhs: GitURL, _ rhs: GitURL) -> Bool {
+	public static func == (_ lhs: GitURL, _ rhs: GitURL) -> Bool {
 		return lhs.normalizedURLString == rhs.normalizedURLString
 	}
 }
@@ -111,7 +111,7 @@ public struct Submodule {
 }
 
 extension Submodule: Hashable {
-	public static func ==(_ lhs: Submodule, _ rhs: Submodule) -> Bool {
+	public static func == (_ lhs: Submodule, _ rhs: Submodule) -> Bool {
 		return lhs.name == rhs.name && lhs.path == rhs.path && lhs.url == rhs.url && lhs.sha == rhs.sha
 	}
 

@@ -29,7 +29,7 @@ public enum ProjectLocator: Comparable {
 	}
 }
 
-public func ==(_ lhs: ProjectLocator, _ rhs: ProjectLocator) -> Bool {
+public func == (_ lhs: ProjectLocator, _ rhs: ProjectLocator) -> Bool {
 	switch (lhs, rhs) {
 	case let (.workspace(left), .workspace(right)):
 		return left == right
@@ -42,7 +42,7 @@ public func ==(_ lhs: ProjectLocator, _ rhs: ProjectLocator) -> Bool {
 	}
 }
 
-public func <(_ lhs: ProjectLocator, _ rhs: ProjectLocator) -> Bool {
+public func < (_ lhs: ProjectLocator, _ rhs: ProjectLocator) -> Bool {
 	// Prefer top-level directories
 	let leftLevel = lhs.level
 	let rightLevel = rhs.level

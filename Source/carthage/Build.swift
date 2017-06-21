@@ -255,7 +255,7 @@ public enum BuildPlatform {
 }
 
 extension BuildPlatform: Equatable {
-	public static func ==(_ lhs: BuildPlatform, _ rhs: BuildPlatform) -> Bool {
+	public static func == (_ lhs: BuildPlatform, _ rhs: BuildPlatform) -> Bool {
 		switch (lhs, rhs) {
 		case let (.multiple(left), .multiple(right)):
 			return left == right

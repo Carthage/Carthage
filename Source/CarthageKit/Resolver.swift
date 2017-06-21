@@ -364,7 +364,7 @@ private struct DependencyGraph: Equatable {
 	}
 }
 
-private func ==(_ lhs: DependencyGraph, _ rhs: DependencyGraph) -> Bool {
+private func == (_ lhs: DependencyGraph, _ rhs: DependencyGraph) -> Bool {
 	if lhs.edges.count != rhs.edges.count || lhs.roots.count != rhs.roots.count {
 		return false
 	}
@@ -484,7 +484,7 @@ private class DependencyNode: Comparable {
 	}
 }
 
-private func <(_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
+private func < (_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
 	let leftSemantic = SemanticVersion.from(lhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
 	let rightSemantic = SemanticVersion.from(rhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
 
@@ -492,7 +492,7 @@ private func <(_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
 	return leftSemantic > rightSemantic
 }
 
-private func ==(_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
+private func == (_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
 	return lhs.dependency == rhs.dependency
 }
 
