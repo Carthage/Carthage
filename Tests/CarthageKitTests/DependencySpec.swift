@@ -241,7 +241,5 @@ class DependencySpec: QuickSpec {
 			}
 
 		}
-
-
 	}
 }

@@ -53,7 +53,6 @@ public struct ColorOptions: OptionsProtocol {
 		let projectName: Wrap
 		let path: Wrap
 
-
 		/// Wraps a string with terminal colors and formatting or passes it through.
 		typealias Wrap = (_ string: String) -> String
 
