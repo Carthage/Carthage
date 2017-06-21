@@ -75,9 +75,9 @@ class VersionFileSpec: QuickSpec {
 				"iOS": [
 					[
 						"name": "TestFramework",
-						"hash": "TestHASH"
-					]
-				]
+						"hash": "TestHASH",
+					],
+				],
 			]
 
 			let file: VersionFile? = Argo.decode(jsonDictionary)

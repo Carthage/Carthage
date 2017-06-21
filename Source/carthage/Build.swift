@@ -301,7 +301,7 @@ extension BuildPlatform: ArgumentProtocol {
 		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
 		"watchOS": .watchOS, "watchsimulator": .watchOS,
 		"tvOS": .tvOS, "tvsimulator": .tvOS, "appletvos": .tvOS, "appletvsimulator": .tvOS,
-		"all": .all
+		"all": .all,
 	]
 
 	public static func from(string: String) -> BuildPlatform? {

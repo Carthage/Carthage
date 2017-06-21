@@ -123,7 +123,7 @@ class ResolverSpec: QuickSpec {
 			let db: DB = [
 				github1: [
 					.v0_1_0: [
-						github2: .compatibleWith(.v1_0_0)
+						github2: .compatibleWith(.v1_0_0),
 					],
 				],
 				github2: [
@@ -142,14 +142,14 @@ class ResolverSpec: QuickSpec {
 			let db: DB = [
 				github1: [
 					.v0_1_0: [
-						github2: .compatibleWith(.v1_0_0)
+						github2: .compatibleWith(.v1_0_0),
 					],
 					.v1_0_0: [
 						github2: .compatibleWith(.v2_0_0),
 					],
 					.v1_1_0: [
 						github2: .compatibleWith(.v2_0_0),
-					]
+					],
 				],
 				github2: [
 					.v1_0_0: [:],
@@ -173,11 +173,11 @@ class ResolverSpec: QuickSpec {
 					],
 					.v1_1_0: [
 						github2: .compatibleWith(.v1_0_0),
-					]
+					],
 				],
 				github2: [
 					.v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
-					.v1_1_0: [ github3: .compatibleWith(.v1_0_0) ]
+					.v1_1_0: [ github3: .compatibleWith(.v1_0_0) ],
 				],
 				github3: [
 					.v1_0_0: [:],
@@ -186,7 +186,7 @@ class ResolverSpec: QuickSpec {
 				],
 				git1: [
 					.v1_0_0: [:],
-				]
+				],
 			]
 			
 			let resolved = db.resolve(
@@ -217,7 +217,7 @@ class ResolverSpec: QuickSpec {
 					],
 					.v2_0_0: [
 						github2: .compatibleWith(.v2_0_0),
-					]
+					],
 				],
 				github2: [
 					.v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
@@ -228,7 +228,7 @@ class ResolverSpec: QuickSpec {
 					.v1_0_0: [:],
 					.v1_1_0: [:],
 					.v1_2_0: [:],
-				]
+				],
 			]
 			
 			let resolved = db.resolve(
@@ -256,7 +256,7 @@ class ResolverSpec: QuickSpec {
 				],
 				github2: [
 					.v1_0_0: [
-						github3: .gitReference(branch)
+						github3: .gitReference(branch),
 					],
 				],
 				github3: [
