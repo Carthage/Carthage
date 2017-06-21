@@ -89,7 +89,7 @@ public let CarthageProjectBinaryAssetPattern = ".framework"
 /// MIME types allowed for GitHub Release assets, for them to be considered as
 /// binary frameworks.
 public let CarthageProjectBinaryAssetContentTypes = [
-	"application/zip"
+	"application/zip",
 ]
 
 /// Describes an event occurring to or with a project.
@@ -925,7 +925,7 @@ public final class Project {
 
 					let dependencyCheckoutURLResource = try? dependencyCheckoutURL.resourceValues(forKeys: [
 						.isSymbolicLinkKey,
-						.isDirectoryKey
+						.isDirectoryKey,
 					])
 
 					if dependencyCheckoutURLResource?.isSymbolicLink == true {

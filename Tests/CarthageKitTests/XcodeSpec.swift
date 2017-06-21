@@ -221,7 +221,7 @@ class XcodeSpec: QuickSpec {
 				("iOS", "SampleiOSFramework"),
 				("Mac", "SampleMacFramework"),
 				("tvOS", "SampleTVFramework"),
-				("watchOS", "SampleWatchFramework")
+				("watchOS", "SampleWatchFramework"),
 			]
 
 			for (platform, framework) in expectedPlatformsFrameworks {

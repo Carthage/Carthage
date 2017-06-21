@@ -17,7 +17,7 @@ struct CachedFramework {
 	func toJSONObject() -> Any {
 		return [
 			CachedFramework.nameKey: name,
-			CachedFramework.hashKey: hash
+			CachedFramework.hashKey: hash,
 		]
 	}
 }
