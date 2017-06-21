@@ -1,19 +1,11 @@
-//
-//  Checkout.swift
-//  Carthage
-//
-//  Created by Alan Rogers on 11/10/2014.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Foundation
 import Result
-import ReactiveCocoa
+import ReactiveSwift
 
-public struct CheckoutCommand: CommandType {
-	public struct Options: OptionsType {
+public struct CheckoutCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
 		public let useSubmodules: Bool
 		public let useBinaries: Bool
@@ -21,7 +13,7 @@ public struct CheckoutCommand: CommandType {
 		public let directoryPath: String
 		public let dependenciesToCheckout: [String]?
 
-		public static func create(useSSH: Bool) -> (Bool) -> (Bool) -> (ColorOptions) -> (String) -> ([String]) -> Options {
+		public static func create(_ useSSH: Bool) -> (Bool) -> (Bool) -> (ColorOptions) -> (String) -> ([String]) -> Options {
 			return { useSubmodules in { useBinaries in { colorOptions in { directoryPath in { dependenciesToCheckout in
 				// Disable binary downloads when using submodules.
 				// See https://github.com/Carthage/Carthage/issues/419.
@@ -43,7 +35,7 @@ public struct CheckoutCommand: CommandType {
 				<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 				<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist, disabled if --use-submodules option is present" + useBinariesAddendum)
 				<*> ColorOptions.evaluate(m)
-				<*> m <| Option(key: "project-directory", defaultValue: FileManager.`default`.currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> m <| Argument(defaultValue: [], usage: dependenciesUsage)
 		}
 
@@ -62,7 +54,7 @@ public struct CheckoutCommand: CommandType {
 			return SignalProducer(value: project)
 		}
 	}
-	
+
 	public let verb = "checkout"
 	public let function = "Check out the project's dependencies"
 
@@ -72,8 +64,8 @@ public struct CheckoutCommand: CommandType {
 	}
 
 	/// Checks out dependencies with the given options.
-	public func checkoutWithOptions(options: Options) -> SignalProducer<(), CarthageError> {
+	public func checkoutWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		return options.loadProject()
-			.flatMap(.merge) { $0.checkoutResolvedDependencies(options.dependenciesToCheckout) }
+			.flatMap(.merge) { $0.checkoutResolvedDependencies(options.dependenciesToCheckout, buildOptions: nil) }
 	}
 }

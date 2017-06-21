@@ -1,23 +1,15 @@
-//
-//  Fetch.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-12-24.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Result
 import Foundation
-import ReactiveCocoa
+import ReactiveSwift
 
-public struct FetchCommand: CommandType {
-	public struct Options: OptionsType {
+public struct FetchCommand: CommandProtocol {
+	public struct Options: OptionsProtocol {
 		public let colorOptions: ColorOptions
 		public let repositoryURL: GitURL
 
-		static func create(colorOptions: ColorOptions) -> (GitURL) -> Options {
+		static func create(_ colorOptions: ColorOptions) -> (GitURL) -> Options {
 			return { repositoryURL in
 				return self.init(colorOptions: colorOptions, repositoryURL: repositoryURL)
 			}
@@ -29,16 +21,16 @@ public struct FetchCommand: CommandType {
 				<*> m <| Argument(usage: "the Git repository that should be cloned or fetched")
 		}
 	}
-	
+
 	public let verb = "fetch"
 	public let function = "Clones or fetches a Git repository ahead of time"
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
-		let project = ProjectIdentifier.git(options.repositoryURL)
+		let dependency = Dependency.git(options.repositoryURL)
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
-		return cloneOrFetchProject(project, preferHTTPS: true)
-			.on(next: { event, _ in
+		return cloneOrFetch(dependency: dependency, preferHTTPS: true)
+			.on(value: { event, _ in
 				if let event = event {
 					eventSink.put(event)
 				}

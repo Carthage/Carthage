@@ -1,19 +1,12 @@
-//
-//  Errors.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-10-24.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import Foundation
-import ReactiveCocoa
+import ReactiveSwift
 import ReactiveTask
 import Tentacle
+import XCDBLD
 
 /// Possible errors that can originate from Carthage.
-public enum CarthageError: ErrorType, Equatable {
-	public typealias VersionRequirement = (specifier: VersionSpecifier, fromProject: ProjectIdentifier?)
+public enum CarthageError: Error {
+	public typealias VersionRequirement = (specifier: VersionSpecifier, fromDependency: Dependency?)
 
 	/// One or more arguments was invalid.
 	case invalidArgument(description: String)
@@ -22,15 +15,15 @@ public enum CarthageError: ErrorType, Equatable {
 	case missingBuildSetting(String)
 
 	/// Incompatible version specifiers were given for a dependency.
-	case incompatibleRequirements(ProjectIdentifier, VersionRequirement, VersionRequirement)
+	case incompatibleRequirements(Dependency, VersionRequirement, VersionRequirement)
 
 	/// No tagged versions could be found for the dependency.
-	case taggedVersionNotFound(ProjectIdentifier)
+	case taggedVersionNotFound(Dependency)
 
 	/// No existent version could be found to satisfy the version specifier for
 	/// a dependency.
-	case requiredVersionNotFound(ProjectIdentifier, VersionSpecifier)
-	
+	case requiredVersionNotFound(Dependency, VersionSpecifier)
+
 	/// No entry could be found in Cartfile for a dependency with this name.
 	case unknownDependencies([String])
 
@@ -46,8 +39,11 @@ public enum CarthageError: ErrorType, Equatable {
 	/// Failed to write a file or directory at the given URL.
 	case writeFailed(URL, NSError?)
 
-	/// An error occurred parsing a Carthage file.
+	/// An error occurred parsing a Carthage file or task result
 	case parseError(description: String)
+
+	/// An error occurred parsing the binary-only framework definition file
+	case invalidBinaryJSON(URL, BinaryJSONError)
 
 	// An expected environment variable wasn't found.
 	case missingEnvironmentVariable(variable: String)
@@ -60,11 +56,11 @@ public enum CarthageError: ErrorType, Equatable {
 
 	/// The project is not sharing any framework schemes, so Carthage cannot
 	/// discover them.
-	case noSharedFrameworkSchemes(ProjectIdentifier, Set<Platform>)
+	case noSharedFrameworkSchemes(Dependency, Set<Platform>)
 
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
-	case noSharedSchemes(ProjectLocator, Repository?)
+	case noSharedSchemes(ProjectLocator, (Server, Repository)?)
 
 	/// Timeout whilst running `xcodebuild`
 	case xcodebuildTimeout(ProjectLocator)
@@ -74,77 +70,104 @@ public enum CarthageError: ErrorType, Equatable {
 	case duplicateDependencies([DuplicateDependency])
 
 	// There was a cycle between dependencies in the associated graph.
-	case dependencyCycle([ProjectIdentifier: Set<ProjectIdentifier>])
-	
+	case dependencyCycle([Dependency: Set<Dependency>])
+
 	/// A request to the GitHub API failed.
 	case gitHubAPIRequestFailed(Client.Error)
-	
+
 	case gitHubAPITimeout
+
+	case buildFailed(TaskError, log: URL?)
 
 	/// An error occurred while shelling out.
 	case taskError(TaskError)
+
+	/// An internal error occurred
+	case internalError(description: String)
 }
 
-private func == (lhs: CarthageError.VersionRequirement, rhs: CarthageError.VersionRequirement) -> Bool {
-	return lhs.specifier == rhs.specifier && lhs.fromProject == rhs.fromProject
+extension CarthageError {
+	public init(scannableError: ScannableError) {
+		self = .parseError(description: "\(scannableError)")
+	}
 }
 
-public func == (lhs: CarthageError, rhs: CarthageError) -> Bool {
-	switch (lhs, rhs) {
-	case let (.invalidArgument(left), .invalidArgument(right)):
-		return left == right
-	
-	case let (.missingBuildSetting(left), .missingBuildSetting(right)):
-		return left == right
-	
-	case let (.incompatibleRequirements(left, la, lb), .incompatibleRequirements(right, ra, rb)):
-		let specifiersEqual = (la == ra && lb == rb) || (la == rb && rb == la)
-		return left == right && specifiersEqual
-	
-	case let (.taggedVersionNotFound(left), .taggedVersionNotFound(right)):
-		return left == right
+private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.VersionRequirement) -> Bool {
+	return lhs.specifier == rhs.specifier && lhs.fromDependency == rhs.fromDependency
+}
 
-	case let (.requiredVersionNotFound(left, leftVersion), .requiredVersionNotFound(right, rightVersion)):
-		return left == right && leftVersion == rightVersion
-	
-	case let (.repositoryCheckoutFailed(la, lb, lc), .repositoryCheckoutFailed(ra, rb, rc)):
-		return la == ra && lb == rb && lc == rc
-	
-	case let (.readFailed(la, lb), .readFailed(ra, rb)):
-		return la == ra && lb == rb
-	
-	case let (.writeFailed(la, lb), .writeFailed(ra, rb)):
-		return la == ra && lb == rb
-	
-	case let (.parseError(left), .parseError(right)):
-		return left == right
-	
-	case let (.missingEnvironmentVariable(left), .missingEnvironmentVariable(right)):
-		return left == right
-	
-	case let (.invalidArchitectures(left), .invalidArchitectures(right)):
-		return left == right
+extension CarthageError: Equatable {
+	public static func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
+		switch (lhs, rhs) {
+		case let (.invalidArgument(left), .invalidArgument(right)):
+			return left == right
 
-	case let (.noSharedFrameworkSchemes(la, lb), .noSharedFrameworkSchemes(ra, rb)):
-		return la == ra && lb == rb
+		case let (.missingBuildSetting(left), .missingBuildSetting(right)):
+			return left == right
 
-	case let (.noSharedSchemes(la, lb), .noSharedSchemes(ra, rb)):
-		return la == ra && lb == rb
-	
-	case let (.duplicateDependencies(left), .duplicateDependencies(right)):
-		return left.sorted() == right.sorted()
-	
-	case let (.gitHubAPIRequestFailed(left), .gitHubAPIRequestFailed(right)):
-		return left == right
-		
-	case (.gitHubAPITimeout, .gitHubAPITimeout):
-		return true
-	
-	case let (.taskError(left), .taskError(right)):
-		return left == right
-	
-	default:
-		return false
+		case let (.incompatibleRequirements(left, la, lb), .incompatibleRequirements(right, ra, rb)):
+			let specifiersEqual = (la == ra && lb == rb) || (la == rb && rb == la)
+			return left == right && specifiersEqual
+
+		case let (.taggedVersionNotFound(left), .taggedVersionNotFound(right)):
+			return left == right
+
+		case let (.requiredVersionNotFound(left, leftVersion), .requiredVersionNotFound(right, rightVersion)):
+			return left == right && leftVersion == rightVersion
+
+		case let (.repositoryCheckoutFailed(la, lb, lc), .repositoryCheckoutFailed(ra, rb, rc)):
+			return la == ra && lb == rb && lc == rc
+
+		case let (.readFailed(la, lb), .readFailed(ra, rb)):
+			return la == ra && lb == rb
+
+		case let (.writeFailed(la, lb), .writeFailed(ra, rb)):
+			return la == ra && lb == rb
+
+		case let (.parseError(left), .parseError(right)):
+			return left == right
+
+		case let (.invalidBinaryJSON(leftUrl, leftError), .invalidBinaryJSON(rightUrl, rightError)):
+			return leftUrl == rightUrl && leftError == rightError
+
+		case let (.missingEnvironmentVariable(left), .missingEnvironmentVariable(right)):
+			return left == right
+
+		case let (.invalidArchitectures(left), .invalidArchitectures(right)):
+			return left == right
+
+		case let (.noSharedFrameworkSchemes(la, lb), .noSharedFrameworkSchemes(ra, rb)):
+			return la == ra && lb == rb
+
+		case let (.noSharedSchemes(la, lb), .noSharedSchemes(ra, rb)):
+			guard la == ra else { return false }
+			switch (lb, rb) {
+			case (nil, nil): return true
+			case let ((lb1, lb2)?, (rb1, rb2)?): return lb1 == rb1 && lb2 == rb2
+			default: return false
+			}
+
+		case let (.duplicateDependencies(left), .duplicateDependencies(right)):
+			return left.sorted() == right.sorted()
+
+		case let (.gitHubAPIRequestFailed(left), .gitHubAPIRequestFailed(right)):
+			return left == right
+
+		case (.gitHubAPITimeout, .gitHubAPITimeout):
+			return true
+
+		case let (.buildFailed(la, lb), .buildFailed(ra, rb)):
+			return la == ra && lb == rb
+
+		case let (.taskError(left), .taskError(right)):
+			return left == right
+
+		case let (.internalError(left), .internalError(right)):
+			return left == right
+
+		default:
+			return false
+		}
 	}
 }
 
@@ -158,7 +181,7 @@ extension CarthageError: CustomStringConvertible {
 			return "xcodebuild did not return a value for build setting \(setting)"
 
 		case let .readFailed(fileURL, underlyingError):
-			var description = "Failed to read file or folder at \(fileURL.carthage_path)"
+			var description = "Failed to read file or folder at \(fileURL.path)"
 
 			if let underlyingError = underlyingError {
 				description += ": \(underlyingError)"
@@ -167,7 +190,7 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case let .writeFailed(fileURL, underlyingError):
-			var description = "Failed to write to \(fileURL.carthage_path)"
+			var description = "Failed to write to \(fileURL.path)"
 
 			if let underlyingError = underlyingError {
 				description += ": \(underlyingError)"
@@ -176,8 +199,8 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case let .incompatibleRequirements(dependency, first, second):
-			let requirement: (VersionRequirement) -> String = { specifier, fromProject in
-				return "\(specifier)" + (fromProject.map { " (\($0))" } ?? "")
+			let requirement: (VersionRequirement) -> String = { specifier, fromDependency in
+				return "\(specifier)" + (fromDependency.map { " (\($0))" } ?? "")
 			}
 			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(requirement(first))\n\t\(requirement(second))"
 
@@ -188,7 +211,7 @@ extension CarthageError: CustomStringConvertible {
 			return "No available version for \(dependency) satisfies the requirement: \(specifier)"
 
 		case let .repositoryCheckoutFailed(workingDirectoryURL, reason, underlyingError):
-			var description = "Failed to check out repository into \(workingDirectoryURL.carthage_path): \(reason)"
+			var description = "Failed to check out repository into \(workingDirectoryURL.path): \(reason)"
 
 			if let underlyingError = underlyingError {
 				description += " (\(underlyingError))"
@@ -199,6 +222,9 @@ extension CarthageError: CustomStringConvertible {
 		case let .parseError(description):
 			return "Parse error: \(description)"
 
+		case let .invalidBinaryJSON(url, error):
+			return "Unable to parse binary-only framework JSON at \(url) due to error: \(error)"
+
 		case let .invalidArchitectures(description):
 			return "Invalid architecture: \(description)"
 
@@ -208,34 +234,34 @@ extension CarthageError: CustomStringConvertible {
 		case let .missingEnvironmentVariable(variable):
 			return "Environment variable not set: \(variable)"
 
-		case let .noSharedFrameworkSchemes(projectIdentifier, platforms):
-			var description = "Dependency \"\(projectIdentifier.name)\" has no shared framework schemes"
+		case let .noSharedFrameworkSchemes(dependency, platforms):
+			var description = "Dependency \"\(dependency.name)\" has no shared framework schemes"
 			if !platforms.isEmpty {
 				let platformsString = platforms.map { $0.description }.joined(separator: ", ")
 				description += " for any of the platforms: \(platformsString)"
 			}
 
-			switch projectIdentifier {
-			case let .gitHub(repository):
-				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
+			switch dependency {
+			case let .gitHub(server, repository):
+				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(server.newIssueURL(for: repository).absoluteString)"
 
-			case .git:
+			case .git, .binary:
 				break
 			}
 
 			return description
 
-		case let .noSharedSchemes(project, repository):
+		case let .noSharedSchemes(project, serverAndRepository):
 			var description = "Project \"\(project)\" has no shared schemes"
-			if let repository = repository {
-				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(repository.newIssueURL.absoluteString)"
+			if let (server, repository) = serverAndRepository {
+				description += "\n\nIf you believe this to be an error, please file an issue with the maintainers at \(server.newIssueURL(for: repository).absoluteString)"
 			}
 
 			return description
 
 		case let .xcodebuildTimeout(project):
 			return "xcodebuild timed out while trying to read \(project) 😭"
-			
+
 		case let .duplicateDependencies(duplicateDeps):
 			let deps = duplicateDeps
 				.sorted() // important to match expected order in test cases
@@ -259,80 +285,35 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .gitHubAPIRequestFailed(message):
 			return "GitHub API request failed: \(message)"
-			
+
 		case .gitHubAPITimeout:
 			return "GitHub API timed out"
-			
+
 		case let .unknownDependencies(names):
 			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile."
 
 		case let .unresolvedDependencies(names):
 			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile.resolved – please run `carthage update` if the dependency is contained in the project's Cartfile."
 
+		case let .buildFailed(taskError, log):
+			var message = "Build Failed\n"
+			if case let .shellTaskFailed(task, exitCode, _) = taskError {
+				message += "\tTask failed with exit code \(exitCode):\n"
+				message += "\t\(task)\n"
+			} else {
+				message += "\t" + taskError.description + "\n"
+			}
+			message += "\nThis usually indicates that project itself failed to compile."
+			if let log = log {
+				message += " Please check the xcodebuild log for more details: \(log.path)"
+			}
+			return message
+
 		case let .taskError(taskError):
 			return taskError.description
+
+		case let .internalError(description):
+			return description
 		}
 	}
-}
-
-/// A duplicate dependency, used in CarthageError.duplicateDependencies.
-public struct DuplicateDependency: Comparable {
-	/// The duplicate dependency as a project.
-	public let project: ProjectIdentifier
-
-	/// The locations where the dependency was found as duplicate.
-	public let locations: [String]
-
-	// The generated memberwise initialiser has internal access control and
-	// cannot be used in test cases, so we reimplement it as public. We are also
-	// sorting locations, which makes sure that we can match them in a
-	// test case.
-	public init(project: ProjectIdentifier, locations: [String]) {
-		self.project = project
-		self.locations = locations.sort(<)
-	}
-}
-
-extension DuplicateDependency: CustomStringConvertible {
-	public var description: String {
-		return "\(project) \(printableLocations)"
-	}
-
-	private var printableLocations: String {
-		if locations.isEmpty {
-			return ""
-		}
-
-		return "(found in "
-			+ locations.joined(separator: " and ")
-			+ ")"
-	}
-}
-
-public func == (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
-	return lhs.project == rhs.project && lhs.locations == rhs.locations
-}
-
-public func < (lhs: DuplicateDependency, rhs: DuplicateDependency) -> Bool {
-	if lhs.description < rhs.description {
-		return true
-	}
-
-	if lhs.locations.count < rhs.locations.count {
-		return true
-	}
-	else if lhs.locations.count > rhs.locations.count {
-		return false
-	}
-
-	for (lhsLocation, rhsLocation) in zip(lhs.locations, rhs.locations) {
-		if lhsLocation < rhsLocation {
-			return true
-		}
-		else if lhsLocation > rhsLocation {
-			return false
-		}
-	}
-
-	return false
 }

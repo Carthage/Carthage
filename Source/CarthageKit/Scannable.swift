@@ -1,11 +1,3 @@
-//
-//  Scannable.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-11-08.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import Foundation
 import Result
 
@@ -15,5 +7,5 @@ public protocol Scannable {
 	///
 	/// If parsing fails, the scanner will be left at the first invalid
 	/// character (with any partially valid input already consumed).
-	static func from(_ scanner: Scanner) -> Result<Self, CarthageError>
+	static func from(_ scanner: Scanner) -> Result<Self, ScannableError>
 }
