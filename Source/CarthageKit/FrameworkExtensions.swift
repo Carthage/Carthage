@@ -385,8 +385,7 @@ internal func buildCountedSet<S: Sequence>(_ sequence: S) -> [S.Iterator.Element
 		var set = set
 		if let count = set[elem] {
 			set[elem] = count + 1
-		}
-		else {
+		} else {
 			set[elem] = 1
 		}
 		return set

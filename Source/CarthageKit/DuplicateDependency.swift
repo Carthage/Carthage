@@ -44,16 +44,14 @@ extension DuplicateDependency: Comparable {
 
 		if lhs.locations.count < rhs.locations.count {
 			return true
-		}
-		else if lhs.locations.count > rhs.locations.count {
+		} else if lhs.locations.count > rhs.locations.count {
 			return false
 		}
 
 		for (lhsLocation, rhsLocation) in zip(lhs.locations, rhs.locations) {
 			if lhsLocation < rhsLocation {
 				return true
-			}
-			else if lhsLocation > rhsLocation {
+			} else if lhsLocation > rhsLocation {
 				return false
 			}
 		}
