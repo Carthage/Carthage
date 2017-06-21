@@ -32,12 +32,12 @@ class ProjectSpec: QuickSpec {
 			}
 
 			beforeEach {
-				let _ = try? FileManager.default.removeItem(at: buildDirectoryURL)
+				_ = try? FileManager.default.removeItem(at: buildDirectoryURL)
 				// Pre-fetch the repos so we have a cache for the given tags
 				let sourceRepoUrl = directoryURL.appendingPathComponent("SourceRepos")
 				["TestFramework1", "TestFramework2", "TestFramework3"].forEach { repo in
 					let urlPath = sourceRepoUrl.appendingPathComponent(repo).path
-					let _ = cloneOrFetch(dependency: .git(GitURL(urlPath)), preferHTTPS: false)
+					_ = cloneOrFetch(dependency: .git(GitURL(urlPath)), preferHTTPS: false)
 						.wait()
 				}
 			}
@@ -116,7 +116,7 @@ class ProjectSpec: QuickSpec {
 
 					let json = try! String(contentsOf: preludeVersionFileURL, encoding: .utf8)
 					let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"v1.0\"", with: "\"commitish\" : \"v1.1\"")
-					let _ = try! modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
+					_ = try! modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
