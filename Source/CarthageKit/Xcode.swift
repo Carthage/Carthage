@@ -69,7 +69,7 @@ internal func isSwiftFramework(_ frameworkURL: URL) -> SignalProducer<Bool, Swif
 /// Emits the framework URL if it matches the local Swift version and errors if not.
 internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
 	return SignalProducer.combineLatest(swiftVersion(usingToolchain: toolchain), frameworkSwiftVersion(frameworkURL))
-		.attemptMap() { localSwiftVersion, frameworkSwiftVersion in
+		.attemptMap { localSwiftVersion, frameworkSwiftVersion in
 			return localSwiftVersion == frameworkSwiftVersion
 				? .success(frameworkURL)
 				: .failure(.incompatibleFrameworkSwiftVersions(local: localSwiftVersion, framework: frameworkSwiftVersion))
