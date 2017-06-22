@@ -67,7 +67,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 /usr/local/bin/carthage copy-frameworks
 ```
 
-    and add the paths to the frameworks you want to use under “Input Files”, e.g.:
+1. Add the paths to the frameworks you want to use under “Input Files”, e.g.:
 
     ```
 $(SRCROOT)/Carthage/Build/iOS/Box.framework
