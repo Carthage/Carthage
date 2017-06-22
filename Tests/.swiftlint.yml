@@ -18,6 +18,7 @@ opt_in_rules:
 disabled_rules:
 - file_length
 - function_body_length
+- redundant_string_enum_value
 - type_body_length
 - vertical_parameter_alignment
 

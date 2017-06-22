@@ -6,10 +6,10 @@ public struct BuildArguments {
 	/// binary.
 	public enum BitcodeGenerationMode: String {
 		/// Only bitcode marker will be embedded.
-		case marker
+		case marker = "marker"
 
 		/// Full bitcode will be embedded.
-		case bitcode
+		case bitcode = "bitcode"
 	}
 
 	/// The project to build.

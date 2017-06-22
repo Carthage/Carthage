@@ -986,7 +986,7 @@ extension Signal where Value: TaskEventType {
 
 /// Strips the given architecture from a framework.
 private func stripArchitecture(_ frameworkURL: URL, _ architecture: String) -> SignalProducer<(), CarthageError> {
-	return SignalProducer.attempt { () -> Result<URL, CarthageError> in return binaryURL(frameworkURL) }
+	return SignalProducer.attempt { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
 		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
 			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path, binaryURL.path])
 			return lipoTask.launch()
@@ -997,7 +997,7 @@ private func stripArchitecture(_ frameworkURL: URL, _ architecture: String) -> S
 
 /// Returns a signal of all architectures present in a given package.
 public func architecturesInPackage(_ packageURL: URL) -> SignalProducer<String, CarthageError> {
-	return SignalProducer.attempt { () -> Result<URL, CarthageError> in return binaryURL(packageURL) }
+	return SignalProducer.attempt { () -> Result<URL, CarthageError> in binaryURL(packageURL) }
 		.flatMap(.merge) { binaryURL -> SignalProducer<String, CarthageError> in
 			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path])
 
@@ -1193,5 +1193,7 @@ private func codesign(_ frameworkURL: URL, _ expandedIdentity: String) -> Signal
 		"/usr/bin/xcrun",
 		arguments: ["codesign", "--force", "--sign", expandedIdentity, "--preserve-metadata=identifier,entitlements", frameworkURL.path]
 	)
-	return codesignTask.launch().mapError(CarthageError.taskError).then(SignalProducer<(), CarthageError>.empty)
+	return codesignTask.launch()
+		.mapError(CarthageError.taskError)
+		.then(SignalProducer<(), CarthageError>.empty)
 }

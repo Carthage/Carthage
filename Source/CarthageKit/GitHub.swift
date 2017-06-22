@@ -55,9 +55,7 @@ extension Repository {
 		// GitHub Enterprise
 		breakpoint: if let url = URL(string: identifier), let host = url.host {
 			var pathComponents = url.pathComponents.filter { $0 != "/" }
-			guard pathComponents.count >= 2 else {
-				break breakpoint
-			}
+			guard pathComponents.count >= 2 else { break breakpoint }
 
 			// Consider that the instance might be in subdirectories.
 			let name = pathComponents.removeLast()

@@ -263,7 +263,8 @@ public func contentsOfFileInRepository(_ repositoryFileURL: URL, _ path: String,
 /// Submodules of the working tree must be handled seperately.
 public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDirectoryURL: URL,
                                           revision: String = "HEAD") -> SignalProducer<(), CarthageError> {
-	return SignalProducer.attempt { () -> Result<[String: String], CarthageError> in
+	return SignalProducer
+		.attempt { () -> Result<[String: String], CarthageError> in
 			do {
 				try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true)
 			} catch let error as NSError {
@@ -278,11 +279,11 @@ public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDir
 			var environment = ProcessInfo.processInfo.environment
 			environment["GIT_WORK_TREE"] = workingDirectoryURL.path
 			return .success(environment)
-	}
-	.flatMap(.concat) { environment in
-		launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
-	}
-	.then(SignalProducer<(), CarthageError>.empty)
+		}
+		.flatMap(.concat) { environment in
+			return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
+		}
+		.then(SignalProducer<(), CarthageError>.empty)
 }
 
 /// Clones the given submodule into the working directory of its parent
@@ -349,7 +350,8 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 			}
 		}
 
-	return SignalProducer.attempt { () -> Result<URL, CarthageError> in
+	return SignalProducer
+		.attempt { () -> Result<URL, CarthageError> in
 			do {
 				try FileManager.default.removeItem(at: submoduleDirectoryURL)
 			} catch let error as NSError {
@@ -363,10 +365,10 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 			}
 
 			return .success(workingDirectoryURL.appendingPathComponent(submodule.path))
-	}
-	.flatMap(.concat) { submoduleDirectoryURL in cloneRepository(submodule.url, submoduleDirectoryURL, isBare: false) }
-	.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-	.then(purgeGitDirectories)
+		}
+		.flatMap(.concat) { submoduleDirectoryURL in cloneRepository(submodule.url, submoduleDirectoryURL, isBare: false) }
+		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+		.then(purgeGitDirectories)
 }
 
 /// Recursively checks out the given submodule's revision, in its working
@@ -421,15 +423,13 @@ private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keyS
 /// - note: Previously, `path` was recursed through — now, just iterated.
 internal func list(treeish: String, atPath path: String, inRepository repositoryURL: URL) -> SignalProducer<String, CarthageError> {
 	return launchGitTask(
-		// `ls-tree`, because `ls-files` returns no output (for all instances I’ve seen) on bare repos.
-		// flag “-z” enables output separated by the nul character (`\0`).
-		[ "ls-tree", "-z", "--full-name", "--name-only", treeish, path ],
-		repositoryFileURL: repositoryURL
-	)
+			// `ls-tree`, because `ls-files` returns no output (for all instances I’ve seen) on bare repos.
+			// flag “-z” enables output separated by the nul character (`\0`).
+			[ "ls-tree", "-z", "--full-name", "--name-only", treeish, path ],
+			repositoryFileURL: repositoryURL
+		)
 		.flatMap(.merge) { (output: String) -> SignalProducer<String, CarthageError> in
-			SignalProducer(
-				output.characters.lazy.split(separator: "\0").map { String($0) }
-			)
+			return SignalProducer(output.characters.lazy.split(separator: "\0").map { String($0) })
 		}
 }
 
@@ -572,7 +572,7 @@ public func resolveReferenceInRepository(_ repositoryFileURL: URL, _ reference: 
 		.then(launchGitTask([ "rev-parse", "\(reference)^{object}" ], repositoryFileURL: repositoryFileURL))
 		.map { string in string.trimmingCharacters(in: .whitespacesAndNewlines) }
 		.mapError { error in
-			CarthageError.repositoryCheckoutFailed(
+			return CarthageError.repositoryCheckoutFailed(
 				workingDirectoryURL: repositoryFileURL,
 				reason: "No object named \"\(reference)\" exists",
 				underlyingError: error as NSError
@@ -585,7 +585,7 @@ internal func resolveTagInRepository(_ repositoryFileURL: URL, _ tag: String) ->
 	return launchGitTask([ "show-ref", "--tags", "--hash", tag ], repositoryFileURL: repositoryFileURL)
 		.map { string in string.trimmingCharacters(in: .whitespacesAndNewlines) }
 		.mapError { error in
-			CarthageError.repositoryCheckoutFailed(
+			return CarthageError.repositoryCheckoutFailed(
 				workingDirectoryURL: repositoryFileURL,
 				reason: "No tag named \"\(tag)\" exists",
 				underlyingError: error as NSError
@@ -639,12 +639,12 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 					.then(SignalProducer<(), CarthageError>.empty)
 			} else {
 				let addSubmodule = launchGitTask(
-					["submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.url.urlString, submodule.path],
-					repositoryFileURL: repositoryFileURL
-				)
-				// A .failure to add usually means the folder was already added
-				// to the index. That's okay.
-				.flatMapError { _ in SignalProducer<String, CarthageError>.empty }
+						["submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.url.urlString, submodule.path],
+						repositoryFileURL: repositoryFileURL
+					)
+					// A .failure to add usually means the folder was already added
+					// to the index. That's okay.
+					.flatMapError { _ in SignalProducer<String, CarthageError>.empty }
 
 				// If it doesn't exist, clone and initialize a submodule from our
 				// local bare repository.

@@ -77,7 +77,7 @@ private func copyDebugSymbolsForFramework(_ source: URL, validArchitectures: [St
 	return SignalProducer(result: appropriateDestinationFolder())
 		.flatMap(.merge) { destinationURL in
 			return SignalProducer(value: source)
-				.map { return $0.appendingPathExtension("dSYM") }
+				.map { $0.appendingPathExtension("dSYM") }
 				.copyFileURLsIntoDirectory(destinationURL)
 				.flatMap(.merge) { dSYMURL in
 					return stripDSYM(dSYMURL, keepingArchitectures: validArchitectures)
@@ -106,7 +106,8 @@ private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
 }
 
 private func codeSigningAllowed() -> Bool {
-	return getEnvironmentVariable("CODE_SIGNING_ALLOWED").map { $0 == "YES" }.value ?? false
+	return getEnvironmentVariable("CODE_SIGNING_ALLOWED")
+		.map { $0 == "YES" }.value ?? false
 }
 
 // The fix for https://github.com/Carthage/Carthage/issues/1259
@@ -138,7 +139,7 @@ private func frameworksFolder() -> Result<URL, CarthageError> {
 
 private func validArchitectures() -> Result<[String], CarthageError> {
 	return getEnvironmentVariable("VALID_ARCHS").map { architectures -> [String] in
-		architectures.components(separatedBy: " ")
+		return architectures.components(separatedBy: " ")
 	}
 }
 

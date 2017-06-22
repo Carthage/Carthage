@@ -150,7 +150,7 @@ public struct ResolvedCartfile {
 			case let .success((dep, version)):
 				cartfile.dependencies[dep] = version
 
-			case let .failure(error): // swiftlint:disable:this unnecessary_case_break
+			case let .failure(error):
 				result = .failure(CarthageError(scannableError: error))
 				break scannerLoop
 			}

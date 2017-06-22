@@ -1,6 +1,8 @@
 import Foundation
 import ReactiveSwift
 
+// swiftlint:disable missing_docs
+
 /// Describes how to locate the actual project or workspace that Xcode should
 /// build.
 public enum ProjectLocator: Comparable {
@@ -29,7 +31,6 @@ public enum ProjectLocator: Comparable {
 	}
 }
 
-/// Returns a Boolean value indicating whether two values are equal.
 public func == (_ lhs: ProjectLocator, _ rhs: ProjectLocator) -> Bool {
 	switch (lhs, rhs) {
 	case let (.workspace(left), .workspace(right)):
@@ -43,8 +44,6 @@ public func == (_ lhs: ProjectLocator, _ rhs: ProjectLocator) -> Bool {
 	}
 }
 
-/// Returns a Boolean value indicating whether the value of the first
-/// argument is less than that of the second argument.
 public func < (_ lhs: ProjectLocator, _ rhs: ProjectLocator) -> Bool {
 	// Prefer top-level directories
 	let leftLevel = lhs.level

@@ -276,14 +276,15 @@ extension CarthageError: CustomStringConvertible {
 			return "The following dependencies are duplicates:\(deps)"
 
 		case let .dependencyCycle(graph):
-			let prettyGraph = graph.map { project, dependencies in
-				let prettyDependencies = dependencies
-					.map { $0.name }
-					.joined(separator: ", ")
+			let prettyGraph = graph
+				.map { project, dependencies in
+					let prettyDependencies = dependencies
+						.map { $0.name }
+						.joined(separator: ", ")
 
-				return "\(project.name): \(prettyDependencies)"
-			}
-			.joined(separator: "\n")
+					return "\(project.name): \(prettyDependencies)"
+				}
+				.joined(separator: "\n")
 
 			return "The dependency graph contained a cycle:\n\(prettyGraph)"
 

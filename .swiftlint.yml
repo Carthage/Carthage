@@ -16,6 +16,7 @@ opt_in_rules:
 
 disabled_rules:
 - vertical_parameter_alignment
+- redundant_string_enum_value
 
 included:
 - Source
@@ -46,9 +47,9 @@ custom_rules:
     severity: warning
   if_as_guard:
     included: ".*.swift"
-    regex: '\n *if [^\{]+\{\s*return[^\n]*\n *\}(?! *else)'
+    regex: '\n *if [^\{]+\{\s*(?:return|break|continue)[^\n]*\n *\}(?! *else)'
     name: "If as Guard"
-    message: "Don't use an if statement to just return – use guard for such cases instead."
+    message: "Don't use an if statement to just return/break/continue – use guard for such cases instead."
     severity: warning
   late_force_unwrapping:
     included: ".*.swift"
@@ -70,9 +71,15 @@ custom_rules:
     severity: warning
   single_line_guard:
     included: ".*.swift"
-    regex: 'guard[^\{]{2,100}else\s*\{\s*\n\s*return.{2,60}\}'
+    regex: 'guard[^\{]{2,100}else\s*\{\s*\n\s*(?:return|break|continue).{2,60}\}'
     name: "Single Line Guard"
     message: "Use a single line guard for simple checks."
+    severity: warning
+  single_line_return:
+    included: ".*.swift"
+    regex: '\.\S+ *\{(?: *return|[^\n\}]+ in return) [^\}]+\}'
+    name: "Single Line Return"
+    message: "Remove the 'return' when returning from a single line closure."
     severity: warning
   space_before_comment:
     included: ".*.swift"

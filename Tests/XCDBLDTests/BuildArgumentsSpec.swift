@@ -3,10 +3,8 @@ import Quick
 import Nimble
 import XCDBLD
 
- // swiftlint:disable:this file_length
-
-class BuildArgumentsSpec: QuickSpec { // swiftlint:disable:this type_body_length
-	override func spec() { // swiftlint:disable:this function_body_length
+class BuildArgumentsSpec: QuickSpec {
+	override func spec() {
 		describe("arguments") {
 			func itCreatesBuildArguments(_ message: String, arguments: [String], configure: @escaping (inout BuildArguments) -> Void) {
 				let workspace = ProjectLocator.workspace(URL(string: "file:///Foo/Bar/workspace.xcworkspace")!)

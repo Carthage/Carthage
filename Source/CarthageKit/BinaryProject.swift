@@ -1,7 +1,6 @@
 import Foundation
 import Result
 
-/// The binary project.
 public struct BinaryProject {
 	public var versions: [PinnedVersion: URL]
 
@@ -9,9 +8,11 @@ public struct BinaryProject {
 		return Result<Any, NSError>(attempt: { try JSONSerialization.jsonObject(with: jsonData, options: []) })
 			.mapError(BinaryJSONError.invalidJSON)
 			.flatMap { json in
-				let error = NSError(domain: Constants.bundleIdentifier,
-				                    code: 1,
-				                    userInfo: [NSLocalizedDescriptionKey: "Binary definition was not expected type [String: String]"])
+				let error = NSError(
+					domain: Constants.bundleIdentifier,
+					code: 1,
+					userInfo: [NSLocalizedDescriptionKey: "Binary definition was not expected type [String: String]"]
+				)
 				return Result(json as? [String: String], failWith: BinaryJSONError.invalidJSON(error))
 			}
 			.flatMap { (json: [String: String]) -> Result<BinaryProject, BinaryJSONError> in

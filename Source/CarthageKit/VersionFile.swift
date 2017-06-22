@@ -111,7 +111,7 @@ struct VersionFile {
 
 				return hashForFileAtURL(frameworkBinaryURL)
 					.map { hash -> String? in
-						hash
+						return hash
 					}
 					.flatMapError { _ in
 						return SignalProducer(value: nil)
@@ -155,11 +155,12 @@ struct VersionFile {
 		let hashes = self.hashes(for: cachedFrameworks, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
 			.collect()
 
-		let swiftVersionMatches = self.swiftVersionMatches(
-			for: cachedFrameworks, platform: platform,
-			binariesDirectoryURL: binariesDirectoryURL, localSwiftVersion: localSwiftVersion
-		)
-		.collect()
+		let swiftVersionMatches = self
+			.swiftVersionMatches(
+				for: cachedFrameworks, platform: platform,
+				binariesDirectoryURL: binariesDirectoryURL, localSwiftVersion: localSwiftVersion
+			)
+			.collect()
 
 		return SignalProducer.zip(hashes, swiftVersionMatches)
 			.flatMap(.concat) { hashes, swiftVersionMatches -> SignalProducer<Bool, CarthageError> in
@@ -214,8 +215,13 @@ extension VersionFile: Decodable {
 /// in order to allow those frameworks to be skipped in future builds.
 ///
 /// Returns a signal that succeeds once the file has been created.
-public func createVersionFile(for dependency: Dependency, version: PinnedVersion, platforms: Set<Platform>,
-                              buildProducts: [URL], rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+public func createVersionFile(
+	for dependency: Dependency,
+	version: PinnedVersion,
+	platforms: Set<Platform>,
+	buildProducts: [URL],
+	rootDirectoryURL: URL
+) -> SignalProducer<(), CarthageError> {
 	return createVersionFileForCommitish(
 		version.commitish,
 		dependencyName: dependency.name,

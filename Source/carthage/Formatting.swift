@@ -13,9 +13,9 @@ private func wrap(_ isColorful: Bool, wrap: Color.Wrap) -> (String) -> String {
 
 /// Argument for whether to color and format terminal output.
 public enum ColorArgument: String, ArgumentProtocol, CustomStringConvertible {
-	case auto
-	case never
-	case always
+	case auto = "auto"
+	case never = "never"
+	case always = "always"
 
 	/// Whether to color and format.
 	public var isColorful: Bool {

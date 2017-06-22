@@ -36,7 +36,7 @@ extension BuildOptions: OptionsProtocol {
 	}
 }
 
-/// Protocol that encapsulates the configuration and evaluation of the `build` subcommand.
+/// Type that encapsulates the configuration and evaluation of the `build` subcommand.
 public struct BuildCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
 		public let buildOptions: BuildOptions

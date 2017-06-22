@@ -274,9 +274,11 @@ extension URL {
 
 extension FileManager: ReactiveExtensionsProvider {
 	@available(*, deprecated, message: "Use reactive.enumerator instead")
-	public func carthage_enumerator(at url: URL, includingPropertiesForKeys keys: [URLResourceKey]? = nil,
-	                                options: FileManager.DirectoryEnumerationOptions = [],
-	                                catchErrors: Bool = false) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
+	public func carthage_enumerator(
+		at url: URL, includingPropertiesForKeys keys: [URLResourceKey]? = nil,
+		options: FileManager.DirectoryEnumerationOptions = [],
+		catchErrors: Bool = false
+	) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
 		return reactive.enumerator(at: url, includingPropertiesForKeys: keys, options: options, catchErrors: catchErrors)
 	}
 }
@@ -285,8 +287,12 @@ extension Reactive where Base: FileManager {
 	/// Creates a directory enumerator at the given URL. Sends each URL
 	/// enumerated, along with the enumerator itself (so it can be introspected
 	/// and modified as enumeration progresses).
-	public func enumerator(at url: URL, includingPropertiesForKeys keys: [URLResourceKey]? = nil, options: FileManager.DirectoryEnumerationOptions = [],
-	                       catchErrors: Bool = false) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
+	public func enumerator(
+		at url: URL,
+		includingPropertiesForKeys keys: [URLResourceKey]? = nil,
+		options: FileManager.DirectoryEnumerationOptions = [],
+		catchErrors: Bool = false
+	) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
 		return SignalProducer { [base = self.base] observer, disposable in
 			let enumerator = base.enumerator(at: url, includingPropertiesForKeys: keys, options: options) { url, error in
 				if catchErrors {

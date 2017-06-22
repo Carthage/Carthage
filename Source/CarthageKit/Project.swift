@@ -156,7 +156,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 		}
 
-		let cartfile = SignalProducer.attempt { return Cartfile.from(file: cartfileURL) }
+		let cartfile = SignalProducer.attempt { Cartfile.from(file: cartfileURL) }
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) && FileManager.default.fileExists(atPath: privateCartfileURL.path) {
 					return SignalProducer(value: Cartfile())
@@ -165,7 +165,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return SignalProducer(error: error)
 			}
 
-		let privateCartfile = SignalProducer.attempt { return Cartfile.from(file: privateCartfileURL) }
+		let privateCartfile = SignalProducer.attempt { Cartfile.from(file: privateCartfileURL) }
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) {
 					return SignalProducer(value: Cartfile())
@@ -179,7 +179,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 				var cartfile = cartfile
 
 				let duplicateDeps = duplicateDependenciesIn(cartfile, privateCartfile).map { dependency in
-					DuplicateDependency(dependency: dependency, locations: ["\(Constants.Project.cartfilePath)", "\(Constants.Project.privateCartfilePath)"])
+					return DuplicateDependency(
+						dependency: dependency,
+						locations: ["\(Constants.Project.cartfilePath)", "\(Constants.Project.privateCartfilePath)"]
+					)
 				}
 
 				if duplicateDeps.isEmpty {
@@ -225,10 +228,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	/// Limits the number of concurrent clones/fetches to the number of active
 	/// processors.
-	private let cloneOrFetchQueue = ConcurrentProducerQueue(
-		name: "org.carthage.Constants.Project.cloneOrFetchDependency",
-		limit: ProcessInfo.processInfo.activeProcessorCount
-	)
+	private let cloneOrFetchQueue = ConcurrentProducerQueue(name: "org.carthage.CarthageKit", limit: ProcessInfo.processInfo.activeProcessorCount)
 
 	/// Clones the given dependency to the global repositories folder, or fetches
 	/// inside it if it has already been cloned.
@@ -248,7 +248,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 	func downloadBinaryFrameworkDefinition(url: URL) -> SignalProducer<BinaryProject, CarthageError> {
-		return SignalProducer.attempt { return .success(self.cachedBinaryProjects) }
+		return SignalProducer.attempt { .success(self.cachedBinaryProjects) }
 			.flatMap(.merge) { binaryProjectsByURL -> SignalProducer<BinaryProject, CarthageError> in
 				if let binaryProject = binaryProjectsByURL[url] {
 					return SignalProducer(value: binaryProject)
@@ -256,14 +256,14 @@ public final class Project { // swiftlint:disable:this type_body_length
 					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(url), url))
 
 					return URLSession.shared.reactive.data(with: URLRequest(url: url))
-						.mapError { return CarthageError.readFailed(url, $0 as NSError) }
+						.mapError { CarthageError.readFailed(url, $0 as NSError) }
 						.attemptMap { data, _ in
 							return BinaryProject.from(jsonData: data, url: url).mapError { error in
 								return CarthageError.invalidBinaryJSON(url, error)
 							}
 						}
 						.on(value: { binaryProject in
-								self.cachedBinaryProjects[url] = binaryProject
+							self.cachedBinaryProjects[url] = binaryProject
 						})
 				}
 			}
@@ -283,7 +283,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				.flatMap(.merge) { repositoryURL in listTags(repositoryURL) }
 				.map { PinnedVersion($0) }
 
-        case let .binary(url):
+		case let .binary(url):
 			fetchVersions = downloadBinaryFrameworkDefinition(url: url)
 				.flatMap(.concat) { binaryProject -> SignalProducer<PinnedVersion, CarthageError> in
 					return SignalProducer(binaryProject.versions.keys)
@@ -302,7 +302,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 						})
 						.flatMap(.concat) { versions in SignalProducer<PinnedVersion, CarthageError>(versions) }
 				}
-			}.startOnQueue(cachedVersionsQueue).collect().flatMap(.concat) { versions -> SignalProducer<PinnedVersion, CarthageError> in
+			}
+			.startOnQueue(cachedVersionsQueue)
+			.collect()
+			.flatMap(.concat) { versions -> SignalProducer<PinnedVersion, CarthageError> in
 				if versions.isEmpty {
 					return SignalProducer(error: .taggedVersionNotFound(dependency))
 				}
@@ -316,15 +319,15 @@ public final class Project { // swiftlint:disable:this type_body_length
 		switch dependency {
 		case .git, .gitHub:
 			let revision = version.commitish
-			return self.cloneOrFetchDependency(dependency, commitish: revision).flatMap(.concat) { repositoryURL in
-				return contentsOfFileInRepository(repositoryURL, Constants.Project.cartfilePath, revision: revision)
-			}
-			.flatMapError { _ in
-				.empty
-			}
-			.attemptMap(Cartfile.from(string:)).flatMap(.concat) { cartfile -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> in
-				return SignalProducer(cartfile.dependencies.map { ($0.0, $0.1) })
-			}
+			return self.cloneOrFetchDependency(dependency, commitish: revision)
+				.flatMap(.concat) { repositoryURL in
+					return contentsOfFileInRepository(repositoryURL, Constants.Project.cartfilePath, revision: revision)
+				}
+				.flatMapError { _ in .empty }
+				.attemptMap(Cartfile.from(string:))
+				.flatMap(.concat) { cartfile -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> in
+					return SignalProducer(cartfile.dependencies.map { ($0.0, $0.1) })
+				}
 
 		case .binary:
 			// Binary-only frameworks do not support dependencies
@@ -343,7 +346,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						return PinnedVersion(reference)
 					}
 					.flatMapError { _ in
-						resolveReferenceInRepository(repositoryURL, reference)
+						return resolveReferenceInRepository(repositoryURL, reference)
 							.map(PinnedVersion.init)
 					}
 			}
@@ -425,8 +428,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Updates the dependencies of the project to the latest version. The
 	/// changes will be reflected in Cartfile.resolved, and also in the working
 	/// directory checkouts if the given parameter is true.
-	public func updateDependencies(shouldCheckout: Bool = true, buildOptions: BuildOptions,
-	                               dependenciesToUpdate: [String]? = nil) -> SignalProducer<(), CarthageError> {
+	public func updateDependencies(
+		shouldCheckout: Bool = true,
+		buildOptions: BuildOptions,
+		dependenciesToUpdate: [String]? = nil
+	) -> SignalProducer<(), CarthageError> {
 		return updatedResolvedCartfile(dependenciesToUpdate)
 			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
@@ -467,21 +473,22 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// Sends empty value on successful removal
 	private func removeItem(at url: URL) -> SignalProducer<(), CarthageError> {
-		return SignalProducer<URL, CarthageError>(value: url).attemptMap({ (url: URL) -> Result<(), CarthageError> in
-			do {
-				try FileManager.default.removeItem(at: url)
-				return .success()
-			} catch let error as NSError {
-				return .failure(.writeFailed(url, error))
+		return SignalProducer<URL, CarthageError>(value: url)
+			.attemptMap { url in
+				do {
+					try FileManager.default.removeItem(at: url)
+					return .success(())
+				} catch let error as NSError {
+					return .failure(.writeFailed(url, error))
+				}
 			}
-		})
 	}
 
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinaries(for dependency: Dependency, atRevision revision: String, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
-		return SignalProducer.attempt { return .success(self.useBinaries) }
+		return SignalProducer.attempt { .success(self.useBinaries) }
 			.flatMap(.merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
 				if !useBinaries {
 					return SignalProducer(value: false)
@@ -854,7 +861,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				// If no `CarthageProjectCheckoutsPath`-housed symlinks are needed,
 				// return early after potentially adding submodules
 				// (which could be outside `CarthageProjectCheckoutsPath`).
-				if names.isEmpty { return .success() }
+				if names.isEmpty { return .success() } // swiftlint:disable:this single_line_return
 
 				do {
 					try fileManager.createDirectory(at: dependencyCheckoutsURL, withIntermediateDirectories: true)
@@ -1184,57 +1191,58 @@ public func cloneOrFetch(
 	let fileManager = FileManager.default
 	let repositoryURL = repositoryFileURL(for: dependency, baseURL: destinationURL)
 
-	return SignalProducer.attempt { () -> Result<GitURL, CarthageError> in
-		do {
-			try fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true)
-		} catch let error as NSError {
-			return .failure(.writeFailed(destinationURL, error))
+	return SignalProducer
+		.attempt { () -> Result<GitURL, CarthageError> in
+			do {
+				try fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true)
+			} catch let error as NSError {
+				return .failure(.writeFailed(destinationURL, error))
+			}
+
+			return .success(dependency.gitURL(preferHTTPS: preferHTTPS)!)
 		}
+		.flatMap(.merge) { remoteURL -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
+			return isGitRepository(repositoryURL)
+				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
+					if isRepository {
+						let fetchProducer: () -> SignalProducer<(ProjectEvent?, URL), CarthageError> = {
+							guard FetchCache.needsFetch(forURL: remoteURL) else { return SignalProducer(value: (nil, repositoryURL)) }
 
-		return .success(dependency.gitURL(preferHTTPS: preferHTTPS)!)
-	}
-	.flatMap(.merge) { remoteURL -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
-		return isGitRepository(repositoryURL)
-			.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
-				if isRepository {
-					let fetchProducer: () -> SignalProducer<(ProjectEvent?, URL), CarthageError> = {
-						guard FetchCache.needsFetch(forURL: remoteURL) else { return SignalProducer(value: (nil, repositoryURL)) }
+							return SignalProducer(value: (.fetching(dependency), repositoryURL))
+								.concat(
+									fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
+										.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
+								)
+						}
 
-						return SignalProducer(value: (.fetching(dependency), repositoryURL))
+						// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
+						if let commitish = commitish {
+							return SignalProducer.zip(
+									branchExistsInRepository(repositoryURL, pattern: commitish),
+									commitExistsInRepository(repositoryURL, revision: commitish)
+								)
+								.flatMap(.concat) { branchExists, commitExists -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
+									// If the given commitish is a branch, we should fetch.
+									if branchExists || !commitExists {
+										return fetchProducer()
+									} else {
+										return SignalProducer(value: (nil, repositoryURL))
+									}
+								}
+						} else {
+							return fetchProducer()
+						}
+					} else {
+						// Either the directory didn't exist or it did but wasn't a git repository
+						// (Could happen if the process is killed during a previous directory creation)
+						// So we remove it, then clone
+						_ = try? fileManager.removeItem(at: repositoryURL)
+						return SignalProducer(value: (.cloning(dependency), repositoryURL))
 							.concat(
-								fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
+								cloneRepository(remoteURL, repositoryURL)
 									.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
 							)
 					}
-
-					// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
-					if let commitish = commitish {
-						return SignalProducer.zip(
-								branchExistsInRepository(repositoryURL, pattern: commitish),
-								commitExistsInRepository(repositoryURL, revision: commitish)
-							)
-							.flatMap(.concat) { branchExists, commitExists -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
-								// If the given commitish is a branch, we should fetch.
-								if branchExists || !commitExists {
-									return fetchProducer()
-								} else {
-									return SignalProducer(value: (nil, repositoryURL))
-								}
-							}
-					} else {
-						return fetchProducer()
-					}
-				} else {
-					// Either the directory didn't exist or it did but wasn't a git repository
-					// (Could happen if the process is killed during a previous directory creation)
-					// So we remove it, then clone
-					_ = try? fileManager.removeItem(at: repositoryURL)
-					return SignalProducer(value: (.cloning(dependency), repositoryURL))
-						.concat(
-							cloneRepository(remoteURL, repositoryURL)
-								.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
-						)
 				}
-			}
-	}
+		}
 }
