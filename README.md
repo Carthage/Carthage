@@ -64,24 +64,24 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
     ```sh
-/usr/local/bin/carthage copy-frameworks
-```
+    /usr/local/bin/carthage copy-frameworks
+    ```
 
 1. Add the paths to the frameworks you want to use under “Input Files”, e.g.:
 
     ```
-$(SRCROOT)/Carthage/Build/iOS/Result.framework
-$(SRCROOT)/Carthage/Build/iOS/ReactiveSwift.framework
-$(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
-```
+    $(SRCROOT)/Carthage/Build/iOS/Result.framework
+    $(SRCROOT)/Carthage/Build/iOS/ReactiveSwift.framework
+    $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
+    ```
 
 1. Add the paths to the copied frameworks to the “Output Files”, e.g.:
 
     ```
-$(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Result.framework
-$(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/ReactiveSwift.framework
-$(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/ReactiveCocoa.framework
-```
+    $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Result.framework
+    $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/ReactiveSwift.framework
+    $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/ReactiveCocoa.framework
+    ```
 
     With output files specified alongside the input files, Xcode only needs to run the script when the input files have changed or the output files are missing. This means dirty builds will be faster when you haven't rebuilt frameworks with Carthage.
 
