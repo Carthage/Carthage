@@ -70,10 +70,20 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 1. Add the paths to the frameworks you want to use under “Input Files”, e.g.:
 
     ```
-$(SRCROOT)/Carthage/Build/iOS/Box.framework
 $(SRCROOT)/Carthage/Build/iOS/Result.framework
+$(SRCROOT)/Carthage/Build/iOS/ReactiveSwift.framework
 $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
 ```
+
+1. Add the paths to the copied frameworks to the “Output Files”, e.g.:
+
+    ```
+$(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Result.framework
+$(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/ReactiveSwift.framework
+$(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/ReactiveCocoa.framework
+```
+
+    With output files specified alongside the input files, Xcode only needs to run the script when the input files have changed or the output files are missing. This means dirty builds will be faster when you haven't rebuilt frameworks with Carthage.
 
 This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files and dSYMs are copied when archiving.
 
