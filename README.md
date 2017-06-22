@@ -63,18 +63,19 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 1. On your application targets’ “General” settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
-  ```sh
-  /usr/local/bin/carthage copy-frameworks
-  ```
+    ```sh
+/usr/local/bin/carthage copy-frameworks
+```
 
-  and add the paths to the frameworks you want to use under “Input Files”, e.g.:
+    and add the paths to the frameworks you want to use under “Input Files”, e.g.:
 
-  ```
-  $(SRCROOT)/Carthage/Build/iOS/Box.framework
-  $(SRCROOT)/Carthage/Build/iOS/Result.framework
-  $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
-  ```
-  This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files and dSYMs are copied when archiving.
+    ```
+$(SRCROOT)/Carthage/Build/iOS/Box.framework
+$(SRCROOT)/Carthage/Build/iOS/Result.framework
+$(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
+```
+
+This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files and dSYMs are copied when archiving.
 
 With the debug information copied into the built products directory, Xcode will be able to symbolicate the stack trace whenever you stop at a breakpoint. This will also enable you to step through third-party code in the debugger.
 
