@@ -13,7 +13,7 @@ class XcodeSpec: QuickSpec {
 		// The fixture is maintained at https://github.com/ikesyo/carthage-fixtures-ReactiveCocoaLayout
 		let directoryURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
 		let projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
-		let buildFolderURL = directoryURL.appendingPathComponent(carthageBinariesFolderPath)
+		let buildFolderURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 		let targetFolderURL = URL(
 			fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString),
 			isDirectory: true
@@ -207,7 +207,7 @@ class XcodeSpec: QuickSpec {
 		it("should build all subprojects for all platforms by default") {
 			let multipleSubprojects = "SampleMultipleSubprojects"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(carthageBinariesFolderPath)
+			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
@@ -236,7 +236,7 @@ class XcodeSpec: QuickSpec {
 		it("should skip projects without shared dynamic framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(carthageBinariesFolderPath)
+			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
@@ -259,7 +259,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should not copy build products from nested dependencies produced by workspace") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "WorkspaceWithDependency", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(carthageBinariesFolderPath)
+			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
@@ -280,7 +280,7 @@ class XcodeSpec: QuickSpec {
 
 		it("should error out with .noSharedFrameworkSchemes if there is no shared framework schemes") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "Swell-0.5.0", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(carthageBinariesFolderPath)
+			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
@@ -373,8 +373,8 @@ class XcodeSpec: QuickSpec {
 
 			let dependencyURL =	directoryURL.appendingPathComponent(dependency.relativePath)
 			// Build
-			let buildURL = directoryURL.appendingPathComponent(carthageBinariesFolderPath)
-			let dependencyBuildURL = dependencyURL.appendingPathComponent(carthageBinariesFolderPath)
+			let buildURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
+			let dependencyBuildURL = dependencyURL.appendingPathComponent(Constants.binariesFolderPath)
 
 			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)

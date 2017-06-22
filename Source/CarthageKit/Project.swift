@@ -7,98 +7,6 @@ import Tentacle
 import XCDBLD
 import ReactiveTask
 
-/// Carthage's bundle identifier.
-public let carthageKitBundleIdentifier: String = "org.carthage.CarthageKit"
-
-/// The fallback dependencies URL to be used in case
-/// the intended ~/Library/Caches/org.carthage.CarthageKit cannot
-/// be found or created.
-private let fallbackDependenciesURL: URL = {
-	let homePath: String
-	if let homeEnvValue = ProcessInfo.processInfo.environment["HOME"] {
-		homePath = (homeEnvValue as NSString).appendingPathComponent(".carthage")
-	} else {
-		homePath = ("~/.carthage" as NSString).expandingTildeInPath
-	}
-	return URL(fileURLWithPath: homePath, isDirectory:true)
-}()
-
-/// ~/Library/Caches/org.carthage.CarthageKit/
-private let carthageUserCachesURL: URL = {
-	let fileManager = FileManager.default
-
-	let urlResult: Result<URL, NSError> = `try` { _ -> URL? in
-		return try? fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-	}.flatMap { cachesURL in
-		let dependenciesURL = cachesURL.appendingPathComponent(carthageKitBundleIdentifier, isDirectory: true)
-		let dependenciesPath = dependenciesURL.absoluteString
-
-		if fileManager.fileExists(atPath: dependenciesPath, isDirectory:nil) {
-			if fileManager.isWritableFile(atPath: dependenciesPath) {
-				return Result(value: dependenciesURL)
-			} else {
-				let error = NSError(domain: carthageKitBundleIdentifier, code: 0, userInfo: nil)
-				return Result(error: error)
-			}
-		} else {
-			return Result(attempt: {
-				try fileManager.createDirectory(
-					at: dependenciesURL,
-					withIntermediateDirectories: true,
-					attributes: [FileAttributeKey.posixPermissions.rawValue: 0o755]
-				)
-				return dependenciesURL
-			})
-		}
-	}
-
-	switch urlResult {
-	case let .success(url):
-		_ = try? FileManager.default.removeItem(at: fallbackDependenciesURL)
-		return url
-
-	case let .failure(error):
-		NSLog("Warning: No Caches directory could be found or created: \(error.localizedDescription). (\(error))")
-		return fallbackDependenciesURL
-	}
-}()
-
-/// The file URL to the directory in which downloaded release binaries will be
-/// stored.
-///
-/// ~/Library/Caches/org.carthage.CarthageKit/binaries/
-public let carthageDependencyAssetsURL: URL = carthageUserCachesURL.appendingPathComponent("binaries", isDirectory: true)
-
-/// The file URL to the directory in which cloned dependencies will be stored.
-///
-/// ~/Library/Caches/org.carthage.CarthageKit/dependencies/
-public let carthageDependencyRepositoriesURL: URL = carthageUserCachesURL.appendingPathComponent("dependencies", isDirectory: true)
-
-/// The file URL to the directory in which per-dependency derived data
-/// directories will be stored.
-///
-/// ~/Library/Caches/org.carthage.CarthageKit/DerivedData/
-public let carthageDependencyDerivedDataURL: URL = carthageUserCachesURL.appendingPathComponent("DerivedData", isDirectory: true)
-
-/// The relative path to a project's Cartfile.
-public let carthageProjectCartfilePath = "Cartfile"
-
-/// The relative path to a project's Cartfile.private.
-public let carthageProjectPrivateCartfilePath = "Cartfile.private"
-
-/// The relative path to a project's Cartfile.resolved.
-public let carthageProjectResolvedCartfilePath = "Cartfile.resolved"
-
-/// The text that needs to exist in a GitHub Release asset's name, for it to be
-/// tried as a binary framework.
-public let carthageProjectBinaryAssetPattern = ".framework"
-
-/// MIME types allowed for GitHub Release assets, for them to be considered as
-/// binary frameworks.
-public let carthageProjectBinaryAssetContentTypes = [
-	"application/zip",
-]
-
 /// Describes an event occurring to or with a project.
 public enum ProjectEvent {
 	/// The project is beginning to clone.
@@ -178,12 +86,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	/// The file URL to the project's Cartfile.
 	public var cartfileURL: URL {
-		return directoryURL.appendingPathComponent(carthageProjectCartfilePath, isDirectory: false)
+		return directoryURL.appendingPathComponent(Constants.Project.cartfilePath, isDirectory: false)
 	}
 
 	/// The file URL to the project's Cartfile.resolved.
 	public var resolvedCartfileURL: URL {
-		return directoryURL.appendingPathComponent(carthageProjectResolvedCartfilePath, isDirectory: false)
+		return directoryURL.appendingPathComponent(Constants.Project.resolvedCartfilePath, isDirectory: false)
 	}
 
 	/// Whether to prefer HTTPS for cloning (vs. SSH).
@@ -222,17 +130,17 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Caches versions to avoid expensive lookups, and unnecessary
 	/// fetching/cloning.
 	private var cachedVersions: CachedVersions = [:]
-	private let cachedVersionsQueue = SerialProducerQueue(name: "org.carthage.CarthageKit.Project.cachedVersionsQueue")
+	private let cachedVersionsQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.cachedVersionsQueue")
 
 	// Cache the binary project definitions in memory to avoid redownloading during carthage operation
 	private var cachedBinaryProjects: CachedBinaryProjects = [:]
-	private let cachedBinaryProjectsQueue = SerialProducerQueue(name: "org.carthage.CarthageKit.Project.cachedBinaryProjectsQueue")
+	private let cachedBinaryProjectsQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.cachedBinaryProjectsQueue")
 
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.
 	public func loadCombinedCartfile() -> SignalProducer<Cartfile, CarthageError> {
-		let cartfileURL = directoryURL.appendingPathComponent(carthageProjectCartfilePath, isDirectory: false)
-		let privateCartfileURL = directoryURL.appendingPathComponent(carthageProjectPrivateCartfilePath, isDirectory: false)
+		let cartfileURL = directoryURL.appendingPathComponent(Constants.Project.cartfilePath, isDirectory: false)
+		let privateCartfileURL = directoryURL.appendingPathComponent(Constants.Project.privateCartfilePath, isDirectory: false)
 
 		func isNoSuchFileError(_ error: CarthageError) -> Bool {
 			switch error {
@@ -271,7 +179,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				var cartfile = cartfile
 
 				let duplicateDeps = duplicateDependenciesIn(cartfile, privateCartfile).map { dependency in
-					DuplicateDependency(dependency: dependency, locations: ["\(carthageProjectCartfilePath)", "\(carthageProjectPrivateCartfilePath)"])
+					DuplicateDependency(dependency: dependency, locations: ["\(Constants.Project.cartfilePath)", "\(Constants.Project.privateCartfilePath)"])
 				}
 
 				if duplicateDeps.isEmpty {
@@ -318,7 +226,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Limits the number of concurrent clones/fetches to the number of active
 	/// processors.
 	private let cloneOrFetchQueue = ConcurrentProducerQueue(
-		name: "org.carthage.CarthageKit.Project.cloneOrFetchDependency",
+		name: "org.carthage.Constants.Project.cloneOrFetchDependency",
 		limit: ProcessInfo.processInfo.activeProcessorCount
 	)
 
@@ -409,7 +317,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		case .git, .gitHub:
 			let revision = version.commitish
 			return self.cloneOrFetchDependency(dependency, commitish: revision).flatMap(.concat) { repositoryURL in
-				return contentsOfFileInRepository(repositoryURL, carthageProjectCartfilePath, revision: revision)
+				return contentsOfFileInRepository(repositoryURL, Constants.Project.cartfilePath, revision: revision)
 			}
 			.flatMapError { _ in
 				.empty
@@ -650,10 +558,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(release.assets)
 					.filter { asset in
-						if asset.name.range(of: carthageProjectBinaryAssetPattern) == nil {
+						if asset.name.range(of: Constants.Project.binaryAssetPattern) == nil {
 							return false
 						}
-						return carthageProjectBinaryAssetContentTypes.contains(asset.contentType)
+						return Constants.Project.binaryAssetContentTypes.contains(asset.contentType)
 					}
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(dependency, release, asset)
@@ -718,7 +626,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
 	}
 
-	private let gitOperationQueue = SerialProducerQueue(name: "org.carthage.CarthageKit.Project.gitOperationQueue")
+	private let gitOperationQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.gitOperationQueue")
 
 	/// Checks out the given dependency into its intended working directory,
 	/// cloning it first if need be.
@@ -813,7 +721,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Limits the number of concurrent checkouts to the number of active 
 	/// processors.
 	let checkoutQueue = ConcurrentProducerQueue(
-		name: "org.carthage.CarthageKit.Project.checkoutResolvedDependencies",
+		name: "org.carthage.Constants.Project.checkoutResolvedDependencies",
 		limit: ProcessInfo.processInfo.activeProcessorCount
 	)
 
@@ -1044,7 +952,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 
 				var options = options
-				let baseURL = options.derivedDataPath.flatMap(URL.init(string:)) ?? carthageDependencyDerivedDataURL
+				let baseURL = options.derivedDataPath.flatMap(URL.init(string:)) ?? Constants.Dependency.derivedDataURL
 				let derivedDataPerDependency = baseURL.appendingPathComponent(dependency.name, isDirectory: true)
 				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version.commitish, isDirectory: true)
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
@@ -1073,13 +981,13 @@ public final class Project { // swiftlint:disable:this type_body_length
 /// arguments should live.
 private func fileURLToCachedBinary(_ dependency: Dependency, _ release: Release, _ asset: Release.Asset) -> URL {
 	// ~/Library/Caches/org.carthage.CarthageKit/binaries/ReactiveCocoa/v2.3.1/1234-ReactiveCocoa.framework.zip
-	return carthageDependencyAssetsURL.appendingPathComponent("\(dependency.name)/\(release.tag)/\(asset.id)-\(asset.name)", isDirectory: false)
+	return Constants.Dependency.assetsURL.appendingPathComponent("\(dependency.name)/\(release.tag)/\(asset.id)-\(asset.name)", isDirectory: false)
 }
 
 /// Constructs a file URL to where the binary only framework download should be cached
 private func fileURLToCachedBinaryDependency(_ dependency: Dependency, _ semanticVersion: SemanticVersion, _ fileName: String) -> URL {
 	// ~/Library/Caches/org.carthage.CarthageKit/binaries/MyBinaryProjectFramework/2.3.1/MyBinaryProject.framework.zip
-	return carthageDependencyAssetsURL.appendingPathComponent("\(dependency.name)/\(semanticVersion)/\(fileName)")
+	return Constants.Dependency.assetsURL.appendingPathComponent("\(dependency.name)/\(semanticVersion)/\(fileName)")
 }
 
 /// Caches the downloaded binary at the given URL, moving it to the other URL
@@ -1243,7 +1151,7 @@ private func BCSymbolMapsForFramework(_ frameworkURL: URL, inDirectoryURL direct
 
 /// Returns the file URL at which the given project's repository will be
 /// located.
-private func repositoryFileURL(for dependency: Dependency, baseURL: URL = carthageDependencyRepositoriesURL) -> URL {
+private func repositoryFileURL(for dependency: Dependency, baseURL: URL = Constants.Dependency.repositoriesURL) -> URL {
 	return baseURL.appendingPathComponent(dependency.name, isDirectory: true)
 }
 
@@ -1270,7 +1178,7 @@ internal func relativeLinkDestination(for dependency: Dependency, subdirectory: 
 public func cloneOrFetch(
 	dependency: Dependency,
 	preferHTTPS: Bool,
-	destinationURL: URL = carthageDependencyRepositoriesURL,
+	destinationURL: URL = Constants.Dependency.repositoriesURL,
 	commitish: String? = nil
 ) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
 	let fileManager = FileManager.default

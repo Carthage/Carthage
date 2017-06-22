@@ -345,7 +345,7 @@ extension Reactive where Base: FileManager {
 	}
 }
 
-private let defaultSessionError = NSError(domain: carthageKitBundleIdentifier, code: 1, userInfo: nil)
+private let defaultSessionError = NSError(domain: Constants.bundleIdentifier, code: 1, userInfo: nil)
 
 extension Reactive where Base: URLSession {
 	/// Returns a SignalProducer which performs a downloadTask associated with an

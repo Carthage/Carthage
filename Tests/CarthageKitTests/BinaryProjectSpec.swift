@@ -47,7 +47,7 @@ class BinaryProjectSpec: QuickSpec {
 				let actualError = BinaryProject.from(jsonData: jsonData, url: testUrl).error
 
 				let error = NSError(
-					domain: carthageKitBundleIdentifier,
+					domain: Constants.bundleIdentifier,
 					code: 1,
 					userInfo: [NSLocalizedDescriptionKey: "Binary definition was not expected type [String: String]"]
 				)

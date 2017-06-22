@@ -14,7 +14,7 @@ class ProjectSpec: QuickSpec {
 	override func spec() {
 		describe("buildCheckedOutDependenciesWithOptions") {
 			let directoryURL = Bundle(for: type(of: self)).url(forResource: "DependencyTest", withExtension: nil)!
-			let buildDirectoryURL = directoryURL.appendingPathComponent(carthageBinariesFolderPath)
+			let buildDirectoryURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
 			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true) -> [String] {
 				var builtSchemes: [String] = []
@@ -202,7 +202,7 @@ class ProjectSpec: QuickSpec {
 					return DuplicateDependency(dependency: dependency, locations: locations)
 				}
 
-				let locations = ["\(carthageProjectCartfilePath)", "\(carthageProjectPrivateCartfilePath)"]
+				let locations = ["\(Constants.Project.cartfilePath)", "\(Constants.Project.privateCartfilePath)"]
 
 				let expectedError = CarthageError.duplicateDependencies([
 					makeDependency("1", "1", locations),

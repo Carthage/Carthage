@@ -184,7 +184,7 @@ public struct BuildCommand: CommandProtocol {
 				let fileURL = URL(fileURLWithPath: path, isDirectory: false)
 
 				guard let handle = FileHandle(forUpdatingAtPath: path) else {
-					let error = NSError(domain: carthageKitBundleIdentifier,
+					let error = NSError(domain: Constants.bundleIdentifier,
 					                    code: 1,
 					                    userInfo: [NSLocalizedDescriptionKey: "Unable to open file handle for file at \(path)"])
 					return .failure(.writeFailed(fileURL, error))

@@ -246,7 +246,7 @@ public func createVersionFileForCommitish(
 	}
 
 	let writeVersionFile = SignalProducer<(), CarthageError>.attempt {
-		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(carthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
+		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
 
 		let versionFile = VersionFile(
@@ -297,7 +297,7 @@ public func versionFileMatches(
 	rootDirectoryURL: URL,
 	toolchain: String?
 ) -> SignalProducer<Bool?, CarthageError> {
-	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(carthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
+	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.name).\(VersionFile.pathExtension)")
 	guard let versionFile = VersionFile(url: versionFileURL) else { return SignalProducer(value: nil) }
 	let commitish = version.commitish

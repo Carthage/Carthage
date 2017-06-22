@@ -16,7 +16,7 @@ extension Platform {
 	/// be stored.
 	public var relativePath: String {
 		let subfolderName = rawValue
-		return (carthageBinariesFolderPath as NSString).appendingPathComponent(subfolderName)
+		return (Constants.binariesFolderPath as NSString).appendingPathComponent(subfolderName)
 	}
 }
 

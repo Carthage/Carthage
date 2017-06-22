@@ -6,10 +6,6 @@ import ReactiveSwift
 import ReactiveTask
 import XCDBLD
 
-/// The name of the folder into which Carthage puts binaries it builds (relative
-/// to the working directory).
-public let carthageBinariesFolderPath = "Carthage/Build"
-
 /// Emits the currect Swift version
 internal func swiftVersion(usingToolchain toolchain: String? = nil) -> SignalProducer<String, SwiftVersionError> {
 	return determineSwiftVersion(usingToolchain: toolchain).replayLazily(upTo: 1)
@@ -686,7 +682,7 @@ public func build(
 /// Returns a signal indicating success
 private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.attempt {
-		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(carthageBinariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
+		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 		let fileManager = FileManager.default
@@ -700,7 +696,7 @@ private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL)
 		// Link this dependency's Carthage/Build folder to that of the root
 		// project, so it can see all products built already, and so we can
 		// automatically drop this dependency's product in the right place.
-		let dependencyBinariesURL = dependencyURL.appendingPathComponent(carthageBinariesFolderPath, isDirectory: true)
+		let dependencyBinariesURL = dependencyURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
 
 		do {
 			try fileManager.removeItem(at: dependencyBinariesURL)
@@ -730,7 +726,7 @@ private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL)
 				return .failure(.writeFailed(dependencyBinariesURL, error))
 			}
 		} else {
-			let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: carthageBinariesFolderPath)
+			let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: Constants.binariesFolderPath)
 			do {
 				try fileManager.createSymbolicLink(atPath: dependencyBinariesURL.path, withDestinationPath: linkDestinationPath)
 			} catch let error as NSError {
