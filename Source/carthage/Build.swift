@@ -9,24 +9,34 @@ import XCDBLD
 extension BuildOptions: OptionsProtocol {
 	public static func create(_ configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> (Bool) -> BuildOptions {
 		return { buildPlatform in { toolchain in { derivedDataPath in { cacheBuilds in
-			return self.init(configuration: configuration, platforms: buildPlatform.platforms, toolchain: toolchain, derivedDataPath: derivedDataPath, cacheBuilds: cacheBuilds)
+			return self.init(
+				configuration: configuration,
+				platforms: buildPlatform.platforms,
+				toolchain: toolchain,
+				derivedDataPath: derivedDataPath,
+				cacheBuilds: cacheBuilds
+			)
 		} } } }
 	}
 
-	public static func evaluate(_ m: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
-		return evaluate(m, addendum: "")
+	public static func evaluate(_ mode: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
+		return evaluate(mode, addendum: "")
 	}
 
-	public static func evaluate(_ m: CommandMode, addendum: String) -> Result<BuildOptions, CommandantError<CarthageError>> {
+	public static func evaluate(_ mode: CommandMode, addendum: String) -> Result<BuildOptions, CommandantError<CarthageError>> {
+		var platformUsage = "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')"
+		platformUsage += addendum
+
 		return create
-			<*> m <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
-			<*> m <| Option(key: "platform", defaultValue: .all, usage: "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')" + addendum)
-			<*> m <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
-			<*> m <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
-			<*> m <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
+			<*> mode <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
+			<*> mode <| Option(key: "platform", defaultValue: .all, usage: platformUsage)
+			<*> mode <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
+			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
+			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
 	}
 }
 
+/// Type that encapsulates the configuration and evaluation of the `build` subcommand.
 public struct BuildCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
 		public let buildOptions: BuildOptions
@@ -40,19 +50,27 @@ public struct BuildCommand: CommandProtocol {
 		public static func create(_ buildOptions: BuildOptions) -> (Bool) -> (ColorOptions) -> (Bool) -> (String) -> (String?) -> ([String]) -> Options {
 			return { skipCurrent in { colorOptions in { isVerbose in { directoryPath in { logPath in { dependenciesToBuild in
 				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
-				return self.init(buildOptions: buildOptions, skipCurrent: skipCurrent, colorOptions: colorOptions, isVerbose: isVerbose, directoryPath: directoryPath, logPath: logPath, dependenciesToBuild: dependenciesToBuild)
+				return self.init(
+					buildOptions: buildOptions,
+					skipCurrent: skipCurrent,
+					colorOptions: colorOptions,
+					isVerbose: isVerbose,
+					directoryPath: directoryPath,
+					logPath: logPath,
+					dependenciesToBuild: dependenciesToBuild
+				)
 			} } } } } }
 		}
 
-		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
-				<*> BuildOptions.evaluate(m)
-				<*> m <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
-				<*> ColorOptions.evaluate(m)
-				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
-				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
-				<*> m <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
-				<*> m <| Argument(defaultValue: [], usage: "the dependency names to build")
+				<*> BuildOptions.evaluate(mode)
+				<*> mode <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
+				<*> ColorOptions.evaluate(mode)
+				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
+				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
+				<*> mode <| Argument(defaultValue: [], usage: "the dependency names to build")
 		}
 	}
 
@@ -166,7 +184,7 @@ public struct BuildCommand: CommandProtocol {
 				let fileURL = URL(fileURLWithPath: path, isDirectory: false)
 
 				guard let handle = FileHandle(forUpdatingAtPath: path) else {
-					let error = NSError(domain: CarthageKitBundleIdentifier,
+					let error = NSError(domain: Constants.bundleIdentifier,
 					                    code: 1,
 					                    userInfo: [NSLocalizedDescriptionKey: "Unable to open file handle for file at \(path)"])
 					return .failure(.writeFailed(fileURL, error))
@@ -246,7 +264,7 @@ public enum BuildPlatform {
 			return [ .tvOS ]
 
 		case let .multiple(buildPlatforms):
-			return buildPlatforms.reduce([]) { (set, buildPlatform) in
+			return buildPlatforms.reduce([]) { set, buildPlatform in
 				return set.union(buildPlatform.platforms)
 			}
 		}

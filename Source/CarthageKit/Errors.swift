@@ -97,7 +97,7 @@ private func == (_ lhs: CarthageError.VersionRequirement, _ rhs: CarthageError.V
 }
 
 extension CarthageError: Equatable {
-	public static func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool {
+	public static func == (_ lhs: CarthageError, _ rhs: CarthageError) -> Bool { // swiftlint:disable:this cyclomatic_complexity function_body_length
 		switch (lhs, rhs) {
 		case let (.invalidArgument(left), .invalidArgument(right)):
 			return left == right
@@ -142,9 +142,14 @@ extension CarthageError: Equatable {
 		case let (.noSharedSchemes(la, lb), .noSharedSchemes(ra, rb)):
 			guard la == ra else { return false }
 			switch (lb, rb) {
-			case (nil, nil): return true
-			case let ((lb1, lb2)?, (rb1, rb2)?): return lb1 == rb1 && lb2 == rb2
-			default: return false
+			case (nil, nil):
+				return true
+
+			case let ((lb1, lb2)?, (rb1, rb2)?):
+				return lb1 == rb1 && lb2 == rb2
+
+			default:
+				return false
 			}
 
 		case let (.duplicateDependencies(left), .duplicateDependencies(right)):
@@ -272,7 +277,7 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .dependencyCycle(graph):
 			let prettyGraph = graph
-				.map { (project, dependencies) in
+				.map { project, dependencies in
 					let prettyDependencies = dependencies
 						.map { $0.name }
 						.joined(separator: ", ")
@@ -293,7 +298,8 @@ extension CarthageError: CustomStringConvertible {
 			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile."
 
 		case let .unresolvedDependencies(names):
-			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile.resolved – please run `carthage update` if the dependency is contained in the project's Cartfile."
+			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile.resolved – "
+				+ "please run `carthage update` if the dependency is contained in the project's Cartfile."
 
 		case let .buildFailed(taskError, log):
 			var message = "Build Failed\n"
@@ -303,10 +309,12 @@ extension CarthageError: CustomStringConvertible {
 			} else {
 				message += "\t" + taskError.description + "\n"
 			}
+
 			message += "\nThis usually indicates that project itself failed to compile."
 			if let log = log {
 				message += " Please check the xcodebuild log for more details: \(log.path)"
 			}
+
 			return message
 
 		case let .taskError(taskError):

@@ -4,6 +4,7 @@ import Foundation
 import Result
 import ReactiveSwift
 
+/// Type that encapsulates the configuration and evaluation of the `checkout` subcommand.
 public struct CheckoutCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
@@ -21,22 +22,28 @@ public struct CheckoutCommand: CommandProtocol {
 
 				let dependenciesToCheckout: [String]? = dependenciesToCheckout.isEmpty ? nil : dependenciesToCheckout
 
-				return self.init(useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: shouldUseBinaries, colorOptions: colorOptions, directoryPath: directoryPath, dependenciesToCheckout: dependenciesToCheckout)
+				return self.init(
+					useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: shouldUseBinaries, colorOptions: colorOptions,
+					directoryPath: directoryPath, dependenciesToCheckout: dependenciesToCheckout
+				)
 			} } } } }
 		}
 
-		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
-			return evaluate(m, useBinariesAddendum: "", dependenciesUsage: "the dependency names to checkout")
+		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+			return evaluate(mode, useBinariesAddendum: "", dependenciesUsage: "the dependency names to checkout")
 		}
 
-		public static func evaluate(_ m: CommandMode, useBinariesAddendum: String, dependenciesUsage: String) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ mode: CommandMode, useBinariesAddendum: String, dependenciesUsage: String) -> Result<Options, CommandantError<CarthageError>> {
+			var useBinariesUsage = "check out dependency repositories even when prebuilt frameworks exist, disabled if --use-submodules option is present"
+			useBinariesUsage += useBinariesAddendum
+
 			return create
-				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
-				<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
-				<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist, disabled if --use-submodules option is present" + useBinariesAddendum)
-				<*> ColorOptions.evaluate(m)
-				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
-				<*> m <| Argument(defaultValue: [], usage: dependenciesUsage)
+				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
+				<*> mode <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
+				<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: useBinariesUsage)
+				<*> ColorOptions.evaluate(mode)
+				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> mode <| Argument(defaultValue: [], usage: dependenciesUsage)
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it

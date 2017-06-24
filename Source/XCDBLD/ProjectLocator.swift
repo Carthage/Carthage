@@ -1,6 +1,8 @@
 import Foundation
 import ReactiveSwift
 
+// swiftlint:disable missing_docs
+
 /// Describes how to locate the actual project or workspace that Xcode should
 /// build.
 public enum ProjectLocator: Comparable {
@@ -46,9 +48,8 @@ public func < (_ lhs: ProjectLocator, _ rhs: ProjectLocator) -> Bool {
 	// Prefer top-level directories
 	let leftLevel = lhs.level
 	let rightLevel = rhs.level
-	guard leftLevel == rightLevel else {
-		return leftLevel < rightLevel
-	}
+
+	guard leftLevel == rightLevel else { return leftLevel < rightLevel }
 
 	// Prefer workspaces over projects.
 	switch (lhs, rhs) {

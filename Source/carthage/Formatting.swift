@@ -22,8 +22,10 @@ public enum ColorArgument: String, ArgumentProtocol, CustomStringConvertible {
 		switch self {
 		case .always:
 			return true
+
 		case .never:
 			return false
+
 		case .auto:
 			return Terminal.isTTY && !Terminal.isDumb
 		}
@@ -58,11 +60,11 @@ public struct ColorOptions: OptionsProtocol {
 
 		init(_ isColorful: Bool) {
 			self.isColorful = isColorful
-			bulletin      = wrap(isColorful, wrap: Color.Wrap(foreground: .blue, style: .bold))
-			bullets       = bulletin("***") + " "
-			url           = wrap(isColorful, wrap: Color.Wrap(styles: .underlined))
-			projectName   = wrap(isColorful, wrap: Color.Wrap(styles: .bold))
-			path          = wrap(isColorful, wrap: Color.Wrap(foreground: .yellow))
+			bulletin = wrap(isColorful, wrap: Color.Wrap(foreground: .blue, style: .bold))
+			bullets = bulletin("***") + " "
+			url = wrap(isColorful, wrap: Color.Wrap(styles: .underlined))
+			projectName = wrap(isColorful, wrap: Color.Wrap(styles: .bold))
+			path = wrap(isColorful, wrap: Color.Wrap(foreground: .yellow))
 		}
 
 		/// Wraps a string in bullets, one space of padding, and formatting.
@@ -80,8 +82,12 @@ public struct ColorOptions: OptionsProtocol {
 		return self.init(argument: argument, formatting: Formatting(argument.isColorful))
 	}
 
-	public static func evaluate(_ m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
+	public static func evaluate(_ mode: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
 		return create
-			<*> m <| Option(key: "color", defaultValue: ColorArgument.auto, usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')")
+			<*> mode <| Option(
+				key: "color",
+				defaultValue: ColorArgument.auto,
+				usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')"
+			)
 	}
 }

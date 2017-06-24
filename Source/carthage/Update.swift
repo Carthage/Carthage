@@ -4,6 +4,7 @@ import Foundation
 import Result
 import ReactiveSwift
 
+/// Type that encapsulates the configuration and evaluation of the `update` subcommand.
 public struct UpdateCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
 		public let checkoutAfterUpdate: Bool
@@ -16,7 +17,15 @@ public struct UpdateCommand: CommandProtocol {
 
 		/// The build options corresponding to these options.
 		public var buildCommandOptions: BuildCommand.Options {
-			return BuildCommand.Options(buildOptions: buildOptions, skipCurrent: true, colorOptions: checkoutOptions.colorOptions, isVerbose: isVerbose, directoryPath: checkoutOptions.directoryPath, logPath: logPath, dependenciesToBuild: dependenciesToUpdate)
+			return BuildCommand.Options(
+				buildOptions: buildOptions,
+				skipCurrent: true,
+				colorOptions: checkoutOptions.colorOptions,
+				isVerbose: isVerbose,
+				directoryPath: checkoutOptions.directoryPath,
+				logPath: logPath,
+				dependenciesToBuild: dependenciesToUpdate
+			)
 		}
 
 		/// If `checkoutAfterUpdate` and `buildAfterUpdate` are both true, this will
@@ -33,18 +42,31 @@ public struct UpdateCommand: CommandProtocol {
 
 		public static func create(_ checkoutAfterUpdate: Bool) -> (Bool) -> (Bool) -> (String?) -> (BuildOptions) -> (CheckoutCommand.Options) -> Options {
 			return { buildAfterUpdate in { isVerbose in { logPath in {  buildOptions in { checkoutOptions in
-				return self.init(checkoutAfterUpdate: checkoutAfterUpdate, buildAfterUpdate: buildAfterUpdate, isVerbose: isVerbose, buildOptions: buildOptions, checkoutOptions: checkoutOptions, logPath: logPath, dependenciesToUpdate: checkoutOptions.dependenciesToCheckout)
+				return self.init(
+					checkoutAfterUpdate: checkoutAfterUpdate,
+					buildAfterUpdate: buildAfterUpdate,
+					isVerbose: isVerbose,
+					buildOptions: buildOptions,
+					checkoutOptions: checkoutOptions,
+					logPath: logPath,
+					dependenciesToUpdate: checkoutOptions.dependenciesToCheckout
+				)
 			} } } } }
 		}
 
-		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+			let buildDescription = "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)"
+
+			let binariesAddendum = "\n(ignored if --no-build or --toolchain option is present)"
+			let dependenciesUsage = "the dependency names to update, checkout and build"
+
 			return create
-				<*> m <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
-				<*> m <| Option(key: "build", defaultValue: true, usage: "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)")
-				<*> m <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
-				<*> m <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
-				<*> BuildOptions.evaluate(m, addendum: "\n(ignored if --no-build option is present)")
-				<*> CheckoutCommand.Options.evaluate(m, useBinariesAddendum: "\n(ignored if --no-build or --toolchain option is present)", dependenciesUsage: "the dependency names to update, checkout and build")
+				<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
+				<*> mode <| Option(key: "build", defaultValue: true, usage: buildDescription)
+				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
+				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
+				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
+				<*> CheckoutCommand.Options.evaluate(mode, useBinariesAddendum: binariesAddendum, dependenciesUsage: dependenciesUsage)
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it

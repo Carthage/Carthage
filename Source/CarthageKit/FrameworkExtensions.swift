@@ -44,6 +44,7 @@ extension Signal {
 	/// Sends each value that occurs on `signal` combined with each value that
 	/// occurs on `otherSignal` (repeats included).
 	fileprivate func permute<U>(with otherSignal: Signal<U, Error>) -> Signal<(Value, U), Error> {
+		// swiftlint:disable:previous cyclomatic_complexity function_body_length
 		return Signal<(Value, U), Error> { observer in
 			let lock = NSLock()
 			lock.name = "org.carthage.CarthageKit.permute"
@@ -130,7 +131,7 @@ extension SignalProducer {
 	/// Sends a boolean of whether the producer succeeded or failed.
 	internal func succeeded() -> SignalProducer<Bool, NoError> {
 		return self
-			.then(SignalProducer<Bool, Error>.init(value: true))
+			.then(SignalProducer<Bool, Error>(value: true))
 			.flatMapError { _ in .init(value: false) }
 	}
 }
@@ -273,7 +274,11 @@ extension URL {
 
 extension FileManager: ReactiveExtensionsProvider {
 	@available(*, deprecated, message: "Use reactive.enumerator instead")
-	public func carthage_enumerator(at url: URL, includingPropertiesForKeys keys: [URLResourceKey]? = nil, options: FileManager.DirectoryEnumerationOptions = [], catchErrors: Bool = false) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
+	public func carthage_enumerator(
+		at url: URL, includingPropertiesForKeys keys: [URLResourceKey]? = nil,
+		options: FileManager.DirectoryEnumerationOptions = [],
+		catchErrors: Bool = false
+	) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
 		return reactive.enumerator(at: url, includingPropertiesForKeys: keys, options: options, catchErrors: catchErrors)
 	}
 }
@@ -282,9 +287,14 @@ extension Reactive where Base: FileManager {
 	/// Creates a directory enumerator at the given URL. Sends each URL
 	/// enumerated, along with the enumerator itself (so it can be introspected
 	/// and modified as enumeration progresses).
-	public func enumerator(at url: URL, includingPropertiesForKeys keys: [URLResourceKey]? = nil, options: FileManager.DirectoryEnumerationOptions = [], catchErrors: Bool = false) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
+	public func enumerator(
+		at url: URL,
+		includingPropertiesForKeys keys: [URLResourceKey]? = nil,
+		options: FileManager.DirectoryEnumerationOptions = [],
+		catchErrors: Bool = false
+	) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
 		return SignalProducer { [base = self.base] observer, disposable in
-			let enumerator = base.enumerator(at: url, includingPropertiesForKeys: keys, options: options) { (url, error) in
+			let enumerator = base.enumerator(at: url, includingPropertiesForKeys: keys, options: options) { url, error in
 				if catchErrors {
 					return true
 				} else {
@@ -322,9 +332,10 @@ extension Reactive where Base: FileManager {
 
 			var temporaryDirectoryTemplate: ContiguousArray<CChar> = temporaryDirectory.appendingPathComponent(template).utf8CString
 
-			let result: UnsafeMutablePointer<Int8>? = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (template: inout UnsafeMutableBufferPointer<CChar>) -> UnsafeMutablePointer<CChar> in
-				return mkdtemp(template.baseAddress)
-			}
+			let result: UnsafeMutablePointer<Int8>? = temporaryDirectoryTemplate
+				.withUnsafeMutableBufferPointer { (template: inout UnsafeMutableBufferPointer<CChar>) -> UnsafeMutablePointer<CChar> in
+					mkdtemp(template.baseAddress)
+				}
 
 			if result == nil {
 				return .failure(.taskError(.posixError(errno)))
@@ -335,14 +346,12 @@ extension Reactive where Base: FileManager {
 			}
 
 			return .success(temporaryPath)
-			}
-			.map { URL(fileURLWithPath: $0, isDirectory: true) }
+		}
+		.map { URL(fileURLWithPath: $0, isDirectory: true) }
 	}
 }
 
-private let defaultSessionError = NSError(domain: CarthageKitBundleIdentifier,
-                                          code: 1,
-                                          userInfo: nil)
+private let defaultSessionError = NSError(domain: Constants.bundleIdentifier, code: 1, userInfo: nil)
 
 extension Reactive where Base: URLSession {
 	/// Returns a SignalProducer which performs a downloadTask associated with an

@@ -4,6 +4,7 @@ import Foundation
 import Result
 import ReactiveSwift
 
+/// Type that encapsulates the configuration and evaluation of the `bootstrap` subcommand.
 public struct BootstrapCommand: CommandProtocol {
 	public let verb = "bootstrap"
 	public let function = "Check out and build the project's dependencies"

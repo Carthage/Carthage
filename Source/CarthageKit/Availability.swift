@@ -3,6 +3,8 @@ import ReactiveSwift
 import Result
 import XCDBLD
 
+// swiftlint:disable missing_docs fatal_error_message
+
 // MARK: - Archive.swift
 
 @available(*, unavailable, renamed: "zip(paths:into:workingDirectory:)")

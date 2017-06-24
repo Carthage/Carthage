@@ -4,6 +4,7 @@ import Result
 import Foundation
 import ReactiveSwift
 
+/// Type that encapsulates the configuration and evaluation of the `fetch` subcommand.
 public struct FetchCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
 		public let colorOptions: ColorOptions
@@ -15,10 +16,10 @@ public struct FetchCommand: CommandProtocol {
 			}
 		}
 
-		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
-				<*> ColorOptions.evaluate(m)
-				<*> m <| Argument(usage: "the Git repository that should be cloned or fetched")
+				<*> ColorOptions.evaluate(mode)
+				<*> mode <| Argument(usage: "the Git repository that should be cloned or fetched")
 		}
 	}
 

@@ -6,9 +6,7 @@ import Quick
 
 class BinaryProjectSpec: QuickSpec {
 	override func spec() {
-
 		describe("from") {
-
 			let testUrl = URL(string: "http://my.domain.com")!
 
 			it("should parse") {
@@ -49,7 +47,7 @@ class BinaryProjectSpec: QuickSpec {
 				let actualError = BinaryProject.from(jsonData: jsonData, url: testUrl).error
 
 				let error = NSError(
-					domain: CarthageKitBundleIdentifier,
+					domain: Constants.bundleIdentifier,
 					code: 1,
 					userInfo: [NSLocalizedDescriptionKey: "Binary definition was not expected type [String: String]"]
 				)
@@ -74,13 +72,10 @@ class BinaryProjectSpec: QuickSpec {
 
 			it("should fail with a non HTTPS url") {
 				let jsonData = "{ \"1.0\": \"http://my.domain.com/framework.zip\" }".data(using: .utf8)!
-
 				let actualError = BinaryProject.from(jsonData: jsonData, url: testUrl).error
 
 				expect(actualError) == .nonHTTPSURL(URL(string: "http://my.domain.com/framework.zip")!)
 			}
-
 		}
-
 	}
 }

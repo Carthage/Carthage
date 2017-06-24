@@ -43,7 +43,8 @@ public struct BuildArguments {
 	/// The build setting whether full bitcode should be embedded in the binary.
 	public var bitcodeGenerationMode: BitcodeGenerationMode?
 
-	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, derivedDataPath: String? = nil, sdk: SDK? = nil, toolchain: String? = nil) {
+	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil,
+	            derivedDataPath: String? = nil, sdk: SDK? = nil, toolchain: String? = nil) {
 		self.project = project
 		self.scheme = scheme
 		self.configuration = configuration

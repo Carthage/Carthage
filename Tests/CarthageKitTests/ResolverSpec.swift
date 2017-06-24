@@ -35,6 +35,7 @@ private extension SemanticVersion {
 }
 // swiftlint:enable no_extension_access_modifier
 
+// swiftlint:enable identifier_name
 private struct DB {
 	var versions: [Dependency: [PinnedVersion: [Dependency: VersionSpecifier]]]
 	var references: [Dependency: [String: PinnedVersion]] = [:]
@@ -278,7 +279,6 @@ class ResolverSpec: QuickSpec {
 				(github2, .v1_0_0),
 				(github1, .v1_0_0),
 			]
-
 		}
 
 		it("should correctly order transitive dependencies") {

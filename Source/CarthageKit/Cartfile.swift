@@ -4,7 +4,7 @@ import ReactiveSwift
 import Tentacle
 
 /// The relative path to a project's checked out dependencies.
-public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
+public let carthageProjectCheckoutsPath = "Carthage/Checkouts"
 
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
@@ -29,7 +29,7 @@ public struct Cartfile {
 		var result: Result<(), CarthageError> = .success(())
 
 		let commentIndicator = "#"
-		string.enumerateLines { (line, stop) in
+		string.enumerateLines { line, stop in
 			let scanner = Scanner(string: line)
 
 			if scanner.scanString(commentIndicator, into: nil) {
@@ -45,10 +45,15 @@ public struct Cartfile {
 			switch Dependency.from(scanner).fanout(VersionSpecifier.from(scanner)) {
 			case let .success((dependency, version)):
 				if case .binary = dependency, case .gitReference = version {
-					result = .failure(CarthageError.parseError(description: "binary dependencies cannot have a git reference for the version specifier in line: \(scanner.currentLine)"))
+					result = .failure(
+						CarthageError.parseError(
+							description: "binary dependencies cannot have a git reference for the version specifier in line: \(scanner.currentLine)"
+						)
+					)
 					stop = true
 					return
 				}
+
 				if dependencies[dependency] == nil {
 					dependencies[dependency] = version
 				} else {
@@ -87,9 +92,7 @@ public struct Cartfile {
 			return Cartfile
 				.from(string: cartfileContents)
 				.mapError { error in
-					guard case let .duplicateDependencies(dupes) = error else {
-						return error
-					}
+					guard case let .duplicateDependencies(dupes) = error else { return error }
 
 					let dependencies = dupes
 						.map { dupe in
@@ -194,7 +197,7 @@ public enum Dependency {
 	/// The path at which this project will be checked out, relative to the
 	/// working directory of the main project.
 	public var relativePath: String {
-		return (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
+		return (carthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
 	}
 }
 
@@ -220,6 +223,7 @@ extension Dependency {
 				switch Repository.fromIdentifier(ownerAndNameSubstring as String) {
 				case .success(let server, let repository):
 					self = Dependency.gitHub(server, repository)
+
 				default:
 					self = Dependency.git(gitURL)
 				}
@@ -340,7 +344,6 @@ extension Dependency: CustomStringConvertible {
 }
 
 extension Dependency {
-
 	/// Returns the URL that the dependency's remote repository exists at.
 	func gitURL(preferHTTPS: Bool) -> GitURL? {
 		switch self {
@@ -353,9 +356,9 @@ extension Dependency {
 
 		case let .git(url):
 			return url
+
 		case .binary:
 			return nil
 		}
 	}
-
 }
