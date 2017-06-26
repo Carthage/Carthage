@@ -281,6 +281,21 @@ extension FileManager: ReactiveExtensionsProvider {
 	) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
 		return reactive.enumerator(at: url, includingPropertiesForKeys: keys, options: options, catchErrors: catchErrors)
 	}
+
+	// rdar://32984063 When on APFS, `FileManager.copyItem(at:to)` can result in zero'd out binary files, due to the cloning functionality.
+	// To avoid this, we drop down to the copyfile c API, explicitly not passing the 'CLONE' flags so we always copy the data normally.
+	internal func carthage_copyItem(at from: URL, to: URL) throws {
+		try from.path.withCString { fromCStr in
+			try to.path.withCString { toCStr in
+				let state = copyfile_state_alloc()
+				let status = copyfile(fromCStr, toCStr, state, UInt32(COPYFILE_ALL | COPYFILE_RECURSIVE | COPYFILE_NOFOLLOW))
+				copyfile_state_free(state)
+				if status < 0 {
+					throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil)
+				}
+			}
+		}
+	}
 }
 
 extension Reactive where Base: FileManager {
