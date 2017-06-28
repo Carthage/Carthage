@@ -307,9 +307,15 @@ extension FileManager: ReactiveExtensionsProvider {
 		return reactive.enumerator(at: url, includingPropertiesForKeys: keys, options: options, catchErrors: catchErrors)
 	}
 
-	// rdar://32984063 When on APFS, `FileManager.copyItem(at:to)` can result in zero'd out binary files, due to the cloning functionality.
-	// To avoid this, we drop down to the copyfile c API, explicitly not passing the 'CLONE' flags so we always copy the data normally.
-	internal func carthage_copyItem(at from: URL, to: URL) throws {
+	// swiftlint:disable identifier_name
+	/// rdar://32984063 When on APFS, `FileManager.copyItem(at:to)` can result in zero'd out binary files, due to the cloning functionality.
+	/// To avoid this, we drop down to the copyfile c API, explicitly not passing the 'CLONE' flags so we always copy the data normally.
+	/// - Parameter avoiding·rdar·32984063: When `false`, passthrough to Foundation’s `FileManager.copyItem(at:to:)`.
+	internal func copyItem(at from: URL, to: URL, avoiding·rdar·32984063: Bool) throws {
+		guard avoiding·rdar·32984063, try from.volumeSupportsFileCloning() else {
+			return try self.copyItem(at: from, to: to)
+		}
+
 		try from.path.withCString { fromCStr in
 			try to.path.withCString { toCStr in
 				let state = copyfile_state_alloc()

@@ -262,7 +262,7 @@ private func mergeModuleIntoModule(_ sourceModuleDirectoryURL: URL, _ destinatio
 			let destinationURL = destinationModuleDirectoryURL.appendingPathComponent(lastComponent).resolvingSymlinksInPath()
 
 			do {
-				try FileManager.default.carthage_copyItem(at: url, to: destinationURL)
+				try FileManager.default.copyItem(at: url, to: destinationURL, avoiding·rdar·32984063: true)
 				return .success(destinationURL)
 			} catch let error as NSError {
 				return .failure(.writeFailed(destinationURL, error))
@@ -920,7 +920,7 @@ public func copyProduct(_ from: URL, _ to: URL) -> SignalProducer<URL, CarthageE
 		}
 
 		do {
-			try manager.carthage_copyItem(at: from, to: to)
+			try manager.copyItem(at: from, to: to, avoiding·rdar·32984063: true)
 			return .success(to)
 		} catch let error as NSError {
 			return .failure(.writeFailed(to, error))
