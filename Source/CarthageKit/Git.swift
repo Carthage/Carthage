@@ -167,6 +167,27 @@ public func launchGitTask(
 	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
 
 	return taskDescription.launch(standardInput: standardInput)
+		.filter { taskEvent in
+			switch taskEvent {
+			case .success(_):
+				return true
+			case .launch(_):
+				return true
+			case let .standardOutput(data):
+				return data.count > 0
+			case let .standardError(data):
+				return data.count > 0
+			}
+		}
+		.on(event: { event in
+			guard let taskEvent = event.value else {
+				return
+			}
+			if case .success(_) = taskEvent {
+				return
+			}
+			print(taskEvent)
+		})
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
 		.map { data in
@@ -199,7 +220,7 @@ public func cloneRepository(_ cloneURL: GitURL, _ destinationURL: URL, isBare: B
 		arguments.append("--bare")
 	}
 
-	return launchGitTask(arguments + [ "--quiet", cloneURL.urlString, destinationURL.path ])
+	return launchGitTask(arguments + [ "-v", cloneURL.urlString, destinationURL.path ])
 		.on(completed: {
 			FetchCache.updateLastFetchTime(forURL: cloneURL)
 		})
@@ -209,7 +230,7 @@ public func cloneRepository(_ cloneURL: GitURL, _ destinationURL: URL, isBare: B
 public func fetchRepository(_ repositoryFileURL: URL, remoteURL: GitURL? = nil, refspec: String? = nil) -> SignalProducer<String, CarthageError> {
 	precondition(repositoryFileURL.isFileURL)
 
-	var arguments = [ "fetch", "--prune", "--quiet" ]
+	var arguments = [ "fetch", "--prune", "-v" ]
 	if let remoteURL = remoteURL {
 		arguments.append(remoteURL.urlString)
 	}
