@@ -257,6 +257,31 @@ extension URL {
 		return false
 	}
 
+	internal func volumeSupportsFileCloning() throws -> Bool {
+		guard #available(macOS 10.12, *) else { return false }
+		let keys: Set<URLResourceKey> = [ .volumeSupportsFileCloningKey ]
+
+		let values = try self.resourceValues(forKeys: keys).allValues
+
+		func error(failureReason: String) -> NSError {
+			return NSError(
+				domain: NSCocoaErrorDomain,
+				code: CocoaError.fileReadUnknown.rawValue,
+				userInfo: [NSURLErrorKey: self, NSLocalizedFailureReasonErrorKey: failureReason]
+			)
+		}
+
+		guard values.count == 1 else {
+			throw error(failureReason: "Expected single resource value: «actual count: \(values.count)».")
+		}
+
+		guard case (keys.first!, let volumeSupportsFileCloning as CFBoolean)? = values.first else {
+			throw error(failureReason: "Unable to extract a CFBoolean from «\(String(describing: values.first))».")
+		}
+
+		return volumeSupportsFileCloning as Bool
+	}
+
 	/// Returns the first `URL` to match `<self>/Headers/*-Swift.h`. Otherwise `nil`.
 	internal func swiftHeaderURL() -> URL? {
 		let headersURL = self.appendingPathComponent("Headers", isDirectory: true).resolvingSymlinksInPath()
