@@ -21,7 +21,7 @@ carthage build "$@"
 
 This script ensures that whenever you invoke `carthage build` , there’s a temporary `.xcconfig` file that’s provided to Carthage’s invocations of `xcodebuild` that forces it to build dynamic frameworks as static frameworks by replacing the `ld` command with invocations to `libtool` instead. It additionally makes sure that `xcodebuild`  does not attempt to produce `dSYM` files for static frameworks, since this would cause a build failure otherwise. Finally, this script also ensures that the temporary `xcconfig` file is automatically deleted whenever the script exits. After you've modified this script to suit your needs, don’t forget to make it executable via `chmod +x`.
 
-Note that you’ll also need to download [ly.py](https://github.com/keith/swift-staticlibs/blob/master/ld.py) and make it executable via `chmod +x ld.py` to invoke it in the above script. It would probably make sense to check it into your repository, but that’s ultimately up to you.
+Note that you’ll also need to download [ld.py](https://github.com/keith/swift-staticlibs/blob/master/ld.py) and make it executable via `chmod +x ld.py` to invoke it in the above script. It would probably make sense to check it into your repository, but that’s ultimately up to you.
 
 Once you’ve modified the above script to fit your local directory structure and added `ld.py` to a location in your repository, you should be able to build static frameworks with Carthage now by invoking your script from above, e.g.:
 ```bash
