@@ -257,6 +257,31 @@ extension URL {
 		return false
 	}
 
+	internal func volumeSupportsFileCloning() throws -> Bool {
+		guard #available(macOS 10.12, *) else { return false }
+		let keys: Set<URLResourceKey> = [ .volumeSupportsFileCloningKey ]
+
+		let values = try self.resourceValues(forKeys: keys).allValues
+
+		func error(failureReason: String) -> NSError {
+			return NSError(
+				domain: NSCocoaErrorDomain,
+				code: CocoaError.fileReadUnknown.rawValue,
+				userInfo: [NSURLErrorKey: self, NSLocalizedFailureReasonErrorKey: failureReason]
+			)
+		}
+
+		guard values.count == 1 else {
+			throw error(failureReason: "Expected single resource value: «actual count: \(values.count)».")
+		}
+
+		guard case (keys.first!, let volumeSupportsFileCloning as CFBoolean)? = values.first else {
+			throw error(failureReason: "Unable to extract a CFBoolean from «\(String(describing: values.first))».")
+		}
+
+		return volumeSupportsFileCloning as Bool
+	}
+
 	/// Returns the first `URL` to match `<self>/Headers/*-Swift.h`. Otherwise `nil`.
 	internal func swiftHeaderURL() -> URL? {
 		let headersURL = self.appendingPathComponent("Headers", isDirectory: true).resolvingSymlinksInPath()
@@ -280,6 +305,27 @@ extension FileManager: ReactiveExtensionsProvider {
 		catchErrors: Bool = false
 	) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
 		return reactive.enumerator(at: url, includingPropertiesForKeys: keys, options: options, catchErrors: catchErrors)
+	}
+
+	// swiftlint:disable identifier_name
+	/// rdar://32984063 When on APFS, `FileManager.copyItem(at:to)` can result in zero'd out binary files, due to the cloning functionality.
+	/// To avoid this, we drop down to the copyfile c API, explicitly not passing the 'CLONE' flags so we always copy the data normally.
+	/// - Parameter avoiding·rdar·32984063: When `false`, passthrough to Foundation’s `FileManager.copyItem(at:to:)`.
+	internal func copyItem(at from: URL, to: URL, avoiding·rdar·32984063: Bool) throws {
+		guard avoiding·rdar·32984063, try from.volumeSupportsFileCloning() else {
+			return try self.copyItem(at: from, to: to)
+		}
+
+		try from.path.withCString { fromCStr in
+			try to.path.withCString { toCStr in
+				let state = copyfile_state_alloc()
+				let status = copyfile(fromCStr, toCStr, state, UInt32(COPYFILE_ALL | COPYFILE_RECURSIVE | COPYFILE_NOFOLLOW))
+				copyfile_state_free(state)
+				if status < 0 {
+					throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil)
+				}
+			}
+		}
 	}
 }
 
