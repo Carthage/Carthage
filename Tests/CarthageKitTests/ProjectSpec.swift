@@ -16,11 +16,11 @@ class ProjectSpec: QuickSpec {
 			let directoryURL = Bundle(for: type(of: self)).url(forResource: "DependencyTest", withExtension: nil)!
 			let buildDirectoryURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true) -> [String] {
+			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				var builtSchemes: [String] = []
 
 				let project = Project(directoryURL: directoryURL)
-				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds))
+				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
 					.flatten(.concat)
 					.ignoreTaskData()
 					.on(value: { project, scheme in
@@ -53,6 +53,28 @@ class ProjectSpec: QuickSpec {
 				expect(result.filter { $0.contains("Mac") }) == macOSexpected
 				expect(result.filter { $0.contains("iOS") }) == iOSExpected
 				expect(Set(result)) == Set<String>(macOSexpected + iOSExpected)
+			}
+
+			it("should determine build order without repo cache") {
+				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
+				["TestFramework3", "TestFramework2", "TestFramework1"].forEach { dep in
+					_ = try? FileManager.default.removeItem(at: Constants.Dependency.repositoriesURL.appendingPathComponent(dep))
+				}
+				// Without the repo cache, it won't know to build frameworks 2 and 3 unless it reads the Cartfile from the checkout directory
+				let result = buildDependencyTest(platforms: [.macOS], cacheBuilds: false, dependenciesToBuild: ["TestFramework1"])
+				expect(result) == macOSexpected
+			}
+
+			it("should fall back to repo cache if checkout is missing") {
+				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac"]
+				let repoDir = directoryURL.appendingPathComponent(carthageProjectCheckoutsPath)
+				let checkout = repoDir.appendingPathComponent("TestFramework1")
+				let tmpCheckout = repoDir.appendingPathComponent("TestFramework1_BACKUP")
+				try! FileManager.default.moveItem(at: checkout, to: tmpCheckout)
+				// Without the checkout, it should still figure out it needs to build 2 and 3.
+				let result = buildDependencyTest(platforms: [.macOS], cacheBuilds: false)
+				expect(result) == macOSexpected
+				try! FileManager.default.moveItem(at: tmpCheckout, to: checkout)
 			}
 
 			describe("createAndCheckVersionFiles") {
