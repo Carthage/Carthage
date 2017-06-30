@@ -11,7 +11,7 @@ public struct ScannableError: Error {
 
 extension ScannableError: CustomStringConvertible {
 	public var description: String {
-		return currentLine.flatMap { "\(message) in line: \($0)" } ?? message
+		return currentLine.map { "\(message) in line: \($0)" } ?? message
 	}
 }
 
