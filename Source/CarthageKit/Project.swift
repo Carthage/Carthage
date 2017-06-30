@@ -216,16 +216,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 		}
 	}
 
-	/// Produces the sub dependencies of the given dependency
-	fileprivate func dependencies(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<Set<Dependency>, CarthageError> {
-		return self.dependencies(for: dependency, version: version)
-			.map { $0.0 }
-			.collect()
-			.map { Set($0) }
-			.concat(value: Set())
-			.take(first: 1)
-	}
-
 	/// Limits the number of concurrent clones/fetches to the number of active
 	/// processors.
 	private let cloneOrFetchQueue = ConcurrentProducerQueue(name: "org.carthage.CarthageKit", limit: ProcessInfo.processInfo.activeProcessorCount)
@@ -314,17 +304,53 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 	}
 
+	/// Produces the sub dependencies of the given dependency. Uses the checked out directory if able
+	private func dependencySet(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<Set<Dependency>, CarthageError> {
+		return self.dependencies(for: dependency, version: version, tryCheckoutDirectory: true)
+			.map { $0.0 }
+			.collect()
+			.map { Set($0) }
+			.concat(value: Set())
+			.take(first: 1)
+	}
+
 	/// Loads the dependencies for the given dependency, at the given version.
 	private func dependencies(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
+		return self.dependencies(for: dependency, version: version, tryCheckoutDirectory: false)
+	}
+
+	/// Loads the dependencies for the given dependency, at the given version. Optionally can attempt to read from the Checkout directory
+	private func dependencies(for dependency: Dependency, version: PinnedVersion, tryCheckoutDirectory: Bool) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
 		switch dependency {
 		case .git, .gitHub:
 			let revision = version.commitish
-			return self.cloneOrFetchDependency(dependency, commitish: revision)
+			let cartfileFetch: SignalProducer<Cartfile, CarthageError> = self.cloneOrFetchDependency(dependency, commitish: revision)
 				.flatMap(.concat) { repositoryURL in
 					return contentsOfFileInRepository(repositoryURL, Constants.Project.cartfilePath, revision: revision)
 				}
 				.flatMapError { _ in .empty }
 				.attemptMap(Cartfile.from(string:))
+
+			let cartfileSource: SignalProducer<Cartfile, CarthageError>
+			if tryCheckoutDirectory {
+				let dependencyURL = self.directoryURL.appendingPathComponent(dependency.relativePath)
+				cartfileSource = SignalProducer<Bool, NoError> {
+					var isDirectory: ObjCBool = false
+					return FileManager.default.fileExists(atPath: dependencyURL.path, isDirectory: &isDirectory) && isDirectory.boolValue
+					}
+					.flatMap(.concat) { directoryExists -> SignalProducer<Cartfile, CarthageError> in
+						if directoryExists {
+							return SignalProducer(result: Cartfile.from(file: dependencyURL.appendingPathComponent(Constants.Project.cartfilePath)))
+								.flatMapError { _ in .empty }
+						} else {
+							return cartfileFetch
+						}
+					}
+					.flatMapError { _ in return .empty }
+			} else {
+				cartfileSource = cartfileFetch
+			}
+			return cartfileSource
 				.flatMap(.concat) { cartfile -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> in
 					return SignalProducer(cartfile.dependencies.map { ($0.0, $0.1) })
 				}
@@ -697,7 +723,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		// dependencies before the projects that depend on them.
 		return SignalProducer<(Dependency, PinnedVersion), CarthageError>(cartfile.dependencies.map { $0 })
 			.flatMap(.merge) { (dependency: Dependency, version: PinnedVersion) -> SignalProducer<DependencyGraph, CarthageError> in
-				return self.dependencies(for: dependency, version: version)
+				return self.dependencySet(for: dependency, version: version)
 					.map { dependencies in
 						[dependency: dependencies]
 					}
@@ -745,10 +771,13 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 
 		return loadResolvedCartfile()
-			.flatMap(.merge) { resolvedCartfile in
-				return self
-					.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToCheckout)
-					.collect()
+			.map { resolvedCartfile -> [(Dependency, PinnedVersion)] in
+				let dependencies = resolvedCartfile.dependencies
+				return dependencies.keys
+					.filter { dependenciesToCheckout?.contains($0.name) ?? true }
+					.map { key in
+						(key, dependencies[key]!)
+					}
 			}
 			.zip(with: submodulesSignal)
 			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
@@ -839,7 +868,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
 		let fileManager = FileManager.default
 
-		return self.dependencies(for: dependency, version: version)
+		return self.dependencySet(for: dependency, version: version)
 			.zip(with: // file system objects which might conflict with symlinks
 				list(treeish: version.commitish, atPath: carthageProjectCheckoutsPath, inRepository: repositoryURL)
 					.map { (path: String) in (path as NSString).lastPathComponent }
@@ -923,7 +952,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { (dependency, version) -> SignalProducer<((Dependency, PinnedVersion), Set<Dependency>, Bool?), CarthageError> in
 				return SignalProducer.combineLatest(
 					SignalProducer(value: (dependency, version)),
-					self.dependencies(for: dependency, version: version),
+					self.dependencySet(for: dependency, version: version),
 					versionFileMatches(dependency, version: version, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
 				)
 			}
