@@ -4,7 +4,6 @@ import Foundation
 import Result
 import ReactiveSwift
 
-/// Type that encapsulates the configuration and evaluation of the `outdated` subcommand.
 public struct OutdatedCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
@@ -18,18 +17,12 @@ public struct OutdatedCommand: CommandProtocol {
 			} } }
 		}
 
-		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
-			let projectDirectoryOption = Option(
-				key: "project-directory",
-				defaultValue: FileManager.default.currentDirectoryPath,
-				usage: "the directory containing the Carthage project"
-			)
-
+		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return create
-				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
-				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
-				<*> ColorOptions.evaluate(mode)
-				<*> mode <| projectDirectoryOption
+				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
+				<*> m <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
+				<*> ColorOptions.evaluate(m)
+				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it

@@ -1,5 +1,3 @@
-// swiftlint:disable file_length
-
 import Foundation
 import Result
 import ReactiveSwift
@@ -211,16 +209,12 @@ public enum VersionSpecifier: VersionType {
 		switch self {
 		case .any:
 			return 0
-
 		case let .atLeast(version):
 			return 1 + version.hashValue
-
 		case let .compatibleWith(version):
 			return 2 + version.hashValue
-
 		case let .exactly(version):
 			return 3 + version.hashValue
-
 		case let .gitReference(commitish):
 			return commitish.hashValue
 		}
@@ -327,10 +321,10 @@ private func intersection(compatibleWith: SemanticVersion, exactly: SemanticVers
 ///
 /// In other words, any version that satisfies the returned specifier will
 /// satisfy _both_ of the given specifiers.
-public func intersection(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> VersionSpecifier? { // swiftlint:disable:this cyclomatic_complexity
+public func intersection(_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> VersionSpecifier? {
 	switch (lhs, rhs) {
 	// Unfortunately, patterns with a wildcard _ are not considered exhaustive,
-	// so do the same thing manually. – swiftlint:disable:this vertical_whitespace_between_cases
+	// so do the same thing manually.
 	case (.any, .any), (.any, .atLeast), (.any, .compatibleWith), (.any, .exactly):
 		return rhs
 

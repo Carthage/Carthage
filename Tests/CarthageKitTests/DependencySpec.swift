@@ -6,6 +6,7 @@ import Tentacle
 
 class DependencySpec: QuickSpec {
 	override func spec() {
+
 		var dependencyType: String!
 
 		sharedExamples("invalid dependency") { (sharedExampleContext: @escaping SharedExampleContext) in
@@ -49,6 +50,7 @@ class DependencySpec: QuickSpec {
 
 		describe("name") {
 			context ("github") {
+
 				it("should equal the name of a github.com repo") {
 					let dependency = Dependency.gitHub(.dotCom, Repository(owner: "owner", name: "name"))
 
@@ -67,6 +69,7 @@ class DependencySpec: QuickSpec {
 			}
 
 			context("git") {
+
 				it("should be the last component of the URL") {
 					let dependency = Dependency.git(GitURL("ssh://server.com/myproject"))
 
@@ -84,9 +87,11 @@ class DependencySpec: QuickSpec {
 
 					expect(dependency.name) == "whatisthisurleven"
 				}
+
 			}
 
 			context("binary") {
+
 				it("should be the last component of the URL") {
 					let dependency = Dependency.binary(URL(string: "https://server.com/myproject")!)
 
@@ -98,11 +103,14 @@ class DependencySpec: QuickSpec {
 
 					expect(dependency.name) == "myproject"
 				}
+
 			}
 		}
 
 		describe("from") {
+
 			context("github") {
+
 				it("should read a github.com dependency") {
 					let scanner = Scanner(string: "github \"ReactiveCocoa/ReactiveCocoa\"")
 
@@ -128,8 +136,7 @@ class DependencySpec: QuickSpec {
 
 					let expectedRepo = Repository(
 						owner: "ReactiveCocoa",
-						name: "ReactiveCocoa"
-					)
+						name: "ReactiveCocoa")
 					expect(dependency) == .gitHub(.enterprise(url: URL(string: "http://mysupercoolinternalwebhost.com")!), expectedRepo)
 				}
 
@@ -155,6 +162,7 @@ class DependencySpec: QuickSpec {
 			}
 
 			context("git") {
+
 				it("should read a git URL") {
 					let scanner = Scanner(string: "git \"mygiturl\"")
 
@@ -168,7 +176,9 @@ class DependencySpec: QuickSpec {
 
 					let dependency = Dependency.from(scanner).value
 
-					let expectedRepo = Repository(owner: "owner", name: "name")
+					let expectedRepo = Repository(
+						owner: "owner",
+						name: "name")
 
 					expect(dependency) == .gitHub(.dotCom, expectedRepo)
 				}
@@ -178,7 +188,9 @@ class DependencySpec: QuickSpec {
 
 					let dependency = Dependency.from(scanner).value
 
-					let expectedRepo = Repository(owner: "owner", name: "name")
+					let expectedRepo = Repository(
+						owner: "owner",
+						name: "name")
 
 					expect(dependency) == .gitHub(.dotCom, expectedRepo)
 				}
@@ -188,15 +200,19 @@ class DependencySpec: QuickSpec {
 
 					let dependency = Dependency.from(scanner).value
 
-					let expectedRepo = Repository(owner: "owner", name: "name")
+					let expectedRepo = Repository(
+						owner: "owner",
+						name: "name")
 
 					expect(dependency) == .gitHub(.dotCom, expectedRepo)
 				}
 
 				itBehavesLike("invalid dependency") { ["dependencyType": "git"] }
+
 			}
 
 			context("binary") {
+
 				it("should read a URL") {
 					let scanner = Scanner(string: "binary \"https://mysupercoolinternalwebhost.com/\"")
 
@@ -223,6 +239,7 @@ class DependencySpec: QuickSpec {
 
 				itBehavesLike("invalid dependency") { ["dependencyType": "binary"] }
 			}
+
 		}
 	}
 }

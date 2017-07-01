@@ -2,6 +2,7 @@ import Foundation
 
 /// Error parsing a binary-only framework JSON file, used in CarthageError.invalidBinaryJSON.
 public enum BinaryJSONError: Error {
+
 	/// Unable to parse the JSON.
 	case invalidJSON(NSError)
 
@@ -20,13 +21,10 @@ extension BinaryJSONError: CustomStringConvertible {
 		switch self {
 		case let .invalidJSON(error):
 			return "invalid JSON: \(error)"
-
 		case let .invalidVersion(error):
 			return "unable to parse semantic version: \(error)"
-
 		case let .invalidURL(string):
 			return "invalid URL: \(string)"
-
 		case let .nonHTTPSURL(url):
 			return "specified URL '\(url)' must be HTTPS"
 		}

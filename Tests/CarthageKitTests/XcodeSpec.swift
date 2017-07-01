@@ -13,11 +13,8 @@ class XcodeSpec: QuickSpec {
 		// The fixture is maintained at https://github.com/ikesyo/carthage-fixtures-ReactiveCocoaLayout
 		let directoryURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
 		let projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
-		let buildFolderURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
-		let targetFolderURL = URL(
-			fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString),
-			isDirectory: true
-		)
+		let buildFolderURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
+		let targetFolderURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
 
 		beforeEach {
 			_ = try? FileManager.default.removeItem(at: buildFolderURL)
@@ -95,7 +92,7 @@ class XcodeSpec: QuickSpec {
 			it("should not find anything in the Carthage Subdirectory") {
 				let relativePaths = relativePathsForProjectsInDirectory(directoryURL)
 				expect(relativePaths).toNot(beEmpty())
-				let pathsStartingWithCarthage = relativePaths.filter { $0.hasPrefix("\(carthageProjectCheckoutsPath)/") }
+				let pathsStartingWithCarthage = relativePaths.filter { $0.hasPrefix("\(CarthageProjectCheckoutsPath)/") }
 				expect(pathsStartingWithCarthage).to(beEmpty())
 			}
 
@@ -119,7 +116,7 @@ class XcodeSpec: QuickSpec {
 				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 					.flatten(.concat)
 					.ignoreTaskData()
-					.on(value: { project, scheme in // swiftlint:disable:this end_closure
+					.on(value: { (project, scheme) in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 					})
 					.wait()
@@ -129,7 +126,7 @@ class XcodeSpec: QuickSpec {
 
 			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this closure_params_parantheses
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -207,13 +204,13 @@ class XcodeSpec: QuickSpec {
 		it("should build all subprojects for all platforms by default") {
 			let multipleSubprojects = "SampleMultipleSubprojects"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
+			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -236,13 +233,13 @@ class XcodeSpec: QuickSpec {
 		it("should skip projects without shared dynamic framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
+			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -259,13 +256,13 @@ class XcodeSpec: QuickSpec {
 
 		it("should not copy build products from nested dependencies produced by workspace") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "WorkspaceWithDependency", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
+			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]))
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -280,13 +277,13 @@ class XcodeSpec: QuickSpec {
 
 		it("should error out with .noSharedFrameworkSchemes if there is no shared framework schemes") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "Swell-0.5.0", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
+			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -309,7 +306,7 @@ class XcodeSpec: QuickSpec {
 			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(value: { project, scheme in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -331,7 +328,7 @@ class XcodeSpec: QuickSpec {
 			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(value: { project, scheme in
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -373,13 +370,13 @@ class XcodeSpec: QuickSpec {
 
 			let dependencyURL =	directoryURL.appendingPathComponent(dependency.relativePath)
 			// Build
-			let buildURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
-			let dependencyBuildURL = dependencyURL.appendingPathComponent(Constants.binariesFolderPath)
+			let buildURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
+			let dependencyBuildURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath)
 
 			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 				.flatten(.concat)
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+				.on(value: { (project, scheme) in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -388,6 +385,7 @@ class XcodeSpec: QuickSpec {
 
 			expect(dependencyBuildURL).to(beRelativeSymlinkToDirectory(buildURL))
 		}
+
 	}
 }
 
@@ -398,7 +396,9 @@ internal func beExistingDirectory() -> MatcherFunc<String> {
 		failureMessage.postfixMessage = "exist and be a directory"
 		let actualPath = try actualExpression.evaluate()
 
-		guard let path = actualPath else { return false }
+		guard let path = actualPath else {
+			return false
+		}
 
 		var isDirectory: ObjCBool = false
 		let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
@@ -418,7 +418,9 @@ internal func beRelativeSymlinkToDirectory(_ directory: URL) -> MatcherFunc<URL>
 		failureMessage.postfixMessage = "be a relative symlink to \(directory)"
 		let actualURL = try actualExpression.evaluate()
 
-		guard var url = actualURL else { return false }
+		guard var url = actualURL else {
+			return false
+		}
 		var isSymlink: Bool = false
 		do {
 			url.removeCachedResourceValue(forKey: .isSymbolicLinkKey)
@@ -430,7 +432,7 @@ internal func beRelativeSymlinkToDirectory(_ directory: URL) -> MatcherFunc<URL>
 			return false
 		}
 
-		let destination = try! FileManager.default.destinationOfSymbolicLink(atPath: url.path) // swiftlint:disable:this force_try
+		let destination = try! FileManager.default.destinationOfSymbolicLink(atPath: url.path)
 
 		guard !(destination as NSString).isAbsolutePath else {
 			failureMessage.postfixMessage += ", but is not a relative symlink"

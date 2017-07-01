@@ -5,8 +5,6 @@ import Tentacle
 import Nimble
 import Quick
 
-// swiftlint:disable:this force_try
-
 class CartfileSpec: QuickSpec {
 	override func spec() {
 		it("should parse a Cartfile") {
@@ -23,9 +21,7 @@ class CartfileSpec: QuickSpec {
 			let libextobjc = Dependency.gitHub(.dotCom, Repository(owner: "jspahrsummers", name: "libextobjc"))
 			let xcconfigs = Dependency.gitHub(.dotCom, Repository(owner: "jspahrsummers", name: "xcconfigs"))
 			let iosCharts = Dependency.gitHub(.dotCom, Repository(owner: "danielgindi", name: "ios-charts"))
-			let errorTranslations = Dependency.gitHub(
-				.enterprise(url: URL(string: "https://enterprise.local/ghe")!), Repository(owner: "desktop", name: "git-error-translations")
-			)
+			let errorTranslations = Dependency.gitHub(.enterprise(url: URL(string: "https://enterprise.local/ghe")!), Repository(owner: "desktop", name: "git-error-translations"))
 			let errorTranslations2 = Dependency.git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))
 
 			expect(cartfile.dependencies) == [
@@ -110,13 +106,11 @@ class CartfileSpec: QuickSpec {
 		}
 
 		it("should not allow a binary framework with git reference") {
+
 			let testCartfile = "binary \"https://server.com/myproject\" \"gitreference\""
 			let result = Cartfile.from(string: testCartfile)
 
-			expect(result.error) == .parseError(
-				description: "binary dependencies cannot have a git reference for the version specifier in line: "
-					+ "binary \"https://server.com/myproject\" \"gitreference\""
-			)
+			expect(result.error) == .parseError(description: "binary dependencies cannot have a git reference for the version specifier in line: binary \"https://server.com/myproject\" \"gitreference\"")
 		}
 	}
 }
@@ -131,8 +125,7 @@ class ResolvedCartfileSpec: QuickSpec {
 					.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
 				])
 
-				expect(resolvedCartfile.description) == "github \"ReactiveCocoa/ReactiveCocoa\" \"v2.3.1\"\ngithub \"ReactiveCocoa/ReactiveSwift\" "
-					+ "\"v1.0.0\"\ngithub \"antitypical/Result\" \"3.0.0\"\n"
+				expect(resolvedCartfile.description) == "github \"ReactiveCocoa/ReactiveCocoa\" \"v2.3.1\"\ngithub \"ReactiveCocoa/ReactiveSwift\" \"v1.0.0\"\ngithub \"antitypical/Result\" \"3.0.0\"\n"
 			}
 		}
 	}

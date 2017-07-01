@@ -5,14 +5,12 @@ public struct BinaryProject {
 	public var versions: [PinnedVersion: URL]
 
 	public static func from(jsonData: Data, url: URL) -> Result<BinaryProject, BinaryJSONError> {
-		return Result<Any, NSError>(attempt: { try JSONSerialization.jsonObject(with: jsonData, options: []) })
+		return Result<Any, NSError>(attempt: { try JSONSerialization.jsonObject(with: jsonData, options: [])})
 			.mapError(BinaryJSONError.invalidJSON)
 			.flatMap { json in
-				let error = NSError(
-					domain: Constants.bundleIdentifier,
-					code: 1,
-					userInfo: [NSLocalizedDescriptionKey: "Binary definition was not expected type [String: String]"]
-				)
+				let error = NSError(domain: CarthageKitBundleIdentifier,
+				                    code: 1,
+				                    userInfo: [NSLocalizedDescriptionKey: "Binary definition was not expected type [String: String]"])
 				return Result(json as? [String: String], failWith: BinaryJSONError.invalidJSON(error))
 			}
 			.flatMap { (json: [String: String]) -> Result<BinaryProject, BinaryJSONError> in
@@ -27,8 +25,13 @@ public struct BinaryProject {
 						return .failure(BinaryJSONError.invalidVersion(error))
 					}
 
-					guard let binaryURL = URL(string: value) else { return .failure(BinaryJSONError.invalidURL(value)) }
-					guard binaryURL.scheme == "https" else { return .failure(BinaryJSONError.nonHTTPSURL(binaryURL)) }
+					guard let binaryURL = URL(string: value) else {
+						return .failure(BinaryJSONError.invalidURL(value))
+					}
+
+					guard binaryURL.scheme == "https" else {
+						return .failure(BinaryJSONError.nonHTTPSURL(binaryURL))
+					}
 
 					versions[pinnedVersion] = binaryURL
 				}
