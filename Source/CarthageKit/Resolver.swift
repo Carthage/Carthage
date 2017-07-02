@@ -209,7 +209,7 @@ public struct Resolver {
 /// Dependency graphs can exist in an incomplete state, but will never be
 /// inconsistent (i.e., include versions that are known to be invalid given the
 /// current graph).
-private struct DependencyGraph: Equatable {
+private struct DependencyGraph {
 	/// A full list of all nodes included in the graph.
 	var allNodes: Set<DependencyNode> = []
 
@@ -371,34 +371,36 @@ private struct DependencyGraph: Equatable {
 	}
 }
 
-private func == (_ lhs: DependencyGraph, _ rhs: DependencyGraph) -> Bool {
-	if lhs.edges.count != rhs.edges.count || lhs.roots.count != rhs.roots.count {
-		return false
-	}
+extension DependencyGraph: Equatable {
+	fileprivate static func == (_ lhs: DependencyGraph, _ rhs: DependencyGraph) -> Bool {
+		if lhs.edges.count != rhs.edges.count || lhs.roots.count != rhs.roots.count {
+			return false
+		}
 
-	for (edge, leftDeps) in lhs.edges {
-		if let rightDeps = rhs.edges[edge] {
-			if leftDeps.count != rightDeps.count {
-				return false
-			}
-
-			for dep in leftDeps {
-				if !rightDeps.contains(dep) {
+		for (edge, leftDeps) in lhs.edges {
+			if let rightDeps = rhs.edges[edge] {
+				if leftDeps.count != rightDeps.count {
 					return false
 				}
+
+				for dep in leftDeps {
+					if !rightDeps.contains(dep) {
+						return false
+					}
+				}
+			} else {
+				return false
 			}
-		} else {
-			return false
 		}
-	}
 
-	for root in lhs.roots {
-		if !rhs.roots.contains(root) {
-			return false
+		for root in lhs.roots {
+			if !rhs.roots.contains(root) {
+				return false
+			}
 		}
-	}
 
-	return true
+		return true
+	}
 }
 
 extension DependencyGraph: CustomStringConvertible {
@@ -456,7 +458,7 @@ private func mergeGraphs
 }
 
 /// A node in, or being considered for, an acyclic dependency graph.
-private class DependencyNode: Comparable {
+private class DependencyNode {
 	/// The dependency that this node refers to.
 	let dependency: Dependency
 
@@ -489,16 +491,18 @@ private class DependencyNode: Comparable {
 	}
 }
 
-private func < (_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
-	let leftSemantic = SemanticVersion.from(lhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
-	let rightSemantic = SemanticVersion.from(rhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+extension DependencyNode: Comparable {
+	fileprivate static func < (_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
+		let leftSemantic = SemanticVersion.from(lhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+		let rightSemantic = SemanticVersion.from(rhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
 
-	// Try higher versions first.
-	return leftSemantic > rightSemantic
-}
+		// Try higher versions first.
+		return leftSemantic > rightSemantic
+	}
 
-private func == (_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
-	return lhs.dependency == rhs.dependency
+	fileprivate static func == (_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
+		return lhs.dependency == rhs.dependency
+	}
 }
 
 extension DependencyNode: Hashable {
