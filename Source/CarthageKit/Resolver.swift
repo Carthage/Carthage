@@ -458,7 +458,7 @@ private func mergeGraphs
 }
 
 /// A node in, or being considered for, an acyclic dependency graph.
-private class DependencyNode {
+private final class DependencyNode {
 	/// The dependency that this node refers to.
 	let dependency: Dependency
 
