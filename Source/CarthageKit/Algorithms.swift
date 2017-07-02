@@ -70,13 +70,17 @@ public func topologicalSort<Node: Comparable>(_ graph: [Node: Set<Node>]) -> [No
 ///
 /// Returns nil if the provided graph has a cycle or is malformed.
 public func topologicalSort<Node: Comparable>(_ graph: [Node: Set<Node>], nodes: Set<Node>) -> [Node]? {
-	guard !nodes.isEmpty else { return topologicalSort(graph) }
+	guard !nodes.isEmpty else {
+		return topologicalSort(graph)
+	}
 
 	precondition(nodes.isSubset(of: Set(graph.keys)))
 
 	// Ensure that the graph has no cycles, otherwise determining the set of 
 	// transitive incoming nodes could infinitely recurse.
-	guard let sorted = topologicalSort(graph) else { return nil }
+	guard let sorted = topologicalSort(graph) else {
+		return nil
+	}
 
 	let relevantNodes = Set(nodes.flatMap { Set([$0]).union(transitiveIncomingNodes(graph, node: $0)) })
 
@@ -86,7 +90,9 @@ public func topologicalSort<Node: Comparable>(_ graph: [Node: Set<Node>], nodes:
 /// Returns the set of nodes that the given node in the provided graph has as
 /// its incoming nodes, both directly and transitively.
 private func transitiveIncomingNodes<Node: Equatable>(_ graph: [Node: Set<Node>], node: Node) -> Set<Node> {
-	guard let nodes = graph[node] else { return Set() }
+	guard let nodes = graph[node] else {
+		return Set()
+	}
 
 	let incomingNodes = Set(nodes.flatMap { transitiveIncomingNodes(graph, node: $0) })
 
