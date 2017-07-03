@@ -279,7 +279,7 @@ private func shouldBuildFrameworkType(_ frameworkType: FrameworkType?) -> Bool {
 private func shouldBuildScheme(_ buildArguments: BuildArguments, _ forPlatforms: Set<Platform>) -> SignalProducer<Bool, CarthageError> {
 	precondition(buildArguments.scheme != nil)
 
-	return BuildSettings.loadWithArguments(buildArguments)
+	return BuildSettings.load(with: buildArguments)
 		.flatMap(.concat) { settings -> SignalProducer<FrameworkType?, CarthageError> in
 			let frameworkType = SignalProducer(result: settings.frameworkType)
 
@@ -469,7 +469,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 					argsForBuilding.destinationTimeout = 3
 				}
 
-				return BuildSettings.loadWithArguments(argsForLoading)
+				return BuildSettings.load(with: argsForLoading)
 					.filter { settings in
 						// Only copy build products that are dynamic frameworks
 						guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
@@ -504,7 +504,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			argsForLoading.sdk = sdk
 
 			return BuildSettings
-				.loadWithArguments(argsForLoading)
+				.load(with: argsForLoading)
 				.filter { settings in
 					// Filter out SDKs that require bitcode when bitcode is disabled in
 					// project settings. This is necessary for testing frameworks, which

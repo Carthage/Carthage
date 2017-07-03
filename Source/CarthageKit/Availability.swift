@@ -16,6 +16,13 @@ public func unzipArchiveToDirectory(_ fileURL: URL, _ destinationDirectoryURL: U
 @available(*, unavailable, renamed: "unzip(archive:)")
 public func unzipArchiveToTemporaryDirectory(_ fileURL: URL) -> SignalProducer<URL, CarthageError> { fatalError() }
 
+// MARK: - BuildSettings.swift
+
+extension BuildSettings {
+	@available(*, unavailable, renamed: "load(with:)")
+	public static func loadWithArguments(_ arguments: BuildArguments) -> SignalProducer<BuildSettings, CarthageError> { fatalError() }
+}
+
 // MARK: - Cartfile.swift
 
 extension Cartfile {
