@@ -182,9 +182,11 @@ struct VersionFile {
 				SignalProducer(swiftVersionMatches)
 			)
 			.map { (hash, cachedFramework, swiftVersionMatches) -> Bool in
-				guard let hash = hash else { return false }
-
-				return hash == cachedFramework.hash && swiftVersionMatches
+				if let hash = hash {
+					return hash == cachedFramework.hash && swiftVersionMatches
+				} else {
+					return false
+				}
 			}
 			.reduce(true) { (result, current) -> Bool in
 				return result && current
@@ -326,9 +328,11 @@ public func versionFileMatches(
 					return versionFile.satisfies(platform: platform, commitish: commitish, binariesDirectoryURL: rootBinariesURL, localSwiftVersion: localSwiftVersion)
 				}
 				.reduce(true) { current, result in
-					guard let current = current else { return false }
-
-					return current && result
+					if let current = current {
+						return current && result
+					} else {
+						return false
+					}
 				}
 		}
 }

@@ -514,9 +514,11 @@ public func gitRootDirectoryForRepository(_ repositoryFileURL: URL) -> SignalPro
 public func submodulesInRepository(_ repositoryFileURL: URL, revision: String = "HEAD") -> SignalProducer<Submodule, CarthageError> {
 	return isGitRepository(repositoryFileURL)
 		.flatMap(.concat) { isRepository -> SignalProducer<URL, CarthageError> in
-			guard isRepository else { return .empty }
-
-			return gitRootDirectoryForRepository(repositoryFileURL)
+			if isRepository {
+				return gitRootDirectoryForRepository(repositoryFileURL)
+			} else {
+				return .empty
+			}
 		}
 		.flatMap(.concat) { actualRepoURL in
 			return gitmodulesEntriesInRepository(repositoryFileURL, revision: revision)
