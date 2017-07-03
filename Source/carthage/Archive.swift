@@ -66,7 +66,7 @@ public struct ArchiveCommand: CommandProtocol {
 				}
 				.flatMap(.merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
-					return BuildSettings.loadWithArguments(buildArguments)
+					return BuildSettings.load(with: buildArguments)
 				}
 				.flatMap(.concat) { settings -> SignalProducer<String, CarthageError> in
 					if let wrapperName = settings.wrapperName.value, settings.productType.value == .framework {
