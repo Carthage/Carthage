@@ -15,7 +15,7 @@ let package = Package(
     dependencies: {
         var deps: [Package.Dependency] = [
             .Package(url: "https://github.com/antitypical/Result.git", versions: Version(3, 2, 1)..<Version(3, .max, .max)),
-            .Package(url: "https://github.com/Carthage/ReactiveTask.git", versions: Version(0, 11, 1)..<Version(0, 11, .max)),
+            .Package(url: "https://github.com/Carthage/ReactiveTask.git", majorVersion: 0, minor: 12),
             .Package(url: "https://github.com/Carthage/Commandant.git", majorVersion: 0, minor: 12),
             .Package(url: "https://github.com/jdhealy/PrettyColors.git", majorVersion: 5),
             .Package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", majorVersion: 1, minor: 1),
