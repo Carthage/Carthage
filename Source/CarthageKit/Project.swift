@@ -337,16 +337,16 @@ public final class Project { // swiftlint:disable:this type_body_length
 				cartfileSource = SignalProducer<Bool, NoError> {
 					var isDirectory: ObjCBool = false
 					return FileManager.default.fileExists(atPath: dependencyURL.path, isDirectory: &isDirectory) && isDirectory.boolValue
+				}
+				.flatMap(.concat) { directoryExists -> SignalProducer<Cartfile, CarthageError> in
+					if directoryExists {
+						return SignalProducer(result: Cartfile.from(file: dependencyURL.appendingPathComponent(Constants.Project.cartfilePath)))
+							.flatMapError { _ in .empty }
+					} else {
+						return cartfileFetch
 					}
-					.flatMap(.concat) { directoryExists -> SignalProducer<Cartfile, CarthageError> in
-						if directoryExists {
-							return SignalProducer(result: Cartfile.from(file: dependencyURL.appendingPathComponent(Constants.Project.cartfilePath)))
-								.flatMapError { _ in .empty }
-						} else {
-							return cartfileFetch
-						}
-					}
-					.flatMapError { _ in return .empty }
+				}
+				.flatMapError { _ in return .empty }
 			} else {
 				cartfileSource = cartfileFetch
 			}
@@ -772,12 +772,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 		return loadResolvedCartfile()
 			.map { resolvedCartfile -> [(Dependency, PinnedVersion)] in
-				let dependencies = resolvedCartfile.dependencies
-				return dependencies.keys
-					.filter { dependenciesToCheckout?.contains($0.name) ?? true }
-					.map { key in
-						(key, dependencies[key]!)
-					}
+				return resolvedCartfile.dependencies
+					.filter { dep, _ in dependenciesToCheckout?.contains(dep.name) ?? true }
 			}
 			.zip(with: submodulesSignal)
 			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
