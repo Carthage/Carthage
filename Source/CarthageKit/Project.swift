@@ -586,9 +586,9 @@ public final class Project {
 						}
 						.flatMap(.concat) {
 							return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, commitish: revision, toolchain: toolchain)
-								.on(terminated: {
-									// We can receive the 'interrupted' event due to the 'take(first: 1)' below, so listen to 'terminated' to ensure we catch it
-									_ = try? FileManager.default.removeItem(at: checkoutDirectoryURL)
+								.on(value: { _ in
+									// Trash the checkouts folder when we've successfully copied binaries, to avoid building unnecessarily
+									_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
 								})
 						}
 						.flatMap(.concat) { self.removeItem(at: $0) }
