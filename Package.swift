@@ -26,7 +26,7 @@ let package = Package(
         if isSwiftPackagerManagerTest {
             deps += [
                 .Package(url: "https://github.com/Quick/Quick.git", majorVersion: 1, minor: 1),
-                .Package(url: "https://github.com/Quick/Nimble.git", majorVersion: 6, minor: 1),
+                .Package(url: "https://github.com/Quick/Nimble.git", majorVersion: 7),
             ]
         }
         return deps
