@@ -257,11 +257,11 @@ extension URL {
 		return false
 	}
 
-	internal func volumeSupportsFileCloning() throws -> Bool {
+	fileprivate func volumeSupportsFileCloning() throws -> Bool {
 		guard #available(macOS 10.12, *) else { return false }
-		let keys: Set<URLResourceKey> = [ .volumeSupportsFileCloningKey ]
 
-		let values = try self.resourceValues(forKeys: keys).allValues
+		let key = URLResourceKey.volumeSupportsFileCloningKey
+		let values = try self.resourceValues(forKeys: [key]).allValues
 
 		func error(failureReason: String) -> NSError {
 			return NSError(
@@ -275,11 +275,11 @@ extension URL {
 			throw error(failureReason: "Expected single resource value: «actual count: \(values.count)».")
 		}
 
-		guard case (keys.first!, let volumeSupportsFileCloning as CFBoolean)? = values.first else {
-			throw error(failureReason: "Unable to extract a CFBoolean from «\(String(describing: values.first))».")
+		guard let volumeSupportsFileCloning = values[key] as? NSNumber else {
+			throw error(failureReason: "Unable to extract a NSNumber from «\(String(describing: values.first))».")
 		}
 
-		return volumeSupportsFileCloning as Bool
+		return volumeSupportsFileCloning.boolValue
 	}
 
 	/// Returns the first `URL` to match `<self>/Headers/*-Swift.h`. Otherwise `nil`.
