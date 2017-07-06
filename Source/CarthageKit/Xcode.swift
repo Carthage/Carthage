@@ -413,7 +413,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		toolchain: options.toolchain
 	)
 
-	let buildSDK = { (sdk: SDK) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
+	func build(sdk: SDK, performClean: Bool) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
 		var argsForLoading = buildArgs
 		argsForLoading.sdk = sdk
 
@@ -488,7 +488,9 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 							argsForBuilding.bitcodeGenerationMode = .bitcode
 						}
 
-						var buildScheme = xcodebuildTask(["clean", "build"], argsForBuilding)
+						let actions = performClean ? ["clean", "build"] : ["build"]
+
+						var buildScheme = xcodebuildTask(actions, argsForBuilding)
 						buildScheme.workingDirectoryPath = workingDirectoryURL.path
 
 						return buildScheme.launch()
@@ -547,7 +549,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			// TODO: Generalize this further?
 			switch sdks.count {
 			case 1:
-				return buildSDK(sdks[0])
+				return build(sdk: sdks[0], performClean: true)
 					.flatMapTaskEvents(.merge) { settings in
 						return copyBuildProductIntoDirectory(folderURL, settings)
 					}
@@ -557,7 +559,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				guard let deviceSDK = deviceSDKs.first else { fatalError("Could not find device SDK in \(sdks)") }
 				guard let simulatorSDK = simulatorSDKs.first else { fatalError("Could not find simulator SDK in \(sdks)") }
 
-				return settingsByTarget(buildSDK(deviceSDK))
+				return settingsByTarget(build(sdk: deviceSDK, performClean: true))
 					.flatMap(.concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
 						switch settingsEvent {
 						case let .launch(task):
@@ -570,7 +572,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 							return SignalProducer(value: .standardError(data))
 
 						case let .success(deviceSettingsByTarget):
-							return settingsByTarget(buildSDK(simulatorSDK))
+							return settingsByTarget(build(sdk: simulatorSDK, performClean: false))
 								.flatMapTaskEvents(.concat) { (simulatorSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
 									assert(
 										deviceSettingsByTarget.count == simulatorSettingsByTarget.count,
