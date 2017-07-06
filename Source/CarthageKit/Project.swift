@@ -509,10 +509,13 @@ public final class Project { // swiftlint:disable:this type_body_length
 								fromRepository: repository, client: Client(server: server, isAuthenticated: false)
 							)
 						}
-						.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, commitish: revision, toolchain: toolchain) }
-						.on(completed: {
-							_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
-						})
+						.flatMap(.concat) {
+							return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, commitish: revision, toolchain: toolchain)
+								.on(value: { _ in
+									// Trash the checkouts folder when we've successfully copied binaries, to avoid building unnecessarily
+									_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
+								})
+						}
 						.flatMap(.concat) { self.removeItem(at: $0) }
 						.map { true }
 						.flatMapError { error in
