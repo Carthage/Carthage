@@ -413,93 +413,6 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		toolchain: options.toolchain
 	)
 
-	func build(sdk: SDK, performClean: Bool) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
-		var argsForLoading = buildArgs
-		argsForLoading.sdk = sdk
-
-		var argsForBuilding = argsForLoading
-		argsForBuilding.onlyActiveArchitecture = false
-
-		// If SDK is the iOS simulator, then also find and set a valid destination.
-		// This fixes problems when the project deployment version is lower than
-		// the target's one and includes simulators unsupported by the target.
-		//
-		// Example: Target is at 8.0, project at 7.0, xcodebuild chooses the first
-		// simulator on the list, iPad 2 7.1, which is invalid for the target.
-		//
-		// See https://github.com/Carthage/Carthage/issues/417.
-		func fetchDestination() -> SignalProducer<String?, CarthageError> {
-			// Specifying destination seems to be required for building with
-			// simulator SDKs since Xcode 7.2.
-			if sdk.isSimulator {
-				let destinationLookup = Task("/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
-				return destinationLookup.launch()
-					.ignoreTaskData()
-					.map { data in
-						let string = String(data: data, encoding: .utf8)!
-						// The output as of Xcode 6.4 is structured text so we
-						// parse it using regex. The destination will be omitted
-						// altogether if parsing fails. Xcode 7.0 beta 4 added a
-						// JSON output option as `xcrun simctl list devices --json`
-						// so this can be switched once 7.0 becomes a requirement.
-						let platformName = sdk.platform.rawValue
-						let regex = try! NSRegularExpression( // swiftlint:disable:this force_try
-							pattern: "-- \(platformName) [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)",
-							options: []
-						)
-						let lastDeviceResult = regex.matches(in: string, range: NSRange(location: 0, length: string.utf16.count)).last
-						return lastDeviceResult.map { result in
-							// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
-							let deviceID = (string as NSString).substring(with: result.rangeAt(1))
-							return "platform=\(platformName) Simulator,id=\(deviceID)"
-						}
-					}
-					.mapError(CarthageError.taskError)
-			}
-			return SignalProducer(value: nil)
-		}
-
-		return fetchDestination()
-			.flatMap(.concat) { destination -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
-				if let destination = destination {
-					argsForBuilding.destination = destination
-					// Also set the destination lookup timeout. Since we're building
-					// for the simulator the lookup shouldn't take more than a
-					// fraction of a second, but we set to 3 just to be safe.
-					argsForBuilding.destinationTimeout = 3
-				}
-
-				return BuildSettings.load(with: argsForLoading)
-					.filter { settings in
-						// Only copy build products that are dynamic frameworks
-						guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
-							return false
-						}
-
-						// Do not copy build products that originate from the current project's own carthage dependencies
-						let projectURL = URL(fileURLWithPath: projectPath)
-						let dependencyCheckoutDir = workingDirectoryURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true)
-						return !dependencyCheckoutDir.hasSubdirectory(projectURL)
-					}
-					.collect()
-					.flatMap(.concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
-						let bitcodeEnabled = settings.reduce(true) { $0 && ($1.bitcodeEnabled.value ?? false) }
-						if bitcodeEnabled {
-							argsForBuilding.bitcodeGenerationMode = .bitcode
-						}
-
-						let actions = performClean ? ["clean", "build"] : ["build"]
-
-						var buildScheme = xcodebuildTask(actions, argsForBuilding)
-						buildScheme.workingDirectoryPath = workingDirectoryURL.path
-
-						return buildScheme.launch()
-							.flatMapTaskEvents(.concat) { _ in SignalProducer(settings) }
-							.mapError(CarthageError.taskError)
-					}
-			}
-	}
-
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
 		.flatMap(.concat) { sdk -> SignalProducer<SDK, CarthageError> in
 			var argsForLoading = buildArgs
@@ -549,7 +462,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			// TODO: Generalize this further?
 			switch sdks.count {
 			case 1:
-				return build(sdk: sdks[0], performClean: true)
+				return build(sdk: sdks[0], with: buildArgs, in: workingDirectoryURL)
 					.flatMapTaskEvents(.merge) { settings in
 						return copyBuildProductIntoDirectory(folderURL, settings)
 					}
@@ -559,7 +472,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				guard let deviceSDK = deviceSDKs.first else { fatalError("Could not find device SDK in \(sdks)") }
 				guard let simulatorSDK = simulatorSDKs.first else { fatalError("Could not find simulator SDK in \(sdks)") }
 
-				return settingsByTarget(build(sdk: deviceSDK, performClean: true))
+				return settingsByTarget(build(sdk: deviceSDK, with: buildArgs, in: workingDirectoryURL))
 					.flatMap(.concat) { settingsEvent -> SignalProducer<TaskEvent<(BuildSettings, BuildSettings)>, CarthageError> in
 						switch settingsEvent {
 						case let .launch(task):
@@ -572,7 +485,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 							return SignalProducer(value: .standardError(data))
 
 						case let .success(deviceSettingsByTarget):
-							return settingsByTarget(build(sdk: simulatorSDK, performClean: false))
+							return settingsByTarget(build(sdk: simulatorSDK, with: buildArgs, in: workingDirectoryURL, performClean: false))
 								.flatMapTaskEvents(.concat) { (simulatorSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
 									assert(
 										deviceSettingsByTarget.count == simulatorSettingsByTarget.count,
@@ -621,6 +534,94 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				}
 				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
 		}
+}
+
+/// Runs the build for a given sdk and build arguments, optionally performing a clean first
+private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectoryURL: URL, performClean: Bool = true) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
+	var argsForLoading = buildArgs
+	argsForLoading.sdk = sdk
+
+	var argsForBuilding = argsForLoading
+	argsForBuilding.onlyActiveArchitecture = false
+
+	// If SDK is the iOS simulator, then also find and set a valid destination.
+	// This fixes problems when the project deployment version is lower than
+	// the target's one and includes simulators unsupported by the target.
+	//
+	// Example: Target is at 8.0, project at 7.0, xcodebuild chooses the first
+	// simulator on the list, iPad 2 7.1, which is invalid for the target.
+	//
+	// See https://github.com/Carthage/Carthage/issues/417.
+	func fetchDestination() -> SignalProducer<String?, CarthageError> {
+		// Specifying destination seems to be required for building with
+		// simulator SDKs since Xcode 7.2.
+		if sdk.isSimulator {
+			let destinationLookup = Task("/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
+			return destinationLookup.launch()
+				.ignoreTaskData()
+				.map { data in
+					let string = String(data: data, encoding: .utf8)!
+					// The output as of Xcode 6.4 is structured text so we
+					// parse it using regex. The destination will be omitted
+					// altogether if parsing fails. Xcode 7.0 beta 4 added a
+					// JSON output option as `xcrun simctl list devices --json`
+					// so this can be switched once 7.0 becomes a requirement.
+					let platformName = sdk.platform.rawValue
+					let regex = try! NSRegularExpression( // swiftlint:disable:this force_try
+						pattern: "-- \(platformName) [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)",
+						options: []
+					)
+					let lastDeviceResult = regex.matches(in: string, range: NSRange(location: 0, length: string.utf16.count)).last
+					return lastDeviceResult.map { result in
+						// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
+						let deviceID = (string as NSString).substring(with: result.rangeAt(1))
+						return "platform=\(platformName) Simulator,id=\(deviceID)"
+					}
+				}
+				.mapError(CarthageError.taskError)
+		}
+		return SignalProducer(value: nil)
+	}
+
+	return fetchDestination()
+		.flatMap(.concat) { destination -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
+			if let destination = destination {
+				argsForBuilding.destination = destination
+				// Also set the destination lookup timeout. Since we're building
+				// for the simulator the lookup shouldn't take more than a
+				// fraction of a second, but we set to 3 just to be safe.
+				argsForBuilding.destinationTimeout = 3
+			}
+
+			return BuildSettings.load(with: argsForLoading)
+				.filter { settings in
+					// Only copy build products that are dynamic frameworks
+					guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
+						return false
+					}
+
+					// Do not copy build products that originate from the current project's own carthage dependencies
+					let projectURL = URL(fileURLWithPath: projectPath)
+					let dependencyCheckoutDir = workingDirectoryURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true)
+					return !dependencyCheckoutDir.hasSubdirectory(projectURL)
+				}
+				.collect()
+				.flatMap(.concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
+					let bitcodeEnabled = settings.reduce(true) { $0 && ($1.bitcodeEnabled.value ?? false) }
+					if bitcodeEnabled {
+						argsForBuilding.bitcodeGenerationMode = .bitcode
+					}
+
+					let actions = performClean ? ["clean", "build"] : ["build"]
+
+					var buildScheme = xcodebuildTask(actions, argsForBuilding)
+					buildScheme.workingDirectoryPath = workingDirectoryURL.path
+
+					return buildScheme.launch()
+						.flatMapTaskEvents(.concat) { _ in SignalProducer(settings) }
+						.mapError(CarthageError.taskError)
+			}
+	}
 }
 
 /// Creates a dSYM for the provided dynamic framework.
