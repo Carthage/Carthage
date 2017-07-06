@@ -39,6 +39,7 @@
 		BF3199C01E32E078007DC0D1 /* DependencySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3199BF1E32E078007DC0D1 /* DependencySpec.swift */; };
 		BF7A1A0B1E3A7AE9008CBCC5 /* BinaryProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */; };
 		BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */; };
+		CD09E28B1F0E3FFB00A0378A /* FakeSwift.framework in Resources */ = {isa = PBXBuildFile; fileRef = CD09E2881F0E3F1400A0378A /* FakeSwift.framework */; };
 		CD1FE6531DD366620016639E /* Runes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; };
 		CD1FE6541DD367920016639E /* Runes.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD28C99C1E11846200322AF7 /* ProductType.swift */; };
@@ -197,6 +198,7 @@
 		BF3199BF1E32E078007DC0D1 /* DependencySpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DependencySpec.swift; sourceTree = "<group>"; };
 		BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProject.swift; sourceTree = "<group>"; };
 		BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProjectSpec.swift; sourceTree = "<group>"; };
+		CD09E2881F0E3F1400A0378A /* FakeSwift.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeSwift.framework; sourceTree = "<group>"; };
 		CD1FE6521DD366620016639E /* Runes.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Runes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD28C99C1E11846200322AF7 /* ProductType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProductType.swift; sourceTree = "<group>"; };
 		CD3E530A1DE33095002C135C /* Availability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Availability.swift; sourceTree = "<group>"; };
@@ -348,6 +350,7 @@
 				CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */,
 				3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */,
 				3B19041D1E4CFE3900A866AD /* FakeOldSwift.framework */,
+				CD09E2881F0E3F1400A0378A /* FakeSwift.framework */,
 				D0AAAB5419FB1062007B24B3 /* TestCartfile */,
 				D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */,
 				CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */,
@@ -693,9 +696,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3B19041E1E4CFE4A00A866AD /* FakeOldObjc.framework in Resources */,
 				CD9A779B1EDD7FEB00A77B00 /* BinaryOnly in Resources */,
+				3B19041E1E4CFE4A00A866AD /* FakeOldObjc.framework in Resources */,
 				3B19041F1E4CFE4A00A866AD /* FakeOldSwift.framework in Resources */,
+				CD09E28B1F0E3FFB00A0378A /* FakeSwift.framework in Resources */,
 				BE624F491E13424400EAEFC9 /* DuplicateDependenciesCartfile in Resources */,
 				B1F27D401E4541A1002D4754 /* TestVersionFile in Resources */,
 				D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */,

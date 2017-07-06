@@ -152,7 +152,7 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					overwriteSwiftVersion("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL, withVersion: "swiftlang-000.0.1 clang-000.0.0.1")
+					overwriteSwiftVersion("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL, withVersion: "1.0")
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
