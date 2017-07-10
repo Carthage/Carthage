@@ -7,7 +7,7 @@ import Tentacle
 
 /// The local installed version as a SemanticVersion object.
 public func localVersion() -> SemanticVersion {
-	let versionString = "0.23.0"
+	let versionString = "0.24.0"
 	return SemanticVersion.from(Scanner(string: versionString)).value!
 }
 
