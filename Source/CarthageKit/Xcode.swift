@@ -36,13 +36,17 @@ private func compilerVersionArguments(usingToolchain toolchain: String?) -> [Str
 private func parseSwiftVersionCommand(output: String?) -> String? {
 	guard
 		let output = output,
-		let regex = try? NSRegularExpression(pattern: "Apple Swift version ([0-9.]+)", options: []),
-		let matchRange = regex.firstMatch(in: output, options: [], range: NSRange(location: 0, length: output.characters.count))?.rangeAt(1)
-		else {
-			return nil
+		let regex = try? NSRegularExpression(pattern: "Apple Swift version ([0-9.]+) .*\\((.+)\\)", options: []),
+		let match = regex.firstMatch(in: output, options: [], range: NSRange(location: 0, length: output.characters.count))
+		else
+	{
+		return nil
 	}
 
-	return (output as NSString).substring(with: matchRange)
+	guard match.numberOfRanges == 3 else { return nil }
+
+	let nsString = output as NSString
+	return "\(nsString.substring(with: match.rangeAt(1))) (\(nsString.substring(with: match.rangeAt(2))))"
 }
 
 /// Determines the Swift version of a framework at a given `URL`.

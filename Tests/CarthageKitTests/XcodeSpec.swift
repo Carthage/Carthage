@@ -64,11 +64,11 @@ class XcodeSpec: QuickSpec {
 			}
 			#endif
 
-			it("should determine a framework's Swift version with an effective version") {
+			it("should determine a framework's Swift version excluding an effective version") {
 				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeSwift.framework", withExtension: nil)!
 				let result = frameworkSwiftVersion(frameworkURL).single()
 
-				expect(result?.value) == "4.0"
+				expect(result?.value) == "4.0 (swiftlang-900.0.43 clang-900.0.22.8)"
 			}
 
 			#if !SWIFT_PACKAGE
@@ -84,7 +84,7 @@ class XcodeSpec: QuickSpec {
 				let result = checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: nil).single()
 
 				expect(result?.value).to(beNil())
-				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: currentSwiftVersion ?? "", framework: "0.0.0")
+				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: currentSwiftVersion ?? "", framework: "0.0.0 (swiftlang-800.0.63 clang-800.0.42.1)")
 			}
 		}
 
