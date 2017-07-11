@@ -61,12 +61,6 @@ custom_rules:
     name: "Multiple Closure Params"
     message: "Don't use multiple in-line closures – save one or more of them to variables instead."
     severity: warning
-  single_line_guard:
-    included: ".*.swift"
-    regex: 'guard[^\{]{2,100}else\s*\{\s*\n\s*return.{2,60}\}'
-    name: "Single Line Guard"
-    message: "Use a single line guard for simple checks."
-    severity: warning
   space_before_comment:
     included: ".*.swift"
     regex: '\n[ ]{0}[^\/ \n][^\n]*\n[ ]{0}\/\/|\n[ ]{4}[^\/ \n][^\n]*\n[ ]{4}\/\/|\n[ ]{8}[^\/ \n][^\n]*\n[ ]{8}\/\/|\n[ ]{16}[^\/ \n][^\n]*\n[ ]{16}\/\/|\n[ ]{20}[^\/ \n][^\n]*\n[ ]{20}\/\/|\n[ ]{24}[^\/ \n][^\n]*\n[ ]{24}\/\/'

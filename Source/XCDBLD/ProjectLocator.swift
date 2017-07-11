@@ -50,7 +50,9 @@ extension ProjectLocator: Comparable {
 		let leftLevel = lhs.level
 		let rightLevel = rhs.level
 
-		guard leftLevel == rightLevel else { return leftLevel < rightLevel }
+		guard leftLevel == rightLevel else {
+			return leftLevel < rightLevel
+		}
 
 		// Prefer workspaces over projects.
 		switch (lhs, rhs) {

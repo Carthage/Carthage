@@ -138,7 +138,9 @@ public struct FetchCache {
 	}
 
 	internal static func needsFetch(forURL url: GitURL) -> Bool {
-		guard let lastFetch = lastFetchTimes[url] else { return true }
+		guard let lastFetch = lastFetchTimes[url] else {
+			return true
+		}
 
 		let difference = Date().timeIntervalSince1970 - lastFetch
 
@@ -179,7 +181,9 @@ public func ensureGitVersion(_ requiredVersion: String = carthageRequiredGitVers
 	return launchGitTask([ "--version" ])
 		.map { input -> Bool in
 			let scanner = Scanner(string: input)
-			guard scanner.scanString("git version ", into: nil) else { return false }
+			guard scanner.scanString("git version ", into: nil) else {
+				return false
+			}
 
 			var version: NSString?
 			if scanner.scanUpTo("", into: &version), let version = version {
@@ -510,8 +514,11 @@ public func gitRootDirectoryForRepository(_ repositoryFileURL: URL) -> SignalPro
 public func submodulesInRepository(_ repositoryFileURL: URL, revision: String = "HEAD") -> SignalProducer<Submodule, CarthageError> {
 	return isGitRepository(repositoryFileURL)
 		.flatMap(.concat) { isRepository -> SignalProducer<URL, CarthageError> in
-			guard isRepository else { return .empty }
-			return gitRootDirectoryForRepository(repositoryFileURL)
+			if isRepository {
+				return gitRootDirectoryForRepository(repositoryFileURL)
+			} else {
+				return .empty
+			}
 		}
 		.flatMap(.concat) { actualRepoURL in
 			return gitmodulesEntriesInRepository(repositoryFileURL, revision: revision)

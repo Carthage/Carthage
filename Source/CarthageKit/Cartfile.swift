@@ -92,7 +92,9 @@ public struct Cartfile {
 			return Cartfile
 				.from(string: cartfileContents)
 				.mapError { error in
-					guard case let .duplicateDependencies(dupes) = error else { return error }
+					guard case let .duplicateDependencies(dupes) = error else {
+						return error
+					}
 
 					let dependencies = dupes
 						.map { dupe in

@@ -963,7 +963,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 				let projectsToBeBuilt = Set(includedDependencies.map { $0.0 })
 
-				guard options.cacheBuilds && projects.intersection(projectsToBeBuilt).isEmpty else { return dependenciesIncludingNext }
+				guard options.cacheBuilds && projects.intersection(projectsToBeBuilt).isEmpty else {
+					return dependenciesIncludingNext
+				}
+
 				guard let versionFileMatches = matches else {
 					self._projectEventsObserver.send(value: .buildingUncached(nextDependency.0))
 					return dependenciesIncludingNext
@@ -1234,7 +1237,9 @@ public func cloneOrFetch(
 				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 					if isRepository {
 						let fetchProducer: () -> SignalProducer<(ProjectEvent?, URL), CarthageError> = {
-							guard FetchCache.needsFetch(forURL: remoteURL) else { return SignalProducer(value: (nil, repositoryURL)) }
+							guard FetchCache.needsFetch(forURL: remoteURL) else {
+								return SignalProducer(value: (nil, repositoryURL))
+							}
 
 							return SignalProducer(value: (.fetching(dependency), repositoryURL))
 								.concat(

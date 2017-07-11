@@ -27,8 +27,12 @@ public struct BinaryProject {
 						return .failure(BinaryJSONError.invalidVersion(error))
 					}
 
-					guard let binaryURL = URL(string: value) else { return .failure(BinaryJSONError.invalidURL(value)) }
-					guard binaryURL.scheme == "https" else { return .failure(BinaryJSONError.nonHTTPSURL(binaryURL)) }
+					guard let binaryURL = URL(string: value) else {
+						return .failure(BinaryJSONError.invalidURL(value))
+					}
+					guard binaryURL.scheme == "https" else {
+						return .failure(BinaryJSONError.nonHTTPSURL(binaryURL))
+					}
 
 					versions[pinnedVersion] = binaryURL
 				}

@@ -150,7 +150,9 @@ struct VersionFile {
 	}
 
 	func satisfies(platform: Platform, commitish: String, binariesDirectoryURL: URL, localSwiftVersion: String) -> SignalProducer<Bool, CarthageError> {
-		guard let cachedFrameworks = self[platform] else { return SignalProducer(value: false) }
+		guard let cachedFrameworks = self[platform] else {
+			return SignalProducer(value: false)
+		}
 
 		let hashes = self.hashes(for: cachedFrameworks, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
 			.collect()
@@ -169,7 +171,9 @@ struct VersionFile {
 	}
 
 	func satisfies(platform: Platform, commitish: String, hashes: [String?], swiftVersionMatches: [Bool]) -> SignalProducer<Bool, CarthageError> {
-		guard let cachedFrameworks = self[platform], commitish == self.commitish else { return SignalProducer(value: false) }
+		guard let cachedFrameworks = self[platform], commitish == self.commitish else {
+			return SignalProducer(value: false)
+		}
 
 		return SignalProducer
 			.zip(
@@ -178,8 +182,11 @@ struct VersionFile {
 				SignalProducer(swiftVersionMatches)
 			)
 			.map { (hash, cachedFramework, swiftVersionMatches) -> Bool in
-				guard let hash = hash else { return false }
-				return hash == cachedFramework.hash && swiftVersionMatches
+				if let hash = hash {
+					return hash == cachedFramework.hash && swiftVersionMatches
+				} else {
+					return false
+				}
 			}
 			.reduce(true) { (result, current) -> Bool in
 				return result && current
@@ -305,7 +312,10 @@ public func versionFileMatches(
 ) -> SignalProducer<Bool?, CarthageError> {
 	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.name).\(VersionFile.pathExtension)")
-	guard let versionFile = VersionFile(url: versionFileURL) else { return SignalProducer(value: nil) }
+	guard let versionFile = VersionFile(url: versionFileURL) else {
+		return SignalProducer(value: nil)
+	}
+
 	let commitish = version.commitish
 
 	let platformsToCheck = platforms.isEmpty ? Set<Platform>(Platform.supportedPlatforms) : platforms
@@ -318,21 +328,30 @@ public func versionFileMatches(
 					return versionFile.satisfies(platform: platform, commitish: commitish, binariesDirectoryURL: rootBinariesURL, localSwiftVersion: localSwiftVersion)
 				}
 				.reduce(true) { current, result in
-					guard let current = current else { return false }
-					return current && result
+					if let current = current {
+						return current && result
+					} else {
+						return false
+					}
 				}
 		}
 }
 
 private func hashForFileAtURL(_ frameworkFileURL: URL) -> SignalProducer<String, CarthageError> {
-	guard FileManager.default.fileExists(atPath: frameworkFileURL.path) else { return SignalProducer(error: .readFailed(frameworkFileURL, nil)) }
+	guard FileManager.default.fileExists(atPath: frameworkFileURL.path) else {
+		return SignalProducer(error: .readFailed(frameworkFileURL, nil))
+	}
+
 	let task = Task("/usr/bin/shasum", arguments: ["-a", "256", frameworkFileURL.path])
 
 	return task.launch()
 		.mapError(CarthageError.taskError)
 		.ignoreTaskData()
 		.attemptMap { data in
-			guard let taskOutput = String(data: data, encoding: .utf8) else { return .failure(.readFailed(frameworkFileURL, nil)) }
+			guard let taskOutput = String(data: data, encoding: .utf8) else {
+				return .failure(.readFailed(frameworkFileURL, nil))
+			}
+			
 			let hashStr = taskOutput.components(separatedBy: CharacterSet.whitespaces)[0]
 			return .success(hashStr.trimmingCharacters(in: .whitespacesAndNewlines))
 		}

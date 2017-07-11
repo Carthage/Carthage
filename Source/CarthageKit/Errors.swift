@@ -141,6 +141,7 @@ extension CarthageError: Equatable {
 
 		case let (.noSharedSchemes(la, lb), .noSharedSchemes(ra, rb)):
 			guard la == ra else { return false }
+
 			switch (lb, rb) {
 			case (nil, nil):
 				return true
