@@ -10,7 +10,9 @@ class BuildArgumentsSpec: QuickSpec {
 				let workspace = ProjectLocator.workspace(URL(string: "file:///Foo/Bar/workspace.xcworkspace")!)
 				let project = ProjectLocator.projectFile(URL(string: "file:///Foo/Bar/project.xcodeproj")!)
 
-				let codeSignArguments = [
+				let fixedArguments = [
+					"-enableCodeCoverage",
+					"NO",
 					"CODE_SIGNING_REQUIRED=NO",
 					"CODE_SIGN_IDENTITY=",
 					"CARTHAGE=YES",
@@ -25,7 +27,7 @@ class BuildArgumentsSpec: QuickSpec {
 							"xcodebuild",
 							"-workspace",
 							"/Foo/Bar/workspace.xcworkspace",
-						] + arguments + codeSignArguments
+						] + arguments + fixedArguments
 					}
 				}
 
@@ -38,7 +40,7 @@ class BuildArgumentsSpec: QuickSpec {
 							"xcodebuild",
 							"-project",
 							"/Foo/Bar/project.xcodeproj",
-						] + arguments + codeSignArguments
+						] + arguments + fixedArguments
 					}
 				}
 			}
