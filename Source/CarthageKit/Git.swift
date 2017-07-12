@@ -294,83 +294,52 @@ public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDir
 /// repository, but without any Git metadata.
 public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
+
+	func repositoryCheck<T>(attempt closure: () throws -> T, reasonForFailure: String) -> Result<T, CarthageError> {
+		do {
+			return .success(try closure())
+		} catch let error as NSError {
+			return .failure(
+				.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: reasonForFailure, underlyingError: error)
+			)
+		}
+	}
+
+	// swiftlint:disable switch_case_on_newline
 	let purgeGitDirectories = FileManager.default.reactive
 		.enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
-		.flatMap(.merge) { enumerator, url -> SignalProducer<(), CarthageError> in
-			var name: String?
-			do {
-				name = try url.resourceValues(forKeys: [ .nameKey ]).name
-			} catch let error as NSError {
-				return SignalProducer(
-					error: CarthageError.repositoryCheckoutFailed(
-						workingDirectoryURL: submoduleDirectoryURL,
-						reason: "could not enumerate name of descendant at \(url.path)",
-						underlyingError: error
-					)
-				)
+		.attemptMap { enumerator, url -> Result<(), CarthageError> in
+			switch repositoryCheck(attempt: {
+				try url.resourceValues(forKeys: [ .nameKey ]).name
+			}, reasonForFailure: "could not enumerate name of descendant at \(url.path)") {
+			case .failure(let error): return .failure(error)
+			case .success(let name) where name != ".git": return .success(())
+			default: break // proceed to the below `repositoryCheck`
 			}
 
-			if name != ".git" {
-				return .empty
-			}
-
-			var isDirectory: Bool?
-			do {
-				isDirectory = try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory
-				if isDirectory == nil {
-					return SignalProducer(
-						error: CarthageError.repositoryCheckoutFailed(
-							workingDirectoryURL: submoduleDirectoryURL,
-							reason: "could not determine whether \(url.path) is a directory",
-							underlyingError: nil
-						)
-					)
+			return repositoryCheck(attempt: {
+				switch try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory {
+				case .none: throw NSError() // this bogus error will probably never be seen
+				case .some(let bool): return bool
 				}
-			} catch let error as NSError {
-				return SignalProducer(
-					error: CarthageError.repositoryCheckoutFailed(
-						workingDirectoryURL: submoduleDirectoryURL,
-						reason: "could not determine whether \(url.path) is a directory",
-						underlyingError: error
-					)
-				)
-			}
+			}, reasonForFailure: "could not determine whether \(url.path) is a directory")
+				.flatMap { (isDirectory: Bool) in
+					if isDirectory { enumerator.skipDescendants() }
 
-			if let directory = isDirectory, directory {
-				enumerator.skipDescendants()
-			}
-
-			do {
-				try FileManager.default.removeItem(at: url)
-				return .empty
-			} catch let error as NSError {
-				return SignalProducer(
-					error: CarthageError.repositoryCheckoutFailed(
-						workingDirectoryURL: submoduleDirectoryURL,
-						reason: "could not remove \(url.path)",
-						underlyingError: error
-					)
-				)
-			}
+					return repositoryCheck(attempt: {
+						try FileManager.default.removeItem(at: url)
+					}, reasonForFailure: "could not remove \(url.path)")
+				}
 		}
+	// swiftlint:enable switch_case_on_newline
 
 	return SignalProducer
-		.attempt { () -> Result<URL, CarthageError> in
-			do {
+		.attempt {
+			repositoryCheck(attempt: {
 				try FileManager.default.removeItem(at: submoduleDirectoryURL)
-			} catch let error as NSError {
-				return .failure(
-					CarthageError.repositoryCheckoutFailed(
-						workingDirectoryURL: submoduleDirectoryURL,
-						reason: "could not remove submodule checkout",
-						underlyingError: error
-					)
-				)
-			}
-
-			return .success(workingDirectoryURL.appendingPathComponent(submodule.path))
+			}, reasonForFailure: "could not remove submodule checkout")
 		}
-		.flatMap(.concat) { submoduleDirectoryURL in cloneRepository(submodule.url, submoduleDirectoryURL, isBare: false) }
+		.then(cloneRepository(submodule.url, workingDirectoryURL.appendingPathComponent(submodule.path), isBare: false))
 		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
 		.then(purgeGitDirectories)
 }
