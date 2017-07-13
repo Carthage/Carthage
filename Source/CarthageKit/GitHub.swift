@@ -44,7 +44,7 @@ extension Repository {
 	/// for the github.com, or the form "http(s)://hostname/owner/name" for
 	/// Enterprise instances.
 	public static func fromIdentifier(_ identifier: String) -> Result<(Server, Repository), ScannableError> {
-		// GitHub.com
+		// ‘owner/name’ → GitHub.com
 		let range = NSRange(location: 0, length: identifier.utf16.count)
 		if let match = nwoRegex.firstMatch(in: identifier, range: range) {
 			let owner = (identifier as NSString).substring(with: match.rangeAt(1))
@@ -52,25 +52,25 @@ extension Repository {
 			return .success((.dotCom, self.init(owner: owner, name: strippingGitSuffix(name))))
 		}
 
-		// GitHub Enterprise
-		if
+		// Hostname-based → GitHub Enterprise
+		guard
 			let url = URL(string: identifier),
 			let host = url.host,
 			case var pathComponents = url.pathComponents.filter({ $0 != "/" }),
 			pathComponents.count >= 2,
 			case (let name, let owner) = (pathComponents.removeLast(), pathComponents.removeLast())
-		{
-			// If the host name starts with “github.com”, that is not an enterprise
-			// one.
-			if host == "github.com" || host == "www.github.com" {
-				return .success((.dotCom, self.init(owner: owner, name: strippingGitSuffix(name))))
-			} else {
-				let baseURL = url.deletingLastPathComponent().deletingLastPathComponent()
-				return .success((.enterprise(url: baseURL), self.init(owner: owner, name: strippingGitSuffix(name))))
-			}
+		else {
+			return .failure(ScannableError(message: "invalid GitHub repository identifier \"\(identifier)\""))
 		}
 
-		return .failure(ScannableError(message: "invalid GitHub repository identifier \"\(identifier)\""))
+		// If the host name starts with “github.com”, that is not an enterprise
+		// one.
+		guard host != "github.com", host != "www.github.com" else {
+			return .success((.dotCom, self.init(owner: owner, name: strippingGitSuffix(name))))
+		}
+
+		let baseURL = url.deletingLastPathComponent().deletingLastPathComponent()
+		return .success((.enterprise(url: baseURL), self.init(owner: owner, name: strippingGitSuffix(name))))
 	}
 }
 
