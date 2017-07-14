@@ -432,6 +432,14 @@ extension Reactive where Base: URLSession {
 	}
 }
 
+#if !swift(>=3.2)
+	extension NSTextCheckingResult {
+		internal func range(at idx: Int) -> NSRange {
+			return rangeAt(idx)
+		}
+	}
+#endif
+
 /// Creates a counted set from a sequence. The counted set is represented as a
 /// dictionary where the keys are elements from the sequence and values count
 /// how many times elements are present in the sequence.
