@@ -318,10 +318,7 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 			}
 
 			return repositoryCheck(attempt: {
-				switch try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory {
-				case .none: throw NSError() // this bogus error will probably never be seen
-				case .some(let bool): return bool
-				}
+				try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory!
 			}, reasonForFailure: "could not determine whether \(url.path) is a directory")
 				.flatMap { (isDirectory: Bool) in
 					if isDirectory { enumerator.skipDescendants() }
