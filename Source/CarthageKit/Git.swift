@@ -295,45 +295,44 @@ public func checkoutRepositoryToDirectory(_ repositoryFileURL: URL, _ workingDir
 public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
 
-	func repositoryCheck<T>(attempt closure: () throws -> T, reasonForFailure: String) -> Result<T, CarthageError> {
+	func repositoryCheck<T>(_ description: String, attempt closure: () throws -> T) -> Result<T, CarthageError> {
 		do {
 			return .success(try closure())
 		} catch let error as NSError {
+			let reason = "could not \(description)"
 			return .failure(
-				.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: reasonForFailure, underlyingError: error)
+				.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: reason, underlyingError: error)
 			)
 		}
 	}
 
-	// swiftlint:disable switch_case_on_newline
 	let purgeGitDirectories = FileManager.default.reactive
 		.enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
 		.attemptMap { enumerator, url -> Result<(), CarthageError> in
-			return repositoryCheck(attempt: {
+			return repositoryCheck("enumerate name of descendant at \(url.path)") {
 				try url.resourceValues(forKeys: [ .nameKey ]).name
-			}, reasonForFailure: "could not enumerate name of descendant at \(url.path)")
+			}
 				.flatMap { (name: String?) in
 					guard name == ".git" else { return .success(()) }
 
-					return repositoryCheck(attempt: {
+					return repositoryCheck("determine whether \(url.path) is a directory") {
 						try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory!
-					}, reasonForFailure: "could not determine whether \(url.path) is a directory")
+					}
 						.flatMap { (isDirectory: Bool) in
 							if isDirectory { enumerator.skipDescendants() }
 
-							return repositoryCheck(attempt: {
+							return repositoryCheck("remove \(url.path)") {
 								try FileManager.default.removeItem(at: url)
-							}, reasonForFailure: "could not remove \(url.path)")
+							}
 						}
 				}
 		}
-	// swiftlint:enable switch_case_on_newline
 
 	return SignalProducer
 		.attempt {
-			repositoryCheck(attempt: {
+			repositoryCheck("remove submodule checkout") {
 				try FileManager.default.removeItem(at: submoduleDirectoryURL)
-			}, reasonForFailure: "could not remove submodule checkout")
+			}
 		}
 		.then(cloneRepository(submodule.url, workingDirectoryURL.appendingPathComponent(submodule.path), isBare: false))
 		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
