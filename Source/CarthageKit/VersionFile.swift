@@ -327,13 +327,8 @@ public func versionFileMatches(
 				.flatMap(.merge) { platform in
 					return versionFile.satisfies(platform: platform, commitish: commitish, binariesDirectoryURL: rootBinariesURL, localSwiftVersion: localSwiftVersion)
 				}
-				.reduce(true) { current, result in
-					if let current = current {
-						return current && result
-					} else {
-						return false
-					}
-				}
+				.reduce(true) { $0 && $1 }
+				.map { .some($0) }
 		}
 }
 
