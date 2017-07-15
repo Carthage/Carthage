@@ -22,7 +22,7 @@ struct CachedFramework {
 	}
 }
 
-extension CachedFramework: Decodable {
+extension CachedFramework: Argo.Decodable {
 	static func decode(_ json: JSON) -> Decoded<CachedFramework> {
 		return curry(self.init)
 			<^> json <| CachedFramework.nameKey
@@ -205,7 +205,7 @@ struct VersionFile {
 	}
 }
 
-extension VersionFile: Decodable {
+extension VersionFile: Argo.Decodable {
 	static func decode(_ json: JSON) -> Decoded<VersionFile> {
 		return curry(self.init)
 			<^> json <| VersionFile.commitishKey
