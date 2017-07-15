@@ -309,23 +309,22 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 	let purgeGitDirectories = FileManager.default.reactive
 		.enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
 		.attemptMap { enumerator, url -> Result<(), CarthageError> in
-			switch repositoryCheck(attempt: {
-				try url.resourceValues(forKeys: [ .nameKey ]).name
-			}, reasonForFailure: "could not enumerate name of descendant at \(url.path)") {
-			case .failure(let error): return .failure(error)
-			case .success(let name) where name != ".git": return .success(())
-			default: break // proceed to the below `repositoryCheck`
-			}
-
 			return repositoryCheck(attempt: {
-				try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory!
-			}, reasonForFailure: "could not determine whether \(url.path) is a directory")
-				.flatMap { (isDirectory: Bool) in
-					if isDirectory { enumerator.skipDescendants() }
+				try url.resourceValues(forKeys: [ .nameKey ]).name
+			}, reasonForFailure: "could not enumerate name of descendant at \(url.path)")
+				.flatMap { (name: String?) in
+					guard name == ".git" else { return .success(()) }
 
 					return repositoryCheck(attempt: {
-						try FileManager.default.removeItem(at: url)
-					}, reasonForFailure: "could not remove \(url.path)")
+						try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory!
+					}, reasonForFailure: "could not determine whether \(url.path) is a directory")
+						.flatMap { (isDirectory: Bool) in
+							if isDirectory { enumerator.skipDescendants() }
+
+							return repositoryCheck(attempt: {
+								try FileManager.default.removeItem(at: url)
+							}, reasonForFailure: "could not remove \(url.path)")
+						}
 				}
 		}
 	// swiftlint:enable switch_case_on_newline
