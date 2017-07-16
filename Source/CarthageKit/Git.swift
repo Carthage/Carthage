@@ -309,15 +309,15 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 	let purgeGitDirectories = FileManager.default.reactive
 		.enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
 		.attemptMap { enumerator, url -> Result<(), CarthageError> in
-			return repositoryCheck("enumerate name of descendant at \(url.path)") {
-				try url.resourceValues(forKeys: [ .nameKey ]).name
-			}
+			return repositoryCheck("enumerate name of descendant at \(url.path)", attempt: {
+					try url.resourceValues(forKeys: [ .nameKey ]).name
+				})
 				.flatMap { (name: String?) in
 					guard name == ".git" else { return .success(()) }
 
-					return repositoryCheck("determine whether \(url.path) is a directory") {
-						try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory!
-					}
+					return repositoryCheck("determine whether \(url.path) is a directory", attempt: {
+							try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory!
+						})
 						.flatMap { (isDirectory: Bool) in
 							if isDirectory { enumerator.skipDescendants() }
 
