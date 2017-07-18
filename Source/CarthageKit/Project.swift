@@ -208,12 +208,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	/// Writes the given Cartfile.resolved out to the project's directory.
 	public func writeResolvedCartfile(_ resolvedCartfile: ResolvedCartfile) -> Result<(), CarthageError> {
-		do {
-			try resolvedCartfile.description.write(to: resolvedCartfileURL, atomically: true, encoding: .utf8)
-			return .success(())
-		} catch let error as NSError {
-			return .failure(.writeFailed(resolvedCartfileURL, error))
-		}
+		return Result(at: resolvedCartfileURL, attempt: {
+			try resolvedCartfile.description.write(to: $0, atomically: true, encoding: .utf8)
+		})
 	}
 
 	/// Limits the number of concurrent clones/fetches to the number of active
@@ -499,15 +496,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// Sends empty value on successful removal
 	private func removeItem(at url: URL) -> SignalProducer<(), CarthageError> {
-		return SignalProducer<URL, CarthageError>(value: url)
-			.attemptMap { url in
-				do {
-					try FileManager.default.removeItem(at: url)
-					return .success(())
-				} catch let error as NSError {
-					return .failure(.writeFailed(url, error))
-				}
-			}
+		return SignalProducer.attempt {
+			Result(at: url, attempt: FileManager.default.removeItem(at:))
+		}
 	}
 
 	/// Installs binaries and debug symbols for the given project, if available.
@@ -922,11 +913,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 						continue
 					}
 
-					do {
-						try fileManager.createSymbolicLink(atPath: dependencyCheckoutURL.path, withDestinationPath: linkDestinationPath)
-					} catch let error as NSError {
-						return .failure(.writeFailed(dependencyCheckoutURL, error))
-					}
+					return Result(at: dependencyCheckoutURL, attempt: {
+						try fileManager.createSymbolicLink(atPath: $0.path, withDestinationPath: linkDestinationPath)
+					})
 				}
 
 				return .success()
@@ -1035,13 +1024,9 @@ private func fileURLToCachedBinaryDependency(_ dependency: Dependency, _ semanti
 private func cacheDownloadedBinary(_ downloadURL: URL, toURL cachedURL: URL) -> SignalProducer<URL, CarthageError> {
 	return SignalProducer(value: cachedURL)
 		.attempt { fileURL in
-			let parentDirectoryURL = fileURL.deletingLastPathComponent()
-			do {
-				try FileManager.default.createDirectory(at: parentDirectoryURL, withIntermediateDirectories: true)
-				return .success(())
-			} catch let error as NSError {
-				return .failure(.writeFailed(parentDirectoryURL, error))
-			}
+			Result(at: fileURL.deletingLastPathComponent(), attempt: {
+				try FileManager.default.createDirectory(at: $0, withIntermediateDirectories: true)
+			})
 		}
 		.attempt { newDownloadURL in
 			// Tries `rename()` system call at first.
@@ -1063,12 +1048,9 @@ private func cacheDownloadedBinary(_ downloadURL: URL, toURL cachedURL: URL) -> 
 			//
 			// See https://github.com/Carthage/Carthage/issues/706 and
 			// https://github.com/Carthage/Carthage/issues/711.
-			do {
-				try FileManager.default.moveItem(at: downloadURL, to: newDownloadURL)
-				return .success(())
-			} catch let error as NSError {
-				return .failure(.writeFailed(newDownloadURL, error))
-			}
+			return Result(at: newDownloadURL, attempt: {
+				try FileManager.default.moveItem(at: downloadURL, to: $0)
+			})
 		}
 }
 
@@ -1223,16 +1205,13 @@ public func cloneOrFetch(
 	let repositoryURL = repositoryFileURL(for: dependency, baseURL: destinationURL)
 
 	return SignalProducer
-		.attempt { () -> Result<GitURL, CarthageError> in
-			do {
-				try fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true)
-			} catch let error as NSError {
-				return .failure(.writeFailed(destinationURL, error))
-			}
-
-			return .success(dependency.gitURL(preferHTTPS: preferHTTPS)!)
+		.attempt {
+			Result(at: destinationURL, attempt: {
+				try fileManager.createDirectory(at: $0, withIntermediateDirectories: true)
+				return dependency.gitURL(preferHTTPS: preferHTTPS)!
+			})
 		}
-		.flatMap(.merge) { remoteURL -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
+		.flatMap(.merge) { (remoteURL: GitURL) -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 			return isGitRepository(repositoryURL)
 				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 					if isRepository {

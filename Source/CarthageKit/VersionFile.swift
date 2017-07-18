@@ -194,14 +194,11 @@ struct VersionFile {
 	}
 
 	func write(to url: URL) -> Result<(), CarthageError> {
-		do {
+		return Result(at: url, attempt: {
 			let json = toJSONObject()
 			let jsonData = try JSONSerialization.data(withJSONObject: json, options: .prettyPrinted)
-			try jsonData.write(to: url, options: .atomic)
-			return .success(())
-		} catch let error as NSError {
-			return .failure(.writeFailed(url, error))
-		}
+			try jsonData.write(to: $0, options: .atomic)
+		})
 	}
 }
 
