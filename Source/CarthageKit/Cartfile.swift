@@ -87,27 +87,21 @@ public struct Cartfile {
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
 	public static func from(file cartfileURL: URL) -> Result<Cartfile, CarthageError> {
-		do {
-			let cartfileContents = try String(contentsOf: cartfileURL, encoding: .utf8)
-			return Cartfile
-				.from(string: cartfileContents)
-				.mapError { error in
-					guard case let .duplicateDependencies(dupes) = error else {
-						return error
-					}
+		return Result(attempt: { try String(contentsOf: cartfileURL, encoding: .utf8) })
+			.mapError { .readFailed(cartfileURL, $0) }
+			.flatMap(Cartfile.from(string:))
+			.mapError { error in
+				guard case let .duplicateDependencies(dupes) = error else { return error }
 
-					let dependencies = dupes
-						.map { dupe in
-							return DuplicateDependency(
-								dependency: dupe.dependency,
-								locations: [ cartfileURL.path ]
-							)
-						}
-					return .duplicateDependencies(dependencies)
-				}
-		} catch let error as NSError {
-			return .failure(CarthageError.readFailed(cartfileURL, error))
-		}
+				let dependencies = dupes
+					.map { dupe in
+						return DuplicateDependency(
+							dependency: dupe.dependency,
+							locations: [ cartfileURL.path ]
+						)
+					}
+				return .duplicateDependencies(dependencies)
+			}
 	}
 
 	/// Appends the contents of another Cartfile to that of the receiver.
