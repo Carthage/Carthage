@@ -238,7 +238,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 	func downloadBinaryFrameworkDefinition(url: URL) -> SignalProducer<BinaryProject, CarthageError> {
-		return SignalProducer.attempt { .success(self.cachedBinaryProjects) }
+		return SignalProducer(value: self.cachedBinaryProjects)
 			.flatMap(.merge) { binaryProjectsByURL -> SignalProducer<BinaryProject, CarthageError> in
 				if let binaryProject = binaryProjectsByURL[url] {
 					return SignalProducer(value: binaryProject)
@@ -280,7 +280,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 		}
 
-		return SignalProducer.attempt { .success(self.cachedVersions) }
+		return SignalProducer(value: self.cachedVersions)
 			.flatMap(.merge) { versionsByDependency -> SignalProducer<PinnedVersion, CarthageError> in
 				if let versions = versionsByDependency[dependency] {
 					return SignalProducer(versions)
@@ -514,7 +514,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinaries(for dependency: Dependency, atRevision revision: String, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
-		return SignalProducer.attempt { .success(self.useBinaries) }
+		return SignalProducer(value: self.useBinaries)
 			.flatMap(.merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
 				if !useBinaries {
 					return SignalProducer(value: false)
