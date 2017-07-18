@@ -197,12 +197,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Reads the project's Cartfile.resolved.
 	public func loadResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
 		return SignalProducer.attempt {
-			do {
-				let resolvedCartfileContents = try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8)
-				return ResolvedCartfile.from(string: resolvedCartfileContents)
-			} catch let error as NSError {
-				return .failure(.readFailed(self.resolvedCartfileURL, error))
-			}
+			Result(attempt: { try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8) })
+				.mapError { .readFailed(self.resolvedCartfileURL, $0) }
+				.flatMap(ResolvedCartfile.from)
 		}
 	}
 
