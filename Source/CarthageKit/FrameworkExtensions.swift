@@ -226,6 +226,22 @@ extension Scanner {
 	}
 }
 
+extension Result where Error == CarthageError {
+	/// Constructs a result from a throwing closure taking a `URL`, failing with `CarthageError` if throw occurs.
+	/// - parameter carthageError: Defaults to `CarthageError.writeFailed`.
+	internal init(
+		at url: URL,
+		carthageError: (URL, NSError) -> CarthageError = CarthageError.writeFailed,
+		attempt closure: (URL) throws -> Value
+	) {
+		do {
+			self = .success(try closure(url))
+		} catch let error as NSError {
+			self = .failure(carthageError(url, error))
+		}
+	}
+}
+
 extension URL {
 	/// The type identifier of the receiver, or an error if it was unable to be
 	/// determined.
