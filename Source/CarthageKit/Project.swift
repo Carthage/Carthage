@@ -910,9 +910,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 						continue
 					}
 
-					return Result(at: dependencyCheckoutURL, attempt: {
+					if let error = Result(at: dependencyCheckoutURL, attempt: {
 						try fileManager.createSymbolicLink(atPath: $0.path, withDestinationPath: linkDestinationPath)
-					})
+					}).error {
+						return .failure(error)
+					}
 				}
 
 				return .success()
