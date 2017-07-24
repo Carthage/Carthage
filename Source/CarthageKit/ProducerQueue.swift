@@ -36,7 +36,10 @@ internal final class SerialProducerQueue: ProducerQueue {
 	/// started, wait until the queue is empty to begin work, and block other
 	/// work while executing.
 	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
-		return SignalProducer { observer, disposable in
+		return SignalProducer { observer, lifetime in
+			let disposable = AnyDisposable()
+			lifetime += disposable
+
 			self.queue.async {
 				if disposable.isDisposed {
 					return
@@ -47,7 +50,7 @@ internal final class SerialProducerQueue: ProducerQueue {
 				self.queue.suspend()
 
 				producer.startWithSignal { signal, signalDisposable in
-					disposable.add(signalDisposable)
+					lifetime += signalDisposable
 
 					signal.observe { event in
 						observer.action(event)
@@ -78,7 +81,10 @@ internal final class ConcurrentProducerQueue: ProducerQueue {
 	/// Creates a SignalProducer that will enqueue the given producer when 
 	/// started.
 	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
-		return SignalProducer { observer, disposable in
+		return SignalProducer { observer, lifetime in
+			let disposable = AnyDisposable()
+			lifetime += disposable
+
 			let operation = Operation { operation in
 				if disposable.isDisposed {
 					operation._isFinished = true
@@ -86,7 +92,7 @@ internal final class ConcurrentProducerQueue: ProducerQueue {
 				}
 
 				producer.startWithSignal { signal, signalDisposable in
-					disposable.add(signalDisposable)
+					lifetime += signalDisposable
 
 					signal.observe { event in
 						observer.action(event)

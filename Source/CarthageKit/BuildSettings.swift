@@ -51,7 +51,7 @@ public struct BuildSettings {
 				return String(data: data, encoding: .utf8)!
 			}
 			.flatMap(.merge) { string -> SignalProducer<BuildSettings, CarthageError> in
-				return SignalProducer { observer, disposable in
+				return SignalProducer { observer, lifetime in
 					var currentSettings: [String: String] = [:]
 					var currentTarget: String?
 
@@ -64,6 +64,9 @@ public struct BuildSettings {
 						currentTarget = nil
 						currentSettings = [:]
 					}
+
+					let disposable = AnyDisposable()
+					lifetime += disposable
 
 					string.enumerateLines { line, stop in
 						if disposable.isDisposed {
