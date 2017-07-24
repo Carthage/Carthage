@@ -6,7 +6,10 @@ extension String {
 	/// Returns a producer that will enumerate each line of the receiver, then
 	/// complete.
 	internal var linesProducer: SignalProducer<String, NoError> {
-		return SignalProducer { observer, disposable in
+		return SignalProducer { observer, lifetime in
+			let disposable = AnyDisposable()
+			lifetime += disposable
+
 			self.enumerateLines { line, stop in
 				observer.send(value: line)
 
@@ -38,6 +41,17 @@ internal func combineDictionaries<K, V>(_ lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	}
 
 	return result
+}
+
+// TODO: Remove this once migrated to ReactiveSwift 2.0
+extension AnyDisposable {
+	internal convenience init() {
+		self.init(SimpleDisposable())
+	}
+
+	internal convenience init(_ action: @escaping () -> Void) {
+		self.init(ActionDisposable(action: action))
+	}
 }
 
 extension Signal {
@@ -355,7 +369,10 @@ extension Reactive where Base: FileManager {
 		options: FileManager.DirectoryEnumerationOptions = [],
 		catchErrors: Bool = false
 	) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
-		return SignalProducer { [base = self.base] observer, disposable in
+		return SignalProducer { [base = self.base] observer, lifetime in
+			let disposable = AnyDisposable()
+			lifetime += disposable
+
 			let enumerator = base.enumerator(at: url, includingPropertiesForKeys: keys, options: options) { url, error in
 				if catchErrors {
 					return true
@@ -430,7 +447,7 @@ extension Reactive where Base: URLSession {
 	///         side error (i.e. when a response with status code other than
 	///         200...299 is received).
 	internal func download(with request: URLRequest) -> SignalProducer<(URL, URLResponse), AnyError> {
-		return SignalProducer { [base = self.base] observer, disposable in
+		return SignalProducer { [base = self.base] observer, lifetime in
 			let task = base.downloadTask(with: request) { url, response, error in
 				if let url = url, let response = response {
 					observer.send(value: (url, response))
@@ -440,7 +457,7 @@ extension Reactive where Base: URLSession {
 				}
 			}
 
-			disposable += {
+			lifetime += AnyDisposable {
 				task.cancel()
 			}
 			task.resume()

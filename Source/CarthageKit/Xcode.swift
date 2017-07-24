@@ -309,11 +309,11 @@ private func shouldBuildScheme(_ buildArguments: BuildArguments, _ forPlatforms:
 /// Returns a signal which will send the aggregated dictionary upon completion
 /// of the input signal, then itself complete.
 private func settingsByTarget<Error>(_ producer: SignalProducer<TaskEvent<BuildSettings>, Error>) -> SignalProducer<TaskEvent<[String: BuildSettings]>, Error> {
-	return SignalProducer { observer, disposable in
+	return SignalProducer { observer, lifetime in
 		var settings: [String: BuildSettings] = [:]
 
 		producer.startWithSignal { signal, signalDisposable in
-			disposable += signalDisposable
+			lifetime += signalDisposable
 
 			signal.observe { event in
 				switch event {
@@ -499,7 +499,10 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 											+ "number of targets built for \(simulatorSDK) (\(simulatorSettingsByTarget.count))"
 									)
 
-									return SignalProducer { observer, disposable in
+									return SignalProducer { observer, lifetime in
+										let disposable = AnyDisposable()
+										lifetime += disposable
+
 										for (target, deviceSettings) in deviceSettingsByTarget {
 											if disposable.isDisposed {
 												break
@@ -737,7 +740,7 @@ public func buildInDirectory(
 ) -> BuildSchemeProducer {
 	precondition(directoryURL.isFileURL)
 
-	return BuildSchemeProducer { observer, disposable in
+	return BuildSchemeProducer { observer, lifetime in
 		// Use SignalProducer.replayLazily to avoid enumerating the given directory
 		// multiple times.
 		let locator = buildableSchemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms)
@@ -827,7 +830,7 @@ public func buildInDirectory(
 				taskEvent.value == nil
 			}
 			.startWithSignal({ signal, signalDisposable in
-				disposable += signalDisposable
+				lifetime += signalDisposable
 				signal.observe(observer)
 			})
 	}
