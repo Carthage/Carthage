@@ -877,7 +877,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				// If no `CarthageProjectCheckoutsPath`-housed symlinks are needed,
 				// return early after potentially adding submodules
 				// (which could be outside `CarthageProjectCheckoutsPath`).
-				if names.isEmpty { return .success() } // swiftlint:disable:this single_line_return
+				if names.isEmpty { return .success(()) } // swiftlint:disable:this single_line_return
 
 				do {
 					try fileManager.createDirectory(at: dependencyCheckoutsURL, withIntermediateDirectories: true)
@@ -917,7 +917,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 				}
 
-				return .success()
+				return .success(())
 			}
 	}
 
