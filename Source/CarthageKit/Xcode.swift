@@ -430,8 +430,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				}
 				.map { _ in sdk }
 		}
-		.reduce([:]) { (sdksByPlatform: [Platform: Set<SDK>], sdk: SDK) in
-			var sdksByPlatform = sdksByPlatform
+		.reduce(into: [:]) { (sdksByPlatform: inout [Platform: Set<SDK>], sdk: SDK) in
 			let platform = sdk.platform
 
 			if var sdks = sdksByPlatform[platform] {
@@ -440,8 +439,6 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			} else {
 				sdksByPlatform[platform] = [sdk]
 			}
-
-			return sdksByPlatform
 		}
 		.flatMap(.concat) { sdksByPlatform -> SignalProducer<(Platform, [SDK]), CarthageError> in
 			if sdksByPlatform.isEmpty {

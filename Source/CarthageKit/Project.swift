@@ -397,10 +397,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 					dependenciesToUpdate: dependenciesToUpdate
 				)
 			}
-			.reduce([:]) { result, dependency in
-				var copy = result
-				copy[dependency.0] = dependency.1
-				return copy
+			.reduce(into: [:]) { (result: inout [Dependency: PinnedVersion], dependency) in
+				result[dependency.0] = dependency.1
 			}
 			.map(ResolvedCartfile.init)
 	}
@@ -719,10 +717,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 						[dependency: dependencies]
 					}
 			}
-			.reduce([:]) { (working: DependencyGraph, next: DependencyGraph) in
-				var result = working
-				next.forEach { result.updateValue($1, forKey: $0) }
-				return result
+			.reduce(into: [:]) { (working: inout DependencyGraph, next: DependencyGraph) in
+				next.forEach { working.updateValue($1, forKey: $0) }
 			}
 			.flatMap(.latest) { (graph: DependencyGraph) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				let dependenciesToInclude = Set(graph
@@ -755,10 +751,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 		/// Determine whether the repository currently holds any submodules (if
 		/// it even is a repository).
 		let submodulesSignal = submodulesInRepository(self.directoryURL)
-			.reduce([:]) { (submodulesByPath: [String: Submodule], submodule) in
-				var submodulesByPath = submodulesByPath
+			.reduce(into: [:]) { (submodulesByPath: inout [String: Submodule], submodule) in
 				submodulesByPath[submodule.path] = submodule
-				return submodulesByPath
 			}
 
 		return loadResolvedCartfile()
