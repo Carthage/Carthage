@@ -237,12 +237,9 @@ public func listTags(_ repositoryFileURL: URL) -> SignalProducer<String, Carthag
 	return launchGitTask([ "tag", "--column=never" ], repositoryFileURL: repositoryFileURL)
 		.flatMap(.concat) { (allTags: String) -> SignalProducer<String, CarthageError> in
 			return SignalProducer { observer, lifetime in
-				let disposable = AnyDisposable()
-				lifetime += disposable
-
 				let range = allTags.characters.startIndex..<allTags.characters.endIndex
 				allTags.enumerateSubstrings(in: range, options: [ .byLines, .reverse ]) { line, _, _, stop in
-					if disposable.isDisposed {
+					if lifetime.hasEnded {
 						stop = true
 					}
 
@@ -358,11 +355,8 @@ private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keyS
 	let entries = contents.characters.split(omittingEmptySubsequences: true) { $0 == "\0" }
 
 	return SignalProducer { observer, lifetime in
-		let disposable = AnyDisposable()
-		lifetime += disposable
-
 		for entry in entries {
-			if disposable.isDisposed {
+			if lifetime.hasEnded {
 				break
 			}
 

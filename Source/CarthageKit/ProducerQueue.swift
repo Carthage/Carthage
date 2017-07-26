@@ -37,11 +37,8 @@ internal final class SerialProducerQueue: ProducerQueue {
 	/// work while executing.
 	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
 		return SignalProducer { observer, lifetime in
-			let disposable = AnyDisposable()
-			lifetime += disposable
-
 			self.queue.async {
-				if disposable.isDisposed {
+				if lifetime.hasEnded {
 					return
 				}
 
@@ -82,11 +79,8 @@ internal final class ConcurrentProducerQueue: ProducerQueue {
 	/// started.
 	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
 		return SignalProducer { observer, lifetime in
-			let disposable = AnyDisposable()
-			lifetime += disposable
-
 			let operation = Operation { operation in
-				if disposable.isDisposed {
+				if lifetime.hasEnded {
 					operation._isFinished = true
 					return
 				}

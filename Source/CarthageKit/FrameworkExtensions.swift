@@ -7,13 +7,10 @@ extension String {
 	/// complete.
 	internal var linesProducer: SignalProducer<String, NoError> {
 		return SignalProducer { observer, lifetime in
-			let disposable = AnyDisposable()
-			lifetime += disposable
-
 			self.enumerateLines { line, stop in
 				observer.send(value: line)
 
-				if disposable.isDisposed {
+				if lifetime.hasEnded {
 					stop = true
 				}
 			}
@@ -359,9 +356,6 @@ extension Reactive where Base: FileManager {
 		catchErrors: Bool = false
 	) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
 		return SignalProducer { [base = self.base] observer, lifetime in
-			let disposable = AnyDisposable()
-			lifetime += disposable
-
 			let enumerator = base.enumerator(at: url, includingPropertiesForKeys: keys, options: options) { url, error in
 				if catchErrors {
 					return true
@@ -371,7 +365,7 @@ extension Reactive where Base: FileManager {
 				}
 			}!
 
-			while !disposable.isDisposed {
+			while !lifetime.hasEnded {
 				if let url = enumerator.nextObject() as? URL {
 					let value = (enumerator, url)
 					observer.send(value: value)
