@@ -43,17 +43,6 @@ internal func combineDictionaries<K, V>(_ lhs: [K: V], rhs: [K: V]) -> [K: V] {
 	return result
 }
 
-// TODO: Remove this once migrated to ReactiveSwift 2.0
-extension AnyDisposable {
-	internal convenience init() {
-		self.init(SimpleDisposable())
-	}
-
-	internal convenience init(_ action: @escaping () -> Void) {
-		self.init(ActionDisposable(action: action))
-	}
-}
-
 extension Signal {
 	/// Sends each value that occurs on `signal` combined with each value that
 	/// occurs on `otherSignal` (repeats included).
@@ -401,7 +390,7 @@ extension Reactive where Base: FileManager {
 	/// The template name should adhere to the format required by the mkdtemp()
 	/// function.
 	public func createTemporaryDirectoryWithTemplate(_ template: String) -> SignalProducer<URL, CarthageError> {
-		return SignalProducer.attempt { [base = self.base] () -> Result<String, CarthageError> in
+		return SignalProducer { [base = self.base] () -> Result<String, CarthageError> in
 			let temporaryDirectory: NSString
 			if #available(macOS 10.12, *) {
 				temporaryDirectory = base.temporaryDirectory.path as NSString
@@ -457,7 +446,7 @@ extension Reactive where Base: URLSession {
 				}
 			}
 
-			lifetime += AnyDisposable {
+			lifetime.observeEnded {
 				task.cancel()
 			}
 			task.resume()

@@ -274,7 +274,7 @@ public func checkoutRepositoryToDirectory(
 	revision: String = "HEAD"
 ) -> SignalProducer<(), CarthageError> {
 	return SignalProducer
-		.attempt { () -> Result<[String: String], CarthageError> in
+		{ () -> Result<[String: String], CarthageError> in
 			var environment = ProcessInfo.processInfo.environment
 			environment["GIT_WORK_TREE"] = workingDirectoryURL.path
 			return .success(environment)
@@ -333,8 +333,8 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 				}
 		}
 
-	return SignalProducer
-		.attempt {
+	return SignalProducer<(), CarthageError>
+		{ () -> Result<(), CarthageError> in
 			repositoryCheck("remove submodule checkout") {
 				try FileManager.default.removeItem(at: submoduleDirectoryURL)
 			}

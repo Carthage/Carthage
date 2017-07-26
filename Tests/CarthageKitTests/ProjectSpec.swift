@@ -280,7 +280,7 @@ class ProjectSpec: QuickSpec {
 					if clearFetchTime {
 						FetchCache.clearFetchTimes()
 					}
-					cloneOrFetch(commitish: commitish).start(Observer(
+					cloneOrFetch(commitish: commitish).start(Signal.Observer(
 						value: { event, _ in action(event) },
 						completed: done
 					))

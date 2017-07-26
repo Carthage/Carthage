@@ -80,7 +80,7 @@ public struct ArchiveCommand: CommandProtocol {
 		}
 
 		return frameworks.flatMap(.merge) { frameworks -> SignalProducer<(), CarthageError> in
-			return SignalProducer(Platform.supportedPlatforms)
+			return SignalProducer<Platform, CarthageError>(Platform.supportedPlatforms)
 				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
 					return SignalProducer(frameworks).map { framework in
 						return (platform.relativePath as NSString).appendingPathComponent(framework)

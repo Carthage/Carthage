@@ -90,7 +90,7 @@ public struct Resolver {
 
 		return SignalProducer(dependencies)
 			.map { dependency -> SignalProducer<DependencyNode, CarthageError> in
-				return SignalProducer(value: dependency)
+				return SignalProducer<(key: Dependency, value: VersionSpecifier), CarthageError>(value: dependency)
 					.flatMap(.concat) { dependency -> SignalProducer<PinnedVersion, CarthageError> in
 						if case let .gitReference(refName) = dependency.value {
 							return self.resolvedGitReference(dependency.key, refName)
@@ -152,7 +152,7 @@ public struct Resolver {
 		basedOnGraph inputGraph: DependencyGraph
 	) -> SignalProducer<DependencyGraph, CarthageError> {
 		return nodePermutations(for: dependencies)
-			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
+			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, NoError> in
 				return self
 					.graphs(for: nodes, dependencyOf: dependencyOf, basedOnGraph: inputGraph)
 					.materialize()
@@ -175,7 +175,7 @@ public struct Resolver {
 		let scheduler = QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.graphs")
 
 		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError>
-			.attempt {
+			{ () -> Result<(DependencyGraph, [DependencyNode]), CarthageError> in
 				var graph = inputGraph
 				return graph
 					.addNodes(nodes, dependenciesOf: dependencyOf)
@@ -189,9 +189,9 @@ public struct Resolver {
 					.map { node in self.graphsForDependenciesOfNode(node, basedOnGraph: graph) }
 					.observe(on: scheduler)
 					.permute()
-					.flatMap(.concat) { graphs -> SignalProducer<Event<DependencyGraph, CarthageError>, NoError> in
+					.flatMap(.concat) { graphs -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, NoError> in
 						return SignalProducer<DependencyGraph, CarthageError>
-							.attempt {
+							{
 								mergeGraphs([ inputGraph ] + graphs)
 							}
 							.materialize()

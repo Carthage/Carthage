@@ -105,7 +105,7 @@ struct VersionFile {
 	/// Sends the hashes of the provided cached framework's binaries in the
 	/// order that they were provided in.
 	func hashes(for cachedFrameworks: [CachedFramework], platform: Platform, binariesDirectoryURL: URL) -> SignalProducer<String?, CarthageError> {
-		return SignalProducer(cachedFrameworks)
+		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<String?, CarthageError> in
 				let frameworkBinaryURL = self.frameworkBinaryURL(for: cachedFramework, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
 
@@ -131,7 +131,7 @@ struct VersionFile {
 		binariesDirectoryURL: URL,
 		localSwiftVersion: String
 	) -> SignalProducer<Bool, CarthageError> {
-		return SignalProducer(cachedFrameworks)
+		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<Bool, CarthageError> in
 				let frameworkURL = self.frameworkURL(for: cachedFramework, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
 
@@ -255,7 +255,7 @@ public func createVersionFileForCommitish(
 		platformCaches[platform.rawValue] = []
 	}
 
-	let writeVersionFile = SignalProducer<(), CarthageError>.attempt {
+	let writeVersionFile = SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
 		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
 
