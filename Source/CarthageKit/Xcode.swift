@@ -500,11 +500,8 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 									)
 
 									return SignalProducer { observer, lifetime in
-										let disposable = AnyDisposable()
-										lifetime += disposable
-
 										for (target, deviceSettings) in deviceSettingsByTarget {
-											if disposable.isDisposed {
+											if lifetime.hasEnded {
 												break
 											}
 

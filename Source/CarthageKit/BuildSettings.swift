@@ -65,11 +65,8 @@ public struct BuildSettings {
 						currentSettings = [:]
 					}
 
-					let disposable = AnyDisposable()
-					lifetime += disposable
-
 					string.enumerateLines { line, stop in
-						if disposable.isDisposed {
+						if lifetime.hasEnded {
 							stop = true
 							return
 						}
