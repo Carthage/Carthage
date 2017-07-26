@@ -136,7 +136,7 @@ public func buildableSchemesInDirectory(
 /// Sends pairs of a scheme and a project, the scheme actually resides in
 /// the project.
 public func schemesInProjects(_ projects: [(ProjectLocator, [String])]) -> SignalProducer<[(String, ProjectLocator)], CarthageError> {
-	return SignalProducer(projects)
+	return SignalProducer<(ProjectLocator, [String]), CarthageError>(projects)
 		.map { (project: ProjectLocator, schemes: [String]) in
 			// Only look for schemes that actually reside in the project
 			let containedSchemes = schemes.filter { (scheme: String) -> Bool in
@@ -155,7 +155,7 @@ public func schemesInProjects(_ projects: [(ProjectLocator, [String])]) -> Signa
 			}
 		}
 		.flatMap(.concat) { project, schemes in
-			return .init(schemes.map { ($0, project) })
+			return SignalProducer<(String, ProjectLocator), CarthageError>(schemes.map { ($0, project) })
 		}
 		.collect()
 }
@@ -693,7 +693,7 @@ public func build(
 ///
 /// Returns a signal indicating success
 private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	return SignalProducer.attempt {
+	return SignalProducer { () -> Result<(), CarthageError> in
 		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
@@ -878,7 +878,7 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
 ///
 /// Returns a signal that will send the URL after copying upon .success.
 public func copyProduct(_ from: URL, _ to: URL) -> SignalProducer<URL, CarthageError> { // swiftlint:disable:this identifier_name
-	return SignalProducer<URL, CarthageError>.attempt {
+	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in
 		let manager = FileManager.default
 
 		// This signal deletes `to` before it copies `from` over it.
@@ -975,7 +975,7 @@ extension Signal where Value: TaskEventType {
 
 /// Strips the given architecture from a framework.
 private func stripArchitecture(_ frameworkURL: URL, _ architecture: String) -> SignalProducer<(), CarthageError> {
-	return SignalProducer.attempt { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
+	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
 		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
 			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path, binaryURL.path])
 			return lipoTask.launch()
@@ -986,7 +986,7 @@ private func stripArchitecture(_ frameworkURL: URL, _ architecture: String) -> S
 
 /// Returns a signal of all architectures present in a given package.
 public func architecturesInPackage(_ packageURL: URL) -> SignalProducer<String, CarthageError> {
-	return SignalProducer.attempt { () -> Result<URL, CarthageError> in binaryURL(packageURL) }
+	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(packageURL) }
 		.flatMap(.merge) { binaryURL -> SignalProducer<String, CarthageError> in
 			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-info", binaryURL.path])
 
@@ -1059,7 +1059,7 @@ public func stripModulesDirectory(_ frameworkURL: URL) -> SignalProducer<(), Car
 }
 
 private func stripDirectory(named directory: String, of frameworkURL: URL) -> SignalProducer<(), CarthageError> {
-	return SignalProducer.attempt {
+	return SignalProducer { () -> Result<(), CarthageError> in
 		let directoryURLToStrip = frameworkURL.appendingPathComponent(directory, isDirectory: true)
 
 		return Result(at: directoryURLToStrip, attempt: {
@@ -1075,8 +1075,8 @@ private func stripDirectory(named directory: String, of frameworkURL: URL) -> Si
 
 /// Sends a set of UUIDs for each architecture present in the given framework.
 public func UUIDsForFramework(_ frameworkURL: URL) -> SignalProducer<Set<UUID>, CarthageError> {
-	return SignalProducer.attempt { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
-		.flatMap(.merge, transform: UUIDsFromDwarfdump)
+	return SignalProducer { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
+		.flatMap(.merge, UUIDsFromDwarfdump)
 }
 
 /// Sends a set of UUIDs for each architecture present in the given dSYM.

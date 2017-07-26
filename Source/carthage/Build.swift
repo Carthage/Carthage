@@ -175,7 +175,7 @@ public struct BuildCommand: CommandProtocol {
 	/// Opens an existing file, if provided, or creates a temporary file if not, returning a handle and the URL to the
 	/// file.
 	private func openLogFile(_ path: String?) -> SignalProducer<(FileHandle, URL), CarthageError> {
-		return SignalProducer.attempt {
+		return SignalProducer { () -> Result<(FileHandle, URL), CarthageError> in
 			if let path = path {
 				if !FileManager.default.fileExists(atPath: path) {
 					FileManager.default.createFile(atPath: path, contents: nil, attributes: nil)

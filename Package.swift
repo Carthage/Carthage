@@ -15,11 +15,11 @@ let package = Package(
     dependencies: {
         var deps: [Package.Dependency] = [
             .Package(url: "https://github.com/antitypical/Result.git", versions: Version(3, 2, 1)..<Version(3, .max, .max)),
-            .Package(url: "https://github.com/Carthage/ReactiveTask.git", majorVersion: 0, minor: 12),
+            .Package(url: "https://github.com/Carthage/ReactiveTask.git", majorVersion: 0, minor: 13),
             .Package(url: "https://github.com/Carthage/Commandant.git", majorVersion: 0, minor: 12),
             .Package(url: "https://github.com/jdhealy/PrettyColors.git", majorVersion: 5),
-            .Package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", majorVersion: 1, minor: 1),
-            .Package(url: "https://github.com/mdiep/Tentacle.git", majorVersion: 0, minor: 7),
+            .Package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", majorVersion: 2),
+            .Package(url: "https://github.com/mdiep/Tentacle.git", majorVersion: 0, minor: 8),
             .Package(url: "https://github.com/thoughtbot/Argo.git", majorVersion: 4, minor: 1),
             .Package(url: "https://github.com/thoughtbot/Runes.git", versions: Version(4, 0, 1)..<Version(4, .max, .max)),
         ]

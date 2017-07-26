@@ -156,7 +156,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 		}
 
-		let cartfile = SignalProducer.attempt { Cartfile.from(file: cartfileURL) }
+		let cartfile = SignalProducer { Cartfile.from(file: cartfileURL) }
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) && FileManager.default.fileExists(atPath: privateCartfileURL.path) {
 					return SignalProducer(value: Cartfile())
@@ -165,7 +165,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return SignalProducer(error: error)
 			}
 
-		let privateCartfile = SignalProducer.attempt { Cartfile.from(file: privateCartfileURL) }
+		let privateCartfile = SignalProducer { Cartfile.from(file: privateCartfileURL) }
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
 				if isNoSuchFileError(error) {
 					return SignalProducer(value: Cartfile())
@@ -196,7 +196,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	/// Reads the project's Cartfile.resolved.
 	public func loadResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
-		return SignalProducer.attempt {
+		return SignalProducer {
 			Result(attempt: { try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8) })
 				.mapError { .readFailed(self.resolvedCartfileURL, $0) }
 				.flatMap(ResolvedCartfile.from)
@@ -232,7 +232,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 	func downloadBinaryFrameworkDefinition(url: URL) -> SignalProducer<BinaryProject, CarthageError> {
-		return SignalProducer(value: self.cachedBinaryProjects)
+		return SignalProducer<Project.CachedBinaryProjects, CarthageError>(value: self.cachedBinaryProjects)
 			.flatMap(.merge) { binaryProjectsByURL -> SignalProducer<BinaryProject, CarthageError> in
 				if let binaryProject = binaryProjectsByURL[url] {
 					return SignalProducer(value: binaryProject)
@@ -274,7 +274,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 		}
 
-		return SignalProducer(value: self.cachedVersions)
+		return SignalProducer<Project.CachedVersions, CarthageError>(value: self.cachedVersions)
 			.flatMap(.merge) { versionsByDependency -> SignalProducer<PinnedVersion, CarthageError> in
 				if let versions = versionsByDependency[dependency] {
 					return SignalProducer(versions)
@@ -328,7 +328,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			let cartfileSource: SignalProducer<Cartfile, CarthageError>
 			if tryCheckoutDirectory {
 				let dependencyURL = self.directoryURL.appendingPathComponent(dependency.relativePath)
-				cartfileSource = SignalProducer<Bool, NoError> {
+				cartfileSource = SignalProducer<Bool, NoError> { () -> Bool in
 					var isDirectory: ObjCBool = false
 					return FileManager.default.fileExists(atPath: dependencyURL.path, isDirectory: &isDirectory) && isDirectory.boolValue
 				}
@@ -468,14 +468,14 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Sends the temporary URL of the unzipped directory
 	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL, projectName: String, commitish: String, toolchain: String?) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer<URL, CarthageError>(value: zipFile)
-			.flatMap(.concat, transform: unarchive(archive:))
+			.flatMap(.concat, unarchive(archive:))
 			.flatMap(.concat) { directoryURL in
 				return frameworksInDirectory(directoryURL)
 					.flatMap(.merge) { url in
 						return checkFrameworkCompatibility(url, usingToolchain: toolchain)
 							.mapError { error in CarthageError.internalError(description: error.description) }
 					}
-					.flatMap(.merge, transform: self.copyFrameworkToBuildFolder)
+					.flatMap(.merge, self.copyFrameworkToBuildFolder)
 					.flatMap(.merge) { frameworkURL in
 						return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
 							.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
@@ -493,7 +493,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// Sends empty value on successful removal
 	private func removeItem(at url: URL) -> SignalProducer<(), CarthageError> {
-		return SignalProducer.attempt {
+		return SignalProducer {
 			Result(at: url, attempt: FileManager.default.removeItem(at:))
 		}
 	}
@@ -502,7 +502,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinaries(for dependency: Dependency, atRevision revision: String, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
-		return SignalProducer(value: self.useBinaries)
+		return SignalProducer<Bool, CarthageError>(value: self.useBinaries)
 			.flatMap(.merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
 				if !useBinaries {
 					return SignalProducer(value: false)
@@ -1204,7 +1204,7 @@ public func cloneOrFetch(
 	let repositoryURL = repositoryFileURL(for: dependency, baseURL: destinationURL)
 
 	return SignalProducer
-		.attempt {
+		{
 			Result(at: destinationURL, attempt: {
 				try fileManager.createDirectory(at: $0, withIntermediateDirectories: true)
 				return dependency.gitURL(preferHTTPS: preferHTTPS)!
