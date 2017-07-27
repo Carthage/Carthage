@@ -74,6 +74,11 @@ public struct Ignorefile {
 public struct IgnoreEntry {
 	public let project: String?
 	public let scheme: String
+
+	public init(project: String?, scheme: String) {
+		self.project = project
+		self.scheme = scheme
+	}
 }
 
 extension IgnoreEntry: Comparable {

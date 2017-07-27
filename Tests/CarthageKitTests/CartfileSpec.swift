@@ -53,6 +53,21 @@ class CartfileSpec: QuickSpec {
 			]
 		}
 
+		it("should parse a Cartfile.ignore") {
+			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "ignore")!
+			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
+
+			let result = Ignorefile.from(string: testCartfile)
+			expect(result.error).to(beNil())
+
+			let ignorefile = result.value!
+			expect(ignorefile.ignoreEntries) == [
+				IgnoreEntry(project: nil, scheme: "RxMoya"), IgnoreEntry(project: nil, scheme: "RxSwift"),
+				IgnoreEntry(project: nil, scheme: "ReactiveMoya"), IgnoreEntry(project: nil, scheme: "ReactiveSwift"),
+				IgnoreEntry(project: "project", scheme: "scheme")
+			]
+		}
+
 		it("should detect duplicate dependencies in a single Cartfile") {
 			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependenciesCartfile", withExtension: "")!
 			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)

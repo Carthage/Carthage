@@ -1,0 +1,10 @@
+# Ignore RxSwift variant of Moya
+scheme "RxMoya"
+scheme "RxSwift"
+
+# Ignore ReactiveSwift variant of Moya
+scheme "ReactiveMoya"
+scheme "ReactiveSwift"
+
+# Ignore scheme within specific project
+scheme "project/scheme"
