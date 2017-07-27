@@ -35,6 +35,7 @@
 		90CDE7BE2003252C00D98F37 /* FakeOSSSwift.framework in Resources */ = {isa = PBXBuildFile; fileRef = 90CDE7BC2003249C00D98F37 /* FakeOSSSwift.framework */; };
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
+		A12397B91F2AB3A600A4370F /* TestCartfile.ignore in Resources */ = {isa = PBXBuildFile; fileRef = A12397B71F2AB24900A4370F /* TestCartfile.ignore */; };
 		A1411ED61EFC1BFD0060461F /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1411ED51EFC1BFD0060461F /* Constants.swift */; };
 		A940B2F520C0363F001C4C59 /* CartfileCommentsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = A940B2F320C033C9001C4C59 /* CartfileCommentsSpec.swift */; };
 		B17145F11F43F812006DC662 /* NewResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B17145EF1F43F797006DC662 /* NewResolver.swift */; };
@@ -207,6 +208,7 @@
 		90CDE7BC2003249C00D98F37 /* FakeOSSSwift.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeOSSSwift.framework; sourceTree = "<group>"; };
 		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
+		A12397B71F2AB24900A4370F /* TestCartfile.ignore */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfile.ignore; sourceTree = "<group>"; };
 		A1411ED51EFC1BFD0060461F /* Constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		A14BB69B1EFA36B90077ABF4 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text; name = .swiftlint.yml; path = Tests/.swiftlint.yml; sourceTree = SOURCE_ROOT; };
 		A940B2F320C033C9001C4C59 /* CartfileCommentsSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CartfileCommentsSpec.swift; sourceTree = "<group>"; };
@@ -381,6 +383,7 @@
 				90CDE7BC2003249C00D98F37 /* FakeOSSSwift.framework */,
 				CD09E2881F0E3F1400A0378A /* FakeSwift.framework */,
 				D0AAAB5419FB1062007B24B3 /* TestCartfile */,
+				A12397B71F2AB24900A4370F /* TestCartfile.ignore */,
 				D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */,
 				CDCE1CC21C170E8100B2ED88 /* TestResolvedCartfile.resolved */,
 				B1F27D3F1E4541A1002D4754 /* TestVersionFile */,
@@ -751,6 +754,7 @@
 				CD9A77991EDD7E2000A77B00 /* DuplicateDependencies in Resources */,
 				D0C6E5761A57042100A5E3E7 /* CartfilePrivateOnly.zip in Resources */,
 				CDCE1CC41C170E8A00B2ED88 /* TestResolvedCartfile.resolved in Resources */,
+				A12397B91F2AB3A600A4370F /* TestCartfile.ignore in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
