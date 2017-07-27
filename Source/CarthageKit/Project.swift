@@ -742,13 +742,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 	}
 
-	/// Limits the number of concurrent checkouts to the number of active 
-	/// processors.
-	let checkoutQueue = ConcurrentProducerQueue(
-		name: "org.carthage.Constants.Project.checkoutResolvedDependencies",
-		limit: ProcessInfo.processInfo.activeProcessorCount
-	)
-
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
 	/// optionally they are limited by the given list of dependency names.
 	public func checkoutResolvedDependencies(_ dependenciesToCheckout: [String]? = nil, buildOptions: BuildOptions?) -> SignalProducer<(), CarthageError> {
@@ -768,8 +761,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 			.zip(with: submodulesSignal)
 			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
+				let limit = UInt(ProcessInfo.processInfo.activeProcessorCount)
 				return SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies)
-					.map { (dependency, version) -> SignalProducer<(), CarthageError> in
+					.flatMap(.concurrent(limit: limit)) { (dependency, version) -> SignalProducer<(), CarthageError> in
 						switch dependency {
 						case .git, .gitHub:
 
@@ -795,9 +789,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 							return self.installBinariesForBinaryProject(url: url, pinnedVersion: version, projectName: dependency.name, toolchain: buildOptions?.toolchain)
 						}
 					}
-					// TODO: Migrate to flatMap(.concurrent(...)) when it's
-					// available in ReactiveSwift.
-					.flatMap(.merge) { self.checkoutQueue.enqueue($0) }
 			}
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
