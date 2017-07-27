@@ -128,10 +128,8 @@ public struct Resolver {
 
 		return dependenciesForDependency(node.dependency, node.proposedVersion)
 			.start(on: scheduler)
-			.reduce([:]) { result, dependency in
-				var copy = result
-				copy[dependency.0] = dependency.1
-				return copy
+			.reduce(into: [:]) { result, dependency in
+				result[dependency.0] = dependency.1
 			}
 			.concat(value: [:])
 			.take(first: 1)

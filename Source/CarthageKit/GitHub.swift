@@ -91,9 +91,7 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 		.flatMap(.concat) { string in
 			return string.linesProducer
 		}
-		.reduce([:]) { (values: [String: String], line: String) -> [String: String] in
-			var values = values
-
+		.reduce(into: [:]) { (values: inout [String: String], line: String) in
 			let parts = line.characters
 				.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }
 				.map(String.init)
@@ -104,8 +102,6 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 
 				values[key] = value
 			}
-
-			return values
 		}
 		.map { (values: [String: String]) -> (String, String)? in
 			if let username = values["username"], let password = values["password"] {
