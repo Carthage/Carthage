@@ -205,13 +205,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	/// Reads the project's Cartfile.ignore.
 	public func loadIgnorefile() -> SignalProducer<Ignorefile, CarthageError> {
-		return SignalProducer.attempt {
-			do {
-				let ignorefileContents = try String(contentsOf: self.ignorefileURL, encoding: .utf8)
-				return Ignorefile.from(string: ignorefileContents)
-			} catch let error as NSError {
-				return .failure(.readFailed(self.ignorefileURL, error))
-			}
+		return SignalProducer {
+			Result(attempt: { try String(contentsOf: self.ignorefileURL, encoding: .utf8) })
+				.mapError { .readFailed(self.ignorefileURL, $0) }
+				.flatMap(Ignorefile.from)
 		}
 	}
 

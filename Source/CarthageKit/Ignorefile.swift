@@ -4,11 +4,8 @@ import Result
 /// Represents a Cartfile.ignore, which is a specification of what projects
 /// and schemes should be ignored and therefore excluded from update/boostrap.
 public struct Ignorefile {
-	/// The project names listed in the Cartfile.ignore.
-	public var projects: [IgnoreEntry]
-
-	/// The scheme names listed in the Cartfile.ignore.
-	public var schemes: [IgnoreEntry]
+	/// The ignore entries listed in the Cartfile.ignore.
+	public var ignoreEntries: [IgnoreEntry]
 
 	/// Returns the location where Cartfile.ignore should exist within the
 	/// given directory.
@@ -18,8 +15,7 @@ public struct Ignorefile {
 
 	/// Attempts to parse Cartfile.ignore information from a string.
 	public static func from(string: String) -> Result<Ignorefile, CarthageError> {
-		var projects: [IgnoreEntry] = []
-		var schemes: [IgnoreEntry] = []
+		var ignoreEntries: [IgnoreEntry] = []
 		var result: Result<(), CarthageError> = .success(())
 
 		let commentIndicator = "#"
@@ -38,13 +34,7 @@ public struct Ignorefile {
 
 			switch IgnoreEntry.from(scanner) {
 			case let .success(ignoreEntry):
-				switch ignoreEntry {
-				case .project:
-					projects.append(ignoreEntry)
-
-				case .scheme:
-					schemes.append(ignoreEntry)
-				}
+				ignoreEntries.append(ignoreEntry)
 
 			case let .failure(error):
 				result = .failure(CarthageError(scannableError: error))
@@ -64,7 +54,7 @@ public struct Ignorefile {
 		}
 
 		return result.flatMap { _ in
-			return .success(Ignorefile(projects: projects, schemes: schemes))
+			return .success(Ignorefile(ignoreEntries: ignoreEntries))
 		}
 	}
 
@@ -81,38 +71,32 @@ public struct Ignorefile {
 }
 
 /// Uniquely identifies an ignore entry that can be used for ignores.
-public enum IgnoreEntry {
-	/// A project to be ignored.
-	case project(String)
-
-	/// A scheme to be ignored.
-	case scheme(String)
+public struct IgnoreEntry {
+	public let project: String?
+	public let scheme: String
 }
 
 extension IgnoreEntry: Comparable {
 	public static func == (_ lhs: IgnoreEntry, _ rhs: IgnoreEntry) -> Bool {
-		switch (lhs, rhs) {
-		case let (.project(left), .project(right)), let (.scheme(left), .scheme(right)),
-		     let (.project(left), .scheme(right)), let (.scheme(left), .project(right)):
-			return left.caseInsensitiveCompare(right) == .orderedSame
-		}
+		return lhs.project == rhs.project && lhs.scheme == rhs.scheme
 	}
 
 	public static func < (_ lhs: IgnoreEntry, _ rhs: IgnoreEntry) -> Bool {
-		switch (lhs, rhs) {
-		case let (.project(left), .project(right)), let (.scheme(left), .scheme(right)),
-		     let (.project(left), .scheme(right)), let (.scheme(left), .project(right)):
-			return left.caseInsensitiveCompare(right) == .orderedAscending
+		guard let leftProject = lhs.project, let rightProject = rhs.project else {
+			return lhs.scheme < rhs.scheme
 		}
+
+		return leftProject < rightProject && lhs.scheme < rhs.scheme
 	}
 }
 
 extension IgnoreEntry: Hashable {
 	public var hashValue: Int {
-		switch self {
-		case let .project(name), let .scheme(name):
-			return name.hashValue
+		guard let project = project else {
+			return scheme.hashValue
 		}
+
+		return project.hashValue ^ scheme.hashValue
 	}
 }
 
@@ -121,13 +105,18 @@ extension IgnoreEntry: Scannable {
 	public static func from(_ scanner: Scanner) -> Result<IgnoreEntry, ScannableError> {
 		let parser: (String) -> Result<IgnoreEntry, ScannableError>
 
-		if scanner.scanString("project", into: nil) {
+		if scanner.scanString("scheme", into: nil) {
 			parser = { name in
-				return .success(IgnoreEntry.project(name))
-			}
-		} else if scanner.scanString("scheme", into: nil) {
-			parser = { name in
-				return .success(IgnoreEntry.scheme(name))
+				let ignoreEntry: IgnoreEntry = {
+					let nameComponents = name.components(separatedBy: "/")
+					if nameComponents.count == 1 {
+						return IgnoreEntry(project: nil, scheme: nameComponents[0])
+					} else {
+						return IgnoreEntry(project: nameComponents.first!, scheme: nameComponents.last!)
+					}
+				}()
+
+				return .success(ignoreEntry)
 			}
 		} else {
 			return .failure(ScannableError(message: "unexpected ignore entry type", currentLine: scanner.currentLine))
@@ -152,12 +141,6 @@ extension IgnoreEntry: Scannable {
 
 extension IgnoreEntry: CustomStringConvertible {
 	public var description: String {
-		switch self {
-		case let .project(name):
-			return "project \"\(name)\""
-
-		case let .scheme(name):
-			return "scheme \"\(name)\""
-		}
+		return "project \"\(String(describing: project))\", scheme \"\(scheme)\""
 	}
 }
