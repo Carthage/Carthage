@@ -761,9 +761,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 			.zip(with: submodulesSignal)
 			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
-				let limit = UInt(ProcessInfo.processInfo.activeProcessorCount)
 				return SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies)
-					.flatMap(.concurrent(limit: limit)) { (dependency, version) -> SignalProducer<(), CarthageError> in
+					.flatMap(.concurrent(limit: 4)) { (dependency, version) -> SignalProducer<(), CarthageError> in
 						switch dependency {
 						case .git, .gitHub:
 
