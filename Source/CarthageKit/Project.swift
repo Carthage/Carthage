@@ -467,21 +467,26 @@ public final class Project { // swiftlint:disable:this type_body_length
 	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL, projectName: String, commitish: String, toolchain: String?) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer<URL, CarthageError>(value: zipFile)
 			.flatMap(.concat, unarchive(archive:))
-			.flatMap(.concat) { directoryURL in
+			.flatMap(.concat) { directoryURL -> SignalProducer<URL, CarthageError> in
 				return frameworksInDirectory(directoryURL)
-					.flatMap(.merge) { url in
+					.flatMap(.merge) { url -> SignalProducer<URL, CarthageError> in
 						return checkFrameworkCompatibility(url, usingToolchain: toolchain)
 							.mapError { error in CarthageError.internalError(description: error.description) }
 					}
 					.flatMap(.merge, self.copyFrameworkToBuildFolder)
-					.flatMap(.merge) { frameworkURL in
+					.flatMap(.merge) { frameworkURL -> SignalProducer<URL, CarthageError> in
 						return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
 							.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
-							.then(SignalProducer<URL, CarthageError>(value: frameworkURL))
+							.then(SignalProducer(value: frameworkURL))
 					}
 					.collect()
-					.flatMap(.concat) { frameworkURLs in
-						return self.createVersionFilesForFrameworks(frameworkURLs, fromDirectoryURL: directoryURL, projectName: projectName, commitish: commitish)
+					.flatMap(.concat) { frameworkURLs -> SignalProducer<(), CarthageError> in
+						return self.createVersionFilesForFrameworks(
+							frameworkURLs,
+							fromDirectoryURL: directoryURL,
+							projectName: projectName,
+							commitish: commitish
+						)
 					}
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 			}
@@ -952,8 +957,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return dependenciesIncludingNext
 				}
 			}
-			.flatMap(.concat) { dependencies in
-				return SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies)
+			.flatMap(.concat) { dependencies -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+				return .init(dependencies)
 			}
 			.flatMap(.concat) { (dependency, version) -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true).path
@@ -968,7 +973,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
 				return build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
-					.map { producer in
+					.map { producer -> BuildSchemeProducer in
 						return producer.flatMapError { error in
 							switch error {
 							case .noSharedFrameworkSchemes:
