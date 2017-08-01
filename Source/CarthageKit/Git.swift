@@ -408,10 +408,14 @@ internal func list(treeish: String, atPath path: String, inRepository repository
 public func submoduleSHAForPath(_ repositoryFileURL: URL, _ path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
 	let task = [ "ls-tree", "-z", revision, path ]
 	return launchGitTask(task, repositoryFileURL: repositoryFileURL)
-		.attemptMap { string in
+		.attemptMap { string -> Result<String, CarthageError> in
 			// Example:
 			// 160000 commit 083fd81ecf00124cbdaa8f86ef10377737f6325a	External/ObjectiveGit
-			let components = string.characters.split(maxSplits: 3, omittingEmptySubsequences: true) { $0 == " " || $0 == "\t" }
+			let components = string
+				.characters
+				.split(maxSplits: 3, omittingEmptySubsequences: true) { (char: Character) in
+					char == " " || char == "\t"
+				}
 			if components.count >= 3 {
 				return .success(String(components[2]))
 			} else {

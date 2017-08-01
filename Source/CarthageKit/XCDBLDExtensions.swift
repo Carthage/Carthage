@@ -31,7 +31,7 @@ extension ProjectLocator {
 			.map { directoryURL.appendingPathComponent($0.path) }
 			.concat(value: directoryURL.appendingPathComponent(carthageProjectCheckoutsPath))
 			.collect()
-			.flatMap(.merge) { directoriesToSkip in
+			.flatMap(.merge) { directoriesToSkip -> SignalProducer<URL, CarthageError> in
 				return FileManager.default.reactive
 					.enumerator(at: directoryURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [ .typeIdentifierKey ], options: enumerationOptions, catchErrors: true)
 					.map { _, url in url }

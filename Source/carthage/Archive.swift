@@ -54,7 +54,7 @@ public struct ArchiveCommand: CommandProtocol {
 			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
 				.collect()
-				.flatMap(.merge) { projects in
+				.flatMap(.merge) { projects -> SignalProducer<(String, ProjectLocator), CarthageError> in
 					return schemesInProjects(projects)
 						.flatMap(.merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 							if !schemes.isEmpty {
