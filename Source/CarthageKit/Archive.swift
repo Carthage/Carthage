@@ -21,6 +21,8 @@ public func zip(paths: [String], into archiveURL: URL, workingDirectory: String)
 public func unarchive(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
 	if fileURL.pathExtension == "gz" {
 		return untargz(archive: fileURL)
+	} else if fileURL.pathExtension == "bz2" {
+		return utarbzip(archive: fileURL)
 	} else {
 		return unzip(archive: fileURL)
 	}
@@ -45,6 +47,18 @@ private func untargz(archive fileURL: URL, to destinationDirectoryURL: URL) -> S
 	precondition(destinationDirectoryURL.isFileURL)
 
 	let task = Task("/usr/bin/env", arguments: [ "tar", "-xzf", fileURL.path, "-C", destinationDirectoryURL.path ])
+	return task.launch()
+		.mapError(CarthageError.taskError)
+		.then(SignalProducer<(), CarthageError>.empty)
+}
+
+/// Untars the bzipped archive at the given file URL, extracting into the given
+/// directory URL (which must already exist).
+private func untarbzip(archive fileURL: URL, to destinationDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+	precondition(fileURL.isFileURL)
+	precondition(destinationDirectoryURL.isFileURL)
+
+	let task = Task("/usr/bin/env", arguments: [ "tar", "-xjf", fileURL.path, "-C", destinationDirectoryURL.path ])
 	return task.launch()
 		.mapError(CarthageError.taskError)
 		.then(SignalProducer<(), CarthageError>.empty)
