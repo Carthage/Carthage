@@ -17,20 +17,19 @@ class ProjectSpec: QuickSpec {
 			let buildDirectoryURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
 			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
-				var builtSchemes: [String] = []
-
 				let project = Project(directoryURL: directoryURL)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
 					.flatten(.concat)
 					.ignoreTaskData()
 					.on(value: { project, scheme in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
-						builtSchemes.append(scheme)
 					})
-					.wait()
+					.map { _, scheme in scheme }
+					.collect()
+					.single()!
 				expect(result.error).to(beNil())
 
-				return builtSchemes
+				return result.value!
 			}
 
 			beforeEach {
