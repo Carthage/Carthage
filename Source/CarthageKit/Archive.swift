@@ -22,7 +22,7 @@ public func unarchive(archive fileURL: URL) -> SignalProducer<URL, CarthageError
 	if fileURL.pathExtension == "gz" {
 		return untargz(archive: fileURL)
 	} else if fileURL.pathExtension == "bz2" {
-		return utarbzip(archive: fileURL)
+		return untarbzip(archive: fileURL)
 	} else {
 		return unzip(archive: fileURL)
 	}
