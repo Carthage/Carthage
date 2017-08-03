@@ -85,3 +85,13 @@ private func untargz(archive fileURL: URL) -> SignalProducer<URL, CarthageError>
 				.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 		}
 }
+
+/// Untars the bzipped archive at the given file URL into a temporary directory, 
+/// then sends the file URL to that directory.
+private func untarbzip(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
+	return FileManager.default.reactive.createTemporaryDirectoryWithTemplate(archiveTemplate)
+		.flatMap(.merge) { directoryURL in
+			return untarbzip(archive: fileURL, to: directoryURL)
+				.then(SignalProducer<URL, CarthageError>(value: directoryURL))
+		}
+}
