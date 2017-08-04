@@ -136,6 +136,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 	private var cachedBinaryProjects: CachedBinaryProjects = [:]
 	private let cachedBinaryProjectsQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.cachedBinaryProjectsQueue")
 
+	private lazy var xcodeVersionDirectory: String = XcodeVersion.make()
+		.map { "\($0.version)_\($0.buildVersion)" } ?? "Unknown"
+
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.
 	public func loadCombinedCartfile() -> SignalProducer<Cartfile, CarthageError> {
@@ -968,7 +971,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 				var options = options
 				let baseURL = options.derivedDataPath.flatMap(URL.init(string:)) ?? Constants.Dependency.derivedDataURL
-				let derivedDataPerDependency = baseURL.appendingPathComponent(dependency.name, isDirectory: true)
+				let derivedDataPerXcode = baseURL.appendingPathComponent(self.xcodeVersionDirectory, isDirectory: true)
+				let derivedDataPerDependency = derivedDataPerXcode.appendingPathComponent(dependency.name, isDirectory: true)
 				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version.commitish, isDirectory: true)
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
