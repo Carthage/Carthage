@@ -3,6 +3,7 @@ import Commandant
 import Foundation
 import Result
 import ReactiveSwift
+import Curry
 
 /// Type that encapsulates the configuration and evaluation of the `outdated` subcommand.
 public struct OutdatedCommand: CommandProtocol {
@@ -12,12 +13,6 @@ public struct OutdatedCommand: CommandProtocol {
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
 
-		public static func create(_ useSSH: Bool) -> (Bool) -> (ColorOptions) -> (String) -> Options {
-			return { isVerbose in { colorOptions in { directoryPath in
-				return self.init(useSSH: useSSH, isVerbose: isVerbose, colorOptions: colorOptions, directoryPath: directoryPath)
-			} } }
-		}
-
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			let projectDirectoryOption = Option(
 				key: "project-directory",
@@ -25,7 +20,7 @@ public struct OutdatedCommand: CommandProtocol {
 				usage: "the directory containing the Carthage project"
 			)
 
-			return create
+			return curry(self.init)
 				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> ColorOptions.evaluate(mode)
