@@ -3,6 +3,7 @@ import Commandant
 import Foundation
 import Result
 import PrettyColors
+import Curry
 
 /// Wraps a string with terminal colors and formatting or passes it through, depending on `isColorful`.
 private func wrap(_ isColorful: Bool, wrap: Color.Wrap) -> (String) -> String {
@@ -78,12 +79,13 @@ public struct ColorOptions: OptionsProtocol {
 		}
 	}
 
-	public static func create(_ argument: ColorArgument) -> ColorOptions {
-		return self.init(argument: argument, formatting: Formatting(argument.isColorful))
+	private init(argument: ColorArgument) {
+		self.argument = argument
+		self.formatting = Formatting(argument.isColorful)
 	}
 
 	public static func evaluate(_ mode: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
-		return create
+		return curry(self.init)
 			<*> mode <| Option(
 				key: "color",
 				defaultValue: ColorArgument.auto,

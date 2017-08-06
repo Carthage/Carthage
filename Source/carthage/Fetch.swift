@@ -3,6 +3,7 @@ import Commandant
 import Result
 import Foundation
 import ReactiveSwift
+import Curry
 
 /// Type that encapsulates the configuration and evaluation of the `fetch` subcommand.
 public struct FetchCommand: CommandProtocol {
@@ -10,14 +11,8 @@ public struct FetchCommand: CommandProtocol {
 		public let colorOptions: ColorOptions
 		public let repositoryURL: GitURL
 
-		static func create(_ colorOptions: ColorOptions) -> (GitURL) -> Options {
-			return { repositoryURL in
-				return self.init(colorOptions: colorOptions, repositoryURL: repositoryURL)
-			}
-		}
-
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
-			return create
+			return curry(self.init)
 				<*> ColorOptions.evaluate(mode)
 				<*> mode <| Argument(usage: "the Git repository that should be cloned or fetched")
 		}

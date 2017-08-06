@@ -4,6 +4,7 @@ import Foundation
 import Result
 import ReactiveSwift
 import XCDBLD
+import Curry
 
 /// Type that encapsulates the configuration and evaluation of the `archive` subcommand.
 public struct ArchiveCommand: CommandProtocol {
@@ -13,17 +14,11 @@ public struct ArchiveCommand: CommandProtocol {
 		public let colorOptions: ColorOptions
 		public let frameworkNames: [String]
 
-		static func create(_ outputPath: String?) -> (String) -> (ColorOptions) -> ([String]) -> Options {
-			return { directoryPath in { colorOptions in { frameworkNames in
-				return self.init(outputPath: outputPath, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: frameworkNames)
-			} } }
-		}
-
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			let argumentUsage = "the names of the built frameworks to archive without any extension "
 				+ "(or blank to pick up the frameworks in the current project built by `--no-skip-current`)"
 
-			return create
+			return curry(self.init)
 				<*> mode <| Option(
 					key: "output",
 					defaultValue: nil,
