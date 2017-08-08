@@ -18,6 +18,7 @@
 		BE0292541E403407004FB579 /* ReactiveSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE0292531E403407004FB579 /* ReactiveSwift.framework */; };
 		BE0292561E4034B5004FB579 /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0292551E4034B5004FB579 /* Platform.swift */; };
 		CD4323C41F32DEBF0083C968 /* XcodeVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD4323C31F32DEBF0083C968 /* XcodeVersion.swift */; };
+		CD54FC5A1F39EA6700DCE10F /* XcodeVersionSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD54FC591F39EA6700DCE10F /* XcodeVersionSpec.swift */; };
 		D01F8A4A19EA28FE00643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
 		D01F8A4C19EA28FE00643E7C /* Nimble.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4B19EA28FE00643E7C /* Nimble.framework */; };
 		D0D1217219E87B05005E4BAA /* XCDBLD.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1217119E87B05005E4BAA /* XCDBLD.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -46,6 +47,7 @@
 		BE0292531E403407004FB579 /* ReactiveSwift.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ReactiveSwift.framework; path = Carthage/Checkouts/ReactiveSwift/build/Debug/ReactiveSwift.framework; sourceTree = "<group>"; };
 		BE0292551E4034B5004FB579 /* Platform.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Platform.swift; sourceTree = "<group>"; };
 		CD4323C31F32DEBF0083C968 /* XcodeVersion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XcodeVersion.swift; sourceTree = "<group>"; };
+		CD54FC591F39EA6700DCE10F /* XcodeVersionSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XcodeVersionSpec.swift; sourceTree = "<group>"; };
 		D01F8A4719EA28F600643E7C /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Quick.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01F8A4B19EA28FE00643E7C /* Nimble.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Nimble.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D1212419E878CC005E4BAA /* Common.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Common.xcconfig; sourceTree = "<group>"; };
@@ -223,6 +225,7 @@
 			children = (
 				BE0292421E403298004FB579 /* BuildArgumentsSpec.swift */,
 				BE02924A1E40337A004FB579 /* ProjectLocatorSpec.swift */,
+				CD54FC591F39EA6700DCE10F /* XcodeVersionSpec.swift */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
 			name = XCDBLDTests;
@@ -365,6 +368,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BE0292431E403298004FB579 /* BuildArgumentsSpec.swift in Sources */,
+				CD54FC5A1F39EA6700DCE10F /* XcodeVersionSpec.swift in Sources */,
 				BE02924B1E40337A004FB579 /* ProjectLocatorSpec.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
