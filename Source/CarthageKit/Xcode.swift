@@ -488,7 +488,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 							return SignalProducer(value: .standardError(data))
 
 						case let .success(deviceSettingsByTarget):
-							return settingsByTarget(build(sdk: simulatorSDK, with: buildArgs, in: workingDirectoryURL, performClean: false))
+							return settingsByTarget(build(sdk: simulatorSDK, with: buildArgs, in: workingDirectoryURL))
 								.flatMapTaskEvents(.concat) { (simulatorSettingsByTarget: [String: BuildSettings]) -> SignalProducer<(BuildSettings, BuildSettings), CarthageError> in
 									assert(
 										deviceSettingsByTarget.count == simulatorSettingsByTarget.count,
@@ -540,7 +540,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 }
 
 /// Runs the build for a given sdk and build arguments, optionally performing a clean first
-private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectoryURL: URL, performClean: Bool = true) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
+private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectoryURL: URL) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
 	var argsForLoading = buildArgs
 	argsForLoading.sdk = sdk
 
@@ -615,7 +615,7 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 						argsForBuilding.bitcodeGenerationMode = .bitcode
 					}
 
-					let actions = performClean ? ["clean", "build"] : ["build"]
+					let actions = ["build"]
 
 					var buildScheme = xcodebuildTask(actions, argsForBuilding)
 					buildScheme.workingDirectoryPath = workingDirectoryURL.path
