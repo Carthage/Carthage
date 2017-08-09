@@ -19,8 +19,8 @@ public func zip(paths: [String], into archiveURL: URL, workingDirectory: String)
 /// Unarchives the given file URL into a temporary directory, using its
 /// extension to detect archive type, then sends the file URL to that directory.
 public func unarchive(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
-	if fileURL.pathExtension == "gz" {
-		return untargz(archive: fileURL)
+	if fileURL.pathExtension == "gz" || fileURL.pathExtension == "bz2" {
+		return untar(archive: fileURL)
 	} else {
 		return unzip(archive: fileURL)
 	}
@@ -38,9 +38,9 @@ private func unzip(archive fileURL: URL, to destinationDirectoryURL: URL) -> Sig
 		.then(SignalProducer<(), CarthageError>.empty)
 }
 
-/// Untars the gzipped archive at the given file URL, extracting into the given
+/// Untars an archive at the given file URL, extracting into the given
 /// directory URL (which must already exist).
-private func untargz(archive fileURL: URL, to destinationDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+private func untar(archive fileURL: URL, to destinationDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	precondition(fileURL.isFileURL)
 	precondition(destinationDirectoryURL.isFileURL)
 
@@ -62,12 +62,12 @@ private func unzip(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
 		}
 }
 
-/// Untars the gzipped archive at the given file URL into a temporary directory, 
+/// Untars an archive at the given file URL into a temporary directory, 
 /// then sends the file URL to that directory.
-private func untargz(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
+private func untar(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
 	return FileManager.default.reactive.createTemporaryDirectoryWithTemplate(archiveTemplate)
 		.flatMap(.merge) { directoryURL in
-			return untargz(archive: fileURL, to: directoryURL)
+			return untar(archive: fileURL, to: directoryURL)
 				.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 		}
 }
