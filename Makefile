@@ -1,3 +1,5 @@
+#!/usr/bin/xcrun make -f
+
 CARTHAGE_TEMPORARY_FOLDER?=/tmp/Carthage.dst
 PREFIX?=/usr/local
 
