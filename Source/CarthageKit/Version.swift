@@ -44,9 +44,8 @@ public struct SemanticVersion: VersionType {
 	public static func from(_ pinnedVersion: PinnedVersion) -> Result<SemanticVersion, ScannableError> {
 		let scanner = Scanner(string: pinnedVersion.commitish)
 
-		// Skip leading characters, like "v" or "version-" or anything like
-		// that.
-		scanner.scanUpToCharacters(from: versionCharacterSet, into: nil)
+		// Skip only the leading "v" character. This matches the SwiftPM's behavior.
+		scanner.scanString("v", into: nil)
 
 		return self.from(scanner).flatMap { version in
 			if scanner.isAtEnd {

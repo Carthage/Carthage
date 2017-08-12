@@ -29,6 +29,8 @@ class SemanticVersionSpec: QuickSpec {
 		it("should fail on invalid semantic versions") {
 			expect(SemanticVersion.from(PinnedVersion("v1")).value).to(beNil())
 			expect(SemanticVersion.from(PinnedVersion("v2.8-alpha")).value).to(beNil())
+			expect(SemanticVersion.from(PinnedVersion("version-3.0.0")).value).to(beNil())
+			expect(SemanticVersion.from(PinnedVersion("swift-3.1")).value).to(beNil())
 			expect(SemanticVersion.from(PinnedVersion("null-string-beta-2")).value).to(beNil())
 		}
 	}
