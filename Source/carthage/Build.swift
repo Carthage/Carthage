@@ -35,7 +35,8 @@ public struct BuildCommand: CommandProtocol {
 		public let directoryPath: String
 		public let logPath: String?
 		public let dependenciesToBuild: [String]?
-
+		public let isPrivateCache: Bool
+		
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return curry(self.init)
 				<*> BuildOptions.evaluate(mode)
@@ -45,6 +46,7 @@ public struct BuildCommand: CommandProtocol {
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> (mode <| Argument(defaultValue: [], usage: "the dependency names to build")).map { $0.isEmpty ? nil : $0 }
+				<*> mode <| Option(key: "private-cache", defaultValue: false, usage: "creates different cache folder")
 		}
 	}
 
@@ -189,6 +191,10 @@ public struct BuildCommand: CommandProtocol {
 	/// Opens a file handle for logging, returning the handle and the URL to any
 	/// temporary file on disk.
 	private func openLoggingHandle(_ options: Options) -> SignalProducer<(FileHandle, URL?), CarthageError> {
+		if options.isPrivateCache {
+			Constants.createPrivateCache = true
+		}
+		
 		if options.isVerbose {
 			let out: (FileHandle, URL?) = (FileHandle.standardOutput, nil)
 			return SignalProducer(value: out)
