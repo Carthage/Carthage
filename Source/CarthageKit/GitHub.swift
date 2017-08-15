@@ -5,15 +5,9 @@ import Tentacle
 
 /// The User-Agent to use for GitHub requests.
 private func gitHubUserAgent() -> String {
-	let bundle = Bundle.main
-
-	let get: (_ key: String) -> String? = { bundle.object(forInfoDictionaryKey: $0) as? String }
-	let version = get("CFBundleShortVersionString")
-		?? get(kCFBundleVersionKey as String)
-		?? "unknown"
-
-	let identifier = bundle.bundleIdentifier
-	return "\(String(describing: identifier))/\(version)"
+	let identifier = Constants.bundleIdentifier
+	let version = CarthageKitVersion.current.value
+	return "\(identifier)/\(version)"
 }
 
 extension Server {
