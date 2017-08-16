@@ -9,6 +9,9 @@ public struct Constants {
 	/// The name of the folder into which Carthage puts binaries it builds (relative
 	/// to the working directory).
 	public static let binariesFolderPath = "Carthage/Build"
+	
+	// create prive cache for the build to achieve concurrency
+	public static var createPrivateCache = false
 
 	/// The fallback dependencies URL to be used in case
 	/// the intended ~/Library/Caches/org.carthage.CarthageKit cannot
@@ -22,15 +25,52 @@ public struct Constants {
 		}
 		return URL(fileURLWithPath: homePath, isDirectory:true)
 	}()
+	
+	/// generates private Cache folder name
+	/// for path: org.carthage.CarthageKit/{private cache}.
+	private static let privateCacheFolder: String = {
+		
+		let letters : NSString = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		let len = UInt32(letters.length)
+		var privateCacheFolder = ""
+		
+		for _ in 0 ..< 5 {
+			let rand = arc4random_uniform(len)
+			var nextChar = letters.character(at: Int(rand))
+			privateCacheFolder += NSString(characters: &nextChar, length: 1) as String
+		}
+
+		let dateFormatter = DateFormatter()
+		dateFormatter.dateFormat = "yyyyMMddHHmmss"
+		privateCacheFolder = privateCacheFolder.appending(dateFormatter.string(from: Date()))
+		print(privateCacheFolder)
+		
+		return privateCacheFolder
+	}()
 
 	/// ~/Library/Caches/org.carthage.CarthageKit/
+	/// or
+	/// ~/Library/Caches/org.carthage.CarthageKit/{private cache folder}
 	private static let userCachesURL: URL = {
 		let fileManager = FileManager.default
 
 		let urlResult: Result<URL, NSError> = Result(attempt: {
 			try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
 		}).flatMap { cachesURL in
-			let dependenciesURL = cachesURL.appendingPathComponent(Constants.bundleIdentifier, isDirectory: true)
+			var dependenciesURL = cachesURL.appendingPathComponent(Constants.bundleIdentifier, isDirectory: true)
+
+			if Constants.createPrivateCache {
+				
+				let folder = Constants.privateCacheFolder
+				let dataPath = dependenciesURL.appendingPathComponent(folder)
+				do {
+					try FileManager.default.createDirectory(atPath: dataPath.path, withIntermediateDirectories: false, attributes: nil)
+				} catch let error as NSError {
+					print(error.localizedDescription);
+				}				
+				dependenciesURL = dependenciesURL.appendingPathComponent(folder, isDirectory: true)
+			}
+			
 			let dependenciesPath = dependenciesURL.absoluteString
 
 			if fileManager.fileExists(atPath: dependenciesPath, isDirectory:nil) {

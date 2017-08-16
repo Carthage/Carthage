@@ -15,6 +15,7 @@ public struct UpdateCommand: CommandProtocol {
 		public let buildOptions: CarthageKit.BuildOptions
 		public let checkoutOptions: CheckoutCommand.Options
 		public let dependenciesToUpdate: [String]?
+		public let isPrivateCache: Bool
 
 		/// The build options corresponding to these options.
 		public var buildCommandOptions: BuildCommand.Options {
@@ -25,7 +26,8 @@ public struct UpdateCommand: CommandProtocol {
 				isVerbose: isVerbose,
 				directoryPath: checkoutOptions.directoryPath,
 				logPath: logPath,
-				dependenciesToBuild: dependenciesToUpdate
+				dependenciesToBuild: dependenciesToUpdate,
+				isPrivateCache: isPrivateCache
 			)
 		}
 
@@ -46,7 +48,8 @@ public struct UpdateCommand: CommandProtocol {
 		             isVerbose: Bool,
 		             logPath: String?,
 		             buildOptions: BuildOptions,
-		             checkoutOptions: CheckoutCommand.Options)
+		             checkoutOptions: CheckoutCommand.Options,
+		             isPrivateCache: Bool)
 		{
 			self.checkoutAfterUpdate = checkoutAfterUpdate
 			self.buildAfterUpdate = buildAfterUpdate
@@ -55,6 +58,7 @@ public struct UpdateCommand: CommandProtocol {
 			self.buildOptions = buildOptions
 			self.checkoutOptions = checkoutOptions
 			self.dependenciesToUpdate = checkoutOptions.dependenciesToCheckout
+			self.isPrivateCache = isPrivateCache
 		}
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
@@ -70,6 +74,7 @@ public struct UpdateCommand: CommandProtocol {
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
 				<*> CheckoutCommand.Options.evaluate(mode, useBinariesAddendum: binariesAddendum, dependenciesUsage: dependenciesUsage)
+				<*> mode <| Option(key: "private-cache", defaultValue: false, usage: "creates different cache folder")
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it
