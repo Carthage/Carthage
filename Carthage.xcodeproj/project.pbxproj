@@ -44,6 +44,7 @@
 		CD1FE6541DD367920016639E /* Runes.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD28C99C1E11846200322AF7 /* ProductType.swift */; };
 		CD3E530B1DE33095002C135C /* Availability.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3E530A1DE33095002C135C /* Availability.swift */; };
+		CD43D9DA1F41640E00CD60F6 /* CarthageKitVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD43D9D91F41640E00CD60F6 /* CarthageKitVersion.swift */; };
 		CD43D9DE1F43074000CD60F6 /* GitURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD43D9DD1F43074000CD60F6 /* GitURL.swift */; };
 		CD9A77991EDD7E2000A77B00 /* DuplicateDependencies in Resources */ = {isa = PBXBuildFile; fileRef = CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */; };
 		CD9A779B1EDD7FEB00A77B00 /* BinaryOnly in Resources */ = {isa = PBXBuildFile; fileRef = CD9A779A1EDD7FEB00A77B00 /* BinaryOnly */; };
@@ -203,6 +204,7 @@
 		CD1FE6521DD366620016639E /* Runes.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Runes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD28C99C1E11846200322AF7 /* ProductType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProductType.swift; sourceTree = "<group>"; };
 		CD3E530A1DE33095002C135C /* Availability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Availability.swift; sourceTree = "<group>"; };
+		CD43D9D91F41640E00CD60F6 /* CarthageKitVersion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarthageKitVersion.swift; sourceTree = "<group>"; };
 		CD43D9DD1F43074000CD60F6 /* GitURL.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitURL.swift; sourceTree = "<group>"; };
 		CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = DuplicateDependencies; sourceTree = "<group>"; };
 		CD9A779A1EDD7FEB00A77B00 /* BinaryOnly */ = {isa = PBXFileReference; lastKnownFileType = folder; path = BinaryOnly; sourceTree = "<group>"; };
@@ -490,6 +492,7 @@
 				CDF9D3701CF1E54200DF5A6F /* BuildOptions.swift */,
 				CDE559281E12263A00ED7F5F /* BuildSettings.swift */,
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
+				CD43D9D91F41640E00CD60F6 /* CarthageKitVersion.swift */,
 				A1411ED51EFC1BFD0060461F /* Constants.swift */,
 				CDF94D941E71144300200486 /* DuplicateDependency.swift */,
 				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
@@ -816,6 +819,7 @@
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */,
+				CD43D9DA1F41640E00CD60F6 /* CarthageKitVersion.swift in Sources */,
 				CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */,
 				CDF94D951E71144300200486 /* DuplicateDependency.swift in Sources */,
 				CD43D9DE1F43074000CD60F6 /* GitURL.swift in Sources */,

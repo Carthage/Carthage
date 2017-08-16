@@ -5,12 +5,6 @@ import ReactiveTask
 import Result
 import Tentacle
 
-/// The local installed version as a SemanticVersion object.
-public func localVersion() -> SemanticVersion {
-	let versionString = "0.24.0"
-	return SemanticVersion.from(Scanner(string: versionString)).value!
-}
-
 /// The latest online version as a SemanticVersion object.
 public func remoteVersion() -> SemanticVersion? {
 	let latestRemoteVersion = Client(.dotCom)

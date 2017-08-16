@@ -12,8 +12,8 @@ guard ensureGitVersion().first()?.value == true else {
 	exit(EXIT_FAILURE)
 }
 
-if let remoteVersion = remoteVersion(), localVersion() < remoteVersion {
-	fputs("Please update to the latest Carthage version: \(remoteVersion). You currently are on \(localVersion())" + "\n", stderr)
+if let remoteVersion = remoteVersion(), CarthageKitVersion.current.value < remoteVersion {
+	fputs("Please update to the latest Carthage version: \(remoteVersion). You currently are on \(CarthageKitVersion.current.value)" + "\n", stderr)
 }
 
 if let carthagePath = Bundle.main.executablePath {
