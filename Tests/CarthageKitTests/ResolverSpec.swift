@@ -326,9 +326,23 @@ class ResolverSpec: QuickSpec {
 				],
 			]
 
-			let resolved = db.resolve([ github1: .compatibleWith(.v3_0_0) ])
-			expect(resolved.value).to(beNil())
-			expect(resolved.error).notTo(beNil())
+			do {
+				let resolved = db.resolve([ github1: .atLeast(.v3_0_0) ])
+				expect(resolved.value).to(beNil())
+				expect(resolved.error).notTo(beNil())
+			}
+
+			do {
+				let resolved = db.resolve([ github1: .compatibleWith(.v3_0_0) ])
+				expect(resolved.value).to(beNil())
+				expect(resolved.error).notTo(beNil())
+			}
+
+			do {
+				let resolved = db.resolve([ github1: .exactly(.v3_0_0) ])
+				expect(resolved.value).to(beNil())
+				expect(resolved.error).notTo(beNil())
+			}
 		}
 	}
 }
