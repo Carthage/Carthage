@@ -380,8 +380,14 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func updatedResolvedCartfile(_ dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
-		let resolver = Resolver(
+	public func updatedResolvedCartfile(_ dependenciesToUpdate: [String]? = nil, useNewResolver: Bool = false) -> SignalProducer<ResolvedCartfile, CarthageError> {
+		let resolverType: ResolverProtocol.Type
+		if useNewResolver {
+			resolverType = NewResolver.self
+		} else {
+			resolverType = Resolver.self
+		}
+		let resolver = resolverType.init(
 			versionsForDependency: versions(for:),
 			dependenciesForDependency: dependencies(for:version:),
 			resolvedGitReference: resolvedGitReference
@@ -448,10 +454,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// directory checkouts if the given parameter is true.
 	public func updateDependencies(
 		shouldCheckout: Bool = true,
+		useNewResolver: Bool = false,
 		buildOptions: BuildOptions,
 		dependenciesToUpdate: [String]? = nil
 	) -> SignalProducer<(), CarthageError> {
-		return updatedResolvedCartfile(dependenciesToUpdate)
+		return updatedResolvedCartfile(dependenciesToUpdate, useNewResolver: useNewResolver)
 			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}
