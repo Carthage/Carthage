@@ -3,7 +3,7 @@ import Foundation
 import Nimble
 import Quick
 
-class GitSpec: QuickSpec {
+class GitURLSpec: QuickSpec {
 	override func spec() {
 		describe("GitURL") {
 			describe("normalizedURLString") {
