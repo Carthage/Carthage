@@ -259,76 +259,78 @@ class ResolverSpec: QuickSpec {
 					]
 				}
 
-				// Only the new resolver passes the following tests. Will change to non-pending when checked in
-				pending("should resolve a subset when given specific dependencies that have constraints") {
-					let db: DB = [
-						github1: [
-							.v1_0_0: [
-								github2: .compatibleWith(.v1_0_0),
+				// Only the new resolver passes the following tests.
+				if resolverType == NewResolver.self {
+					it("should resolve a subset when given specific dependencies that have constraints") {
+						let db: DB = [
+							github1: [
+								.v1_0_0: [
+									github2: .compatibleWith(.v1_0_0),
+								],
+								.v1_1_0: [
+									github2: .compatibleWith(.v1_0_0),
+								],
+								.v2_0_0: [
+									github2: .compatibleWith(.v2_0_0),
+								],
 							],
-							.v1_1_0: [
-								github2: .compatibleWith(.v1_0_0),
+							github2: [
+								.v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
+								.v1_1_0: [ github3: .compatibleWith(.v1_0_0) ],
+								.v2_0_0: [:],
 							],
-							.v2_0_0: [
-								github2: .compatibleWith(.v2_0_0),
+							github3: [
+								.v1_0_0: [:],
+								.v1_1_0: [:],
+								.v1_2_0: [:],
 							],
-						],
-						github2: [
-							.v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
-							.v1_1_0: [ github3: .compatibleWith(.v1_0_0) ],
-							.v2_0_0: [:],
-						],
-						github3: [
-							.v1_0_0: [:],
-							.v1_1_0: [:],
-							.v1_2_0: [:],
-						],
+							]
+
+						let resolved = db.resolve(resolverType,
+						                          [ github1: .any ],
+						                          resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
+						                          updating: [ github2 ]
+						)
+						expect(resolved.value!) == [
+							github3: .v1_2_0,
+							github2: .v1_1_0,
+							github1: .v1_0_0,
 						]
-
-					let resolved = db.resolve(resolverType,
-					                          [ github1: .any ],
-					                          resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
-					                          updating: [ github2 ]
-					)
-					expect(resolved.value!) == [
-						github3: .v1_2_0,
-						github2: .v1_1_0,
-						github1: .v1_0_0,
-					]
-				}
+					}
 
 
-				pending("should fail when the only valid graph is not in the specified dependencies") {
-					let db: DB = [
-						github1: [
-							.v1_0_0: [
-								github2: .compatibleWith(.v1_0_0),
+					it("should fail when the only valid graph is not in the specified dependencies") {
+						let db: DB = [
+							github1: [
+								.v1_0_0: [
+									github2: .compatibleWith(.v1_0_0),
+								],
+								.v1_1_0: [
+									github2: .compatibleWith(.v1_0_0),
+								],
+								.v2_0_0: [
+									github2: .compatibleWith(.v2_0_0),
+								],
 							],
-							.v1_1_0: [
-								github2: .compatibleWith(.v1_0_0),
+							github2: [
+								.v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
+								.v1_1_0: [ github3: .compatibleWith(.v1_0_0) ],
+								.v2_0_0: [:],
 							],
-							.v2_0_0: [
-								github2: .compatibleWith(.v2_0_0),
+							github3: [
+								.v1_0_0: [:],
+								.v1_1_0: [:],
+								.v1_2_0: [:],
 							],
-						],
-						github2: [
-							.v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
-							.v1_1_0: [ github3: .compatibleWith(.v1_0_0) ],
-							.v2_0_0: [:],
-						],
-						github3: [
-							.v1_0_0: [:],
-							.v1_1_0: [:],
-							.v1_2_0: [:],
-						],
-						]
-					let resolved = db.resolve(resolverType,
-					                          [ github1: .exactly(.v2_0_0) ],
-					                          resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
-					                          updating: [ github2 ]
-					)
-					expect(resolved.value).to(beNil())
-					expect(resolved.error).notTo(beNil())
+							]
+						let resolved = db.resolve(resolverType,
+						                          [ github1: .exactly(.v2_0_0) ],
+						                          resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
+						                          updating: [ github2 ]
+						)
+						expect(resolved.value).to(beNil())
+						expect(resolved.error).notTo(beNil())
+					}
 				}
 
 				it("should resolve a Cartfile whose dependency is specified by both a branch name and a SHA which is the HEAD of that branch") {
@@ -433,7 +435,7 @@ class ResolverSpec: QuickSpec {
 		}
 
 		itBehavesLike("resolver") { ["resolverType": Resolver.self] }
-		// TODO: Will uncomment when the new resolver is checked in
-		// itBehavesLike("resolver") { ["resolverType": NewResolver.self] }
+		itBehavesLike("resolver") { ["resolverType": NewResolver.self] }
 	}
 }
+
