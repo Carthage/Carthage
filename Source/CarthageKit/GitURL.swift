@@ -8,7 +8,7 @@ public struct GitURL {
 	/// A normalized URL string, without protocol, authentication, or port
 	/// information. This is mostly useful for comparison, and not for any
 	/// actual Git operations.
-	fileprivate var normalizedURLString: String {
+	internal var normalizedURLString: String {
 		let parsedURL: URL? = URL(string: urlString)
 
 		if let parsedURL = parsedURL, let host = parsedURL.host {
