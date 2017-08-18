@@ -35,7 +35,7 @@ public struct NewResolver: ResolverProtocol {
 		lastResolved: [Dependency: PinnedVersion]? = nil,
 		dependenciesToUpdate: [String]? = nil
 		) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
-		let result = process(dependencies: dependencies, in: DependencyGraph())
+		let result = process(dependencies: dependencies, in: DependencyGraph(whitelist: dependenciesToUpdate, lastResolved: lastResolved))
 			.map { graph -> [Dependency: PinnedVersion] in
 				guard
 					let dependenciesToUpdate = dependenciesToUpdate,
@@ -135,7 +135,7 @@ public struct NewResolver: ResolverProtocol {
 		var graph = graph
 		guard let node = graph.nextNodeToVisit() else {
 			// Base case, all nodes have been visited. Return valid graph
-			return .success(graph)
+			return graph.validateFinalGraph()
 		}
 
 		return self.dependenciesForDependency(node.dependency, node.proposedVersion)
@@ -198,11 +198,54 @@ private struct DependencyGraph {
 	/// List of nodes that still need to be processed, in the order they should be processed
 	var unvisitedNodes: [DependencyNode] = []
 
-	init() {}
+	/// Whitelist of dependencies to limit updates to. Once a valid graph is found,
+	/// the nodes are filtered down to this list. Remaining nodes are given the values found in 'lastResolved'.
+	/// The graph is then re-checked for validity. If it's now invalid due to the whitelist, the search is continued
+	let whitelist: [String]?
+	let lastResolved: [Dependency: PinnedVersion]?
+
+	init(whitelist: [String]?, lastResolved: [Dependency: PinnedVersion]? = nil) {
+		self.whitelist = whitelist
+		self.lastResolved = lastResolved
+	}
 
 	/// Returns the next unvisited node if available
 	mutating func nextNodeToVisit() -> DependencyNode? {
 		return !unvisitedNodes.isEmpty ? unvisitedNodes.removeFirst() : nil
+	}
+
+	/// Runs final validations on a complete graph (e.g., no more unvisited nodes)
+	func validateFinalGraph() -> Result<DependencyGraph, CarthageError> {
+		guard unvisitedNodes.isEmpty else {
+			return .failure(.internalError(description: "Validating graph before it's been completely expanded"))
+		}
+
+		guard let whitelist = whitelist, let lastResolved = lastResolved else {
+			return .success(self)
+		}
+
+		// Anything dependencies of items in the whitelist are also allowed to update
+		var nodeWhitelist = Set<DependencyNode>()
+		allNodes
+			.filter { whitelist.contains($0.dependency.name) }
+			.forEach { node in
+				nodeWhitelist.insert(node)
+				if let nestedDependencies = edges[node] {
+					nodeWhitelist.formUnion(nestedDependencies)
+				}
+		}
+
+		for node in allNodes {
+			guard !nodeWhitelist.contains(node), let lastVersion = lastResolved[node.dependency] else {
+				continue
+			}
+
+			// If it's not in the whitelist, and it has a previous version, they should match
+			if lastVersion != node.proposedVersion {
+				return .failure(.unsatisfiableDependencyList(whitelist))
+			}
+		}
+		return .success(self)
 	}
 
 	/// Returns a dictionary defining all the versions that are pinned in this graph.
