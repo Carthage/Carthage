@@ -20,6 +20,32 @@ class GitURLSpec: QuickSpec {
 					expect(GitURL("/path/to/git/repo").normalizedURLString) == expected
 				}
 
+				it("should parse local relative path") {
+					do {
+						let expected = "path/to/git/repo"
+						expect(GitURL("path/to/git/repo.git").normalizedURLString) == expected
+						expect(GitURL("path/to/git/repo").normalizedURLString) == expected
+					}
+
+					do {
+						let expected = "./path/to/git/repo"
+						expect(GitURL("./path/to/git/repo.git").normalizedURLString) == expected
+						expect(GitURL("./path/to/git/repo").normalizedURLString) == expected
+					}
+
+					do {
+						let expected = "../path/to/git/repo"
+						expect(GitURL("../path/to/git/repo.git").normalizedURLString) == expected
+						expect(GitURL("../path/to/git/repo").normalizedURLString) == expected
+					}
+
+					do {
+						let expected = "~/path/to/git/repo"
+						expect(GitURL("~/path/to/git/repo.git").normalizedURLString) == expected
+						expect(GitURL("~/path/to/git/repo").normalizedURLString) == expected
+					}
+				}
+
 				it("should parse scp syntax") {
 					let expected = "github.com/antitypical/Result"
 					expect(GitURL("git@github.com:antitypical/Result.git").normalizedURLString) == expected
