@@ -9,13 +9,15 @@ public struct GitURL {
 	/// information. This is mostly useful for comparison, and not for any
 	/// actual Git operations.
 	internal var normalizedURLString: String {
-		let parsedURL: URL? = URL(string: urlString)
-
-		if let parsedURL = parsedURL, let host = parsedURL.host {
+		if let parsedURL = URL(string: urlString), let host = parsedURL.host {
 			// Normal, valid URL.
 			let path = strippingGitSuffix(parsedURL.path)
 			return "\(host)\(path)"
-		} else if urlString.hasPrefix("/") {
+		} else if urlString.hasPrefix("/") // "/path/to/..."
+			|| urlString.hasPrefix(".") // "./path/to/...", "../path/to/..."
+			|| urlString.hasPrefix("~") // "~/path/to/..."
+			|| !urlString.contains(":") // "path/to/..." with avoiding "git@github.com:owner/name"
+		{
 			// Local path.
 			return strippingGitSuffix(urlString)
 		} else {
