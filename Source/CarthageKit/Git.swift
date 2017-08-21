@@ -55,13 +55,13 @@ public struct FetchCache {
 	/// Amount of time before a git repository is fetched again. Defaults to 1 minute
 	public static var fetchCacheInterval: TimeInterval = 60.0
 
-	private static var lastFetchTimes: [GitURL : TimeInterval] = [:]
+	private static var lastFetchTimes: [URL : TimeInterval] = [:]
 
 	internal static func clearFetchTimes() {
 		lastFetchTimes.removeAll()
 	}
 
-	internal static func needsFetch(forURL url: GitURL) -> Bool {
+	internal static func needsFetch(forURL url: URL) -> Bool {
 		guard let lastFetch = lastFetchTimes[url] else {
 			return true
 		}
@@ -71,10 +71,8 @@ public struct FetchCache {
 		return !(0...fetchCacheInterval).contains(difference)
 	}
 
-	fileprivate static func updateLastFetchTime(forURL url: GitURL?) {
-		if let url = url {
-			lastFetchTimes[url] = Date().timeIntervalSince1970
-		}
+	fileprivate static func updateLastFetchTime(forURL url: URL) {
+		lastFetchTimes[url] = Date().timeIntervalSince1970
 	}
 }
 
@@ -129,7 +127,7 @@ public func cloneRepository(_ cloneURL: GitURL, _ destinationURL: URL, isBare: B
 
 	return launchGitTask(arguments + [ "--quiet", cloneURL.urlString, destinationURL.path ])
 		.on(completed: {
-			FetchCache.updateLastFetchTime(forURL: cloneURL)
+			FetchCache.updateLastFetchTime(forURL: destinationURL)
 		})
 }
 
@@ -140,6 +138,8 @@ public func fetchRepository(_ repositoryFileURL: URL, remoteURL: GitURL? = nil, 
 	var arguments = [ "fetch", "--prune", "--quiet" ]
 	if let remoteURL = remoteURL {
 		arguments.append(remoteURL.urlString)
+	} else {
+		arguments.append("origin")
 	}
 
 	// Specify an explict refspec that fetches tags for pruning.
@@ -152,7 +152,7 @@ public func fetchRepository(_ repositoryFileURL: URL, remoteURL: GitURL? = nil, 
 
 	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
 		.on(completed: {
-			FetchCache.updateLastFetchTime(forURL: remoteURL)
+			FetchCache.updateLastFetchTime(forURL: repositoryFileURL)
 		})
 }
 

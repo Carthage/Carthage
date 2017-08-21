@@ -1208,13 +1208,15 @@ public func cloneOrFetch(
 				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 					if isRepository {
 						let fetchProducer: () -> SignalProducer<(ProjectEvent?, URL), CarthageError> = {
-							guard FetchCache.needsFetch(forURL: remoteURL) else {
+							guard FetchCache.needsFetch(forURL: repositoryURL) else {
 								return SignalProducer(value: (nil, repositoryURL))
 							}
 
 							return SignalProducer(value: (.fetching(dependency), repositoryURL))
 								.concat(
-									fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
+									// Don't need to pass `remoteURL` here since the repository should have 
+									// the `origin` remote.
+									fetchRepository(repositoryURL, refspec: "+refs/heads/*:refs/heads/*")
 										.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
 								)
 						}
