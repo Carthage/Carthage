@@ -246,6 +246,19 @@ class ProjectSpec: QuickSpec {
 					fail()
 				}
 			}
+			
+			it("should error when either a Cartfile or Cartfile.private contains the incorrect case") {
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "LowercaseCartfile", withExtension: nil)!
+				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
+				expect(result).notTo(beNil())
+				
+				if case let .readFailed(_, underlyingError)? = result?.error {
+					expect(underlyingError?.domain) == NSCocoaErrorDomain
+					expect(underlyingError?.code) == NSFileReadNoSuchFileError
+				} else {
+					fail()
+				}
+			}
 		}
 
 		describe("cloneOrFetchProject") {
