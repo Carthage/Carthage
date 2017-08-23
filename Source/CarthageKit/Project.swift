@@ -1214,11 +1214,6 @@ public func cloneOrFetch(
 
 							return SignalProducer(value: (.fetching(dependency), repositoryURL))
 								.concat(
-									// Don't need to pass `remoteURL` here since the repository should have 
-									// the `origin` remote.
-									//
-									// See https://github.com/Carthage/Carthage/issues/968
-									// and https://github.com/Carthage/Carthage/pull/2125.
 									fetchRepository(repositoryURL, refspec: "+refs/heads/*:refs/heads/*")
 										.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
 								)

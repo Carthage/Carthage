@@ -132,15 +132,16 @@ public func cloneRepository(_ cloneURL: GitURL, _ destinationURL: URL, isBare: B
 }
 
 /// Returns a signal that completes when the fetch completes successfully.
-public func fetchRepository(_ repositoryFileURL: URL, remoteURL: GitURL? = nil, refspec: String? = nil) -> SignalProducer<String, CarthageError> {
+public func fetchRepository(_ repositoryFileURL: URL, refspec: String? = nil) -> SignalProducer<String, CarthageError> {
 	precondition(repositoryFileURL.isFileURL)
 
 	var arguments = [ "fetch", "--prune", "--quiet" ]
-	if let remoteURL = remoteURL {
-		arguments.append(remoteURL.urlString)
-	} else {
-		arguments.append("origin")
-	}
+
+	// Use the `origin` remote which should have been set up.
+	//
+	// See https://github.com/Carthage/Carthage/issues/968
+	// and https://github.com/Carthage/Carthage/pull/2125.
+	arguments.append("origin")
 
 	// Specify an explict refspec that fetches tags for pruning.
 	// See https://github.com/Carthage/Carthage/issues/1027 and `man git-fetch`.
@@ -527,7 +528,7 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 		.flatMap(.merge) { submoduleExists -> SignalProducer<(), CarthageError> in
 			if submoduleExists {
 				// Just check out and stage the correct revision.
-				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
+				return fetchRepository(submoduleDirectoryURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
 					.then(
 						launchGitTask(
 							["config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.url.urlString],
