@@ -4,7 +4,7 @@ import Result
 public struct BinaryProject {
 	public var versions: [PinnedVersion: URL]
 
-	public static func from(jsonData: Data, url: URL) -> Result<BinaryProject, BinaryJSONError> {
+	public static func from(jsonData: Data) -> Result<BinaryProject, BinaryJSONError> {
 		return Result<Any, NSError>(attempt: { try JSONSerialization.jsonObject(with: jsonData, options: []) })
 			.mapError(BinaryJSONError.invalidJSON)
 			.flatMap { json in
