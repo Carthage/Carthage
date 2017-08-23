@@ -400,9 +400,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 					dependenciesToUpdate: dependenciesToUpdate
 				)
 			}
-			.reduce(into: [:]) { (result: inout [Dependency: PinnedVersion], dependency) in
-				result[dependency.0] = dependency.1
-			}
 			.map(ResolvedCartfile.init)
 	}
 
