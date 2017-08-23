@@ -245,7 +245,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return URLSession.shared.reactive.data(with: URLRequest(url: url))
 						.mapError { CarthageError.readFailed(url, $0 as NSError) }
 						.attemptMap { data, _ in
-							return BinaryProject.from(jsonData: data, url: url).mapError { error in
+							return BinaryProject.from(jsonData: data).mapError { error in
 								return CarthageError.invalidBinaryJSON(url, error)
 							}
 						}
