@@ -464,7 +464,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// for the given frameworks.
 	///
 	/// Sends the temporary URL of the unzipped directory
-	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL, projectName: String, commitish: String, toolchain: String?) -> SignalProducer<URL, CarthageError> {
+	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL, projectName: String, pinnedVersion: PinnedVersion, toolchain: String?) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer<URL, CarthageError>(value: zipFile)
 			.flatMap(.concat, unarchive(archive:))
 			.flatMap(.concat) { directoryURL -> SignalProducer<URL, CarthageError> in
@@ -485,7 +485,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 							frameworkURLs,
 							fromDirectoryURL: directoryURL,
 							projectName: projectName,
-							commitish: commitish
+							commitish: pinnedVersion.commitish
 						)
 					}
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
@@ -504,7 +504,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-	private func installBinaries(for dependency: Dependency, atRevision revision: String, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
+	private func installBinaries(for dependency: Dependency, pinnedVersion: PinnedVersion, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer<Bool, CarthageError>(value: self.useBinaries)
 			.flatMap(.merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
 				if !useBinaries {
@@ -516,18 +516,20 @@ public final class Project { // swiftlint:disable:this type_body_length
 				switch dependency {
 				case let .gitHub(server, repository):
 					let client = Client(server: server)
-					return self.downloadMatchingBinaries(for: dependency, atRevision: revision, fromRepository: repository, client: client)
+					return self.downloadMatchingBinaries(for: dependency, pinnedVersion: pinnedVersion, fromRepository: repository, client: client)
 						.flatMapError { error -> SignalProducer<URL, CarthageError> in
 							if !client.isAuthenticated {
 								return SignalProducer(error: error)
 							}
 							return self.downloadMatchingBinaries(
-								for: dependency, atRevision: revision,
-								fromRepository: repository, client: Client(server: server, isAuthenticated: false)
+								for: dependency,
+								pinnedVersion: pinnedVersion,
+								fromRepository: repository,
+								client: Client(server: server, isAuthenticated: false)
 							)
 						}
 						.flatMap(.concat) {
-							return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, commitish: revision, toolchain: toolchain)
+							return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, pinnedVersion: pinnedVersion, toolchain: toolchain)
 								.on(value: { _ in
 									// Trash the checkouts folder when we've successfully copied binaries, to avoid building unnecessarily
 									_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
@@ -555,11 +557,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// less temporary location.
 	private func downloadMatchingBinaries(
 		for dependency: Dependency,
-		atRevision revision: String,
+		pinnedVersion: PinnedVersion,
 		fromRepository repository: Repository,
 		client: Client
 	) -> SignalProducer<URL, CarthageError> {
-		return client.execute(repository.release(forTag: revision))
+		return client.execute(repository.release(forTag: pinnedVersion.commitish))
 			.map { _, release in release }
 			.filter { release in
 				return !release.isDraft && !release.assets.isEmpty
@@ -774,7 +776,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 								return checkoutOrCloneDependency
 							}
 
-							return self.installBinaries(for: dependency, atRevision: version.commitish, toolchain: buildOptions?.toolchain)
+							return self.installBinaries(for: dependency, pinnedVersion: version, toolchain: buildOptions?.toolchain)
 								.flatMap(.merge) { installed -> SignalProducer<(), CarthageError> in
 									if installed {
 										return .empty
@@ -810,7 +812,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { semanticVersion, frameworkURL in
 				return self.downloadBinary(dependency: Dependency.binary(url), version: semanticVersion, url: frameworkURL)
 			}
-			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: projectName, commitish: pinnedVersion.commitish, toolchain: toolchain) }
+			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: projectName, pinnedVersion: pinnedVersion, toolchain: toolchain) }
 			.flatMap(.concat) { self.removeItem(at: $0) }
 	}
 
