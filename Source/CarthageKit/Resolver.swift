@@ -2,8 +2,22 @@ import Foundation
 import Result
 import ReactiveSwift
 
+public protocol ResolverProtocol {
+	init(
+		versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
+		dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
+		resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
+	)
+
+	func resolve(
+		dependencies: [Dependency: VersionSpecifier],
+		lastResolved: [Dependency: PinnedVersion]?,
+		dependenciesToUpdate: [String]?
+	) -> SignalProducer<[Dependency: PinnedVersion], CarthageError>
+}
+
 /// Responsible for resolving acyclic dependency graphs.
-public struct Resolver {
+public struct Resolver: ResolverProtocol {
 	private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
 	private let resolvedGitReference: (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
 	private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
@@ -29,13 +43,12 @@ public struct Resolver {
 	/// Attempts to determine the latest valid version to use for each
 	/// dependency in `dependencies`, and all nested dependencies thereof.
 	///
-	/// Sends each recursive dependency with its resolved version, in the order
-	/// that they should be built.
+	/// Sends a dictionary with each dependency and its resolved version.
 	public func resolve(
 		dependencies: [Dependency: VersionSpecifier],
 		lastResolved: [Dependency: PinnedVersion]? = nil,
 		dependenciesToUpdate: [String]? = nil
-	) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> {
+	) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
 		return graphs(for: dependencies, dependencyOf: nil, basedOnGraph: DependencyGraph())
 			.take(first: 1)
 			.observe(on: QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.resolve"))
@@ -75,6 +88,9 @@ public struct Resolver {
 					// Skip newly added nodes which are not in the targets.
 					return nil
 				}
+			}
+			.reduce(into: [:]) { (result: inout [Dependency: PinnedVersion], dependency) in
+				result[dependency.0] = dependency.1
 			}
 	}
 
