@@ -152,7 +152,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			func isValidFile(name: String) -> Bool {
 				let cartfileURL = directoryURL.appendingPathComponent(name)
 				if FileManager.default.fileExists(atPath: cartfileURL.path) {
-					return workingDirectory.filter({ $0.lastPathComponent == name }).count == 1
+					return workingDirectory.first(where:{ $0.lastPathComponent == name }) != nil
 				}
 				return true
 			}
