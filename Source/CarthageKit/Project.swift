@@ -146,7 +146,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 		// Because the file system Carthage is interacting with may be case sensitive a validation must be
 		// performed to ensure proper file naming. See: https://github.com/Carthage/Carthage/issues/1336
-		func isValidProjectFiles() -> Bool {
+		func validateFilenamesOfCartfiles() -> Bool {
 			let workingDirectory = (try? FileManager.default.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: [], options: .skipsHiddenFiles)) ?? []
 
 			func isValidFile(name: String) -> Bool {
@@ -197,7 +197,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.attemptMap { cartfile, privateCartfile -> Result<Cartfile, CarthageError> in
 				var cartfile = cartfile
 
-				if !isValidProjectFiles() {
+				if !validateFilenamesOfCartfiles() {
 					let error = CarthageError.readFailed(cartfileURL, NSError(domain: NSCocoaErrorDomain, code: NSFileReadNoSuchFileError, userInfo: nil))
 					return .failure(error)
 				}
