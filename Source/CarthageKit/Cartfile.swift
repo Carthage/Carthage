@@ -286,10 +286,10 @@ extension Dependency: Scannable {
 		} else if scanner.scanString("binary", into: nil) {
 			parser = { urlString in
 				if let url = URL(string: urlString) {
-					if url.scheme == "https" {
+					if url.scheme == "https" || url.scheme == "file" {
 						return .success(self.binary(url))
 					} else {
-						return .failure(ScannableError(message: "non-https URL found for dependency type `binary`", currentLine: scanner.currentLine))
+						return .failure(ScannableError(message: "non-https or non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
 					}
 				} else {
 					return .failure(ScannableError(message: "invalid URL found for dependency type `binary`", currentLine: scanner.currentLine))
