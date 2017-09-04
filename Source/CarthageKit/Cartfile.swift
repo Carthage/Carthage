@@ -289,7 +289,7 @@ extension Dependency: Scannable {
 					if url.scheme == "https" || url.scheme == "file" {
 						return .success(self.binary(url))
 					} else {
-						return .failure(ScannableError(message: "non-https or non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
+						return .failure(ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
 					}
 				} else {
 					return .failure(ScannableError(message: "invalid URL found for dependency type `binary`", currentLine: scanner.currentLine))

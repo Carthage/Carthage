@@ -218,7 +218,7 @@ class DependencySpec: QuickSpec {
 
 					let error = Dependency.from(scanner).error
 
-					expect(error) == ScannableError(message: "non-https or non-file URL found for dependency type `binary`", currentLine: "binary \"nope\"")
+					expect(error) == ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: "binary \"nope\"")
 				}
 
 				it("should fail with invalid URL") {
