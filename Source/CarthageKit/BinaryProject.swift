@@ -30,7 +30,7 @@ public struct BinaryProject {
 					guard let binaryURL = URL(string: value) else {
 						return .failure(BinaryJSONError.invalidURL(value))
 					}
-					guard binaryURL.scheme == "https" else {
+					guard binaryURL.scheme == "file" || binaryURL.scheme == "https" else {
 						return .failure(BinaryJSONError.nonHTTPSURL(binaryURL))
 					}
 

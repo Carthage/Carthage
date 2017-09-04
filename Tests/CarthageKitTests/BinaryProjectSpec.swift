@@ -74,6 +74,17 @@ class BinaryProjectSpec: QuickSpec {
 
 				expect(actualError) == .nonHTTPSURL(URL(string: "http://my.domain.com/framework.zip")!)
 			}
+
+			it("should parse with a file url") {
+				let jsonData = "{ \"1.0\": \"file:///my/domain/com/framework.zip\" }".data(using: .utf8)!
+				let actualBinaryProject = BinaryProject.from(jsonData: jsonData).value
+
+				let expectedBinaryProject = BinaryProject(versions: [
+					PinnedVersion("1.0"): URL(string: "file:///my/domain/com/framework.zip")!,
+				])
+
+				expect(actualBinaryProject) == expectedBinaryProject
+			}
 		}
 	}
 }
