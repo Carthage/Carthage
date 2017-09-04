@@ -61,12 +61,11 @@ public struct NewResolver: ResolverProtocol {
 	private let errorCache = ErrorCache()
 
 	/// Produces a lazily computed sequence of valid permutations of `dependencies`
-	/// previously seen errors, in the order they should be tried.
+	/// taking into account previously seen errors, in the order they should be tried.
 	///
-	/// In other words, each permutation is an array of DependencyNodes the same length as
-	/// `dependencies`. Each array represents one possible permutation of those
-	/// dependencies (chosen from among the versions that actually exist for
-	/// each).
+	/// The sequence produces 'DependencyGraph's with `dependencies` added. Each graph
+	/// represents one possible permutation of those dependencies
+	/// (chosen from among the versions that actually exist for each).
 	private func nodePermutations(
 		for dependencies: [Dependency: VersionSpecifier],
 		in basisGraph: DependencyGraph,
