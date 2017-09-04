@@ -67,8 +67,11 @@ public struct NewResolver: ResolverProtocol {
 	/// `dependencies`. Each array represents one possible permutation of those
 	/// dependencies (chosen from among the versions that actually exist for
 	/// each).
-	private func nodePermutations(for dependencies: [Dependency: VersionSpecifier], in basisGraph: DependencyGraph, withParent parentNode: DependencyNode?) -> Result<NodePermutations, CarthageError> {
-
+	private func nodePermutations(
+		for dependencies: [Dependency: VersionSpecifier],
+		in basisGraph: DependencyGraph,
+		withParent parentNode: DependencyNode?
+		) -> Result<NodePermutations, CarthageError> {
 		return SignalProducer<(key: Dependency, value: VersionSpecifier), CarthageError>(dependencies)
 			.flatMap(.concat) { (dependency, specifier) -> SignalProducer<[DependencyNode], CarthageError> in
 				let versionProducer: SignalProducer<PinnedVersion, CarthageError>
@@ -87,7 +90,7 @@ public struct NewResolver: ResolverProtocol {
 							return .failure(CarthageError.requiredVersionNotFound(dependency, specifier))
 						}
 						return .success(nodes.sorted())
-				}
+					}
 			}
 			.collect()
 			.map { nodesToPermute -> NodePermutations in
@@ -98,14 +101,16 @@ public struct NewResolver: ResolverProtocol {
 			}
 			.first()!
 	}
-	
-
 
 	/// Permutes `dependencies`, attaching each permutation to `basisGraph`, as a dependency of the
 	/// specified node (or as a root otherwise). It then recursively processes each graph
 	///
 	/// This is a helper method, and not meant to be called from outside.
-	private func process(dependencies: [Dependency: VersionSpecifier], in basisGraph: DependencyGraph, withParent parent: DependencyNode? = nil) -> Result<DependencyGraph, CarthageError> {
+	private func process(
+		dependencies: [Dependency: VersionSpecifier],
+		in basisGraph: DependencyGraph,
+		withParent parent: DependencyNode? = nil
+		) -> Result<DependencyGraph, CarthageError> {
 		return self.nodePermutations(for: dependencies, in: basisGraph, withParent: parent)
 			.flatMap { permutations in
 				// Only throw an error if no valid graph was produced by any of the permutations
@@ -116,9 +121,9 @@ public struct NewResolver: ResolverProtocol {
 
 					let nextResult = self.process(graph: nextGraph)
 					switch nextResult {
-					case .success(_):
+					case .success:
 						return nextResult
-					case .failure(_):
+					case .failure:
 						errResult = errResult ?? nextResult
 					}
 				}
@@ -156,12 +161,14 @@ public struct NewResolver: ResolverProtocol {
 							self.errorCache.addRootIncompatibility(for: (node.dependency, node.proposedVersion))
 						}
 					}
-					return .failure(CarthageError.incompatibleRequirements(child, (specifier: existingChildNode.versionSpecifier, fromDependency: existingChildNode.parent?.dependency), (specifier: newSpecifier, fromDependency: node.dependency)))
+					let existingReqs: CarthageError.VersionRequirement = (specifier: existingChildNode.versionSpecifier, fromDependency: existingChildNode.parent?.dependency)
+					let newReqs: CarthageError.VersionRequirement = (specifier: newSpecifier, fromDependency: node.dependency)
+					return .failure(.incompatibleRequirements(child, existingReqs, newReqs))
 				}
 
 				return .success(())
 			}
-			.filter { (childDependency, _) in
+			.filter { childDependency, _ in
 				// Only run permutations on nodes not already pinned to the graph
 				graph.node(for: childDependency) == nil
 			}
@@ -178,9 +185,6 @@ public struct NewResolver: ResolverProtocol {
 			}
 	}
 }
-
-
-
 
 /// Represents an acyclic dependency graph in which each project appears at most
 /// once.
@@ -233,7 +237,7 @@ private struct DependencyGraph {
 				if let nestedDependencies = edges[node] {
 					nodeWhitelist.formUnion(nestedDependencies)
 				}
-		}
+			}
 
 		for node in allNodes {
 			guard !nodeWhitelist.contains(node), let lastVersion = lastResolved[node.dependency] else {
@@ -285,7 +289,9 @@ private struct DependencyGraph {
 	/// Adds the node to the unvisited nodes list
 	mutating func addNode(_ node: DependencyNode) -> Result<(), CarthageError> {
 		guard !allNodes.contains(node) else {
-			return .failure(CarthageError.internalError(description: "Attempted to add node \(node), but it already exists in the dependency graph. This is an error in carthage, please file an issue\n\033[4mhttps://github.com/Carthage/Carthage/issues/new\033[0m\n"))
+			let failureMsg = "Attempted to add node \(node), but it already exists in the dependency graph."
+				+ "This is an error in carthage, please file an issue\n\033[4mhttps://github.com/Carthage/Carthage/issues/new\033[0m\n"
+			return .failure(.internalError(description: failureMsg))
 		}
 
 		allNodes.insert(node)
@@ -339,7 +345,7 @@ private struct DependencyGraph {
 /// Custom iterator to perform permutations. Used in tandem with the `ErrorCache', 
 /// allowing us to short circuit permutations before generating them, rather than
 /// filtering results as they come.
-fileprivate struct NodePermutations: Sequence, IteratorProtocol {
+private struct NodePermutations: Sequence, IteratorProtocol {
 	private let basisGraph: DependencyGraph
 	private let nodesToPermute: [[DependencyNode]]
 	private let errorCache: ErrorCache
