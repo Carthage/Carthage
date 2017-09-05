@@ -13,6 +13,7 @@ opt_in_rules:
 - operator_usage_whitespace
 - redundant_nil_coalescing
 - switch_case_on_newline
+- unneeded_parentheses_in_closure_argument
 
 disabled_rules:
 - vertical_parameter_alignment
@@ -39,12 +40,6 @@ custom_rules:
     regex: '(?:\n| {2,})\}\)? *\n *[^ \n\})\]]'
     name: "Closing Brace Whitespace"
     message: "Empty line required after closing curly braces if code with same indentation follows."
-    severity: warning
-  closure_params_parantheses:
-    included: ".*.swift"
-    regex: '\{\s*\([^):]+\)\s*in'
-    name: "Unnecessary Closure Params Parantheses"
-    message: "Don't use parantheses around non-typed parameters in a closure."
     severity: warning
   if_as_guard:
     included: ".*.swift"
