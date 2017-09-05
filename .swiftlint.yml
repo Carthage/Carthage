@@ -28,6 +28,9 @@ excluded:
 
 line_length: 160
 
+file_length:
+  ignore_comment_only_lines: true
+
 file_header:
   required_pattern: ''
 
