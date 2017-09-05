@@ -16,7 +16,6 @@ opt_in_rules:
 - unneeded_parentheses_in_closure_argument
 
 disabled_rules:
-- vertical_parameter_alignment
 - redundant_string_enum_value
 - superfluous_disable_command
 
