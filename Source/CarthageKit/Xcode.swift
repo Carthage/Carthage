@@ -623,8 +623,8 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 					return buildScheme.launch()
 						.flatMapTaskEvents(.concat) { _ in SignalProducer(settings) }
 						.mapError(CarthageError.taskError)
-			}
-	}
+				}
+		}
 }
 
 /// Creates a dSYM for the provided dynamic framework.

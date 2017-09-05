@@ -20,8 +20,8 @@ public struct CheckoutCommand: CommandProtocol {
 		             useBinaries: Bool,
 		             colorOptions: ColorOptions,
 		             directoryPath: String,
-		             dependenciesToCheckout: [String]?)
-		{
+		             dependenciesToCheckout: [String]?
+		) {
 			// Disable binary downloads when using submodules.
 			// See https://github.com/Carthage/Carthage/issues/419.
 			let shouldUseBinaries = useSubmodules ? false : useBinaries

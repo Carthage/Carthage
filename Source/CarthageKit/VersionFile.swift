@@ -343,7 +343,7 @@ private func hashForFileAtURL(_ frameworkFileURL: URL) -> SignalProducer<String,
 			guard let taskOutput = String(data: data, encoding: .utf8) else {
 				return .failure(.readFailed(frameworkFileURL, nil))
 			}
-			
+
 			let hashStr = taskOutput.components(separatedBy: CharacterSet.whitespaces)[0]
 			return .success(hashStr.trimmingCharacters(in: .whitespacesAndNewlines))
 		}
