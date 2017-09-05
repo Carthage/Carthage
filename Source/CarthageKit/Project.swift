@@ -951,7 +951,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 				let projectsToBeBuilt = Set(includedDependencies.map { $0.0 })
 
-				guard options.cacheBuilds && projects.intersection(projectsToBeBuilt).isEmpty else {
+				guard options.cacheBuilds && projects.isDisjoint(with: projectsToBeBuilt) else {
 					return dependenciesIncludingNext
 				}
 
