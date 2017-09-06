@@ -112,14 +112,14 @@ public struct BuildCommand: CommandProtocol {
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeValues { eventSink.put($0) }
 
-		let buildProducer = project.loadCombinedCartfile()
+		let buildProducer = project.loadResolvedCartfile()
 			.map { _ in project }
 			.flatMapError { error -> SignalProducer<Project, CarthageError> in
 				if options.skipCurrent {
 					return SignalProducer(error: error)
 				} else {
-					// Ignore Cartfile loading failures. Assume the user just
-					// wants to build the enclosing project.
+					// Ignore Cartfile.resolved loading failure. Assume the user
+					// just wants to build the enclosing project.
 					return .empty
 				}
 			}
