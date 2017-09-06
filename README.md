@@ -301,6 +301,20 @@ Want to advertise that your project can be used with Carthage? You can add a com
 ##### DWARFs symbol problem
 Pre-built framework cannot be debugged using step execution on other machine than on which the framework was built. Simply `carthage bootstrap/build/update --no-use-binaries` should fix this, but for more automated workaround, see [#924](https://github.com/Carthage/Carthage/issues/924). Dupe [rdar://23551273](http://www.openradar.me/23551273) if you want Apple to fix the root cause of this problem.
 
+##### xcode-select Issues
+
+    Module compiled with Swift 4.0 cannot be imported in Swift 3.1
+    
+After switching back and forth between Xcode versions and using `xcode-select`, frameworks are still compiled with the wrong version of Swift.
+
+To fix this, remove carthage cache by running:
+
+    rm -rf ~/Library/Caches/org.carthage.CarthageKit/DerivedData
+    
+Additional steps are to remove your project `Carthage/` folder and clean your derived data.
+
+for more details see [#2062](https://github.com/Carthage/Carthage/issues/2062).
+
 ## CarthageKit
 
 Most of the functionality of the `carthage` command line tool is actually encapsulated in a framework named CarthageKit.
