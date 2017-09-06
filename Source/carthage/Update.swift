@@ -46,8 +46,8 @@ public struct UpdateCommand: CommandProtocol {
 		             isVerbose: Bool,
 		             logPath: String?,
 		             buildOptions: BuildOptions,
-		             checkoutOptions: CheckoutCommand.Options)
-		{
+		             checkoutOptions: CheckoutCommand.Options
+		) {
 			self.checkoutAfterUpdate = checkoutAfterUpdate
 			self.buildAfterUpdate = buildAfterUpdate
 			self.isVerbose = isVerbose

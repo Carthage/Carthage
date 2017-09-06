@@ -317,7 +317,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 	/// Loads the dependencies for the given dependency, at the given version. Optionally can attempt to read from the Checkout directory
-	private func dependencies(for dependency: Dependency, version: PinnedVersion, tryCheckoutDirectory: Bool) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
+	private func dependencies(
+		for dependency: Dependency,
+		version: PinnedVersion,
+		tryCheckoutDirectory: Bool
+	) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
 		switch dependency {
 		case .git, .gitHub:
 			let revision = version.commitish
@@ -343,7 +347,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						return cartfileFetch
 					}
 				}
-				.flatMapError { _ in return .empty }
+				.flatMapError { _ in .empty }
 			} else {
 				cartfileSource = cartfileFetch
 			}
@@ -464,7 +468,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// for the given frameworks.
 	///
 	/// Sends the temporary URL of the unzipped directory
-	private func unarchiveAndCopyBinaryFrameworks(zipFile: URL, projectName: String, pinnedVersion: PinnedVersion, toolchain: String?) -> SignalProducer<URL, CarthageError> {
+	private func unarchiveAndCopyBinaryFrameworks(
+		zipFile: URL,
+		projectName: String,
+		pinnedVersion: PinnedVersion,
+		toolchain: String?
+	) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer<URL, CarthageError>(value: zipFile)
 			.flatMap(.concat, unarchive(archive:))
 			.flatMap(.concat) { directoryURL -> SignalProducer<URL, CarthageError> in
@@ -942,7 +951,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 				let projectsToBeBuilt = Set(includedDependencies.map { $0.0 })
 
-				guard options.cacheBuilds && projects.intersection(projectsToBeBuilt).isEmpty else {
+				guard options.cacheBuilds && projects.isDisjoint(with: projectsToBeBuilt) else {
 					return dependenciesIncludingNext
 				}
 
