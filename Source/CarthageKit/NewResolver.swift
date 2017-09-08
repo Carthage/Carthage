@@ -315,9 +315,8 @@ private struct DependencyGraph {
 /// filtering results as they come.
 private struct NodePermutations: Sequence, IteratorProtocol {
 	private let baseGraph: DependencyGraph
-	private let nodesToPermute: [[DependencyNode]]
+	private var permutation: [Dimension]
 	private let errorCache: ErrorCache
-	private var currentPermutation: [Int] // Array of current indexes into pinned version arrays
 	private var hasNext = true
 
 	/// Instantiates a permutation sequence for `nodesToPermute`. Each permutation
@@ -328,9 +327,8 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 		errorCache: ErrorCache
 	) {
 		self.baseGraph = baseGraph
-		self.nodesToPermute = nodesToPermute
+		self.permutation = nodesToPermute.map { Dimension($0) }
 		self.errorCache = errorCache
-		currentPermutation = Array(repeatElement(0, count: nodesToPermute.count))
 	}
 
 	/// Generates the next permutation, skipping over any combinations which are deemed
@@ -349,13 +347,8 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 
 	/// Creates a new graph from the indexes stored in the permutation array
 	private func generateGraph() -> Result<DependencyGraph, CarthageError> {
-		var newGraph = baseGraph
-		let newNodes = currentPermutation.enumerated().map { dependencyIdx, nodeIdx -> DependencyNode in
-			let nodes = nodesToPermute[dependencyIdx]
-			return nodes[nodeIdx]
-		}
-
-		return newGraph.addNodes(newNodes)
+		let newNodes = permutation.map { $0.node }
+		return baseGraph.addNodes(newNodes)
 	}
 
 	/// Generates the next valid graph, skipping over invalid permutations
@@ -368,11 +361,10 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 			guard case let .success(generatedGraph) = generateGraph() else { break }
 
 			let versions = generatedGraph.versions
-			for i in (0..<currentPermutation.count).reversed() {
-				let nodes = nodesToPermute[i]
-				let node = nodes[currentPermutation[i]]
+			for i in (permutation.startIndex..<permutation.endIndex).reversed() {
+				let node = permutation[i].node
 				if !errorCache.dependencyIsValid(node.dependency, given: versions) {
-					incrementIndexes(startingAt: i)
+					incrementIndexes(startingAt: permutation.index(after: i))
 					result = nil
 					break
 				}
@@ -383,30 +375,60 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 	}
 
 	/// Basic permutation increment
-	private mutating func incrementIndexes(startingAt startingIndex: Int? = nil) {
+	private mutating func incrementIndexes(startingAt startingIndex: Array<Dimension>.Index? = nil) {
 		guard hasNext else { return }
 
 		// 'skip' any permutations as defined by 'startingIndex' by setting all subsequent values to their max. We don't count this as an 'incremented' occurrence.
 		if let startingIndex = startingIndex {
-			for i in (startingIndex + 1..<currentPermutation.count) {
-				let nodes = nodesToPermute[i]
-				currentPermutation[i] = nodes.count - 1
+			for i in (startingIndex..<permutation.endIndex) {
+				permutation[i].skipRemaining()
 			}
 		}
 
-		var incremented = false
-		for i in (0..<currentPermutation.count).reversed() {
-			let nodeIndex = currentPermutation[i]
-			let nodes = nodesToPermute[i]
-			if nodeIndex == nodes.count - 1 {
-				currentPermutation[i] = 0
-			} else {
-				currentPermutation[i] = nodeIndex + 1
-				incremented = true
+		// If we 'reset' for every dimension, we've hit the end
+		hasNext = false
+		for i in (permutation.startIndex..<permutation.endIndex).reversed() {
+			if permutation[i].increment() == .incremented {
+				hasNext = true
 				break
 			}
 		}
-		hasNext = incremented
+	}
+}
+
+/// Helper struct to track a single axis of a permutation
+extension NodePermutations {
+	enum IncrementResult {
+		case incremented
+		case reset
+	}
+
+	struct Dimension {
+		let nodes: [DependencyNode]
+		var index: Array<DependencyNode>.Index
+
+		init(_ nodes: [DependencyNode]) {
+			self.nodes = nodes
+			self.index = nodes.startIndex
+		}
+
+		var node: DependencyNode {
+			return nodes[index]
+		}
+
+		mutating func skipRemaining() {
+			index = nodes.index(before: nodes.endIndex)
+		}
+
+		mutating func increment() -> IncrementResult {
+			index = nodes.index(after: index)
+			if index < nodes.endIndex {
+				return .incremented
+			} else {
+				index = nodes.startIndex
+				return .reset
+			}
+		}
 	}
 }
 
