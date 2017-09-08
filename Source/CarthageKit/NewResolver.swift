@@ -264,15 +264,16 @@ private struct DependencyGraph {
 	/// Adds the given node to the graph
 	///
 	/// Adds the node to the unvisited nodes list
-	mutating func addNode(_ node: DependencyNode) -> Result<(), CarthageError> {
+	func addNode(_ node: DependencyNode) -> Result<DependencyGraph, CarthageError> {
 		guard !allNodes.contains(node) else {
 			let failureMsg = "Attempted to add node \(node), but it already exists in the dependency graph."
 				+ "This is an error in carthage, please file an issue\n\033[4mhttps://github.com/Carthage/Carthage/issues/new\033[0m\n"
 			return .failure(.internalError(description: failureMsg))
 		}
 
-		allNodes.insert(node)
-		unvisitedNodes.append(node)
+		var newGraph = self
+		newGraph.allNodes.insert(node)
+		newGraph.unvisitedNodes.append(node)
 
 		if let dependencyOf = node.parent {
 			var nodeSet = edges[dependencyOf] ?? Set()
@@ -283,39 +284,29 @@ private struct DependencyGraph {
 				nodeSet.formUnion(dependenciesOfNode)
 			}
 
-			edges[dependencyOf] = nodeSet
+			newGraph.edges[dependencyOf] = nodeSet
 
 			// Add a nested dependency to the list of its ancestor.
-			let edgesCopy = edges
-			for (ancestor, var itsDependencies) in edgesCopy {
+			for (ancestor, var itsDependencies) in edges {
 				if itsDependencies.contains(dependencyOf) {
 					itsDependencies.formUnion(nodeSet)
-					edges[ancestor] = itsDependencies
+					newGraph.edges[ancestor] = itsDependencies
 				}
 			}
 		}
 
-		return .success()
+		return .success(newGraph)
 	}
 
 	/// Adds the given nodes to the graph
 	///
 	/// Adds the nodes to the unvisited nodes list, in the order given
 	/// Returns self if successful
-	mutating func addNodes
-		<C: Collection>
-		(_ nodes: C) -> Result<DependencyGraph, CarthageError>
+	func addNodes<C: Collection>(_ nodes: C) -> Result<DependencyGraph, CarthageError>
 		where C.Iterator.Element == DependencyNode {
-			for node in nodes {
-				switch self.addNode(node) {
-				case .success:
-					continue
-				case let .failure(error):
-					return Result(error: error)
-				}
+			return nodes.reduce(.success(self)) { graph, node in
+				return graph.flatMap { $0.addNode(node) }
 			}
-
-			return .success(self)
 	}
 }
 
