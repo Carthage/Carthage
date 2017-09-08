@@ -734,7 +734,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 			}
 			.reduce(into: [:]) { (working: inout DependencyGraph, next: DependencyGraph) in
-				next.forEach { working.updateValue($1, forKey: $0) }
+				for (key, value) in next {
+					working.updateValue(value, forKey: key)
+				}
 			}
 			.flatMap(.latest) { (graph: DependencyGraph) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				let dependenciesToInclude = Set(graph

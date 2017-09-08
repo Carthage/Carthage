@@ -36,7 +36,7 @@ class ProjectSpec: QuickSpec {
 				_ = try? FileManager.default.removeItem(at: buildDirectoryURL)
 				// Pre-fetch the repos so we have a cache for the given tags
 				let sourceRepoUrl = directoryURL.appendingPathComponent("SourceRepos")
-				["TestFramework1", "TestFramework2", "TestFramework3"].forEach { repo in
+				for repo in ["TestFramework1", "TestFramework2", "TestFramework3"] {
 					let urlPath = sourceRepoUrl.appendingPathComponent(repo).path
 					_ = cloneOrFetch(dependency: .git(GitURL(urlPath)), preferHTTPS: false)
 						.wait()
@@ -56,7 +56,7 @@ class ProjectSpec: QuickSpec {
 
 			it("should determine build order without repo cache") {
 				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
-				["TestFramework3", "TestFramework2", "TestFramework1"].forEach { dep in
+				for dep in ["TestFramework3", "TestFramework2", "TestFramework1"] {
 					_ = try? FileManager.default.removeItem(at: Constants.Dependency.repositoriesURL.appendingPathComponent(dep))
 				}
 				// Without the repo cache, it won't know to build frameworks 2 and 3 unless it reads the Cartfile from the checkout directory
