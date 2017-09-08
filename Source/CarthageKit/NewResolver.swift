@@ -52,7 +52,7 @@ public struct NewResolver: ResolverProtocol {
 	/// (chosen from among the versions that actually exist for each).
 	private func nodePermutations(
 		for dependencies: [Dependency: VersionSpecifier],
-		in basisGraph: DependencyGraph,
+		in baseGraph: DependencyGraph,
 		withParent parentNode: DependencyNode?
 		) -> Result<NodePermutations, CarthageError> {
 		return SignalProducer<(key: Dependency, value: VersionSpecifier), CarthageError>(dependencies)
@@ -78,23 +78,23 @@ public struct NewResolver: ResolverProtocol {
 			.collect()
 			.map { nodesToPermute -> NodePermutations in
 				return NodePermutations(
-					basisGraph: basisGraph,
+					baseGraph: baseGraph,
 					nodesToPermute: nodesToPermute,
 					errorCache: self.errorCache)
 			}
 			.first()!
 	}
 
-	/// Permutes `dependencies`, attaching each permutation to `basisGraph`, as a dependency of the
+	/// Permutes `dependencies`, attaching each permutation to `baseGraph`, as a dependency of the
 	/// specified node (or as a root otherwise). It then recursively processes each graph
 	///
 	/// This is a helper method, and not meant to be called from outside.
 	private func process(
 		dependencies: [Dependency: VersionSpecifier],
-		in basisGraph: DependencyGraph,
+		in baseGraph: DependencyGraph,
 		withParent parent: DependencyNode? = nil
 		) -> Result<DependencyGraph, CarthageError> {
-		return self.nodePermutations(for: dependencies, in: basisGraph, withParent: parent)
+		return self.nodePermutations(for: dependencies, in: baseGraph, withParent: parent)
 			.flatMap { permutations in
 				// Only throw an error if no valid graph was produced by any of the permutations
 				var errResult: Result<DependencyGraph, CarthageError>? = nil
@@ -314,20 +314,20 @@ private struct DependencyGraph {
 /// allowing us to short circuit permutations before generating them, rather than
 /// filtering results as they come.
 private struct NodePermutations: Sequence, IteratorProtocol {
-	private let basisGraph: DependencyGraph
+	private let baseGraph: DependencyGraph
 	private let nodesToPermute: [[DependencyNode]]
 	private let errorCache: ErrorCache
 	private var currentPermutation: [Int] // Array of current indexes into pinned version arrays
 	private var hasNext = true
 
 	/// Instantiates a permutation sequence for `nodesToPermute`. Each permutation
-	/// creates a new graph from `basisGraph`, with the nodes added to the graph.
+	/// creates a new graph from `baseGraph`, with the nodes added to the graph.
 	init(
-		basisGraph: DependencyGraph,
+		baseGraph: DependencyGraph,
 		nodesToPermute: [[DependencyNode]],
 		errorCache: ErrorCache
 	) {
-		self.basisGraph = basisGraph
+		self.baseGraph = baseGraph
 		self.nodesToPermute = nodesToPermute
 		self.errorCache = errorCache
 		currentPermutation = Array(repeatElement(0, count: nodesToPermute.count))
@@ -339,7 +339,7 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 		guard hasNext else { return nil }
 
 		// In case incompatibilities came in for a higher level in the recursion, skip the entire sequence
-		guard errorCache.graphIsValid(basisGraph) else { return nil }
+		guard errorCache.graphIsValid(baseGraph) else { return nil }
 
 		guard let graph = nextValidGraph() else { return nil }
 
@@ -349,7 +349,7 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 
 	/// Creates a new graph from the indexes stored in the permutation array
 	private func generateGraph() -> Result<DependencyGraph, CarthageError> {
-		var newGraph = basisGraph
+		var newGraph = baseGraph
 		let newNodes = currentPermutation.enumerated().map { dependencyIdx, nodeIdx -> DependencyNode in
 			let nodes = nodesToPermute[dependencyIdx]
 			return nodes[nodeIdx]
