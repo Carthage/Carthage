@@ -36,23 +36,7 @@ public struct NewResolver: ResolverProtocol {
 		dependenciesToUpdate: [String]? = nil
 		) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
 		let result = process(dependencies: dependencies, in: DependencyGraph(whitelist: dependenciesToUpdate, lastResolved: lastResolved))
-			.map { graph -> [Dependency: PinnedVersion] in
-				guard
-					let dependenciesToUpdate = dependenciesToUpdate,
-					let lastResolved = lastResolved,
-					!dependenciesToUpdate.isEmpty else {
-						return graph.versions()
-				}
-
-				var newVersions = graph.versions(for: dependenciesToUpdate)
-				for (dependency, version) in lastResolved {
-					// If we don't have a new version for it, and it's still in the graph, grab the last resolved version
-					guard newVersions[dependency] == nil && graph.node(for: dependency) != nil else { continue }
-					newVersions[dependency] = version
-				}
-
-				return newVersions
-			}
+			.map { graph in graph.versions }
 
 		return SignalProducer(result: result)
 	}
@@ -212,22 +196,35 @@ private struct DependencyGraph {
 		self.lastResolved = lastResolved
 	}
 
+	/// A dictionary defining all the versions that are pinned in this graph.
+	var versions: [Dependency: PinnedVersion] {
+		var versionDictionary: [Dependency: PinnedVersion] = [:]
+		for node in allNodes {
+			versionDictionary[node.dependency] = node.proposedVersion
+		}
+		return versionDictionary
+	}
+
 	/// Returns the next unvisited node if available
 	mutating func nextNodeToVisit() -> DependencyNode? {
 		return !unvisitedNodes.isEmpty ? unvisitedNodes.removeFirst() : nil
 	}
 
-	/// Runs final validations on a complete graph (e.g., no more unvisited nodes)
+	/// Runs final validation against the whitelist on a complete graph (e.g., no more unvisited nodes)
+	///
+	/// For every node that is not in the whitelist or its dependencies
+	/// - If it has a version in 'lastResolved', it must match, or an unsatisfiableDependencyList error is returned
+	/// - If the node has no previous version, it will be removed from the returned graph, but the graph is still considered valid
 	func validateFinalGraph() -> Result<DependencyGraph, CarthageError> {
 		guard unvisitedNodes.isEmpty else {
 			return .failure(.internalError(description: "Validating graph before it's been completely expanded"))
 		}
 
-		guard let whitelist = whitelist, let lastResolved = lastResolved else {
+		guard let whitelist = whitelist, !whitelist.isEmpty, let lastResolved = lastResolved else {
 			return .success(self)
 		}
 
-		// Anything dependencies of items in the whitelist are also allowed to update
+		// Any dependencies of items in the whitelist are also allowed to update
 		var nodeWhitelist = Set<DependencyNode>()
 		allNodes
 			.filter { whitelist.contains($0.dependency.name) }
@@ -238,8 +235,16 @@ private struct DependencyGraph {
 				}
 			}
 
+		var filteredGraph = self
 		for node in allNodes {
-			guard !nodeWhitelist.contains(node), let lastVersion = lastResolved[node.dependency] else {
+			guard !nodeWhitelist.contains(node) else {
+				continue
+			}
+
+			guard let lastVersion = lastResolved[node.dependency] else {
+				// If it doesn't have a previous version, and isn't in the whitelist, remove it from the returned graph
+				filteredGraph.allNodes.remove(node)
+				filteredGraph.edges.removeValue(forKey: node)
 				continue
 			}
 
@@ -248,34 +253,7 @@ private struct DependencyGraph {
 				return .failure(.unsatisfiableDependencyList(whitelist))
 			}
 		}
-		return .success(self)
-	}
-
-	/// Returns a dictionary defining all the versions that are pinned in this graph.
-	///
-	/// If dependenciesToUpdate is non-empty, it filters the output to those dependencies, including nested dependencies
-	func versions(for dependenciesToUpdate: [String] = []) -> [Dependency: PinnedVersion] {
-		let nodesToReturn: Set<DependencyNode>
-		if dependenciesToUpdate.isEmpty {
-			nodesToReturn = allNodes
-		} else {
-			var filteredNodes = Set<DependencyNode>()
-			allNodes
-				.filter { dependenciesToUpdate.contains($0.dependency.name) }
-				.forEach { node in
-					filteredNodes.insert(node)
-					if let nestedDependencies = edges[node] {
-						filteredNodes.formUnion(nestedDependencies)
-					}
-				}
-			nodesToReturn = filteredNodes
-		}
-
-		var versionDictionary: [Dependency: PinnedVersion] = [:]
-		nodesToReturn.forEach { node in
-			versionDictionary[node.dependency] = node.proposedVersion
-		}
-		return versionDictionary
+		return .success(filteredGraph)
 	}
 
 	/// Returns the current node for a given dependency, if contained in the graph
@@ -398,7 +376,7 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 			result = generateGraph()
 			guard case let .success(generatedGraph) = generateGraph() else { break }
 
-			let versions = generatedGraph.versions()
+			let versions = generatedGraph.versions
 			for i in (0..<currentPermutation.count).reversed() {
 				let nodes = nodesToPermute[i]
 				let node = nodes[currentPermutation[i]]
@@ -519,7 +497,7 @@ private final class ErrorCache {
 	}
 
 	func graphIsValid(_ graph: DependencyGraph) -> Bool {
-		let versions = graph.versions()
+		let versions = graph.versions
 		return !graph.allNodes.contains { !dependencyIsValid($0.dependency, given: versions) }
 	}
 
