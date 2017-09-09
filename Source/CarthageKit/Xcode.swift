@@ -806,7 +806,7 @@ public func buildInDirectory(
 				guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
 					return .empty
 				}
-				
+
 				return createVersionFile(
 					for: dependency.dependency, version: dependency.version,
 					platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL
