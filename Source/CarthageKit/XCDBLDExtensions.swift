@@ -34,9 +34,8 @@ extension ProjectLocator {
 			.flatMap(.merge) { directoriesToSkip -> SignalProducer<URL, CarthageError> in
 				return FileManager.default.reactive
 					.enumerator(at: directoryURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [ .typeIdentifierKey ], options: enumerationOptions, catchErrors: true)
-					.map { _, url in url }
-					.filter { url in
-						return !directoriesToSkip.contains { $0.hasSubdirectory(url) }
+					.filterMap { _, url in
+						return !directoriesToSkip.contains { $0.hasSubdirectory(url) } ? url : nil
 					}
 			}
 			.filterMap { url -> ProjectLocator? in

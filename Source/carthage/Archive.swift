@@ -81,11 +81,12 @@ public struct ArchiveCommand: CommandProtocol {
 						return (platform.relativePath as NSString).appendingPathComponent(framework)
 					}
 				}
-				.map { relativePath -> (relativePath: String, absolutePath: String) in
+				.filterMap { relativePath -> (relativePath: String, absolutePath: String)? in
 					let absolutePath = (options.directoryPath as NSString).appendingPathComponent(relativePath)
-					return (relativePath, absolutePath)
+					return FileManager.default.fileExists(atPath: absolutePath)
+						? (relativePath, absolutePath)
+						: nil
 				}
-				.filter { filePath in FileManager.default.fileExists(atPath: filePath.absolutePath) }
 				.flatMap(.merge) { framework -> SignalProducer<String, CarthageError> in
 					let dSYM = (framework.relativePath as NSString).appendingPathExtension("dSYM")!
 					let bcsymbolmapsProducer = BCSymbolMapsForFramework(URL(fileURLWithPath: framework.absolutePath))
