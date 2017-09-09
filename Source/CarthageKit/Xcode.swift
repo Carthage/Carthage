@@ -290,8 +290,9 @@ private func shouldBuildScheme(_ buildArguments: BuildArguments, _ forPlatforms:
 					.flatMapError { _ in .empty }
 			} else {
 				return settings.buildSDKs
-					.filter { forPlatforms.contains($0.platform) }
-					.flatMap(.merge) { _ in frameworkType }
+					.flatMap(.merge) { sdk in
+						return forPlatforms.contains(sdk.platform) ? frameworkType : .empty
+					}
 					.flatMapError { _ in .empty }
 			}
 		}
@@ -368,15 +369,13 @@ private func mergeBuildProductsIntoDirectory(
 				}
 
 			let sourceModulesURL = SignalProducer(result: secondProductSettings.relativeModulesPath.fanout(secondProductSettings.builtProductsDirectoryURL))
-				.filter { $0.0 != nil }
-				.map { (modulesPath, productsURL) -> URL in
-					return productsURL.appendingPathComponent(modulesPath!)
+				.filterMap { modulesPath, productsURL in
+					return modulesPath.map { productsURL.appendingPathComponent($0) }
 				}
 
 			let destinationModulesURL = SignalProducer(result: firstProductSettings.relativeModulesPath)
-				.filter { $0 != nil }
-				.map { modulesPath -> URL in
-					return destinationFolderURL.appendingPathComponent(modulesPath!)
+				.filterMap { modulesPath in
+					return modulesPath.map { destinationFolderURL.appendingPathComponent($0) }
 				}
 
 			let mergeProductModules = SignalProducer.zip(sourceModulesURL, destinationModulesURL)
@@ -452,10 +451,9 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			let filterResult = sdkFilter(sdks, scheme, options.configuration, project)
 			return SignalProducer(result: filterResult.map { (platform, $0) })
 		}
-		.filter { _, sdks in
-			return !sdks.isEmpty
-		}
 		.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<URL>, CarthageError> in
+			guard !sdks.isEmpty else { return .empty }
+
 			let folderURL = workingDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).resolvingSymlinksInPath()
 
 			// TODO: Generalize this further?
@@ -742,10 +740,11 @@ public func buildInDirectory(
 
 		locator
 			.collect()
-			// Allow dependencies which have no projects, not to error out with
-			// `.noSharedFrameworkSchemes`.
-			.filter { projects in !projects.isEmpty }
 			.flatMap(.merge) { (projects: [(ProjectLocator, [String])]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+				// Allow dependencies which have no projects, not to error out 
+				// with `.noSharedFrameworkSchemes`.
+				guard !projects.isEmpty else { return .empty }
+
 				return schemesInProjects(projects)
 					.flatMap(.merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
 						if !schemes.isEmpty {
@@ -858,8 +857,11 @@ public func stripDSYM(_ dSYMURL: URL, keepingArchitectures: [String]) -> SignalP
 /// Strips a universal file from unexpected architectures.
 private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> SignalProducer<(), CarthageError> {
 	return architecturesInPackage(binaryURL)
-		.filter { !keepingArchitectures.contains($0) }
-		.flatMap(.concat) { stripArchitecture(binaryURL, $0) }
+		.flatMap(.concat) { architecture in
+			return keepingArchitectures.contains(architecture)
+				? .empty
+				: stripArchitecture(binaryURL, architecture)
+		}
 }
 
 /// Copies a product into the given folder. The folder will be created if it
@@ -917,8 +919,10 @@ extension SignalProducer where Value == URL, Error == CarthageError {
 	/// Returns a producer that will send locations where the copied files are.
 	public func copyFileURLsIntoDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 		return producer
-			.filter { fileURL in (try? fileURL.checkResourceIsReachable()) ?? false }
 			.flatMap(.merge) { fileURL -> SignalProducer<URL, CarthageError> in
+				let isReachable = (try? fileURL.checkResourceIsReachable()) ?? false
+				guard isReachable else { return .empty }
+
 				let fileName = fileURL.lastPathComponent
 				let destinationURL = directoryURL.appendingPathComponent(fileName, isDirectory: false)
 				let resolvedDestinationURL = destinationURL.resolvingSymlinksInPath()
@@ -1099,12 +1103,13 @@ private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, Carthag
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
 		.map { String(data: $0, encoding: .utf8) ?? "" }
-		// If there are no dSYMs (the output is empty but has a zero exit 
-		// status), complete with no values. This can occur if this is a "fake"
-		// framework, meaning a static framework packaged like a dynamic 
-		// framework.
-		.filter { !$0.isEmpty }
 		.flatMap(.merge) { output -> SignalProducer<Set<UUID>, CarthageError> in
+			// If there are no dSYMs (the output is empty but has a zero exit
+			// status), complete with no values. This can occur if this is a "fake"
+			// framework, meaning a static framework packaged like a dynamic
+			// framework.
+			guard !output.isEmpty else { return .empty }
+
 			// UUIDs are letters, decimals, or hyphens.
 			var uuidCharacterSet = CharacterSet()
 			uuidCharacterSet.formUnion(.letters)
