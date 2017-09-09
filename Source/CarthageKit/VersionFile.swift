@@ -181,14 +181,14 @@ struct VersionFile {
 				SignalProducer(cachedFrameworks),
 				SignalProducer(swiftVersionMatches)
 			)
-			.map { (hash, cachedFramework, swiftVersionMatches) -> Bool in
+			.map { hash, cachedFramework, swiftVersionMatches -> Bool in
 				if let hash = hash {
 					return hash == cachedFramework.hash && swiftVersionMatches
 				} else {
 					return false
 				}
 			}
-			.reduce(true) { (result, current) -> Bool in
+			.reduce(true) { result, current -> Bool in
 				return result && current
 			}
 	}

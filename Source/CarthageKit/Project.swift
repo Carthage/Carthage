@@ -440,7 +440,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				outdatedDependencies,
 				loadCombinedCartfile()
 			)
-			.map { (oudatedDependencies, combinedCartfile) -> [OutdatedDependency] in
+			.map { oudatedDependencies, combinedCartfile -> [OutdatedDependency] in
 				return oudatedDependencies.filter { project, _, _ in
 					return combinedCartfile.dependencies[project] != nil
 				}
@@ -774,7 +774,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.zip(with: submodulesSignal)
 			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
 				return SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies)
-					.flatMap(.concurrent(limit: 4)) { (dependency, version) -> SignalProducer<(), CarthageError> in
+					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(), CarthageError> in
 						switch dependency {
 						case .git, .gitHub:
 
@@ -813,7 +813,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(pinnedVersion))
 			.mapError { CarthageError(scannableError: $0) }
 			.combineLatest(with: self.downloadBinaryFrameworkDefinition(url: url))
-			.attemptMap { (semanticVersion, binaryProject) -> Result<(SemanticVersion, URL), CarthageError> in
+			.attemptMap { semanticVersion, binaryProject -> Result<(SemanticVersion, URL), CarthageError> in
 				guard let frameworkURL = binaryProject.versions[pinnedVersion] else {
 					return .failure(CarthageError.requiredVersionNotFound(Dependency.binary(url), VersionSpecifier.exactly(semanticVersion)))
 				}
@@ -938,14 +938,14 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { resolvedCartfile -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
 			}
-			.flatMap(.concat) { (dependency, version) -> SignalProducer<((Dependency, PinnedVersion), Set<Dependency>, Bool?), CarthageError> in
+			.flatMap(.concat) { dependency, version -> SignalProducer<((Dependency, PinnedVersion), Set<Dependency>, Bool?), CarthageError> in
 				return SignalProducer.combineLatest(
 					SignalProducer(value: (dependency, version)),
 					self.dependencySet(for: dependency, version: version),
 					versionFileMatches(dependency, version: version, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
 				)
 			}
-			.reduce([]) { (includedDependencies, nextGroup) -> [(Dependency, PinnedVersion)] in
+			.reduce([]) { includedDependencies, nextGroup -> [(Dependency, PinnedVersion)] in
 				let (nextDependency, projects, matches) = nextGroup
 
 				var dependenciesIncludingNext = includedDependencies
@@ -973,7 +973,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { dependencies -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				return .init(dependencies)
 			}
-			.flatMap(.concat) { (dependency, version) -> SignalProducer<BuildSchemeProducer, CarthageError> in
+			.flatMap(.concat) { dependency, version -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true).path
 				if !FileManager.default.fileExists(atPath: dependencyPath) {
 					return .empty

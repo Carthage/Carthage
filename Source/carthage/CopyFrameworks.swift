@@ -24,7 +24,7 @@ public struct CopyFrameworksCommand: CommandProtocol {
 				let target = frameworksFolder().map { $0.appendingPathComponent(frameworkName, isDirectory: true) }
 
 				return SignalProducer.combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
-					.flatMap(.merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
+					.flatMap(.merge) { source, target, validArchitectures -> SignalProducer<(), CarthageError> in
 						return shouldIgnoreFramework(source, validArchitectures: validArchitectures)
 							.flatMap(.concat) { shouldIgnore -> SignalProducer<(), CarthageError> in
 								if shouldIgnore {
@@ -47,7 +47,7 @@ public struct CopyFrameworksCommand: CommandProtocol {
 
 private func copyFramework(_ source: URL, target: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
-		.flatMap(.merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
+		.flatMap(.merge) { url, codesigningIdentity -> SignalProducer<(), CarthageError> in
 			let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
 			if buildActionIsArchiveOrInstall() {
 				return strip

@@ -790,7 +790,7 @@ public func buildInDirectory(
 				}
 
 				return buildScheme(scheme, withOptions: options, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
-					.mapError { (error) -> CarthageError in
+					.mapError { error -> CarthageError in
 						if case let .taskError(taskError) = error {
 							return .buildFailed(taskError, log: nil)
 						} else {

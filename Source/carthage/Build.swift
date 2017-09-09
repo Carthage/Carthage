@@ -59,7 +59,7 @@ public struct BuildCommand: CommandProtocol {
 	/// Builds a project with the given options.
 	public func buildWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
-			.flatMap(.merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
+			.flatMap(.merge) { stdoutHandle, temporaryURL -> SignalProducer<(), CarthageError> in
 				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 
 				let buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
