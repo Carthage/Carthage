@@ -308,9 +308,8 @@ private struct DependencyGraph {
 				//
 				// See https://github.com/Carthage/Carthage/issues/765.
 				let existingDependencyOf = edges
-					.flatMap { key, value in
-						return value.contains(existingNode) ? key : nil
-					}
+					.filter { _, value in value.contains(existingNode) }
+					.map { $0.0 }
 					.first
 				let first = (existingNode.versionSpecifier, existingDependencyOf?.dependency)
 				let second = (node.versionSpecifier, dependencyOf?.dependency)
@@ -378,11 +377,10 @@ private struct DependencyGraph {
 	/// the given dependencies.
 	func dependencies(_ dependencies: [String], containsNestedDependencyOfNode node: DependencyNode) -> Bool {
 		return edges.lazy
-			.flatMap { edge, nodeSet in
+			.filter { edge, nodeSet in
 				return dependencies.contains(edge.dependency.name) && nodeSet.contains(node)
-					? true
-					: nil
 			}
+			.map { _ in true }
 			.first ?? false
 	}
 }

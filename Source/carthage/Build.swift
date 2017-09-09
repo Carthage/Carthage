@@ -300,9 +300,8 @@ extension BuildPlatform: ArgumentProtocol {
 
 		let findBuildPlatform: (String) -> BuildPlatform? = { string in
 			return self.acceptedStrings.lazy
-				.flatMap { key, platform in
-					return string.caseInsensitiveCompare(key) == .orderedSame ? platform : nil
-				}
+				.filter { key, _ in string.caseInsensitiveCompare(key) == .orderedSame }
+				.map { _, platform in platform }
 				.first
 		}
 

@@ -118,7 +118,8 @@ public func buildableSchemesInDirectory(
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
 					return shouldBuildScheme(buildArguments, platforms)
-						.filterMap { shouldBuild in shouldBuild ? scheme : nil }
+						.filter { $0 }
+						.map { _ in scheme }
 				}
 				.collect()
 				.flatMapError { error in
@@ -420,14 +421,13 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 
 			return BuildSettings
 				.load(with: argsForLoading)
-				.filterMap { settings in
+				.filter { settings in
 					// Filter out SDKs that require bitcode when bitcode is disabled in
 					// project settings. This is necessary for testing frameworks, which
 					// must add a User-Defined setting of ENABLE_BITCODE=NO.
 					return settings.bitcodeEnabled.value == true || ![.tvOS, .watchOS].contains(sdk)
-						? sdk
-						: nil
 				}
+				.map { _ in sdk }
 		}
 		.reduce(into: [:]) { (sdksByPlatform: inout [Platform: Set<SDK>], sdk: SDK) in
 			let platform = sdk.platform

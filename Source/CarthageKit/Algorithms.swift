@@ -28,9 +28,9 @@
 /// strict total order as defined by `Comparable`.
 public func topologicalSort<Node: Comparable>(_ graph: [Node: Set<Node>]) -> [Node]? {
 	// Maintain a list of nodes with no incoming edges (sources).
-	var sources = graph.flatMap { node, incomingEdges in
-		return incomingEdges.isEmpty ? node : nil
-	}
+	var sources = graph
+		.filter { _, incomingEdges in incomingEdges.isEmpty }
+		.map { node, _ in node }
 
 	// Maintain a working graph with all sources removed.
 	var workingGraph = graph

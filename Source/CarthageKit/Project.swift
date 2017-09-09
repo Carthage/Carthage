@@ -571,8 +571,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 		client: Client
 	) -> SignalProducer<URL, CarthageError> {
 		return client.execute(repository.release(forTag: pinnedVersion.commitish))
-			.filterMap { _, release in
-				return !release.isDraft && !release.assets.isEmpty ? release : nil
+			.map { _, release in release }
+			.filter { release in
+				return !release.isDraft && !release.assets.isEmpty
 			}
 			.flatMapError { error -> SignalProducer<Release, CarthageError> in
 				switch error {
@@ -739,11 +740,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 			.flatMap(.latest) { (graph: DependencyGraph) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				let dependenciesToInclude = Set(graph
-					.flatMap { dependency, _ in
-						return dependenciesToInclude?.contains(dependency.name) ?? false
-							? dependency
-							: nil
-					})
+					.map { dependency, _ in dependency }
+					.filter { dependency in dependenciesToInclude?.contains(dependency.name) ?? false })
 
 				guard let sortedDependencies = topologicalSort(graph, nodes: dependenciesToInclude) else { // swiftlint:disable:this single_line_guard
 					return SignalProducer(error: .dependencyCycle(graph))
@@ -867,15 +865,16 @@ public final class Project { // swiftlint:disable:this type_body_length
 			)
 			.attemptMap { (dependencies: Set<Dependency>, components: [String]) -> Result<(), CarthageError> in
 				let names = dependencies
-					.flatMap { dependency in
+					.filter { dependency in
 						// Filter out dependencies with names matching (case-insensitively) file system objects from git in `CarthageProjectCheckoutsPath`.
 						// Edge case warning on file system case-sensitivity. If a differently-cased file system object exists in git
 						// and is stored on a case-sensitive file system (like the Sierra preview of APFS), we currently preempt
 						// the non-conflicting symlink. Probably, nobody actually desires or needs the opposite behavior.
-						return !components.contains { dependency.name.caseInsensitiveCompare($0) == .orderedSame }
-							? dependency.name
-							: nil
+						!components.contains {
+							dependency.name.caseInsensitiveCompare($0) == .orderedSame
+						}
 					}
+					.map { $0.name }
 
 				// If no `CarthageProjectCheckoutsPath`-housed symlinks are needed,
 				// return early after potentially adding submodules
@@ -1129,9 +1128,11 @@ private func dSYMForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: 
 		.flatMap(.concat) { (frameworkUUIDs: Set<UUID>) in
 			return dSYMsInDirectory(directoryURL)
 				.flatMap(.merge) { dSYMURL in
-					return UUIDsForDSYM(dSYMURL).filterMap { dSYMUUIDs in
-						return dSYMUUIDs == frameworkUUIDs ? dSYMURL : nil
-					}
+					return UUIDsForDSYM(dSYMURL)
+						.filter { (dSYMUUIDs: Set<UUID>) in
+							return dSYMUUIDs == frameworkUUIDs
+						}
+						.map { _ in dSYMURL }
 				}
 		}
 		.take(first: 1)
