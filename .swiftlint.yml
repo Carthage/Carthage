@@ -26,7 +26,10 @@ included:
 excluded:
 - Carthage
 
-line_length: 160
+line_length:
+  warning: 160
+  ignores_comments: true
+  ignores_function_declarations: true
 
 file_length:
   ignore_comment_only_lines: true

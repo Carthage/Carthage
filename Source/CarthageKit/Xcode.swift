@@ -790,7 +790,7 @@ public func buildInDirectory(
 				}
 
 				return buildScheme(scheme, withOptions: options, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
-					.mapError { (error) -> CarthageError in
+					.mapError { error -> CarthageError in
 						if case let .taskError(taskError) = error {
 							return .buildFailed(taskError, log: nil)
 						} else {
@@ -806,7 +806,7 @@ public func buildInDirectory(
 				guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
 					return .empty
 				}
-				
+
 				return createVersionFile(
 					for: dependency.dependency, version: dependency.version,
 					platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL
