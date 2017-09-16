@@ -352,28 +352,28 @@ private func settingsByTarget<Error>(_ producer: SignalProducer<TaskEvent<BuildS
 /// Any *.bcsymbolmap files for the built products are also copied.
 ///
 /// Upon .success, sends the URL to the merged product, then completes.
-private func mergeBuildProductsIntoDirectory(
-	_ firstProductSettings: BuildSettings,
-	_ secondProductSettings: BuildSettings,
-	_ destinationFolderURL: URL
+private func mergeBuildProducts(
+	deviceBuildSettings: BuildSettings,
+	simulatorBuildSettings: BuildSettings,
+	into destinationFolderURL: URL
 ) -> SignalProducer<URL, CarthageError> {
-	return copyBuildProductIntoDirectory(destinationFolderURL, firstProductSettings)
+	return copyBuildProductIntoDirectory(destinationFolderURL, deviceBuildSettings)
 		.flatMap(.merge) { productURL -> SignalProducer<URL, CarthageError> in
-			let executableURLs = (firstProductSettings.executableURL.fanout(secondProductSettings.executableURL)).map { [ $0, $1 ] }
-			let outputURL = firstProductSettings.executablePath.map(destinationFolderURL.appendingPathComponent)
+			let executableURLs = (deviceBuildSettings.executableURL.fanout(simulatorBuildSettings.executableURL)).map { [ $0, $1 ] }
+			let outputURL = deviceBuildSettings.executablePath.map(destinationFolderURL.appendingPathComponent)
 
 			let mergeProductBinaries = SignalProducer(result: executableURLs.fanout(outputURL))
 				.flatMap(.concat) { (executableURLs: [URL], outputURL: URL) -> SignalProducer<(), CarthageError> in
 					return mergeExecutables(executableURLs, outputURL.resolvingSymlinksInPath())
 				}
 
-			let sourceModulesURL = SignalProducer(result: secondProductSettings.relativeModulesPath.fanout(secondProductSettings.builtProductsDirectoryURL))
+			let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
 				.filter { $0.0 != nil }
 				.map { (modulesPath, productsURL) -> URL in
 					return productsURL.appendingPathComponent(modulesPath!)
 				}
 
-			let destinationModulesURL = SignalProducer(result: firstProductSettings.relativeModulesPath)
+			let destinationModulesURL = SignalProducer(result: deviceBuildSettings.relativeModulesPath)
 				.filter { $0 != nil }
 				.map { modulesPath -> URL in
 					return destinationFolderURL.appendingPathComponent(modulesPath!)
@@ -386,7 +386,7 @@ private func mergeBuildProductsIntoDirectory(
 
 			return mergeProductBinaries
 				.then(mergeProductModules)
-				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, secondProductSettings))
+				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, simulatorBuildSettings))
 				.then(SignalProducer<URL, CarthageError>(value: productURL))
 		}
 }
@@ -514,7 +514,11 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						}
 					}
 					.flatMapTaskEvents(.concat) { deviceSettings, simulatorSettings in
-						return mergeBuildProductsIntoDirectory(deviceSettings, simulatorSettings, folderURL)
+						return mergeBuildProducts(
+							deviceBuildSettings: deviceSettings,
+							simulatorBuildSettings: simulatorSettings,
+							into: folderURL
+						)
 					}
 
 			default:
