@@ -11,9 +11,22 @@ public struct BuildSettings {
 	/// All build settings given at initialization.
 	public let settings: [String: String]
 
-	public init(target: String, settings: [String: String]) {
+	/// The build arguments used for loading the settings.
+	public let arguments: BuildArguments
+
+	/// The designated xcodebuild action if present.
+	public let action: BuildArguments.Action?
+
+	internal init(
+		target: String,
+		settings: [String: String],
+		arguments: BuildArguments,
+		action: BuildArguments.Action?
+	) {
 		self.target = target
 		self.settings = settings
+		self.arguments = arguments
+		self.action = action
 	}
 
 	/// Matches lines of the forms:
@@ -30,7 +43,7 @@ public struct BuildSettings {
 	///
 	/// Upon .success, sends one BuildSettings value for each target included in
 	/// the referenced scheme.
-	public static func load(with arguments: BuildArguments) -> SignalProducer<BuildSettings, CarthageError> {
+	public static func load(with arguments: BuildArguments, for action: BuildArguments.Action? = nil) -> SignalProducer<BuildSettings, CarthageError> {
 		// xcodebuild (in Xcode 8) has a bug where xcodebuild -showBuildSettings
 		// can hang indefinitely on projects that contain core data models.
 		// rdar://27052195
@@ -57,7 +70,12 @@ public struct BuildSettings {
 
 					let flushTarget = { () -> Void in
 						if let currentTarget = currentTarget {
-							let buildSettings = self.init(target: currentTarget, settings: currentSettings)
+							let buildSettings = self.init(
+								target: currentTarget,
+								settings: currentSettings,
+								arguments: arguments,
+								action: action
+							)
 							observer.send(value: buildSettings)
 						}
 
@@ -152,18 +170,48 @@ public struct BuildSettings {
 		}
 	}
 
+	private var productsDirectoryURLDependingOnAction: Result<URL, CarthageError> {
+		if action == .archive {
+			return self["OBJROOT"]
+				.fanout(archiveIntermediatesBuildProductsPath)
+				.map { objroot, path -> URL in
+					let root = URL(fileURLWithPath: objroot, isDirectory: true)
+					return root.appendingPathComponent(path)
+				}
+		} else {
+			return builtProductsDirectoryURL
+		}
+	}
+
+	private var archiveIntermediatesBuildProductsPath: Result<String, CarthageError> {
+		let r1 = self["TARGET_NAME"]
+		guard let schemeOrTarget = arguments.scheme ?? r1.value else { return r1 }
+
+		let r2 = self["CONFIGURATION"]
+		guard let configuration = r2.value else { return r2 }
+
+		let effectivePlatformName = self["EFFECTIVE_PLATFORM_NAME"].value ?? ""
+
+		// e.g.,
+		// - ArchiveIntermediates/Archimedes Mac/BuildProductsPath/Release
+		// - ArchiveIntermediates/Archimedes iOS/BuildProductsPath/Release-iphoneos
+		let path = "ArchiveIntermediates/\(schemeOrTarget)/BuildProductsPath/\(configuration)\(effectivePlatformName)"
+		return .success(path)
+	}
+
 	/// Attempts to determine the relative path (from the build folder) to the
 	/// built executable.
 	public var executablePath: Result<String, CarthageError> {
 		return self["EXECUTABLE_PATH"]
 	}
 
-	/// Attempts to determine the URL to the built executable.
+	/// Attempts to determine the URL to the built executable, corresponding to
+	/// its xcodebuild action.
 	public var executableURL: Result<URL, CarthageError> {
-		return builtProductsDirectoryURL
+		return productsDirectoryURLDependingOnAction
 			.fanout(executablePath)
-			.map { builtProductsURL, executablePath in
-				return builtProductsURL.appendingPathComponent(executablePath)
+			.map { productsDirectoryURL, executablePath in
+				return productsDirectoryURL.appendingPathComponent(executablePath)
 			}
 	}
 
@@ -172,12 +220,13 @@ public struct BuildSettings {
 		return self["WRAPPER_NAME"]
 	}
 
-	/// Attempts to determine the URL to the built product's wrapper.
+	/// Attempts to determine the URL to the built product's wrapper, corresponding
+	/// to its xcodebuild action.
 	public var wrapperURL: Result<URL, CarthageError> {
-		return builtProductsDirectoryURL
+		return productsDirectoryURLDependingOnAction
 			.fanout(wrapperName)
-			.map { builtProductsURL, wrapperName in
-				return builtProductsURL.appendingPathComponent(wrapperName)
+			.map { productsDirectoryURL, wrapperName in
+				return productsDirectoryURL.appendingPathComponent(wrapperName)
 			}
 	}
 

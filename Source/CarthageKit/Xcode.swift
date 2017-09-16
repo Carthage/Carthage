@@ -206,7 +206,7 @@ private func copyBuildProductIntoDirectory(_ directoryURL: URL, _ settings: Buil
 	let target = settings.wrapperName.map(directoryURL.appendingPathComponent)
 	return SignalProducer(result: target.fanout(settings.wrapperURL))
 		.flatMap(.merge) { target, source in
-			return copyProduct(source, target)
+			return copyProduct(source.resolvingSymlinksInPath(), target)
 		}
 		.flatMap(.merge) { url in
 			return copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL, settings)
@@ -364,7 +364,10 @@ private func mergeBuildProducts(
 
 			let mergeProductBinaries = SignalProducer(result: executableURLs.fanout(outputURL))
 				.flatMap(.concat) { (executableURLs: [URL], outputURL: URL) -> SignalProducer<(), CarthageError> in
-					return mergeExecutables(executableURLs, outputURL.resolvingSymlinksInPath())
+					return mergeExecutables(
+						executableURLs.map { $0.resolvingSymlinksInPath() },
+						outputURL.resolvingSymlinksInPath()
+					)
 				}
 
 			let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
@@ -600,7 +603,12 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 				argsForBuilding.destinationTimeout = 3
 			}
 
-			return BuildSettings.load(with: argsForLoading)
+			// Use `archive` action when building device SDKs to disable LLVM Instrumentation.
+			//
+			// See https://github.com/Carthage/Carthage/issues/2056
+			// and https://developer.apple.com/library/content/qa/qa1964/_index.html.
+			let xcodebuildAction: BuildArguments.Action = sdk.isDevice ? .archive : .build
+			return BuildSettings.load(with: argsForLoading, for: xcodebuildAction)
 				.filter { settings in
 					// Only copy build products that are dynamic frameworks
 					guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
@@ -619,7 +627,25 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 						argsForBuilding.bitcodeGenerationMode = .bitcode
 					}
 
-					let actions = ["build"]
+					let actions: [String] = {
+						var result: [String] = [xcodebuildAction.rawValue]
+
+						if xcodebuildAction == .archive {
+							// Prevent generating unnecessary empty `.xcarchive` directories.
+							result += ["-archivePath", "./"]
+						}
+
+						result += [
+							// Disable GCC (and LLVM) Instrumentation.
+							//
+							// See https://github.com/Carthage/Carthage/issues/2056
+							// and https://developer.apple.com/library/content/qa/qa1964/_index.html.
+							"GCC_INSTRUMENT_PROGRAM_FLOW_ARCS=NO",
+							"CLANG_ENABLE_CODE_COVERAGE=NO",
+						]
+
+						return result
+					}()
 
 					var buildScheme = xcodebuildTask(actions, argsForBuilding)
 					buildScheme.workingDirectoryPath = workingDirectoryURL.path
