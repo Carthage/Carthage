@@ -2,6 +2,19 @@ import Foundation
 
 /// Configures a build with Xcode.
 public struct BuildArguments {
+	/// Available actions for xcodebuild listed in `man xcodebuild`
+	public enum Action: String {
+		case build = "build"
+		case buildForTesting = "build-for-testing"
+		case analyze = "analyze"
+		case archive = "archive"
+		case test = "test"
+		case testWithoutBuilding = "test-without-building"
+		case installSrc = "install-src"
+		case install = "install"
+		case clean = "clean"
+	}
+
 	/// Represents a build setting whether full bitcode should be embedded in the
 	/// binary.
 	public enum BitcodeGenerationMode: String {
