@@ -190,6 +190,9 @@ public struct BuildSettings {
 		let r2 = self["CONFIGURATION"]
 		guard let configuration = r2.value else { return r2 }
 
+		// A value almost certainly beginning with `-` or (lacking said value) an
+		// empty string to append without effect in the path below because Xcode
+		// expects the path like that.
 		let effectivePlatformName = self["EFFECTIVE_PLATFORM_NAME"].value ?? ""
 
 		// e.g.,
