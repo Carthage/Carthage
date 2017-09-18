@@ -631,18 +631,22 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 						var result: [String] = [xcodebuildAction.rawValue]
 
 						if xcodebuildAction == .archive {
-							// Prevent generating unnecessary empty `.xcarchive` directories.
-							result += ["-archivePath", "./"]
-						}
+							result += [
+								// Prevent generating unnecessary empty `.xcarchive`
+								// directories.
+								"-archivePath", "./",
 
-						result += [
-							// Disable GCC (and LLVM) Instrumentation.
-							//
-							// See https://github.com/Carthage/Carthage/issues/2056
-							// and https://developer.apple.com/library/content/qa/qa1964/_index.html.
-							"GCC_INSTRUMENT_PROGRAM_FLOW_ARCS=NO",
-							"CLANG_ENABLE_CODE_COVERAGE=NO",
-						]
+								// Disable the “Instrument Program Flow” build
+								// setting for both GCC and LLVM as noted in
+								// https://developer.apple.com/library/content/qa/qa1964/_index.html.
+								"GCC_INSTRUMENT_PROGRAM_FLOW_ARCS=NO",
+
+								// Disable the “Generate Test Coverage Files” build
+								// setting for GCC as noted in
+								// https://developer.apple.com/library/content/qa/qa1964/_index.html.
+								"CLANG_ENABLE_CODE_COVERAGE=NO",
+							]
+						}
 
 						return result
 					}()
