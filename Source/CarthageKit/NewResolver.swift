@@ -60,6 +60,10 @@ public struct NewResolver: ResolverProtocol {
 				let versionProducer: SignalProducer<PinnedVersion, CarthageError>
 				if case let .gitReference(refName) = specifier {
 					versionProducer = self.resolvedGitReference(dependency, refName)
+				} else if let existingNode = baseGraph.node(for: dependency) {
+					// We still 'permute' over all dependencies to properly account for the graph edges
+					// but if it has already been pinned, the only possible value is that pinned version
+					versionProducer = SignalProducer(value: existingNode.proposedVersion)
 				} else {
 					versionProducer = self.versionsForDependency(dependency)
 						.filter { specifier.isSatisfied(by: $0) }
@@ -150,10 +154,6 @@ public struct NewResolver: ResolverProtocol {
 				}
 
 				return .success(())
-			}
-			.filter { childDependency, _ in
-				// Only run permutations on nodes not already pinned to the graph
-				graph.node(for: childDependency) == nil
 			}
 			.reduce([:]) { curDict, childDependencyTuple in
 				var curDict = curDict
@@ -265,37 +265,16 @@ private struct DependencyGraph {
 	///
 	/// Adds the node to the unvisited nodes list
 	func addNode(_ node: DependencyNode) -> Result<DependencyGraph, CarthageError> {
-		guard !allNodes.contains(node) else {
-			let failureMsg = "Attempted to add node \(node), but it already exists in the dependency graph."
-				+ "This is an error in carthage, please file an issue\n\033[4mhttps://github.com/Carthage/Carthage/issues/new\033[0m\n"
-			return .failure(.internalError(description: failureMsg))
+		if allNodes.contains(node) {
+			// It already exists, only update the edge list
+			return self.updateEdges(with: node)
 		}
 
 		var newGraph = self
 		newGraph.allNodes.insert(node)
 		newGraph.unvisitedNodes.append(node)
 
-		if let dependencyOf = node.parent {
-			var nodeSet = edges[dependencyOf] ?? Set()
-			nodeSet.insert(node)
-
-			// If the given node has its dependencies, add them also to the list.
-			if let dependenciesOfNode = edges[node] {
-				nodeSet.formUnion(dependenciesOfNode)
-			}
-
-			newGraph.edges[dependencyOf] = nodeSet
-
-			// Add a nested dependency to the list of its ancestor.
-			for (ancestor, var itsDependencies) in edges {
-				if itsDependencies.contains(dependencyOf) {
-					itsDependencies.formUnion(nodeSet)
-					newGraph.edges[ancestor] = itsDependencies
-				}
-			}
-		}
-
-		return .success(newGraph)
+		return newGraph.updateEdges(with: node)
 	}
 
 	/// Adds the given nodes to the graph
@@ -307,6 +286,34 @@ private struct DependencyGraph {
 			return nodes.reduce(.success(self)) { graph, node in
 				return graph.flatMap { $0.addNode(node) }
 			}
+	}
+
+	/// Produces a new graph with an updated the edge list for the given node
+	private func updateEdges(with node: DependencyNode) -> Result<DependencyGraph, CarthageError> {
+		guard let parent = node.parent else {
+			return .success(self)
+		}
+
+		var newGraph = self
+		var nodeSet = edges[parent] ?? Set()
+		nodeSet.insert(node)
+
+		// If the given node already has dependencies, add them to the list.
+		if let dependenciesOfNode = edges[node] {
+			nodeSet.formUnion(dependenciesOfNode)
+		}
+
+		newGraph.edges[parent] = nodeSet
+
+		// Add a nested dependency to the list of its ancestor.
+		for (ancestor, var itsDependencies) in edges {
+			if itsDependencies.contains(parent) {
+				itsDependencies.formUnion(nodeSet)
+				newGraph.edges[ancestor] = itsDependencies
+			}
+		}
+
+		return .success(newGraph)
 	}
 }
 

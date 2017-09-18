@@ -220,6 +220,30 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 				]
 			}
 
+			it("should update a dependency that is in the root list and nested when the parent is marked for update") {
+				let db: DB = [
+					github1: [
+						.v1_0_0: [
+							git1: .compatibleWith(.v1_0_0)
+						]
+					],
+					git1: [
+						.v1_0_0: [:],
+						.v1_1_0: [:]
+					]
+				]
+
+				let resolved = db.resolve(resolverType,
+				                          [ github1: .any, git1: .any],
+				                          resolved: [ github1: .v1_0_0, git1: .v1_0_0 ],
+				                          updating: [ github1 ])
+				expect(resolved.value!) == [
+					github1: .v1_0_0,
+					git1: .v1_1_0
+				]
+
+			}
+
 			it("should fail when given incompatible nested version specifiers") {
 				let db: DB = [
 					github1: [
