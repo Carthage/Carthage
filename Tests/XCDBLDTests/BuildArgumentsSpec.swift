@@ -46,7 +46,7 @@ class BuildArgumentsSpec: QuickSpec {
 			itCreatesBuildArguments("has a default set of arguments", arguments: []) { _ in }
 
 			itCreatesBuildArguments("includes the scheme if one is given", arguments: ["-scheme", "exampleScheme"]) { subject in
-				subject.scheme = "exampleScheme"
+				subject.scheme = Scheme("exampleScheme")
 			}
 
 			itCreatesBuildArguments("includes the configuration if one is given", arguments: ["-configuration", "exampleConfiguration"]) { subject in

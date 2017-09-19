@@ -29,7 +29,7 @@ public struct BuildArguments {
 	public let project: ProjectLocator
 
 	/// The scheme to build in the project.
-	public var scheme: String?
+	public var scheme: Scheme?
 
 	/// The configuration to use when building the project.
 	public var configuration: String?
@@ -56,8 +56,14 @@ public struct BuildArguments {
 	/// The build setting whether full bitcode should be embedded in the binary.
 	public var bitcodeGenerationMode: BitcodeGenerationMode?
 
-	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil,
-	            derivedDataPath: String? = nil, sdk: SDK? = nil, toolchain: String? = nil) {
+	public init(
+		project: ProjectLocator,
+		scheme: Scheme? = nil,
+		configuration: String? = nil,
+		derivedDataPath: String? = nil,
+		sdk: SDK? = nil,
+		toolchain: String? = nil
+	) {
 		self.project = project
 		self.scheme = scheme
 		self.configuration = configuration
@@ -79,7 +85,7 @@ public struct BuildArguments {
 		}
 
 		if let scheme = scheme {
-			args += [ "-scheme", scheme ]
+			args += [ "-scheme", scheme.name ]
 		}
 
 		if let configuration = configuration {

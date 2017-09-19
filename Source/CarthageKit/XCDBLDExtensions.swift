@@ -55,7 +55,7 @@ extension ProjectLocator {
 	}
 
 	/// Sends each scheme found in the receiver.
-	public func schemes() -> SignalProducer<String, CarthageError> {
+	public func schemes() -> SignalProducer<Scheme, CarthageError> {
 		let task = xcodebuildTask("-list", BuildArguments(project: self))
 
 		return task.launch()
@@ -86,7 +86,10 @@ extension ProjectLocator {
 			.skip { line in !line.hasSuffix("Schemes:") }
 			.skip(first: 1)
 			.take { line in !line.isEmpty }
-			.map { line in line.trimmingCharacters(in: .whitespaces) }
+			.map { line in
+				let trimmed = line.trimmingCharacters(in: .whitespaces)
+				return Scheme(trimmed)
+			}
 	}
 }
 

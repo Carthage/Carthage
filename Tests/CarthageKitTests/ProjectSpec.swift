@@ -29,7 +29,7 @@ class ProjectSpec: QuickSpec {
 					.single()!
 				expect(result.error).to(beNil())
 
-				return result.value!
+				return result.value!.map { $0.name }
 			}
 
 			beforeEach {

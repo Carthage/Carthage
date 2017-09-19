@@ -95,7 +95,7 @@ public struct BuildCommand: CommandProtocol {
 								stderrHandle.write(data)
 
 							case let .success(project, scheme):
-								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(project.description))
+								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme.name) + " in " + formatting.projectName(project.description))
 							}
 						}
 					)

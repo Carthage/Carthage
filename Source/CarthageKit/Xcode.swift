@@ -107,15 +107,15 @@ public func buildableSchemesInDirectory(
 	_ directoryURL: URL,
 	withConfiguration configuration: String,
 	forPlatforms platforms: Set<Platform> = []
-) -> SignalProducer<(ProjectLocator, [String]), CarthageError> {
+) -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> {
 	precondition(directoryURL.isFileURL)
 
 	return ProjectLocator
 		.locate(in: directoryURL)
-		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [String]), CarthageError> in
+		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
 			return project
 				.schemes()
-				.flatMap(.merge) { scheme -> SignalProducer<String, CarthageError> in
+				.flatMap(.merge) { scheme -> SignalProducer<Scheme, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
 					return shouldBuildScheme(buildArguments, platforms)
@@ -136,17 +136,17 @@ public func buildableSchemesInDirectory(
 
 /// Sends pairs of a scheme and a project, the scheme actually resides in
 /// the project.
-public func schemesInProjects(_ projects: [(ProjectLocator, [String])]) -> SignalProducer<[(String, ProjectLocator)], CarthageError> {
-	return SignalProducer<(ProjectLocator, [String]), CarthageError>(projects)
-		.map { (project: ProjectLocator, schemes: [String]) in
+public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<[(Scheme, ProjectLocator)], CarthageError> {
+	return SignalProducer<(ProjectLocator, [Scheme]), CarthageError>(projects)
+		.map { (project: ProjectLocator, schemes: [Scheme]) in
 			// Only look for schemes that actually reside in the project
-			let containedSchemes = schemes.filter { (scheme: String) -> Bool in
+			let containedSchemes = schemes.filter { scheme -> Bool in
 				let schemePath = project.fileURL.appendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").path
 				return FileManager.default.fileExists(atPath: schemePath)
 			}
 			return (project, containedSchemes)
 		}
-		.filter { (project: ProjectLocator, schemes: [String]) in
+		.filter { (project: ProjectLocator, schemes: [Scheme]) in
 			switch project {
 			case .projectFile where !schemes.isEmpty:
 				return true
@@ -156,7 +156,7 @@ public func schemesInProjects(_ projects: [(ProjectLocator, [String])]) -> Signa
 			}
 		}
 		.flatMap(.concat) { project, schemes in
-			return SignalProducer<(String, ProjectLocator), CarthageError>(schemes.map { ($0, project) })
+			return SignalProducer<(Scheme, ProjectLocator), CarthageError>(schemes.map { ($0, project) })
 		}
 		.collect()
 }
@@ -396,14 +396,14 @@ private func mergeBuildProducts(
 }
 
 /// A callback function used to determine whether or not an SDK should be built
-public typealias SDKFilterCallback = (_ sdks: [SDK], _ scheme: String, _ configuration: String, _ project: ProjectLocator) -> Result<[SDK], CarthageError>
+public typealias SDKFilterCallback = (_ sdks: [SDK], _ scheme: Scheme, _ configuration: String, _ project: ProjectLocator) -> Result<[SDK], CarthageError>
 
 /// Builds one scheme of the given project, for all supported SDKs.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
 public func buildScheme( // swiftlint:disable:this function_body_length cyclomatic_complexity
-	_ scheme: String,
+	_ scheme: Scheme,
 	withOptions options: BuildOptions,
 	inProject project: ProjectLocator,
 	workingDirectoryURL: URL,
@@ -684,7 +684,7 @@ public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<Tas
 ///
 /// A producer of this type will send the project and scheme name when building
 /// begins, then complete or error when building terminates.
-public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator, String)>, CarthageError>
+public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator, Scheme)>, CarthageError>
 
 /// Attempts to build the dependency, then places its build product into the
 /// root directory given.
@@ -780,9 +780,9 @@ public func buildInDirectory(
 			// Allow dependencies which have no projects, not to error out with
 			// `.noSharedFrameworkSchemes`.
 			.filter { projects in !projects.isEmpty }
-			.flatMap(.merge) { (projects: [(ProjectLocator, [String])]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+			.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
 				return schemesInProjects(projects)
-					.flatMap(.merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+					.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
 						if !schemes.isEmpty {
 							return .init(schemes)
 						} else {
@@ -790,7 +790,7 @@ public func buildInDirectory(
 						}
 					}
 			}
-			.flatMap(.merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
+			.flatMap(.merge) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
 				return locator
 					// This scheduler hop is required to avoid disallowed recursive signals.
 					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
@@ -811,7 +811,7 @@ public func buildInDirectory(
 					.take(first: 1)
 					.map { project, _ in (scheme, project) }
 			}
-			.flatMap(.concat) { (scheme: String, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
+			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
 				let initialValue = (project, scheme)
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
@@ -851,8 +851,8 @@ public func buildInDirectory(
 			// Discard any Success values, since we want to
 			// use our initial value instead of waiting for
 			// completion.
-			.map { taskEvent -> TaskEvent<(ProjectLocator, String)> in
-				let ignoredValue = (ProjectLocator.workspace(URL(string: ".")!), "")
+			.map { taskEvent -> TaskEvent<(ProjectLocator, Scheme)> in
+				let ignoredValue = (ProjectLocator.workspace(URL(string: ".")!), Scheme(""))
 				return taskEvent.map { _ in ignoredValue }
 			}
 			.filter { taskEvent in
