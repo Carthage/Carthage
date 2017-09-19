@@ -17,6 +17,7 @@
 		BE0292521E4033FE004FB579 /* ReactiveTask.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE0292511E4033FE004FB579 /* ReactiveTask.framework */; };
 		BE0292541E403407004FB579 /* ReactiveSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE0292531E403407004FB579 /* ReactiveSwift.framework */; };
 		BE0292561E4034B5004FB579 /* Platform.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0292551E4034B5004FB579 /* Platform.swift */; };
+		CD0ACC1B1F70D6C400DB93FE /* Scheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD0ACC1A1F70D6C400DB93FE /* Scheme.swift */; };
 		CD4323C41F32DEBF0083C968 /* XcodeVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD4323C31F32DEBF0083C968 /* XcodeVersion.swift */; };
 		CD54FC5A1F39EA6700DCE10F /* XcodeVersionSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD54FC591F39EA6700DCE10F /* XcodeVersionSpec.swift */; };
 		D01F8A4A19EA28FE00643E7C /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01F8A4719EA28F600643E7C /* Quick.framework */; };
@@ -46,6 +47,7 @@
 		BE0292511E4033FE004FB579 /* ReactiveTask.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ReactiveTask.framework; path = Carthage/Checkouts/ReactiveTask/build/Debug/ReactiveTask.framework; sourceTree = "<group>"; };
 		BE0292531E403407004FB579 /* ReactiveSwift.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ReactiveSwift.framework; path = Carthage/Checkouts/ReactiveSwift/build/Debug/ReactiveSwift.framework; sourceTree = "<group>"; };
 		BE0292551E4034B5004FB579 /* Platform.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Platform.swift; sourceTree = "<group>"; };
+		CD0ACC1A1F70D6C400DB93FE /* Scheme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Scheme.swift; sourceTree = "<group>"; };
 		CD4323C31F32DEBF0083C968 /* XcodeVersion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XcodeVersion.swift; sourceTree = "<group>"; };
 		CD54FC591F39EA6700DCE10F /* XcodeVersionSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = XcodeVersionSpec.swift; sourceTree = "<group>"; };
 		D01F8A4719EA28F600643E7C /* Quick.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Quick.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -204,6 +206,7 @@
 				BE0292461E403318004FB579 /* MachOType.swift */,
 				BE0292551E4034B5004FB579 /* Platform.swift */,
 				BE0292441E40330D004FB579 /* ProjectLocator.swift */,
+				CD0ACC1A1F70D6C400DB93FE /* Scheme.swift */,
 				BE02924C1E4033AE004FB579 /* SDK.swift */,
 				CD4323C31F32DEBF0083C968 /* XcodeVersion.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
@@ -358,6 +361,7 @@
 				BE0292471E403318004FB579 /* MachOType.swift in Sources */,
 				CD4323C41F32DEBF0083C968 /* XcodeVersion.swift in Sources */,
 				BE0292451E40330D004FB579 /* ProjectLocator.swift in Sources */,
+				CD0ACC1B1F70D6C400DB93FE /* Scheme.swift in Sources */,
 				BE02924D1E4033AE004FB579 /* SDK.swift in Sources */,
 				BE0292411E403278004FB579 /* BuildArguments.swift in Sources */,
 			);
