@@ -206,7 +206,7 @@ private func copyBuildProductIntoDirectory(_ directoryURL: URL, _ settings: Buil
 	let target = settings.wrapperName.map(directoryURL.appendingPathComponent)
 	return SignalProducer(result: target.fanout(settings.wrapperURL))
 		.flatMap(.merge) { target, source in
-			return copyProduct(source, target)
+			return copyProduct(source.resolvingSymlinksInPath(), target)
 		}
 		.flatMap(.merge) { url in
 			return copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL, settings)
@@ -352,28 +352,31 @@ private func settingsByTarget<Error>(_ producer: SignalProducer<TaskEvent<BuildS
 /// Any *.bcsymbolmap files for the built products are also copied.
 ///
 /// Upon .success, sends the URL to the merged product, then completes.
-private func mergeBuildProductsIntoDirectory(
-	_ firstProductSettings: BuildSettings,
-	_ secondProductSettings: BuildSettings,
-	_ destinationFolderURL: URL
+private func mergeBuildProducts(
+	deviceBuildSettings: BuildSettings,
+	simulatorBuildSettings: BuildSettings,
+	into destinationFolderURL: URL
 ) -> SignalProducer<URL, CarthageError> {
-	return copyBuildProductIntoDirectory(destinationFolderURL, firstProductSettings)
+	return copyBuildProductIntoDirectory(destinationFolderURL, deviceBuildSettings)
 		.flatMap(.merge) { productURL -> SignalProducer<URL, CarthageError> in
-			let executableURLs = (firstProductSettings.executableURL.fanout(secondProductSettings.executableURL)).map { [ $0, $1 ] }
-			let outputURL = firstProductSettings.executablePath.map(destinationFolderURL.appendingPathComponent)
+			let executableURLs = (deviceBuildSettings.executableURL.fanout(simulatorBuildSettings.executableURL)).map { [ $0, $1 ] }
+			let outputURL = deviceBuildSettings.executablePath.map(destinationFolderURL.appendingPathComponent)
 
 			let mergeProductBinaries = SignalProducer(result: executableURLs.fanout(outputURL))
 				.flatMap(.concat) { (executableURLs: [URL], outputURL: URL) -> SignalProducer<(), CarthageError> in
-					return mergeExecutables(executableURLs, outputURL.resolvingSymlinksInPath())
+					return mergeExecutables(
+						executableURLs.map { $0.resolvingSymlinksInPath() },
+						outputURL.resolvingSymlinksInPath()
+					)
 				}
 
-			let sourceModulesURL = SignalProducer(result: secondProductSettings.relativeModulesPath.fanout(secondProductSettings.builtProductsDirectoryURL))
+			let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
 				.filter { $0.0 != nil }
 				.map { (modulesPath, productsURL) -> URL in
 					return productsURL.appendingPathComponent(modulesPath!)
 				}
 
-			let destinationModulesURL = SignalProducer(result: firstProductSettings.relativeModulesPath)
+			let destinationModulesURL = SignalProducer(result: deviceBuildSettings.relativeModulesPath)
 				.filter { $0 != nil }
 				.map { modulesPath -> URL in
 					return destinationFolderURL.appendingPathComponent(modulesPath!)
@@ -386,7 +389,7 @@ private func mergeBuildProductsIntoDirectory(
 
 			return mergeProductBinaries
 				.then(mergeProductModules)
-				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, secondProductSettings))
+				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, simulatorBuildSettings))
 				.then(SignalProducer<URL, CarthageError>(value: productURL))
 		}
 }
@@ -514,7 +517,11 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						}
 					}
 					.flatMapTaskEvents(.concat) { deviceSettings, simulatorSettings in
-						return mergeBuildProductsIntoDirectory(deviceSettings, simulatorSettings, folderURL)
+						return mergeBuildProducts(
+							deviceBuildSettings: deviceSettings,
+							simulatorBuildSettings: simulatorSettings,
+							into: folderURL
+						)
 					}
 
 			default:
@@ -596,7 +603,12 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 				argsForBuilding.destinationTimeout = 3
 			}
 
-			return BuildSettings.load(with: argsForLoading)
+			// Use `archive` action when building device SDKs to disable LLVM Instrumentation.
+			//
+			// See https://github.com/Carthage/Carthage/issues/2056
+			// and https://developer.apple.com/library/content/qa/qa1964/_index.html.
+			let xcodebuildAction: BuildArguments.Action = sdk.isDevice ? .archive : .build
+			return BuildSettings.load(with: argsForLoading, for: xcodebuildAction)
 				.filter { settings in
 					// Only copy build products that are dynamic frameworks
 					guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
@@ -615,7 +627,29 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 						argsForBuilding.bitcodeGenerationMode = .bitcode
 					}
 
-					let actions = ["build"]
+					let actions: [String] = {
+						var result: [String] = [xcodebuildAction.rawValue]
+
+						if xcodebuildAction == .archive {
+							result += [
+								// Prevent generating unnecessary empty `.xcarchive`
+								// directories.
+								"-archivePath", "./",
+
+								// Disable the “Instrument Program Flow” build
+								// setting for both GCC and LLVM as noted in
+								// https://developer.apple.com/library/content/qa/qa1964/_index.html.
+								"GCC_INSTRUMENT_PROGRAM_FLOW_ARCS=NO",
+
+								// Disable the “Generate Test Coverage Files” build
+								// setting for GCC as noted in
+								// https://developer.apple.com/library/content/qa/qa1964/_index.html.
+								"CLANG_ENABLE_CODE_COVERAGE=NO",
+							]
+						}
+
+						return result
+					}()
 
 					var buildScheme = xcodebuildTask(actions, argsForBuilding)
 					buildScheme.workingDirectoryPath = workingDirectoryURL.path
