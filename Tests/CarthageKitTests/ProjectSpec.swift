@@ -96,9 +96,17 @@ class ProjectSpec: QuickSpec {
 
 					var header = try! String(contentsOf: swiftHeaderURL)
 
-					let range = header.range(of: swiftVersionResult.value!)!
+					// Sanitize “effective-3.2 ” value.
+					if
+						let effectiveVersionRegex = try? NSRegularExpression(pattern: "effective-[0-9.]+ "),
+						let match = effectiveVersionRegex.firstMatch(in: header, range: NSRange(header.startIndex..., in: header)),
+						let effectiveVersionRange = Range(match.range(at: 0), in: header)
+					{
+						header.replaceSubrange(effectiveVersionRange, with: "")
+					}
 
-					header.replaceSubrange(range, with: version)
+					let versionRange = header.range(of: swiftVersionResult.value!)!
+					header.replaceSubrange(versionRange, with: version)
 
 					try! header.write(to: swiftHeaderURL, atomically: true, encoding: header.fastestEncoding)
 				}
