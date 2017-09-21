@@ -39,10 +39,10 @@ extension Repository {
 	/// Enterprise instances.
 	public static func fromIdentifier(_ identifier: String) -> Result<(Server, Repository), ScannableError> {
 		// ‘owner/name’ → GitHub.com
-		let range = NSRange(location: 0, length: identifier.utf16.count)
+		let range = NSRange(identifier.startIndex..., in: identifier)
 		if let match = nwoRegex.firstMatch(in: identifier, range: range) {
-			let owner = (identifier as NSString).substring(with: match.range(at: 1))
-			let name = (identifier as NSString).substring(with: match.range(at: 2))
+			let owner = identifier.substring(with: Range(match.range(at: 1), in: identifier)!)
+			let name = identifier.substring(with: Range(match.range(at: 2), in: identifier)!)
 			return .success((.dotCom, self.init(owner: owner, name: strippingGitSuffix(name))))
 		}
 

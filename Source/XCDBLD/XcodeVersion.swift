@@ -22,14 +22,13 @@ public struct XcodeVersion {
 	}
 
 	internal init?(xcodebuildOutput: String) {
-		let range = NSRange(location: 0, length: xcodebuildOutput.utf16.count)
+		let range = NSRange(xcodebuildOutput.startIndex..., in: xcodebuildOutput)
 		guard let match = XcodeVersion.regex.firstMatch(in: xcodebuildOutput, range: range) else {
 			return nil
 		}
 
-		let nsString = xcodebuildOutput as NSString
-		let version = nsString.substring(with: match.range(at: 1))
-		let buildVersion = nsString.substring(with: match.range(at: 2))
+		let version = xcodebuildOutput.substring(with: Range(match.range(at: 1), in: xcodebuildOutput)!)
+		let buildVersion = xcodebuildOutput.substring(with: Range(match.range(at: 2), in: xcodebuildOutput)!)
 
 		self.init(version: version, buildVersion: buildVersion)
 	}
