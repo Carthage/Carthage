@@ -455,18 +455,3 @@ extension Reactive where Base: URLSession {
 		}
 	}
 #endif
-
-/// Creates a counted set from a sequence. The counted set is represented as a
-/// dictionary where the keys are elements from the sequence and values count
-/// how many times elements are present in the sequence.
-internal func buildCountedSet<S: Sequence>(_ sequence: S) -> [S.Iterator.Element: Int] {
-	return sequence.reduce([:]) { set, elem in
-		var set = set
-		if let count = set[elem] {
-			set[elem] = count + 1
-		} else {
-			set[elem] = 1
-		}
-		return set
-	}
-}
