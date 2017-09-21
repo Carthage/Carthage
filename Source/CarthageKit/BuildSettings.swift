@@ -185,7 +185,7 @@ public struct BuildSettings {
 
 	private var archiveIntermediatesBuildProductsPath: Result<String, CarthageError> {
 		let r1 = self["TARGET_NAME"]
-		guard let schemeOrTarget = arguments.scheme ?? r1.value else { return r1 }
+		guard let schemeOrTarget = arguments.scheme?.name ?? r1.value else { return r1 }
 
 		let r2 = self["CONFIGURATION"]
 		guard let configuration = r2.value else { return r2 }
