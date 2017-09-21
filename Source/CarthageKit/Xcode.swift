@@ -37,7 +37,7 @@ private func parseSwiftVersionCommand(output: String?) -> String? {
 	guard
 		let output = output,
 		let regex = try? NSRegularExpression(pattern: "Apple Swift version ([0-9.]+) .*\\((.+)\\)", options: []),
-		let match = regex.firstMatch(in: output, options: [], range: NSRange(location: 0, length: output.characters.count))
+		let match = regex.firstMatch(in: output, options: [], range: NSRange(output.startIndex..., in: output))
 		else
 	{
 		return nil
@@ -45,8 +45,9 @@ private func parseSwiftVersionCommand(output: String?) -> String? {
 
 	guard match.numberOfRanges == 3 else { return nil }
 
-	let nsString = output as NSString
-	return "\(nsString.substring(with: match.range(at: 1))) (\(nsString.substring(with: match.range(at: 2))))"
+	let first = output.substring(with: Range(match.range(at: 1), in: output)!)
+	let second = output.substring(with: Range(match.range(at: 2), in: output)!)
+	return "\(first) (\(second))"
 }
 
 /// Determines the Swift version of a framework at a given `URL`.
@@ -581,10 +582,10 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 						pattern: "-- \(platformName) [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)",
 						options: []
 					)
-					let lastDeviceResult = regex.matches(in: string, range: NSRange(location: 0, length: string.utf16.count)).last
+					let lastDeviceResult = regex.matches(in: string, range: NSRange(string.startIndex..., in: string)).last
 					return lastDeviceResult.map { result in
 						// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
-						let deviceID = (string as NSString).substring(with: result.range(at: 1))
+						let deviceID = string.substring(with: Range(result.range(at: 1), in: string)!)
 						return "platform=\(platformName) Simulator,id=\(deviceID)"
 					}
 				}

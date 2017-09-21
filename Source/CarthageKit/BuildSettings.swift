@@ -89,11 +89,11 @@ public struct BuildSettings {
 							return
 						}
 
-						if let result = self.targetSettingsRegex.firstMatch(in: line, range: NSRange(location: 0, length: line.utf16.count)) {
-							let targetRange = result.range(at: 1)
+						if let result = self.targetSettingsRegex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) {
+							let targetRange = Range(result.range(at: 1), in: line)!
 
 							flushTarget()
-							currentTarget = (line as NSString).substring(with: targetRange)
+							currentTarget = line.substring(with: targetRange)
 							return
 						}
 
