@@ -102,7 +102,7 @@ private func ==<A: Equatable, B: Equatable>(lhs: [(A, B)], rhs: [(A, B)]) -> Boo
 	return true
 }
 
-private func equal<A: Equatable, B: Equatable>(_ expectedValue: [(A, B)]?) -> NonNilMatcherFunc<[(A, B)]> {
+private func equal<A: Equatable, B: Equatable>(_ expectedValue: [(A, B)]?) -> Predicate<[(A, B)]> {
 	return NonNilMatcherFunc { actualExpression, failureMessage in
 		failureMessage.postfixMessage = "equal <\(stringify(expectedValue))>"
 		let actualValue = try actualExpression.evaluate()
@@ -113,7 +113,7 @@ private func equal<A: Equatable, B: Equatable>(_ expectedValue: [(A, B)]?) -> No
 			return false
 		}
 		return expectedValue! == actualValue!
-	}
+	}.predicate
 }
 
 private func ==<A: Equatable, B: Equatable>(lhs: Expectation<[(A, B)]>, rhs: [(A, B)]) {

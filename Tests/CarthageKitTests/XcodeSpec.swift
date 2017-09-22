@@ -400,7 +400,7 @@ class XcodeSpec: QuickSpec {
 
 // MARK: Matcher
 
-internal func beExistingDirectory() -> MatcherFunc<String> {
+internal func beExistingDirectory() -> Predicate<String> {
 	return MatcherFunc { actualExpression, failureMessage in
 		failureMessage.postfixMessage = "exist and be a directory"
 		let actualPath = try actualExpression.evaluate()
@@ -417,10 +417,10 @@ internal func beExistingDirectory() -> MatcherFunc<String> {
 		}
 
 		return exists && isDirectory.boolValue
-	}
+	}.predicate
 }
 
-internal func beRelativeSymlinkToDirectory(_ directory: URL) -> MatcherFunc<URL> {
+internal func beRelativeSymlinkToDirectory(_ directory: URL) -> Predicate<URL> {
 	return MatcherFunc { actualExpression, failureMessage in
 		failureMessage.postfixMessage = "be a relative symlink to \(directory)"
 		let actualURL = try actualExpression.evaluate()
@@ -454,5 +454,5 @@ internal func beRelativeSymlinkToDirectory(_ directory: URL) -> MatcherFunc<URL>
 		}
 
 		return urlsEqual
-	}
+	}.predicate
 }
