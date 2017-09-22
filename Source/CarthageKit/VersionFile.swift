@@ -1,44 +1,35 @@
 import Foundation
 import Runes
-import Argo
-import Curry
 import ReactiveSwift
 import ReactiveTask
 import Result
 import XCDBLD
 
-struct CachedFramework {
+struct CachedFramework: Codable {
+	enum CodingKeys: CodingKey, String {
+		case name = "name"
+		case hash = "hash"
+	}
+
 	let name: String
 	let hash: String
-
-	static let nameKey = "name"
-	static let hashKey = "hash"
-
-	func toJSONObject() -> Any {
-		return [
-			CachedFramework.nameKey: name,
-			CachedFramework.hashKey: hash,
-		]
-	}
 }
 
-extension CachedFramework: Argo.Decodable {
-	static func decode(_ json: JSON) -> Decoded<CachedFramework> {
-		return curry(self.init)
-			<^> json <| CachedFramework.nameKey
-			<*> json <| CachedFramework.hashKey
+struct VersionFile: Codable {
+	enum CodingKeys: CodingKey, String {
+		case commitish = "commitish"
+		case macOS = "Mac"
+		case iOS = "iOS"
+		case watchOS = "watchOS"
+		case tvOS = "tvOS"
 	}
-}
 
-struct VersionFile {
 	let commitish: String
 
 	let macOS: [CachedFramework]?
 	let iOS: [CachedFramework]?
 	let watchOS: [CachedFramework]?
 	let tvOS: [CachedFramework]?
-
-	static let commitishKey = "commitish"
 
 	/// The extension representing a serialized VersionFile.
 	static let pathExtension = "version"
@@ -59,18 +50,6 @@ struct VersionFile {
 		}
 	}
 
-	func toJSONObject() -> Any {
-		var dict: [String: Any] = [
-			VersionFile.commitishKey: commitish,
-		]
-		for platform in Platform.supportedPlatforms {
-			if let caches = self[platform] {
-				dict[platform.rawValue] = caches.map { $0.toJSONObject() }
-			}
-		}
-		return dict
-	}
-
 	init(commitish: String, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
 		self.commitish = commitish
 
@@ -81,11 +60,12 @@ struct VersionFile {
 	}
 
 	init?(url: URL) {
-		guard FileManager.default.fileExists(atPath: url.path),
+		guard
+			FileManager.default.fileExists(atPath: url.path),
 			let jsonData = try? Data(contentsOf: url),
-			let json = try? JSONSerialization.jsonObject(with: jsonData, options: .allowFragments),
-			let versionFile: VersionFile = Argo.decode(json) else {
-				return nil
+			let versionFile = try? JSONDecoder().decode(VersionFile.self, from: jsonData) else
+		{
+			return nil
 		}
 		self = versionFile
 	}
@@ -195,21 +175,12 @@ struct VersionFile {
 
 	func write(to url: URL) -> Result<(), CarthageError> {
 		return Result(at: url, attempt: {
-			let json = toJSONObject()
-			let jsonData = try JSONSerialization.data(withJSONObject: json, options: .prettyPrinted)
+			let encoder = JSONEncoder()
+			encoder.outputFormatting = .prettyPrinted
+
+			let jsonData = try encoder.encode(self)
 			try jsonData.write(to: $0, options: .atomic)
 		})
-	}
-}
-
-extension VersionFile: Argo.Decodable {
-	static func decode(_ json: JSON) -> Decoded<VersionFile> {
-		return curry(self.init)
-			<^> json <| VersionFile.commitishKey
-			<*> json <||? Platform.macOS.rawValue
-			<*> json <||? Platform.iOS.rawValue
-			<*> json <||? Platform.watchOS.rawValue
-			<*> json <||? Platform.tvOS.rawValue
 	}
 }
 

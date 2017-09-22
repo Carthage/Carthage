@@ -1,7 +1,6 @@
 import Foundation
 import Quick
 import Nimble
-import Argo
 import ReactiveSwift
 import Result
 import XCDBLD
@@ -77,8 +76,9 @@ class VersionFileSpec: QuickSpec {
 					],
 				],
 			]
+			let jsonData = try! JSONSerialization.data(withJSONObject: jsonDictionary)
 
-			let file: VersionFile? = Argo.decode(jsonDictionary)
+			let file: VersionFile? = try? JSONDecoder().decode(VersionFile.self, from: jsonData)
 			expect(file).notTo(beNil())
 
 			let versionFile = file!
@@ -91,7 +91,7 @@ class VersionFileSpec: QuickSpec {
 			expect(iOSCache![0].name) == "TestFramework"
 			expect(iOSCache![0].hash) == "TestHASH"
 
-			let value = versionFile.toJSONObject() as? [String: Any]
+			let value = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(versionFile))) as? [String: Any]
 			expect(value).notTo(beNil())
 			let newJSONDictionary = value!
 
