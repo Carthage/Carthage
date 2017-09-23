@@ -41,8 +41,8 @@ extension Repository {
 		// ‘owner/name’ → GitHub.com
 		let range = NSRange(identifier.startIndex..., in: identifier)
 		if let match = nwoRegex.firstMatch(in: identifier, range: range) {
-			let owner = identifier.substring(with: Range(match.range(at: 1), in: identifier)!)
-			let name = identifier.substring(with: Range(match.range(at: 2), in: identifier)!)
+			let owner = String(identifier[Range(match.range(at: 1), in: identifier)!])
+			let name = String(identifier[Range(match.range(at: 2), in: identifier)!])
 			return .success((.dotCom, self.init(owner: owner, name: strippingGitSuffix(name))))
 		}
 

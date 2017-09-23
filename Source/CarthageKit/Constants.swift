@@ -45,7 +45,7 @@ public struct Constants {
 					try fileManager.createDirectory(
 						at: dependenciesURL,
 						withIntermediateDirectories: true,
-						attributes: [FileAttributeKey.posixPermissions.rawValue: 0o755]
+						attributes: [FileAttributeKey.posixPermissions: 0o755]
 					)
 					return dependenciesURL
 				})

@@ -45,8 +45,8 @@ private func parseSwiftVersionCommand(output: String?) -> String? {
 
 	guard match.numberOfRanges == 3 else { return nil }
 
-	let first = output.substring(with: Range(match.range(at: 1), in: output)!)
-	let second = output.substring(with: Range(match.range(at: 2), in: output)!)
+	let first = output[Range(match.range(at: 1), in: output)!]
+	let second = output[Range(match.range(at: 2), in: output)!]
 	return "\(first) (\(second))"
 }
 
@@ -407,7 +407,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 	withOptions options: BuildOptions,
 	inProject project: ProjectLocator,
 	workingDirectoryURL: URL,
-	sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }
+	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> SignalProducer<TaskEvent<URL>, CarthageError> {
 	precondition(workingDirectoryURL.isFileURL)
 
@@ -585,7 +585,7 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 					let lastDeviceResult = regex.matches(in: string, range: NSRange(string.startIndex..., in: string)).last
 					return lastDeviceResult.map { result in
 						// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
-						let deviceID = string.substring(with: Range(result.range(at: 1), in: string)!)
+						let deviceID = string[Range(result.range(at: 1), in: string)!]
 						return "platform=\(platformName) Simulator,id=\(deviceID)"
 					}
 				}
@@ -695,7 +695,7 @@ public func build(
 	version: PinnedVersion,
 	_ rootDirectoryURL: URL,
 	withOptions options: BuildOptions,
-	sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }
+	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
@@ -765,7 +765,7 @@ public func buildInDirectory(
 	withOptions options: BuildOptions,
 	dependency: (dependency: Dependency, version: PinnedVersion)? = nil,
 	rootDirectoryURL: URL? = nil,
-	sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }
+	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> BuildSchemeProducer {
 	precondition(directoryURL.isFileURL)
 

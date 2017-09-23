@@ -27,8 +27,8 @@ public struct XcodeVersion {
 			return nil
 		}
 
-		let version = xcodebuildOutput.substring(with: Range(match.range(at: 1), in: xcodebuildOutput)!)
-		let buildVersion = xcodebuildOutput.substring(with: Range(match.range(at: 2), in: xcodebuildOutput)!)
+		let version = String(xcodebuildOutput[Range(match.range(at: 1), in: xcodebuildOutput)!])
+		let buildVersion = String(xcodebuildOutput[Range(match.range(at: 2), in: xcodebuildOutput)!])
 
 		self.init(version: version, buildVersion: buildVersion)
 	}

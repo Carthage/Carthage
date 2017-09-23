@@ -23,7 +23,7 @@ extension String {
 	internal func stripping(suffix: String) -> String {
 		if hasSuffix(suffix) {
 			let end = characters.index(endIndex, offsetBy: -suffix.characters.count)
-			return self[startIndex..<end]
+			return String(self[startIndex..<end])
 		} else {
 			return self
 		}
