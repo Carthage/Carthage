@@ -238,8 +238,8 @@ public enum BuildPlatform {
 			return [ .tvOS ]
 
 		case let .multiple(buildPlatforms):
-			return buildPlatforms.reduce([]) { set, buildPlatform in
-				return set.union(buildPlatform.platforms)
+			return buildPlatforms.reduce(into: []) { set, buildPlatform in
+				set.formUnion(buildPlatform.platforms)
 			}
 		}
 	}
