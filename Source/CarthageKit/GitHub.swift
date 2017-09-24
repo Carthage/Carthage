@@ -117,9 +117,7 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 		let records = accessTokenInput
 			.characters
 			.split(omittingEmptySubsequences: true) { $0 == "," }
-			.reduce([:]) { (values: [String: String], record) in
-				var values = values
-
+			.reduce(into: [:]) { (values: inout [String: String], record) in
 				let parts = record.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }.map(String.init)
 				switch parts.count {
 				case 1:
@@ -134,8 +132,6 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 				default:
 					break
 				}
-
-				return values
 			}
 		return records[server.url.host!]
 	}
