@@ -96,8 +96,8 @@
         "repositoryURL": "https://github.com/mdiep/Tentacle.git",
         "state": {
           "branch": null,
-          "revision": "fe46f82f326201d61f25a0bcf51696a7dc9bbf23",
-          "version": "0.8.0"
+          "revision": "682ef58707d347cb300c715821647c35c7b79231",
+          "version": "0.9.0"
         }
       }
     ]
