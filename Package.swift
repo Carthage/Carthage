@@ -19,7 +19,7 @@ let package = Package(
             .Package(url: "https://github.com/Carthage/Commandant.git", majorVersion: 0, minor: 12),
             .Package(url: "https://github.com/jdhealy/PrettyColors.git", majorVersion: 5),
             .Package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", majorVersion: 2),
-            .Package(url: "https://github.com/mdiep/Tentacle.git", majorVersion: 0, minor: 8),
+            .Package(url: "https://github.com/mdiep/Tentacle.git", majorVersion: 0, minor: 9),
             .Package(url: "https://github.com/thoughtbot/Argo.git", majorVersion: 4, minor: 1),
             .Package(url: "https://github.com/thoughtbot/Runes.git", versions: Version(4, 0, 1)..<Version(4, .max, .max)),
         ]
