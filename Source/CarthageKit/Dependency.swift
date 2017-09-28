@@ -27,6 +27,11 @@ public enum Dependency {
 		}
 	}
 
+	/// The unique identifier for this project which is useful as a file system path.
+	public var fileSystemIdentifier: String {
+		return name + "-" + String(hashValue)
+	}
+
 	/// The path at which this project will be checked out, relative to the
 	/// working directory of the main project.
 	public var relativePath: String {
@@ -35,7 +40,7 @@ public enum Dependency {
 }
 
 extension Dependency {
-	fileprivate init(gitURL: GitURL) {
+	public init(gitURL: GitURL) {
 		let githubHostIdentifier = "github.com"
 		let urlString = gitURL.urlString
 

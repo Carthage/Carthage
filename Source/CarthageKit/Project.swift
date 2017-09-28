@@ -1255,7 +1255,7 @@ private func BCSymbolMapsForFramework(_ frameworkURL: URL, inDirectoryURL direct
 /// Returns the file URL at which the given project's repository will be
 /// located.
 private func repositoryFileURL(for dependency: Dependency, baseURL: URL = Constants.Dependency.repositoriesURL) -> URL {
-	return baseURL.appendingPathComponent(dependency.name, isDirectory: true)
+	return baseURL.appendingPathComponent(dependency.fileSystemIdentifier, isDirectory: true)
 }
 
 /// Returns the string representing a relative path from a dependency back to the root

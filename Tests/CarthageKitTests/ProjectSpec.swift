@@ -56,9 +56,19 @@ class ProjectSpec: QuickSpec {
 
 			it("should determine build order without repo cache") {
 				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
-				for dep in ["TestFramework3", "TestFramework2", "TestFramework1"] {
-					_ = try? FileManager.default.removeItem(at: Constants.Dependency.repositoriesURL.appendingPathComponent(dep))
+
+				let sourceRepoUrl = directoryURL.appendingPathComponent("SourceRepos")
+				for repo in ["TestFramework3", "TestFramework2", "TestFramework1"] {
+					let urlPath = sourceRepoUrl.appendingPathComponent(repo).path
+					let dep = Dependency.git(GitURL(urlPath))
+					let cacheURL = Constants.Dependency.repositoriesURL.appendingPathComponent(dep.fileSystemIdentifier)
+					do {
+						try FileManager.default.removeItem(at: cacheURL)
+					} catch {
+						fail("Failed to remove a repository cache at: \(cacheURL)")
+					}
 				}
+
 				// Without the repo cache, it won't know to build frameworks 2 and 3 unless it reads the Cartfile from the checkout directory
 				let result = buildDependencyTest(platforms: [.macOS], cacheBuilds: false, dependenciesToBuild: ["TestFramework1"])
 				expect(result) == macOSexpected
