@@ -242,7 +242,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				} else {
 					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(url), url))
 
-					return URLSession.shared.reactive.data(with: URLRequest(url: url))
+					return URLSession.makeProxyConfiguredSession().reactive.data(with: URLRequest(url: url))
 						.mapError { CarthageError.readFailed(url, $0 as NSError) }
 						.attemptMap { data, _ in
 							return BinaryProject.from(jsonData: data).mapError { error in
@@ -836,7 +836,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		if FileManager.default.fileExists(atPath: fileURL.path) {
 			return SignalProducer(value: fileURL)
 		} else {
-			return URLSession.shared.reactive.download(with: URLRequest(url: url))
+			return URLSession.makeProxyConfiguredSession().reactive.download(with: URLRequest(url: url))
 				.on(started: {
 					self._projectEventsObserver.send(value: .downloadingBinaries(dependency, version.description))
 				})
