@@ -313,6 +313,49 @@ extension URL {
 	}
 }
 
+extension URLSession {
+	public static func makeProxyConfiguredSession() -> URLSession {
+		let configuration = URLSessionConfiguration.default
+		let env = ProcessInfo.processInfo.environment
+
+		func getProxy() -> (http: String?, https: String?) {
+			let http = [ "http_proxy", "HTTP_PROXY" ].flatMap { env[$0] }.first
+			let https = [ "https_proxy", "HTTPS_PROXY" ].flatMap { env[$0] }.first
+			return (http, https)
+		}
+
+		let (http, https) = getProxy()
+		guard http != nil || https != nil else {
+			return URLSession(configuration: configuration)
+		}
+
+		var dictionary: [AnyHashable: Any] = [:]
+		// HTTP Proxy
+		if let http = http, var components = URLComponents(string: http) {
+			if let port = components.port {
+				dictionary[kCFNetworkProxiesHTTPPort as AnyHashable] = port
+				components.port = nil
+			}
+
+			dictionary[kCFNetworkProxiesHTTPEnable as AnyHashable] = true
+			dictionary[kCFNetworkProxiesHTTPProxy as AnyHashable] = components.host
+		}
+		// HTTPS Proxy
+		if let https = https, var components = URLComponents(string: https) {
+			if let port = components.port {
+				dictionary[kCFNetworkProxiesHTTPSPort as AnyHashable] = port
+				components.port = nil
+			}
+
+			dictionary[kCFNetworkProxiesHTTPSEnable as AnyHashable] = true
+			dictionary[kCFNetworkProxiesHTTPSProxy as AnyHashable] = components.host
+		}
+
+		configuration.connectionProxyDictionary = dictionary
+		return URLSession(configuration: configuration)
+	}
+}
+
 extension FileManager: ReactiveExtensionsProvider {
 	@available(*, deprecated, message: "Use reactive.enumerator instead")
 	public func carthage_enumerator(
