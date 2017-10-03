@@ -31,8 +31,6 @@ matrix:
       language: objective-c
       osx_image: xcode9
       script:
-        - SWIFTPM_TEST_Carthage=YES swift package resolve
-        - SWIFTPM_TEST_Carthage=YES swift package edit Quick --revision 2d56373ed47146fd1f23a5f549f40f254346141f
         - make swiftpm_test
       env: JOB=CI_BUILD_SWIFTPM_TEST
     - os: osx
