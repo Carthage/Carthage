@@ -117,7 +117,7 @@ public struct BuildSettings {
 	///
 	/// If an SDK is unrecognized or could not be determined, an error will be
 	/// sent on the returned signal.
-	public static func SDKsForScheme(_ scheme: String, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
+	public static func SDKsForScheme(_ scheme: Scheme, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
 		return load(with: BuildArguments(project: project, scheme: scheme))
 			.take(first: 1)
 			.flatMap(.merge) { $0.buildSDKs }
@@ -185,7 +185,7 @@ public struct BuildSettings {
 
 	private var archiveIntermediatesBuildProductsPath: Result<String, CarthageError> {
 		let r1 = self["TARGET_NAME"]
-		guard let schemeOrTarget = arguments.scheme ?? r1.value else { return r1 }
+		guard let schemeOrTarget = arguments.scheme?.name ?? r1.value else { return r1 }
 
 		let r2 = self["CONFIGURATION"]
 		guard let configuration = r2.value else { return r2 }
