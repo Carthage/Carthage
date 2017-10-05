@@ -30,16 +30,6 @@ extension String {
 	}
 }
 
-/// Merges `rhs` into `lhs` and returns the result.
-internal func combineDictionaries<K, V>(_ lhs: [K: V], rhs: [K: V]) -> [K: V] {
-	var result = lhs
-	for (key, value) in rhs {
-		result.updateValue(value, forKey: key)
-	}
-
-	return result
-}
-
 extension Signal {
 	/// Sends each value that occurs on `signal` combined with each value that
 	/// occurs on `otherSignal` (repeats included).

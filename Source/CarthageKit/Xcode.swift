@@ -322,7 +322,7 @@ private func settingsByTarget<Error>(_ producer: SignalProducer<TaskEvent<BuildS
 					let transformedEvent = settingsEvent.map { settings in [ settings.target: settings ] }
 
 					if let transformed = transformedEvent.value {
-						settings = combineDictionaries(settings, rhs: transformed)
+						settings.merge(transformed) { _, new in new }
 					} else {
 						observer.send(value: transformedEvent)
 					}
