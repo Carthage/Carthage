@@ -3,14 +3,6 @@ import Result
 import ReactiveSwift
 import ReactiveTask
 
-#if !swift(>=4)
-	extension NSTextCheckingResult {
-		fileprivate func range(at idx: Int) -> NSRange {
-			return rangeAt(idx)
-		}
-	}
-#endif
-
 /// Represents version and build version of an Xcode.
 public struct XcodeVersion {
 	public let version: String

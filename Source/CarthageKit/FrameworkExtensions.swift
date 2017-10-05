@@ -437,11 +437,3 @@ extension Reactive where Base: URLSession {
 		}
 	}
 }
-
-#if !swift(>=4)
-	extension NSTextCheckingResult {
-		internal func range(at idx: Int) -> NSRange {
-			return rangeAt(idx)
-		}
-	}
-#endif
