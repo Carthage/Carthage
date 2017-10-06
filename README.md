@@ -135,6 +135,20 @@ or
 carthage update Box Result
 ```
 
+### Upgrading frameworks automatically
+
+If you want to make sure your dependencies are updated on each build, you can add a Run Script build phase that invokes Carthage like so:
+
+```sh
+{
+    /usr/local/bin/carthage update --cache-builds --platform "$PLATFORM_NAME" --project-directory "$SRCROOT"
+} || {
+    echo "warning: Couldn't update Carthage automatically. Check your internet connection."
+}
+```
+Now you don't need to use the command line to update your dependencies. 
+This is especially helpful when your dependencies are updated frequently, and when multiple people are working on the same project. Now they don't all need to remember to run `carthage update`. Even the first time they checkout the repository.
+
 ### Nested dependencies
 
 If the framework you want to add to your project has dependencies explicitly listed in a [Cartfile][], Carthage will automatically retrieve them for you. You will then have to **drag them yourself into your project** from the [Carthage/Build] folder.
