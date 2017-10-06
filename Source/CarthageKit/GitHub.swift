@@ -86,7 +86,7 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 			return string.linesProducer
 		}
 		.reduce(into: [:]) { (values: inout [String: String], line: String) in
-			let parts = line.characters
+			let parts = line
 				.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }
 				.map(String.init)
 
@@ -115,7 +115,6 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 		// Treat the input as comma-separated series of domains and tokens.
 		// (e.g., `GITHUB_ACCESS_TOKEN="github.com=XXXXXXXXXXXXX,enterprise.local/ghe=YYYYYYYYY"`)
 		let records = accessTokenInput
-			.characters
 			.split(omittingEmptySubsequences: true) { $0 == "," }
 			.reduce(into: [:]) { (values: inout [String: String], record) in
 				let parts = record.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }.map(String.init)

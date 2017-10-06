@@ -123,7 +123,7 @@ public func listTags(_ repositoryFileURL: URL) -> SignalProducer<String, Carthag
 	return launchGitTask([ "tag", "--column=never" ], repositoryFileURL: repositoryFileURL)
 		.flatMap(.concat) { (allTags: String) -> SignalProducer<String, CarthageError> in
 			return SignalProducer { observer, lifetime in
-				let range = allTags.characters.startIndex..<allTags.characters.endIndex
+				let range = allTags.startIndex...
 				allTags.enumerateSubstrings(in: range, options: [ .byLines, .reverse ]) { line, _, _, stop in
 					if lifetime.hasEnded {
 						stop = true
@@ -238,7 +238,7 @@ private func checkoutSubmodule(_ submodule: Submodule, _ submoduleWorkingDirecto
 /// Parses each key/value entry from the given config file contents, optionally
 /// stripping a known prefix/suffix off of each key.
 private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keySuffix: String = "") -> SignalProducer<(String, String), NoError> {
-	let entries = contents.characters.split(omittingEmptySubsequences: true) { $0 == "\0" }
+	let entries = contents.split(omittingEmptySubsequences: true) { $0 == "\0" }
 
 	return SignalProducer { observer, lifetime in
 		for entry in entries {
@@ -285,7 +285,7 @@ internal func list(treeish: String, atPath path: String, inRepository repository
 			repositoryFileURL: repositoryURL
 		)
 		.flatMap(.merge) { (output: String) -> SignalProducer<String, CarthageError> in
-			return SignalProducer(output.characters.lazy.split(separator: "\0").map { String($0) })
+			return SignalProducer(output.lazy.split(separator: "\0").map(String.init))
 		}
 }
 
@@ -298,7 +298,6 @@ public func submoduleSHAForPath(_ repositoryFileURL: URL, _ path: String, revisi
 			// Example:
 			// 160000 commit 083fd81ecf00124cbdaa8f86ef10377737f6325a	External/ObjectiveGit
 			let components = string
-				.characters
 				.split(maxSplits: 3, omittingEmptySubsequences: true) { (char: Character) in
 					char == " " || char == "\t"
 				}
