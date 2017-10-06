@@ -726,7 +726,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		// out the relationships between them. Loading the cartfile will each will give us its
 		// dependencies. Building a recursive lookup table with this information will let us sort
 		// dependencies before the projects that depend on them.
-		return SignalProducer<(Dependency, PinnedVersion), CarthageError>(cartfile.dependencies.map { $0 })
+		return SignalProducer<(Dependency, PinnedVersion), CarthageError>(cartfile.dependencies.map { ($0, $1) })
 			.flatMap(.merge) { (dependency: Dependency, version: PinnedVersion) -> SignalProducer<DependencyGraph, CarthageError> in
 				return self.dependencySet(for: dependency, version: version)
 					.map { dependencies in
@@ -932,7 +932,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	public func buildCheckedOutDependenciesWithOptions(
 		_ options: BuildOptions,
 		dependenciesToBuild: [String]? = nil,
-		sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }
+		sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 	) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.concat) { resolvedCartfile -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in

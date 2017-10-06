@@ -51,7 +51,7 @@ extension Dependency {
 			let startOfOwnerAndNameSubstring = gitbubHostScanner.scanLocation
 
 			if separatorFound && startOfOwnerAndNameSubstring <= urlString.utf16.count {
-				let ownerAndNameSubstring = urlString[urlString.index(urlString.startIndex, offsetBy: startOfOwnerAndNameSubstring)..<urlString.endIndex]
+				let ownerAndNameSubstring = String(urlString[urlString.index(urlString.startIndex, offsetBy: startOfOwnerAndNameSubstring)..<urlString.endIndex])
 
 				switch Repository.fromIdentifier(ownerAndNameSubstring as String) {
 				case .success(let server, let repository):

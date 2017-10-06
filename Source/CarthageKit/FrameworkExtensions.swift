@@ -22,22 +22,12 @@ extension String {
 	/// Strips off a trailing string, if present.
 	internal func stripping(suffix: String) -> String {
 		if hasSuffix(suffix) {
-			let end = characters.index(endIndex, offsetBy: -suffix.characters.count)
-			return self[startIndex..<end]
+			let end = characters.index(endIndex, offsetBy: -suffix.count)
+			return String(self[startIndex..<end])
 		} else {
 			return self
 		}
 	}
-}
-
-/// Merges `rhs` into `lhs` and returns the result.
-internal func combineDictionaries<K, V>(_ lhs: [K: V], rhs: [K: V]) -> [K: V] {
-	var result = lhs
-	for (key, value) in rhs {
-		result.updateValue(value, forKey: key)
-	}
-
-	return result
 }
 
 extension Signal {
@@ -447,11 +437,3 @@ extension Reactive where Base: URLSession {
 		}
 	}
 }
-
-#if !swift(>=4)
-	extension NSTextCheckingResult {
-		internal func range(at idx: Int) -> NSRange {
-			return rangeAt(idx)
-		}
-	}
-#endif

@@ -30,7 +30,7 @@ public struct GitURL {
 
 			var host = ""
 			if let index = strippedURLString.characters.index(of: ":") {
-				host = strippedURLString[strippedURLString.startIndex..<index]
+				host = String(strippedURLString[strippedURLString.startIndex..<index])
 				strippedURLString.removeSubrange(strippedURLString.startIndex...index)
 			}
 

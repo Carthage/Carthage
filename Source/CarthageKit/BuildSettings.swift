@@ -93,7 +93,7 @@ public struct BuildSettings {
 							let targetRange = Range(result.range(at: 1), in: line)!
 
 							flushTarget()
-							currentTarget = line.substring(with: targetRange)
+							currentTarget = String(line[targetRange])
 							return
 						}
 
