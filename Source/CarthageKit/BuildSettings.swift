@@ -98,9 +98,9 @@ public struct BuildSettings {
 						}
 
 						let trimSet = CharacterSet.whitespacesAndNewlines
-						let components = line.characters
+						let components = line
 							.split(maxSplits: 1) { $0 == "=" }
-							.map { String($0).trimmingCharacters(in: trimSet) }
+							.map { $0.trimmingCharacters(in: trimSet) }
 
 						if components.count == 2 {
 							currentSettings[components[0]] = components[1]
@@ -138,7 +138,7 @@ public struct BuildSettings {
 		let supportedPlatforms = self["SUPPORTED_PLATFORMS"]
 
 		if let supportedPlatforms = supportedPlatforms.value {
-			let platforms = supportedPlatforms.characters.split { $0 == " " }.map(String.init)
+			let platforms = supportedPlatforms.split { $0 == " " }.map(String.init)
 			return SignalProducer<String, CarthageError>(platforms)
 				.map { platform in SignalProducer(result: SDK.from(string: platform)) }
 				.flatten(.merge)

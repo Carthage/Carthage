@@ -70,9 +70,7 @@ extension SemanticVersion: Scannable {
 		}
 
 		let components = (unwrapped as String)
-			.characters
 			.split(omittingEmptySubsequences: true) { $0 == "." }
-			.map(String.init)
 		if components.isEmpty {
 			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
 		}
