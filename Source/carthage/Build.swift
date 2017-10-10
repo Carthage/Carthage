@@ -299,10 +299,9 @@ extension BuildPlatform: ArgumentProtocol {
 		let tokens = string.split()
 
 		let findBuildPlatform: (String) -> BuildPlatform? = { string in
-			return self.acceptedStrings.lazy
-				.filter { key, _ in string.caseInsensitiveCompare(key) == .orderedSame }
+			return self.acceptedStrings
+				.first { key, _ in string.caseInsensitiveCompare(key) == .orderedSame }
 				.map { _, platform in platform }
-				.first
 		}
 
 		switch tokens.count {
