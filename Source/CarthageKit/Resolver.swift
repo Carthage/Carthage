@@ -376,12 +376,11 @@ private struct DependencyGraph {
 	/// Whether the given node is included or not in the nested dependencies of
 	/// the given dependencies.
 	func dependencies(_ dependencies: [String], containsNestedDependencyOfNode node: DependencyNode) -> Bool {
-		return edges.lazy
-			.filter { edge, nodeSet in
+		return edges
+			.first { edge, nodeSet in
 				return dependencies.contains(edge.dependency.name) && nodeSet.contains(node)
 			}
-			.map { _ in true }
-			.first ?? false
+			.map { _ in true } ?? false
 	}
 }
 
