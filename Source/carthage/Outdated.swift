@@ -10,6 +10,7 @@ public struct OutdatedCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
 		public let isVerbose: Bool
+		public let outputXcodeWarnings: Bool
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
 
@@ -23,6 +24,7 @@ public struct OutdatedCommand: CommandProtocol {
 			return curry(self.init)
 				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
+				<*> mode <| Option(key: "xcode-warnings", defaultValue: false, usage: "output Xcode compatible warning messages")
 				<*> ColorOptions.evaluate(mode)
 				<*> mode <| projectDirectoryOption
 		}
@@ -53,7 +55,11 @@ public struct OutdatedCommand: CommandProtocol {
 				if !outdatedDependencies.isEmpty {
 					carthage.println(formatting.path("The following dependencies are outdated:"))
 					for (project, current, updated) in outdatedDependencies {
-						carthage.println(formatting.projectName(project.name) + " \(current) -> \(updated)")
+						if options.outputXcodeWarnings {
+							carthage.println("warning: \(formatting.projectName(project.name)) is out of date (\(current) -> \(updated))")
+						} else {
+							carthage.println(formatting.projectName(project.name) + " \(current) -> \(updated)")
+						}
 					}
 				} else {
 					carthage.println("All dependencies are up to date.")
