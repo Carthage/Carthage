@@ -637,6 +637,11 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 								// directories.
 								"-archivePath", "./",
 
+								// Disable installing when running `archive` action
+								// to prevent built frameworks from being deleted
+								// from derived data folder.
+								"SKIP_INSTALL=YES",
+
 								// Disable the “Instrument Program Flow” build
 								// setting for both GCC and LLVM as noted in
 								// https://developer.apple.com/library/content/qa/qa1964/_index.html.
