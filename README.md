@@ -95,6 +95,16 @@ When archiving your application for submission to the App Store or TestFlight, X
 
 Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.resolved][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.resolved][]**, because anyone else using the project will need that file to build the same framework versions.
 
+##### (Optionally) Add build phase to warn about outdated dependencies
+
+You can add a Run Script phase to automatically warn you when one of your dependencies is out of date.
+
+1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
+
+```sh
+/usr/local/bin/carthage outdated --xcode-warnings
+```
+
 ##### Swift binary framework download compatibility
 
 Carthage will check to make sure that downloaded Swift (and mixed Objective-C/Swift) frameworks were built with the same version of Swift that is in use locally. If there is a version mismatch, Carthage will proceed to build the framework from source. If the framework cannot be built from source, Carthage will fail.
