@@ -187,18 +187,33 @@ public struct BuildSettings {
 		let r1 = self["TARGET_NAME"]
 		guard let schemeOrTarget = arguments.scheme?.name ?? r1.value else { return r1 }
 
-		let r2 = self["CONFIGURATION"]
-		guard let configuration = r2.value else { return r2 }
+		let basePath = "ArchiveIntermediates/\(schemeOrTarget)/BuildProductsPath"
+		let pathComponent: String
 
-		// A value almost certainly beginning with `-` or (lacking said value) an
-		// empty string to append without effect in the path below because Xcode
-		// expects the path like that.
-		let effectivePlatformName = self["EFFECTIVE_PLATFORM_NAME"].value ?? ""
+		if
+			let buildDir = self["BUILD_DIR"].value,
+			let builtProductsDir = self["BUILT_PRODUCTS_DIR"].value,
+			builtProductsDir.hasPrefix(buildDir)
+		{
+			// This is required to support CocoaPods-generated projects.
+			// See https://github.com/AliSoftware/Reusable/issues/50#issuecomment-336434345 for the details.
+			pathComponent = String(builtProductsDir[buildDir.endIndex...]) // e.g., /Release-iphoneos/Reusable-iOS
+		} else {
+			let r2 = self["CONFIGURATION"]
+			guard let configuration = r2.value else { return r2 }
 
-		// e.g.,
-		// - ArchiveIntermediates/Archimedes Mac/BuildProductsPath/Release
-		// - ArchiveIntermediates/Archimedes iOS/BuildProductsPath/Release-iphoneos
-		let path = "ArchiveIntermediates/\(schemeOrTarget)/BuildProductsPath/\(configuration)\(effectivePlatformName)"
+			// A value almost certainly beginning with `-` or (lacking said value) an
+			// empty string to append without effect in the path below because Xcode
+			// expects the path like that.
+			let effectivePlatformName = self["EFFECTIVE_PLATFORM_NAME"].value ?? ""
+
+			// e.g.,
+			// - Release
+			// - Release-iphoneos
+			pathComponent = "\(configuration)\(effectivePlatformName)"
+		}
+
+		let path = (basePath as NSString).appendingPathComponent(pathComponent)
 		return .success(path)
 	}
 
