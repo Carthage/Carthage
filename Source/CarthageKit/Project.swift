@@ -693,6 +693,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 
 				let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, version: version, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
+				let symlinksBinaryPaths = self.symlinkBinaryPaths(for: dependency, version: version, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
 
 				if let submodule = submodule {
 					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
@@ -700,10 +701,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
 						.startOnQueue(self.gitOperationQueue)
 						.then(symlinkCheckoutPaths)
+						.then(symlinksBinaryPaths)
 				} else {
 					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
 						// For checkouts of “ideally bare” repositories of `dependency`, we add its submodules by cloning ourselves, after symlinking.
 						.then(symlinkCheckoutPaths)
+						.then(symlinksBinaryPaths)
 						.then(
 							submodulesInRepository(repositoryURL, revision: revision)
 								.flatMap(.merge) {
@@ -870,8 +873,13 @@ public final class Project { // swiftlint:disable:this type_body_length
 						// Edge case warning on file system case-sensitivity. If a differently-cased file system object exists in git
 						// and is stored on a case-sensitive file system (like the Sierra preview of APFS), we currently preempt
 						// the non-conflicting symlink. Probably, nobody actually desires or needs the opposite behavior.
-						!components.contains {
-							dependency.name.caseInsensitiveCompare($0) == .orderedSame
+						switch dependency {
+						case .git, .gitHub:
+							return !components.contains {
+								dependency.name.caseInsensitiveCompare($0) == .orderedSame
+							}
+						case .binary:
+							return false
 						}
 					}
 					.map { $0.name }
@@ -917,6 +925,73 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}).error {
 						return .failure(error)
 					}
+				}
+
+				return .success(())
+			}
+	}
+
+	/// Creates symlink between the dependency binaries and the root binaries
+	private func symlinkBinaryPaths(
+		for dependency: Dependency,
+		version: PinnedVersion,
+		withRepository repositoryURL: URL,
+		atRootDirectory rootDirectoryURL: URL
+		) -> SignalProducer<(), CarthageError> {
+		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
+		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
+		let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: Constants.binariesFolderPath)
+		let dependencyCheckoutURL = dependencyURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
+
+		let fileManager = FileManager.default
+
+		return self.dependencySet(for: dependency, version: version)
+			.zip(with: // file system objects which might conflict with symlinks
+				list(treeish: version.commitish, atPath: carthageProjectCheckoutsPath, inRepository: repositoryURL)
+					.map { (path: String) in (path as NSString).lastPathComponent }
+					.collect()
+			)
+			.attemptMap { (dependencies: Set<Dependency>, components: [String]) -> Result<(), CarthageError> in
+				let names = dependencies
+					.filter { dependency in
+						switch dependency {
+						case .binary:
+							return !components.contains {
+								dependency.name.caseInsensitiveCompare($0) == .orderedSame
+							}
+						case .git, .gitHub:
+							return false
+						}
+					}
+					.map { $0.name }
+
+				// If no `Constants.binariesFolderPath`-housed symlinks are needed,
+				// return early after potentially adding submodules
+				// (which could be outside `Constants.binariesFolderPath`).
+				if names.isEmpty { return .success(()) } // swiftlint:disable:this single_line_return
+
+				let dependencyCheckoutURLResource = try? dependencyCheckoutURL.resourceValues(forKeys: [
+					.isSymbolicLinkKey,
+					.isDirectoryKey,
+					])
+
+				if dependencyCheckoutURLResource?.isSymbolicLink == true {
+					_ = dependencyCheckoutURL.path.withCString(Darwin.unlink)
+				} else if dependencyCheckoutURLResource?.isDirectory == true {
+					// older version of carthage wrote this directory?
+					// user wrote this directory, unaware of the precedent not to circumvent carthage’s management?
+					// directory exists as the result of rogue process or gamma ray?
+
+					// TODO: explore possibility of messaging user, informing that deleting said directory will result
+					// in symlink creation with carthage versions greater than 0.20.0, maybe with more broad advice on
+					// “from scratch” reproducability.
+					return .success(())
+				}
+
+				if let error = Result(at: dependencyCheckoutURL, attempt: {
+					try fileManager.createSymbolicLink(atPath: $0.path, withDestinationPath: linkDestinationPath)
+				}).error {
+					return .failure(error)
 				}
 
 				return .success(())
