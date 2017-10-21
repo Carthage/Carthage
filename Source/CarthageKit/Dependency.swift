@@ -1,5 +1,7 @@
 import Foundation
 import Result
+import ReactiveSwift
+import ReactiveTask
 import Tentacle
 
 /// Uniquely identifies a project that can be used as a dependency.
@@ -28,8 +30,20 @@ public enum Dependency {
 	}
 
 	/// The unique identifier for this project which is useful as a file system path.
-	public var fileSystemIdentifier: String {
-		return name + "-" + String(hashValue)
+	public var fileSystemIdentifier: SignalProducer<String, CarthageError> {
+		let task = Task("/usr/bin/shasum", arguments: ["-a", "256"])
+		return task
+			.launch(standardInput: .init(value: _hashable.data(using: .utf8)!))
+			.ignoreTaskData()
+			.mapError(CarthageError.taskError)
+			.map { data -> String in
+				let output = String(data: data, encoding: .utf8)!
+				let sha = output
+					.components(separatedBy: CharacterSet.whitespaces)[0]
+					.trimmingCharacters(in: .whitespacesAndNewlines)
+
+				return self.name + "-" + sha
+			}
 	}
 
 	/// The path at which this project will be checked out, relative to the
@@ -97,17 +111,21 @@ extension Dependency: Comparable {
 }
 
 extension Dependency: Hashable {
-	public var hashValue: Int {
+	fileprivate var _hashable: String {
 		switch self {
 		case let .gitHub(server, repo):
-			return server.hashValue ^ repo.hashValue
+			return server.url(for: repo).absoluteString.lowercased()
 
 		case let .git(url):
-			return url.hashValue
+			return url.normalizedURLString
 
 		case let .binary(url):
-			return url.hashValue
+			return url.absoluteString
 		}
+	}
+
+	public var hashValue: Int {
+		return _hashable.hashValue
 	}
 }
 

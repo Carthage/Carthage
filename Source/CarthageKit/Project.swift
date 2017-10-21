@@ -364,9 +364,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(_ dependency: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
-		let repositoryURL = repositoryFileURL(for: dependency)
 		return cloneOrFetchDependency(dependency, commitish: reference)
-			.flatMap(.concat) { _ in
+			.flatMap(.concat) { repositoryURL in
 				return resolveTagInRepository(repositoryURL, reference)
 					.map { _ in
 						// If the reference is an exact tag, resolves it to the tag.
@@ -1254,8 +1253,13 @@ private func BCSymbolMapsForFramework(_ frameworkURL: URL, inDirectoryURL direct
 
 /// Returns the file URL at which the given project's repository will be
 /// located.
-private func repositoryFileURL(for dependency: Dependency, baseURL: URL = Constants.Dependency.repositoriesURL) -> URL {
-	return baseURL.appendingPathComponent(dependency.fileSystemIdentifier, isDirectory: true)
+private func repositoryFileURL(
+	for dependency: Dependency,
+	baseURL: URL = Constants.Dependency.repositoriesURL
+) -> SignalProducer<URL, CarthageError> {
+	return dependency.fileSystemIdentifier.map { identifier in
+		return baseURL.appendingPathComponent(identifier, isDirectory: true)
+	}
 }
 
 /// Returns the string representing a relative path from a dependency back to the root
@@ -1293,7 +1297,8 @@ public func cloneOrFetch(
 				return dependency.gitURL(preferHTTPS: preferHTTPS)!
 			})
 		}
-		.flatMap(.merge) { (remoteURL: GitURL) -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
+		.zip(with: repositoryURL)
+		.flatMap(.merge) { (remoteURL: GitURL, repositoryURL: URL) -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 			return isGitRepository(repositoryURL)
 				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 					if isRepository {

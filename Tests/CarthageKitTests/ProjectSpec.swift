@@ -61,7 +61,9 @@ class ProjectSpec: QuickSpec {
 				for repo in ["TestFramework3", "TestFramework2", "TestFramework1"] {
 					let urlPath = sourceRepoUrl.appendingPathComponent(repo).path
 					let dep = Dependency.git(GitURL(urlPath))
-					let cacheURL = Constants.Dependency.repositoriesURL.appendingPathComponent(dep.fileSystemIdentifier)
+					let cacheURL = Constants.Dependency
+						.repositoriesURL
+						.appendingPathComponent(dep.fileSystemIdentifier.single()!.value!)
 					do {
 						try FileManager.default.removeItem(at: cacheURL)
 					} catch {
