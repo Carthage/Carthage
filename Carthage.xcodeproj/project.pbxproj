@@ -40,8 +40,6 @@
 		BF7A1A0B1E3A7AE9008CBCC5 /* BinaryProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */; };
 		BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */; };
 		CD09E28B1F0E3FFB00A0378A /* FakeSwift.framework in Resources */ = {isa = PBXBuildFile; fileRef = CD09E2881F0E3F1400A0378A /* FakeSwift.framework */; };
-		CD1FE6531DD366620016639E /* Runes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; };
-		CD1FE6541DD367920016639E /* Runes.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = CD1FE6521DD366620016639E /* Runes.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD28C99C1E11846200322AF7 /* ProductType.swift */; };
 		CD3E530B1DE33095002C135C /* Availability.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3E530A1DE33095002C135C /* Availability.swift */; };
 		CD43D9DA1F41640E00CD60F6 /* CarthageKitVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD43D9D91F41640E00CD60F6 /* CarthageKitVersion.swift */; };
@@ -97,8 +95,6 @@
 		D0E7B65319E9C6AD00EDBA4D /* CarthageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1216D19E87B05005E4BAA /* CarthageKit.framework */; };
 		D0E7B65619E9C76900EDBA4D /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1211B19E87861005E4BAA /* main.swift */; };
 		D0F551DC1A0D71AB0093311F /* TestCartfile.resolved in Resources */ = {isa = PBXBuildFile; fileRef = D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */; };
-		D0F648821A4DD3D900BCF808 /* Argo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F648811A4DD3D900BCF808 /* Argo.framework */; };
-		D0F648831A4DD3EA00BCF808 /* Argo.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = D0F648811A4DD3D900BCF808 /* Argo.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		F128A71A1B463D490044368C /* Outdated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F128A7191B463D490044368C /* Outdated.swift */; };
 		F162F3421D63D8A900809D7E /* VersionFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CB3CFB1D63D05D00C9EB99 /* VersionFile.swift */; };
 		F603929919EA29F80050A6AF /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = F603929819EA29F80050A6AF /* Project.swift */; };
@@ -143,14 +139,12 @@
 			dstSubfolderSpec = 10;
 			files = (
 				BE02925C1E403648004FB579 /* XCDBLD.framework in Copy Frameworks */,
-				CD1FE6541DD367920016639E /* Runes.framework in Copy Frameworks */,
 				BEA86FA01C9F91500049360B /* Tentacle.framework in Copy Frameworks */,
 				BEA86F9F1C9F914A0049360B /* Curry.framework in Copy Frameworks */,
 				D01F8A4519EA28E600643E7C /* ReactiveSwift.framework in Copy Frameworks */,
 				D00CCE331A20784800109F8C /* Commandant.framework in Copy Frameworks */,
 				D0E0E1B11A2D28CB0097BE2B /* ReactiveTask.framework in Copy Frameworks */,
 				67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */,
-				D0F648831A4DD3EA00BCF808 /* Argo.framework in Copy Frameworks */,
 				D012AD111AF9844D00EE91DA /* Result.framework in Copy Frameworks */,
 			);
 			name = "Copy Frameworks";
@@ -203,7 +197,6 @@
 		BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProject.swift; sourceTree = "<group>"; };
 		BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProjectSpec.swift; sourceTree = "<group>"; };
 		CD09E2881F0E3F1400A0378A /* FakeSwift.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeSwift.framework; sourceTree = "<group>"; };
-		CD1FE6521DD366620016639E /* Runes.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Runes.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CD28C99C1E11846200322AF7 /* ProductType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProductType.swift; sourceTree = "<group>"; };
 		CD3E530A1DE33095002C135C /* Availability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Availability.swift; sourceTree = "<group>"; };
 		CD43D9D91F41640E00CD60F6 /* CarthageKitVersion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarthageKitVersion.swift; sourceTree = "<group>"; };
@@ -277,7 +270,6 @@
 		D0E7B63219E9C64500EDBA4D /* carthage.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = carthage.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E7B65819E9CA0800EDBA4D /* carthage */ = {isa = PBXFileReference; lastKnownFileType = text; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfile.resolved; sourceTree = "<group>"; };
-		D0F648811A4DD3D900BCF808 /* Argo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Argo.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		F128A7191B463D490044368C /* Outdated.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Outdated.swift; sourceTree = "<group>"; };
 		F1CB3CFB1D63D05D00C9EB99 /* VersionFile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionFile.swift; sourceTree = "<group>"; };
 		F603929819EA29F80050A6AF /* Project.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
@@ -290,9 +282,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BE02925B1E40363B004FB579 /* XCDBLD.framework in Frameworks */,
-				D0F648821A4DD3D900BCF808 /* Argo.framework in Frameworks */,
 				BEB076661C8A1FD800ABD373 /* Curry.framework in Frameworks */,
-				CD1FE6531DD366620016639E /* Runes.framework in Frameworks */,
 				BEB076671C8A1FD800ABD373 /* Tentacle.framework in Frameworks */,
 				D0E0E1B01A2D28AC0097BE2B /* ReactiveTask.framework in Frameworks */,
 				D00CCE321A20783A00109F8C /* Commandant.framework in Frameworks */,
@@ -527,9 +517,7 @@
 			isa = PBXGroup;
 			children = (
 				D012AD0F1AF9843700EE91DA /* Result.framework */,
-				D0F648811A4DD3D900BCF808 /* Argo.framework */,
 				BEB076641C8A1FD800ABD373 /* Curry.framework */,
-				CD1FE6521DD366620016639E /* Runes.framework */,
 				D00CCE311A20783A00109F8C /* Commandant.framework */,
 				67AFA9891A79430B00B7DA78 /* PrettyColors.framework */,
 				D01F8A3E19EA28C400643E7C /* ReactiveSwift.framework */,

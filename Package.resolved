@@ -2,15 +2,6 @@
   "object": {
     "pins": [
       {
-        "package": "Argo",
-        "repositoryURL": "https://github.com/thoughtbot/Argo.git",
-        "state": {
-          "branch": null,
-          "revision": "203daf8fbebff84fb8d560acd3cad32a067b6189",
-          "version": "4.1.2"
-        }
-      },
-      {
         "package": "Commandant",
         "repositoryURL": "https://github.com/Carthage/Commandant.git",
         "state": {
@@ -83,21 +74,12 @@
         }
       },
       {
-        "package": "Runes",
-        "repositoryURL": "https://github.com/thoughtbot/Runes.git",
-        "state": {
-          "branch": null,
-          "revision": "e1bb1f7a589fe9172dc3410203f8b62373ea92a4",
-          "version": "4.1.0"
-        }
-      },
-      {
         "package": "Tentacle",
         "repositoryURL": "https://github.com/mdiep/Tentacle.git",
         "state": {
           "branch": null,
-          "revision": "682ef58707d347cb300c715821647c35c7b79231",
-          "version": "0.9.0"
+          "revision": "90c57572d15c56d591e671bbe4fc37f7288df060",
+          "version": "0.10.0"
         }
       }
     ]
