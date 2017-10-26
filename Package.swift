@@ -14,10 +14,8 @@ let package = Package(
         .package(url: "https://github.com/Carthage/Commandant.git", from: "0.12.0"),
         .package(url: "https://github.com/jdhealy/PrettyColors.git", from: "5.0.0"),
         .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "2.0.0"),
-        .package(url: "https://github.com/mdiep/Tentacle.git", from: "0.9.0"),
-        .package(url: "https://github.com/thoughtbot/Argo.git", from: "4.1.0"),
+        .package(url: "https://github.com/mdiep/Tentacle.git", from: "0.10.0"),
         .package(url: "https://github.com/thoughtbot/Curry.git", from: "3.0.0"),
-        .package(url: "https://github.com/thoughtbot/Runes.git", from: "4.0.1"),
         .package(url: "https://github.com/Quick/Quick.git", from: "1.2.0"),
         .package(url: "https://github.com/Quick/Nimble.git", from: "7.0.2"),
     ],
@@ -32,7 +30,7 @@ let package = Package(
         ),
         .target(
             name: "CarthageKit", 
-            dependencies: ["XCDBLD", "Tentacle", "Argo", "Curry", "Runes"]
+            dependencies: ["XCDBLD", "Tentacle", "Curry"]
         ),
         .testTarget(
             name: "CarthageKitTests",
