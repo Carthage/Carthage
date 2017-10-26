@@ -26,13 +26,24 @@ public enum SDK: String {
 
 	public static let allSDKs: Set<SDK> = [.macOSX, .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator]
 
+	/// Returns whether this is a device SDK.
+	public var isDevice: Bool {
+		switch self {
+		case .macOSX, .iPhoneOS, .watchOS, .tvOS:
+			return true
+
+		case .iPhoneSimulator, .watchSimulator, .tvSimulator:
+			return false
+		}
+	}
+
 	/// Returns whether this is a simulator SDK.
 	public var isSimulator: Bool {
 		switch self {
 		case .iPhoneSimulator, .watchSimulator, .tvSimulator:
 			return true
 
-		case _:
+		case .macOSX, .iPhoneOS, .watchOS, .tvOS:
 			return false
 		}
 	}

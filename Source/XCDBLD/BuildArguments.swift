@@ -2,6 +2,19 @@ import Foundation
 
 /// Configures a build with Xcode.
 public struct BuildArguments {
+	/// Available actions for xcodebuild listed in `man xcodebuild`
+	public enum Action: String {
+		case build = "build"
+		case buildForTesting = "build-for-testing"
+		case analyze = "analyze"
+		case archive = "archive"
+		case test = "test"
+		case testWithoutBuilding = "test-without-building"
+		case installSrc = "install-src"
+		case install = "install"
+		case clean = "clean"
+	}
+
 	/// Represents a build setting whether full bitcode should be embedded in the
 	/// binary.
 	public enum BitcodeGenerationMode: String {
@@ -16,7 +29,7 @@ public struct BuildArguments {
 	public let project: ProjectLocator
 
 	/// The scheme to build in the project.
-	public var scheme: String?
+	public var scheme: Scheme?
 
 	/// The configuration to use when building the project.
 	public var configuration: String?
@@ -43,8 +56,14 @@ public struct BuildArguments {
 	/// The build setting whether full bitcode should be embedded in the binary.
 	public var bitcodeGenerationMode: BitcodeGenerationMode?
 
-	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil,
-	            derivedDataPath: String? = nil, sdk: SDK? = nil, toolchain: String? = nil) {
+	public init(
+		project: ProjectLocator,
+		scheme: Scheme? = nil,
+		configuration: String? = nil,
+		derivedDataPath: String? = nil,
+		sdk: SDK? = nil,
+		toolchain: String? = nil
+	) {
 		self.project = project
 		self.scheme = scheme
 		self.configuration = configuration
@@ -66,7 +85,7 @@ public struct BuildArguments {
 		}
 
 		if let scheme = scheme {
-			args += [ "-scheme", scheme ]
+			args += [ "-scheme", scheme.name ]
 		}
 
 		if let configuration = configuration {

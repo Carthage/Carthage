@@ -37,7 +37,7 @@ private func parseSwiftVersionCommand(output: String?) -> String? {
 	guard
 		let output = output,
 		let regex = try? NSRegularExpression(pattern: "Apple Swift version ([0-9.]+) .*\\((.+)\\)", options: []),
-		let match = regex.firstMatch(in: output, options: [], range: NSRange(location: 0, length: output.characters.count))
+		let match = regex.firstMatch(in: output, options: [], range: NSRange(output.startIndex..., in: output))
 		else
 	{
 		return nil
@@ -45,8 +45,9 @@ private func parseSwiftVersionCommand(output: String?) -> String? {
 
 	guard match.numberOfRanges == 3 else { return nil }
 
-	let nsString = output as NSString
-	return "\(nsString.substring(with: match.range(at: 1))) (\(nsString.substring(with: match.range(at: 2))))"
+	let first = output[Range(match.range(at: 1), in: output)!]
+	let second = output[Range(match.range(at: 2), in: output)!]
+	return "\(first) (\(second))"
 }
 
 /// Determines the Swift version of a framework at a given `URL`.
@@ -106,15 +107,15 @@ public func buildableSchemesInDirectory(
 	_ directoryURL: URL,
 	withConfiguration configuration: String,
 	forPlatforms platforms: Set<Platform> = []
-) -> SignalProducer<(ProjectLocator, [String]), CarthageError> {
+) -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> {
 	precondition(directoryURL.isFileURL)
 
 	return ProjectLocator
 		.locate(in: directoryURL)
-		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [String]), CarthageError> in
+		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
 			return project
 				.schemes()
-				.flatMap(.merge) { scheme -> SignalProducer<String, CarthageError> in
+				.flatMap(.merge) { scheme -> SignalProducer<Scheme, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 
 					return shouldBuildScheme(buildArguments, platforms)
@@ -135,17 +136,17 @@ public func buildableSchemesInDirectory(
 
 /// Sends pairs of a scheme and a project, the scheme actually resides in
 /// the project.
-public func schemesInProjects(_ projects: [(ProjectLocator, [String])]) -> SignalProducer<[(String, ProjectLocator)], CarthageError> {
-	return SignalProducer<(ProjectLocator, [String]), CarthageError>(projects)
-		.map { (project: ProjectLocator, schemes: [String]) in
+public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<[(Scheme, ProjectLocator)], CarthageError> {
+	return SignalProducer<(ProjectLocator, [Scheme]), CarthageError>(projects)
+		.map { (project: ProjectLocator, schemes: [Scheme]) in
 			// Only look for schemes that actually reside in the project
-			let containedSchemes = schemes.filter { (scheme: String) -> Bool in
+			let containedSchemes = schemes.filter { scheme -> Bool in
 				let schemePath = project.fileURL.appendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").path
 				return FileManager.default.fileExists(atPath: schemePath)
 			}
 			return (project, containedSchemes)
 		}
-		.filter { (project: ProjectLocator, schemes: [String]) in
+		.filter { (project: ProjectLocator, schemes: [Scheme]) in
 			switch project {
 			case .projectFile where !schemes.isEmpty:
 				return true
@@ -155,7 +156,7 @@ public func schemesInProjects(_ projects: [(ProjectLocator, [String])]) -> Signa
 			}
 		}
 		.flatMap(.concat) { project, schemes in
-			return SignalProducer<(String, ProjectLocator), CarthageError>(schemes.map { ($0, project) })
+			return SignalProducer<(Scheme, ProjectLocator), CarthageError>(schemes.map { ($0, project) })
 		}
 		.collect()
 }
@@ -206,7 +207,7 @@ private func copyBuildProductIntoDirectory(_ directoryURL: URL, _ settings: Buil
 	let target = settings.wrapperName.map(directoryURL.appendingPathComponent)
 	return SignalProducer(result: target.fanout(settings.wrapperURL))
 		.flatMap(.merge) { target, source in
-			return copyProduct(source, target)
+			return copyProduct(source.resolvingSymlinksInPath(), target)
 		}
 		.flatMap(.merge) { url in
 			return copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL, settings)
@@ -321,7 +322,7 @@ private func settingsByTarget<Error>(_ producer: SignalProducer<TaskEvent<BuildS
 					let transformedEvent = settingsEvent.map { settings in [ settings.target: settings ] }
 
 					if let transformed = transformedEvent.value {
-						settings = combineDictionaries(settings, rhs: transformed)
+						settings.merge(transformed) { _, new in new }
 					} else {
 						observer.send(value: transformedEvent)
 					}
@@ -352,28 +353,31 @@ private func settingsByTarget<Error>(_ producer: SignalProducer<TaskEvent<BuildS
 /// Any *.bcsymbolmap files for the built products are also copied.
 ///
 /// Upon .success, sends the URL to the merged product, then completes.
-private func mergeBuildProductsIntoDirectory(
-	_ firstProductSettings: BuildSettings,
-	_ secondProductSettings: BuildSettings,
-	_ destinationFolderURL: URL
+private func mergeBuildProducts(
+	deviceBuildSettings: BuildSettings,
+	simulatorBuildSettings: BuildSettings,
+	into destinationFolderURL: URL
 ) -> SignalProducer<URL, CarthageError> {
-	return copyBuildProductIntoDirectory(destinationFolderURL, firstProductSettings)
+	return copyBuildProductIntoDirectory(destinationFolderURL, deviceBuildSettings)
 		.flatMap(.merge) { productURL -> SignalProducer<URL, CarthageError> in
-			let executableURLs = (firstProductSettings.executableURL.fanout(secondProductSettings.executableURL)).map { [ $0, $1 ] }
-			let outputURL = firstProductSettings.executablePath.map(destinationFolderURL.appendingPathComponent)
+			let executableURLs = (deviceBuildSettings.executableURL.fanout(simulatorBuildSettings.executableURL)).map { [ $0, $1 ] }
+			let outputURL = deviceBuildSettings.executablePath.map(destinationFolderURL.appendingPathComponent)
 
 			let mergeProductBinaries = SignalProducer(result: executableURLs.fanout(outputURL))
 				.flatMap(.concat) { (executableURLs: [URL], outputURL: URL) -> SignalProducer<(), CarthageError> in
-					return mergeExecutables(executableURLs, outputURL.resolvingSymlinksInPath())
+					return mergeExecutables(
+						executableURLs.map { $0.resolvingSymlinksInPath() },
+						outputURL.resolvingSymlinksInPath()
+					)
 				}
 
-			let sourceModulesURL = SignalProducer(result: secondProductSettings.relativeModulesPath.fanout(secondProductSettings.builtProductsDirectoryURL))
+			let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
 				.filter { $0.0 != nil }
 				.map { (modulesPath, productsURL) -> URL in
 					return productsURL.appendingPathComponent(modulesPath!)
 				}
 
-			let destinationModulesURL = SignalProducer(result: firstProductSettings.relativeModulesPath)
+			let destinationModulesURL = SignalProducer(result: deviceBuildSettings.relativeModulesPath)
 				.filter { $0 != nil }
 				.map { modulesPath -> URL in
 					return destinationFolderURL.appendingPathComponent(modulesPath!)
@@ -386,24 +390,24 @@ private func mergeBuildProductsIntoDirectory(
 
 			return mergeProductBinaries
 				.then(mergeProductModules)
-				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, secondProductSettings))
+				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, simulatorBuildSettings))
 				.then(SignalProducer<URL, CarthageError>(value: productURL))
 		}
 }
 
 /// A callback function used to determine whether or not an SDK should be built
-public typealias SDKFilterCallback = (_ sdks: [SDK], _ scheme: String, _ configuration: String, _ project: ProjectLocator) -> Result<[SDK], CarthageError>
+public typealias SDKFilterCallback = (_ sdks: [SDK], _ scheme: Scheme, _ configuration: String, _ project: ProjectLocator) -> Result<[SDK], CarthageError>
 
 /// Builds one scheme of the given project, for all supported SDKs.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
 public func buildScheme( // swiftlint:disable:this function_body_length cyclomatic_complexity
-	_ scheme: String,
+	_ scheme: Scheme,
 	withOptions options: BuildOptions,
 	inProject project: ProjectLocator,
 	workingDirectoryURL: URL,
-	sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }
+	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> SignalProducer<TaskEvent<URL>, CarthageError> {
 	precondition(workingDirectoryURL.isFileURL)
 
@@ -514,7 +518,11 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						}
 					}
 					.flatMapTaskEvents(.concat) { deviceSettings, simulatorSettings in
-						return mergeBuildProductsIntoDirectory(deviceSettings, simulatorSettings, folderURL)
+						return mergeBuildProducts(
+							deviceBuildSettings: deviceSettings,
+							simulatorBuildSettings: simulatorSettings,
+							into: folderURL
+						)
 					}
 
 			default:
@@ -574,10 +582,10 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 						pattern: "-- \(platformName) [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)",
 						options: []
 					)
-					let lastDeviceResult = regex.matches(in: string, range: NSRange(location: 0, length: string.utf16.count)).last
+					let lastDeviceResult = regex.matches(in: string, range: NSRange(string.startIndex..., in: string)).last
 					return lastDeviceResult.map { result in
 						// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
-						let deviceID = (string as NSString).substring(with: result.range(at: 1))
+						let deviceID = string[Range(result.range(at: 1), in: string)!]
 						return "platform=\(platformName) Simulator,id=\(deviceID)"
 					}
 				}
@@ -596,7 +604,12 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 				argsForBuilding.destinationTimeout = 3
 			}
 
-			return BuildSettings.load(with: argsForLoading)
+			// Use `archive` action when building device SDKs to disable LLVM Instrumentation.
+			//
+			// See https://github.com/Carthage/Carthage/issues/2056
+			// and https://developer.apple.com/library/content/qa/qa1964/_index.html.
+			let xcodebuildAction: BuildArguments.Action = sdk.isDevice ? .archive : .build
+			return BuildSettings.load(with: argsForLoading, for: xcodebuildAction)
 				.filter { settings in
 					// Only copy build products that are dynamic frameworks
 					guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
@@ -615,7 +628,34 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 						argsForBuilding.bitcodeGenerationMode = .bitcode
 					}
 
-					let actions = ["build"]
+					let actions: [String] = {
+						var result: [String] = [xcodebuildAction.rawValue]
+
+						if xcodebuildAction == .archive {
+							result += [
+								// Prevent generating unnecessary empty `.xcarchive`
+								// directories.
+								"-archivePath", "./",
+
+								// Disable installing when running `archive` action
+								// to prevent built frameworks from being deleted
+								// from derived data folder.
+								"SKIP_INSTALL=YES",
+
+								// Disable the “Instrument Program Flow” build
+								// setting for both GCC and LLVM as noted in
+								// https://developer.apple.com/library/content/qa/qa1964/_index.html.
+								"GCC_INSTRUMENT_PROGRAM_FLOW_ARCS=NO",
+
+								// Disable the “Generate Test Coverage Files” build
+								// setting for GCC as noted in
+								// https://developer.apple.com/library/content/qa/qa1964/_index.html.
+								"CLANG_ENABLE_CODE_COVERAGE=NO",
+							]
+						}
+
+						return result
+					}()
 
 					var buildScheme = xcodebuildTask(actions, argsForBuilding)
 					buildScheme.workingDirectoryPath = workingDirectoryURL.path
@@ -623,8 +663,8 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 					return buildScheme.launch()
 						.flatMapTaskEvents(.concat) { _ in SignalProducer(settings) }
 						.mapError(CarthageError.taskError)
-			}
-	}
+				}
+		}
 }
 
 /// Creates a dSYM for the provided dynamic framework.
@@ -649,7 +689,7 @@ public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<Tas
 ///
 /// A producer of this type will send the project and scheme name when building
 /// begins, then complete or error when building terminates.
-public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator, String)>, CarthageError>
+public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator, Scheme)>, CarthageError>
 
 /// Attempts to build the dependency, then places its build product into the
 /// root directory given.
@@ -660,7 +700,7 @@ public func build(
 	version: PinnedVersion,
 	_ rootDirectoryURL: URL,
 	withOptions options: BuildOptions,
-	sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }
+	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
@@ -730,7 +770,7 @@ public func buildInDirectory(
 	withOptions options: BuildOptions,
 	dependency: (dependency: Dependency, version: PinnedVersion)? = nil,
 	rootDirectoryURL: URL? = nil,
-	sdkFilter: @escaping SDKFilterCallback = { .success($0.0) }
+	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> BuildSchemeProducer {
 	precondition(directoryURL.isFileURL)
 
@@ -745,9 +785,9 @@ public func buildInDirectory(
 			// Allow dependencies which have no projects, not to error out with
 			// `.noSharedFrameworkSchemes`.
 			.filter { projects in !projects.isEmpty }
-			.flatMap(.merge) { (projects: [(ProjectLocator, [String])]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+			.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
 				return schemesInProjects(projects)
-					.flatMap(.merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
+					.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
 						if !schemes.isEmpty {
 							return .init(schemes)
 						} else {
@@ -755,7 +795,7 @@ public func buildInDirectory(
 						}
 					}
 			}
-			.flatMap(.merge) { scheme, project -> SignalProducer<(String, ProjectLocator), CarthageError> in
+			.flatMap(.merge) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
 				return locator
 					// This scheduler hop is required to avoid disallowed recursive signals.
 					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
@@ -776,7 +816,7 @@ public func buildInDirectory(
 					.take(first: 1)
 					.map { project, _ in (scheme, project) }
 			}
-			.flatMap(.concat) { (scheme: String, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
+			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
 				let initialValue = (project, scheme)
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
@@ -790,7 +830,7 @@ public func buildInDirectory(
 				}
 
 				return buildScheme(scheme, withOptions: options, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
-					.mapError { (error) -> CarthageError in
+					.mapError { error -> CarthageError in
 						if case let .taskError(taskError) = error {
 							return .buildFailed(taskError, log: nil)
 						} else {
@@ -806,7 +846,7 @@ public func buildInDirectory(
 				guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
 					return .empty
 				}
-				
+
 				return createVersionFile(
 					for: dependency.dependency, version: dependency.version,
 					platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL
@@ -816,8 +856,8 @@ public func buildInDirectory(
 			// Discard any Success values, since we want to
 			// use our initial value instead of waiting for
 			// completion.
-			.map { taskEvent -> TaskEvent<(ProjectLocator, String)> in
-				let ignoredValue = (ProjectLocator.workspace(URL(string: ".")!), "")
+			.map { taskEvent -> TaskEvent<(ProjectLocator, Scheme)> in
+				let ignoredValue = (ProjectLocator.workspace(URL(string: ".")!), Scheme(""))
 				return taskEvent.map { _ in ignoredValue }
 			}
 			.filter { taskEvent in

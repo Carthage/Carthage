@@ -24,13 +24,13 @@ public struct GitURL {
 			// scp syntax.
 			var strippedURLString = urlString
 
-			if let index = strippedURLString.characters.index(of: "@") {
+			if let index = strippedURLString.index(of: "@") {
 				strippedURLString.removeSubrange(strippedURLString.startIndex...index)
 			}
 
 			var host = ""
-			if let index = strippedURLString.characters.index(of: ":") {
-				host = strippedURLString[strippedURLString.startIndex..<index]
+			if let index = strippedURLString.index(of: ":") {
+				host = String(strippedURLString[strippedURLString.startIndex..<index])
 				strippedURLString.removeSubrange(strippedURLString.startIndex...index)
 			}
 
@@ -47,7 +47,7 @@ public struct GitURL {
 
 	/// The name of the repository, if it can be inferred from the URL.
 	public var name: String? {
-		let components = urlString.characters.split(omittingEmptySubsequences: true) { $0 == "/" }
+		let components = urlString.split(omittingEmptySubsequences: true) { $0 == "/" }
 
 		return components
 			.last

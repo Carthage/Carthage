@@ -1,0 +1,106 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Argo",
+        "repositoryURL": "https://github.com/thoughtbot/Argo.git",
+        "state": {
+          "branch": null,
+          "revision": "203daf8fbebff84fb8d560acd3cad32a067b6189",
+          "version": "4.1.2"
+        }
+      },
+      {
+        "package": "Commandant",
+        "repositoryURL": "https://github.com/Carthage/Commandant.git",
+        "state": {
+          "branch": null,
+          "revision": "c281992c31c3f41c48b5036c5a38185eaec32626",
+          "version": "0.12.0"
+        }
+      },
+      {
+        "package": "Curry",
+        "repositoryURL": "https://github.com/thoughtbot/Curry.git",
+        "state": {
+          "branch": null,
+          "revision": "c9f1a37e0e12ad38af7933b9386bdc5f9e6222dc",
+          "version": "3.0.0"
+        }
+      },
+      {
+        "package": "Nimble",
+        "repositoryURL": "https://github.com/Quick/Nimble.git",
+        "state": {
+          "branch": null,
+          "revision": "38c9ab0846a3fbec308eb2aa9ef68b10a7434eb4",
+          "version": "7.0.2"
+        }
+      },
+      {
+        "package": "PrettyColors",
+        "repositoryURL": "https://github.com/jdhealy/PrettyColors.git",
+        "state": {
+          "branch": null,
+          "revision": "40dba7f0390e6daf855448acbe8762b40a2366cc",
+          "version": "5.0.0"
+        }
+      },
+      {
+        "package": "Quick",
+        "repositoryURL": "https://github.com/Quick/Quick.git",
+        "state": {
+          "branch": null,
+          "revision": "0ff81f2c665b4381f526bd656f8708dd52a9ea2f",
+          "version": "1.2.0"
+        }
+      },
+      {
+        "package": "ReactiveSwift",
+        "repositoryURL": "https://github.com/ReactiveCocoa/ReactiveSwift.git",
+        "state": {
+          "branch": null,
+          "revision": "b9d5b350a446b85704396ce332a1f9e4960cfc6b",
+          "version": "2.0.1"
+        }
+      },
+      {
+        "package": "ReactiveTask",
+        "repositoryURL": "https://github.com/Carthage/ReactiveTask.git",
+        "state": {
+          "branch": null,
+          "revision": "c4ac2a770d9991157561084ec7b9a4fe40fed87a",
+          "version": "0.13.0"
+        }
+      },
+      {
+        "package": "Result",
+        "repositoryURL": "https://github.com/antitypical/Result.git",
+        "state": {
+          "branch": null,
+          "revision": "7477584259bfce2560a19e06ad9f71db441fff11",
+          "version": "3.2.4"
+        }
+      },
+      {
+        "package": "Runes",
+        "repositoryURL": "https://github.com/thoughtbot/Runes.git",
+        "state": {
+          "branch": null,
+          "revision": "e1bb1f7a589fe9172dc3410203f8b62373ea92a4",
+          "version": "4.1.0"
+        }
+      },
+      {
+        "package": "Tentacle",
+        "repositoryURL": "https://github.com/mdiep/Tentacle.git",
+        "state": {
+          "branch": null,
+          "revision": "682ef58707d347cb300c715821647c35c7b79231",
+          "version": "0.9.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

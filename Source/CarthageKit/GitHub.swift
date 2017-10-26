@@ -39,10 +39,10 @@ extension Repository {
 	/// Enterprise instances.
 	public static func fromIdentifier(_ identifier: String) -> Result<(Server, Repository), ScannableError> {
 		// ‘owner/name’ → GitHub.com
-		let range = NSRange(location: 0, length: identifier.utf16.count)
+		let range = NSRange(identifier.startIndex..., in: identifier)
 		if let match = nwoRegex.firstMatch(in: identifier, range: range) {
-			let owner = (identifier as NSString).substring(with: match.range(at: 1))
-			let name = (identifier as NSString).substring(with: match.range(at: 2))
+			let owner = String(identifier[Range(match.range(at: 1), in: identifier)!])
+			let name = String(identifier[Range(match.range(at: 2), in: identifier)!])
 			return .success((.dotCom, self.init(owner: owner, name: strippingGitSuffix(name))))
 		}
 
@@ -86,7 +86,7 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 			return string.linesProducer
 		}
 		.reduce(into: [:]) { (values: inout [String: String], line: String) in
-			let parts = line.characters
+			let parts = line
 				.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }
 				.map(String.init)
 
@@ -115,11 +115,8 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 		// Treat the input as comma-separated series of domains and tokens.
 		// (e.g., `GITHUB_ACCESS_TOKEN="github.com=XXXXXXXXXXXXX,enterprise.local/ghe=YYYYYYYYY"`)
 		let records = accessTokenInput
-			.characters
 			.split(omittingEmptySubsequences: true) { $0 == "," }
-			.reduce([:]) { (values: [String: String], record) in
-				var values = values
-
+			.reduce(into: [:]) { (values: inout [String: String], record) in
 				let parts = record.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }.map(String.init)
 				switch parts.count {
 				case 1:
@@ -134,8 +131,6 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 				default:
 					break
 				}
-
-				return values
 			}
 		return records[server.url.host!]
 	}

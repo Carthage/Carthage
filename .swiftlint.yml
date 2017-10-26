@@ -13,10 +13,12 @@ opt_in_rules:
 - operator_usage_whitespace
 - redundant_nil_coalescing
 - switch_case_on_newline
+- unneeded_parentheses_in_closure_argument
+- vertical_parameter_alignment_on_call
 
 disabled_rules:
-- vertical_parameter_alignment
 - redundant_string_enum_value
+- superfluous_disable_command
 
 included:
 - Source
@@ -24,7 +26,13 @@ included:
 excluded:
 - Carthage
 
-line_length: 160
+line_length:
+  warning: 160
+  ignores_comments: true
+  ignores_function_declarations: true
+
+file_length:
+  ignore_comment_only_lines: true
 
 file_header:
   required_pattern: ''
@@ -38,12 +46,6 @@ custom_rules:
     regex: '(?:\n| {2,})\}\)? *\n *[^ \n\})\]]'
     name: "Closing Brace Whitespace"
     message: "Empty line required after closing curly braces if code with same indentation follows."
-    severity: warning
-  closure_params_parantheses:
-    included: ".*.swift"
-    regex: '\{\s*\([^):]+\)\s*in'
-    name: "Unnecessary Closure Params Parantheses"
-    message: "Don't use parantheses around non-typed parameters in a closure."
     severity: warning
   if_as_guard:
     included: ".*.swift"

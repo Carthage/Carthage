@@ -48,8 +48,8 @@ public struct UpdateCommand: CommandProtocol {
 		             logPath: String?,
 		             useNewResolver: Bool,
 		             buildOptions: BuildOptions,
-		             checkoutOptions: CheckoutCommand.Options)
-		{
+		             checkoutOptions: CheckoutCommand.Options
+		) {
 			self.checkoutAfterUpdate = checkoutAfterUpdate
 			self.buildAfterUpdate = buildAfterUpdate
 			self.isVerbose = isVerbose

@@ -29,14 +29,14 @@ class ProjectSpec: QuickSpec {
 					.single()!
 				expect(result.error).to(beNil())
 
-				return result.value!
+				return result.value!.map { $0.name }
 			}
 
 			beforeEach {
 				_ = try? FileManager.default.removeItem(at: buildDirectoryURL)
 				// Pre-fetch the repos so we have a cache for the given tags
 				let sourceRepoUrl = directoryURL.appendingPathComponent("SourceRepos")
-				["TestFramework1", "TestFramework2", "TestFramework3"].forEach { repo in
+				for repo in ["TestFramework1", "TestFramework2", "TestFramework3"] {
 					let urlPath = sourceRepoUrl.appendingPathComponent(repo).path
 					_ = cloneOrFetch(dependency: .git(GitURL(urlPath)), preferHTTPS: false)
 						.wait()
@@ -56,7 +56,7 @@ class ProjectSpec: QuickSpec {
 
 			it("should determine build order without repo cache") {
 				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
-				["TestFramework3", "TestFramework2", "TestFramework1"].forEach { dep in
+				for dep in ["TestFramework3", "TestFramework2", "TestFramework1"] {
 					_ = try? FileManager.default.removeItem(at: Constants.Dependency.repositoriesURL.appendingPathComponent(dep))
 				}
 				// Without the repo cache, it won't know to build frameworks 2 and 3 unless it reads the Cartfile from the checkout directory
@@ -96,9 +96,17 @@ class ProjectSpec: QuickSpec {
 
 					var header = try! String(contentsOf: swiftHeaderURL)
 
-					let range = header.range(of: swiftVersionResult.value!)!
+					// Sanitize “effective-3.2 ” value.
+					if
+						let effectiveVersionRegex = try? NSRegularExpression(pattern: "effective-[0-9.]+ "),
+						let match = effectiveVersionRegex.firstMatch(in: header, range: NSRange(header.startIndex..., in: header)),
+						let effectiveVersionRange = Range(match.range(at: 0), in: header)
+					{
+						header.replaceSubrange(effectiveVersionRange, with: "")
+					}
 
-					header.replaceSubrange(range, with: version)
+					let versionRange = header.range(of: swiftVersionResult.value!)!
+					header.replaceSubrange(versionRange, with: version)
 
 					try! header.write(to: swiftHeaderURL, atomically: true, encoding: header.fastestEncoding)
 				}

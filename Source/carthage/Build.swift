@@ -59,7 +59,7 @@ public struct BuildCommand: CommandProtocol {
 	/// Builds a project with the given options.
 	public func buildWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
-			.flatMap(.merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
+			.flatMap(.merge) { stdoutHandle, temporaryURL -> SignalProducer<(), CarthageError> in
 				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 
 				let buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
@@ -95,7 +95,7 @@ public struct BuildCommand: CommandProtocol {
 								stderrHandle.write(data)
 
 							case let .success(project, scheme):
-								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(project.description))
+								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme.name) + " in " + formatting.projectName(project.description))
 							}
 						}
 					)
@@ -112,14 +112,14 @@ public struct BuildCommand: CommandProtocol {
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeValues { eventSink.put($0) }
 
-		let buildProducer = project.loadCombinedCartfile()
+		let buildProducer = project.loadResolvedCartfile()
 			.map { _ in project }
 			.flatMapError { error -> SignalProducer<Project, CarthageError> in
 				if options.skipCurrent {
 					return SignalProducer(error: error)
 				} else {
-					// Ignore Cartfile loading failures. Assume the user just
-					// wants to build the enclosing project.
+					// Ignore Cartfile.resolved loading failure. Assume the user
+					// just wants to build the enclosing project.
 					return .empty
 				}
 			}
@@ -238,8 +238,8 @@ public enum BuildPlatform {
 			return [ .tvOS ]
 
 		case let .multiple(buildPlatforms):
-			return buildPlatforms.reduce([]) { set, buildPlatform in
-				return set.union(buildPlatform.platforms)
+			return buildPlatforms.reduce(into: []) { set, buildPlatform in
+				set.formUnion(buildPlatform.platforms)
 			}
 		}
 	}
@@ -299,10 +299,9 @@ extension BuildPlatform: ArgumentProtocol {
 		let tokens = string.split()
 
 		let findBuildPlatform: (String) -> BuildPlatform? = { string in
-			return self.acceptedStrings.lazy
-				.filter { key, _ in string.caseInsensitiveCompare(key) == .orderedSame }
+			return self.acceptedStrings
+				.first { key, _ in string.caseInsensitiveCompare(key) == .orderedSame }
 				.map { _, platform in platform }
-				.first
 		}
 
 		switch tokens.count {

@@ -34,7 +34,9 @@ public func topologicalSort<Node: Comparable>(_ graph: [Node: Set<Node>]) -> [No
 
 	// Maintain a working graph with all sources removed.
 	var workingGraph = graph
-	sources.forEach { node in workingGraph.removeValue(forKey: node) }
+	for node in sources {
+		workingGraph.removeValue(forKey: node)
+	}
 
 	var sorted: [Node] = []
 

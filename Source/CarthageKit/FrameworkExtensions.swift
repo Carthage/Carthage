@@ -22,22 +22,12 @@ extension String {
 	/// Strips off a trailing string, if present.
 	internal func stripping(suffix: String) -> String {
 		if hasSuffix(suffix) {
-			let end = characters.index(endIndex, offsetBy: -suffix.characters.count)
-			return self[startIndex..<end]
+			let end = characters.index(endIndex, offsetBy: -suffix.count)
+			return String(self[startIndex..<end])
 		} else {
 			return self
 		}
 	}
-}
-
-/// Merges `rhs` into `lhs` and returns the result.
-internal func combineDictionaries<K, V>(_ lhs: [K: V], rhs: [K: V]) -> [K: V] {
-	var result = lhs
-	for (key, value) in rhs {
-		result.updateValue(value, forKey: key)
-	}
-
-	return result
 }
 
 extension Signal {
@@ -445,28 +435,5 @@ extension Reactive where Base: URLSession {
 			}
 			task.resume()
 		}
-	}
-}
-
-#if !swift(>=4)
-	extension NSTextCheckingResult {
-		internal func range(at idx: Int) -> NSRange {
-			return rangeAt(idx)
-		}
-	}
-#endif
-
-/// Creates a counted set from a sequence. The counted set is represented as a
-/// dictionary where the keys are elements from the sequence and values count
-/// how many times elements are present in the sequence.
-internal func buildCountedSet<S: Sequence>(_ sequence: S) -> [S.Iterator.Element: Int] {
-	return sequence.reduce([:]) { set, elem in
-		var set = set
-		if let count = set[elem] {
-			set[elem] = count + 1
-		} else {
-			set[elem] = 1
-		}
-		return set
 	}
 }
