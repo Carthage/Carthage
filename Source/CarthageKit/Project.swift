@@ -1112,8 +1112,41 @@ private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platfor
 				let error = Result<(), NSError>.error(message)
 				return .readFailed(frameworkURL, error)
 			}
+			
+			func sdknameFromExecutable() -> Any? {
+				guard let executableURL = bundle?.executableURL else {
+					return nil
+				}
+				
+				let otoolTask = Process()
+				otoolTask.launchPath = "/usr/bin/otool"
+				otoolTask.arguments = ["-lv", executableURL.path]
+				
+				let otoolPipe = Pipe()
+				otoolTask.standardOutput = otoolPipe
+				otoolTask.standardError = otoolPipe
+				otoolTask.launch()
+				
+				let grepTask = Process()
+				grepTask.launchPath = "/usr/bin/grep"
+				grepTask.arguments = ["-A", "3", "LC_VERSION"]
+				
+				let grepPipe = Pipe()
+				grepTask.standardInput = otoolPipe
+				grepTask.standardOutput = grepPipe
+				grepTask.standardError = grepPipe
+				grepTask.launch()
+				
+				let data = grepPipe.fileHandleForReading.readDataToEndOfFile()
+				let output = String(data: data, encoding: .utf8)?.lowercased()
+				otoolTask.waitUntilExit()
+				grepTask.waitUntilExit()
+				
+				let sdkName = SDK.allSDKs.filter({ output?.contains($0.rawValue) == true }).first?.rawValue
+				return sdkName
+			}
 
-			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") else {
+			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") ?? sdknameFromExecutable()  else {
 				return .failure(readFailed("the DTSDKName key in its plist file is missing"))
 			}
 
