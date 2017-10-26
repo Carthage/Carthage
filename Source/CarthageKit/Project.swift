@@ -104,6 +104,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Whether to download binaries for dependencies, or just check out their
 	/// repositories.
 	public var useBinaries = false
+	
+	/// Whenever to copy the downloaded binary dependencies
+	public var copyBinaries: Bool = false
+	
+	/// Whenever to validate and copy the downloaded frameworks to the Build directory
+	public var copyFrameworks: Bool = true
 
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
@@ -476,7 +482,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 	) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer<URL, CarthageError>(value: zipFile)
 			.flatMap(.concat, unarchive(archive:))
+			.flatMap(.concat, { self.copyDownloadedBinaries(from: $0, projectName: projectName)} )
 			.flatMap(.concat) { directoryURL -> SignalProducer<URL, CarthageError> in
+				guard self.copyFrameworks else {
+					return SignalProducer<URL, CarthageError>(value: directoryURL)
+				}
+				
 				return frameworksInDirectory(directoryURL)
 					.flatMap(.merge) { url -> SignalProducer<URL, CarthageError> in
 						return checkFrameworkCompatibility(url, usingToolchain: toolchain)
@@ -662,6 +673,20 @@ public final class Project { // swiftlint:disable:this type_body_length
 		commitish: String
 	) -> SignalProducer<(), CarthageError> {
 		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
+	}
+	
+	public func copyDownloadedBinaries(from directory: URL, projectName: String) -> SignalProducer<URL, CarthageError> {
+		return SignalProducer(value: directory)
+			.flatMap(.concat) { directoryURL -> SignalProducer<URL, CarthageError> in
+				if self.copyBinaries {
+					let dir = self.directoryURL.appendingPathComponent(Constants.downloadsFolderPath).appendingPathComponent(projectName)
+					try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)
+					try? FileManager.default.removeItem(at: dir)
+					try? FileManager.default.copyItem(at: directoryURL, to: dir)
+				}
+				
+				return SignalProducer(value: directoryURL)
+			}
 	}
 
 	private let gitOperationQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.gitOperationQueue")
@@ -1087,8 +1112,41 @@ private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platfor
 				let error = Result<(), NSError>.error(message)
 				return .readFailed(frameworkURL, error)
 			}
+			
+			func sdknameFromExecutable() -> Any? {
+				guard let executableURL = bundle?.executableURL else {
+					return nil
+				}
+				
+				let otoolTask = Process()
+				otoolTask.launchPath = "/usr/bin/otool"
+				otoolTask.arguments = ["-lv", executableURL.path]
+				
+				let otoolPipe = Pipe()
+				otoolTask.standardOutput = otoolPipe
+				otoolTask.standardError = otoolPipe
+				otoolTask.launch()
+				
+				let grepTask = Process()
+				grepTask.launchPath = "/usr/bin/grep"
+				grepTask.arguments = ["-A", "3", "LC_VERSION"]
+				
+				let grepPipe = Pipe()
+				grepTask.standardInput = otoolPipe
+				grepTask.standardOutput = grepPipe
+				grepTask.standardError = grepPipe
+				grepTask.launch()
+				
+				let data = grepPipe.fileHandleForReading.readDataToEndOfFile()
+				let output = String(data: data, encoding: .utf8)?.lowercased()
+				otoolTask.waitUntilExit()
+				grepTask.waitUntilExit()
+				
+				let sdkName = SDK.allSDKs.filter({ output?.contains($0.rawValue) == true }).first?.rawValue
+				return sdkName
+			}
 
-			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") else {
+			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") ?? sdknameFromExecutable()  else {
 				return .failure(readFailed("the DTSDKName key in its plist file is missing"))
 			}
 
@@ -1108,6 +1166,11 @@ private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platfor
 private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
 		.filter { url in
+			//skip __MACOSX directory produced from archives
+			if url.pathComponents.contains("__MACOSX") {
+				return false
+			}
+			
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
 				return (pathComponent as NSString).pathExtension == "framework"

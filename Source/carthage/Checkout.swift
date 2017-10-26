@@ -11,6 +11,8 @@ public struct CheckoutCommand: CommandProtocol {
 		public let useSSH: Bool
 		public let useSubmodules: Bool
 		public let useBinaries: Bool
+		public let copyBinaries: Bool
+		public let copyFrameworks: Bool
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
 		public let dependenciesToCheckout: [String]?
@@ -18,6 +20,8 @@ public struct CheckoutCommand: CommandProtocol {
 		private init(useSSH: Bool,
 		             useSubmodules: Bool,
 		             useBinaries: Bool,
+					 copyBinaries: Bool,
+					 copyFrameworks: Bool,
 		             colorOptions: ColorOptions,
 		             directoryPath: String,
 		             dependenciesToCheckout: [String]?
@@ -29,6 +33,8 @@ public struct CheckoutCommand: CommandProtocol {
 			self.useSSH = useSSH
 			self.useSubmodules = useSubmodules
 			self.useBinaries = shouldUseBinaries
+			self.copyBinaries = copyBinaries
+			self.copyFrameworks = copyFrameworks
 			self.colorOptions = colorOptions
 			self.directoryPath = directoryPath
 			self.dependenciesToCheckout = dependenciesToCheckout
@@ -46,6 +52,8 @@ public struct CheckoutCommand: CommandProtocol {
 				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> mode <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 				<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: useBinariesUsage)
+				<*> mode <| Option(key: "copy-binaries", defaultValue: false, usage: "copy the contents of the binary depndencies")
+				<*> mode <| Option(key: "copy-frameworks", defaultValue: true, usage: "skip frameworks validations and copying in Build folder, can be used with --copy-binaries in order to only download raw binary dependencies")
 				<*> ColorOptions.evaluate(mode)
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> (mode <| Argument(defaultValue: [], usage: dependenciesUsage)).map { $0.isEmpty ? nil : $0 }
@@ -59,6 +67,8 @@ public struct CheckoutCommand: CommandProtocol {
 			project.preferHTTPS = !self.useSSH
 			project.useSubmodules = self.useSubmodules
 			project.useBinaries = self.useBinaries
+			project.copyBinaries = self.copyBinaries
+			project.copyFrameworks = self.copyFrameworks
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
 			project.projectEvents.observeValues { eventSink.put($0) }
