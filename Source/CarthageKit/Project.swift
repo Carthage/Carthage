@@ -104,6 +104,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Whether to download binaries for dependencies, or just check out their
 	/// repositories.
 	public var useBinaries = false
+	
+	/// Whenever to copy the downloaded binary dependencies
+	public var copyBinaries: Bool = false
+	
+	/// Whenever to validate and copy the downloaded frameworks to the Build directory
+	public var copyFrameworks: Bool = true
 
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
@@ -476,7 +482,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 	) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer<URL, CarthageError>(value: zipFile)
 			.flatMap(.concat, unarchive(archive:))
+			.flatMap(.concat, { self.copyDownloadedBinaries(from: $0, projectName: projectName)} )
 			.flatMap(.concat) { directoryURL -> SignalProducer<URL, CarthageError> in
+				guard self.copyFrameworks else {
+					return SignalProducer<URL, CarthageError>(value: directoryURL)
+				}
+				
 				return frameworksInDirectory(directoryURL)
 					.flatMap(.merge) { url -> SignalProducer<URL, CarthageError> in
 						return checkFrameworkCompatibility(url, usingToolchain: toolchain)
@@ -662,6 +673,20 @@ public final class Project { // swiftlint:disable:this type_body_length
 		commitish: String
 	) -> SignalProducer<(), CarthageError> {
 		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
+	}
+	
+	public func copyDownloadedBinaries(from directory: URL, projectName: String) -> SignalProducer<URL, CarthageError> {
+		return SignalProducer(value: directory)
+			.flatMap(.concat) { directoryURL -> SignalProducer<URL, CarthageError> in
+				if self.copyBinaries {
+					let dir = self.directoryURL.appendingPathComponent(Constants.downloadsFolderPath).appendingPathComponent(projectName)
+					try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)
+					try? FileManager.default.removeItem(at: dir)
+					try? FileManager.default.copyItem(at: directoryURL, to: dir)
+				}
+				
+				return SignalProducer(value: directoryURL)
+			}
 	}
 
 	private let gitOperationQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.gitOperationQueue")

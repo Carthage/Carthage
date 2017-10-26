@@ -9,6 +9,10 @@ public struct Constants {
 	/// The name of the folder into which Carthage puts binaries it builds (relative
 	/// to the working directory).
 	public static let binariesFolderPath = "Carthage/Build"
+	
+	/// The name of the folder into which Carthage puts binaries it downloads (relative
+	/// to the working directory).
+	public static let downloadsFolderPath = "Carthage/Downloads"
 
 	/// The fallback dependencies URL to be used in case
 	/// the intended ~/Library/Caches/org.carthage.CarthageKit cannot
