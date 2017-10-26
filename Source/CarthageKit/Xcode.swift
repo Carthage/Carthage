@@ -1200,6 +1200,9 @@ private func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 		}
 
 	default:
+		if let binaryURL = bundle?.executableURL {
+			return .success(binaryURL)
+		}
 		break
 	}
 
