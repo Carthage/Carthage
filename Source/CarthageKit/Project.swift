@@ -1133,6 +1133,11 @@ private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platfor
 private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
 		.filter { url in
+			//skip __MACOSX directory produced from archives
+			if url.pathComponents.contains("__MACOSX") {
+				return false
+			}
+			
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
 				return (pathComponent as NSString).pathExtension == "framework"
