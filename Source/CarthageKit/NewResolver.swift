@@ -56,7 +56,7 @@ public struct NewResolver: ResolverProtocol {
 		withParent parentNode: DependencyNode?
 		) -> Result<NodePermutations, CarthageError> {
 		return SignalProducer<(key: Dependency, value: VersionSpecifier), CarthageError>(dependencies)
-			.flatMap(.concat) { (dependency, specifier) -> SignalProducer<[DependencyNode], CarthageError> in
+			.flatMap(.concat) { dependency, specifier -> SignalProducer<[DependencyNode], CarthageError> in
 				let versionProducer: SignalProducer<PinnedVersion, CarthageError>
 				if case let .gitReference(refName) = specifier {
 					versionProducer = self.resolvedGitReference(dependency, refName)
@@ -131,7 +131,7 @@ public struct NewResolver: ResolverProtocol {
 		}
 
 		return self.dependenciesForDependency(node.dependency, node.proposedVersion)
-			.attempt { (child, newSpecifier) -> Result<(), CarthageError> in
+			.attempt { child, newSpecifier -> Result<(), CarthageError> in
 				// If we haven't added this dependency yet, succeed
 				guard let existingChildNode = graph.node(for: child) else {
 					return .success(())
