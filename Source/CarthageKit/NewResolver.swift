@@ -322,7 +322,7 @@ private struct DependencyGraph {
 /// filtering results as they come.
 private struct NodePermutations: Sequence, IteratorProtocol {
 	private let baseGraph: DependencyGraph
-	private var permutation: [Dimension]
+	private var currentNodeValues: [Dimension]
 	private let errorCache: ErrorCache
 	private var hasNext = true
 
@@ -334,7 +334,7 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 		errorCache: ErrorCache
 	) {
 		self.baseGraph = baseGraph
-		self.permutation = nodesToPermute.map { Dimension($0) }
+		self.currentNodeValues = nodesToPermute.map { Dimension($0) }
 		self.errorCache = errorCache
 	}
 
@@ -352,9 +352,9 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 		return graph
 	}
 
-	/// Creates a new graph from the indexes stored in the permutation array
+	/// Creates a new graph from the indexes stored in the currentNodeValues array
 	private func generateGraph() -> Result<DependencyGraph, CarthageError> {
-		let newNodes = permutation.map { $0.node }
+		let newNodes = currentNodeValues.map { $0.node }
 		return baseGraph.addNodes(newNodes)
 	}
 
@@ -368,10 +368,10 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 			guard case let .success(generatedGraph) = generateGraph() else { break }
 
 			let versions = generatedGraph.versions
-			for i in (permutation.startIndex..<permutation.endIndex).reversed() {
-				let node = permutation[i].node
+			for i in (currentNodeValues.startIndex..<currentNodeValues.endIndex).reversed() {
+				let node = currentNodeValues[i].node
 				if !errorCache.dependencyIsValid(node.dependency, given: versions) {
-					incrementIndexes(startingAt: permutation.index(after: i))
+					incrementIndexes(startingAt: currentNodeValues.index(after: i))
 					result = nil
 					break
 				}
@@ -387,15 +387,15 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 
 		// 'skip' any permutations as defined by 'startingIndex' by setting all subsequent values to their max. We don't count this as an 'incremented' occurrence.
 		if let startingIndex = startingIndex {
-			for i in (startingIndex..<permutation.endIndex) {
-				permutation[i].skipRemaining()
+			for i in (startingIndex..<currentNodeValues.endIndex) {
+				currentNodeValues[i].skipRemaining()
 			}
 		}
 
 		// If we 'reset' for every dimension, we've hit the end
 		hasNext = false
-		for i in (permutation.startIndex..<permutation.endIndex).reversed() {
-			if permutation[i].increment() == .incremented {
+		for i in (currentNodeValues.startIndex..<currentNodeValues.endIndex).reversed() {
+			if currentNodeValues[i].increment() == .incremented {
 				hasNext = true
 				break
 			}
@@ -479,7 +479,11 @@ extension DependencyNode: Comparable {
 	}
 
 	fileprivate static func == (_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
-		return lhs.dependency == rhs.dependency
+		guard lhs.dependency == rhs.dependency else { return false }
+
+		let leftSemantic = SemanticVersion.from(lhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+		let rightSemantic = SemanticVersion.from(rhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+		return leftSemantic == rightSemantic
 	}
 }
 
