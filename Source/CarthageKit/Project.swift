@@ -1095,7 +1095,7 @@ private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platfor
 				return .readFailed(frameworkURL, error)
 			}
 			
-			func sdknameFromExecutable() -> Any? {
+			func sdkNameFromExecutable() -> Any? {
 				guard let executableURL = bundle?.executableURL else {
 					return nil
 				}
@@ -1128,7 +1128,7 @@ private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platfor
 				return sdkName
 			}
 
-			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") ?? sdknameFromExecutable()  else {
+			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") ?? sdkNameFromExecutable()  else {
 				return .failure(readFailed("the DTSDKName key in its plist file is missing"))
 			}
 
