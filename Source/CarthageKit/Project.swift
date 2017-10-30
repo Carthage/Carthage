@@ -1147,11 +1147,8 @@ private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platfor
 /// Sends the URL to each framework bundle found in the given directory.
 private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
+		.filter { !$0.pathComponents.contains("__MACOSX") }
 		.filter { url in
-			//skip __MACOSX directory produced from archives
-			if url.pathComponents.contains("__MACOSX") {
-				return false
-			}
 			
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
