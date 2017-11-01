@@ -635,7 +635,7 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 							result += [
 								// Prevent generating unnecessary empty `.xcarchive`
 								// directories.
-								"-archivePath", "./",
+								"-archivePath", (NSTemporaryDirectory() as NSString).appendingPathComponent(workingDirectoryURL.lastPathComponent),
 
 								// Disable installing when running `archive` action
 								// to prevent built frameworks from being deleted
