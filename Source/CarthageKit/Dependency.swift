@@ -7,12 +7,15 @@ import Tentacle
 /// Uniquely identifies a project that can be used as a dependency.
 public enum Dependency {
 	/// A repository hosted on GitHub.com or GitHub Enterprise.
+	/// This is treated as case-insensitive.
 	case gitHub(Server, Repository)
 
 	/// An arbitrary Git repository.
+	/// This is treated as case-sensitive.
 	case git(GitURL)
 
 	/// A binary-only framework
+	/// This is treated as case-sensitive.
 	case binary(URL)
 
 	/// The unique, user-visible name for this project.
