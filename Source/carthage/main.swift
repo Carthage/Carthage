@@ -1,24 +1,22 @@
-//
-//  main.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-10-10.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Foundation
-import ReactiveCocoa
+import ReactiveSwift
 import ReactiveTask
 import Result
 
+setlinebuf(stdout)
+
 guard ensureGitVersion().first()?.value == true else {
-	fputs("Carthage requires git \(CarthageRequiredGitVersion) or later.\n", stderr)
+	fputs("Carthage requires git \(carthageRequiredGitVersion) or later.\n", stderr)
 	exit(EXIT_FAILURE)
 }
 
-if let carthagePath = NSBundle.mainBundle().executablePath {
+if let remoteVersion = remoteVersion(), CarthageKitVersion.current.value < remoteVersion {
+	fputs("Please update to the latest Carthage version: \(remoteVersion). You currently are on \(CarthageKitVersion.current.value)" + "\n", stderr)
+}
+
+if let carthagePath = Bundle.main.executablePath {
 	setenv("CARTHAGE_PATH", carthagePath, 0)
 }
 

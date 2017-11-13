@@ -1,22 +1,14 @@
-//
-//  Environment.swift
-//  Carthage
-//
-//  Created by J.D. Healy on 2/6/15.
-//  Copyright (c) 2015 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Foundation
 import Result
 
-internal func getEnvironmentVariable(variable: String) -> Result<String, CarthageError> {
-	let environment = NSProcessInfo.processInfo().environment
+internal func getEnvironmentVariable(_ variable: String) -> Result<String, CarthageError> {
+	let environment = ProcessInfo.processInfo.environment
 
 	if let value = environment[variable] {
-		return .Success(value)
+		return .success(value)
 	} else {
-		return .Failure(CarthageError.MissingEnvironmentVariable(variable: variable))
+		return .failure(CarthageError.missingEnvironmentVariable(variable: variable))
 	}
 }
 
@@ -26,12 +18,12 @@ internal struct Terminal {
 	static var terminalType: String? {
 		return getEnvironmentVariable("TERM").value
 	}
-	
+
 	/// Whether terminal type is `dumb`.
 	static var isDumb: Bool {
-		return (terminalType?.caseInsensitiveCompare("dumb") == .OrderedSame) ?? false
+		return terminalType?.caseInsensitiveCompare("dumb") == .orderedSame
 	}
-	
+
 	/// Whether STDOUT is a TTY.
 	static var isTTY: Bool {
 		return isatty(STDOUT_FILENO) != 0

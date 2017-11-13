@@ -1,62 +1,74 @@
-//
-//  Archive.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-12-26.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import Foundation
 import Result
-import ReactiveCocoa
+import ReactiveSwift
 import ReactiveTask
 
-/// Zips the given input items (recursively) into an archive that will be
+/// Zips the given input paths (recursively) into an archive that will be
 /// located at the given URL.
-public func zipIntoArchive(destinationArchiveURL: NSURL, _ inputPaths: [String]) -> SignalProducer<(), CarthageError> {
-	precondition(destinationArchiveURL.fileURL)
-	precondition(!inputPaths.isEmpty)
+public func zip(paths: [String], into archiveURL: URL, workingDirectory: String) -> SignalProducer<(), CarthageError> {
+	precondition(!paths.isEmpty)
+	precondition(archiveURL.isFileURL)
 
-	let task = Task("/usr/bin/env", arguments: [ "zip", "-q", "-r", "--symlinks", destinationArchiveURL.path! ] + inputPaths)
-	return launchTask(task)
-		.mapError(CarthageError.TaskError)
-		.then(.empty)
+	let task = Task("/usr/bin/env", arguments: [ "zip", "-q", "-r", "--symlinks", archiveURL.path ] + paths, workingDirectoryPath: workingDirectory)
+
+	return task.launch()
+		.mapError(CarthageError.taskError)
+		.then(SignalProducer<(), CarthageError>.empty)
+}
+
+/// Unarchives the given file URL into a temporary directory, using its
+/// extension to detect archive type, then sends the file URL to that directory.
+public func unarchive(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
+	switch fileURL.pathExtension {
+	case "gz", "tgz", "bz2":
+		return untar(archive: fileURL)
+	default:
+		return unzip(archive: fileURL)
+	}
 }
 
 /// Unzips the archive at the given file URL, extracting into the given
 /// directory URL (which must already exist).
-public func unzipArchiveToDirectory(fileURL: NSURL, _ destinationDirectoryURL: NSURL) -> SignalProducer<(), CarthageError> {
-	precondition(fileURL.fileURL)
-	precondition(destinationDirectoryURL.fileURL)
+private func unzip(archive fileURL: URL, to destinationDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+	precondition(fileURL.isFileURL)
+	precondition(destinationDirectoryURL.isFileURL)
 
-	let task = Task("/usr/bin/env", arguments: [ "unzip", "-qq", "-d", destinationDirectoryURL.path!, fileURL.path! ])
-	return launchTask(task)
-		.mapError(CarthageError.TaskError)
-		.then(.empty)
+	let task = Task("/usr/bin/env", arguments: [ "unzip", "-uo", "-qq", "-d", destinationDirectoryURL.path, fileURL.path ])
+	return task.launch()
+		.mapError(CarthageError.taskError)
+		.then(SignalProducer<(), CarthageError>.empty)
 }
+
+/// Untars an archive at the given file URL, extracting into the given
+/// directory URL (which must already exist).
+private func untar(archive fileURL: URL, to destinationDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+	precondition(fileURL.isFileURL)
+	precondition(destinationDirectoryURL.isFileURL)
+
+	let task = Task("/usr/bin/env", arguments: [ "tar", "-xf", fileURL.path, "-C", destinationDirectoryURL.path ])
+	return task.launch()
+		.mapError(CarthageError.taskError)
+		.then(SignalProducer<(), CarthageError>.empty)
+}
+
+private let archiveTemplate = "carthage-archive.XXXXXX"
 
 /// Unzips the archive at the given file URL into a temporary directory, then
 /// sends the file URL to that directory.
-public func unzipArchiveToTemporaryDirectory(fileURL: NSURL) -> SignalProducer<NSURL, CarthageError> {
-	return SignalProducer.attempt { () -> Result<String, CarthageError> in
-			var temporaryDirectoryTemplate: [CChar] = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("carthage-archive.XXXXXX").nulTerminatedUTF8.map { CChar($0) }
-			let result = temporaryDirectoryTemplate.withUnsafeMutableBufferPointer { (inout template: UnsafeMutableBufferPointer<CChar>) -> UnsafeMutablePointer<CChar> in
-				return mkdtemp(template.baseAddress)
-			}
-
-			if result == nil {
-				return .Failure(.TaskError(.POSIXError(errno)))
-			}
-
-			let temporaryPath = temporaryDirectoryTemplate.withUnsafeBufferPointer { (ptr: UnsafeBufferPointer<CChar>) -> String in
-				return String.fromCString(ptr.baseAddress)!
-			}
-
-			return .Success(temporaryPath)
+private func unzip(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
+	return FileManager.default.reactive.createTemporaryDirectoryWithTemplate(archiveTemplate)
+		.flatMap(.merge) { directoryURL in
+			return unzip(archive: fileURL, to: directoryURL)
+				.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 		}
-		.map { NSURL.fileURLWithPath($0, isDirectory: true) }
-		.flatMap(.Merge) { directoryURL in
-			return unzipArchiveToDirectory(fileURL, directoryURL)
-				.then(SignalProducer(value: directoryURL))
+}
+
+/// Untars an archive at the given file URL into a temporary directory, 
+/// then sends the file URL to that directory.
+private func untar(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
+	return FileManager.default.reactive.createTemporaryDirectoryWithTemplate(archiveTemplate)
+		.flatMap(.merge) { directoryURL in
+			return untar(archive: fileURL, to: directoryURL)
+				.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 		}
 }

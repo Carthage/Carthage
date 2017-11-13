@@ -10,20 +10,33 @@ Dependency specifications consist of two main parts: the [origin](#origin), and 
 
 #### Origin
 
-The only supported origins right now are GitHub repositories (both GitHub.com and GitHub Enterprise), specified with the `github` keyword:
+The three supported origins right now are GitHub repositories, Git repositories, and binary-only frameworks served over `https`. Other possible origins may be added in the future. If there’s something specific you’d like to see, please [file an issue](https://github.com/Carthage/Carthage/issues/new).
+
+##### GitHub Repositories
+
+GitHub repositories (both GitHub.com and GitHub Enterprise) are specified with the `github` keyword:
 
 ```
 github "ReactiveCocoa/ReactiveCocoa" # GitHub.com
 github "https://enterprise.local/ghe/desktop/git-error-translations" # GitHub Enterprise
 ```
 
-… or other Git repositories, specified with the `git` keyword:
+##### Git repositories
+
+Other Git repositories are specified with the `git` keyword:
 
 ```
 git "https://enterprise.local/desktop/git-error-translations2.git"
 ```
 
-Other possible origins may be added in the future. If there’s something specific you’d like to see, please [file an issue](https://github.com/Carthage/Carthage/issues/new).
+##### Binary only frameworks
+
+Dependencies that are only available as compiled binary `.framework`s are specified with the `binary` keyword and an https address that returns a binary project specification:
+
+```
+binary "https://my.domain.com/release/MyFramework.json"
+```
+
 
 #### Version requirement
 
@@ -32,7 +45,7 @@ Carthage supports several kinds of version requirements:
 1. `>= 1.0` for “at least version 1.0”
 1. `~> 1.0` for “compatible with version 1.0”
 1. `== 1.0` for “exactly version 1.0”
-1. `"some-branch-or-tag-or-commit"` for a specific Git object (anything allowed by `git rev-parse`)
+1. `"some-branch-or-tag-or-commit"` for a specific Git object (anything allowed by `git rev-parse`).  **Note**: This form of requirement is _not_ supported for `binary` origins.
 
 If no version requirement is given, any version of the dependency is allowed.
 
@@ -40,7 +53,7 @@ Compatibility is determined according to [Semantic Versioning](http://semver.org
 
 According to SemVer, any 0.x.y release may completely break the exported API, so it's not safe to consider them compatible with one another. Only patch versions are compatible under 0.x, meaning 0.1.1 is compatible with 0.1.2, but not 0.2. This isn't according to the SemVer spec but keeps `~>` useful for 0.x.y versions.
 
-**In all cases, Carthage will pin to a tag or SHA**, and only bump the tag or SHA when `carthage update` is run again in the future. This means that following a branch (for example) still results in commits that can be independently checked out just as they were originally.
+**In all cases, Carthage will pin to a tag or SHA (for `git` and `github` origins) or a semantic version (for `binary` origins)**, and only bump those values when `carthage update` is run again in the future. This means that following a branch (for example) still results in commits that can be independently checked out just as they were originally.
 
 #### Example Cartfile
 
@@ -68,6 +81,9 @@ git "https://enterprise.local/desktop/git-error-translations2.git" "development"
 
 # Use a local project
 git "file:///directory/to/project" "branch"
+
+# A binary only framework
+binary "https://my.domain.com/release/MyFramework.json" ~> 2.3
 ```
 
 ## Cartfile.private
@@ -107,3 +123,22 @@ If the `--use-submodules` flag was given when a project’s dependencies were bo
 This folder is created automatically by Carthage, and contains the “bare” Git repositories used for fetching and checking out dependencies, as well as prebuilt binaries that have been downloaded. Keeping all repositories in this centralized location avoids polluting individual projects with Git metadata, and allows Carthage to share one copy of each repository across all projects.
 
 If you need to reclaim disk space, you can safely delete this folder, or any of the individual folders inside. The folder will be automatically repopulated the next time `carthage checkout` is run.
+
+## Binary Project Specification
+
+For dependencies that do not have source code available, a binary project specification can be used to list the locations and versions of compiled frameworks.  This data **must** be available via `https` and could be served from a static file or dynamically.
+
+* The JSON structure is a top-level dictionary with the key-value pairs of version / location.
+* The version **must** be a semantic version.  Git branches, tags and commits are not valid.
+* The location **must** be an `https` url.
+
+#### Example binary project specification
+
+```
+{
+	"1.0": "https://my.domain.com/release/1.0.0/framework.zip",
+	"1.0.1": "https://my.domain.com/release/1.0.1/framework.zip"
+}
+
+```
+

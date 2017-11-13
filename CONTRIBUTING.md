@@ -19,7 +19,7 @@ Unless you’re specifically improving something about the command-line experien
 After checkout, you can run the following command from the cloned directory, and then open the workspace in Xcode:
 
 ```bash
-./script/bootstrap
+make bootstrap
 ```
 
 Then, to install your development copy of Carthage (and any local changes you've made) on your system, and test with your own repos:
@@ -34,6 +34,29 @@ If you want to go back to the mainline Brew build, just uninstall the dev copy f
 sudo make uninstall
 brew install carthage
 ```
+
+## Run Carthage from Xcode
+
+It may be useful to run Carthage on different `Cartfile`s or in "real" project for debugging purpose or to learn how Carthage works. Carthage is a regular macOS application so you can run it inside Xcode and set breakpoints! To do so you may want to change the arguments passed to Carthage's command line tool and probably also change the working directory.
+
+ 1. Select the `carthage` scheme in the Scheme chooser.
+ ![step01](./Documentation/Resources/Contributing/RunCarthageFromXcode/step01.png)
+
+ 2. The go to `Product > Scheme > Edit current scheme` or press ⌘ + <.
+ ![step02](./Documentation/Resources/Contributing/RunCarthageFromXcode/step02.png)
+
+ 3. On the edit scheme sheet, on the left column select `Run`.
+
+ 4. On the Info tab you may want to change the `Build Configuration` to `Debug`.
+ ![step04](./Documentation/Resources/Contributing/RunCarthageFromXcode/step04.png)
+
+ 5. You can set the arguments you want to pass to Carthage's command line tool in the `Arguments` tab.
+ ![step05](./Documentation/Resources/Contributing/RunCarthageFromXcode/step05.png)
+
+ 6. You can change the `Working Directory` on the `Options` tab. Choose a absolute path where a `Cartfile` is located.
+ ![step06](./Documentation/Resources/Contributing/RunCarthageFromXcode/step06.png)
+
+ 7. Run the application by going to `Product > Run` or ⌘ + R.
 
 ## Code style
 
