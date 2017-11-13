@@ -145,6 +145,17 @@ or
 carthage update Box Result
 ```
 
+##### Experimental Resolver
+
+A rewrite of the logic for upgrading frameworks was done with the aim of increasing speed and reducing memory usage. It is currently an opt-in feature. It can be used by passing `--new-resolver` to the update command, e.g.,
+
+```
+carthage update --new-resolver Box
+```
+
+If you are experiencing performance problems during updates, please give the new resolver a try
+
+
 ### Nested dependencies
 
 If the framework you want to add to your project has dependencies explicitly listed in a [Cartfile][], Carthage will automatically retrieve them for you. You will then have to **drag them yourself into your project** from the [Carthage/Build] folder.
