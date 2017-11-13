@@ -58,7 +58,7 @@ public struct OutdatedCommand: CommandProtocol {
 						if options.outputXcodeWarnings {
 							carthage.println("warning: \(formatting.projectName(project.name)) is out of date (\(current) -> \(updated)) (Latest: \(latest))")
 						} else {
-							carthage.println(formatting.projectName(project.name) + " \(current) -> \(updated) (Latest: \(latest)")
+							carthage.println(formatting.projectName(project.name) + " \(current) -> \(updated) (Latest: \(latest))")
 						}
 					}
 				} else {

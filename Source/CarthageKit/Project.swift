@@ -412,7 +412,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 			.map(ResolvedCartfile.init)
 	}
-	
+
 	/// Attempts to determine the latest version (whether satisfiable or not)
 	/// of the project's Carthage dependencies.
 	///
@@ -420,24 +420,23 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// them out into the project's working directory.
 	private func latestDependencies() -> SignalProducer<[(Dependency, PinnedVersion)], CarthageError> {
 		return loadResolvedCartfile()
-			.flatMap(.merge) { (dependency) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
-//				let bla = self.versions(for: dependency)
-				
-				return SignalProducer<(Dependency, PinnedVersion), CarthageError>.empty
-//				return self.versions(for: dependency)
-//					.map { SemanticVersion.from($0).value }
-//					// TODO: This should be ignoreNil
-//					.filter { $0 != nil }
-//					.collect()
-//					// TODO: This should be max!
-//					.map { $0.first }
-//					// TODO: This should be ignoreNil
-//					.filter { $0 != nil }
-//					.map { (dependency, $0) }
-			}
-			.collect()
+			.flatMap(.merge) { cartfile -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+				return SignalProducer(cartfile.dependencies.keys)
+					.flatMap(FlattenStrategy.merge) { dependency -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+						let versions = self.versions(for: dependency)
+							.map(SemanticVersion.from)
+							.map { $0.value }
+							.skipNil()
+							.collect()
+						let latestVersion = versions
+							.map { $0.max() }
+							.skipNil()
+							.map { PinnedVersion($0.description) }
+						return SignalProducer(value: dependency).combineLatest(with: latestVersion)
+					}
+			}.collect()
 	}
-	
+
 	/// Attempts to determine which of the project's Carthage
 	/// dependencies are out of date.
 	///
@@ -455,21 +454,22 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.map { ($0.dependencies, $1.dependencies, $2) }
 			.map { (currentDependencies, updatedDependencies, latestDependencies) -> [OutdatedDependency] in
 				return updatedDependencies.flatMap { (project, version) -> OutdatedDependency? in
-					
+
 					var latestDependenciesDictionary = [Dependency: PinnedVersion]()
 					for latestDependency in latestDependencies {
 						latestDependenciesDictionary[latestDependency.0] = latestDependency.1
 					}
 					let latest = latestDependenciesDictionary[project]
-					
-					if let resolved = currentDependencies[project], resolved != version, let latest = latest {
+
+					if let resolved = currentDependencies[project], let latest = latest, resolved != latest {
+						return (project, resolved, version, latest)
+					} else if let resolved = currentDependencies[project], resolved != version, let latest = latest {
 						return (project, resolved, version, latest)
 					} else {
 						return nil
 					}
 				}
 			}
-		
 
 		if includeNestedDependencies {
 			return outdatedDependencies
