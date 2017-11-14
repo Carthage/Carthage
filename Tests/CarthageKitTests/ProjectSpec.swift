@@ -406,6 +406,16 @@ class ProjectSpec: QuickSpec {
 				expect(events) == [.downloadingBinaryFrameworkDefinition(.binary(testDefinitionURL), testDefinitionURL)]
 			}
 		}
+		
+		describe("outdated dependencies") {
+			pending("should return the latest version for each dependency") {
+				
+			}
+			
+			pending("should return all outdated dependencies") {
+				
+			}
+		}
 	}
 }
 
