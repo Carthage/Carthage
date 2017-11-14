@@ -439,14 +439,13 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 	}
 
+	public typealias OutdatedDependency = (Dependency, PinnedVersion, PinnedVersion, PinnedVersion)
 	/// Attempts to determine which of the project's Carthage
 	/// dependencies are out of date.
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func outdatedDependencies(_ includeNestedDependencies: Bool) -> SignalProducer<[(Dependency, PinnedVersion, PinnedVersion, PinnedVersion)], CarthageError> {
-		typealias OutdatedDependency = (Dependency, PinnedVersion, PinnedVersion, PinnedVersion)
-
+	public func outdatedDependencies(_ includeNestedDependencies: Bool) -> SignalProducer<[OutdatedDependency], CarthageError> {
 		let outdatedDependencies = SignalProducer
 			.combineLatest(
 				loadResolvedCartfile(),
