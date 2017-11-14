@@ -423,15 +423,17 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.merge) { cartfile -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				return SignalProducer(cartfile.dependencies.keys)
 					.flatMap(FlattenStrategy.merge) { dependency -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+						// For finding the latest version the semantic version is necessary, but it is necessary to preserve the pinned version
+						typealias Version = (semantic: SemanticVersion, pinned: PinnedVersion)
 						let versions = self.versions(for: dependency)
-							.map(SemanticVersion.from)
-							.map { $0.value }
-							.skipNil()
+							.filterMap { version -> Version? in
+								guard let semanticVersion = SemanticVersion.from(version).value else { return nil }
+								return (semantic: semanticVersion, pinned: version)
+							}
 							.collect()
 						let latestVersion = versions
-							.map { $0.max() }
-							.skipNil()
-							.map { PinnedVersion($0.description) }
+							.filterMap { $0.max(by: { $0.semantic < $1.semantic }) }
+							.map { $0.pinned }
 						return SignalProducer(value: dependency).combineLatest(with: latestVersion)
 					}
 			}.reduce(into: [:]) { (working: inout [Dependency: PinnedVersion], next: (Dependency, PinnedVersion)) in
