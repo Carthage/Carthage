@@ -77,6 +77,11 @@ public struct ColorOptions: OptionsProtocol {
 		func quote(_ string: String, quotationMark: String = "\"") -> String {
 			return wrap(isColorful, wrap: Color.Wrap(foreground: .green))(quotationMark + string + quotationMark)
 		}
+
+		/// Wraps a string in a color
+		func colored(_ string: String, color: Color.Named.Color) -> String {
+			return wrap(isColorful, wrap: Color.Wrap(foreground: color))(string)
+		}
 	}
 
 	private init(argument: ColorArgument) {
