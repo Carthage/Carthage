@@ -22,7 +22,7 @@ extension String {
 	/// Strips off a trailing string, if present.
 	internal func stripping(suffix: String) -> String {
 		if hasSuffix(suffix) {
-			let end = characters.index(endIndex, offsetBy: -suffix.count)
+			let end = index(endIndex, offsetBy: -suffix.count)
 			return String(self[startIndex..<end])
 		} else {
 			return self
