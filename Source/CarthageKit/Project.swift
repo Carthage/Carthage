@@ -455,11 +455,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.map { ($0.dependencies, $1.dependencies, $2) }
 			.map { (currentDependencies, updatedDependencies, latestDependencies) -> [OutdatedDependency] in
 				return updatedDependencies.flatMap { (project, version) -> OutdatedDependency? in
-					let latest = latestDependencies[project]
-
-					if let resolved = currentDependencies[project], let latest = latest, resolved != latest {
-						return (project, resolved, version, latest)
-					} else if let resolved = currentDependencies[project], resolved != version, let latest = latest {
+					if let resolved = currentDependencies[project], let latest = latestDependencies[project], resolved != version || resolved != latest {
 						return (project, resolved, version, latest)
 					} else {
 						return nil
