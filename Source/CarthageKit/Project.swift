@@ -418,7 +418,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	private func latestDependencies() -> SignalProducer<[(Dependency, PinnedVersion)], CarthageError> {
+	private func latestDependencies() -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
 		return loadResolvedCartfile()
 			.flatMap(.merge) { cartfile -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				return SignalProducer(cartfile.dependencies.keys)
@@ -434,7 +434,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 							.map { PinnedVersion($0.description) }
 						return SignalProducer(value: dependency).combineLatest(with: latestVersion)
 					}
-			}.collect()
+			}.reduce(into: [:]) { (working: inout [Dependency: PinnedVersion], next: (Dependency, PinnedVersion)) in
+				working[next.0] = next.1
+			}
 	}
 
 	/// Attempts to determine which of the project's Carthage
@@ -454,12 +456,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.map { ($0.dependencies, $1.dependencies, $2) }
 			.map { (currentDependencies, updatedDependencies, latestDependencies) -> [OutdatedDependency] in
 				return updatedDependencies.flatMap { (project, version) -> OutdatedDependency? in
-
-					var latestDependenciesDictionary = [Dependency: PinnedVersion]()
-					for latestDependency in latestDependencies {
-						latestDependenciesDictionary[latestDependency.0] = latestDependency.1
-					}
-					let latest = latestDependenciesDictionary[project]
+					let latest = latestDependencies[project]
 
 					if let resolved = currentDependencies[project], let latest = latest, resolved != latest {
 						return (project, resolved, version, latest)
