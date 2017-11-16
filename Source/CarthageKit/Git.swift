@@ -335,6 +335,7 @@ internal func gitmodulesEntriesInRepository(
 		.flatMap(.concat) { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
 		.flatMap(.concat) { name, path -> SignalProducer<(name: String, path: String, url: GitURL), CarthageError> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
+				.map { $0.stripping(suffix: "\0") }
 				.map { urlString in (name: name, path: path, url: GitURL(urlString)) }
 		}
 }
