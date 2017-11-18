@@ -33,8 +33,8 @@
         "repositoryURL": "https://github.com/jdhealy/PrettyColors.git",
         "state": {
           "branch": null,
-          "revision": "40dba7f0390e6daf855448acbe8762b40a2366cc",
-          "version": "5.0.0"
+          "revision": "1954a28331668a706134dc315fe264b15b74984e",
+          "version": "5.0.1"
         }
       },
       {
@@ -51,17 +51,17 @@
         "repositoryURL": "https://github.com/ReactiveCocoa/ReactiveSwift.git",
         "state": {
           "branch": null,
-          "revision": "b9d5b350a446b85704396ce332a1f9e4960cfc6b",
-          "version": "2.0.1"
+          "revision": "2ec944c43ef9cf6b1380629e3ea483f62a7afaef",
+          "version": "3.0.0"
         }
       },
       {
         "package": "ReactiveTask",
         "repositoryURL": "https://github.com/Carthage/ReactiveTask.git",
         "state": {
-          "branch": null,
-          "revision": "c4ac2a770d9991157561084ec7b9a4fe40fed87a",
-          "version": "0.13.0"
+          "branch": "reactiveswift-3.0",
+          "revision": "a61a9689ce433c54fd1d097a166751c19967630f",
+          "version": null
         }
       },
       {
@@ -77,9 +77,9 @@
         "package": "Tentacle",
         "repositoryURL": "https://github.com/mdiep/Tentacle.git",
         "state": {
-          "branch": null,
-          "revision": "90c57572d15c56d591e671bbe4fc37f7288df060",
-          "version": "0.10.0"
+          "branch": "reactiveswift-3.0",
+          "revision": "66c71c8390a710ed505be8d0c2b6557e285c77b2",
+          "version": null
         }
       }
     ]
