@@ -406,6 +406,17 @@ class ProjectSpec: QuickSpec {
 				expect(events) == [.downloadingBinaryFrameworkDefinition(.binary(testDefinitionURL), testDefinitionURL)]
 			}
 		}
+		
+		describe("platformForFramework") {
+			let testStaticFrameworkURL = Bundle(for: type(of: self)).url(forResource: "Alamofire.framework", withExtension: nil)!
+			
+			it("should produce s platform") {
+				
+				let actualPlatform = platformForFramework(testStaticFrameworkURL).first()?.value
+				expect(actualPlatform) == .iOS
+			}
+			
+		}
 	}
 }
 

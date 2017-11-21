@@ -1083,7 +1083,7 @@ private func filesInDirectory(_ directoryURL: URL, _ typeIdentifier: String? = n
 }
 
 /// Sends the platform specified in the given Info.plist.
-private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, CarthageError> {
+public func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, CarthageError> {
 	return SignalProducer(value: frameworkURL)
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used
 		// because Xcode 6 and below do not include either in macOS frameworks.
@@ -1094,42 +1094,42 @@ private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platfor
 				let error = Result<(), NSError>.error(message)
 				return .readFailed(frameworkURL, error)
 			}
-			
+
 			func sdkNameFromExecutable() -> Any? {
 				guard let executableURL = bundle?.executableURL else {
 					return nil
 				}
-				
-				let otoolTask = Process()
-				otoolTask.launchPath = "/usr/bin/otool"
-				otoolTask.arguments = ["-lv", executableURL.path]
-				
-				let otoolPipe = Pipe()
-				otoolTask.standardOutput = otoolPipe
-				otoolTask.standardError = otoolPipe
-				otoolTask.launch()
-				
-				let grepTask = Process()
-				grepTask.launchPath = "/usr/bin/grep"
-				grepTask.arguments = ["-A", "3", "LC_VERSION"]
-				
-				let grepPipe = Pipe()
-				grepTask.standardInput = otoolPipe
-				grepTask.standardOutput = grepPipe
-				grepTask.standardError = grepPipe
-				grepTask.launch()
-				
-				let data = grepPipe.fileHandleForReading.readDataToEndOfFile()
-				let output = String(data: data, encoding: .utf8)?.lowercased()
-				otoolTask.waitUntilExit()
-				grepTask.waitUntilExit()
-				
-				let sdkName = SDK.allSDKs.filter({ output?.contains($0.rawValue) == true }).first?.rawValue
-				return sdkName
+
+				let task = Task("/usr/bin/otool", arguments: ["-lv", executableURL.path])
+
+				let sdk: SDK? = task.launch(standardInput: nil)
+					.ignoreTaskData()
+					.mapError(CarthageError.taskError)
+					.map { String(data: $0, encoding: .utf8) ?? "" }
+					.filter { !$0.isEmpty }
+					.flatMap(.merge) { (output: String) -> SignalProducer<String, NoError> in
+						output.linesProducer
+					}
+					.filter { !$0.contains("LC_VERSION") }
+					.flatMap(.merge) { lcVersionLine -> SignalProducer<SDK?, NoError> in
+						let sdk = lcVersionLine.split(separator: "_")
+							.last
+							.flatMap(String.init)
+							.flatMap { $0.lowercased() }
+							.flatMap(SDK.init)
+
+						return .init(value:sdk)
+					}.skipNil()
+					.collect()
+					.single()?
+					.value?
+					.first
+
+				return sdk
 			}
 
-			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") ?? sdkNameFromExecutable()  else {
-				return .failure(readFailed("the DTSDKName key in its plist file is missing"))
+			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") ?? sdkNameFromExecutable() else {
+				return .failure(readFailed("DTSDKName key in its plist file is missing and coult not recover by looking for SDK hint in LC_VERSION in binary"))
 			}
 
 			if let sdkName = sdkName as? String {
