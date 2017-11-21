@@ -1095,46 +1095,42 @@ public func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform
 				return .readFailed(frameworkURL, error)
 			}
 
-			func sdkNameFromExecutable() -> Any? {
+			func sdkNameFromExecutable() -> String? {
 				guard let executableURL = bundle?.executableURL else {
 					return nil
 				}
 
 				let task = Task("/usr/bin/otool", arguments: ["-lv", executableURL.path])
 
-				let sdk: SDK? = task.launch(standardInput: nil)
+				let sdkName: String? = task.launch(standardInput: nil)
 					.ignoreTaskData()
 					.map { String(data: $0, encoding: .utf8) ?? "" }
 					.filter { !$0.isEmpty }
 					.flatMap(.merge) { (output: String) -> SignalProducer<String, NoError> in
 						output.linesProducer
 					}
-					.filter { !$0.contains("LC_VERSION") }
-					.flatMap(.merge) { lcVersionLine -> SignalProducer<SDK?, NoError> in
-						let sdk = lcVersionLine.split(separator: "_")
+					.filter { $0.contains("LC_VERSION") }
+					.take(last: 1)
+					.flatMap(.merge) { lcVersionLine -> SignalProducer<String?, NoError> in
+						let sdkString = lcVersionLine.split(separator: "_")
 							.last
 							.flatMap(String.init)
 							.flatMap { $0.lowercased() }
-							.flatMap(SDK.init)
 
-						return .init(value:sdk)
+						return .init(value: sdkString)
 					}.skipNil()
-					.collect()
 					.single()?
-					.value?
-					.first
+					.value
 
-				return sdk
+				return sdkName
 			}
 
-			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") ?? sdkNameFromExecutable() else {
-				return .failure(readFailed("DTSDKName key in its plist file is missing and could not recover by looking for SDK hint via LC_VERSION in binary"))
-			}
-
-			if let sdkName = sdkName as? String {
-				return .success(sdkName)
+			if let sdkNameFromBundle = bundle?.object(forInfoDictionaryKey: "DTSDKName") as? String {
+				return .success(sdkNameFromBundle)
+			} else if let sdkNameFromExecutable = sdkNameFromExecutable() {
+				return .success(sdkNameFromExecutable)
 			} else {
-				return .failure(readFailed("the value for the DTSDKName key in its plist file is not a string"))
+				return .failure(readFailed("could not determine platform neither from DTSDKName key in plist nor from the framework's executable"))
 			}
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
