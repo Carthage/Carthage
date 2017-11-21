@@ -1104,7 +1104,6 @@ public func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform
 
 				let sdk: SDK? = task.launch(standardInput: nil)
 					.ignoreTaskData()
-					.mapError(CarthageError.taskError)
 					.map { String(data: $0, encoding: .utf8) ?? "" }
 					.filter { !$0.isEmpty }
 					.flatMap(.merge) { (output: String) -> SignalProducer<String, NoError> in
@@ -1149,7 +1148,7 @@ private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, C
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
 		.filter { !$0.pathComponents.contains("__MACOSX") }
 		.filter { url in
-			
+
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
 				return (pathComponent as NSString).pathExtension == "framework"
