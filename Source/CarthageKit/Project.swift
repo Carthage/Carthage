@@ -1129,7 +1129,7 @@ public func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform
 			}
 
 			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") ?? sdkNameFromExecutable() else {
-				return .failure(readFailed("DTSDKName key in its plist file is missing and coult not recover by looking for SDK hint in LC_VERSION in binary"))
+				return .failure(readFailed("DTSDKName key in its plist file is missing and could not recover by looking for SDK hint via LC_VERSION in binary"))
 			}
 
 			if let sdkName = sdkName as? String {
