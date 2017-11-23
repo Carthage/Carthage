@@ -1,7 +1,7 @@
 github "antitypical/Result" ~> 3.2
-github "Carthage/ReactiveTask" "reactiveswift-3.0"
+github "Carthage/ReactiveTask" ~> 0.14
 github "Carthage/Commandant" ~> 0.12
 github "jdhealy/PrettyColors" ~> 5.0
 github "ReactiveCocoa/ReactiveSwift" ~> 3.0
-github "mdiep/Tentacle" "reactiveswift-3.0"
+github "mdiep/Tentacle" "2ac00b0"
 github "thoughtbot/Curry" ~> 3.0
