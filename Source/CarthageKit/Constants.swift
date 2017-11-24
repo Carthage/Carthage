@@ -20,7 +20,7 @@ public struct Constants {
 		} else {
 			homePath = ("~/.carthage" as NSString).expandingTildeInPath
 		}
-		return URL(fileURLWithPath: homePath, isDirectory:true)
+		return URL(fileURLWithPath: homePath, isDirectory: true)
 	}()
 
 	/// ~/Library/Caches/org.carthage.CarthageKit/
@@ -33,7 +33,7 @@ public struct Constants {
 			let dependenciesURL = cachesURL.appendingPathComponent(Constants.bundleIdentifier, isDirectory: true)
 			let dependenciesPath = dependenciesURL.absoluteString
 
-			if fileManager.fileExists(atPath: dependenciesPath, isDirectory:nil) {
+			if fileManager.fileExists(atPath: dependenciesPath, isDirectory: nil) {
 				if fileManager.isWritableFile(atPath: dependenciesPath) {
 					return Result(value: dependenciesURL)
 				} else {

@@ -373,7 +373,7 @@ private func mergeBuildProducts(
 
 			let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
 				.filter { $0.0 != nil }
-				.map { (modulesPath, productsURL) -> URL in
+				.map { modulesPath, productsURL in
 					return productsURL.appendingPathComponent(modulesPath!)
 				}
 
