@@ -982,8 +982,8 @@ extension Signal where Value: TaskEventType {
 	fileprivate func collectTaskEvents() -> Signal<TaskEvent<[Value.T]>, Error> {
 		var taskValues: [Value.T] = []
 
-		return Signal<TaskEvent<[Value.T]>, Error> { observer in
-			return self.observe { event in
+		return Signal<TaskEvent<[Value.T]>, Error> { observer, lifetime in
+			lifetime += self.observe { event in
 				switch event {
 				case let .value(value):
 					if let taskValue = value.value {
