@@ -24,8 +24,8 @@
         "repositoryURL": "https://github.com/Quick/Nimble.git",
         "state": {
           "branch": null,
-          "revision": "38c9ab0846a3fbec308eb2aa9ef68b10a7434eb4",
-          "version": "7.0.2"
+          "revision": "22800b0954c89344bb8c87f8ab93378076716fb7",
+          "version": "7.0.3"
         }
       },
       {
@@ -77,9 +77,9 @@
         "package": "Tentacle",
         "repositoryURL": "https://github.com/mdiep/Tentacle.git",
         "state": {
-          "branch": "2ac00b0",
+          "branch": null,
           "revision": "2ac00b0cbfff50109f11ae4bfb03a03b0a02b4cf",
-          "version": null
+          "version": "0.11.0"
         }
       }
     ]
