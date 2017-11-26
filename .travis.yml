@@ -12,30 +12,30 @@ matrix:
   include:
     - os: osx
       language: objective-c
-      osx_image: xcode9
+      osx_image: xcode9.1
       script: make test
       env: JOB=CI_BUILD_TEST
     - os: osx
       language: objective-c
-      osx_image: xcode9
+      osx_image: xcode9.1
       script: make package
       env: JOB=CI_BUILD_PACKAGE
     - os: osx
       language: objective-c
-      osx_image: xcode9
+      osx_image: xcode9.1
       script:
         - make swiftpm
         - .build/release/carthage version
       env: JOB=CI_BUILD_SWIFTPM
     - os: osx
       language: objective-c
-      osx_image: xcode9
+      osx_image: xcode9.1
       script:
         - make swiftpm_test
       env: JOB=CI_BUILD_SWIFTPM_TEST
     - os: osx
       language: objective-c
-      osx_image: xcode9
+      osx_image: xcode9.1
       script:
         - brew uninstall carthage
         - HOMEBREW_NO_AUTO_UPDATE=1 brew install bats
@@ -45,7 +45,7 @@ matrix:
         - JOB=INTEGRATION_TESTS
     - os: osx
       language: objective-c
-      osx_image: xcode9
+      osx_image: xcode9.1
       script:
         - brew uninstall carthage
         - HOMEBREW_NO_AUTO_UPDATE=1 brew install bats        
