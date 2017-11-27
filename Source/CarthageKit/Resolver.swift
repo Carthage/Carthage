@@ -205,8 +205,8 @@ public struct Resolver: ResolverProtocol {
 					.flatMap(.concat) { graphs -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, NoError> in
 						return SignalProducer<DependencyGraph, CarthageError> {
 								mergeGraphs([ inputGraph ] + graphs)
-						}
-						.materialize()
+							}
+							.materialize()
 					}
 					// Pass through resolution errors only if we never got
 					// a valid graph.
