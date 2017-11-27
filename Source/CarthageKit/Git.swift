@@ -156,24 +156,24 @@ public func checkoutRepositoryToDirectory(
 	revision: String = "HEAD"
 ) -> SignalProducer<(), CarthageError> {
 	return SignalProducer { () -> Result<[String: String], CarthageError> in
-		var environment = ProcessInfo.processInfo.environment
-		environment["GIT_WORK_TREE"] = workingDirectoryURL.path
-		return .success(environment)
-	}
-	.attempt { _ in
-		Result(attempt: { try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true) })
-			.mapError {
-				CarthageError.repositoryCheckoutFailed(
-					workingDirectoryURL: workingDirectoryURL,
-					reason: "Could not create working directory",
-					underlyingError: $0
-				)
-			}
-	}
-	.flatMap(.concat) { environment in
-		return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
-	}
-	.then(SignalProducer<(), CarthageError>.empty)
+			var environment = ProcessInfo.processInfo.environment
+			environment["GIT_WORK_TREE"] = workingDirectoryURL.path
+			return .success(environment)
+		}
+		.attempt { _ in
+			Result(attempt: { try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true) })
+				.mapError {
+					CarthageError.repositoryCheckoutFailed(
+						workingDirectoryURL: workingDirectoryURL,
+						reason: "Could not create working directory",
+						underlyingError: $0
+					)
+				}
+		}
+		.flatMap(.concat) { environment in
+			return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
+		}
+		.then(SignalProducer<(), CarthageError>.empty)
 }
 
 /// Clones the given submodule into the working directory of its parent
@@ -215,13 +215,13 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 		}
 
 	return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
-		repositoryCheck("remove submodule checkout") {
-			try FileManager.default.removeItem(at: submoduleDirectoryURL)
+			repositoryCheck("remove submodule checkout") {
+				try FileManager.default.removeItem(at: submoduleDirectoryURL)
+			}
 		}
-	}
-	.then(cloneRepository(submodule.url, workingDirectoryURL.appendingPathComponent(submodule.path), isBare: false))
-	.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-	.then(purgeGitDirectories)
+		.then(cloneRepository(submodule.url, workingDirectoryURL.appendingPathComponent(submodule.path), isBare: false))
+		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+		.then(purgeGitDirectories)
 }
 
 /// Recursively checks out the given submodule's revision, in its working

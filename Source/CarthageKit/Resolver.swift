@@ -195,23 +195,23 @@ public struct Resolver: ResolverProtocol {
 					.map { newNodes in
 						return (graph, newNodes)
 					}
-		}
-		.flatMap(.concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
-			return SignalProducer(nodes)
-				// Each producer represents all evaluations of one subtree.
-				.map { node in self.graphsForDependenciesOfNode(node, basedOnGraph: graph) }
-				.observe(on: scheduler)
-				.permute()
-				.flatMap(.concat) { graphs -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, NoError> in
-					return SignalProducer<DependencyGraph, CarthageError> {
-							mergeGraphs([ inputGraph ] + graphs)
+			}
+			.flatMap(.concat) { graph, nodes -> SignalProducer<DependencyGraph, CarthageError> in
+				return SignalProducer(nodes)
+					// Each producer represents all evaluations of one subtree.
+					.map { node in self.graphsForDependenciesOfNode(node, basedOnGraph: graph) }
+					.observe(on: scheduler)
+					.permute()
+					.flatMap(.concat) { graphs -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, NoError> in
+						return SignalProducer<DependencyGraph, CarthageError> {
+								mergeGraphs([ inputGraph ] + graphs)
+						}
+						.materialize()
 					}
-					.materialize()
-				}
-				// Pass through resolution errors only if we never got
-				// a valid graph.
-				.dematerializeErrorsIfEmpty()
-		}
+					// Pass through resolution errors only if we never got
+					// a valid graph.
+					.dematerializeErrorsIfEmpty()
+			}
 	}
 }
 
