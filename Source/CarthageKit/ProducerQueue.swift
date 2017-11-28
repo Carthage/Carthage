@@ -50,7 +50,7 @@ internal final class SerialProducerQueue: ProducerQueue {
 					lifetime += signalDisposable
 
 					signal.observe { event in
-						observer.action(event)
+						observer.send(event)
 
 						if event.isTerminating {
 							self.queue.resume()
@@ -89,7 +89,7 @@ internal final class ConcurrentProducerQueue: ProducerQueue {
 					lifetime += signalDisposable
 
 					signal.observe { event in
-						observer.action(event)
+						observer.send(event)
 
 						if event.isTerminating {
 							operation._isFinished = true
