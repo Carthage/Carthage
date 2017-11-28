@@ -16,7 +16,7 @@ public struct FetchCache {
 	/// Amount of time before a git repository is fetched again. Defaults to 1 minute
 	public static var fetchCacheInterval: TimeInterval = 60.0
 
-	private static var lastFetchTimes: [GitURL : TimeInterval] = [:]
+	private static var lastFetchTimes: [GitURL: TimeInterval] = [:]
 
 	internal static func clearFetchTimes() {
 		lastFetchTimes.removeAll()
@@ -155,8 +155,7 @@ public func checkoutRepositoryToDirectory(
 	_ workingDirectoryURL: URL,
 	revision: String = "HEAD"
 ) -> SignalProducer<(), CarthageError> {
-	return SignalProducer
-		{ () -> Result<[String: String], CarthageError> in
+	return SignalProducer { () -> Result<[String: String], CarthageError> in
 			var environment = ProcessInfo.processInfo.environment
 			environment["GIT_WORK_TREE"] = workingDirectoryURL.path
 			return .success(environment)
@@ -215,8 +214,7 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 				}
 		}
 
-	return SignalProducer<(), CarthageError>
-		{ () -> Result<(), CarthageError> in
+	return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
 			repositoryCheck("remove submodule checkout") {
 				try FileManager.default.removeItem(at: submoduleDirectoryURL)
 			}

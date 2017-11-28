@@ -643,7 +643,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Sends the URL of the dSYM after copying.
 	public func copyDSYMToBuildFolderForFramework(_ frameworkURL: URL, fromDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 		let destinationDirectoryURL = frameworkURL.deletingLastPathComponent()
-		return dSYMForFramework(frameworkURL, inDirectoryURL:directoryURL)
+		return dSYMForFramework(frameworkURL, inDirectoryURL: directoryURL)
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
 	}
 
@@ -1213,8 +1213,7 @@ public func cloneOrFetch(
 	let fileManager = FileManager.default
 	let repositoryURL = repositoryFileURL(for: dependency, baseURL: destinationURL)
 
-	return SignalProducer
-		{
+	return SignalProducer {
 			Result(at: destinationURL, attempt: {
 				try fileManager.createDirectory(at: $0, withIntermediateDirectories: true)
 				return dependency.gitURL(preferHTTPS: preferHTTPS)!

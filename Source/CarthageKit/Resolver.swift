@@ -188,8 +188,7 @@ public struct Resolver: ResolverProtocol {
 	) -> SignalProducer<DependencyGraph, CarthageError> {
 		let scheduler = QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.graphs")
 
-		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError>
-			{ () -> Result<(DependencyGraph, [DependencyNode]), CarthageError> in
+		return SignalProducer<(DependencyGraph, [DependencyNode]), CarthageError> { () -> Result<(DependencyGraph, [DependencyNode]), CarthageError> in
 				var graph = inputGraph
 				return graph
 					.addNodes(nodes, dependenciesOf: dependencyOf)
@@ -204,8 +203,7 @@ public struct Resolver: ResolverProtocol {
 					.observe(on: scheduler)
 					.permute()
 					.flatMap(.concat) { graphs -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, NoError> in
-						return SignalProducer<DependencyGraph, CarthageError>
-							{
+						return SignalProducer<DependencyGraph, CarthageError> {
 								mergeGraphs([ inputGraph ] + graphs)
 							}
 							.materialize()
