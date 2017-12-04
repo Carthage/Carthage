@@ -426,13 +426,16 @@ public final class Project { // swiftlint:disable:this type_body_length
 			resolverType = Resolver.self
 		}
 
-		// When determining outdated dependencies, only direct dependencies matter
-		// since dependencies of dependencies that are outdated are not under direct control of the user
-		let emptyDependencies: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> = { _, _ in .empty }
+		let dependencies: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
+		if includeNestedDependencies {
+			dependencies = self.dependencies(for:version:)
+		} else {
+			dependencies = { _, _ in .empty }
+		}
 
 		let resolver = resolver ?? resolverType.init(
 			versionsForDependency: versions(for:),
-			dependenciesForDependency: emptyDependencies,
+			dependenciesForDependency: dependencies,
 			resolvedGitReference: resolvedGitReference
 		)
 
