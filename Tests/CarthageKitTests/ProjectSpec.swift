@@ -14,6 +14,8 @@ private let github1 = Dependency.gitHub(.dotCom, Repository(owner: "1", name: "1
 private let github2 = Dependency.gitHub(.dotCom, Repository(owner: "2", name: "2"))
 private let github3 = Dependency.gitHub(.dotCom, Repository(owner: "3", name: "3"))
 private let github4 = Dependency.gitHub(.dotCom, Repository(owner: "4", name: "4"))
+private let github5 = Dependency.gitHub(.dotCom, Repository(owner: "5", name: "5"))
+private let github6 = Dependency.gitHub(.dotCom, Repository(owner: "6", name: "6"))
 
 // swiftlint:disable no_extension_access_modifier
 private extension PinnedVersion {
@@ -448,13 +450,27 @@ class ProjectSpec: QuickSpec {
 						.v3_0_0_beta_1: [:],
 						.v3_0_0: [:]
 					],
+					github5: [
+						.v1_0_0: [:]
+					],
+					github6: [
+						.v1_0_0: [:]
 					]
+				]
+				let currentSHA = "2ea246ae4573538886ffb946d70d141583443734"
+				let nextSHA = "809b8eb20f4b6b9e805b62de3084fbc7fcde54cc"
 				db.references = [
 					github3: [
 						"2.0": PinnedVersion("2.0.1")
 					],
 					github4: [
 						"2.0": PinnedVersion("2.0.1")
+					],
+					github5: [
+						"development": PinnedVersion(currentSHA)
+					],
+					github6: [
+						"development": PinnedVersion(nextSHA)
 					]
 				]
 				let directoryURL = Bundle(for: type(of: self)).url(forResource: "OutdatedDependencies", withExtension: nil)!
@@ -488,6 +504,14 @@ class ProjectSpec: QuickSpec {
 				expect(outdatedDependencies[github4]!.0) == PinnedVersion("2.0.0")
 				expect(outdatedDependencies[github4]!.1) == PinnedVersion("2.0.1")
 				expect(outdatedDependencies[github4]!.2) == PinnedVersion("3.0.0")
+				
+				// Github 5 is pinned to a branch and is already at the most recent commit, so it should not be displayed
+				expect(outdatedDependencies[github5]).to(beNil())
+				
+				// Github 6 is pinned ot a branch which has new commits, so it should be displayed
+				expect(outdatedDependencies[github6]!.0) == PinnedVersion(currentSHA)
+				expect(outdatedDependencies[github6]!.1) == PinnedVersion(nextSHA)
+				expect(outdatedDependencies[github6]!.2) == PinnedVersion("1.0.0")
 			}
 		}
 	}
