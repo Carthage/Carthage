@@ -10,6 +10,23 @@ import XCDBLD
 
 // swiftlint:disable:this force_try
 
+private let github1 = Dependency.gitHub(.dotCom, Repository(owner: "1", name: "1"))
+private let github2 = Dependency.gitHub(.dotCom, Repository(owner: "2", name: "2"))
+private let github3 = Dependency.gitHub(.dotCom, Repository(owner: "3", name: "3"))
+private let github4 = Dependency.gitHub(.dotCom, Repository(owner: "4", name: "4"))
+
+// swiftlint:disable no_extension_access_modifier
+private extension PinnedVersion {
+	static let v0_1_0 = PinnedVersion("0.1.0")
+	static let v1_0_0 = PinnedVersion("1.0.0")
+	static let v1_1_0 = PinnedVersion("1.1.0")
+	static let v1_2_0 = PinnedVersion("1.2.0")
+	static let v2_0_0 = PinnedVersion("2.0.0")
+	static let v2_0_1 = PinnedVersion("2.0.1")
+	static let v3_0_0_beta_1 = PinnedVersion("3.0.0-beta.1")
+	static let v3_0_0 = PinnedVersion("3.0.0")
+}
+
 class ProjectSpec: QuickSpec {
 	override func spec() {
 		describe("buildCheckedOutDependenciesWithOptions") {
@@ -408,12 +425,69 @@ class ProjectSpec: QuickSpec {
 		}
 		
 		describe("outdated dependencies") {
-			pending("should return the latest version for each dependency") {
+			it("should return return available updates for outdated dependencies") {
+				var db: DB = [
+					github1: [
+						.v1_0_0: [:]
+					],
+					github2: [
+						.v1_0_0: [:],
+						.v1_1_0: [:],
+						.v2_0_0: [:]
+					],
+					github3: [
+						.v1_0_0: [:],
+						.v1_1_0: [:],
+						.v1_2_0: [:],
+						.v2_0_0: [:],
+						.v2_0_1: [:]
+					],
+					github4: [
+						.v1_0_0: [:],
+						.v1_2_0: [:],
+						.v3_0_0_beta_1: [:],
+						.v3_0_0: [:]
+					],
+					]
+				db.references = [
+					github3: [
+						"2.0": PinnedVersion("2.0.1")
+					],
+					github4: [
+						"2.0": PinnedVersion("2.0.1")
+					]
+				]
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "OutdatedDependencies", withExtension: nil)!
+				let project = Project(directoryURL: directoryURL)
+
+				let result = project.outdatedDependencies(false, useNewResolver: false, resolver: db.resolver()).single()
+				expect(result).notTo(beNil())
+				expect(result!.error).to(beNil())
+				expect(result!.value!).notTo(beNil())
 				
-			}
-			
-			pending("should return all outdated dependencies") {
+				let outdatedDependencies = result!.value!.reduce(into: [:], { (result, next) in
+					result[next.0] = (next.1, next.2, next.3)
+				})
+
+				// Github 1 has no updates available
+				expect(outdatedDependencies[github1]).to(beNil())
 				
+				// Github 2 is currently at 1.0.0, can be updated to the latest version which is 2.0.0
+				// Github 2 has no constraint in the Cartfile
+				expect(outdatedDependencies[github2]!.0) == PinnedVersion("1.0.0")
+				expect(outdatedDependencies[github2]!.1) == PinnedVersion("2.0.0")
+				expect(outdatedDependencies[github2]!.2) == PinnedVersion("2.0.0")
+				
+				// Github 3 is currently at 2.0.0, latest is 2.0.1, to which it can be updated
+				// Github 3 has a constraint in the Cartfile
+				expect(outdatedDependencies[github3]!.0) == PinnedVersion("2.0.0")
+				expect(outdatedDependencies[github3]!.1) == PinnedVersion("2.0.1")
+				expect(outdatedDependencies[github3]!.2) == PinnedVersion("2.0.1")
+				
+				// Github 4 is currently at 2.0.0, latest is 3.0.0, but it can only be updated to 2.0.1
+				expect(outdatedDependencies[github4]!.0) == PinnedVersion("2.0.0")
+				expect(outdatedDependencies[github4]!.1) == PinnedVersion("2.0.1")
+				expect(outdatedDependencies[github4]!.2) == PinnedVersion("3.0.0")
 			}
 		}
 	}
@@ -433,4 +507,60 @@ extension ProjectEvent {
 		}
 		return false
 	}
+}
+
+
+// swiftlint:enable identifier_name
+private struct DB {
+	var versions: [Dependency: [PinnedVersion: [Dependency: VersionSpecifier]]]
+	var references: [Dependency: [String: PinnedVersion]] = [:]
+	
+	func versions(for dependency: Dependency) -> SignalProducer<PinnedVersion, CarthageError> {
+		if let versions = self.versions[dependency] {
+			return .init(versions.keys)
+		} else {
+			return .init(error: .taggedVersionNotFound(dependency))
+		}
+	}
+	
+	func dependencies(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
+		if let dependencies = self.versions[dependency]?[version] {
+			return .init(dependencies.map { ($0.0, $0.1) })
+		} else {
+			return .empty
+		}
+	}
+	
+	func resolvedGitReference(_ dependency: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
+		if let version = references[dependency]?[reference] {
+			return .init(value: version)
+		} else {
+			return .empty
+		}
+	}
+
+	func resolver(_ resolverType: ResolverProtocol.Type = Resolver.self) -> ResolverProtocol {
+		return resolverType.init(
+			versionsForDependency: self.versions(for:),
+			dependenciesForDependency: self.dependencies(for:version:),
+			resolvedGitReference: self.resolvedGitReference(_:reference:)
+		)
+	}
+}
+
+extension DB: ExpressibleByDictionaryLiteral {
+	init(dictionaryLiteral elements: (Dependency, [PinnedVersion: [Dependency: VersionSpecifier]])...) {
+		self.init(versions: [:], references: [:])
+		for (key, value) in elements {
+			versions[key] = value
+		}
+	}
+}
+
+private func ==<A: Equatable, B: Equatable>(lhs: [(A, B)], rhs: [(A, B)]) -> Bool {
+	guard lhs.count == rhs.count else { return false }
+	for (lhs, rhs) in zip(lhs, rhs) {
+		guard lhs == rhs else { return false }
+	}
+	return true
 }

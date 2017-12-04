@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2190FA981FD5B2F0008D8A79 /* OutdatedDependencies in Resources */ = {isa = PBXBuildFile; fileRef = 2190FA961FD5B05F008D8A79 /* OutdatedDependencies */; };
 		3A0472F31C782B4000097EC7 /* Algorithms.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0472F21C782B4000097EC7 /* Algorithms.swift */; };
 		3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0472F41C782D1D00097EC7 /* AlgorithmsSpec.swift */; };
 		3B19041E1E4CFE4A00A866AD /* FakeOldObjc.framework in Resources */ = {isa = PBXBuildFile; fileRef = 3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */; };
@@ -165,6 +166,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2190FA961FD5B05F008D8A79 /* OutdatedDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OutdatedDependencies; sourceTree = "<group>"; };
 		3A0472F21C782B4000097EC7 /* Algorithms.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Algorithms.swift; sourceTree = "<group>"; };
 		3A0472F41C782D1D00097EC7 /* AlgorithmsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlgorithmsSpec.swift; sourceTree = "<group>"; };
 		3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeOldObjc.framework; sourceTree = "<group>"; };
@@ -346,6 +348,7 @@
 		CD6500D61EDD30FC00C2C3FB /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				2190FA961FD5B05F008D8A79 /* OutdatedDependencies */,
 				CD9A779A1EDD7FEB00A77B00 /* BinaryOnly */,
 				CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */,
 				3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */,
@@ -704,6 +707,7 @@
 				3B19041F1E4CFE4A00A866AD /* FakeOldSwift.framework in Resources */,
 				CD09E28B1F0E3FFB00A0378A /* FakeSwift.framework in Resources */,
 				BE624F491E13424400EAEFC9 /* DuplicateDependenciesCartfile in Resources */,
+				2190FA981FD5B2F0008D8A79 /* OutdatedDependencies in Resources */,
 				B1F27D401E4541A1002D4754 /* TestVersionFile in Resources */,
 				D0AAAB5519FB1062007B24B3 /* TestCartfile in Resources */,
 				D0F551DC1A0D71AB0093311F /* TestCartfile.resolved in Resources */,
