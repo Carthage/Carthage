@@ -90,6 +90,18 @@ class DependencySpec: QuickSpec {
 
 					expect(dependency.name) == "whatisthisurleven"
 				}
+				
+				it("should be the last component of scp url with a path") {
+					let dependency = Dependency.git(GitURL("git@github.com:antitypical/Result.git"))
+					
+					expect(dependency.name) == "Result"
+				}
+				
+				it("should be the last component of scp url") {
+					let dependency = Dependency.git(GitURL("git@github.com:Result.git"))
+					
+					expect(dependency.name) == "Result"
+				}
 			}
 
 			context("binary") {
