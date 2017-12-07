@@ -31,17 +31,16 @@ public enum Dependency {
 			return name
 		}
 	}
-	
+
 	public var cacheName: String {
 		switch self {
 		case let .gitHub(_, repo):
 			return "\(repo.owner)_\(repo.name)"
-			
 		case let .git(url):
-			return url.name ?? url.urlString
-			
+			// Replace all non a-z0-9 chars with _
+			return url.normalizedURLString.components(separatedBy: CharacterSet.alphanumerics.inverted).joined(separator: "_")
 		case let .binary(url):
-			return url.lastPathComponent.stripping(suffix: ".json")
+			return url.absoluteString.components(separatedBy: CharacterSet.alphanumerics.inverted).joined(separator: "_")
 		}
 	}
 
