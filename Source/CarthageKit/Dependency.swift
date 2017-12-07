@@ -23,7 +23,12 @@ public enum Dependency {
 			return url.name ?? url.urlString
 
 		case let .binary(url):
-			return url.lastPathComponent.stripping(suffix: ".json")
+			let name = url.lastPathComponent.stripping(suffix: ".json")
+			// lastPathComponent gives empty string when no path
+			if name == "" {
+				return url.host ?? "unknown"
+			}
+			return name
 		}
 	}
 	
