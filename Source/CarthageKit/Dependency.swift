@@ -26,6 +26,19 @@ public enum Dependency {
 			return url.lastPathComponent.stripping(suffix: ".json")
 		}
 	}
+	
+	public var cacheName: String {
+		switch self {
+		case let .gitHub(_, repo):
+			return "\(repo.owner)_\(repo.name)"
+			
+		case let .git(url):
+			return url.name ?? url.urlString
+			
+		case let .binary(url):
+			return url.lastPathComponent.stripping(suffix: ".json")
+		}
+	}
 
 	/// The path at which this project will be checked out, relative to the
 	/// working directory of the main project.

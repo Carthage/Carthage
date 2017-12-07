@@ -100,6 +100,60 @@ class DependencySpec: QuickSpec {
 				}
 			}
 		}
+		
+		describe("cacheName") {
+			context ("github") {
+				it("should equal owner_name of a github.com repo") {
+					let dependency = Dependency.gitHub(.dotCom, Repository(owner: "owner", name: "name"))
+					
+					expect(dependency.cacheName) == "owner_name"
+				}
+				
+				it("should equal owner_name of an enterprise github repo") {
+					let enterpriseRepo = Repository(
+						owner: "owner",
+						name: "name")
+					
+					let dependency = Dependency.gitHub(.enterprise(url: URL(string: "http://server.com")!), enterpriseRepo)
+					
+					expect(dependency.cacheName) == "owner_name"
+				}
+			}
+			
+			context("git") {
+				it("should be the last component of the URL") {
+					let dependency = Dependency.git(GitURL("ssh://server.com/myproject"))
+					
+					expect(dependency.cacheName) == "myproject"
+				}
+				
+				it("should not include the trailing git suffix") {
+					let dependency = Dependency.git(GitURL("ssh://server.com/myproject.git"))
+					
+					expect(dependency.cacheName) == "myproject"
+				}
+				
+				it("should be the entire URL string if there is no last component") {
+					let dependency = Dependency.git(GitURL("whatisthisurleven"))
+					
+					expect(dependency.cacheName) == "whatisthisurleven"
+				}
+			}
+			
+			context("binary") {
+				it("should be the last component of the URL") {
+					let dependency = Dependency.binary(URL(string: "https://server.com/myproject")!)
+					
+					expect(dependency.cacheName) == "myproject"
+				}
+				
+				it("should not include the trailing git suffix") {
+					let dependency = Dependency.binary(URL(string: "https://server.com/myproject.json")!)
+					
+					expect(dependency.cacheName) == "myproject"
+				}
+			}
+		}
 
 		describe("from") {
 			context("github") {
