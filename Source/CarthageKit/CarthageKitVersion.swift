@@ -2,5 +2,5 @@
 public struct CarthageKitVersion {
 	public let value: SemanticVersion
 
-	public static let current = CarthageKitVersion(value: SemanticVersion(major: 0, minor: 26, patch: 2))
+	public static let current = CarthageKitVersion(value: SemanticVersion(major: 0, minor: 27, patch: 0))
 }
