@@ -401,31 +401,39 @@ class XcodeSpec: QuickSpec {
 // MARK: Matcher
 
 internal func beExistingDirectory() -> Predicate<String> {
-	return MatcherFunc { actualExpression, failureMessage in
-		failureMessage.postfixMessage = "exist and be a directory"
+	return Predicate { actualExpression in
+		var message = "exist and be a directory"
 		let actualPath = try actualExpression.evaluate()
 
-		guard let path = actualPath else { return false }
+		guard let path = actualPath else {
+			return PredicateResult(status: .fail, message: .expectedActualValueTo(message))
+		}
 
 		var isDirectory: ObjCBool = false
 		let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
 
 		if !exists {
-			failureMessage.postfixMessage += ", but does not exist"
+			message += ", but does not exist"
 		} else if !isDirectory.boolValue {
-			failureMessage.postfixMessage += ", but is not a directory"
+			message += ", but is not a directory"
 		}
 
-		return exists && isDirectory.boolValue
-	}.predicate
+		return PredicateResult(
+			bool: exists && isDirectory.boolValue,
+			message: .expectedActualValueTo(message)
+		)
+	}
 }
 
 internal func beRelativeSymlinkToDirectory(_ directory: URL) -> Predicate<URL> {
-	return MatcherFunc { actualExpression, failureMessage in
-		failureMessage.postfixMessage = "be a relative symlink to \(directory)"
+	return Predicate { actualExpression in
+		let message = "be a relative symlink to \(directory)"
 		let actualURL = try actualExpression.evaluate()
 
-		guard var url = actualURL else { return false }
+		guard var url = actualURL else {
+			return PredicateResult(status: .fail, message: .expectedActualValueTo(message))
+		}
+
 		var isSymlink: Bool = false
 		do {
 			url.removeCachedResourceValue(forKey: .isSymbolicLinkKey)
@@ -433,26 +441,28 @@ internal func beRelativeSymlinkToDirectory(_ directory: URL) -> Predicate<URL> {
 		} catch {}
 
 		guard isSymlink else {
-			failureMessage.postfixMessage += ", but is not a symlink"
-			return false
+			return PredicateResult(
+				status: .fail,
+				message: .expectedActualValueTo(message + ", but is not a symlink")
+			)
 		}
 
 		let destination = try! FileManager.default.destinationOfSymbolicLink(atPath: url.path) // swiftlint:disable:this force_try
 
 		guard !(destination as NSString).isAbsolutePath else {
-			failureMessage.postfixMessage += ", but is not a relative symlink"
-			return false
+			return PredicateResult(
+				status: .fail,
+				message: .expectedActualValueTo(message + ", but is not a relative symlink")
+			)
 		}
 
 		let standardDestination = url.resolvingSymlinksInPath().standardizedFileURL
 		let desiredDestination = directory.standardizedFileURL
 
 		let urlsEqual = standardDestination == desiredDestination
-
-		if !urlsEqual {
-			failureMessage.postfixMessage += ", but does not point to the correct destination. Instead it points to \(standardDestination)"
-		}
-
-		return urlsEqual
-	}.predicate
+		let expectationMessage: ExpectationMessage = urlsEqual
+			? .expectedActualValueTo(message)
+			: .expectedActualValueTo(message + ", but does not point to the correct destination. Instead it points to \(standardDestination)")
+		return PredicateResult(bool: urlsEqual, message: expectationMessage)
+	}
 }
