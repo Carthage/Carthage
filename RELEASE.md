@@ -20,7 +20,7 @@ Try to call out more important items earlier in the list.
 You can use the [compare](https://github.com/Carthage/Carthage/compare) page on GitHub to see what’s changed since the previous release. Typically only the merge commits (those of the form _Merge pull request #2342 from branch-name_) are needed. Click the link to the PR to see what changed.
 
 ## 2. Update Version Number
-If the changes in this release are breaking, then increment the minor number (`0.26.0` to `0.26.1`). Otherwise increment the patch number (`0.26.0` to `0.27.0`).
+If the changes in this release are breaking, then increment the minor number (`0.26.0` to `0.27.0`). Otherwise increment the patch number (`0.26.0` to `0.26.1`).
 
 The version number needs to be set in the `CarthageKitVersion` struct and in the `Info.plist`s for both `carthage` and `CarthageKit`.
 
