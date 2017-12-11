@@ -410,7 +410,7 @@ class ProjectSpec: QuickSpec {
 		describe("platformForFramework") {
 			let testStaticFrameworkURL = Bundle(for: type(of: self)).url(forResource: "Alamofire.framework", withExtension: nil)!
 			
-			it("should produce s platform") {
+			it("should produce a platform") {
 				
 				let actualPlatform = platformForFramework(testStaticFrameworkURL).first()?.value
 				expect(actualPlatform) == .iOS
