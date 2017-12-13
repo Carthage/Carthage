@@ -38,17 +38,13 @@ class XcodeSpec: QuickSpec {
 
 			#if !SWIFT_PACKAGE
 			it("should determine that a Swift framework is a Swift framework") {
-				let result = isSwiftFramework(testSwiftFrameworkURL).single()
-
-				expect(result?.value) == true
+				expect(isSwiftFramework(testSwiftFrameworkURL)) == true
 			}
 			#endif
 
 			it("should determine that an ObjC framework is not a Swift framework") {
 				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldObjc.framework", withExtension: nil)!
-				let result = isSwiftFramework(frameworkURL).single()
-
-				expect(result?.value) == false
+				expect(isSwiftFramework(frameworkURL)) == false
 			}
 
 			it("should determine a value for the local swift version") {

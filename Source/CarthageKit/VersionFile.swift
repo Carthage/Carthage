@@ -114,17 +114,15 @@ struct VersionFile: Codable {
 			.flatMap(.concat) { cachedFramework -> SignalProducer<Bool, CarthageError> in
 				let frameworkURL = self.frameworkURL(for: cachedFramework, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
 
-				return isSwiftFramework(frameworkURL)
-					.flatMap(.concat) { isSwift -> SignalProducer<Bool, SwiftVersionError> in
-						if !isSwift {
-							return SignalProducer(value: true)
-						}
-
-						return frameworkSwiftVersion(frameworkURL).map { swiftVersion -> Bool in
+				if !isSwiftFramework(frameworkURL) {
+					return SignalProducer(value: true)
+				} else {
+					return frameworkSwiftVersion(frameworkURL)
+						.map { swiftVersion -> Bool in
 							return swiftVersion == localSwiftVersion
 						}
-					}
-					.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
+						.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
+				}
 			}
 	}
 
