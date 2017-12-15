@@ -34,13 +34,15 @@ public enum Dependency {
 
 	public var cacheName: String {
 		switch self {
-		case let .gitHub(_, repo):
-			return "\(repo.owner)_\(repo.name)"
+		case let .gitHub(.dotCom, repo):
+			return "\(repo.name)_\(repo.owner)"
+		case let .gitHub(.enterprise(url), repo):
+			return "\(url.absoluteString.cacheSafeName)_\(repo.name)_\(repo.owner)"
 		case let .git(url):
 			// Replace all non a-z0-9 chars with _
-			return url.normalizedURLString.components(separatedBy: CharacterSet.alphanumerics.inverted).joined(separator: "_")
+			return url.normalizedURLString.cacheSafeName
 		case let .binary(url):
-			return url.absoluteString.components(separatedBy: CharacterSet.alphanumerics.inverted).joined(separator: "_")
+			return url.absoluteString.cacheSafeName
 		}
 	}
 

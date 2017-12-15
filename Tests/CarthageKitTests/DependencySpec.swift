@@ -130,17 +130,17 @@ class DependencySpec: QuickSpec {
 				it("should equal owner_name of a github.com repo") {
 					let dependency = Dependency.gitHub(.dotCom, Repository(owner: "owner", name: "name"))
 					
-					expect(dependency.cacheName) == "owner_name"
+					expect(dependency.cacheName) == "name_owner"
 				}
 				
-				it("should equal owner_name of an enterprise github repo") {
+				it("should equal url_owner_name of an enterprise github repo") {
 					let enterpriseRepo = Repository(
 						owner: "owner",
 						name: "name")
 					
 					let dependency = Dependency.gitHub(.enterprise(url: URL(string: "http://server.com")!), enterpriseRepo)
 					
-					expect(dependency.cacheName) == "owner_name"
+					expect(dependency.cacheName) == "http_server_com_name_owner"
 				}
 			}
 			
@@ -192,19 +192,19 @@ class DependencySpec: QuickSpec {
 				it("should be the last component of the URL") {
 					let dependency = Dependency.binary(URL(string: "https://server.com/myproject")!)
 					
-					expect(dependency.cacheName) == "https___server_com_myproject"
+					expect(dependency.cacheName) == "https_server_com_myproject"
 				}
 				
 				it("should be the domain when there is no path") {
 					let dependency = Dependency.binary(URL(string: "https://server.com")!)
 					
-					expect(dependency.cacheName) == "https___server_com"
+					expect(dependency.cacheName) == "https_server_com"
 				}
 				
 				it("should not include the trailing json suffix") {
 					let dependency = Dependency.binary(URL(string: "https://server.com/myproject.json")!)
 					
-					expect(dependency.cacheName) == "https___server_com_myproject_json"
+					expect(dependency.cacheName) == "https_server_com_myproject_json"
 				}
 				
 				it("should be owner_name when there are multiple components of the path") {
@@ -222,13 +222,13 @@ class DependencySpec: QuickSpec {
 				it("should be owner_name when there are 2 components of the URL") {
 					let dependency = Dependency.binary(URL(string: "https://server.com/myname/myproject")!)
 					
-					expect(dependency.cacheName) == "https___server_com_myname_myproject"
+					expect(dependency.cacheName) == "https_server_com_myname_myproject"
 				}
 				
 				it("should be owner_name when there are 2 components of the URL and still no trailing json suffix") {
 					let dependency = Dependency.binary(URL(string: "https://server.com/myname/myproject.json")!)
 					
-					expect(dependency.cacheName) == "https___server_com_myname_myproject_json"
+					expect(dependency.cacheName) == "https_server_com_myname_myproject_json"
 				}
 			}
 		}
