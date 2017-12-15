@@ -1083,7 +1083,7 @@ private func filesInDirectory(_ directoryURL: URL, _ typeIdentifier: String? = n
 }
 
 /// Sends the platform specified in the given Info.plist.
-private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, CarthageError> {
+func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, CarthageError> {
 	return SignalProducer(value: frameworkURL)
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used
 		// because Xcode 6 and below do not include either in macOS frameworks.
@@ -1095,14 +1095,49 @@ private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platfor
 				return .readFailed(frameworkURL, error)
 			}
 
-			guard let sdkName = bundle?.object(forInfoDictionaryKey: "DTSDKName") else {
-				return .failure(readFailed("the DTSDKName key in its plist file is missing"))
+			func sdkNameFromExecutable() -> String? {
+				guard let executableURL = bundle?.executableURL else {
+					return nil
+				}
+
+				let task = Task("/usr/bin/xcrun", arguments: ["otool", "-lv", executableURL.path])
+
+				let sdkName: String? = task.launch(standardInput: nil)
+					.ignoreTaskData()
+					.map { String(data: $0, encoding: .utf8) ?? "" }
+					.filter { !$0.isEmpty }
+					.flatMap(.merge) { (output: String) -> SignalProducer<String, NoError> in
+						output.linesProducer
+					}
+					.filter { $0.contains("LC_VERSION") }
+					.take(last: 1)
+					.map { lcVersionLine -> String? in
+						let sdkString = lcVersionLine.split(separator: "_")
+							.last
+							.flatMap(String.init)
+							.flatMap { $0.lowercased() }
+
+						return sdkString
+					}
+					.skipNil()
+					.single()?
+					.value
+
+				return sdkName
 			}
 
-			if let sdkName = sdkName as? String {
-				return .success(sdkName)
+			// Try to read what platfrom this binary is for. Attempt in order:
+			// 1. Read `DTSDKName` from Info.plist.
+			//    Some users are reporting that static frameworks don't have this key in the .plist,
+			//    so we fall back and check the binary of the executable itself.
+			// 2. Read the LC_VERSION_<PLATFORM> from the framework's binary executable file
+
+			if let sdkNameFromBundle = bundle?.object(forInfoDictionaryKey: "DTSDKName") as? String {
+				return .success(sdkNameFromBundle)
+			} else if let sdkNameFromExecutable = sdkNameFromExecutable() {
+				return .success(sdkNameFromExecutable)
 			} else {
-				return .failure(readFailed("the value for the DTSDKName key in its plist file is not a string"))
+				return .failure(readFailed("could not determine platform neither from DTSDKName key in plist nor from the framework's executable"))
 			}
 		}
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
@@ -1114,7 +1149,9 @@ private func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platfor
 /// Sends the URL to each framework bundle found in the given directory.
 private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
+		.filter { !$0.pathComponents.contains("__MACOSX") }
 		.filter { url in
+
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
 				return (pathComponent as NSString).pathExtension == "framework"
