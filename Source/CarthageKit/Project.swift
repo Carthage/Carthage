@@ -1254,8 +1254,26 @@ private func BCSymbolMapsForFramework(_ frameworkURL: URL, inDirectoryURL direct
 
 /// Returns the file URL at which the given project's repository will be
 /// located.
-private func repositoryFileURL(for dependency: Dependency, baseURL: URL = Constants.Dependency.repositoriesURL) -> URL {
-	return baseURL.appendingPathComponent(dependency.cacheName, isDirectory: true)
+internal func repositoryFileURL(for dependency: Dependency, baseURL: URL = Constants.Dependency.repositoriesURL) -> URL {
+	let url = baseURL.appendingPathComponent(dependency.cacheName, isDirectory: true)
+	let fileManager = FileManager.default
+	// If the new dir exists, use it
+	if fileManager.fileExists(atPath: url.path) {
+		return url
+	}
+	// The old cache was based on dependency name, and we want to migrate to the new cache name
+	let oldUrl = baseURL.appendingPathComponent(dependency.name, isDirectory: true)
+	if !fileManager.fileExists(atPath: oldUrl.path) {
+		return url
+	}
+
+	do {
+		try fileManager.moveItem(at: oldUrl, to: url)
+	} catch {
+		NSLog("Warning: Failed to move old cache dir: \(error.localizedDescription). (\(error))")
+	}
+
+	return url
 }
 
 /// Returns the string representing a relative path from a dependency back to the root
