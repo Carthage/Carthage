@@ -1100,7 +1100,7 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, Carth
 					return nil
 				}
 
-				let task = Task("/usr/bin/otool", arguments: ["-lv", executableURL.path])
+				let task = Task("/usr/bin/xcrun", arguments: ["otool", "-lv", executableURL.path])
 
 				let sdkName: String? = task.launch(standardInput: nil)
 					.ignoreTaskData()
@@ -1111,19 +1111,26 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, Carth
 					}
 					.filter { $0.contains("LC_VERSION") }
 					.take(last: 1)
-					.flatMap(.merge) { lcVersionLine -> SignalProducer<String?, NoError> in
+					.map { lcVersionLine -> String? in
 						let sdkString = lcVersionLine.split(separator: "_")
 							.last
 							.flatMap(String.init)
 							.flatMap { $0.lowercased() }
 
-						return .init(value: sdkString)
-					}.skipNil()
+						return sdkString
+					}
+					.skipNil()
 					.single()?
 					.value
 
 				return sdkName
 			}
+
+			// Try to read what platfrom this binary is for. Attempt in order:
+			// 1. Read `DTSDKName` from Info.plist.
+			//    Some users are reporting that static frameworks don't have this key in the .plist,
+			//    so we fall back and check the binary of the executable itself.
+			// 2. Read the LC_VERSION_<PLATFORM> from the framework's binary executable file
 
 			if let sdkNameFromBundle = bundle?.object(forInfoDictionaryKey: "DTSDKName") as? String {
 				return .success(sdkNameFromBundle)
