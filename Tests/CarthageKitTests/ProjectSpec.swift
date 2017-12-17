@@ -10,25 +10,6 @@ import XCDBLD
 
 // swiftlint:disable:this force_try
 
-private let github1 = Dependency.gitHub(.dotCom, Repository(owner: "1", name: "1"))
-private let github2 = Dependency.gitHub(.dotCom, Repository(owner: "2", name: "2"))
-private let github3 = Dependency.gitHub(.dotCom, Repository(owner: "3", name: "3"))
-private let github4 = Dependency.gitHub(.dotCom, Repository(owner: "4", name: "4"))
-private let github5 = Dependency.gitHub(.dotCom, Repository(owner: "5", name: "5"))
-private let github6 = Dependency.gitHub(.dotCom, Repository(owner: "6", name: "6"))
-
-// swiftlint:disable no_extension_access_modifier
-private extension PinnedVersion {
-	static let v0_1_0 = PinnedVersion("0.1.0")
-	static let v1_0_0 = PinnedVersion("1.0.0")
-	static let v1_1_0 = PinnedVersion("1.1.0")
-	static let v1_2_0 = PinnedVersion("1.2.0")
-	static let v2_0_0 = PinnedVersion("2.0.0")
-	static let v2_0_1 = PinnedVersion("2.0.1")
-	static let v3_0_0_beta_1 = PinnedVersion("3.0.0-beta.1")
-	static let v3_0_0 = PinnedVersion("3.0.0")
-}
-
 class ProjectSpec: QuickSpec {
 	override func spec() {
 		describe("buildCheckedOutDependenciesWithOptions") {
@@ -461,10 +442,10 @@ class ProjectSpec: QuickSpec {
 				let nextSHA = "809b8eb20f4b6b9e805b62de3084fbc7fcde54cc"
 				db.references = [
 					github3: [
-						"2.0": PinnedVersion("2.0.1")
+						"2.0": PinnedVersion("v2.0.1")
 					],
 					github4: [
-						"2.0": PinnedVersion("2.0.1")
+						"2.0": PinnedVersion("v2.0.1")
 					],
 					github5: [
 						"development": PinnedVersion(currentSHA)
@@ -490,20 +471,20 @@ class ProjectSpec: QuickSpec {
 				
 				// Github 2 is currently at 1.0.0, can be updated to the latest version which is 2.0.0
 				// Github 2 has no constraint in the Cartfile
-				expect(outdatedDependencies[github2]!.0) == PinnedVersion("1.0.0")
-				expect(outdatedDependencies[github2]!.1) == PinnedVersion("2.0.0")
-				expect(outdatedDependencies[github2]!.2) == PinnedVersion("2.0.0")
+				expect(outdatedDependencies[github2]!.0) == PinnedVersion("v1.0.0")
+				expect(outdatedDependencies[github2]!.1) == PinnedVersion("v2.0.0")
+				expect(outdatedDependencies[github2]!.2) == PinnedVersion("v2.0.0")
 				
 				// Github 3 is currently at 2.0.0, latest is 2.0.1, to which it can be updated
 				// Github 3 has a constraint in the Cartfile
-				expect(outdatedDependencies[github3]!.0) == PinnedVersion("2.0.0")
-				expect(outdatedDependencies[github3]!.1) == PinnedVersion("2.0.1")
-				expect(outdatedDependencies[github3]!.2) == PinnedVersion("2.0.1")
+				expect(outdatedDependencies[github3]!.0) == PinnedVersion("v2.0.0")
+				expect(outdatedDependencies[github3]!.1) == PinnedVersion("v2.0.1")
+				expect(outdatedDependencies[github3]!.2) == PinnedVersion("v2.0.1")
 				
 				// Github 4 is currently at 2.0.0, latest is 3.0.0, but it can only be updated to 2.0.1
-				expect(outdatedDependencies[github4]!.0) == PinnedVersion("2.0.0")
-				expect(outdatedDependencies[github4]!.1) == PinnedVersion("2.0.1")
-				expect(outdatedDependencies[github4]!.2) == PinnedVersion("3.0.0")
+				expect(outdatedDependencies[github4]!.0) == PinnedVersion("v2.0.0")
+				expect(outdatedDependencies[github4]!.1) == PinnedVersion("v2.0.1")
+				expect(outdatedDependencies[github4]!.2) == PinnedVersion("v3.0.0")
 				
 				// Github 5 is pinned to a branch and is already at the most recent commit, so it should not be displayed
 				expect(outdatedDependencies[github5]).to(beNil())
@@ -511,7 +492,7 @@ class ProjectSpec: QuickSpec {
 				// Github 6 is pinned ot a branch which has new commits, so it should be displayed
 				expect(outdatedDependencies[github6]!.0) == PinnedVersion(currentSHA)
 				expect(outdatedDependencies[github6]!.1) == PinnedVersion(nextSHA)
-				expect(outdatedDependencies[github6]!.2) == PinnedVersion("1.0.0")
+				expect(outdatedDependencies[github6]!.2) == PinnedVersion("v1.0.0")
 			}
 		}
 
@@ -540,54 +521,6 @@ extension ProjectEvent {
 			return true
 		}
 		return false
-	}
-}
-
-
-// swiftlint:enable identifier_name
-private struct DB {
-	var versions: [Dependency: [PinnedVersion: [Dependency: VersionSpecifier]]]
-	var references: [Dependency: [String: PinnedVersion]] = [:]
-	
-	func versions(for dependency: Dependency) -> SignalProducer<PinnedVersion, CarthageError> {
-		if let versions = self.versions[dependency] {
-			return .init(versions.keys)
-		} else {
-			return .init(error: .taggedVersionNotFound(dependency))
-		}
-	}
-	
-	func dependencies(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
-		if let dependencies = self.versions[dependency]?[version] {
-			return .init(dependencies.map { ($0.0, $0.1) })
-		} else {
-			return .empty
-		}
-	}
-	
-	func resolvedGitReference(_ dependency: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
-		if let version = references[dependency]?[reference] {
-			return .init(value: version)
-		} else {
-			return .empty
-		}
-	}
-
-	func resolver(_ resolverType: ResolverProtocol.Type = Resolver.self) -> ResolverProtocol {
-		return resolverType.init(
-			versionsForDependency: self.versions(for:),
-			dependenciesForDependency: self.dependencies(for:version:),
-			resolvedGitReference: self.resolvedGitReference(_:reference:)
-		)
-	}
-}
-
-extension DB: ExpressibleByDictionaryLiteral {
-	init(dictionaryLiteral elements: (Dependency, [PinnedVersion: [Dependency: VersionSpecifier]])...) {
-		self.init(versions: [:], references: [:])
-		for (key, value) in elements {
-			versions[key] = value
-		}
 	}
 }
 
