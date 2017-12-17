@@ -65,8 +65,8 @@ internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<Strin
 }
 
 /// Determines whether a framework was built with Swift
-internal func isSwiftFramework(_ frameworkURL: URL) -> SignalProducer<Bool, SwiftVersionError> {
-	return SignalProducer(value: frameworkURL.swiftmoduleURL() != nil)
+internal func isSwiftFramework(_ frameworkURL: URL) -> Bool {
+	return frameworkURL.swiftmoduleURL() != nil
 }
 
 /// Emits the framework URL if it matches the local Swift version and errors if not.
@@ -81,12 +81,11 @@ internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolcha
 
 /// Emits the framework URL if it is compatible with the build environment and errors if not.
 internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
-	return isSwiftFramework(frameworkURL)
-		.flatMap(.merge) { isSwift in
-			return isSwift
-				? checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: toolchain)
-				: SignalProducer(value: frameworkURL)
-		}
+	if isSwiftFramework(frameworkURL) {
+		return checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: toolchain)
+	} else {
+		return SignalProducer(value: frameworkURL)
+	}
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
@@ -373,7 +372,7 @@ private func mergeBuildProducts(
 
 			let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
 				.filter { $0.0 != nil }
-				.map { (modulesPath, productsURL) -> URL in
+				.map { modulesPath, productsURL in
 					return productsURL.appendingPathComponent(modulesPath!)
 				}
 
@@ -982,8 +981,8 @@ extension Signal where Value: TaskEventType {
 	fileprivate func collectTaskEvents() -> Signal<TaskEvent<[Value.T]>, Error> {
 		var taskValues: [Value.T] = []
 
-		return Signal<TaskEvent<[Value.T]>, Error> { observer in
-			return self.observe { event in
+		return Signal<TaskEvent<[Value.T]>, Error> { observer, lifetime in
+			lifetime += self.observe { event in
 				switch event {
 				case let .value(value):
 					if let taskValue = value.value {

@@ -42,7 +42,7 @@ extension Dependency {
 		if urlString.contains(githubHostIdentifier) {
 			let gitbubHostScanner = Scanner(string: urlString)
 
-			gitbubHostScanner.scanUpTo(githubHostIdentifier, into:nil)
+			gitbubHostScanner.scanUpTo(githubHostIdentifier, into: nil)
 			gitbubHostScanner.scanString(githubHostIdentifier, into: nil)
 
 			// find an SCP or URL path separator

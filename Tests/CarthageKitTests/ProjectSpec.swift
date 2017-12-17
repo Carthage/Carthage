@@ -425,7 +425,7 @@ class ProjectSpec: QuickSpec {
 				expect(events) == [.downloadingBinaryFrameworkDefinition(.binary(testDefinitionURL), testDefinitionURL)]
 			}
 		}
-		
+
 		describe("outdated dependencies") {
 			it("should return return available updates for outdated dependencies") {
 				var db: DB = [
@@ -512,6 +512,16 @@ class ProjectSpec: QuickSpec {
 				expect(outdatedDependencies[github6]!.0) == PinnedVersion(currentSHA)
 				expect(outdatedDependencies[github6]!.1) == PinnedVersion(nextSHA)
 				expect(outdatedDependencies[github6]!.2) == PinnedVersion("1.0.0")
+			}
+		}
+
+		describe("platformForFramework") {
+			let testStaticFrameworkURL = Bundle(for: type(of: self)).url(forResource: "Alamofire.framework", withExtension: nil)!
+			// Checks the framework's executable binary, not the Info.plist.
+			// The Info.plist is missing from Alamofire's bundle on purpose.
+			it("should check the framework's executable binary and produce a platform") {
+				let actualPlatform = platformForFramework(testStaticFrameworkURL).first()?.value
+				expect(actualPlatform) == .iOS
 			}
 		}
 	}

@@ -22,7 +22,7 @@ extension String {
 	/// Strips off a trailing string, if present.
 	internal func stripping(suffix: String) -> String {
 		if hasSuffix(suffix) {
-			let end = characters.index(endIndex, offsetBy: -suffix.count)
+			let end = index(endIndex, offsetBy: -suffix.count)
 			return String(self[startIndex..<end])
 		} else {
 			return self
@@ -35,7 +35,7 @@ extension Signal {
 	/// occurs on `otherSignal` (repeats included).
 	fileprivate func permute<U>(with otherSignal: Signal<U, Error>) -> Signal<(Value, U), Error> {
 		// swiftlint:disable:previous cyclomatic_complexity function_body_length
-		return Signal<(Value, U), Error> { observer in
+		return Signal<(Value, U), Error> { observer, lifetime in
 			let lock = NSLock()
 			lock.name = "org.carthage.CarthageKit.permute"
 
@@ -45,6 +45,7 @@ extension Signal {
 			var otherCompleted = false
 
 			let compositeDisposable = CompositeDisposable()
+			lifetime += compositeDisposable
 
 			compositeDisposable += self.observe { event in
 				switch event {
@@ -105,8 +106,6 @@ extension Signal {
 					observer.sendInterrupted()
 				}
 			}
-
-			return compositeDisposable
 		}
 	}
 }
@@ -155,11 +154,11 @@ extension Signal where Value: EventProtocol, Value.Error == Error {
 	/// Dematerializes the signal, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> Signal<Value.Value, Error> {
-		return Signal<Value.Value, Error> { observer in
+		return Signal<Value.Value, Error> { observer, lifetime in
 			var receivedValue = false
 			var receivedError: Error?
 
-			return self.observe { event in
+			lifetime += self.observe { event in
 				switch event {
 				case let .value(innerEvent):
 					switch innerEvent.event {

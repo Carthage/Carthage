@@ -16,13 +16,13 @@ public struct FetchCache {
 	/// Amount of time before a git repository is fetched again. Defaults to 1 minute
 	public static var fetchCacheInterval: TimeInterval = 60.0
 
-	private static var lastFetchTimes: [URL : TimeInterval] = [:]
+	private static var lastFetchTimes: [GitURL: TimeInterval] = [:]
 
 	internal static func clearFetchTimes() {
 		lastFetchTimes.removeAll()
 	}
 
-	internal static func needsFetch(forURL url: URL) -> Bool {
+	internal static func needsFetch(forURL url: GitURL) -> Bool {
 		guard let lastFetch = lastFetchTimes[url] else {
 			return true
 		}
@@ -32,8 +32,10 @@ public struct FetchCache {
 		return !(0...fetchCacheInterval).contains(difference)
 	}
 
-	fileprivate static func updateLastFetchTime(forURL url: URL) {
-		lastFetchTimes[url] = Date().timeIntervalSince1970
+	fileprivate static func updateLastFetchTime(forURL url: GitURL?) {
+		if let url = url {
+			lastFetchTimes[url] = Date().timeIntervalSince1970
+		}
 	}
 }
 
@@ -88,21 +90,18 @@ public func cloneRepository(_ cloneURL: GitURL, _ destinationURL: URL, isBare: B
 
 	return launchGitTask(arguments + [ "--quiet", cloneURL.urlString, destinationURL.path ])
 		.on(completed: {
-			FetchCache.updateLastFetchTime(forURL: destinationURL)
+			FetchCache.updateLastFetchTime(forURL: cloneURL)
 		})
 }
 
 /// Returns a signal that completes when the fetch completes successfully.
-public func fetchRepository(_ repositoryFileURL: URL, refspec: String? = nil) -> SignalProducer<String, CarthageError> {
+public func fetchRepository(_ repositoryFileURL: URL, remoteURL: GitURL? = nil, refspec: String? = nil) -> SignalProducer<String, CarthageError> {
 	precondition(repositoryFileURL.isFileURL)
 
 	var arguments = [ "fetch", "--prune", "--quiet" ]
-
-	// Use the `origin` remote which should have been set up.
-	//
-	// See https://github.com/Carthage/Carthage/issues/968
-	// and https://github.com/Carthage/Carthage/pull/2125.
-	arguments.append("origin")
+	if let remoteURL = remoteURL {
+		arguments.append(remoteURL.urlString)
+	}
 
 	// Specify an explict refspec that fetches tags for pruning.
 	// See https://github.com/Carthage/Carthage/issues/1027 and `man git-fetch`.
@@ -114,7 +113,7 @@ public func fetchRepository(_ repositoryFileURL: URL, refspec: String? = nil) ->
 
 	return launchGitTask(arguments, repositoryFileURL: repositoryFileURL)
 		.on(completed: {
-			FetchCache.updateLastFetchTime(forURL: repositoryFileURL)
+			FetchCache.updateLastFetchTime(forURL: remoteURL)
 		})
 }
 
@@ -156,8 +155,7 @@ public func checkoutRepositoryToDirectory(
 	_ workingDirectoryURL: URL,
 	revision: String = "HEAD"
 ) -> SignalProducer<(), CarthageError> {
-	return SignalProducer
-		{ () -> Result<[String: String], CarthageError> in
+	return SignalProducer { () -> Result<[String: String], CarthageError> in
 			var environment = ProcessInfo.processInfo.environment
 			environment["GIT_WORK_TREE"] = workingDirectoryURL.path
 			return .success(environment)
@@ -216,8 +214,7 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 				}
 		}
 
-	return SignalProducer<(), CarthageError>
-		{ () -> Result<(), CarthageError> in
+	return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
 			repositoryCheck("remove submodule checkout") {
 				try FileManager.default.removeItem(at: submoduleDirectoryURL)
 			}
@@ -336,6 +333,7 @@ internal func gitmodulesEntriesInRepository(
 		.flatMap(.concat) { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
 		.flatMap(.concat) { name, path -> SignalProducer<(name: String, path: String, url: GitURL), CarthageError> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
+				.map { $0.stripping(suffix: "\0") }
 				.map { urlString in (name: name, path: path, url: GitURL(urlString)) }
 		}
 }
@@ -488,7 +486,7 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 		.flatMap(.merge) { submoduleExists -> SignalProducer<(), CarthageError> in
 			if submoduleExists {
 				// Just check out and stage the correct revision.
-				return fetchRepository(submoduleDirectoryURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
+				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
 					.then(
 						launchGitTask(
 							["config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.url.urlString],
