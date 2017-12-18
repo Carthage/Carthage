@@ -54,11 +54,11 @@ public struct OutdatedCommand: CommandProtocol {
 
 				if !outdatedDependencies.isEmpty {
 					carthage.println(formatting.path("The following dependencies are outdated:"))
-					for (project, current, updated) in outdatedDependencies {
+					for (project, current, updated, latest) in outdatedDependencies {
 						if options.outputXcodeWarnings {
-							carthage.println("warning: \(formatting.projectName(project.name)) is out of date (\(current) -> \(updated))")
+							carthage.println("warning: \(formatting.projectName(project.name)) is out of date (\(current) -> \(updated)) (Latest: \(latest))")
 						} else {
-							carthage.println(formatting.projectName(project.name) + " \(current) -> \(updated)")
+							carthage.println(formatting.projectName(project.name) + " \(current) -> \(updated) (Latest: \(latest))")
 						}
 					}
 				} else {

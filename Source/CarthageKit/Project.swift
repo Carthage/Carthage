@@ -384,19 +384,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func updatedResolvedCartfile(_ dependenciesToUpdate: [String]? = nil, useNewResolver: Bool = false) -> SignalProducer<ResolvedCartfile, CarthageError> {
-		let resolverType: ResolverProtocol.Type
-		if useNewResolver {
-			resolverType = NewResolver.self
-		} else {
-			resolverType = Resolver.self
-		}
-		let resolver = resolverType.init(
-			versionsForDependency: versions(for:),
-			dependenciesForDependency: dependencies(for:version:),
-			resolvedGitReference: resolvedGitReference
-		)
-
+	public func updatedResolvedCartfile(_ dependenciesToUpdate: [String]? = nil, resolver: ResolverProtocol) -> SignalProducer<ResolvedCartfile, CarthageError> {
 		let resolvedCartfile: SignalProducer<ResolvedCartfile?, CarthageError> = loadResolvedCartfile()
 			.map(Optional.init)
 			.flatMapError { _ in .init(value: nil) }
@@ -413,24 +401,61 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.map(ResolvedCartfile.init)
 	}
 
+	/// Attempts to determine the latest version (whether satisfiable or not)
+	/// of the project's Carthage dependencies.
+	///
+	/// This will fetch dependency repositories as necessary, but will not check
+	/// them out into the project's working directory.
+	private func latestDependencies(resolver: ResolverProtocol) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
+		return loadResolvedCartfile()
+			.map { $0.dependencies.mapValues { _ in VersionSpecifier.any } }
+			.flatMap(.merge) { resolver.resolve(dependencies: $0, lastResolved: nil, dependenciesToUpdate: nil) }
+	}
+
+	public typealias OutdatedDependency = (Dependency, PinnedVersion, PinnedVersion, PinnedVersion)
 	/// Attempts to determine which of the project's Carthage
 	/// dependencies are out of date.
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func outdatedDependencies(_ includeNestedDependencies: Bool) -> SignalProducer<[(Dependency, PinnedVersion, PinnedVersion)], CarthageError> {
-		typealias OutdatedDependency = (Dependency, PinnedVersion, PinnedVersion)
+	public func outdatedDependencies(_ includeNestedDependencies: Bool, useNewResolver: Bool = true, resolver: ResolverProtocol? = nil) -> SignalProducer<[OutdatedDependency], CarthageError> {
+		let resolverType: ResolverProtocol.Type
+		if useNewResolver {
+			resolverType = NewResolver.self
+		} else {
+			resolverType = Resolver.self
+		}
+
+		let dependencies: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
+		if includeNestedDependencies {
+			dependencies = self.dependencies(for:version:)
+		} else {
+			dependencies = { _, _ in .empty }
+		}
+
+		let resolver = resolver ?? resolverType.init(
+			versionsForDependency: versions(for:),
+			dependenciesForDependency: dependencies,
+			resolvedGitReference: resolvedGitReference
+		)
 
 		let outdatedDependencies = SignalProducer
 			.combineLatest(
 				loadResolvedCartfile(),
-				updatedResolvedCartfile()
+				updatedResolvedCartfile(resolver: resolver),
+				latestDependencies(resolver: resolver)
 			)
-			.map { ($0.dependencies, $1.dependencies) }
-			.map { (currentDependencies, updatedDependencies) -> [OutdatedDependency] in
+			.map { ($0.dependencies, $1.dependencies, $2) }
+			.map { (currentDependencies, updatedDependencies, latestDependencies) -> [OutdatedDependency] in
 				return updatedDependencies.flatMap { (project, version) -> OutdatedDependency? in
-					if let resolved = currentDependencies[project], resolved != version {
-						return (project, resolved, version)
+					if let resolved = currentDependencies[project], let latest = latestDependencies[project], resolved != version || resolved != latest {
+						if SemanticVersion.from(resolved).value == nil, version == resolved {
+							// If resolved version is not a semantic version but a commit
+							// it is a false-positive if `version` and `resolved` are the same
+							return nil
+						}
+
+						return (project, resolved, version, latest)
 					} else {
 						return nil
 					}
@@ -447,7 +472,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				loadCombinedCartfile()
 			)
 			.map { oudatedDependencies, combinedCartfile -> [OutdatedDependency] in
-				return oudatedDependencies.filter { project, _, _ in
+				return oudatedDependencies.filter { project, _, _, _ in
 					return combinedCartfile.dependencies[project] != nil
 				}
 			}
@@ -462,7 +487,19 @@ public final class Project { // swiftlint:disable:this type_body_length
 		buildOptions: BuildOptions,
 		dependenciesToUpdate: [String]? = nil
 	) -> SignalProducer<(), CarthageError> {
-		return updatedResolvedCartfile(dependenciesToUpdate, useNewResolver: useNewResolver)
+		let resolverType: ResolverProtocol.Type
+		if useNewResolver {
+			resolverType = NewResolver.self
+		} else {
+			resolverType = Resolver.self
+		}
+		let resolver = resolverType.init(
+			versionsForDependency: versions(for:),
+			dependenciesForDependency: dependencies(for:version:),
+			resolvedGitReference: resolvedGitReference
+		)
+
+		return updatedResolvedCartfile(dependenciesToUpdate, resolver: resolver)
 			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
 				return self.writeResolvedCartfile(resolvedCartfile)
 			}
