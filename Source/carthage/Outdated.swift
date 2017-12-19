@@ -4,10 +4,33 @@ import Foundation
 import Result
 import ReactiveSwift
 import Curry
-import PrettyColors
 
 /// Type that encapsulates the configuration and evaluation of the `outdated` subcommand.
 public struct OutdatedCommand: CommandProtocol {
+	enum UpdateAvailabilityAndApplicability: String {
+		case updatesAvailableAllApplicable =
+		"Will be updated to the newest version."
+		case updatesAvailableSomeApplicable =
+		"Will be updated, but not to the newest version because of the specified version in Cartfile."
+		case updatesAvailableNoneApplicable =
+		"Will not be updated because of the specified version in Cartfile."
+		case noUpdatesAvailable =
+		"Will not be updated: no updates available."
+
+		init(currentVersion current: PinnedVersion, applicableVersion applicable: PinnedVersion, latestVersion latest: PinnedVersion) {
+			switch (current, applicable, latest) {
+			case (current, applicable, latest) where current != latest && applicable == latest:
+				self = .updatesAvailableAllApplicable
+			case (current, applicable, latest) where current != applicable && applicable != latest:
+				self = .updatesAvailableSomeApplicable
+			case (current, applicable, latest) where current != latest && current == applicable:
+				self = .updatesAvailableNoneApplicable
+			default:
+				self = .noUpdatesAvailable
+			}
+		}
+	}
+
 	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
 		public let isVerbose: Bool
@@ -56,39 +79,17 @@ public struct OutdatedCommand: CommandProtocol {
 				if !outdatedDependencies.isEmpty {
 					carthage.println(formatting.path("The following dependencies are outdated:"))
 
-					for (project, current, updated, latest) in outdatedDependencies {
-						let versionColor: Color.Named.Color
-						switch (current, updated, latest) {
-						case (_, updated, latest) where updated == latest:
-							// Update available and applicable
-							versionColor = .green
-						case (current, updated, latest) where current != updated && updated != latest:
-							// Update availabe and applicable, but not to the latest version due to version lock
-							versionColor = .yellow
-						case (current, updated, latest) where current == updated:
-							// Update available, but not applicable due to version lock
-							versionColor = .red
-						default:
-							versionColor = .white
-						}
-
+					for (project, current, applicable, latest) in outdatedDependencies {
 						if options.outputXcodeWarnings {
-							carthage.println("warning: \(formatting.projectName(project.name)) is out of date (\(current) -> \(updated)) (Latest: \(latest))")
+							carthage.println("warning: \(formatting.projectName(project.name)) is out of date (\(current) -> \(applicable)) (Latest: \(latest))")
 						} else {
-							let versionSummary = formatting.colored(current.description, color: versionColor)
-								+ " -> " + formatting.colored(updated.description, color: versionColor)
-								+ " (Latest: \(latest))"
+							let availability = UpdateAvailabilityAndApplicability(currentVersion: current, applicableVersion: applicable, latestVersion: latest)
+							let style = formatting[availability]
+							let versionSummary = "\(style(current.description)) -> \(style(applicable.description)) (Latest: \(latest))"
 							carthage.println(formatting.projectName(project.name) + " " + versionSummary)
 						}
 					}
-
-					if options.colorOptions.formatting.isColorful {
-						carthage.println(formatting.path("The color indicates what happens when you run `carthage update`"))
-						carthage.println(formatting.colored("<green>", color: .green) + "\t\t- Will be updated to the newest version")
-						carthage.println(formatting.colored("<yellow>", color: .yellow) + "\t- Will be updated, but not to the newest version"
-							+ " because of the specified version in Cartfile")
-						carthage.println(formatting.colored("<red>", color: .red) + "\t\t- Will not be updated because of the specified version in Cartfile")
-					}
+					formatting.legendForOutdatedCommand.map(carthage.println)
 				} else {
 					carthage.println("All dependencies are up to date.")
 				}

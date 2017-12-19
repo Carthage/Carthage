@@ -77,11 +77,6 @@ public struct ColorOptions: OptionsProtocol {
 		func quote(_ string: String, quotationMark: String = "\"") -> String {
 			return wrap(isColorful, wrap: Color.Wrap(foreground: .green))(quotationMark + string + quotationMark)
 		}
-
-		/// Wraps a string in a color
-		func colored(_ string: String, color: Color.Named.Color) -> String {
-			return wrap(isColorful, wrap: Color.Wrap(foreground: color))(string)
-		}
 	}
 
 	private init(argument: ColorArgument) {
@@ -96,5 +91,38 @@ public struct ColorOptions: OptionsProtocol {
 				defaultValue: ColorArgument.auto,
 				usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')"
 			)
+	}
+}
+
+extension OutdatedCommand.UpdateAvailabilityAndApplicability {
+	fileprivate static let dict: [OutdatedCommand.UpdateAvailabilityAndApplicability: Color.Named.Color] = [
+		.updatesAvailableAllApplicable: .green,
+		.updatesAvailableSomeApplicable: .yellow,
+		.updatesAvailableNoneApplicable: .red,
+	]
+}
+
+extension ColorOptions.Formatting {
+	subscript(_ index: OutdatedCommand.UpdateAvailabilityAndApplicability) -> Wrap {
+		guard self.isColorful, let color = OutdatedCommand.UpdateAvailabilityAndApplicability.dict[index] else {
+			return { $0 }
+		}
+		return Color.Wrap(foreground: color).wrap
+	}
+
+	public var legendForOutdatedCommand: String? {
+		guard self.isColorful else { return nil }
+
+		let header = "Legend — <color> • «what happens when you run `carthage update`»:\n"
+		return OutdatedCommand.UpdateAvailabilityAndApplicability.dict.reduce(into: header) {
+			let (situation, color) = $1
+			let tabs = String(
+				repeating: "\t",
+				count: color == .yellow || color == .magenta ? 1 : 2
+			)
+			let colorDescription = Color.Wrap(foreground: color)
+				.wrap("<" + String(describing: color) + ">")
+			$0.append(colorDescription + tabs + "• " + situation.rawValue + "\n")
+		}
 	}
 }
