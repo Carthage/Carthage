@@ -7,26 +7,30 @@ import Curry
 
 /// Type that encapsulates the configuration and evaluation of the `outdated` subcommand.
 public struct OutdatedCommand: CommandProtocol {
-	enum UpdateAvailabilityAndApplicability: String {
-		case updatesAvailableAllApplicable =
-		"Will be updated to the newest version."
-		case updatesAvailableSomeApplicable =
-		"Will be updated, but not to the newest version because of the specified version in Cartfile."
-		case updatesAvailableNoneApplicable =
-		"Will not be updated because of the specified version in Cartfile."
-		case noUpdatesAvailable =
-		"Will not be updated: no updates available."
+	enum UpdateType {
+		case newest
+		case newer
+		case ineligible
 
-		init(currentVersion current: PinnedVersion, applicableVersion applicable: PinnedVersion, latestVersion latest: PinnedVersion) {
-			switch (current, applicable, latest) {
-			case (current, applicable, latest) where current != latest && applicable == latest:
-				self = .updatesAvailableAllApplicable
-			case (current, applicable, latest) where current != applicable && applicable != latest:
-				self = .updatesAvailableSomeApplicable
-			case (current, applicable, latest) where current != latest && current == applicable:
-				self = .updatesAvailableNoneApplicable
-			default:
-				self = .noUpdatesAvailable
+		init?(currentVersion current: PinnedVersion, applicableVersion applicable: PinnedVersion, latestVersion latest: PinnedVersion) {
+			guard current != latest else { return nil }
+			if applicable == latest {
+				self = .newest
+			} else if current != applicable {
+				self = .newer
+			} else {
+				self = .ineligible
+			}
+		}
+
+		var explanation: String {
+			switch self {
+			case .newest:
+				return "Will be updated to the newest version."
+			case .newer:
+				return "Will be updated, but not to the newest version because of the specified version in Cartfile."
+			case .ineligible:
+				return "Will not be updated because of the specified version in Cartfile."
 			}
 		}
 	}
@@ -83,8 +87,8 @@ public struct OutdatedCommand: CommandProtocol {
 						if options.outputXcodeWarnings {
 							carthage.println("warning: \(formatting.projectName(project.name)) is out of date (\(current) -> \(applicable)) (Latest: \(latest))")
 						} else {
-							let availability = UpdateAvailabilityAndApplicability(currentVersion: current, applicableVersion: applicable, latestVersion: latest)
-							let style = formatting[availability]
+							let update = UpdateType(currentVersion: current, applicableVersion: applicable, latestVersion: latest)
+							let style = formatting[update]
 							let versionSummary = "\(style(current.description)) -> \(style(applicable.description)) (Latest: \(latest))"
 							carthage.println(formatting.projectName(project.name) + " " + versionSummary)
 						}
