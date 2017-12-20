@@ -85,12 +85,20 @@ public struct ColorOptions: OptionsProtocol {
 	}
 
 	public static func evaluate(_ mode: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
+		return self.evaluate(mode, additionalUsage: nil)
+	}
+
+	public static func evaluate(_ mode: CommandMode, additionalUsage: String? = nil) -> Result<ColorOptions, CommandantError<CarthageError>> {
+		var usage = "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')"
+		if let additionalUsage = additionalUsage {
+			usage += "\n" + additionalUsage
+		}
 		return curry(self.init)
 			<*> mode <| Option(
 				key: "color",
 				defaultValue: ColorArgument.auto,
-				usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')"
-			)
+				usage: usage
+		)
 	}
 }
 
@@ -113,21 +121,5 @@ extension ColorOptions.Formatting {
 			return { $0 }
 		}
 		return Color.Wrap(foreground: update.color).wrap
-	}
-
-	public var legendForOutdatedCommand: String? {
-		guard self.isColorful else { return nil }
-
-		let header = "Legend — <color> • «what happens when you run `carthage update`»:\n"
-		return [OutdatedCommand.UpdateType.newest, .newer, .ineligible].reduce(into: header) {
-			let (color, explanation) = ($1.color, $1.explanation)
-			let tabs = String(
-				repeating: "\t",
-				count: color == .yellow || color == .magenta ? 1 : 2
-			)
-			let colorDescription = Color.Wrap(foreground: color)
-				.wrap("<" + String(describing: color) + ">")
-			$0.append(colorDescription + tabs + "• " + explanation + "\n")
-		}
 	}
 }

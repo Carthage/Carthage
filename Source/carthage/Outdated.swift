@@ -33,6 +33,18 @@ public struct OutdatedCommand: CommandProtocol {
 				return "Will not be updated because of the specified version in Cartfile."
 			}
 		}
+
+		static var legend: String {
+			let header = "Legend — <color> • «what happens when you run `carthage update`»:\n"
+			return header + [UpdateType.newest, .newer, .ineligible].map {
+				let (color, explanation) = ($0.color, $0.explanation)
+				let tabs = String(
+					repeating: "\t",
+					count: color == .yellow || color == .magenta ? 1 : 2
+				)
+				return "<" + String(describing: color) + ">" + tabs + "• " + explanation
+			}.joined(separator: "\n")
+		}
 	}
 
 	public struct Options: OptionsProtocol {
@@ -53,7 +65,7 @@ public struct OutdatedCommand: CommandProtocol {
 				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> mode <| Option(key: "xcode-warnings", defaultValue: false, usage: "output Xcode compatible warning messages")
-				<*> ColorOptions.evaluate(mode)
+				<*> ColorOptions.evaluate(mode, additionalUsage: UpdateType.legend)
 				<*> mode <| projectDirectoryOption
 		}
 
@@ -93,7 +105,6 @@ public struct OutdatedCommand: CommandProtocol {
 							carthage.println(formatting.projectName(project.name) + " " + versionSummary)
 						}
 					}
-					formatting.legendForOutdatedCommand.map(carthage.println)
 				} else {
 					carthage.println("All dependencies are up to date.")
 				}
