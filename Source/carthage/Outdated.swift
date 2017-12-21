@@ -7,6 +7,46 @@ import Curry
 
 /// Type that encapsulates the configuration and evaluation of the `outdated` subcommand.
 public struct OutdatedCommand: CommandProtocol {
+	enum UpdateType {
+		case newest
+		case newer
+		case ineligible
+
+		init?(currentVersion current: PinnedVersion, applicableVersion applicable: PinnedVersion, latestVersion latest: PinnedVersion) {
+			guard current != latest else { return nil }
+			if applicable == latest {
+				self = .newest
+			} else if current != applicable {
+				self = .newer
+			} else {
+				self = .ineligible
+			}
+		}
+
+		var explanation: String {
+			switch self {
+			case .newest:
+				return "Will be updated to the newest version."
+			case .newer:
+				return "Will be updated, but not to the newest version because of the specified version in Cartfile."
+			case .ineligible:
+				return "Will not be updated because of the specified version in Cartfile."
+			}
+		}
+
+		static var legend: String {
+			let header = "Legend — <color> • «what happens when you run `carthage update`»:\n"
+			return header + [UpdateType.newest, .newer, .ineligible].map {
+				let (color, explanation) = ($0.color, $0.explanation)
+				let tabs = String(
+					repeating: "\t",
+					count: color == .yellow || color == .magenta ? 1 : 2
+				)
+				return "<" + String(describing: color) + ">" + tabs + "• " + explanation
+			}.joined(separator: "\n")
+		}
+	}
+
 	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
 		public let isVerbose: Bool
@@ -25,7 +65,7 @@ public struct OutdatedCommand: CommandProtocol {
 				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> mode <| Option(key: "xcode-warnings", defaultValue: false, usage: "output Xcode compatible warning messages")
-				<*> ColorOptions.evaluate(mode)
+				<*> ColorOptions.evaluate(mode, additionalUsage: UpdateType.legend)
 				<*> mode <| projectDirectoryOption
 		}
 
@@ -54,11 +94,15 @@ public struct OutdatedCommand: CommandProtocol {
 
 				if !outdatedDependencies.isEmpty {
 					carthage.println(formatting.path("The following dependencies are outdated:"))
-					for (project, current, updated, latest) in outdatedDependencies {
+
+					for (project, current, applicable, latest) in outdatedDependencies {
 						if options.outputXcodeWarnings {
-							carthage.println("warning: \(formatting.projectName(project.name)) is out of date (\(current) -> \(updated)) (Latest: \(latest))")
+							carthage.println("warning: \(formatting.projectName(project.name)) is out of date (\(current) -> \(applicable)) (Latest: \(latest))")
 						} else {
-							carthage.println(formatting.projectName(project.name) + " \(current) -> \(updated) (Latest: \(latest))")
+							let update = UpdateType(currentVersion: current, applicableVersion: applicable, latestVersion: latest)
+							let style = formatting[update]
+							let versionSummary = "\(style(current.description)) -> \(style(applicable.description)) (Latest: \(latest))"
+							carthage.println(formatting.projectName(project.name) + " " + versionSummary)
 						}
 					}
 				} else {

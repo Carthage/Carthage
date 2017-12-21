@@ -85,11 +85,41 @@ public struct ColorOptions: OptionsProtocol {
 	}
 
 	public static func evaluate(_ mode: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
+		return self.evaluate(mode, additionalUsage: nil)
+	}
+
+	public static func evaluate(_ mode: CommandMode, additionalUsage: String? = nil) -> Result<ColorOptions, CommandantError<CarthageError>> {
+		var usage = "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')"
+		if let additionalUsage = additionalUsage {
+			usage += "\n" + additionalUsage
+		}
 		return curry(self.init)
 			<*> mode <| Option(
 				key: "color",
 				defaultValue: ColorArgument.auto,
-				usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')"
-			)
+				usage: usage
+		)
+	}
+}
+
+extension OutdatedCommand.UpdateType {
+	var color: Color.Named.Color {
+		switch self {
+		case .newest:
+			return .green
+		case .newer:
+			return .yellow
+		case .ineligible:
+			return .red
+		}
+	}
+}
+
+extension ColorOptions.Formatting {
+	subscript(_ index: OutdatedCommand.UpdateType?) -> Wrap {
+		guard self.isColorful, let update = index else {
+			return { $0 }
+		}
+		return Color.Wrap(foreground: update.color).wrap
 	}
 }
