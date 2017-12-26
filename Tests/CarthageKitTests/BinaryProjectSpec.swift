@@ -44,12 +44,11 @@ class BinaryProjectSpec: QuickSpec {
 
 				let actualError = BinaryProject.from(jsonData: jsonData).error
 
-				let error = NSError(
-					domain: Constants.bundleIdentifier,
-					code: 1,
-					userInfo: [NSLocalizedDescriptionKey: "Binary definition was not expected type [String: String]"]
-				)
-				expect(actualError) == .invalidJSON(error)
+				if case let .invalidJSON(underlyingError)? = actualError {
+					expect(underlyingError is DecodingError) == true
+				} else {
+					fail()
+				}
 			}
 
 			it("should fail with an invalid semantic version") {
