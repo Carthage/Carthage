@@ -149,7 +149,7 @@ public func contentsOfFileInRepository(_ repositoryFileURL: URL, _ path: String,
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
 ///
-/// Submodules of the working tree must be handled seperately.
+/// Submodules of the working tree must be handled separately.
 public func checkoutRepositoryToDirectory(
 	_ repositoryFileURL: URL,
 	_ workingDirectoryURL: URL,
