@@ -28,8 +28,12 @@ public struct Cartfile {
 
 		let commentIndicator = "#"
 		string.enumerateLines { line, stop in
-			let scanner = Scanner(string: line)
-
+			var trimLine = line.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+			let skipTag = "##skip"
+			let hasSkipTag = trimLine.hasSuffix(skipTag) == true
+			trimLine = trimLine.replacingOccurrences(of: skipTag, with: "").trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+			let scanner = Scanner(string: trimLine)
+			
 			if scanner.scanString(commentIndicator, into: nil) {
 				// Skip the rest of the line.
 				return
@@ -39,7 +43,7 @@ public struct Cartfile {
 				// The line was all whitespace.
 				return
 			}
-
+			
 			switch Dependency.from(scanner).fanout(VersionSpecifier.from(scanner)) {
 			case let .success((dependency, version)):
 				if case .binary = dependency, case .gitReference = version {
@@ -51,11 +55,24 @@ public struct Cartfile {
 					stop = true
 					return
 				}
-
-				if dependencies[dependency] == nil {
-					dependencies[dependency] = version
+				if hasSkipTag {
+					Dependency.skippableDependencies.insert(dependency)
+				}
+				let name = dependency.name
+				var replacedDependency: Dependency = dependency
+				if let old = Dependency.totalDependencies[name] {
+					if old.isLocalProject == false, dependency.isLocalProject == true {
+						Dependency.totalDependencies[name] = dependency
+					} else {
+						replacedDependency = old
+					}
 				} else {
-					duplicates.append(dependency)
+					Dependency.totalDependencies[name] = dependency
+				}
+				if dependencies[replacedDependency] == nil {
+					dependencies[replacedDependency] = version
+				} else {
+					duplicates.append(replacedDependency)
 				}
 
 			case let .failure(error):
@@ -69,7 +86,7 @@ public struct Cartfile {
 				return
 			}
 
-			if !scanner.isAtEnd {
+			if scanner.isAtEnd == false {
 				result = .failure(CarthageError.parseError(description: "unexpected trailing characters in line: \(line)"))
 				stop = true
 			}

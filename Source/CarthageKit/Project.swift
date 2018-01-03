@@ -223,6 +223,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Returns a signal which will send the URL to the repository's folder on
 	/// disk once cloning or fetching has completed.
 	private func cloneOrFetchDependency(_ dependency: Dependency, commitish: String? = nil) -> SignalProducer<URL, CarthageError> {
+
 		return cloneOrFetch(dependency: dependency, preferHTTPS: self.preferHTTPS, commitish: commitish)
 			.on(value: { event, _ in
 				if let event = event {
@@ -269,13 +270,14 @@ public final class Project { // swiftlint:disable:this type_body_length
 			fetchVersions = cloneOrFetchDependency(dependency)
 				.flatMap(.merge) { repositoryURL in listTags(repositoryURL) }
 				.map { PinnedVersion($0) }
-
+			
 		case let .binary(url):
 			fetchVersions = downloadBinaryFrameworkDefinition(url: url)
 				.flatMap(.concat) { binaryProject -> SignalProducer<PinnedVersion, CarthageError> in
 					return SignalProducer(binaryProject.versions.keys)
-				}
+			}
 		}
+		
 
 		return SignalProducer<Project.CachedVersions, CarthageError>(value: self.cachedVersions)
 			.flatMap(.merge) { versionsByDependency -> SignalProducer<PinnedVersion, CarthageError> in
@@ -325,6 +327,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		switch dependency {
 		case .git, .gitHub:
 			let revision = version.commitish
+
 			let cartfileFetch: SignalProducer<Cartfile, CarthageError> = self.cloneOrFetchDependency(dependency, commitish: revision)
 				.flatMap(.concat) { repositoryURL in
 					return contentsOfFileInRepository(repositoryURL, Constants.Project.cartfilePath, revision: revision)
@@ -365,6 +368,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(_ dependency: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
 		let repositoryURL = repositoryFileURL(for: dependency)
+
 		return cloneOrFetchDependency(dependency, commitish: reference)
 			.flatMap(.concat) { _ in
 				return resolveTagInRepository(repositoryURL, reference)
@@ -596,7 +600,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						}
 						.concat(value: false)
 						.take(first: 1)
-
+					
 				case .git, .binary:
 					return SignalProducer(value: false)
 				}
@@ -718,6 +722,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		submodulesByPath: [String: Submodule]
 	) -> SignalProducer<(), CarthageError> {
 		let revision = version.commitish
+
 		return cloneOrFetchDependency(dependency, commitish: revision)
 			.flatMap(.merge) { repositoryURL -> SignalProducer<(), CarthageError> in
 				let workingDirectoryURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
@@ -779,6 +784,17 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 			.reduce(into: [:]) { (working: inout DependencyGraph, next: DependencyGraph) in
 				for (key, value) in next {
+					if value == [] {
+						for (workKey, workValue) in working {
+							for item in workValue {
+								guard item.name == key.name else { continue }
+								var mutWorkValue = workValue
+								mutWorkValue.remove(item)
+								mutWorkValue.insert(key)
+								working.updateValue(mutWorkValue, forKey: workKey)
+							}
+						}
+					}
 					working.updateValue(value, forKey: key)
 				}
 			}
@@ -786,7 +802,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 				let dependenciesToInclude = Set(graph
 					.map { dependency, _ in dependency }
 					.filter { dependency in dependenciesToInclude?.contains(dependency.name) ?? false })
-
 				guard let sortedDependencies = topologicalSort(graph, nodes: dependenciesToInclude) else { // swiftlint:disable:this single_line_guard
 					return SignalProducer(error: .dependencyCycle(graph))
 				}
@@ -821,16 +836,16 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(), CarthageError> in
 						switch dependency {
 						case .git, .gitHub:
-
+							
 							let submoduleFound = submodulesByPath[dependency.relativePath] != nil
 							let checkoutOrCloneDependency = self.checkoutOrCloneDependency(dependency, version: version, submodulesByPath: submodulesByPath)
-
+							
 							// Disable binary downloads for the dependency if that
 							// is already checked out as a submodule.
 							if submoduleFound {
 								return checkoutOrCloneDependency
 							}
-
+							
 							return self.installBinaries(for: dependency, pinnedVersion: version, toolchain: buildOptions?.toolchain)
 								.flatMap(.merge) { installed -> SignalProducer<(), CarthageError> in
 									if installed {
@@ -838,12 +853,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 									} else {
 										return checkoutOrCloneDependency
 									}
-								}
-
+							}
+							
 						case let .binary(url):
 							return self.installBinariesForBinaryProject(url: url, pinnedVersion: version, projectName: dependency.name, toolchain: buildOptions?.toolchain)
 						}
-					}
+				}
 			}
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
@@ -1034,7 +1049,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.map { producer -> BuildSchemeProducer in
 						return producer.flatMapError { error in
 							switch error {
-							case .noSharedFrameworkSchemes:
+							case .noSharedFrameworkSchemes, .skipped:
 								// Log that building the dependency is being skipped,
 								// not to error out with `.noSharedFrameworkSchemes`
 								// to continue building other dependencies.
@@ -1296,7 +1311,8 @@ public func cloneOrFetch(
 		.flatMap(.merge) { (remoteURL: GitURL) -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 			return isGitRepository(repositoryURL)
 				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
-					if isRepository {
+					let isLocalProject = dependency.isLocalProject
+					if isRepository, isLocalProject == false {
 						let fetchProducer: () -> SignalProducer<(ProjectEvent?, URL), CarthageError> = {
 							guard FetchCache.needsFetch(forURL: remoteURL) else {
 								return SignalProducer(value: (nil, repositoryURL))
@@ -1308,7 +1324,6 @@ public func cloneOrFetch(
 										.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
 								)
 						}
-
 						// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
 						if let commitish = commitish {
 							return SignalProducer.zip(
@@ -1327,6 +1342,7 @@ public func cloneOrFetch(
 							return fetchProducer()
 						}
 					} else {
+
 						// Either the directory didn't exist or it did but wasn't a git repository
 						// (Could happen if the process is killed during a previous directory creation)
 						// So we remove it, then clone

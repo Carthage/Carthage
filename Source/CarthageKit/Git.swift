@@ -50,9 +50,7 @@ public func launchGitTask(
 	// See https://github.com/Carthage/Carthage/issues/219.
 	var updatedEnvironment = environment ?? ProcessInfo.processInfo.environment
 	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
-
 	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
-
 	return taskDescription.launch(standardInput: standardInput)
 		.ignoreTaskData()
 		.mapError(CarthageError.taskError)
@@ -99,6 +97,7 @@ public func fetchRepository(_ repositoryFileURL: URL, remoteURL: GitURL? = nil, 
 	precondition(repositoryFileURL.isFileURL)
 
 	var arguments = [ "fetch", "--prune", "--quiet" ]
+	
 	if let remoteURL = remoteURL {
 		arguments.append(remoteURL.urlString)
 	}
@@ -116,6 +115,8 @@ public func fetchRepository(_ repositoryFileURL: URL, remoteURL: GitURL? = nil, 
 			FetchCache.updateLastFetchTime(forURL: remoteURL)
 		})
 }
+
+
 
 /// Sends each tag found in the given Git repository.
 public func listTags(_ repositoryFileURL: URL) -> SignalProducer<String, CarthageError> {

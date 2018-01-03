@@ -71,6 +71,7 @@ extension GitURL: ArgumentProtocol {
 /// Logs project events put into the sink.
 internal struct ProjectEventSink {
 	private let colorOptions: ColorOptions
+	private var echoMap: [String : [String]] = [:]
 
 	init(colorOptions: ColorOptions) {
 		self.colorOptions = colorOptions
@@ -81,13 +82,18 @@ internal struct ProjectEventSink {
 
 		switch event {
 		case let .cloning(dependency):
-			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(dependency.name))
+			var clones = echoMap["Cloning"] ?? []
+			let name = dependency.name
+			guard clones.contains(name) == false else { return }
+			clones.append(name)
+			echoMap["Cloning"] = clones
+			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(name) + " " + formatting.path(dependency.description) )
 
 		case let .fetching(dependency):
-			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(dependency.name))
+			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(dependency.name) + " " + formatting.path(dependency.description) )
 
 		case let .checkingOut(dependency, revision):
-			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(dependency.name) + " at " + formatting.quote(revision))
+			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(dependency.name) + " at " + formatting.quote(revision) + " path " + formatting.path(dependency.description))
 
 		case let .downloadingBinaryFrameworkDefinition(dependency, url):
 			carthage.println(formatting.bullets + "Downloading binary-only framework " + formatting.projectName(dependency.name)

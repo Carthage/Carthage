@@ -87,6 +87,8 @@ public enum CarthageError: Error {
 
 	/// An internal error occurred
 	case internalError(description: String)
+	
+	case skipped(Dependency)
 }
 
 extension CarthageError {
@@ -334,6 +336,9 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .internalError(description):
 			return description
+			
+		case let .skipped(dependency):
+			return "⚠️   Skip Building: \(dependency.name) accroding to the config in Cartfile"
 		}
 	}
 }

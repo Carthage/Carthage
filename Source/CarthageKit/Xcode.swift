@@ -703,7 +703,11 @@ public func build(
 ) -> SignalProducer<BuildSchemeProducer, CarthageError> {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
-
+	
+	if Dependency.skippableDependencies.contains(dependency) {
+		let value = SignalProducer<TaskEvent<(ProjectLocator, Scheme)>, CarthageError>(error: .skipped(dependency))
+		return SignalProducer<BuildSchemeProducer, CarthageError>(value: value)
+	}
 	return symlinkBuildPath(for: dependency, rootDirectoryURL: rootDirectoryURL)
 		.map { _ -> BuildSchemeProducer in
 			return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)

@@ -3,7 +3,9 @@ import Result
 import Tentacle
 
 /// Uniquely identifies a project that can be used as a dependency.
-public enum Dependency {
+public indirect enum Dependency {
+	public static var skippableDependencies: Set<Dependency> = []
+	public static var totalDependencies: [String : Dependency] = [:]
 	/// A repository hosted on GitHub.com or GitHub Enterprise.
 	case gitHub(Server, Repository)
 
@@ -31,6 +33,21 @@ public enum Dependency {
 	/// working directory of the main project.
 	public var relativePath: String {
 		return (carthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
+	}
+	
+	public var isLocalProject: Bool {
+		switch self {
+		case .git(let url):
+			let urlString = url.urlString
+			if urlString.hasPrefix("file://")
+				|| urlString.hasPrefix("/") // "/path/to/..."
+				|| urlString.hasPrefix(".") // "./path/to/...", "../path/to/..."
+				|| urlString.hasPrefix("~") // "~/path/to/..."
+				|| !urlString.contains(":") // "path/to/..." with avoiding "git@github.com:owner/name"
+			{ return true }
+			return false
+		default: return false
+		}
 	}
 }
 
@@ -110,7 +127,6 @@ extension Dependency: Scannable {
 	/// Attempts to parse a Dependency.
 	public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
 		let parser: (String) -> Result<Dependency, ScannableError>
-
 		if scanner.scanString("github", into: nil) {
 			parser = { repoIdentifier in
 				return Repository.fromIdentifier(repoIdentifier).map { self.gitHub($0, $1) }
@@ -186,7 +202,6 @@ extension Dependency {
 			} else {
 				return server.sshURL(for: repository)
 			}
-
 		case let .git(url):
 			return url
 
