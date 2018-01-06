@@ -66,12 +66,15 @@ public struct UpdateCommand: CommandProtocol {
 			let binariesAddendum = "\n(ignored if --no-build or --toolchain option is present)"
 			let dependenciesUsage = "the dependency names to update, checkout and build"
 
+			let isVerbose = Configuration.shared.isEnableVerbose
+			let isEnableNewResolver = Configuration.shared.isEnableNewResolver
+			
 			return curry(self.init)
 				<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 				<*> mode <| Option(key: "build", defaultValue: true, usage: buildDescription)
-				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
+				<*> mode <| Option(key: "verbose", defaultValue: isVerbose, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
-				<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
+				<*> mode <| Option(key: "new-resolver", defaultValue: isEnableNewResolver, usage: "use the new resolver codeline when calculating dependencies. Default is false")
 				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
 				<*> CheckoutCommand.Options.evaluate(mode, useBinariesAddendum: binariesAddendum, dependenciesUsage: dependenciesUsage)
 		}

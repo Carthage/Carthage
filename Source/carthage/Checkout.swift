@@ -42,9 +42,12 @@ public struct CheckoutCommand: CommandProtocol {
 			var useBinariesUsage = "check out dependency repositories even when prebuilt frameworks exist, disabled if --use-submodules option is present"
 			useBinariesUsage += useBinariesAddendum
 
+			let isUsingSubmodules = Configuration.shared.isUsingSubmodules
+			let isUsingSSH = Configuration.shared.isUsingSSH
+			
 			return curry(self.init)
-				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
-				<*> mode <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
+				<*> mode <| Option(key: "use-ssh", defaultValue: isUsingSSH, usage: "use SSH for downloading GitHub repositories")
+				<*> mode <| Option(key: "use-submodules", defaultValue: isUsingSubmodules, usage: "add dependencies as Git submodules")
 				<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: useBinariesUsage)
 				<*> ColorOptions.evaluate(mode)
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")

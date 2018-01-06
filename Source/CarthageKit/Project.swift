@@ -1034,7 +1034,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.map { producer -> BuildSchemeProducer in
 						return producer.flatMapError { error in
 							switch error {
-							case .noSharedFrameworkSchemes:
+							case .noSharedFrameworkSchemes, .skip:
 								// Log that building the dependency is being skipped,
 								// not to error out with `.noSharedFrameworkSchemes`
 								// to continue building other dependencies.
@@ -1296,7 +1296,8 @@ public func cloneOrFetch(
 		.flatMap(.merge) { (remoteURL: GitURL) -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 			return isGitRepository(repositoryURL)
 				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
-					if isRepository {
+					let isLocalProject = dependency.isLocalProject
+					if isRepository, isLocalProject == false {
 						let fetchProducer: () -> SignalProducer<(ProjectEvent?, URL), CarthageError> = {
 							guard FetchCache.needsFetch(forURL: remoteURL) else {
 								return SignalProducer(value: (nil, repositoryURL))

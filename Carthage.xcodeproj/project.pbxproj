@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		107946382000F757002907FE /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10B7DB202000F32200FF5A1D /* Configuration.swift */; };
 		2190FA981FD5B2F0008D8A79 /* OutdatedDependencies in Resources */ = {isa = PBXBuildFile; fileRef = 2190FA961FD5B05F008D8A79 /* OutdatedDependencies */; };
 		21F11B481FE67A26009FB783 /* DB.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F11B461FE6787F009FB783 /* DB.swift */; };
 		3A0472F31C782B4000097EC7 /* Algorithms.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0472F21C782B4000097EC7 /* Algorithms.swift */; };
@@ -169,6 +170,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		10B7DB202000F32200FF5A1D /* Configuration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		2190FA961FD5B05F008D8A79 /* OutdatedDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OutdatedDependencies; sourceTree = "<group>"; };
 		21F11B461FE6787F009FB783 /* DB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DB.swift; sourceTree = "<group>"; };
 		3A0472F21C782B4000097EC7 /* Algorithms.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Algorithms.swift; sourceTree = "<group>"; };
@@ -490,6 +492,7 @@
 			isa = PBXGroup;
 			children = (
 				D0D1217119E87B05005E4BAA /* CarthageKit.h */,
+				10B7DB202000F32200FF5A1D /* Configuration.swift */,
 				3A0472F21C782B4000097EC7 /* Algorithms.swift */,
 				D069CA231A4E3B2700314A85 /* Archive.swift */,
 				CD3E530A1DE33095002C135C /* Availability.swift */,
@@ -823,6 +826,7 @@
 				CDD7CF791F75ED88000E0EA5 /* Dependency.swift in Sources */,
 				BF7A1A0B1E3A7AE9008CBCC5 /* BinaryProject.swift in Sources */,
 				D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */,
+				107946382000F757002907FE /* Configuration.swift in Sources */,
 				CDB099241E6DC2D40030B4A8 /* ScannableError.swift in Sources */,
 				BE02925D1E4036C8004FB579 /* XCDBLDExtensions.swift in Sources */,
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
