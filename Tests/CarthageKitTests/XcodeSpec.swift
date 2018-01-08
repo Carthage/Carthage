@@ -82,6 +82,13 @@ class XcodeSpec: QuickSpec {
 				expect(result?.value).to(beNil())
 				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: currentSwiftVersion ?? "", framework: "0.0.0 (swiftlang-800.0.63 clang-800.0.42.1)")
 			}
+
+			it("should determine a framework's Swift version for OSS toolchains from Swift.org") {
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOSSSwift.framework", withExtension: nil)!
+				let result = frameworkSwiftVersion(frameworkURL).single()
+
+				expect(result?.value) == "4.1-dev (LLVM 0fcc19c0d8, Clang 1696f82ad2, Swift 691139445e)"
+			}
 		}
 
 		describe("locateProjectsInDirectory:") {
