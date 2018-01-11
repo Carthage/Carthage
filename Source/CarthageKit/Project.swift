@@ -819,16 +819,15 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
 				return SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies)
 					.flatMap(.merge) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
-						guard buildOptions?.cacheBuilds == true else {
+						guard let buildOptions = buildOptions, buildOptions.cacheBuilds else {
 							return .init(value: (dependency, version))
 						}
-						let platforms = buildOptions?.platforms ?? []
 						return versionFileMatches(
 							dependency,
 							version: version,
-							platforms: platforms,
+							platforms: buildOptions.platforms,
 							rootDirectoryURL: self.directoryURL,
-							toolchain: buildOptions?.toolchain).flatMap(.merge) { matched -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+							toolchain: buildOptions.toolchain).flatMap(.merge) { matched -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 								matched == true ? .empty : .init(value: (dependency, version))
 						}
 					}
