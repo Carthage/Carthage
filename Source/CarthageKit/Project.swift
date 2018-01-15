@@ -813,7 +813,21 @@ public final class Project { // swiftlint:disable:this type_body_length
 		return loadResolvedCartfile()
 			.map { resolvedCartfile -> [(Dependency, PinnedVersion)] in
 				return resolvedCartfile.dependencies
-					.filter { dep, _ in dependenciesToCheckout?.contains(dep.name) ?? true }
+					.filter { dep, _ in dependenciesToCheckout?.contains(dep.name) ?? false }
+			}
+			.flatMap(.merge) { dependencies -> SignalProducer<[String], CarthageError> in
+				return SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies)
+					.flatMap(.merge) { dependency, version -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> in
+						return self.dependencies(for: dependency, version: version)
+					}
+					.map { $0.0.name }
+					.collect()
+			}
+			.zip(with: loadResolvedCartfile())
+			.map { subDependencies, resolvedCartfile -> [(Dependency, PinnedVersion)] in
+				let dependencies = (dependenciesToCheckout ?? []) + subDependencies
+				return resolvedCartfile.dependencies
+					.filter { dep, _ in dependencies.isEmpty ? true : dependencies.contains(dep.name) }
 			}
 			.zip(with: submodulesSignal)
 			.flatMap(.merge) { dependencies, submodulesByPath -> SignalProducer<(), CarthageError> in
