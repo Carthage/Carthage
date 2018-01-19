@@ -12,7 +12,7 @@ public struct OutdatedCommand: CommandProtocol {
 		case newer
 		case ineligible
 
-		init?(currentVersion current: PinnedVersion, applicableVersion applicable: PinnedVersion, latestVersion latest: PinnedVersion) {
+		init?(currentVersion current: PinnedVersion, applicableVersion applicable: PinnedVersion, latestVersion latest: PinnedVersion?) {
 			guard current != latest else { return nil }
 			if applicable == latest {
 				self = .newest
@@ -96,12 +96,13 @@ public struct OutdatedCommand: CommandProtocol {
 					carthage.println(formatting.path("The following dependencies are outdated:"))
 
 					for (project, current, applicable, latest) in outdatedDependencies {
+						let latestDesc = latest.map { " (Latest: \($0))" } ?? ""
 						if options.outputXcodeWarnings {
-							carthage.println("warning: \(formatting.projectName(project.name)) is out of date (\(current) -> \(applicable)) (Latest: \(latest))")
+							carthage.println("warning: \(formatting.projectName(project.name)) is out of date (\(current) -> \(applicable))\(latestDesc)")
 						} else {
 							let update = UpdateType(currentVersion: current, applicableVersion: applicable, latestVersion: latest)
 							let style = formatting[update]
-							let versionSummary = "\(style(current.description)) -> \(style(applicable.description)) (Latest: \(latest))"
+							let versionSummary = "\(style(current.description)) -> \(style(applicable.description))\(latestDesc)"
 							carthage.println(formatting.projectName(project.name) + " " + versionSummary)
 						}
 					}
