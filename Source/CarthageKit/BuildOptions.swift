@@ -10,7 +10,7 @@ public struct BuildOptions {
 	public var toolchain: String?
 	/// The path to the custom derived data folder.
 	public var derivedDataPath: String?
-	/// Rebuild even if cached builds exist.
+	/// Skip building if valid cached builds exist.
 	public var cacheBuilds: Bool
 
 	public init(configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil, cacheBuilds: Bool = true) {
