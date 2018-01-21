@@ -801,7 +801,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 
-	public func removeUnused() -> SignalProducer<Void, CarthageError> {
+	public func removeUnneededItems() -> SignalProducer<Void, CarthageError> {
 		return loadResolvedCartfile()
 			.on { resolved in
 				struct Artifacts {
