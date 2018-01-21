@@ -804,7 +804,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	public func removeUnused() -> SignalProducer<Void, CarthageError> {
 		return loadResolvedCartfile()
 			.on { resolved in
-				struct Targets {
+				struct Artifacts {
 					var ignoreCheckoutURLs = [URL]()
 					var ignoreVersionFileURLs = [URL]()
 					var ignoreBinaryURLs = [URL]()
@@ -862,19 +862,19 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 
 				resolved.dependencies
-					.reduce(into: Targets(directoryURL: self.directoryURL)) { targets, pair in
-						let dependency = pair.key
+					.reduce(into: Artifacts(directoryURL: self.directoryURL)) { artifacts, group in
+						let dependency = group.key
 
-						targets.ignoreCheckoutURLs.append(
-							self.directoryURL.appendingPathComponent(
-								dependency.relativePath, isDirectory: true
-							)
+						artifacts.ignoreCheckoutURLs.append(
+							self.directoryURL
+								.appendingPathComponent(dependency.relativePath, isDirectory: true)
+								.resolvingSymlinksInPath()
 						)
-						let versionFileURL = VersionFile.url(
-							for: dependency, rootDirectoryURL: self.directoryURL
-						)
+						let versionFileURL = VersionFile
+							.url(for: dependency, rootDirectoryURL: self.directoryURL)
+							.resolvingSymlinksInPath()
 						guard let versionFile = VersionFile(url: versionFileURL) else { return }
-						targets.ignoreVersionFileURLs.append(versionFileURL)
+						artifacts.ignoreVersionFileURLs.append(versionFileURL)
 						let binariesDirectoryURL = self.directoryURL
 							.appendingPathComponent(
 								Constants.binariesFolderPath, isDirectory: true
@@ -889,15 +889,20 @@ public final class Project { // swiftlint:disable:this type_body_length
 							case .watchOS: cachedFrameworks = versionFile.watchOS
 							case .tvOS: cachedFrameworks = versionFile.tvOS
 							}
-							targets.ignoreBinaryURLs += (cachedFrameworks ?? [])
+							artifacts.ignoreBinaryURLs += (cachedFrameworks ?? [])
 								.flatMap { cachedFramework -> [URL] in
-									let frameworkURL = versionFile.frameworkURL(
-										for: cachedFramework, platform: platform,
-										binariesDirectoryURL: binariesDirectoryURL
-									)
+									let frameworkURL = versionFile
+										.frameworkURL(
+											for: cachedFramework,
+											platform: platform,
+											binariesDirectoryURL: binariesDirectoryURL
+										)
+										.resolvingSymlinksInPath()
 									return [
 										frameworkURL,
-										URL(fileURLWithPath: frameworkURL.relativePath).appendingPathExtension("dSYM"),
+										URL(fileURLWithPath: frameworkURL.relativePath)
+											.appendingPathExtension("dSYM")
+											.resolvingSymlinksInPath(),
 									]
 							}
 						}
