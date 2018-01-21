@@ -457,7 +457,7 @@ class ProjectSpec: QuickSpec {
 				let directoryURL = Bundle(for: type(of: self)).url(forResource: "OutdatedDependencies", withExtension: nil)!
 				let project = Project(directoryURL: directoryURL)
 
-				let result = project.outdatedDependencies(false, useNewResolver: false, resolver: db.resolver()).single()
+				let result = project.outdatedDependencies(false, resolverType: .normal, resolver: db.resolver()).single()
 				expect(result).notTo(beNil())
 				expect(result!.error).to(beNil())
 				expect(result!.value!).notTo(beNil())

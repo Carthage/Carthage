@@ -49,6 +49,21 @@ public enum ProjectEvent {
 	case buildingUncached(Dependency)
 }
 
+public enum ResolverType {
+	case normal, new, fast
+	
+	public var resolverClass: ResolverProtocol.Type {
+		switch self {
+		case .normal:
+			return Resolver.self
+		case .new:
+			return NewResolver.self
+		case .fast:
+			return FastResolver.self
+		}
+	}
+}
+
 extension ProjectEvent: Equatable {
 	public static func == (lhs: ProjectEvent, rhs: ProjectEvent) -> Bool {
 		switch (lhs, rhs) {
@@ -418,14 +433,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
-	public func outdatedDependencies(_ includeNestedDependencies: Bool, useNewResolver: Bool = true, resolver: ResolverProtocol? = nil) -> SignalProducer<[OutdatedDependency], CarthageError> {
-		let resolverType: ResolverProtocol.Type
-		if useNewResolver {
-			resolverType = NewResolver.self
-		} else {
-			resolverType = Resolver.self
-		}
-
+	public func outdatedDependencies(_ includeNestedDependencies: Bool, resolverType: ResolverType = .new, resolver: ResolverProtocol? = nil) -> SignalProducer<[OutdatedDependency], CarthageError> {
+		let resolverClass = resolverType.resolverClass
 		let dependencies: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
 		if includeNestedDependencies {
 			dependencies = self.dependencies(for:version:)
@@ -433,7 +442,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			dependencies = { _, _ in .empty }
 		}
 
-		let resolver = resolver ?? resolverType.init(
+		let resolver = resolver ?? resolverClass.init(
 			versionsForDependency: versions(for:),
 			dependenciesForDependency: dependencies,
 			resolvedGitReference: resolvedGitReference
@@ -483,17 +492,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// directory checkouts if the given parameter is true.
 	public func updateDependencies(
 		shouldCheckout: Bool = true,
-		useNewResolver: Bool = false,
+		resolverType: ResolverType = .normal,
 		buildOptions: BuildOptions,
 		dependenciesToUpdate: [String]? = nil
 	) -> SignalProducer<(), CarthageError> {
-		let resolverType: ResolverProtocol.Type
-		if useNewResolver {
-			resolverType = NewResolver.self
-		} else {
-			resolverType = Resolver.self
-		}
-		let resolver = resolverType.init(
+		let resolverClass = resolverType.resolverClass
+		let resolver = resolverClass.init(
 			versionsForDependency: versions(for:),
 			dependenciesForDependency: dependencies(for:version:),
 			resolvedGitReference: resolvedGitReference

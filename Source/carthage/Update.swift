@@ -117,7 +117,7 @@ public struct UpdateCommand: CommandProtocol {
 				}
 
 				let updateDependencies = project.updateDependencies(
-					shouldCheckout: options.checkoutAfterUpdate, useNewResolver: options.useNewResolver, buildOptions: options.buildOptions,
+					shouldCheckout: options.checkoutAfterUpdate, resolverType: options.useNewResolver ? .new : .normal, buildOptions: options.buildOptions,
 					dependenciesToUpdate: options.dependenciesToUpdate
 				)
 
