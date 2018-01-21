@@ -6,6 +6,8 @@ public struct Constants {
 	/// Carthage's bundle identifier.
 	public static let bundleIdentifier: String = "org.carthage.CarthageKit"
 
+	public static let checkoutsFolderPath = "Carthage/Checkouts"
+
 	/// The name of the folder into which Carthage puts binaries it builds (relative
 	/// to the working directory).
 	public static let binariesFolderPath = "Carthage/Build"

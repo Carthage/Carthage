@@ -66,7 +66,7 @@ class ProjectSpec: QuickSpec {
 
 			it("should fall back to repo cache if checkout is missing") {
 				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac"]
-				let repoDir = directoryURL.appendingPathComponent(carthageProjectCheckoutsPath)
+				let repoDir = directoryURL.appendingPathComponent(Constants.checkoutsFolderPath)
 				let checkout = repoDir.appendingPathComponent("TestFramework1")
 				let tmpCheckout = repoDir.appendingPathComponent("TestFramework1_BACKUP")
 				try! FileManager.default.moveItem(at: checkout, to: tmpCheckout)

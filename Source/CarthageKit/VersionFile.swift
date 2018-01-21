@@ -69,6 +69,11 @@ struct VersionFile: Codable {
 		self = versionFile
 	}
 
+	static func url(for dependency: Dependency, rootDirectoryURL: URL) -> URL {
+		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
+		return rootBinariesURL.appendingPathComponent(".\(dependency.name).\(VersionFile.pathExtension)")
+	}
+
 	func frameworkURL(for cachedFramework: CachedFramework, platform: Platform, binariesDirectoryURL: URL) -> URL {
 		return binariesDirectoryURL
 			.appendingPathComponent(platform.rawValue, isDirectory: true)
@@ -275,11 +280,17 @@ public func versionFileMatches(
 	rootDirectoryURL: URL,
 	toolchain: String?
 ) -> SignalProducer<Bool?, CarthageError> {
-	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
-	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.name).\(VersionFile.pathExtension)")
+	let versionFileURL = VersionFile.url(for: dependency, rootDirectoryURL: rootDirectoryURL)
+
 	guard let versionFile = VersionFile(url: versionFileURL) else {
-		return SignalProducer(value: nil)
+		return .init(value: nil)
 	}
+
+	let rootBinariesURL = rootDirectoryURL
+		.appendingPathComponent(
+			Constants.binariesFolderPath, isDirectory: true
+		)
+		.resolvingSymlinksInPath()
 
 	let commitish = version.commitish
 
