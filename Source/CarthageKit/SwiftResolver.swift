@@ -3,12 +3,12 @@ import Result
 import ReactiveSwift
 
 /// Responsible for resolving acyclic dependency graphs.
-public final class FastResolver: ResolverProtocol, PackageContainerProvider, DependencyResolverDelegate {
+public final class SwiftResolver: ResolverProtocol, PackageContainerProvider, DependencyResolverDelegate {
 	
 	public typealias Identifier = CarthagePackageIdentifier
 	public typealias Container = CarthagePackageContainer
 	
-	private typealias SwiftDependencyResolver = DependencyResolver<FastResolver, FastResolver>
+	private typealias SwiftDependencyResolver = DependencyResolver<SwiftResolver, SwiftResolver>
 	private typealias Constraint = SwiftDependencyResolver.Constraint
 	
 	private let dependencyFinder: DependencyFinder

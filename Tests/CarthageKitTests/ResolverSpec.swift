@@ -35,7 +35,7 @@ class ResolverSpec: QuickSpec {
 	override func spec() {
 		itBehavesLike(ResolverBehavior.self) { () in Resolver.self }
 		itBehavesLike(ResolverBehavior.self) { () in NewResolver.self }
-		itBehavesLike(ResolverBehavior.self) { () in FastResolver.self }
+		itBehavesLike(ResolverBehavior.self) { () in SwiftResolver.self }
 	}
 }
 
@@ -202,7 +202,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 			}
 
 			// Only the new resolver passes the following tests.
-			if resolverType == NewResolver.self || resolverType == FastResolver.self {
+			if resolverType == NewResolver.self || resolverType == SwiftResolver.self {
 				it("should resolve a subset when given specific dependencies that have constraints") {
 					let db: DB = [
 						github1: [
