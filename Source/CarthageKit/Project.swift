@@ -59,7 +59,7 @@ public enum ResolverType {
 		case .new:
 			return NewResolver.self
 		case .fast:
-			return SwiftResolver.self
+			return FastResolver.self
 		}
 	}
 }
