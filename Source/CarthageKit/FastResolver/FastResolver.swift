@@ -7,10 +7,10 @@ import Foundation
 import Result
 import ReactiveSwift
 
-/// Responsible for resolving acyclic dependency graphs.
-public final class FastResolver: ResolverProtocol {
+typealias DependencyEntry = (key: Dependency, value: VersionSpecifier)
 
-    private typealias DependencyEntry = (key: Dependency, value: VersionSpecifier)
+/// Responsible for resolving acyclic dependency graphs.
+public final class FastResolver: ResolverProtocol, DependencyRetriever {
 
     private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
     private let resolvedGitReference: (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
@@ -20,8 +20,22 @@ public final class FastResolver: ResolverProtocol {
     private var versionsCache = [Dependency: SortedSet<ConcreteVersion>]()
 
     private enum ResolverState {
-        case rejected, accepted, incomplete
+        case rejected, accepted
     }
+
+    private struct PinnedDependency: Hashable {
+        let dependency: Dependency
+        let pinnedVersion: PinnedVersion
+
+        public var hashValue: Int {
+            return pinnedVersion.hashValue &+ 17 &* dependency.hashValue
+        }
+
+        public static func ==(lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
+            return lhs.pinnedVersion == rhs.pinnedVersion && lhs.dependency == rhs.dependency
+        }
+    }
+
 
     /// Instantiates a dependency graph resolver with the given behaviors.
     ///
@@ -50,31 +64,31 @@ public final class FastResolver: ResolverProtocol {
             lastResolved: [Dependency: PinnedVersion]? = nil,
             dependenciesToUpdate: [String]? = nil
     ) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
-        let result = Result<[Dependency: PinnedVersion], CarthageError>.success([Dependency: PinnedVersion]())
-
-        let dependencySet = DependencySet(requiredDependencies: Set(dependencies.keys))
+        let result: Result<[Dependency: PinnedVersion], CarthageError>
+        let dependencySet = DependencySet(requiredDependencies: Set(dependencies.keys), retriever: self)
 
         do {
-            try backtrack(dependencies: AnySequence(dependencies), dependencySet: dependencySet)
+            try dependencySet.update(with: AnySequence(dependencies))
+            let resolverResult = try backtrack(dependencySet: dependencySet)
+
+            switch resolverResult.state {
+            case .accepted:
+                break
+            case .rejected:
+                throw CarthageError.unresolvedDependencies(dependencySet.unresolvedDependencies.map { $0.name })
+            }
+
+            result = .success(resolverResult.dependencySet.resolvedDependencies)
+
         } catch let error {
-            print("Caught error: \(error)")
+            let carthageError: CarthageError = (error as? CarthageError) ?? CarthageError.internalError(description: error.localizedDescription)
+            result = .failure(carthageError)
         }
 
         return SignalProducer(result: result)
     }
 
-    private func backtrack(dependencies: AnySequence<DependencyEntry>, dependencySet: DependencySet) throws -> (ResolverState, DependencySet) {
-
-        //Find all versions for current dependencies
-        for (dependency, versionSpecifier) in dependencies {
-            if !dependencySet.containsDependency(dependency) {
-                let validVersions = try findAllVersions(for: dependency, compatibleWith: versionSpecifier)
-                dependencySet.setVersions(validVersions, for: dependency)
-            } else {
-                //Remove the versions from the set that are not valid according to the versionSpecifier
-                dependencySet.constrainVersions(for: dependency, with: versionSpecifier)
-            }
-        }
+    private func backtrack(dependencySet: DependencySet) throws -> (state: ResolverState, dependencySet: DependencySet) {
 
         if dependencySet.isRejected {
             return (.rejected, dependencySet)
@@ -82,43 +96,33 @@ public final class FastResolver: ResolverProtocol {
             return (.accepted, dependencySet)
         }
 
-        outer:
-        while true {
-            if var (pinnedDependency, subSet) = dependencySet.popSubSet() {
+        while !dependencySet.isRejected {
 
-                inner:
-                while true {
-                    let transitiveDependencies = try findDependencies(for: pinnedDependency.dependency, version: pinnedDependency.pinnedVersion)
+            if let subSet = try dependencySet.popSubSet() {
 
-                    let result = try backtrack(dependencies: AnySequence(transitiveDependencies), dependencySet: subSet)
+                //Backtrack again with this subset
+                let result = try backtrack(dependencySet: subSet)
 
-                    switch result.0 {
-                    case .rejected:
-                        //Set is rejected, cannot narrow further, try next possibility
-                        break inner
-                    case .accepted:
-                        //Set contains all dependencies, we've got a winner
-                        return (.accepted, subSet)
-                    case .incomplete:
-                        //Set is still valid, but should be narrowed down further
-                        if let (nextDependency, nextSubSet) = subSet.popSubSet() {
-                            pinnedDependency = nextDependency
-                            subSet = nextSubSet
-                        } else {
-                            break inner
-                        }
-                    }
+                switch result.state {
+                case .rejected:
+                    //Set is rejected, try next possibility
+                    break
+                case .accepted:
+                    //Set contains all dependencies, we've got a winner
+                    return (.accepted, result.dependencySet)
                 }
 
             } else {
-                break outer
+                //All done
+                break
             }
         }
 
+        //Defaults to rejected, no valid set was found
         return (.rejected, dependencySet)
     }
 
-    private func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> SortedSet<ConcreteVersion> {
+    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> SortedSet<ConcreteVersion> {
         let concreteVersions: SortedSet<ConcreteVersion>
         if let versions = versionsCache[dependency] {
             concreteVersions = versions
@@ -136,41 +140,34 @@ public final class FastResolver: ResolverProtocol {
         }
 
         let ret = concreteVersions.copy
-        ret.retainObjects(compatibleWith: versionSpecifier)
+        ret.retainVersions(compatibleWith: versionSpecifier)
         return ret
     }
 
-    private func findDependencies(for dependency: Dependency, version: PinnedVersion) throws -> [DependencyEntry] {
-        let pinnedDependency = PinnedDependency(dependency: dependency, pinnedVersion: version)
+    func findDependencies(for dependency: Dependency, version: ConcreteVersion) throws -> [DependencyEntry] {
+        let pinnedDependency = PinnedDependency(dependency: dependency, pinnedVersion: version.pinnedVersion)
 
         if let ret = dependencyCache[pinnedDependency] {
             return ret
         } else {
-            let result = self.dependenciesForDependency(dependency, version).collect().first()!
+            let result = self.dependenciesForDependency(dependency, version.pinnedVersion).collect().first()!
             let ret = try result.dematerialize()
             dependencyCache[pinnedDependency] = ret
             return ret
         }
     }
-
 }
 
-private struct PinnedDependency: Hashable {
-    let dependency: Dependency
-    let pinnedVersion: PinnedVersion
-
-    public var hashValue: Int {
-        return pinnedVersion.hashValue &+ 17 * dependency.hashValue
-    }
-
-    public static func ==(lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
-        return lhs.pinnedVersion == rhs.pinnedVersion && lhs.dependency == rhs.dependency
-    }
+protocol DependencyRetriever: class {
+    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> SortedSet<ConcreteVersion>
+    func findDependencies(for dependency: Dependency, version: ConcreteVersion) throws -> [DependencyEntry]
 }
 
 final class DependencySet {
 
     private var contents: [Dependency: SortedSet<ConcreteVersion>]
+
+    private weak var retriever: DependencyRetriever!
 
     public var unresolvedDependencies: Set<Dependency>
 
@@ -182,30 +179,31 @@ final class DependencySet {
     }
 
     public var isAccepted: Bool {
-        return self.isRejected && self.isComplete
+        return !self.isRejected && self.isComplete
     }
 
     public var copy: DependencySet {
-        return DependencySet(unresolvedDependencies: self.unresolvedDependencies, contents: contents.mapValues { set -> SortedSet<ConcreteVersion> in return set.copy })
+        return DependencySet(unresolvedDependencies: self.unresolvedDependencies, contents: contents.mapValues { set -> SortedSet<ConcreteVersion> in return set.copy }, retriever: self.retriever)
     }
 
-    public var resolvedDependencies: [(Dependency, ConcreteVersion)] {
-        return contents.filterMap { dependency, versionSet -> (Dependency, ConcreteVersion)? in
-            if versionSet.isEmpty {
-                return nil
-            } else {
-                return (dependency, versionSet[0])
+    public var resolvedDependencies: [Dependency: PinnedVersion] {
+        var ret = [Dependency: PinnedVersion]()
+        for (dependency, versionSet) in contents {
+            if (versionSet.count > 0) {
+                ret[dependency] = versionSet[0].pinnedVersion
             }
         }
+        return ret
     }
 
-    private init(unresolvedDependencies: Set<Dependency>, contents: [Dependency: SortedSet<ConcreteVersion>]) {
+    private init(unresolvedDependencies: Set<Dependency>, contents: [Dependency: SortedSet<ConcreteVersion>], retriever: DependencyRetriever) {
         self.unresolvedDependencies = unresolvedDependencies
         self.contents = contents
+        self.retriever = retriever
     }
 
-    public convenience init(requiredDependencies: Set<Dependency>) {
-        self.init(unresolvedDependencies: requiredDependencies, contents: [Dependency: SortedSet<ConcreteVersion>]())
+    public convenience init(requiredDependencies: Set<Dependency>, retriever: DependencyRetriever) {
+        self.init(unresolvedDependencies: requiredDependencies, contents: [Dependency: SortedSet<ConcreteVersion>](), retriever: retriever)
     }
 
     public func removeVersion(_ version: ConcreteVersion, for dependency: Dependency) -> Bool {
@@ -221,10 +219,9 @@ final class DependencySet {
 
     public func setVersions(_ versions: SortedSet<ConcreteVersion>, for dependency: Dependency) {
         contents[dependency] = versions
+        unresolvedDependencies.insert(dependency)
         if versions.isEmpty {
             isRejected = true
-        } else {
-            unresolvedDependencies.remove(dependency)
         }
     }
 
@@ -236,7 +233,7 @@ final class DependencySet {
 
     public func constrainVersions(for dependency: Dependency, with versionSpecifier: VersionSpecifier) {
         if let versionSet = versions(for: dependency) {
-            versionSet.retainObjects(compatibleWith: versionSpecifier)
+            versionSet.retainVersions(compatibleWith: versionSpecifier)
             if versionSet.isEmpty {
                 self.isRejected = true
             }
@@ -251,22 +248,48 @@ final class DependencySet {
         return contents[dependency] != nil
     }
 
-    public func popSubSet() -> (PinnedDependency, DependencySet)? {
-        //Find first dependency which contains more than 1 version
-        for (dependency, set) in contents {
-            let count = set.count
-            if count > 1 {
-                let copy = self.copy
+    public func popSubSet() throws -> DependencySet? {
+        while !unresolvedDependencies.isEmpty {
+            if let dependency = unresolvedDependencies.first, let set = contents[dependency], !set.isEmpty {
+                let count = set.count
                 let version = set[0]
-                copy.removeAllVersionsExcept(version, for: dependency)
-                removeVersion(version, for: dependency)
-                return (PinnedDependency(dependency: dependency, pinnedVersion: version.pinnedVersion), copy)
-            } else if count == 0 {
-                //Set is depleted for one of the dependencies, cannot pop
-                return nil
+                let newSet: DependencySet
+                if count > 1 {
+                    let copy = self.copy
+                    copy.removeAllVersionsExcept(version, for: dependency)
+                    _ = removeVersion(version, for: dependency)
+                    newSet = copy
+                } else {
+                    newSet = self
+                }
+
+                let transitiveDependencies = try retriever.findDependencies(for: dependency, version: version)
+
+                newSet.unresolvedDependencies.remove(dependency)
+
+                try newSet.update(with: AnySequence(transitiveDependencies))
+
+                return newSet
             }
         }
         return nil
+    }
+
+    public func update(with dependencyEntries: AnySequence<DependencyEntry>) throws {
+        //Find all versions for current dependencies
+        for (dependency, versionSpecifier) in dependencyEntries {
+            if !self.containsDependency(dependency) {
+                let validVersions = try retriever.findAllVersions(for: dependency, compatibleWith: versionSpecifier)
+                self.setVersions(validVersions, for: dependency)
+            } else {
+                //Remove the versions from the set that are not valid according to the versionSpecifier
+                self.constrainVersions(for: dependency, with: versionSpecifier)
+            }
+            if self.isRejected {
+                //No need to proceed, set is rejected already
+                break
+            }
+        }
     }
 }
 
@@ -277,8 +300,14 @@ Semantic versions are first, ordered descending, then versions that do not compl
 */
 struct ConcreteVersion: Comparable, CustomStringConvertible {
 
+    public static let firstPossibleNonSemanticVersion = ConcreteVersion(pinnedVersion: PinnedVersion(""))
+
     public let pinnedVersion: PinnedVersion
     public let semanticVersion: SemanticVersion?
+
+    public init(string: String) {
+        self.init(pinnedVersion: PinnedVersion(string))
+    }
 
     public init(pinnedVersion: PinnedVersion) {
         self.pinnedVersion = pinnedVersion
@@ -289,6 +318,11 @@ struct ConcreteVersion: Comparable, CustomStringConvertible {
         default:
             self.semanticVersion = nil
         }
+    }
+
+    public init(semanticVersion: SemanticVersion) {
+        self.pinnedVersion = PinnedVersion(semanticVersion.description)
+        self.semanticVersion = semanticVersion
     }
 
     public static func ==(lhs: ConcreteVersion, rhs: ConcreteVersion) -> Bool {
@@ -309,7 +343,7 @@ struct ConcreteVersion: Comparable, CustomStringConvertible {
         } else if rightSemanticVersion != nil {
             return false
         }
-        return lhs.pinnedVersion.commitish > rhs.pinnedVersion.commitish
+        return lhs.pinnedVersion.commitish < rhs.pinnedVersion.commitish
     }
 
     public var description: String {
@@ -319,20 +353,101 @@ struct ConcreteVersion: Comparable, CustomStringConvertible {
 
 extension SortedSet where T == ConcreteVersion {
 
-    func retainObjects(compatibleWith versionSpecifier: VersionSpecifier) {
+    var semanticVersions: ArraySlice<ConcreteVersion> {
+        let index = storage.binarySearch(ConcreteVersion.firstPossibleNonSemanticVersion)
+        return slice(at: index, first: true)
+    }
+
+    var nonSemanticVersions: ArraySlice<ConcreteVersion> {
+        let index = storage.binarySearch(ConcreteVersion.firstPossibleNonSemanticVersion)
+        return slice(at: index, first: false)
+    }
+
+    private func slice(at index: Int, first: Bool) -> ArraySlice<ConcreteVersion> {
+        let insertionIndex: Int
+        if (index >= 0) {
+            insertionIndex = index
+        } else {
+            insertionIndex = -(index + 1)
+        }
+
+        if first {
+            return storage[..<insertionIndex]
+        } else {
+            return storage[insertionIndex...]
+        }
+    }
+
+    private func retainSlice(_ slice: ArraySlice<ConcreteVersion>?, includeNonSemantic: Bool = true) {
+        var newStorage = [ConcreteVersion]()
+
+        if let definedSlice = slice {
+            newStorage.append(contentsOf: definedSlice)
+        }
+
+        if includeNonSemantic {
+            newStorage.append(contentsOf: nonSemanticVersions)
+        }
+
+        storage = newStorage
+    }
+
+    func retainVersions(compatibleWith versionSpecifier: VersionSpecifier) {
+
+        //This is an optimization to achieve O(log(N)) time complexity for this method instead of O(N)
+        var slice: ArraySlice<ConcreteVersion> = storage[0..<0]
 
         switch versionSpecifier {
         case .any, .gitReference:
             //Do nothing, always satisfied
             return
-        default:
-            break
+        case .exactly(let requirement):
+            let index = self.storage.binarySearch(ConcreteVersion(semanticVersion: requirement))
+            if (index >= 0) {
+                slice = storage[index..<index+1]
+            }
+        case .atLeast(let requirement):
+            let index = self.storage.binarySearch(ConcreteVersion(semanticVersion: requirement))
+            let splitIndex: Int
+
+            if index >= 0 {
+                splitIndex = index + 1
+            } else {
+                splitIndex = -(index + 1)
+            }
+
+            if splitIndex > 0 {
+                slice = storage[..<splitIndex]
+            }
+
+        case .compatibleWith(let requirement):
+
+            let lowerBound = ConcreteVersion(semanticVersion: requirement)
+            let upperBound = requirement.major > 0 ?
+                    ConcreteVersion(semanticVersion: SemanticVersion(major: requirement.major + 1, minor: 0, patch: 0)) :
+                    ConcreteVersion(semanticVersion: SemanticVersion(major: 0, minor: requirement.minor + 1, patch: 0))
+
+            var index1 = self.storage.binarySearch(upperBound)
+            if index1 < 0 {
+                index1 = -(index1 + 1)
+            } else {
+                index1 += 1
+            }
+
+            var index2 = self.storage.binarySearch(lowerBound)
+
+            if index2 >= 0 {
+                index2 += 1
+            } else {
+                index2 = -(index2 + 1)
+            }
+
+            if index2 > index1 {
+                slice = storage[index1..<index2]
+            }
         }
 
-        //TODO: can be optimized: O(N) -> O(logN)
-        self.retainObjects { concreteVersion in
-            return versionSpecifier.isSatisfied(by: concreteVersion.pinnedVersion)
-        }
+        retainSlice(slice)
     }
 }
 

@@ -58,10 +58,16 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					]
 
 				let resolved = db.resolve(resolverType, [ github1: .exactly(.v0_1_0) ])
-				expect(resolved.value!) == [
-					github2: .v1_0_0,
-					github1: .v0_1_0,
-				]
+				
+				switch resolved {
+				case .success(let value):
+					expect(value) == [
+						github2: .v1_0_0,
+						github1: .v0_1_0,
+					]
+				case .failure(let error):
+					fail("Expected no error to occur: \(error)")
+				}
 			}
 
 			it("should resolve to the latest matching versions") {
@@ -85,10 +91,16 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					]
 
 				let resolved = db.resolve(resolverType, [ github1: .any ])
-				expect(resolved.value!) == [
-					github2: .v2_0_1,
-					github1: .v1_1_0,
-				]
+				
+				switch resolved {
+				case .success(let value):
+					expect(value) == [
+						github2: .v2_0_1,
+						github1: .v1_1_0,
+					]
+				case .failure(let error):
+					fail("Expected no error to occur: \(error)")
+				}
 			}
 
 			it("should resolve a subset when given specific dependencies") {
@@ -125,11 +137,17 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 										  resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
 										  updating: [ github2 ]
 				)
-				expect(resolved.value!) == [
-					github3: .v1_2_0,
-					github2: .v1_1_0,
-					github1: .v1_0_0,
-				]
+				
+				switch resolved {
+				case .success(let value):
+					expect(value) == [
+						github3: .v1_2_0,
+						github2: .v1_1_0,
+						github1: .v1_0_0,
+					]
+				case .failure(let error):
+					fail("Expected no error to occur: \(error)")
+				}
 			}
 
 			it("should update a dependency that is in the root list and nested when the parent is marked for update") {
@@ -149,11 +167,16 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 				                          [ github1: .any, git1: .any],
 				                          resolved: [ github1: .v1_0_0, git1: .v1_0_0 ],
 				                          updating: [ github1 ])
-				expect(resolved.value!) == [
-					github1: .v1_0_0,
-					git1: .v1_1_0
-				]
-
+				
+				switch resolved {
+				case .success(let value):
+					expect(value) == [
+						github1: .v1_0_0,
+						git1: .v1_1_0
+					]
+				case .failure(let error):
+					fail("Expected no error to occur: \(error)")
+				}
 			}
 
 			it("should fail when given incompatible nested version specifiers") {
@@ -195,10 +218,16 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 				]
 
 				let resolved = db.resolve(resolverType, [ github1: .any, github2: .atLeast(.v1_0_0) ])
-				expect(resolved.value!) == [
-					github1: .v1_0_0,
-					github2: .v1_0_0
-				]
+				
+				switch resolved {
+				case .success(let value):
+					expect(value) == [
+						github1: .v1_0_0,
+						github2: .v1_0_0
+					]
+				case .failure(let error):
+					fail("Expected no error to occur: \(error)")
+				}
 			}
 
 			// Only the new resolver passes the following tests.
@@ -233,11 +262,17 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					                          resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
 					                          updating: [ github2 ]
 					)
-					expect(resolved.value!) == [
-						github3: .v1_2_0,
-						github2: .v1_1_0,
-						github1: .v1_0_0,
-					]
+					
+					switch resolved {
+					case .success(let value):
+						expect(value) == [
+							github3: .v1_2_0,
+							github2: .v1_1_0,
+							github1: .v1_0_0,
+						]
+					case .failure(let error):
+						fail("Expected no error to occur: \(error)")
+					}
 				}
 
 
@@ -303,11 +338,17 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 				]
 
 				let resolved = db.resolve(resolverType, [ github1: .any, github2: .any ])
-				expect(resolved.value!) == [
-					github3: PinnedVersion(sha),
-					github2: .v1_0_0,
-					github1: .v1_0_0,
-				]
+				
+				switch resolved {
+				case .success(let value):
+					expect(value) == [
+						github3: PinnedVersion(sha),
+						github2: .v1_0_0,
+						github1: .v1_0_0,
+					]
+				case .failure(let error):
+					fail("Expected no error to occur: \(error)")
+				}
 			}
 
 			it("should correctly order transitive dependencies") {
@@ -336,13 +377,19 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					]
 
 				let resolved = db.resolve(resolverType, [ github1: .any ])
-				expect(resolved.value!) == [
-					git2: .v1_0_0,
-					github3: .v1_0_0,
-					git1: .v1_0_0,
-					github2: .v1_0_0,
-					github1: .v1_0_0,
-				]
+				
+				switch resolved {
+				case .success(let value):
+					expect(value) == [
+						git2: .v1_0_0,
+						github3: .v1_0_0,
+						git1: .v1_0_0,
+						github2: .v1_0_0,
+						github1: .v1_0_0,
+					]
+				case .failure(let error):
+					fail("Expected no error to occur: \(error)")
+				}
 			}
 
 			pending("should fail if no versions match the requirements and prerelease versions exist") {
