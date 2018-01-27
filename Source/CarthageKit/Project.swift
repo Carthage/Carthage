@@ -120,10 +120,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 		self.directoryURL = directoryURL
 	}
 
-	deinit {
-		_projectEventsObserver.sendCompleted()
-	}
-
 	private typealias CachedVersions = [Dependency: [PinnedVersion]]
 	private typealias CachedBinaryProjects = [URL: BinaryProject]
 
