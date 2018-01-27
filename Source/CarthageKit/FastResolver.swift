@@ -17,7 +17,7 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
     private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
 
     private var dependencyCache = [PinnedDependency: [DependencyEntry]]()
-    private var versionsCache = [Dependency: ConcreteVersionSet]()
+    private var versionsCache = [VersionedDependency: ConcreteVersionSet]()
 
     private enum ResolverState {
         case rejected, accepted
@@ -28,11 +28,24 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
         let pinnedVersion: PinnedVersion
 
         public var hashValue: Int {
-            return pinnedVersion.hashValue &+ 17 &* dependency.hashValue
+            return dependency.hashValue &+ 17 &* pinnedVersion.hashValue
         }
 
         public static func ==(lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
-            return lhs.pinnedVersion == rhs.pinnedVersion && lhs.dependency == rhs.dependency
+            return lhs.dependency == rhs.dependency && lhs.pinnedVersion == rhs.pinnedVersion
+        }
+    }
+
+    private struct VersionedDependency: Hashable {
+        let dependency: Dependency
+        let versionSpecifier: VersionSpecifier
+
+        public var hashValue: Int {
+            return dependency.hashValue &+ 17 &* versionSpecifier.hashValue
+        }
+
+        public static func ==(lhs: VersionedDependency, rhs: VersionedDependency) -> Bool {
+            return lhs.dependency == rhs.dependency && lhs.versionSpecifier == rhs.versionSpecifier
         }
     }
 
@@ -88,6 +101,11 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
         return SignalProducer(result: result)
     }
 
+    /**
+    Backtracking algorithm to resolve the dependency set.
+
+    See: https://en.wikipedia.org/wiki/Backtracking
+    */
     private func backtrack(dependencySet: DependencySet) throws -> (state: ResolverState, dependencySet: DependencySet) {
 
         if dependencySet.isRejected {
@@ -122,39 +140,49 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
         return (.rejected, dependencySet)
     }
 
-    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> ConcreteVersionSet {
-        let concreteVersions: ConcreteVersionSet
-        if let versions = versionsCache[dependency] {
-            concreteVersions = versions
-        } else {
-            let versionSet = ConcreteVersionSet()
-            let pinnedVersionsProducer = self.versionsForDependency(dependency)
-            let concreteVersionsProducer = pinnedVersionsProducer.filterMap { (pinnedVersion) -> ConcreteVersion? in
-                let concreteVersion = ConcreteVersion(pinnedVersion: pinnedVersion)
-                versionSet.insert(concreteVersion)
-                return nil
-            }
-            _ = concreteVersionsProducer.collect().first()
-            versionsCache[dependency] = versionSet
-            concreteVersions = versionSet
+    private func findAllVersionsUncached(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> ConcreteVersionSet {
+        let versionSet = ConcreteVersionSet()
+        let pinnedVersionsProducer: SignalProducer<PinnedVersion, CarthageError>
+
+        switch versionSpecifier {
+        case .gitReference(let hash):
+            pinnedVersionsProducer = resolvedGitReference(dependency, hash)
+        default:
+            pinnedVersionsProducer = versionsForDependency(dependency)
         }
 
-        let ret = concreteVersions.copy
-        ret.retainVersions(compatibleWith: versionSpecifier)
-        return ret
+        let concreteVersionsProducer = pinnedVersionsProducer.filterMap { (pinnedVersion) -> ConcreteVersion? in
+            let concreteVersion = ConcreteVersion(pinnedVersion: pinnedVersion)
+            versionSet.insert(concreteVersion)
+            return nil
+        }
+        _ = try concreteVersionsProducer.collect().first()!.dematerialize()
+        versionSet.retainVersions(compatibleWith: versionSpecifier)
+        return versionSet
+    }
+
+    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> ConcreteVersionSet {
+
+        let versionedDependency = VersionedDependency(dependency: dependency, versionSpecifier: versionSpecifier)
+
+        let concreteVersionSet = try versionsCache.object(
+                for: versionedDependency,
+                byStoringDefault: try findAllVersionsUncached(for: dependency, compatibleWith: versionSpecifier)
+        )
+
+        guard !concreteVersionSet.isEmpty else {
+            throw CarthageError.requiredVersionNotFound(dependency, versionSpecifier)
+        }
+
+        return concreteVersionSet
     }
 
     func findDependencies(for dependency: Dependency, version: ConcreteVersion) throws -> [DependencyEntry] {
         let pinnedDependency = PinnedDependency(dependency: dependency, pinnedVersion: version.pinnedVersion)
-
-        if let ret = dependencyCache[pinnedDependency] {
-            return ret
-        } else {
-            let result = self.dependenciesForDependency(dependency, version.pinnedVersion).collect().first()!
-            let ret = try result.dematerialize()
-            dependencyCache[pinnedDependency] = ret
-            return ret
-        }
+        return try dependencyCache.object(
+                for: pinnedDependency,
+                byStoringDefault: try dependenciesForDependency(dependency, version.pinnedVersion).collect().first()!.dematerialize()
+        )
     }
 }
 
@@ -169,7 +197,7 @@ final class DependencySet {
 
     private weak var retriever: DependencyRetriever!
 
-    public var unresolvedDependencies: Set<Dependency>
+    public private(set) var unresolvedDependencies: Set<Dependency>
 
     public private(set) var isRejected = false
 
@@ -179,11 +207,11 @@ final class DependencySet {
     }
 
     public var isAccepted: Bool {
-        return !self.isRejected && self.isComplete
+        return !isRejected && isComplete
     }
 
     public var copy: DependencySet {
-        return DependencySet(unresolvedDependencies: self.unresolvedDependencies, contents: contents.mapValues { set -> ConcreteVersionSet in return set.copy }, retriever: self.retriever)
+        return DependencySet(unresolvedDependencies: unresolvedDependencies, contents: contents.mapValues { set -> ConcreteVersionSet in return set.copy }, retriever: self.retriever)
     }
 
     public var resolvedDependencies: [Dependency: PinnedVersion] {
@@ -250,8 +278,8 @@ final class DependencySet {
 
     public func popSubSet() throws -> DependencySet? {
         while !unresolvedDependencies.isEmpty {
-            if let dependency = unresolvedDependencies.first, let set = contents[dependency], let version = set.first {
-                let count = set.count
+            if let dependency = unresolvedDependencies.first, let versionSet = contents[dependency], let version = versionSet.first {
+                let count = versionSet.count
                 let newSet: DependencySet
                 if count > 1 {
                     let copy = self.copy
@@ -279,12 +307,12 @@ final class DependencySet {
         for (dependency, versionSpecifier) in dependencyEntries {
             if !self.containsDependency(dependency) {
                 let validVersions = try retriever.findAllVersions(for: dependency, compatibleWith: versionSpecifier)
-                self.setVersions(validVersions, for: dependency)
+                setVersions(validVersions, for: dependency)
             } else {
                 //Remove the versions from the set that are not valid according to the versionSpecifier
-                self.constrainVersions(for: dependency, with: versionSpecifier)
+                constrainVersions(for: dependency, with: versionSpecifier)
             }
-            if self.isRejected {
+            if isRejected {
                 //No need to proceed, set is rejected already
                 break
             }
@@ -485,7 +513,12 @@ final class ConcreteVersionSet: Sequence {
                 range = (lowerIndex..<upperIndex).relative(to: versions)
             }
         }
-        versions.retain(range: range ?? 0..<0)
+
+        if let nonNilRange = range, !nonNilRange.isEmpty {
+            versions.retain(range: nonNilRange)
+        } else {
+            versions.removeAll()
+        }
     }
 
     public func makeIterator() -> Iterator {
@@ -513,6 +546,26 @@ final class ConcreteVersionSet: Sequence {
                 ret = currentIterator.next()
             }
             return ret
+        }
+    }
+}
+
+fileprivate extension Dictionary {
+
+    /**
+     Returns the value for the specified key if it exists, else it will store the default value as created by the closure and will return that value instead.
+
+     This method is useful for caches where the first time a value is instantiated it should be stored in the cache for subsequent use.
+
+     Compare this to the method [_ key, default: ] which does return a default but doesn't store it in the dictionary.
+     */
+    mutating func object(for key: Dictionary.Key, byStoringDefault defaultValue: @autoclosure () throws -> Dictionary.Value) rethrows -> Dictionary.Value {
+        if let v = self[key] {
+            return v
+        } else {
+            let dv = try defaultValue()
+            self[key] = dv
+            return dv
         }
     }
 }

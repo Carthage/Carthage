@@ -21,30 +21,22 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
     public typealias Iterator = Array<Element>.Iterator
     public typealias Index = Int
 
-    private var storage: [T]
-
-    public var count: Int {
-        return storage.count
-    }
-
-    public var isEmpty: Bool {
-        return storage.isEmpty
-    }
+    private var storage: [Element]
 
     /**
     Returns a copy of this set.
     */
-    public var copy: SortedSet<T> {
-        let ret = SortedSet<T>(storage: storage)
+    public var copy: SortedSet<Element> {
+        let ret = SortedSet<Element>(storage: storage)
         return ret
     }
 
-    private init(storage: [T]) {
+    private init(storage: [Element]) {
         self.storage = storage
     }
 
     public convenience init() {
-        self.init(storage: [T]())
+        self.init(storage: [Element]())
     }
 
     /**
@@ -98,8 +90,8 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
 
     O(N)
     */
-    public func retainAll(satisfying predicate: (T) -> Bool) {
-        var newStorage = [T]()
+    public func retainAll(satisfying predicate: (Element) -> Bool) {
+        var newStorage = [Element]()
         for obj in storage {
             if predicate(obj) {
                 newStorage.append(obj)
@@ -112,7 +104,7 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
     Retains the specified range, removes all other objects.
     */
     public func retain(range: Range<Int>) {
-        let slice: ArraySlice<T> = storage[range]
+        let slice: ArraySlice<Element> = storage[range]
         storage = Array(slice)
     }
 
