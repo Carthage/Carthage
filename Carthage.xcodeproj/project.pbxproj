@@ -31,6 +31,7 @@
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
 		A1411ED61EFC1BFD0060461F /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1411ED51EFC1BFD0060461F /* Constants.swift */; };
+		A83DF19DF04DB4F5201B961C /* SortedSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DF0ECE4F68B96D9A4161F /* SortedSet.swift */; };
 		A83DFA40C60153E8BDD32B78 /* FastResolverTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DFC55EC0BC1A0F9674D1C /* FastResolverTest.swift */; };
 		A83DFE484004ADF8794B4FEB /* FastResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DF22BD79BD0FAABCE8610 /* FastResolver.swift */; };
 		B17145F11F43F812006DC662 /* NewResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B17145EF1F43F797006DC662 /* NewResolver.swift */; };
@@ -198,6 +199,7 @@
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
 		A1411ED51EFC1BFD0060461F /* Constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		A14BB69B1EFA36B90077ABF4 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text; name = .swiftlint.yml; path = Tests/.swiftlint.yml; sourceTree = SOURCE_ROOT; };
+		A83DF0ECE4F68B96D9A4161F /* SortedSet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SortedSet.swift; sourceTree = "<group>"; };
 		A83DF22BD79BD0FAABCE8610 /* FastResolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FastResolver.swift; sourceTree = "<group>"; };
 		A83DFC55EC0BC1A0F9674D1C /* FastResolverTest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FastResolverTest.swift; sourceTree = "<group>"; };
 		B17145EF1F43F797006DC662 /* NewResolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NewResolver.swift; sourceTree = "<group>"; };
@@ -529,6 +531,7 @@
 				D01F8A5319EA2F1700643E7C /* Xcode.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
 				A83DF22BD79BD0FAABCE8610 /* FastResolver.swift */,
+				A83DF0ECE4F68B96D9A4161F /* SortedSet.swift */,
 			);
 			name = CarthageKit;
 			path = Source/CarthageKit;
@@ -858,6 +861,7 @@
 				CDBE654C1F4BF0040060D94E /* Submodule.swift in Sources */,
 				D069CA241A4E3B2700314A85 /* Archive.swift in Sources */,
 				A83DFE484004ADF8794B4FEB /* FastResolver.swift in Sources */,
+				A83DF19DF04DB4F5201B961C /* SortedSet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -17,7 +17,7 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
     private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
 
     private var dependencyCache = [PinnedDependency: [DependencyEntry]]()
-    private var versionsCache = [Dependency: SortedSet<ConcreteVersion>]()
+    private var versionsCache = [Dependency: ConcreteVersionSet]()
 
     private enum ResolverState {
         case rejected, accepted
@@ -122,16 +122,16 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
         return (.rejected, dependencySet)
     }
 
-    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> SortedSet<ConcreteVersion> {
-        let concreteVersions: SortedSet<ConcreteVersion>
+    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> ConcreteVersionSet {
+        let concreteVersions: ConcreteVersionSet
         if let versions = versionsCache[dependency] {
             concreteVersions = versions
         } else {
-            let versionSet = SortedSet<ConcreteVersion>()
+            let versionSet = ConcreteVersionSet()
             let pinnedVersionsProducer = self.versionsForDependency(dependency)
             let concreteVersionsProducer = pinnedVersionsProducer.filterMap { (pinnedVersion) -> ConcreteVersion? in
                 let concreteVersion = ConcreteVersion(pinnedVersion: pinnedVersion)
-                versionSet.insertObject(concreteVersion)
+                versionSet.insert(concreteVersion)
                 return nil
             }
             _ = concreteVersionsProducer.collect().first()
@@ -159,13 +159,13 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
 }
 
 protocol DependencyRetriever: class {
-    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> SortedSet<ConcreteVersion>
+    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> ConcreteVersionSet
     func findDependencies(for dependency: Dependency, version: ConcreteVersion) throws -> [DependencyEntry]
 }
 
 final class DependencySet {
 
-    private var contents: [Dependency: SortedSet<ConcreteVersion>]
+    private var contents: [Dependency: ConcreteVersionSet]
 
     private weak var retriever: DependencyRetriever!
 
@@ -183,32 +183,32 @@ final class DependencySet {
     }
 
     public var copy: DependencySet {
-        return DependencySet(unresolvedDependencies: self.unresolvedDependencies, contents: contents.mapValues { set -> SortedSet<ConcreteVersion> in return set.copy }, retriever: self.retriever)
+        return DependencySet(unresolvedDependencies: self.unresolvedDependencies, contents: contents.mapValues { set -> ConcreteVersionSet in return set.copy }, retriever: self.retriever)
     }
 
     public var resolvedDependencies: [Dependency: PinnedVersion] {
         var ret = [Dependency: PinnedVersion]()
         for (dependency, versionSet) in contents {
-            if (versionSet.count > 0) {
-                ret[dependency] = versionSet[0].pinnedVersion
+            if let firstVersion = versionSet.first {
+                ret[dependency] = firstVersion.pinnedVersion
             }
         }
         return ret
     }
 
-    private init(unresolvedDependencies: Set<Dependency>, contents: [Dependency: SortedSet<ConcreteVersion>], retriever: DependencyRetriever) {
+    private init(unresolvedDependencies: Set<Dependency>, contents: [Dependency: ConcreteVersionSet], retriever: DependencyRetriever) {
         self.unresolvedDependencies = unresolvedDependencies
         self.contents = contents
         self.retriever = retriever
     }
 
     public convenience init(requiredDependencies: Set<Dependency>, retriever: DependencyRetriever) {
-        self.init(unresolvedDependencies: requiredDependencies, contents: [Dependency: SortedSet<ConcreteVersion>](), retriever: retriever)
+        self.init(unresolvedDependencies: requiredDependencies, contents: [Dependency: ConcreteVersionSet](), retriever: retriever)
     }
 
     public func removeVersion(_ version: ConcreteVersion, for dependency: Dependency) -> Bool {
         if let versionSet = contents[dependency] {
-            versionSet.removeObject(version)
+            versionSet.remove(version)
             if versionSet.isEmpty {
                 isRejected = true
             }
@@ -217,7 +217,7 @@ final class DependencySet {
         return false
     }
 
-    public func setVersions(_ versions: SortedSet<ConcreteVersion>, for dependency: Dependency) {
+    public func setVersions(_ versions: ConcreteVersionSet, for dependency: Dependency) {
         contents[dependency] = versions
         unresolvedDependencies.insert(dependency)
         if versions.isEmpty {
@@ -227,7 +227,7 @@ final class DependencySet {
 
     public func removeAllVersionsExcept(_ version: ConcreteVersion, for dependency: Dependency) {
         if let versionSet = versions(for: dependency) {
-            versionSet.removeAllExcept(version)
+            versionSet.removeAll(except: version)
         }
     }
 
@@ -240,7 +240,7 @@ final class DependencySet {
         }
     }
 
-    public func versions(for dependency: Dependency) -> SortedSet<ConcreteVersion>? {
+    public func versions(for dependency: Dependency) -> ConcreteVersionSet? {
         return contents[dependency]
     }
 
@@ -250,9 +250,8 @@ final class DependencySet {
 
     public func popSubSet() throws -> DependencySet? {
         while !unresolvedDependencies.isEmpty {
-            if let dependency = unresolvedDependencies.first, let set = contents[dependency], !set.isEmpty {
+            if let dependency = unresolvedDependencies.first, let set = contents[dependency], let version = set.first {
                 let count = set.count
-                let version = set[0]
                 let newSet: DependencySet
                 if count > 1 {
                     let copy = self.copy
@@ -325,25 +324,45 @@ struct ConcreteVersion: Comparable, CustomStringConvertible {
         self.semanticVersion = semanticVersion
     }
 
-    public static func ==(lhs: ConcreteVersion, rhs: ConcreteVersion) -> Bool {
-        if let leftSemanticVersion = lhs.semanticVersion, let rightSemanticVersion = rhs.semanticVersion {
-            return leftSemanticVersion == rightSemanticVersion
-        }
-        return lhs.pinnedVersion == rhs.pinnedVersion
-    }
-
-    public static func <(lhs: ConcreteVersion, rhs: ConcreteVersion) -> Bool {
+    private static func compare(lhs: ConcreteVersion, rhs: ConcreteVersion) -> ComparisonResult {
         let leftSemanticVersion = lhs.semanticVersion
         let rightSemanticVersion = rhs.semanticVersion
 
         if leftSemanticVersion != nil && rightSemanticVersion != nil {
-            return leftSemanticVersion! > rightSemanticVersion!
+            let v1 = leftSemanticVersion!
+            let v2 = rightSemanticVersion!
+			return v1 < v2 ? .orderedDescending : v2 < v1 ? .orderedAscending : .orderedSame
         } else if leftSemanticVersion != nil {
-            return true
+            return .orderedAscending
         } else if rightSemanticVersion != nil {
-            return false
+            return .orderedDescending
         }
-        return lhs.pinnedVersion.commitish < rhs.pinnedVersion.commitish
+
+        let s1 = lhs.pinnedVersion.commitish
+        let s2 = rhs.pinnedVersion.commitish
+        return s1 < s2 ? .orderedAscending : s2 < s1 ? .orderedDescending : .orderedSame
+    }
+
+    public static func ==(lhs: ConcreteVersion, rhs: ConcreteVersion) -> Bool {
+        return compare(lhs: lhs, rhs: rhs) == .orderedSame
+    }
+
+    public static func <(lhs: ConcreteVersion, rhs: ConcreteVersion) -> Bool {
+        return compare(lhs: lhs, rhs: rhs) == .orderedAscending
+    }
+
+    public static func >(lhs: ConcreteVersion, rhs: ConcreteVersion) -> Bool {
+        return compare(lhs: lhs, rhs: rhs) == .orderedDescending
+    }
+
+    public static func >=(lhs: ConcreteVersion, rhs: ConcreteVersion) -> Bool {
+        let comparisonResult = compare(lhs: lhs, rhs: rhs)
+        return comparisonResult == .orderedSame || comparisonResult == .orderedDescending
+    }
+
+    public static func <=(lhs: ConcreteVersion, rhs: ConcreteVersion) -> Bool {
+        let comparisonResult = compare(lhs: lhs, rhs: rhs)
+        return comparisonResult == .orderedSame || comparisonResult == .orderedAscending
     }
 
     public var description: String {
@@ -351,75 +370,93 @@ struct ConcreteVersion: Comparable, CustomStringConvertible {
     }
 }
 
-extension SortedSet where T == ConcreteVersion {
+final class ConcreteVersionSet: Sequence {
 
-    var semanticVersions: ArraySlice<ConcreteVersion> {
-        let index = storage.binarySearch(ConcreteVersion.firstPossibleNonSemanticVersion)
-        return slice(at: index, first: true)
+    public typealias Element = ConcreteVersion
+    public typealias Iterator = ConcreteVersionSetIterator
+
+    private let semanticVersions: SortedSet<ConcreteVersion>
+    private let nonSemanticVersions: SortedSet<ConcreteVersion>
+
+    private init(semanticVersions: SortedSet<ConcreteVersion>, nonSemanticVersions: SortedSet<ConcreteVersion>) {
+        self.semanticVersions = semanticVersions
+        self.nonSemanticVersions = nonSemanticVersions
     }
 
-    var nonSemanticVersions: ArraySlice<ConcreteVersion> {
-        let index = storage.binarySearch(ConcreteVersion.firstPossibleNonSemanticVersion)
-        return slice(at: index, first: false)
+    public convenience init() {
+        self.init(semanticVersions: SortedSet<ConcreteVersion>(), nonSemanticVersions: SortedSet<ConcreteVersion>())
     }
 
-    private func slice(at index: Int, first: Bool) -> ArraySlice<ConcreteVersion> {
-        let insertionIndex: Int
-        if (index >= 0) {
-            insertionIndex = index
+    public var copy: ConcreteVersionSet {
+        return ConcreteVersionSet(semanticVersions: semanticVersions.copy, nonSemanticVersions: nonSemanticVersions.copy)
+    }
+
+    public var count: Int {
+        return semanticVersions.count + nonSemanticVersions.count
+    }
+
+    public var isEmpty: Bool {
+        return count == 0
+    }
+
+    public var first: ConcreteVersion? {
+        return self.semanticVersions.first ?? self.nonSemanticVersions.first
+    }
+
+    @discardableResult
+    public func insert(_ version: ConcreteVersion) -> Bool {
+        if version.semanticVersion != nil {
+            return semanticVersions.insert(version)
         } else {
-            insertionIndex = -(index + 1)
+            return nonSemanticVersions.insert(version)
         }
+    }
 
-        if first {
-            return storage[..<insertionIndex]
+    @discardableResult
+    public func remove(_ version: ConcreteVersion) -> Bool {
+        if version.semanticVersion != nil {
+            return semanticVersions.remove(version)
         } else {
-            return storage[insertionIndex...]
+            return nonSemanticVersions.remove(version)
         }
     }
 
-    private func retainSlice(_ slice: ArraySlice<ConcreteVersion>?, includeNonSemantic: Bool = true) {
-        var newStorage = [ConcreteVersion]()
-
-        if let definedSlice = slice {
-            newStorage.append(contentsOf: definedSlice)
+    public func removeAll(except version: ConcreteVersion) {
+        if version.semanticVersion != nil {
+            semanticVersions.removeAll(except: version)
+            nonSemanticVersions.removeAll()
+        } else {
+            semanticVersions.removeAll()
+            nonSemanticVersions.removeAll(except: version)
         }
-
-        if includeNonSemantic {
-            newStorage.append(contentsOf: nonSemanticVersions)
-        }
-
-        storage = newStorage
     }
 
-    func retainVersions(compatibleWith versionSpecifier: VersionSpecifier) {
+    public func retainVersions(compatibleWith versionSpecifier: VersionSpecifier) {
 
         //This is an optimization to achieve O(log(N)) time complexity for this method instead of O(N)
-        var slice: ArraySlice<ConcreteVersion> = storage[0..<0]
+        var range: Range<Int>? = nil
+        let versions = semanticVersions
 
         switch versionSpecifier {
         case .any, .gitReference:
             //Do nothing, always satisfied
             return
         case .exactly(let requirement):
-            let index = self.storage.binarySearch(ConcreteVersion(semanticVersion: requirement))
-            if (index >= 0) {
-                slice = storage[index..<index+1]
+            switch versions.search(ConcreteVersion(semanticVersion: requirement)) {
+            case .notFound:
+                break
+            case .found(let i):
+                range = (i..<i+1).relative(to: versions)
             }
         case .atLeast(let requirement):
-            let index = self.storage.binarySearch(ConcreteVersion(semanticVersion: requirement))
             let splitIndex: Int
-
-            if index >= 0 {
-                splitIndex = index + 1
-            } else {
-                splitIndex = -(index + 1)
+            switch versions.search(ConcreteVersion(semanticVersion: requirement)) {
+            case .notFound(let i):
+                splitIndex = i
+            case .found(let i):
+                splitIndex = i + 1
             }
-
-            if splitIndex > 0 {
-                slice = storage[..<splitIndex]
-            }
-
+            range = (..<splitIndex).relative(to: versions)
         case .compatibleWith(let requirement):
 
             let lowerBound = ConcreteVersion(semanticVersion: requirement)
@@ -427,158 +464,56 @@ extension SortedSet where T == ConcreteVersion {
                     ConcreteVersion(semanticVersion: SemanticVersion(major: requirement.major + 1, minor: 0, patch: 0)) :
                     ConcreteVersion(semanticVersion: SemanticVersion(major: 0, minor: requirement.minor + 1, patch: 0))
 
-            var index1 = self.storage.binarySearch(upperBound)
-            if index1 < 0 {
-                index1 = -(index1 + 1)
-            } else {
-                index1 += 1
+            let lowerIndex: Int
+            let upperIndex: Int
+
+            switch versions.search(upperBound) {
+            case .notFound(let i):
+                lowerIndex = i
+            case .found(let i):
+                lowerIndex = i + 1
             }
 
-            var index2 = self.storage.binarySearch(lowerBound)
-
-            if index2 >= 0 {
-                index2 += 1
-            } else {
-                index2 = -(index2 + 1)
+            switch versions.search(lowerBound) {
+            case .notFound(let i):
+                upperIndex = i
+            case .found(let i):
+                upperIndex = i + 1
             }
 
-            if index2 > index1 {
-                slice = storage[index1..<index2]
+            if upperIndex > lowerIndex {
+                range = (lowerIndex..<upperIndex).relative(to: versions)
             }
         }
-
-        retainSlice(slice)
-    }
-}
-
-final class SortedSet<T: Comparable>: Sequence {
-
-    typealias Element = T
-    typealias Iterator = Array<Element>.Iterator
-
-    private var storage: [T]
-
-    public var count: Int {
-        return storage.count
-    }
-
-    public var isEmpty: Bool {
-        return storage.isEmpty
-    }
-
-    public var copy: SortedSet<T> {
-        let ret = SortedSet<T>(storage: self.storage)
-        return ret
-    }
-
-    private init(storage: [T]) {
-        self.storage = storage
-    }
-
-    public convenience init() {
-        self.init(storage: [T]())
-    }
-
-    /**
-    Inserts an object at the correct insertion point to keep the set sorted,
-    returns true if successful (i.e. the object did not yet exist), false otherwise.
-    */
-    @discardableResult
-    public func insertObject(_ object: T) -> Bool {
-        let index = storage.binarySearch(object)
-
-        if (index >= 0) {
-            //Element already exists
-            return false
-        } else {
-            let insertionIndex = -(index + 1)
-            storage.insert(object, at: insertionIndex)
-            return true
-        }
-    }
-
-    /**
-    Removes an object from the set,
-    returns true if succesfull (i.e. the set contained the object), false otherwise
-    */
-    @discardableResult
-    public func removeObject(_ object: T) -> Bool {
-        let index = storage.binarySearch(object)
-        if (index >= 0) {
-            storage.remove(at: index)
-            return true
-        } else {
-            return false
-        }
-    }
-
-    /**
-    Checks whether the specified object is contained in this set, returns true if so, false otherwise.
-    */
-    public func containsObject(_ object: T) -> Bool {
-        return storage.binarySearch(object) >= 0
-    }
-
-    public func retainObjects(satisfying predicate: (T) -> Bool) {
-        var newStorage = [T]()
-        for obj in storage {
-            if predicate(obj) {
-                newStorage.append(obj)
-            }
-        }
-        storage = newStorage
-    }
-
-    public func removeAllExcept(_ object: T) {
-        let index = storage.binarySearch(object)
-        storage.removeAll()
-        if index >= 0 {
-            storage.append(object)
-        }
-    }
-
-    /**
-    Returns the object at the specified index.
-    */
-    public subscript(index: Int) -> Element {
-        return storage[index]
+        versions.retain(range: range ?? 0..<0)
     }
 
     public func makeIterator() -> Iterator {
-        return storage.makeIterator()
+        return ConcreteVersionSetIterator(self)
     }
-}
 
-extension Array where Element: Comparable {
+    public struct ConcreteVersionSetIterator: IteratorProtocol {
 
-    func binarySearch(_ element: Element) -> Int {
-        var low = 0;
-        var high = self.count - 1;
+        typealias Element = ConcreteVersion
 
-        while (low <= high) {
-            let mid = (low + high) >> 1;
-            let midVal = self[mid];
+        private let versionSet: ConcreteVersionSet
+        private var iteratingSemanticVersions = true
+        private var currentIterator: SortedSet<ConcreteVersion>.Iterator
 
-            if (midVal < element) {
-                low = mid + 1
-            } else if (midVal > element) {
-                high = mid - 1
-            } else {
-                return mid
-            }
+        fileprivate init(_ versionSet: ConcreteVersionSet) {
+            self.versionSet = versionSet
+            self.currentIterator = versionSet.semanticVersions.makeIterator()
         }
-        return -(low + 1);
+
+        public mutating func next() -> Element? {
+            var ret = currentIterator.next()
+            if ret == nil && iteratingSemanticVersions {
+                iteratingSemanticVersions = false
+                currentIterator = versionSet.nonSemanticVersions.makeIterator()
+                ret = currentIterator.next()
+            }
+            return ret
+        }
     }
 }
 
-extension Collection {
-    public func filterMap<T>(_ transform: (Self.Element) throws -> T?) rethrows -> [T] {
-        var ret = [T]()
-        for element in self {
-            if let newElement = try transform(element) {
-                ret.append(newElement)
-            }
-        }
-        return ret
-    }
-}

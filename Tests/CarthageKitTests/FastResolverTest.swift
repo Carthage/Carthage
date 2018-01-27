@@ -18,8 +18,8 @@ class FastResolverTest: XCTestCase {
         let shuffledArray = array.shuffled()
 
         for s in shuffledArray {
-            XCTAssertTrue(set.insertObject(s))
-            XCTAssertFalse(set.insertObject(s))
+            XCTAssertTrue(set.insert(s))
+            XCTAssertFalse(set.insert(s))
         }
 
         let array1 = Array(set)
@@ -29,9 +29,9 @@ class FastResolverTest: XCTestCase {
 
         for s in shuffledArray {
             XCTAssertTrue(set.contains(s))
-            XCTAssertTrue(set.removeObject(s))
+            XCTAssertTrue(set.remove(s))
             XCTAssertFalse(set.contains(s))
-            XCTAssertFalse(set.removeObject(s))
+            XCTAssertFalse(set.remove(s))
         }
 
         XCTAssertEqual(0, set.count)
@@ -61,13 +61,31 @@ class FastResolverTest: XCTestCase {
 
         for versionString in shuffledVersions {
             let pinnedVersion = PinnedVersion(versionString)
-            XCTAssertTrue(set.insertObject(ConcreteVersion(pinnedVersion: pinnedVersion)))
+            XCTAssertTrue(set.insert(ConcreteVersion(pinnedVersion: pinnedVersion)))
         }
 
         let orderedVersions = Array(set).map { return $0.pinnedVersion.commitish }
 
         XCTAssertEqual(versions, orderedVersions)
     }
+
+	func testConcreteVersionComparison() {
+		var v1 = ConcreteVersion(string: "1.0.0")
+		var v2 = ConcreteVersion(string: "1.1.0")
+
+		XCTAssertTrue(v2 < v1)
+		XCTAssertTrue(v1 > v2)
+		XCTAssertTrue(v2 <= v1)
+		XCTAssertTrue(v1 >= v2)
+
+		v1 = ConcreteVersion(string: "aap")
+		v2 = ConcreteVersion(string: "1.0.0")
+
+		XCTAssertTrue(v2 < v1)
+		XCTAssertTrue(v1 > v2)
+		XCTAssertTrue(v2 <= v1)
+		XCTAssertTrue(v1 >= v2)
+	}
 
     func testRetainVersions() {
 
@@ -89,10 +107,10 @@ class FastResolverTest: XCTestCase {
 			"fedcba0987654321",
         ]
 
-        let set = SortedSet<ConcreteVersion>()
+        let set = ConcreteVersionSet()
 
         for versionString in versions {
-            XCTAssertTrue(set.insertObject(ConcreteVersion(string: versionString)))
+            XCTAssertTrue(set.insert(ConcreteVersion(string: versionString)))
         }
 
         var set1 = set.copy
