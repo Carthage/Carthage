@@ -313,9 +313,11 @@ class FastResolverTest: XCTestCase {
 			github1: [
 				.v1_0_0: [
 					github2: .compatibleWith(.v1_0_0),
+					github4: .compatibleWith(.v1_0_0),
 				],
 				.v1_1_0: [
 					github2: .compatibleWith(.v1_0_0),
+					github4: .compatibleWith(.v1_0_0),
 				],
 			],
 			github2: [
@@ -323,6 +325,11 @@ class FastResolverTest: XCTestCase {
 				.v1_1_0: [ github3: .compatibleWith(.v1_0_0) ],
 			],
 			github3: [
+				.v1_0_0: [:],
+				.v1_1_0: [:],
+				.v1_2_0: [:],
+			],
+			github4: [
 				.v1_0_0: [:],
 				.v1_1_0: [:],
 				.v1_2_0: [:],
@@ -339,13 +346,14 @@ class FastResolverTest: XCTestCase {
 									// list should not be resolved.
 									git1: .any,
 									],
-								  resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
+								  resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0, github4: .v1_0_0 ],
 								  updating: [ github2 ]
 		)
 		
 		switch resolved {
 		case .success(let value):
 			let expectedValue: [Dependency: PinnedVersion] = [
+				github4: .v1_0_0,
 				github3: .v1_2_0,
 				github2: .v1_1_0,
 				github1: .v1_0_0,

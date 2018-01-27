@@ -18,6 +18,8 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
 
     private var dependencyCache = [PinnedDependency: [DependencyEntry]]()
     private var versionsCache = [VersionedDependency: ConcreteVersionSet]()
+    private var pinnedVersions: [Dependency: PinnedVersion]? = nil
+    private var updatableDependencyNames: Set<String>? = nil
 
     private enum ResolverState {
         case rejected, accepted
@@ -28,7 +30,7 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
         let pinnedVersion: PinnedVersion
 
         public var hashValue: Int {
-            return dependency.hashValue &+ 17 &* pinnedVersion.hashValue
+            return 37 &* dependency.hashValue &+ pinnedVersion.hashValue
         }
 
         public static func ==(lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
@@ -39,9 +41,13 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
     private struct VersionedDependency: Hashable {
         let dependency: Dependency
         let versionSpecifier: VersionSpecifier
+        let isUpdatable: Bool
 
         public var hashValue: Int {
-            return dependency.hashValue &+ 17 &* versionSpecifier.hashValue
+            var hash = dependency.hashValue
+            hash = 37 &* hash &+ versionSpecifier.hashValue
+            hash = 37 &* hash &+ isUpdatable.hashValue
+            return hash
         }
 
         public static func ==(lhs: VersionedDependency, rhs: VersionedDependency) -> Bool {
@@ -78,10 +84,28 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
             dependenciesToUpdate: [String]? = nil
     ) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
         let result: Result<[Dependency: PinnedVersion], CarthageError>
-        let dependencySet = DependencySet(requiredDependencies: Set(dependencies.keys), retriever: self)
+
+        pinnedVersions = lastResolved
+        updatableDependencyNames = dependenciesToUpdate.map { Set($0) }
+        dependencyCache.removeAll()
+        versionsCache.removeAll()
+
+        var requiredDependencies = dependencies
+        let hasSpecificDepedenciesToUpdate = !(updatableDependencyNames?.isEmpty ?? true)
+
+        if hasSpecificDepedenciesToUpdate {
+            requiredDependencies = requiredDependencies.filter { dependency, _ in return (updatableDependencyNames?.contains(dependency.name) ?? true) || (pinnedVersions?[dependency] != nil) }
+        }
+
+        defer {
+            pinnedVersions = nil
+            updatableDependencyNames = nil
+            dependencyCache.removeAll()
+            versionsCache.removeAll()
+        }
 
         do {
-            try dependencySet.update(with: AnySequence(dependencies))
+            let dependencySet = try DependencySet(requiredDependencies: AnySequence(requiredDependencies), retriever: self)
             let resolverResult = try backtrack(dependencySet: dependencySet)
 
             switch resolverResult.state {
@@ -114,63 +138,71 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
             return (.accepted, dependencySet)
         }
 
-        while !dependencySet.isRejected {
+        var result: (state: ResolverState, dependencySet: DependencySet)? = nil
+        while result == nil {
+            try autoreleasepool {
+                if let subSet = try dependencySet.popSubSet() {
 
-            if let subSet = try dependencySet.popSubSet() {
+                    //Backtrack again with this subset
+                    let nestedResult = try backtrack(dependencySet: subSet)
 
-                //Backtrack again with this subset
-                let result = try backtrack(dependencySet: subSet)
+                    switch nestedResult.state {
+                    case .rejected:
+                        //Set is rejected, try next possibility
+                        break
+                    case .accepted:
+                        //Set contains all dependencies, we've got a winner
+                        result = (.accepted, nestedResult.dependencySet)
+                    }
 
-                switch result.state {
-                case .rejected:
-                    //Set is rejected, try next possibility
-                    break
-                case .accepted:
-                    //Set contains all dependencies, we've got a winner
-                    return (.accepted, result.dependencySet)
+                } else {
+                    //All done
+                    result = (.rejected, dependencySet)
                 }
-
-            } else {
-                //All done
-                break
             }
         }
-
-        //Defaults to rejected, no valid set was found
-        return (.rejected, dependencySet)
+        return result!
     }
 
-    private func findAllVersionsUncached(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> ConcreteVersionSet {
+    private func findAllVersionsUncached(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier, isUpdatable: Bool) throws -> ConcreteVersionSet {
+
         let versionSet = ConcreteVersionSet()
-        let pinnedVersionsProducer: SignalProducer<PinnedVersion, CarthageError>
 
-        switch versionSpecifier {
-        case .gitReference(let hash):
-            pinnedVersionsProducer = resolvedGitReference(dependency, hash)
-        default:
-            pinnedVersionsProducer = versionsForDependency(dependency)
-        }
+        if !isUpdatable, let pinnedVersion = pinnedVersions?[dependency] {
+            versionSet.insert(ConcreteVersion(pinnedVersion: pinnedVersion))
+            versionSet.pinnedVersionSpecifier = versionSpecifier
+        } else if isUpdatable {
+            let pinnedVersionsProducer: SignalProducer<PinnedVersion, CarthageError>
 
-        let concreteVersionsProducer = pinnedVersionsProducer.filterMap { (pinnedVersion) -> ConcreteVersion? in
-            let concreteVersion = ConcreteVersion(pinnedVersion: pinnedVersion)
-            versionSet.insert(concreteVersion)
-            return nil
+            switch versionSpecifier {
+            case .gitReference(let hash):
+                pinnedVersionsProducer = resolvedGitReference(dependency, hash)
+            default:
+                pinnedVersionsProducer = versionsForDependency(dependency)
+            }
+
+            let concreteVersionsProducer = pinnedVersionsProducer.filterMap { (pinnedVersion) -> ConcreteVersion? in
+                let concreteVersion = ConcreteVersion(pinnedVersion: pinnedVersion)
+                versionSet.insert(concreteVersion)
+                return nil
+            }
+            _ = try concreteVersionsProducer.collect().first()!.dematerialize()
         }
-        _ = try concreteVersionsProducer.collect().first()!.dematerialize()
         versionSet.retainVersions(compatibleWith: versionSpecifier)
         return versionSet
     }
 
     func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> ConcreteVersionSet {
 
-        let versionedDependency = VersionedDependency(dependency: dependency, versionSpecifier: versionSpecifier)
+        let isUpdatable = isUpdatableDependency(dependency)
+        let versionedDependency = VersionedDependency(dependency: dependency, versionSpecifier: versionSpecifier, isUpdatable: isUpdatable)
 
         let concreteVersionSet = try versionsCache.object(
                 for: versionedDependency,
-                byStoringDefault: try findAllVersionsUncached(for: dependency, compatibleWith: versionSpecifier)
+                byStoringDefault: try findAllVersionsUncached(for: dependency, compatibleWith: versionSpecifier, isUpdatable: isUpdatable)
         )
 
-        guard !concreteVersionSet.isEmpty else {
+        guard !isUpdatable || !concreteVersionSet.isEmpty else {
             throw CarthageError.requiredVersionNotFound(dependency, versionSpecifier)
         }
 
@@ -179,16 +211,33 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
 
     func findDependencies(for dependency: Dependency, version: ConcreteVersion) throws -> [DependencyEntry] {
         let pinnedDependency = PinnedDependency(dependency: dependency, pinnedVersion: version.pinnedVersion)
-        return try dependencyCache.object(
+        let result: [DependencyEntry] = try dependencyCache.object(
                 for: pinnedDependency,
                 byStoringDefault: try dependenciesForDependency(dependency, version.pinnedVersion).collect().first()!.dematerialize()
         )
+        if isUpdatableDependency(dependency) {
+            addUpdatableDependencies(AnySequence(result.map { $0.key }))
+        }
+        return result
+    }
+
+    func isUpdatableDependency(_ dependency: Dependency) -> Bool {
+        return updatableDependencyNames == nil || updatableDependencyNames!.count == 0 || updatableDependencyNames!.contains(dependency.name)
+    }
+
+    private func addUpdatableDependencies(_ dependencies: AnySequence<Dependency>) {
+        if updatableDependencyNames != nil && !updatableDependencyNames!.isEmpty {
+            for dependency in dependencies {
+                updatableDependencyNames!.insert(dependency.name)
+            }
+        }
     }
 }
 
 protocol DependencyRetriever: class {
     func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> ConcreteVersionSet
     func findDependencies(for dependency: Dependency, version: ConcreteVersion) throws -> [DependencyEntry]
+    func isUpdatableDependency(_ dependency: Dependency) -> Bool
 }
 
 final class DependencySet {
@@ -230,8 +279,9 @@ final class DependencySet {
         self.retriever = retriever
     }
 
-    public convenience init(requiredDependencies: Set<Dependency>, retriever: DependencyRetriever) {
-        self.init(unresolvedDependencies: requiredDependencies, contents: [Dependency: ConcreteVersionSet](), retriever: retriever)
+    public convenience init(requiredDependencies: AnySequence<DependencyEntry>, retriever: DependencyRetriever) throws {
+        self.init(unresolvedDependencies: Set(requiredDependencies.map { $0.key }), contents: [Dependency: ConcreteVersionSet](), retriever: retriever)
+        try self.update(with: requiredDependencies)
     }
 
     public func removeVersion(_ version: ConcreteVersion, for dependency: Dependency) -> Bool {
@@ -305,9 +355,17 @@ final class DependencySet {
     public func update(with dependencyEntries: AnySequence<DependencyEntry>) throws {
         //Find all versions for current dependencies
         for (dependency, versionSpecifier) in dependencyEntries {
-            if !self.containsDependency(dependency) {
+
+            let existingVersionSet = versions(for: dependency)
+            let updatable = retriever.isUpdatableDependency(dependency)
+
+            if existingVersionSet == nil || (existingVersionSet!.isPinned && updatable) {
                 let validVersions = try retriever.findAllVersions(for: dependency, compatibleWith: versionSpecifier)
                 setVersions(validVersions, for: dependency)
+
+                if let pinnedVersionSpecifier = existingVersionSet?.pinnedVersionSpecifier {
+                    constrainVersions(for: dependency, with: pinnedVersionSpecifier)
+                }
             } else {
                 //Remove the versions from the set that are not valid according to the versionSpecifier
                 constrainVersions(for: dependency, with: versionSpecifier)
@@ -406,6 +464,12 @@ final class ConcreteVersionSet: Sequence {
     private let semanticVersions: SortedSet<ConcreteVersion>
     private let nonSemanticVersions: SortedSet<ConcreteVersion>
 
+    public var pinnedVersionSpecifier: VersionSpecifier?
+
+    public var isPinned: Bool {
+        return pinnedVersionSpecifier != nil
+    }
+
     private init(semanticVersions: SortedSet<ConcreteVersion>, nonSemanticVersions: SortedSet<ConcreteVersion>) {
         self.semanticVersions = semanticVersions
         self.nonSemanticVersions = nonSemanticVersions
@@ -416,7 +480,9 @@ final class ConcreteVersionSet: Sequence {
     }
 
     public var copy: ConcreteVersionSet {
-        return ConcreteVersionSet(semanticVersions: semanticVersions.copy, nonSemanticVersions: nonSemanticVersions.copy)
+        let copy = ConcreteVersionSet(semanticVersions: semanticVersions.copy, nonSemanticVersions: nonSemanticVersions.copy)
+        copy.pinnedVersionSpecifier = pinnedVersionSpecifier
+        return copy
     }
 
     public var count: Int {
