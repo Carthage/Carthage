@@ -1,8 +1,3 @@
-//
-// Created by Werner Altewischer on 27/01/2018.
-// Copyright (c) 2018 Carthage. All rights reserved.
-//
-
 import Foundation
 
 /**
@@ -10,11 +5,11 @@ A set which sorts its elements in natural order.
 
 This type is intentionally modelled as a class instead of a struct to have control over when copies take place.
 */
+// swiftlint:disable missing_docs
 public final class SortedSet<T: Comparable>: Sequence, Collection {
-
     public enum SearchResult {
-        case found(index: Int) //The index
-        case notFound(insertionIndex: Int) //The insertion index
+        case found(index: Int)
+        case notFound(insertionIndex: Int)
     }
 
     public typealias Element = T
@@ -49,8 +44,8 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
     public func insert(_ element: Element) -> Bool {
         let index = storage.binarySearch(element)
 
-        if (index >= 0) {
-            //Element already exists
+        if index >= 0 {
+            // Element already exists
             return false
         } else {
             let insertionIndex = -(index + 1)
@@ -68,7 +63,7 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
     @discardableResult
     public func remove(_ element: Element) -> Bool {
         let index = storage.binarySearch(element)
-        if (index >= 0) {
+        if index >= 0 {
             storage.remove(at: index)
             return true
         } else {
@@ -97,6 +92,7 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
                 newStorage.append(obj)
             }
         }
+
         storage = newStorage
     }
 
@@ -135,7 +131,7 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
     public func search(_ element: Element) -> SearchResult {
         let i = storage.binarySearch(element)
 
-        if (i >= 0) {
+        if i >= 0 {
             return .found(index: i)
         } else {
             return .notFound(insertionIndex: -(i + 1))
@@ -169,35 +165,35 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
         return storage[position]
     }
 
-    public func index(after i: Index) -> Index {
-        return storage.index(after: i)
+    public func index(after index: Index) -> Index {
+        return storage.index(after: index)
     }
 }
 
-private extension Array where Element: Comparable {
-
+extension Array where Element: Comparable {
     /**
     Returns the index of the element if found or if not found -(insertionIndex + 1) where the insertionIndex is the index
     where the element should be inserted for correct sorting order.
 
     This method assumes the array is already sorted, otherwise the result is not defined.
     */
-    func binarySearch(_ element: Element) -> Int {
-        var low = 0
-        var high = self.count - 1
+	func binarySearch(_ element: Element) -> Int {
+		var low = 0
+		var high = self.count - 1
 
-        while (low <= high) {
-            let mid = (low + high) >> 1
-            let midVal = self[mid]
+		while low <= high {
+			let mid = (low + high) >> 1
+			let midVal = self[mid]
 
-            if (midVal < element) {
-                low = mid + 1
-            } else if (midVal > element) {
-                high = mid - 1
-            } else {
-                return mid
-            }
-        }
-        return -(low + 1)
-    }
+			if midVal < element {
+				low = mid + 1
+			} else if midVal > element {
+				high = mid - 1
+			} else {
+				return mid
+			}
+		}
+
+		return -(low + 1)
+	}
 }

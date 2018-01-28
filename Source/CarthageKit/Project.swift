@@ -51,7 +51,7 @@ public enum ProjectEvent {
 
 public enum ResolverType {
 	case normal, new, fast
-	
+
 	public var resolverClass: ResolverProtocol.Type {
 		switch self {
 		case .normal:

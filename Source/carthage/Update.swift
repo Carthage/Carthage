@@ -13,6 +13,7 @@ public struct UpdateCommand: CommandProtocol {
 		public let isVerbose: Bool
 		public let logPath: String?
 		public let useNewResolver: Bool
+		public let useFastResolver: Bool
 		public let buildOptions: CarthageKit.BuildOptions
 		public let checkoutOptions: CheckoutCommand.Options
 		public let dependenciesToUpdate: [String]?
@@ -47,6 +48,7 @@ public struct UpdateCommand: CommandProtocol {
 		             isVerbose: Bool,
 		             logPath: String?,
 		             useNewResolver: Bool,
+		             useFastResolver: Bool,
 		             buildOptions: BuildOptions,
 		             checkoutOptions: CheckoutCommand.Options
 		) {
@@ -55,6 +57,7 @@ public struct UpdateCommand: CommandProtocol {
 			self.isVerbose = isVerbose
 			self.logPath = logPath
 			self.useNewResolver = useNewResolver
+			self.useFastResolver = useFastResolver
 			self.buildOptions = buildOptions
 			self.checkoutOptions = checkoutOptions
 			self.dependenciesToUpdate = checkoutOptions.dependenciesToCheckout
@@ -72,6 +75,7 @@ public struct UpdateCommand: CommandProtocol {
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
+				<*> mode <| Option(key: "fast-resolver", defaultValue: false, usage: "use the fast resolver codeline when calculating dependencies. Default is false")
 				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
 				<*> CheckoutCommand.Options.evaluate(mode, useBinariesAddendum: binariesAddendum, dependenciesUsage: dependenciesUsage)
 		}
@@ -117,7 +121,9 @@ public struct UpdateCommand: CommandProtocol {
 				}
 
 				let updateDependencies = project.updateDependencies(
-					shouldCheckout: options.checkoutAfterUpdate, resolverType: options.useNewResolver ? .new : .normal, buildOptions: options.buildOptions,
+					shouldCheckout: options.checkoutAfterUpdate,
+					resolverType: options.useFastResolver ? .fast : options.useNewResolver ? .new : .normal,
+					buildOptions: options.buildOptions,
 					dependenciesToUpdate: options.dependenciesToUpdate
 				)
 
