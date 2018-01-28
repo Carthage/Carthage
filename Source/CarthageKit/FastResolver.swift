@@ -19,7 +19,6 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
     private var dependencyCache = [PinnedDependency: [DependencyEntry]]()
     private var versionsCache = [VersionedDependency: ConcreteVersionSet]()
     private var pinnedVersions: [Dependency: PinnedVersion]? = nil
-    private var updatableDependencyNames: Set<String>? = nil
 
     private enum ResolverState {
         case rejected, accepted
@@ -85,27 +84,30 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
     ) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
         let result: Result<[Dependency: PinnedVersion], CarthageError>
 
+        //Ensure we start and finish with a clean slate
         pinnedVersions = lastResolved
-        updatableDependencyNames = dependenciesToUpdate.map { Set($0) }
         dependencyCache.removeAll()
         versionsCache.removeAll()
 
-        var requiredDependencies = dependencies
-        let hasSpecificDepedenciesToUpdate = !(updatableDependencyNames?.isEmpty ?? true)
-
-        if hasSpecificDepedenciesToUpdate {
-            requiredDependencies = requiredDependencies.filter { dependency, _ in return (updatableDependencyNames?.contains(dependency.name) ?? true) || (pinnedVersions?[dependency] != nil) }
-        }
-
         defer {
             pinnedVersions = nil
-            updatableDependencyNames = nil
             dependencyCache.removeAll()
             versionsCache.removeAll()
         }
 
+        let updatableDependencyNames = dependenciesToUpdate.map { Set($0) } ?? Set()
+
+        let requiredDependencies: AnySequence<DependencyEntry>
+        let hasSpecificDepedenciesToUpdate = !updatableDependencyNames.isEmpty
+
+        if hasSpecificDepedenciesToUpdate {
+            requiredDependencies = AnySequence(dependencies.filter { dependency, _ in return updatableDependencyNames.contains(dependency.name) || pinnedVersions?[dependency] != nil })
+        } else {
+            requiredDependencies = AnySequence(dependencies)
+        }
+
         do {
-            let dependencySet = try DependencySet(requiredDependencies: AnySequence(requiredDependencies), retriever: self)
+            let dependencySet = try DependencySet(requiredDependencies: requiredDependencies, updatableDependencyNames: updatableDependencyNames, retriever: self)
             let resolverResult = try backtrack(dependencySet: dependencySet)
 
             switch resolverResult.state {
@@ -192,9 +194,8 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
         return versionSet
     }
 
-    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> ConcreteVersionSet {
+    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier, isUpdatable: Bool) throws -> ConcreteVersionSet {
 
-        let isUpdatable = isUpdatableDependency(dependency)
         let versionedDependency = VersionedDependency(dependency: dependency, versionSpecifier: versionSpecifier, isUpdatable: isUpdatable)
 
         let concreteVersionSet = try versionsCache.object(
@@ -215,34 +216,20 @@ public final class FastResolver: ResolverProtocol, DependencyRetriever {
                 for: pinnedDependency,
                 byStoringDefault: try dependenciesForDependency(dependency, version.pinnedVersion).collect().first()!.dematerialize()
         )
-        if isUpdatableDependency(dependency) {
-            addUpdatableDependencies(AnySequence(result.map { $0.key }))
-        }
         return result
-    }
-
-    func isUpdatableDependency(_ dependency: Dependency) -> Bool {
-        return updatableDependencyNames == nil || updatableDependencyNames!.count == 0 || updatableDependencyNames!.contains(dependency.name)
-    }
-
-    private func addUpdatableDependencies(_ dependencies: AnySequence<Dependency>) {
-        if updatableDependencyNames != nil && !updatableDependencyNames!.isEmpty {
-            for dependency in dependencies {
-                updatableDependencyNames!.insert(dependency.name)
-            }
-        }
     }
 }
 
 protocol DependencyRetriever: class {
-    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> ConcreteVersionSet
+    func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier, isUpdatable: Bool) throws -> ConcreteVersionSet
     func findDependencies(for dependency: Dependency, version: ConcreteVersion) throws -> [DependencyEntry]
-    func isUpdatableDependency(_ dependency: Dependency) -> Bool
 }
 
 final class DependencySet {
 
     private var contents: [Dependency: ConcreteVersionSet]
+
+    private var updatableDependencyNames: Set<String>
 
     private weak var retriever: DependencyRetriever!
 
@@ -260,27 +247,26 @@ final class DependencySet {
     }
 
     public var copy: DependencySet {
-        return DependencySet(unresolvedDependencies: unresolvedDependencies, contents: contents.mapValues { set -> ConcreteVersionSet in return set.copy }, retriever: self.retriever)
+        return DependencySet(
+                unresolvedDependencies: unresolvedDependencies,
+                updatableDependencyNames: updatableDependencyNames,
+                contents: contents.mapValues { $0.copy },
+                retriever: retriever)
     }
 
     public var resolvedDependencies: [Dependency: PinnedVersion] {
-        var ret = [Dependency: PinnedVersion]()
-        for (dependency, versionSet) in contents {
-            if let firstVersion = versionSet.first {
-                ret[dependency] = firstVersion.pinnedVersion
-            }
-        }
-        return ret
+        return contents.filterMapValues { return $0.first?.pinnedVersion }
     }
 
-    private init(unresolvedDependencies: Set<Dependency>, contents: [Dependency: ConcreteVersionSet], retriever: DependencyRetriever) {
+    private init(unresolvedDependencies: Set<Dependency>, updatableDependencyNames: Set<String>, contents: [Dependency: ConcreteVersionSet], retriever: DependencyRetriever) {
         self.unresolvedDependencies = unresolvedDependencies
+        self.updatableDependencyNames = updatableDependencyNames
         self.contents = contents
         self.retriever = retriever
     }
 
-    public convenience init(requiredDependencies: AnySequence<DependencyEntry>, retriever: DependencyRetriever) throws {
-        self.init(unresolvedDependencies: Set(requiredDependencies.map { $0.key }), contents: [Dependency: ConcreteVersionSet](), retriever: retriever)
+    public convenience init(requiredDependencies: AnySequence<DependencyEntry>, updatableDependencyNames: Set<String>, retriever: DependencyRetriever) throws {
+        self.init(unresolvedDependencies: Set(requiredDependencies.map { $0.key }), updatableDependencyNames: updatableDependencyNames, contents: [Dependency: ConcreteVersionSet](), retriever: retriever)
         try self.update(with: requiredDependencies)
     }
 
@@ -326,6 +312,16 @@ final class DependencySet {
         return contents[dependency] != nil
     }
 
+    public func isUpdatableDependency(_ dependency: Dependency) -> Bool {
+        return updatableDependencyNames.isEmpty || updatableDependencyNames.contains(dependency.name)
+    }
+
+    public func addUpdatableDependency(_ dependency: Dependency) {
+        if !updatableDependencyNames.isEmpty {
+            updatableDependencyNames.insert(dependency.name)
+        }
+    }
+
     public func popSubSet() throws -> DependencySet? {
         while !unresolvedDependencies.isEmpty {
             if let dependency = unresolvedDependencies.first, let versionSet = contents[dependency], let version = versionSet.first {
@@ -344,7 +340,7 @@ final class DependencySet {
 
                 newSet.unresolvedDependencies.remove(dependency)
 
-                try newSet.update(with: AnySequence(transitiveDependencies))
+                try newSet.update(with: AnySequence(transitiveDependencies), forceUpdatable: isUpdatableDependency(dependency))
 
                 return newSet
             }
@@ -352,15 +348,20 @@ final class DependencySet {
         return nil
     }
 
-    public func update(with dependencyEntries: AnySequence<DependencyEntry>) throws {
+    public func update(with dependencyEntries: AnySequence<DependencyEntry>, forceUpdatable: Bool = false) throws {
         //Find all versions for current dependencies
+
         for (dependency, versionSpecifier) in dependencyEntries {
 
-            let existingVersionSet = versions(for: dependency)
-            let updatable = retriever.isUpdatableDependency(dependency)
+            let isUpdatable = forceUpdatable || isUpdatableDependency(dependency)
+            if forceUpdatable {
+                addUpdatableDependency(dependency)
+            }
 
-            if existingVersionSet == nil || (existingVersionSet!.isPinned && updatable) {
-                let validVersions = try retriever.findAllVersions(for: dependency, compatibleWith: versionSpecifier)
+            let existingVersionSet = versions(for: dependency)
+
+            if existingVersionSet == nil || (existingVersionSet!.isPinned && isUpdatable) {
+                let validVersions = try retriever.findAllVersions(for: dependency, compatibleWith: versionSpecifier, isUpdatable: isUpdatable)
                 setVersions(validVersions, for: dependency)
 
                 if let pinnedVersionSpecifier = existingVersionSet?.pinnedVersionSpecifier {
@@ -633,6 +634,16 @@ fileprivate extension Dictionary {
             self[key] = dv
             return dv
         }
+    }
+
+    func filterMapValues<T>(_ transform: (Dictionary.Value) throws -> T?) rethrows -> [Dictionary.Key: T] {
+        var result = [Dictionary.Key: T]()
+        for (key, value) in self {
+            if let transformedValue = try transform(value) {
+                result[key] = transformedValue
+            }
+        }
+        return result
     }
 }
 
