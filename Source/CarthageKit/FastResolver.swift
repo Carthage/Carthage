@@ -46,6 +46,8 @@ public final class FastResolver: ResolverProtocol {
 		) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
 		let result: Result<[Dependency: PinnedVersion], CarthageError>
 
+		let start = Date()
+
 		// Ensure we start and finish with a clean slate
 		let pinnedVersions = lastResolved ?? [Dependency: PinnedVersion]()
 		let dependencyRetriever = DependencyRetriever(versionsForDependency: versionsForDependency,
@@ -83,6 +85,10 @@ public final class FastResolver: ResolverProtocol {
 			let carthageError: CarthageError = (error as? CarthageError) ?? CarthageError.internalError(description: error.localizedDescription)
 			result = .failure(carthageError)
 		}
+
+		let end = Date()
+
+		print("Fast resolver took: \(end.timeIntervalSince(start)) s.")
 
 		return SignalProducer(result: result)
 	}
