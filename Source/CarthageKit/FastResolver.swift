@@ -480,8 +480,8 @@ final class ConcreteVersionSet: Sequence {
 	public typealias Element = ConcreteVersion
 	public typealias Iterator = ConcreteVersionSetIterator
 
-	private let semanticVersions: SortedSet<ConcreteVersion>
-	private let nonSemanticVersions: SortedSet<ConcreteVersion>
+	private var semanticVersions: SortedSet<ConcreteVersion>
+	private var nonSemanticVersions: SortedSet<ConcreteVersion>
 
 	public var pinnedVersionSpecifier: VersionSpecifier?
 
@@ -489,9 +489,10 @@ final class ConcreteVersionSet: Sequence {
 		return pinnedVersionSpecifier != nil
 	}
 
-	private init(semanticVersions: SortedSet<ConcreteVersion>, nonSemanticVersions: SortedSet<ConcreteVersion>) {
+	private init(semanticVersions: SortedSet<ConcreteVersion>, nonSemanticVersions: SortedSet<ConcreteVersion>, pinnedVersionSpecifier: VersionSpecifier? = nil) {
 		self.semanticVersions = semanticVersions
 		self.nonSemanticVersions = nonSemanticVersions
+        self.pinnedVersionSpecifier = pinnedVersionSpecifier
 	}
 
 	public convenience init() {
@@ -499,9 +500,7 @@ final class ConcreteVersionSet: Sequence {
 	}
 
 	public var copy: ConcreteVersionSet {
-		let copy = ConcreteVersionSet(semanticVersions: semanticVersions.copy, nonSemanticVersions: nonSemanticVersions.copy)
-		copy.pinnedVersionSpecifier = pinnedVersionSpecifier
-		return copy
+		return ConcreteVersionSet(semanticVersions: semanticVersions, nonSemanticVersions: nonSemanticVersions, pinnedVersionSpecifier: pinnedVersionSpecifier)
 	}
 
 	public var count: Int {
@@ -581,28 +580,27 @@ final class ConcreteVersionSet: Sequence {
 	public func retainVersions(compatibleWith versionSpecifier: VersionSpecifier) {
 		// This is an optimization to achieve O(log(N)) time complexity for this method instead of O(N)
 		var range: Range<Int>?
-		let versions = semanticVersions
 
 		switch versionSpecifier {
 		case .any, .gitReference:
 			return
 		case .exactly(let requirement):
 			let fixedVersion = ConcreteVersion(semanticVersion: requirement)
-			range = self.range(for: versions, from: fixedVersion, to: fixedVersion)
+			range = self.range(for: semanticVersions, from: fixedVersion, to: fixedVersion)
 		case .atLeast(let requirement):
-			range = self.range(for: versions, from: ConcreteVersion(semanticVersion: requirement), to: nil)
+			range = self.range(for: semanticVersions, from: ConcreteVersion(semanticVersion: requirement), to: nil)
 		case .compatibleWith(let requirement):
 			let lowerBound = ConcreteVersion(semanticVersion: requirement)
 			let upperBound = requirement.major > 0 ?
 				ConcreteVersion(semanticVersion: SemanticVersion(major: requirement.major + 1, minor: 0, patch: 0)) :
 				ConcreteVersion(semanticVersion: SemanticVersion(major: 0, minor: requirement.minor + 1, patch: 0))
-			range = self.range(for: versions, from: lowerBound, to: upperBound)
+			range = self.range(for: semanticVersions, from: lowerBound, to: upperBound)
 		}
 
 		if let nonNilRange = range {
-			versions.retain(range: nonNilRange)
+            semanticVersions.retain(range: nonNilRange)
 		} else {
-			versions.removeAll()
+            semanticVersions.removeAll()
 		}
 	}
 

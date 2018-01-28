@@ -11,33 +11,6 @@ class FastResolverTest: XCTestCase {
 	
 	let resolverType = FastResolver.self
 	
-    func testSortedSet() {
-
-        let set = SortedSet<String>()
-        let array = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
-        let shuffledArray = array.shuffled()
-
-        for s in shuffledArray {
-            XCTAssertTrue(set.insert(s))
-            XCTAssertFalse(set.insert(s))
-        }
-
-        let array1 = Array(set)
-
-        XCTAssertEqual(array, array1)
-        XCTAssertEqual(array.count, set.count)
-
-        for s in shuffledArray {
-            XCTAssertTrue(set.contains(s))
-            XCTAssertTrue(set.remove(s))
-            XCTAssertFalse(set.contains(s))
-            XCTAssertFalse(set.remove(s))
-        }
-
-        XCTAssertEqual(0, set.count)
-    }
-
-
     func testConcreteVersionOrdering() {
         let versions = [
             "3.10.0",
@@ -57,7 +30,7 @@ class FastResolverTest: XCTestCase {
         ]
 
         let shuffledVersions = versions.shuffled()
-        let set = SortedSet<ConcreteVersion>()
+        var set = SortedSet<ConcreteVersion>()
 
         for versionString in shuffledVersions {
             let pinnedVersion = PinnedVersion(versionString)

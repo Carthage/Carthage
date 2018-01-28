@@ -6,7 +6,7 @@ A set which sorts its elements in natural order.
 This type is intentionally modelled as a class instead of a struct to have control over when copies take place.
 */
 // swiftlint:disable missing_docs
-public final class SortedSet<T: Comparable>: Sequence, Collection {
+public struct SortedSet<T: Comparable>: Sequence, Collection {
     public enum SearchResult {
         case found(index: Int)
         case notFound(insertionIndex: Int)
@@ -16,22 +16,9 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
     public typealias Iterator = Array<Element>.Iterator
     public typealias Index = Int
 
-    private var storage: [Element]
+    private var storage = [Element]()
 
-    /**
-    Returns a copy of this set.
-    */
-    public var copy: SortedSet<Element> {
-        let ret = SortedSet<Element>(storage: storage)
-        return ret
-    }
-
-    private init(storage: [Element]) {
-        self.storage = storage
-    }
-
-    public convenience init() {
-        self.init(storage: [Element]())
+    public init() {
     }
 
     /**
@@ -41,7 +28,7 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
     O(log(N))
     */
     @discardableResult
-    public func insert(_ element: Element) -> Bool {
+    public mutating func insert(_ element: Element) -> Bool {
         let index = storage.binarySearch(element)
 
         if index >= 0 {
@@ -61,7 +48,7 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
     O(log(N))
     */
     @discardableResult
-    public func remove(_ element: Element) -> Bool {
+    public mutating func remove(_ element: Element) -> Bool {
         let index = storage.binarySearch(element)
         if index >= 0 {
             storage.remove(at: index)
@@ -85,7 +72,7 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
 
     O(N)
     */
-    public func retainAll(satisfying predicate: (Element) -> Bool) {
+    public mutating func retainAll(satisfying predicate: (Element) -> Bool) {
         var newStorage = [Element]()
         for obj in storage {
             if predicate(obj) {
@@ -99,7 +86,7 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
     /**
     Retains the specified range, removes all other objects.
     */
-    public func retain(range: Range<Int>) {
+    public mutating func retain(range: Range<Int>) {
         let slice: ArraySlice<Element> = storage[range]
         storage = Array(slice)
     }
@@ -109,7 +96,7 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
 
     O(log(N))
     */
-    public func removeAll(except element: Element) {
+    public mutating func removeAll(except element: Element) {
         let index = storage.binarySearch(element)
         storage.removeAll()
         if index >= 0 {
@@ -120,7 +107,7 @@ public final class SortedSet<T: Comparable>: Sequence, Collection {
     /**
     Removes all objects from the set.
     */
-    public func removeAll() {
+    public mutating func removeAll() {
         storage.removeAll()
     }
 
@@ -177,7 +164,7 @@ extension Array where Element: Comparable {
 
     This method assumes the array is already sorted, otherwise the result is not defined.
     */
-	func binarySearch(_ element: Element) -> Int {
+	fileprivate func binarySearch(_ element: Element) -> Int {
 		var low = 0
 		var high = self.count - 1
 
