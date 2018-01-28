@@ -49,6 +49,7 @@ public struct Resolver: ResolverProtocol {
 		lastResolved: [Dependency: PinnedVersion]? = nil,
 		dependenciesToUpdate: [String]? = nil
 	) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
+		var start: Date? = Date()
 		return graphs(for: dependencies, dependencyOf: nil, basedOnGraph: DependencyGraph())
 			.take(first: 1)
 			.observe(on: QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Resolver.resolve"))
@@ -91,6 +92,13 @@ public struct Resolver: ResolverProtocol {
 			}
 			.reduce(into: [:]) { (result: inout [Dependency: PinnedVersion], dependency) in
 				result[dependency.0] = dependency.1
+
+				if let startDate = start {
+					let end = Date()
+					print("Resolver took \(end.timeIntervalSince(startDate)) s.")
+					start = nil
+				}
+
 			}
 	}
 

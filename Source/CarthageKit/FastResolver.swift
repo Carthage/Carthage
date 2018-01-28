@@ -641,7 +641,7 @@ extension Dictionary {
 	
 	Compare this to the method [_ key, default: ] which does return a default but doesn't store it in the dictionary.
 	*/
-	mutating func object(for key: Dictionary.Key, byStoringDefault defaultValue: @autoclosure () throws -> Dictionary.Value) rethrows -> Dictionary.Value {
+	fileprivate mutating func object(for key: Dictionary.Key, byStoringDefault defaultValue: @autoclosure () throws -> Dictionary.Value) rethrows -> Dictionary.Value {
 		if let v = self[key] {
 			return v
 		} else {
@@ -651,7 +651,7 @@ extension Dictionary {
 		}
 	}
 
-	func filterMapValues<T>(_ transform: (Dictionary.Value) throws -> T?) rethrows -> [Dictionary.Key: T] {
+	fileprivate func filterMapValues<T>(_ transform: (Dictionary.Value) throws -> T?) rethrows -> [Dictionary.Key: T] {
 		var result = [Dictionary.Key: T]()
 		for (key, value) in self {
 			if let transformedValue = try transform(value) {

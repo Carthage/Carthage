@@ -35,8 +35,13 @@ public struct NewResolver: ResolverProtocol {
 		lastResolved: [Dependency: PinnedVersion]? = nil,
 		dependenciesToUpdate: [String]? = nil
 		) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
+		let start = Date()
 		let result = process(dependencies: dependencies, in: DependencyGraph(whitelist: dependenciesToUpdate, lastResolved: lastResolved))
 			.map { graph in graph.versions }
+
+		let end = Date()
+
+		print("New resolver took \(end.timeIntervalSince(start)) s.")
 
 		return SignalProducer(result: result)
 	}
