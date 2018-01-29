@@ -148,6 +148,7 @@ private final class DependencyRetriever {
 
 	private var dependencyCache = [PinnedDependency: [DependencyEntry]]()
 	private var versionsCache = [VersionedDependency: ConcreteVersionSet]()
+	private var conflictCache = [VersionedDependency: CarthageError]()
 
 	init(
 		versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
@@ -242,6 +243,16 @@ private final class DependencyRetriever {
 			byStoringDefault: try dependenciesForDependency(dependency, version.pinnedVersion).collect().first()!.dematerialize()
 		)
 		return result
+	}
+
+	func setCachedError(_ error: CarthageError, for dependency: Dependency, with versionSpecifier: VersionSpecifier) {
+		let key = VersionedDependency(dependency: dependency, versionSpecifier: versionSpecifier, isUpdatable: true)
+		conflictCache[key] = error
+	}
+
+	func cachedError(for dependency: Dependency, with versionSpecifier: VersionSpecifier) -> CarthageError? {
+		let key = VersionedDependency(dependency: dependency, versionSpecifier: versionSpecifier, isUpdatable: true)
+		return conflictCache[key]
 	}
 }
 
@@ -390,6 +401,12 @@ private final class DependencySet {
 		}
 
 		for (transitiveDependency, versionSpecifier) in transitiveDependencies {
+
+			if let cachedConflict = retriever.cachedError(for: transitiveDependency, with: versionSpecifier) {
+				rejectionError = cachedConflict
+				return
+			}
+
 			let isUpdatable = forceUpdatable || isUpdatableDependency(transitiveDependency)
 			if forceUpdatable {
 				addUpdatableDependency(transitiveDependency)
@@ -402,6 +419,7 @@ private final class DependencySet {
 
 				if !setVersions(validVersions, for: transitiveDependency) {
 					rejectionError = CarthageError.requiredVersionNotFound(transitiveDependency, versionSpecifier)
+					retriever.setCachedError(rejectionError!, for: transitiveDependency, with: versionSpecifier)
 					return
 				}
 
@@ -416,6 +434,9 @@ private final class DependencySet {
 						let newRequirement: CarthageError.VersionRequirement = (specifier: versionSpecifier, fromDependency: parent)
 						let existingRequirement: CarthageError.VersionRequirement = (specifier: incompatibleSpec.versionSpecifier, fromDependency: incompatibleSpec.parent)
 						rejectionError = CarthageError.incompatibleRequirements(transitiveDependency, existingRequirement, newRequirement)
+						if incompatibleSpec.parent == nil {
+							retriever.setCachedError(rejectionError!, for: transitiveDependency, with: versionSpecifier)
+						}
 					} else {
 						rejectionError = CarthageError.unsatisfiableDependencyList([transitiveDependency.name])
 					}
