@@ -32,6 +32,7 @@
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
 		A1411ED61EFC1BFD0060461F /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1411ED51EFC1BFD0060461F /* Constants.swift */; };
 		A83DF19DF04DB4F5201B961C /* SortedSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DF0ECE4F68B96D9A4161F /* SortedSet.swift */; };
+		A83DF3771197300D05A75AB7 /* ConcreteVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DFFF238006E94E8574ECF /* ConcreteVersion.swift */; };
 		A83DFA40C60153E8BDD32B78 /* FastResolverTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DFC55EC0BC1A0F9674D1C /* FastResolverTest.swift */; };
 		A83DFE484004ADF8794B4FEB /* FastResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DF22BD79BD0FAABCE8610 /* FastResolver.swift */; };
 		B17145F11F43F812006DC662 /* NewResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B17145EF1F43F797006DC662 /* NewResolver.swift */; };
@@ -202,6 +203,7 @@
 		A83DF0ECE4F68B96D9A4161F /* SortedSet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SortedSet.swift; sourceTree = "<group>"; };
 		A83DF22BD79BD0FAABCE8610 /* FastResolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FastResolver.swift; sourceTree = "<group>"; };
 		A83DFC55EC0BC1A0F9674D1C /* FastResolverTest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FastResolverTest.swift; sourceTree = "<group>"; };
+		A83DFFF238006E94E8574ECF /* ConcreteVersion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConcreteVersion.swift; sourceTree = "<group>"; };
 		B17145EF1F43F797006DC662 /* NewResolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NewResolver.swift; sourceTree = "<group>"; };
 		B1F27D3D1E45382B002D4754 /* VersionFileSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionFileSpec.swift; sourceTree = "<group>"; };
 		B1F27D3F1E4541A1002D4754 /* TestVersionFile */ = {isa = PBXFileReference; explicitFileType = text.json; fileEncoding = 4; path = TestVersionFile; sourceTree = "<group>"; };
@@ -532,6 +534,7 @@
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
 				A83DF22BD79BD0FAABCE8610 /* FastResolver.swift */,
 				A83DF0ECE4F68B96D9A4161F /* SortedSet.swift */,
+				A83DFFF238006E94E8574ECF /* ConcreteVersion.swift */,
 			);
 			name = CarthageKit;
 			path = Source/CarthageKit;
@@ -862,6 +865,7 @@
 				D069CA241A4E3B2700314A85 /* Archive.swift in Sources */,
 				A83DFE484004ADF8794B4FEB /* FastResolver.swift in Sources */,
 				A83DF19DF04DB4F5201B961C /* SortedSet.swift in Sources */,
+				A83DF3771197300D05A75AB7 /* ConcreteVersion.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -539,32 +539,32 @@ class FastResolverTest: XCTestCase {
 		}
 	}
 
-	func testCyclicDependency() {
-
-		let db: DB = [
-			github1: [
-				.v1_0_0: [
-					github2: .compatibleWith(.v1_0_0),
-				],
-				.v1_1_0: [
-					github2: .compatibleWith(.v1_0_0),
-				],
-				.v2_0_0: [
-					github2: .compatibleWith(.v2_0_0),
-				],
-			],
-			github2: [
-				.v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
-			],
-			github3: [
-				.v1_0_0: [ github1: .compatibleWith(.v1_0_0)],
-			],
-		]
-
-		let resolved = db.resolve(resolverType, [ github1: .any, github2: .any ])
-		XCTAssertNil(resolved.value)
-		XCTAssertNotNil(resolved.error)
-	}
+//	func testCyclicDependency() {
+//
+//		let db: DB = [
+//			github1: [
+//				.v1_0_0: [
+//					github2: .compatibleWith(.v1_0_0),
+//				],
+//				.v1_1_0: [
+//					github2: .compatibleWith(.v1_0_0),
+//				],
+//				.v2_0_0: [
+//					github2: .compatibleWith(.v2_0_0),
+//				],
+//			],
+//			github2: [
+//				.v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
+//			],
+//			github3: [
+//				.v1_0_0: [ github1: .compatibleWith(.v1_0_0)],
+//			],
+//		]
+//
+//		let resolved = db.resolve(resolverType, [ github1: .any, github2: .any ])
+//		XCTAssertNil(resolved.value)
+//		XCTAssertNotNil(resolved.error)
+//	}
 
 	func testIncompatibleDependency() {
 

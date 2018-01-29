@@ -1,11 +1,11 @@
 import Foundation
 
-/**
-A set which sorts its elements in natural order.
-
-This type is intentionally modelled as a class instead of a struct to have control over when copies take place.
-*/
 // swiftlint:disable missing_docs
+/**
+ A set which sorts its elements in natural order.
+
+ This type is intentionally modelled as a class instead of a struct to have control over when copies take place.
+*/
 public struct SortedSet<T: Comparable>: Sequence, Collection {
     public enum SearchResult {
         case found(index: Int)
