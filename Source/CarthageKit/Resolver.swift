@@ -98,7 +98,6 @@ public struct Resolver: ResolverProtocol {
 					print("Resolver took \(end.timeIntervalSince(startDate)) s.")
 					start = nil
 				}
-
 			}
 	}
 

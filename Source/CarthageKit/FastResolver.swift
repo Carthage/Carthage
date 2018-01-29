@@ -48,6 +48,11 @@ public final class FastResolver: ResolverProtocol {
 
 		let start = Date()
 
+		defer {
+			let end = Date()
+			print("Fast resolver took: \(end.timeIntervalSince(start)) s.")
+		}
+
 		// Ensure we start and finish with a clean slate
 		let pinnedVersions = lastResolved ?? [Dependency: PinnedVersion]()
 		let dependencyRetriever = DependencyRetriever(versionsForDependency: versionsForDependency,
@@ -77,18 +82,21 @@ public final class FastResolver: ResolverProtocol {
 			case .accepted:
 				break
 			case .rejected:
-				throw CarthageError.unresolvedDependencies(dependencySet.unresolvedDependencies.map { $0.name })
+				if let rejectionError = dependencySet.rejectionError {
+					throw rejectionError
+				} else {
+					throw CarthageError.unresolvedDependencies(dependencySet.unresolvedDependencies.map { $0.name })
+				}
 			}
 
 			result = .success(resolverResult.dependencySet.resolvedDependencies)
+			print("Resolver succeeded!")
 		} catch let error {
 			let carthageError: CarthageError = (error as? CarthageError) ?? CarthageError.internalError(description: error.localizedDescription)
+
 			result = .failure(carthageError)
+			print("Resolver failed with error: \(carthageError)")
 		}
-
-		let end = Date()
-
-		print("Fast resolver took: \(end.timeIntervalSince(start)) s.")
 
 		return SignalProducer(result: result)
 	}
@@ -114,7 +122,9 @@ public final class FastResolver: ResolverProtocol {
 
 					switch nestedResult.state {
 					case .rejected:
-						break
+						if subSet === dependencySet {
+							result = (.rejected, subSet)
+						}
 					case .accepted:
 						// Set contains all dependencies, we've got a winner
 						result = (.accepted, nestedResult.dependencySet)
@@ -244,7 +254,11 @@ final class DependencySet {
 
 	public private(set) var unresolvedDependencies: Set<Dependency>
 
-	public private(set) var isRejected = false
+	public private(set) var rejectionError: CarthageError?
+
+	public var isRejected: Bool {
+		return rejectionError != nil
+	}
 
 	public var isComplete: Bool {
 		// Dependency resolution is complete if there are no unresolved dependencies anymore
@@ -284,43 +298,38 @@ final class DependencySet {
 				  updatableDependencyNames: updatableDependencyNames,
 				  contents: [Dependency: ConcreteVersionSet](),
 				  retriever: retriever)
-		try self.update(with: requiredDependencies)
+		try self.update(parent: nil, with: requiredDependencies)
 	}
 
 	public func removeVersion(_ version: ConcreteVersion, for dependency: Dependency) -> Bool {
 		if let versionSet = contents[dependency] {
 			versionSet.remove(version)
-			if versionSet.isEmpty {
-				isRejected = true
-			}
-
 			return true
 		}
 
 		return false
 	}
 
-	public func setVersions(_ versions: ConcreteVersionSet, for dependency: Dependency) {
+	public func setVersions(_ versions: ConcreteVersionSet, for dependency: Dependency) -> Bool {
 		contents[dependency] = versions
 		unresolvedDependencies.insert(dependency)
-		if versions.isEmpty {
-			isRejected = true
-		}
+		return !versions.isEmpty
 	}
 
-	public func removeAllVersionsExcept(_ version: ConcreteVersion, for dependency: Dependency) {
+	public func removeAllVersionsExcept(_ version: ConcreteVersion, for dependency: Dependency) -> Bool {
 		if let versionSet = versions(for: dependency) {
 			versionSet.removeAll(except: version)
+			return !versionSet.isEmpty
 		}
+		return false
 	}
 
-	public func constrainVersions(for dependency: Dependency, with versionSpecifier: VersionSpecifier) {
+	public func constrainVersions(for dependency: Dependency, with versionSpecifier: VersionSpecifier) -> Bool {
 		if let versionSet = versions(for: dependency) {
 			versionSet.retainVersions(compatibleWith: versionSpecifier)
-			if versionSet.isEmpty {
-				self.isRejected = true
-			}
+			return !versionSet.isEmpty
 		}
+		return false
 	}
 
 	public func versions(for dependency: Dependency) -> ConcreteVersionSet? {
@@ -348,8 +357,14 @@ final class DependencySet {
 				let newSet: DependencySet
 				if count > 1 {
 					let copy = self.copy
-					copy.removeAllVersionsExcept(version, for: dependency)
-					_ = removeVersion(version, for: dependency)
+					let valid1 = copy.removeAllVersionsExcept(version, for: dependency)
+
+					assert(valid1, "Expected set to contain the specified version")
+
+					let valid2 = removeVersion(version, for: dependency)
+
+					assert(valid2, "Expected set to contain the specified version")
+
 					newSet = copy
 				} else {
 					newSet = self
@@ -357,9 +372,7 @@ final class DependencySet {
 
 				let transitiveDependencies = try retriever.findDependencies(for: dependency, version: version)
 
-				newSet.unresolvedDependencies.remove(dependency)
-
-				try newSet.update(with: AnySequence(transitiveDependencies), forceUpdatable: isUpdatableDependency(dependency))
+				try newSet.update(parent: dependency, with: AnySequence(transitiveDependencies), forceUpdatable: isUpdatableDependency(dependency))
 
 				return newSet
 			}
@@ -368,32 +381,52 @@ final class DependencySet {
 		return nil
 	}
 
-	public func update(with dependencyEntries: AnySequence<DependencyEntry>, forceUpdatable: Bool = false) throws {
-		// Find all versions for current dependencies
+	public func update(parent: Dependency?, with transitiveDependencies: AnySequence<DependencyEntry>, forceUpdatable: Bool = false) throws {
+		if isRejected {
+			return
+		}
+		if let definedParent = parent {
+			unresolvedDependencies.remove(definedParent)
+		}
 
-		for (dependency, versionSpecifier) in dependencyEntries {
-			let isUpdatable = forceUpdatable || isUpdatableDependency(dependency)
+		for (transitiveDependency, versionSpecifier) in transitiveDependencies {
+//			if traversedDependencies.contains(transitiveDependency) {
+//				//Cyclic dependency encountered
+//				rejectionError = .dependencyCycle([transitiveDependency: traversedDependencies])
+//				return
+//			}
+
+			let isUpdatable = forceUpdatable || isUpdatableDependency(transitiveDependency)
 			if forceUpdatable {
-				addUpdatableDependency(dependency)
+				addUpdatableDependency(transitiveDependency)
 			}
 
-			let existingVersionSet = versions(for: dependency)
+			let existingVersionSet = versions(for: transitiveDependency)
 
 			if existingVersionSet == nil || (existingVersionSet!.isPinned && isUpdatable) {
-				let validVersions = try retriever.findAllVersions(for: dependency, compatibleWith: versionSpecifier, isUpdatable: isUpdatable)
-				setVersions(validVersions, for: dependency)
+				let validVersions = try retriever.findAllVersions(for: transitiveDependency, compatibleWith: versionSpecifier, isUpdatable: isUpdatable)
 
-				if let pinnedVersionSpecifier = existingVersionSet?.pinnedVersionSpecifier {
-					constrainVersions(for: dependency, with: pinnedVersionSpecifier)
+				if !setVersions(validVersions, for: transitiveDependency) {
+					rejectionError = CarthageError.requiredVersionNotFound(transitiveDependency, versionSpecifier)
+					return
 				}
-			} else {
-				// Remove the versions from the set that are not valid according to the versionSpecifier
-				constrainVersions(for: dependency, with: versionSpecifier)
-			}
 
-			if isRejected {
-				// No need to proceed, set is rejected already
-				break
+				existingVersionSet?.pinnedVersionSpecifier = nil
+				validVersions.addSpec(DependencySpec(parent: parent, versionSpecifier: versionSpecifier))
+			} else if let versionSet = existingVersionSet {
+				let currentSpec = DependencySpec(parent: parent, versionSpecifier: versionSpecifier)
+				versionSet.addSpec(currentSpec)
+
+				if !constrainVersions(for: transitiveDependency, with: versionSpecifier) {
+					if let incompatibleSpec = versionSet.specs.first(where: { intersection($0.versionSpecifier, currentSpec.versionSpecifier) == nil }) {
+						let newRequirement: CarthageError.VersionRequirement = (specifier: versionSpecifier, fromDependency: parent)
+						let existingRequirement: CarthageError.VersionRequirement = (specifier: incompatibleSpec.versionSpecifier, fromDependency: incompatibleSpec.parent)
+						rejectionError = CarthageError.incompatibleRequirements(transitiveDependency, existingRequirement, newRequirement)
+					} else {
+						rejectionError = CarthageError.unsatisfiableDependencyList([transitiveDependency.name])
+					}
+					return
+				}
 			}
 		}
 	}
@@ -476,12 +509,18 @@ struct ConcreteVersion: Comparable, CustomStringConvertible {
 	}
 }
 
+struct DependencySpec {
+	let parent: Dependency?
+	let versionSpecifier: VersionSpecifier
+}
+
 final class ConcreteVersionSet: Sequence {
 	public typealias Element = ConcreteVersion
 	public typealias Iterator = ConcreteVersionSetIterator
 
 	private var semanticVersions: SortedSet<ConcreteVersion>
 	private var nonSemanticVersions: SortedSet<ConcreteVersion>
+	public private(set) var specs: [DependencySpec]
 
 	public var pinnedVersionSpecifier: VersionSpecifier?
 
@@ -489,18 +528,23 @@ final class ConcreteVersionSet: Sequence {
 		return pinnedVersionSpecifier != nil
 	}
 
-	private init(semanticVersions: SortedSet<ConcreteVersion>, nonSemanticVersions: SortedSet<ConcreteVersion>, pinnedVersionSpecifier: VersionSpecifier? = nil) {
+	private init(semanticVersions: SortedSet<ConcreteVersion>, nonSemanticVersions: SortedSet<ConcreteVersion>,
+				 specs: [DependencySpec], pinnedVersionSpecifier: VersionSpecifier? = nil) {
 		self.semanticVersions = semanticVersions
 		self.nonSemanticVersions = nonSemanticVersions
+		self.specs = specs
         self.pinnedVersionSpecifier = pinnedVersionSpecifier
 	}
 
 	public convenience init() {
-		self.init(semanticVersions: SortedSet<ConcreteVersion>(), nonSemanticVersions: SortedSet<ConcreteVersion>())
+		self.init(semanticVersions: SortedSet<ConcreteVersion>(), nonSemanticVersions: SortedSet<ConcreteVersion>(), specs: [DependencySpec]())
 	}
 
 	public var copy: ConcreteVersionSet {
-		return ConcreteVersionSet(semanticVersions: semanticVersions, nonSemanticVersions: nonSemanticVersions, pinnedVersionSpecifier: pinnedVersionSpecifier)
+		return ConcreteVersionSet(semanticVersions: semanticVersions,
+				nonSemanticVersions: nonSemanticVersions,
+				specs: specs,
+				pinnedVersionSpecifier: pinnedVersionSpecifier)
 	}
 
 	public var count: Int {
@@ -513,6 +557,10 @@ final class ConcreteVersionSet: Sequence {
 
 	public var first: ConcreteVersion? {
 		return self.semanticVersions.first ?? self.nonSemanticVersions.first
+	}
+
+	public func addSpec(_ spec: DependencySpec) {
+		specs.append(spec)
 	}
 
 	@discardableResult
