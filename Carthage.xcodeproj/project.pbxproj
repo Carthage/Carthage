@@ -28,6 +28,7 @@
 		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
 		8AC381441FC3AA4A007CF7E8 /* Alamofire.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8AC381421FC3A900007CF7E8 /* Alamofire.framework */; settings = {ATTRIBUTES = (Required, ); }; };
 		8AC381451FC3AAE4007CF7E8 /* Alamofire.framework in Resources */ = {isa = PBXBuildFile; fileRef = 8AC381421FC3A900007CF7E8 /* Alamofire.framework */; };
+		90CDE7BE2003252C00D98F37 /* FakeOSSSwift.framework in Resources */ = {isa = PBXBuildFile; fileRef = 90CDE7BC2003249C00D98F37 /* FakeOSSSwift.framework */; };
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
 		A1411ED61EFC1BFD0060461F /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1411ED51EFC1BFD0060461F /* Constants.swift */; };
@@ -192,6 +193,7 @@
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
 		8AC381421FC3A900007CF7E8 /* Alamofire.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Alamofire.framework; sourceTree = "<group>"; };
+		90CDE7BC2003249C00D98F37 /* FakeOSSSwift.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeOSSSwift.framework; sourceTree = "<group>"; };
 		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
 		A1411ED51EFC1BFD0060461F /* Constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
@@ -362,6 +364,7 @@
 				8AC381421FC3A900007CF7E8 /* Alamofire.framework */,
 				3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */,
 				3B19041D1E4CFE3900A866AD /* FakeOldSwift.framework */,
+				90CDE7BC2003249C00D98F37 /* FakeOSSSwift.framework */,
 				CD09E2881F0E3F1400A0378A /* FakeSwift.framework */,
 				D0AAAB5419FB1062007B24B3 /* TestCartfile */,
 				D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */,
@@ -717,6 +720,7 @@
 				CD9A779B1EDD7FEB00A77B00 /* BinaryOnly in Resources */,
 				3B19041E1E4CFE4A00A866AD /* FakeOldObjc.framework in Resources */,
 				3B19041F1E4CFE4A00A866AD /* FakeOldSwift.framework in Resources */,
+				90CDE7BE2003252C00D98F37 /* FakeOSSSwift.framework in Resources */,
 				CD09E28B1F0E3FFB00A0378A /* FakeSwift.framework in Resources */,
 				BE624F491E13424400EAEFC9 /* DuplicateDependenciesCartfile in Resources */,
 				2190FA981FD5B2F0008D8A79 /* OutdatedDependencies in Resources */,
