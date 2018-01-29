@@ -22,6 +22,7 @@ public struct FetchCommand: CommandProtocol {
 	public let function = "Clones or fetches a Git repository ahead of time"
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
+		golbalColorOption = options.colorOptions
 		let dependency = Dependency.git(options.repositoryURL)
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 

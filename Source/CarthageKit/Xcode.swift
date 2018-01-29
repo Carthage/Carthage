@@ -704,6 +704,12 @@ public func build(
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
+	if Configuration.shared.skippableDependencies.contains(where: {
+		return $0.name == dependency.name && $0.scheme == nil
+	}) {
+		let value = BuildSchemeProducer(error: .skip(dependency, nil, nil) )
+		return SignalProducer<BuildSchemeProducer, CarthageError>(value: value)
+	}
 	return symlinkBuildPath(for: dependency, rootDirectoryURL: rootDirectoryURL)
 		.map { _ -> BuildSchemeProducer in
 			return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
@@ -827,7 +833,12 @@ public func buildInDirectory(
 					}
 					return sdkFilter(filteredSDKs, scheme, configuration, project)
 				}
-
+				
+				if let dp = dependency?.dependency, Configuration.shared.skippableDependencies.contains(where: {
+					return $0.name == dp.name && $0.scheme == scheme.name && $0.workspaceOrProject == project.fileURL.lastPathComponent
+				}) {
+					return .init(error: .skip(dp, scheme, project))
+				}
 				return buildScheme(scheme, withOptions: options, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
 					.mapError { error -> CarthageError in
 						if case let .taskError(taskError) = error {

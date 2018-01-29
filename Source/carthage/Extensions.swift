@@ -72,22 +72,39 @@ extension GitURL: ArgumentProtocol {
 internal struct ProjectEventSink {
 	private let colorOptions: ColorOptions
 
+	private static var showOnce = false
 	init(colorOptions: ColorOptions) {
 		self.colorOptions = colorOptions
+		golbalColorOption = colorOptions
+		if ProjectEventSink.showOnce == false {
+			ProjectEventSink.showOnce = true
+			let formatting = colorOptions.formatting
+			let prefix = formatting.bulletin("***")
+			let opts = Configuration.shared.runOptions()
+			carthage.println(prefix + "Config options: " + formatting.path(opts) )
+		}
 	}
 
 	mutating func put(_ event: ProjectEvent) { // swiftlint:disable:this cyclomatic_complexity
 		let formatting = colorOptions.formatting
-
+		let path: (Dependency) -> String = { de -> String in
+			let url: String = {
+				switch de {
+				case .git(let url): return url.urlString
+				default: return de.description
+				}
+			}()
+			return " path \(formatting.path(url))"
+		}
 		switch event {
 		case let .cloning(dependency):
-			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(dependency.name))
+			carthage.println(formatting.bullets + "Cloning " + formatting.projectName(dependency.name) + path(dependency))
 
 		case let .fetching(dependency):
-			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(dependency.name))
+			carthage.println(formatting.bullets + "Fetching " + formatting.projectName(dependency.name) + path(dependency))
 
 		case let .checkingOut(dependency, revision):
-			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(dependency.name) + " at " + formatting.quote(revision))
+			carthage.println(formatting.bullets + "Checking out " + formatting.projectName(dependency.name) + " at " + formatting.quote(revision) + path(dependency))
 
 		case let .downloadingBinaryFrameworkDefinition(dependency, url):
 			carthage.println(formatting.bullets + "Downloading binary-only framework " + formatting.projectName(dependency.name)

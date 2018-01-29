@@ -20,6 +20,9 @@ if let carthagePath = Bundle.main.executablePath {
 	setenv("CARTHAGE_PATH", carthagePath, 0)
 }
 
+Configuration.shared.readConfig()
+var golbalColorOption: ColorOptions?
+
 let registry = CommandRegistry<CarthageError>()
 registry.register(ArchiveCommand())
 registry.register(BootstrapCommand())
@@ -34,6 +37,13 @@ registry.register(VersionCommand())
 let helpCommand = HelpCommand(registry: registry)
 registry.register(helpCommand)
 
-registry.main(defaultVerb: helpCommand.verb) { error in
-	fputs(error.description + "\n", stderr)
-}
+let start = CFAbsoluteTimeGetCurrent()
+registry.main(defaultVerb: helpCommand.verb, completionHandler: {
+	let cost = CFAbsoluteTimeGetCurrent() - start
+	let time = String(format: "%.2f", cost)
+	guard let prefix = golbalColorOption?.formatting.bulletin("***"),
+		let t = golbalColorOption?.formatting.path("\(time)s") else { return }
+	carthage.println(prefix + "🍺 Success, time cost: " + t)
+}, errorHandler: { fputs($0.description + "\n", stderr) })
+
+

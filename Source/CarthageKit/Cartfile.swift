@@ -52,12 +52,15 @@ public struct Cartfile {
 					return
 				}
 
-				if dependencies[dependency] == nil {
-					dependencies[dependency] = version
+				let dp = Configuration.shared.uniqueDependency(for: dependency)
+				if dependencies[dp] == nil {
+					dependencies[dp] = version
 				} else {
-					duplicates.append(dependency)
+					duplicates.append(dp)
 				}
-
+				
+				Configuration.shared.replaceOverrideDependencies(for: &dependencies)
+				
 			case let .failure(error):
 				result = .failure(CarthageError(scannableError: error))
 				stop = true
@@ -107,6 +110,7 @@ public struct Cartfile {
 		for (dependency, version) in cartfile.dependencies {
 			dependencies[dependency] = version
 		}
+		Configuration.shared.replaceOverrideDependencies(for: &dependencies)
 	}
 }
 

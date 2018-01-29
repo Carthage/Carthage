@@ -22,3 +22,5 @@ DerivedData
 
 Carthage.pkg
 Carthage/Build
+CarthageApp.pkg
+CarthageKit.framework.zip
