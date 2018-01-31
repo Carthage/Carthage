@@ -407,16 +407,34 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
 	private func latestDependencies(resolver: ResolverProtocol) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
-		return loadResolvedCartfile()
-			.map { $0.dependencies.mapValues { _ in VersionSpecifier.any } }
-			.flatMap(.merge) { dependencies -> SignalProducer<[Dependency: PinnedVersion], NoError> in
-				SignalProducer(dependencies)
-					.flatMap(.merge) { key, value -> SignalProducer<[Dependency: PinnedVersion], NoError> in
-						resolver
-							.resolve(dependencies: [key: value], lastResolved: nil, dependenciesToUpdate: nil)
-							.flatMapError { _ in .empty }
+		func resolve(prefersGitReference: Bool) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
+			return SignalProducer
+				.combineLatest(loadCombinedCartfile(), loadResolvedCartfile())
+				.map { cartfile, resolvedCartfile in
+					resolvedCartfile
+						.dependencies
+						.reduce(into: [Dependency: VersionSpecifier]()) { result, group in
+							let dependency = group.key
+							switch (prefersGitReference, cartfile.dependencies[dependency]) {
+							case (true, .gitReference(let value)?):
+								result[dependency] = .gitReference(value)
+							default:
+								result[dependency] = .any
+							}
 					}
-					.reduce([Dependency: PinnedVersion]()) { $0.merging($1) { $1 } }
+				}
+				.flatMap(.merge) {
+					resolver.resolve(dependencies: $0, lastResolved: nil, dependenciesToUpdate: nil)
+			}
+		}
+
+		return resolve(prefersGitReference: false).flatMapError {
+			switch $0 {
+			case .taggedVersionNotFound:
+				return resolve(prefersGitReference: true)
+			default:
+				return SignalProducer(error: $0)
+			}
 		}
 	}
 
