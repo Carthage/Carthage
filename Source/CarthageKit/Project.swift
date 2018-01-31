@@ -438,7 +438,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		}
 	}
 
-	public typealias OutdatedDependency = (Dependency, PinnedVersion, PinnedVersion, PinnedVersion?)
+	public typealias OutdatedDependency = (Dependency, PinnedVersion, PinnedVersion, PinnedVersion)
 	/// Attempts to determine which of the project's Carthage
 	/// dependencies are out of date.
 	///
@@ -474,8 +474,13 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.map { ($0.dependencies, $1.dependencies, $2) }
 			.map { (currentDependencies, updatedDependencies, latestDependencies) -> [OutdatedDependency] in
 				return updatedDependencies.flatMap { (project, version) -> OutdatedDependency? in
-					if let resolved = currentDependencies[project], resolved != version {
-						let latest = latestDependencies[project]
+					if let resolved = currentDependencies[project], let latest = latestDependencies[project], resolved != version || resolved != latest {
+						if SemanticVersion.from(resolved).value == nil, version == resolved {
+							// If resolved version is not a semantic version but a commit
+							// it is a false-positive if `version` and `resolved` are the same
+							return nil
+						}
+
 						return (project, resolved, version, latest)
 					} else {
 						return nil
