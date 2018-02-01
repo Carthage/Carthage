@@ -415,25 +415,24 @@ public final class Project { // swiftlint:disable:this type_body_length
 						.dependencies
 						.reduce(into: [Dependency: VersionSpecifier]()) { result, group in
 							let dependency = group.key
-							switch (prefersGitReference, cartfile.dependencies[dependency]) {
-							case (true, .gitReference(let value)?):
-								result[dependency] = .gitReference(value)
-							default:
-								result[dependency] = .any
+							let specifier: VersionSpecifier
+							if case let .gitReference(value)? = cartfile.dependencies[dependency], prefersGitReference {
+								specifier = .gitReference(value)
+							} else {
+								specifier = .any
 							}
+							result[dependency] = specifier
 					}
 				}
-				.flatMap(.merge) {
-					resolver.resolve(dependencies: $0, lastResolved: nil, dependenciesToUpdate: nil)
-			}
+				.flatMap(.merge) { resolver.resolve(dependencies: $0, lastResolved: nil, dependenciesToUpdate: nil) }
 		}
 
-		return resolve(prefersGitReference: false).flatMapError {
-			switch $0 {
+		return resolve(prefersGitReference: false).flatMapError { error in
+			switch error {
 			case .taggedVersionNotFound:
 				return resolve(prefersGitReference: true)
 			default:
-				return SignalProducer(error: $0)
+				return SignalProducer(error: error)
 			}
 		}
 	}
