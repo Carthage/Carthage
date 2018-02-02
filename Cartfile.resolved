@@ -1,4 +1,4 @@
-github "Carthage/Commandant" "0.12.0"
+github "Carthage/Commandant" "0.13.0"
 github "Carthage/ReactiveTask" "0.14.0"
 github "Quick/Nimble" "v7.0.3"
 github "Quick/Quick" "v1.2.0"
