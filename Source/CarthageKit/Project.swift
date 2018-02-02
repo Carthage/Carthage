@@ -403,9 +403,34 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// This will fetch dependency repositories as necessary, but will not check
 	/// them out into the project's working directory.
 	private func latestDependencies(resolver: ResolverProtocol) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
-		return loadResolvedCartfile()
-			.map { $0.dependencies.mapValues { _ in VersionSpecifier.any } }
-			.flatMap(.merge) { resolver.resolve(dependencies: $0, lastResolved: nil, dependenciesToUpdate: nil) }
+		func resolve(prefersGitReference: Bool) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
+			return SignalProducer
+				.combineLatest(loadCombinedCartfile(), loadResolvedCartfile())
+				.map { cartfile, resolvedCartfile in
+					resolvedCartfile
+						.dependencies
+						.reduce(into: [Dependency: VersionSpecifier]()) { result, group in
+							let dependency = group.key
+							let specifier: VersionSpecifier
+							if case let .gitReference(value)? = cartfile.dependencies[dependency], prefersGitReference {
+								specifier = .gitReference(value)
+							} else {
+								specifier = .any
+							}
+							result[dependency] = specifier
+					}
+				}
+				.flatMap(.merge) { resolver.resolve(dependencies: $0, lastResolved: nil, dependenciesToUpdate: nil) }
+		}
+
+		return resolve(prefersGitReference: false).flatMapError { error in
+			switch error {
+			case .taggedVersionNotFound:
+				return resolve(prefersGitReference: true)
+			default:
+				return SignalProducer(error: error)
+			}
+		}
 	}
 
 	public typealias OutdatedDependency = (Dependency, PinnedVersion, PinnedVersion, PinnedVersion)
