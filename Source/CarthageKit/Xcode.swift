@@ -114,11 +114,9 @@ public func buildableSchemesInDirectory(
 		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
 			return project
 				.schemes()
-				.flatMap(.merge) { scheme -> SignalProducer<(Scheme, BuildArguments), CarthageError> in
+				.flatMap(.concurrent(limit: 4)) { scheme -> SignalProducer<Scheme, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-					return .init(value: (scheme, buildArguments))
-				}
-				.flatMap(.concurrent(limit: 4)) { scheme, buildArguments -> SignalProducer<Scheme, CarthageError> in
+
 					return shouldBuildScheme(buildArguments, platforms)
 						.filter { $0 }
 						.map { _ in scheme }
