@@ -1011,11 +1011,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 						switch dependency {
 						case .git, .gitHub:
-							guard options.useBinaries else { return .init(value: (dependency, version)) }
+							guard options.useBinaries else {
+								return .init(value: (dependency, version))
+							}
 							return self.installBinaries(for: dependency, pinnedVersion: version, toolchain: options.toolchain)
 								.filterMap { installed -> (Dependency, PinnedVersion)? in
-									guard installed else { return (dependency, version) }
-									return nil
+									return installed ? nil : (dependency, version)
 							}
 						case let .binary(url):
 							return self.installBinariesForBinaryProject(url: url, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
