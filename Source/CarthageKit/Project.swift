@@ -101,10 +101,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// working directories.
 	public var useSubmodules = false
 
-	/// Whether to download binaries for dependencies, or just check out their
-	/// repositories.
-	public var useBinaries = false
-
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
 	public let projectEvents: Signal<ProjectEvent, NoError>
@@ -579,49 +575,42 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinaries(for dependency: Dependency, pinnedVersion: PinnedVersion, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
-		return SignalProducer<Bool, CarthageError>(value: self.useBinaries)
-			.flatMap(.merge) { useBinaries -> SignalProducer<Bool, CarthageError> in
-				if !useBinaries {
+		let checkoutDirectoryURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
+
+		switch dependency {
+		case let .gitHub(server, repository):
+			let client = Client(server: server)
+			return self.downloadMatchingBinaries(for: dependency, pinnedVersion: pinnedVersion, fromRepository: repository, client: client)
+				.flatMapError { error -> SignalProducer<URL, CarthageError> in
+					if !client.isAuthenticated {
+						return SignalProducer(error: error)
+					}
+					return self.downloadMatchingBinaries(
+						for: dependency,
+						pinnedVersion: pinnedVersion,
+						fromRepository: repository,
+						client: Client(server: server, isAuthenticated: false)
+					)
+				}
+				.flatMap(.concat) {
+					return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, pinnedVersion: pinnedVersion, toolchain: toolchain)
+						.on(value: { _ in
+							// Trash the checkouts folder when we've successfully copied binaries, to avoid building unnecessarily
+							_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
+						})
+				}
+				.flatMap(.concat) { self.removeItem(at: $0) }
+				.map { true }
+				.flatMapError { error in
+					self._projectEventsObserver.send(value: .skippedInstallingBinaries(dependency: dependency, error: error))
 					return SignalProducer(value: false)
 				}
+				.concat(value: false)
+				.take(first: 1)
 
-				let checkoutDirectoryURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
-
-				switch dependency {
-				case let .gitHub(server, repository):
-					let client = Client(server: server)
-					return self.downloadMatchingBinaries(for: dependency, pinnedVersion: pinnedVersion, fromRepository: repository, client: client)
-						.flatMapError { error -> SignalProducer<URL, CarthageError> in
-							if !client.isAuthenticated {
-								return SignalProducer(error: error)
-							}
-							return self.downloadMatchingBinaries(
-								for: dependency,
-								pinnedVersion: pinnedVersion,
-								fromRepository: repository,
-								client: Client(server: server, isAuthenticated: false)
-							)
-						}
-						.flatMap(.concat) {
-							return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, pinnedVersion: pinnedVersion, toolchain: toolchain)
-								.on(value: { _ in
-									// Trash the checkouts folder when we've successfully copied binaries, to avoid building unnecessarily
-									_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
-								})
-						}
-						.flatMap(.concat) { self.removeItem(at: $0) }
-						.map { true }
-						.flatMapError { error in
-							self._projectEventsObserver.send(value: .skippedInstallingBinaries(dependency: dependency, error: error))
-							return SignalProducer(value: false)
-						}
-						.concat(value: false)
-						.take(first: 1)
-
-				case .git, .binary:
-					return SignalProducer(value: false)
-				}
-			}
+		case .git, .binary:
+			return SignalProducer(value: false)
+		}
 	}
 
 	/// Downloads any binaries and debug symbols that may be able to be used

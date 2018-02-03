@@ -22,6 +22,7 @@ extension BuildOptions: OptionsProtocol {
 			<*> mode <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
+			<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: "use cached builds when possible")
 	}
 }
 

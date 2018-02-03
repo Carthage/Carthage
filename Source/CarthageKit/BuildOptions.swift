@@ -13,11 +13,15 @@ public struct BuildOptions {
 	/// Rebuild even if cached builds exist.
 	public var cacheBuilds: Bool
 
-	public init(configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil, cacheBuilds: Bool = true) {
+	public var useBinaries: Bool
+
+	public init(configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil,
+				derivedDataPath: String? = nil, cacheBuilds: Bool = true, useBinaries: Bool = true) {
 		self.configuration = configuration
 		self.platforms = platforms
 		self.toolchain = toolchain
 		self.derivedDataPath = derivedDataPath
 		self.cacheBuilds = cacheBuilds
+		self.useBinaries = useBinaries
 	}
 }
