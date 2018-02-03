@@ -831,27 +831,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(), CarthageError> in
 						switch dependency {
 						case .git, .gitHub:
-
-							let submoduleFound = submodulesByPath[dependency.relativePath] != nil
-							let checkoutOrCloneDependency = self.checkoutOrCloneDependency(dependency, version: version, submodulesByPath: submodulesByPath)
-
-							// Disable binary downloads for the dependency if that
-							// is already checked out as a submodule.
-							if submoduleFound {
-								return checkoutOrCloneDependency
-							}
-
-							return self.installBinaries(for: dependency, pinnedVersion: version, toolchain: buildOptions?.toolchain)
-								.flatMap(.merge) { installed -> SignalProducer<(), CarthageError> in
-									if installed {
-										return .empty
-									} else {
-										return checkoutOrCloneDependency
-									}
-								}
-
-						case let .binary(url):
-							return self.installBinariesForBinaryProject(url: url, pinnedVersion: version, projectName: dependency.name, toolchain: buildOptions?.toolchain)
+							return self.checkoutOrCloneDependency(dependency, version: version, submodulesByPath: submodulesByPath)
+						case .binary:
+							return .empty
 						}
 					}
 			}
@@ -1025,7 +1007,23 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 			}
 			.flatMap(.concat) { dependencies -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
-				return .init(dependencies)
+				return SignalProducer(dependencies)
+					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+						switch dependency {
+						case .git, .gitHub:
+							guard options.useBinaries else { return .init(value: (dependency, version)) }
+							return self.installBinaries(for: dependency, pinnedVersion: version, toolchain: options.toolchain)
+								.filterMap { installed -> (Dependency, PinnedVersion)? in
+									guard installed else { return (dependency, version) }
+									return nil
+							}
+						case let .binary(url):
+							return self.installBinariesForBinaryProject(url: url, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
+								.then(SignalProducer<(Dependency, PinnedVersion), CarthageError>.empty)
+						}
+					}
+					.collect()
+					.flatten()
 			}
 			.flatMap(.concat) { dependency, version -> SignalProducer<BuildSchemeProducer, CarthageError> in
 				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true).path
