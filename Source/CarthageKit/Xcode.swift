@@ -133,6 +133,32 @@ public func buildableSchemesInDirectory(
 		}
 }
 
+/// Finds schemes of projects or workspaces, does not fiter on buildable ones
+/// within the given directory.
+public func schemesInDirectory(
+	_ directoryURL: URL,
+	withConfiguration configuration: String,
+	forPlatforms platforms: Set<Platform> = []
+	) -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> {
+	precondition(directoryURL.isFileURL)
+
+	return ProjectLocator
+		.locate(in: directoryURL)
+		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
+			return project
+				.schemes()
+				.collect()
+				.flatMapError { error in
+					if case .noSharedSchemes = error {
+						return .init(value: [])
+					} else {
+						return .init(error: error)
+					}
+				}
+				.map { (project, $0) }
+		}
+}
+
 /// Sends pairs of a scheme and a project, the scheme actually resides in
 /// the project.
 public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<[(Scheme, ProjectLocator)], CarthageError> {
@@ -776,7 +802,7 @@ public func buildInDirectory(
 	return BuildSchemeProducer { observer, lifetime in
 		// Use SignalProducer.replayLazily to avoid enumerating the given directory
 		// multiple times.
-		let locator = buildableSchemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms)
+		let locator = schemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms)
 			.replayLazily(upTo: Int.max)
 
 		locator
@@ -814,6 +840,12 @@ public func buildInDirectory(
 					.concat(value: (project, []))
 					.take(first: 1)
 					.map { project, _ in (scheme, project) }
+			}
+			.flatMap(.concurrent(limit: 4)) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+				let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: options.configuration)
+				return shouldBuildScheme(buildArguments, options.platforms)
+					.filter { $0 }
+					.map { _ in (scheme, project) }
 			}
 			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
 				let initialValue = (project, scheme)
