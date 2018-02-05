@@ -650,6 +650,10 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 								// setting for GCC as noted in
 								// https://developer.apple.com/library/content/qa/qa1964/_index.html.
 								"CLANG_ENABLE_CODE_COVERAGE=NO",
+								
+								// Disable injecting the debugger entitlement into archive builds
+								// https://download.developer.apple.com/Developer_Tools/Xcode_9.3_beta/Release_Notes_for_Xcode_9.3_beta.pdf
+								"CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO",
 							]
 						}
 
