@@ -33,13 +33,21 @@ class SDKSpec: QuickSpec {
 					expect(tvOS2).notTo(beNil())
 					expect(tvOS2) == SDK.tvOS
 					
-					let macos = SDK(rawValue: "macosx")
-					expect(macos).notTo(beNil())
-					expect(macos) == SDK.macOSX
+					let tvOSSimulator = SDK(rawValue: "appletvsimulator")
+					expect(tvOSSimulator).notTo(beNil())
+					expect(tvOSSimulator) == SDK.tvSimulator
 					
-					let ios = SDK(rawValue: "iphoneos")
-					expect(ios).notTo(beNil())
-					expect(ios) == SDK.iPhoneOS
+					let macOS = SDK(rawValue: "macosx")
+					expect(macOS).notTo(beNil())
+					expect(macOS) == SDK.macOSX
+					
+					let iOS = SDK(rawValue: "iphoneos")
+					expect(iOS).notTo(beNil())
+					expect(iOS) == SDK.iPhoneOS
+					
+					let iOSimulator = SDK(rawValue: "iphonesimulator")
+					expect(iOSimulator).notTo(beNil())
+					expect(iOSimulator) == SDK.iPhoneSimulator
 				}
 			}
 		}
