@@ -47,18 +47,7 @@ public struct ArchiveCommand: CommandProtocol {
 			})
 		} else {
 			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
-			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
-				.collect()
-				.flatMap(.merge) { projects -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-					return schemesInProjects(projects)
-						.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-							if !schemes.isEmpty {
-								return .init(schemes)
-							} else {
-								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), []))
-							}
-						}
-				}
+			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release")
 				.flatMap(.merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 					return BuildSettings.load(with: buildArguments)

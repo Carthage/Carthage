@@ -106,56 +106,64 @@ public func buildableSchemesInDirectory(
 	_ directoryURL: URL,
 	withConfiguration configuration: String,
 	forPlatforms platforms: Set<Platform> = []
-) -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> {
+) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> {
 	precondition(directoryURL.isFileURL)
-
-	return ProjectLocator
-		.locate(in: directoryURL)
-		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
-			return project
-				.schemes()
-				.flatMap(.concurrent(limit: 4)) { scheme -> SignalProducer<Scheme, CarthageError> in
-					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-
-					return shouldBuildScheme(buildArguments, platforms)
-						.filter { $0 }
-						.map { _ in scheme }
-				}
-				.collect()
-				.flatMapError { error in
-					if case .noSharedSchemes = error {
-						return .init(value: [])
+	let locator = ProjectLocator
+			.locate(in: directoryURL)
+			.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
+				return project
+					.schemes()
+					.collect()
+					.flatMapError { error in
+						if case .noSharedSchemes = error {
+							return .init(value: [])
+						} else {
+							return .init(error: error)
+						}
+					}
+					.map { (project, $0) }
+			}
+			.replayLazily(upTo: Int.max)
+	return locator
+		.collect()
+		// Allow dependencies which have no projects, not to error out with
+		// `.noSharedFrameworkSchemes`.
+		.filter { projects in !projects.isEmpty }
+		.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			return schemesInProjects(projects)
+				.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+					if !schemes.isEmpty {
+						return .init(schemes)
 					} else {
-						return .init(error: error)
+						return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platforms))
 					}
 				}
-				.map { (project, $0) }
+		}.flatMap(.merge) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			return locator
+				// This scheduler hop is required to avoid disallowed recursive signals.
+				// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
+				.start(on: QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
+				// Pick up the first workspace which can build the scheme.
+				.filter { project, schemes in
+					switch project {
+					case .workspace where schemes.contains(scheme):
+						return true
+
+					default:
+						return false
+					}
+				}
+				// If there is no appropriate workspace, use the project in
+				// which the scheme is defined instead.
+				.concat(value: (project, []))
+				.take(first: 1)
+				.map { project, _ in (scheme, project) }
 		}
-}
-
-/// Finds schemes of projects or workspaces, does not fiter on buildable ones
-/// within the given directory.
-public func schemesInDirectory(
-	_ directoryURL: URL,
-	withConfiguration configuration: String,
-	forPlatforms platforms: Set<Platform> = []
-	) -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> {
-	precondition(directoryURL.isFileURL)
-
-	return ProjectLocator
-		.locate(in: directoryURL)
-		.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
-			return project
-				.schemes()
-				.collect()
-				.flatMapError { error in
-					if case .noSharedSchemes = error {
-						return .init(value: [])
-					} else {
-						return .init(error: error)
-					}
-				}
-				.map { (project, $0) }
+		.flatMap(.concurrent(limit: 4)) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+			return shouldBuildScheme(buildArguments, platforms)
+				.filter { $0 }
+				.map { _ in (scheme, project) }
 		}
 }
 
@@ -802,51 +810,7 @@ public func buildInDirectory(
 	return BuildSchemeProducer { observer, lifetime in
 		// Use SignalProducer.replayLazily to avoid enumerating the given directory
 		// multiple times.
-		let locator = schemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms)
-			.replayLazily(upTo: Int.max)
-
-		locator
-			.collect()
-			// Allow dependencies which have no projects, not to error out with
-			// `.noSharedFrameworkSchemes`.
-			.filter { projects in !projects.isEmpty }
-			.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-				return schemesInProjects(projects)
-					.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-						if !schemes.isEmpty {
-							return .init(schemes)
-						} else {
-							return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), options.platforms))
-						}
-					}
-			}
-			.flatMap(.merge) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-				return locator
-					// This scheduler hop is required to avoid disallowed recursive signals.
-					// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
-					.start(on: QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
-					// Pick up the first workspace which can build the scheme.
-					.filter { project, schemes in
-						switch project {
-						case .workspace where schemes.contains(scheme):
-							return true
-
-						default:
-							return false
-						}
-					}
-					// If there is no appropriate workspace, use the project in
-					// which the scheme is defined instead.
-					.concat(value: (project, []))
-					.take(first: 1)
-					.map { project, _ in (scheme, project) }
-			}
-			.flatMap(.concurrent(limit: 4)) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-				let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: options.configuration)
-				return shouldBuildScheme(buildArguments, options.platforms)
-					.filter { $0 }
-					.map { _ in (scheme, project) }
-			}
+		buildableSchemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms)
 			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
 				let initialValue = (project, scheme)
 
