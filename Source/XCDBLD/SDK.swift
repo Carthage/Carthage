@@ -69,7 +69,7 @@ public enum SDK: String {
 		return ["tvos": .tvOS]
 	}
 
-	public init?(rawValue: RawValue) {
+	public init?(rawValue: String) {
 		let lowerCasedRawValue = rawValue.lowercased()
 		let maybeSDK = SDK
 			.allSDKs

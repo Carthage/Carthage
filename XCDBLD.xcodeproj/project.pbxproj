@@ -38,7 +38,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		8A5C8CFC202BB81E002242EB /* SDKSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDKSpec.swift; sourceTree = "<group>"; };
+		8A5C8CFC202BB81E002242EB /* SDKSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SDKSpec.swift; sourceTree = "<group>"; };
 		BE0292401E403278004FB579 /* BuildArguments.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArguments.swift; sourceTree = "<group>"; };
 		BE0292421E403298004FB579 /* BuildArgumentsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArgumentsSpec.swift; sourceTree = "<group>"; };
 		BE0292441E40330D004FB579 /* ProjectLocator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectLocator.swift; sourceTree = "<group>"; };
