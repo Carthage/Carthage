@@ -650,6 +650,10 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 								// setting for GCC as noted in
 								// https://developer.apple.com/library/content/qa/qa1964/_index.html.
 								"CLANG_ENABLE_CODE_COVERAGE=NO",
+
+								// Disable the "Strip Linked Product" build
+								// setting so we can later generate a dSYM
+								"STRIP_INSTALLED_PRODUCT=NO",
 							]
 						}
 
