@@ -453,20 +453,13 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 	)
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		.flatMap(.concat) { sdk -> SignalProducer<SDK, CarthageError> in
-			var argsForLoading = buildArgs
-			argsForLoading.sdk = sdk
-
-			return BuildSettings
-				.load(with: argsForLoading)
-				.filter { settings in
-					// Filter out SDKs that require bitcode when bitcode is disabled in
-					// project settings. This is necessary for testing frameworks, which
-					// must add a User-Defined setting of ENABLE_BITCODE=NO.
-					return settings.bitcodeEnabled.value == true || ![.tvOS, .watchOS].contains(sdk)
-				}
-				.map { _ in sdk }
+		// Filter out SDKs that require bitcode when bitcode is disabled in
+		// project settings. This is necessary for testing frameworks, which
+		// must add a User-Defined setting of ENABLE_BITCODE=NO.
+		.filter { settings, sdk in
+			return settings.bitcodeEnabled.value == true || ![.tvOS, .watchOS].contains(sdk)
 		}
+		.map { $0.1 }
 		.reduce(into: [:]) { (sdksByPlatform: inout [Platform: Set<SDK>], sdk: SDK) in
 			let platform = sdk.platform
 

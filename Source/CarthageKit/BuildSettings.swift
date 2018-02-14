@@ -117,10 +117,10 @@ public struct BuildSettings {
 	///
 	/// If an SDK is unrecognized or could not be determined, an error will be
 	/// sent on the returned signal.
-	public static func SDKsForScheme(_ scheme: Scheme, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
+	public static func SDKsForScheme(_ scheme: Scheme, inProject project: ProjectLocator) -> SignalProducer<(BuildSettings,SDK), CarthageError> {
 		return load(with: BuildArguments(project: project, scheme: scheme))
 			.take(first: 1)
-			.flatMap(.merge) { $0.buildSDKs }
+			.flatMap(.merge) { settings in settings.buildSDKs.map { (settings, $0) } }
 	}
 
 	/// Returns the value for the given build setting, or an error if it could
