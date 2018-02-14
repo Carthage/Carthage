@@ -24,6 +24,9 @@ public enum CarthageError: Error {
 	/// a dependency.
 	case requiredVersionNotFound(Dependency, VersionSpecifier)
 
+	/// No valid versions could be found, given the list of dependencies to update
+	case unsatisfiableDependencyList([String])
+
 	/// No entry could be found in Cartfile for a dependency with this name.
 	case unknownDependencies([String])
 
@@ -115,6 +118,9 @@ extension CarthageError: Equatable {
 		case let (.requiredVersionNotFound(left, leftVersion), .requiredVersionNotFound(right, rightVersion)):
 			return left == right && leftVersion == rightVersion
 
+		case let (.unsatisfiableDependencyList(left), .unsatisfiableDependencyList(right)):
+			return left == right
+
 		case let (.repositoryCheckoutFailed(la, lb, lc), .repositoryCheckoutFailed(ra, rb, rc)):
 			return la == ra && lb == rb && lc == rc
 
@@ -205,7 +211,8 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case let .incompatibleRequirements(dependency, first, second):
-			let requirement: (VersionRequirement) -> String = { specifier, fromDependency in
+			let requirement: (VersionRequirement) -> String = { arg in
+				let (specifier, fromDependency) = arg
 				return "\(specifier)" + (fromDependency.map { " (\($0))" } ?? "")
 			}
 			return "Could not pick a version for \(dependency), due to mutually incompatible requirements:\n\t\(requirement(first))\n\t\(requirement(second))"
@@ -215,6 +222,10 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .requiredVersionNotFound(dependency, specifier):
 			return "No available version for \(dependency) satisfies the requirement: \(specifier)"
+
+		case let .unsatisfiableDependencyList(subsetList):
+			let subsetString = subsetList.map { "\t" + $0 }.joined(separator: "\n")
+			return "No valid versions could be found that restrict updates to:\n\(subsetString)"
 
 		case let .repositoryCheckoutFailed(workingDirectoryURL, reason, underlyingError):
 			var description = "Failed to check out repository into \(workingDirectoryURL.path): \(reason)"

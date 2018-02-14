@@ -34,7 +34,9 @@ public func topologicalSort<Node: Comparable>(_ graph: [Node: Set<Node>]) -> [No
 
 	// Maintain a working graph with all sources removed.
 	var workingGraph = graph
-	sources.forEach { node in workingGraph.removeValue(forKey: node) }
+	for node in sources {
+		workingGraph.removeValue(forKey: node)
+	}
 
 	var sorted: [Node] = []
 
@@ -89,7 +91,7 @@ public func topologicalSort<Node: Comparable>(_ graph: [Node: Set<Node>], nodes:
 
 /// Returns the set of nodes that the given node in the provided graph has as
 /// its incoming nodes, both directly and transitively.
-private func transitiveIncomingNodes<Node: Equatable>(_ graph: [Node: Set<Node>], node: Node) -> Set<Node> {
+private func transitiveIncomingNodes<Node>(_ graph: [Node: Set<Node>], node: Node) -> Set<Node> {
 	guard let nodes = graph[node] else {
 		return Set()
 	}

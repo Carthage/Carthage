@@ -4,6 +4,7 @@ import Foundation
 import Result
 import ReactiveSwift
 import XCDBLD
+import Curry
 
 /// Type that encapsulates the configuration and evaluation of the `archive` subcommand.
 public struct ArchiveCommand: CommandProtocol {
@@ -13,17 +14,11 @@ public struct ArchiveCommand: CommandProtocol {
 		public let colorOptions: ColorOptions
 		public let frameworkNames: [String]
 
-		static func create(_ outputPath: String?) -> (String) -> (ColorOptions) -> ([String]) -> Options {
-			return { directoryPath in { colorOptions in { frameworkNames in
-				return self.init(outputPath: outputPath, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: frameworkNames)
-			} } }
-		}
-
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			let argumentUsage = "the names of the built frameworks to archive without any extension "
 				+ "(or blank to pick up the frameworks in the current project built by `--no-skip-current`)"
 
-			return create
+			return curry(self.init)
 				<*> mode <| Option(
 					key: "output",
 					defaultValue: nil,
@@ -52,18 +47,7 @@ public struct ArchiveCommand: CommandProtocol {
 			})
 		} else {
 			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
-			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
-				.collect()
-				.flatMap(.merge) { projects in
-					return schemesInProjects(projects)
-						.flatMap(.merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
-							if !schemes.isEmpty {
-								return .init(schemes)
-							} else {
-								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), []))
-							}
-						}
-				}
+			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release")
 				.flatMap(.merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 					return BuildSettings.load(with: buildArguments)
@@ -80,7 +64,7 @@ public struct ArchiveCommand: CommandProtocol {
 		}
 
 		return frameworks.flatMap(.merge) { frameworks -> SignalProducer<(), CarthageError> in
-			return SignalProducer(Platform.supportedPlatforms)
+			return SignalProducer<Platform, CarthageError>(Platform.supportedPlatforms)
 				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
 					return SignalProducer(frameworks).map { framework in
 						return (platform.relativePath as NSString).appendingPathComponent(framework)

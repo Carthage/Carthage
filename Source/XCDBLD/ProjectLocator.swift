@@ -63,7 +63,7 @@ extension ProjectLocator: Comparable {
 			return false
 
 		default:
-			return lhs.fileURL.path.characters.lexicographicallyPrecedes(rhs.fileURL.path.characters)
+			return lhs.fileURL.path.lexicographicallyPrecedes(rhs.fileURL.path)
 		}
 	}
 }

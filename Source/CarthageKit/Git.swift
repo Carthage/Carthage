@@ -6,124 +6,9 @@ import ReactiveTask
 /// The git version Carthage requires at least.
 public let carthageRequiredGitVersion = "2.3.0"
 
-/// Represents a URL for a Git remote.
-public struct GitURL {
-	/// The string representation of the URL.
-	public let urlString: String
-
-	/// A normalized URL string, without protocol, authentication, or port
-	/// information. This is mostly useful for comparison, and not for any
-	/// actual Git operations.
-	fileprivate var normalizedURLString: String {
-		let parsedURL: URL? = URL(string: urlString)
-
-		if let parsedURL = parsedURL, let host = parsedURL.host {
-			// Normal, valid URL.
-			let path = strippingGitSuffix(parsedURL.path)
-			return "\(host)\(path)"
-		} else if urlString.hasPrefix("/") {
-			// Local path.
-			return strippingGitSuffix(urlString)
-		} else {
-			// scp syntax.
-			var strippedURLString = urlString
-
-			if let index = strippedURLString.characters.index(of: "@") {
-				strippedURLString.removeSubrange(strippedURLString.startIndex...index)
-			}
-
-			var host = ""
-			if let index = strippedURLString.characters.index(of: ":") {
-				host = strippedURLString[strippedURLString.startIndex..<index]
-				strippedURLString.removeSubrange(strippedURLString.startIndex...index)
-			}
-
-			var path = strippingGitSuffix(strippedURLString)
-			if !path.hasPrefix("/") {
-				// This probably isn't strictly legit, but we'll have a forward
-				// slash for other URL types.
-				path.insert("/", at: path.startIndex)
-			}
-
-			return "\(host)\(path)"
-		}
-	}
-
-	/// The name of the repository, if it can be inferred from the URL.
-	public var name: String? {
-		let components = urlString.characters.split(omittingEmptySubsequences: true) { $0 == "/" }
-
-		return components
-			.last
-			.map(String.init)
-			.map(strippingGitSuffix)
-	}
-
-	public init(_ urlString: String) {
-		self.urlString = urlString
-	}
-}
-
 /// Strips any trailing .git in the given name, if one exists.
 public func strippingGitSuffix(_ string: String) -> String {
 	return string.stripping(suffix: ".git")
-}
-
-extension GitURL: Equatable {
-	public static func == (_ lhs: GitURL, _ rhs: GitURL) -> Bool {
-		return lhs.normalizedURLString == rhs.normalizedURLString
-	}
-}
-
-extension GitURL: Hashable {
-	public var hashValue: Int {
-		return normalizedURLString.hashValue
-	}
-}
-
-extension GitURL: CustomStringConvertible {
-	public var description: String {
-		return urlString
-	}
-}
-
-/// A Git submodule.
-public struct Submodule {
-	/// The name of the submodule. Usually (but not always) the same as the
-	/// path.
-	public let name: String
-
-	/// The relative path at which the submodule is checked out.
-	public let path: String
-
-	/// The URL from which the submodule should be cloned, if present.
-	public var url: GitURL
-
-	/// The SHA checked out in the submodule.
-	public var sha: String
-
-	public init(name: String, path: String, url: GitURL, sha: String) {
-		self.name = name
-		self.path = path
-		self.url = url
-		self.sha = sha
-	}
-}
-
-extension Submodule: Hashable {
-	public static func == (_ lhs: Submodule, _ rhs: Submodule) -> Bool {
-		return lhs.name == rhs.name && lhs.path == rhs.path && lhs.url == rhs.url && lhs.sha == rhs.sha
-	}
-
-	public var hashValue: Int {
-		return name.hashValue
-	}
-}
-
-extension Submodule: CustomStringConvertible {
-	public var description: String {
-		return "\(name) @ \(sha)"
-	}
 }
 
 /// Struct to encapsulate global fetch interval cache
@@ -131,7 +16,7 @@ public struct FetchCache {
 	/// Amount of time before a git repository is fetched again. Defaults to 1 minute
 	public static var fetchCacheInterval: TimeInterval = 60.0
 
-	private static var lastFetchTimes: [GitURL : TimeInterval] = [:]
+	private static var lastFetchTimes: [GitURL: TimeInterval] = [:]
 
 	internal static func clearFetchTimes() {
 		lastFetchTimes.removeAll()
@@ -236,10 +121,10 @@ public func fetchRepository(_ repositoryFileURL: URL, remoteURL: GitURL? = nil, 
 public func listTags(_ repositoryFileURL: URL) -> SignalProducer<String, CarthageError> {
 	return launchGitTask([ "tag", "--column=never" ], repositoryFileURL: repositoryFileURL)
 		.flatMap(.concat) { (allTags: String) -> SignalProducer<String, CarthageError> in
-			return SignalProducer { observer, disposable in
-				let range = allTags.characters.startIndex..<allTags.characters.endIndex
+			return SignalProducer { observer, lifetime in
+				let range = allTags.startIndex...
 				allTags.enumerateSubstrings(in: range, options: [ .byLines, .reverse ]) { line, _, _, stop in
-					if disposable.isDisposed {
+					if lifetime.hasEnded {
 						stop = true
 					}
 
@@ -264,14 +149,13 @@ public func contentsOfFileInRepository(_ repositoryFileURL: URL, _ path: String,
 /// specified revision, to the given folder. If the folder does not exist, it
 /// will be created.
 ///
-/// Submodules of the working tree must be handled seperately.
+/// Submodules of the working tree must be handled separately.
 public func checkoutRepositoryToDirectory(
 	_ repositoryFileURL: URL,
 	_ workingDirectoryURL: URL,
 	revision: String = "HEAD"
 ) -> SignalProducer<(), CarthageError> {
-	return SignalProducer
-		.attempt { () -> Result<[String: String], CarthageError> in
+	return SignalProducer { () -> Result<[String: String], CarthageError> in
 			var environment = ProcessInfo.processInfo.environment
 			environment["GIT_WORK_TREE"] = workingDirectoryURL.path
 			return .success(environment)
@@ -330,8 +214,7 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 				}
 		}
 
-	return SignalProducer
-		.attempt {
+	return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
 			repositoryCheck("remove submodule checkout") {
 				try FileManager.default.removeItem(at: submoduleDirectoryURL)
 			}
@@ -352,11 +235,11 @@ private func checkoutSubmodule(_ submodule: Submodule, _ submoduleWorkingDirecto
 /// Parses each key/value entry from the given config file contents, optionally
 /// stripping a known prefix/suffix off of each key.
 private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keySuffix: String = "") -> SignalProducer<(String, String), NoError> {
-	let entries = contents.characters.split(omittingEmptySubsequences: true) { $0 == "\0" }
+	let entries = contents.split(omittingEmptySubsequences: true) { $0 == "\0" }
 
-	return SignalProducer { observer, disposable in
+	return SignalProducer { observer, lifetime in
 		for entry in entries {
-			if disposable.isDisposed {
+			if lifetime.hasEnded {
 				break
 			}
 
@@ -399,7 +282,7 @@ internal func list(treeish: String, atPath path: String, inRepository repository
 			repositoryFileURL: repositoryURL
 		)
 		.flatMap(.merge) { (output: String) -> SignalProducer<String, CarthageError> in
-			return SignalProducer(output.characters.lazy.split(separator: "\0").map { String($0) })
+			return SignalProducer(output.lazy.split(separator: "\0").map(String.init))
 		}
 }
 
@@ -408,10 +291,13 @@ internal func list(treeish: String, atPath path: String, inRepository repository
 public func submoduleSHAForPath(_ repositoryFileURL: URL, _ path: String, revision: String = "HEAD") -> SignalProducer<String, CarthageError> {
 	let task = [ "ls-tree", "-z", revision, path ]
 	return launchGitTask(task, repositoryFileURL: repositoryFileURL)
-		.attemptMap { string in
+		.attemptMap { string -> Result<String, CarthageError> in
 			// Example:
 			// 160000 commit 083fd81ecf00124cbdaa8f86ef10377737f6325a	External/ObjectiveGit
-			let components = string.characters.split(maxSplits: 3, omittingEmptySubsequences: true) { $0 == " " || $0 == "\t" }
+			let components = string
+				.split(maxSplits: 3, omittingEmptySubsequences: true) { (char: Character) in
+					char == " " || char == "\t"
+				}
 			if components.count >= 3 {
 				return .success(String(components[2]))
 			} else {
@@ -447,6 +333,7 @@ internal func gitmodulesEntriesInRepository(
 		.flatMap(.concat) { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
 		.flatMap(.concat) { name, path -> SignalProducer<(name: String, path: String, url: GitURL), CarthageError> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
+				.map { $0.stripping(suffix: "\0") }
 				.map { urlString in (name: name, path: path, url: GitURL(urlString)) }
 		}
 }

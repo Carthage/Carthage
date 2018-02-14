@@ -1,23 +1,38 @@
-TEMPORARY_FOLDER?=/tmp/Carthage.dst
+#!/usr/bin/xcrun make -f
+
+CARTHAGE_TEMPORARY_FOLDER?=/tmp/Carthage.dst
 PREFIX?=/usr/local
 
-XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage' DSTROOT=$(TEMPORARY_FOLDER)
+XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage' DSTROOT=$(CARTHAGE_TEMPORARY_FOLDER)
 
 INTERNAL_PACKAGE=CarthageApp.pkg
 OUTPUT_PACKAGE=Carthage.pkg
 OUTPUT_FRAMEWORK=CarthageKit.framework
 OUTPUT_FRAMEWORK_ZIP=CarthageKit.framework.zip
 
-BUILT_BUNDLE=$(TEMPORARY_FOLDER)/Applications/carthage.app
+BUILT_BUNDLE=$(CARTHAGE_TEMPORARY_FOLDER)/Applications/carthage.app
 CARTHAGEKIT_BUNDLE=$(BUILT_BUNDLE)/Contents/Frameworks/$(OUTPUT_FRAMEWORK)
 CARTHAGE_EXECUTABLE=$(BUILT_BUNDLE)/Contents/MacOS/carthage
 
 FRAMEWORKS_FOLDER=/Library/Frameworks
 BINARIES_FOLDER=/usr/local/bin
 
+# ZSH_COMMAND · run single command in `zsh` shell, ignoring most `zsh` startup files. 
+ZSH_COMMAND := ZDOTDIR='/var/empty' zsh -o NO_GLOBAL_RCS -c
+# RM_SAFELY · `rm -rf` ensuring first and only parameter is non-null, contains more than whitespace, non-root if resolving absolutely.
+RM_SAFELY := $(ZSH_COMMAND) '[[ ! $${1:?} =~ "^[[:space:]]+\$$" ]] && [[ $${1:A} != "/" ]] && [[ $${\#} == "1" ]] && noglob rm -rf $${1:A}' --
+
 VERSION_STRING=$(shell git describe --abbrev=0 --tags)
 COMPONENTS_PLIST=Source/carthage/Components.plist
 DISTRIBUTION_PLIST=Source/carthage/Distribution.plist
+
+RM=rm -f
+RMD=rm -rf
+MKDIR=mkdir -p
+SUDO=sudo
+MV=mv -f
+CP=cp
+RSYNC=rsync -a --delete
 
 .PHONY: all bootstrap clean install package test uninstall
 
@@ -31,31 +46,31 @@ test: clean bootstrap
 	xcodebuild $(XCODEFLAGS) -configuration Release ENABLE_TESTABILITY=YES test
 
 clean:
-	rm -f "$(INTERNAL_PACKAGE)"
-	rm -f "$(OUTPUT_PACKAGE)"
-	rm -f "$(OUTPUT_FRAMEWORK_ZIP)"
-	rm -rf "$(TEMPORARY_FOLDER)"
+	$(RM) "$(INTERNAL_PACKAGE)"
+	$(RM) "$(OUTPUT_PACKAGE)"
+	$(RM) "$(OUTPUT_FRAMEWORK_ZIP)"
+	$(RM_SAFELY) "$(CARTHAGE_TEMPORARY_FOLDER)"
 	xcodebuild $(XCODEFLAGS) clean
 
 install: package
-	sudo installer -pkg $(OUTPUT_PACKAGE) -target /
+	$(SUDO) installer -pkg $(OUTPUT_PACKAGE) -target /
 
 uninstall:
-	rm -rf "$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)"
-	rm -f "$(BINARIES_FOLDER)/carthage"
+	$(RM_SAFELY) "$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)"
+	$(RM) "$(BINARIES_FOLDER)/carthage"
 
 installables: clean bootstrap
 	xcodebuild $(XCODEFLAGS) install
 
-	mkdir -p "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)"
-	mv -f "$(CARTHAGEKIT_BUNDLE)" "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)"
-	mv -f "$(CARTHAGE_EXECUTABLE)" "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage"
-	rm -rf "$(BUILT_BUNDLE)"
+	$(MKDIR) "$(CARTHAGE_TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" "$(CARTHAGE_TEMPORARY_FOLDER)$(BINARIES_FOLDER)"
+	$(MV) "$(CARTHAGEKIT_BUNDLE)" "$(CARTHAGE_TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)"
+	$(MV) "$(CARTHAGE_EXECUTABLE)" "$(CARTHAGE_TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage"
+	$(RM_SAFELY) "$(BUILT_BUNDLE)"
 
 prefix_install: installables
-	mkdir -p "$(PREFIX)/Frameworks" "$(PREFIX)/bin"
-	rsync -a --delete "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)" "$(PREFIX)/Frameworks/"
-	cp -f "$(TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage" "$(PREFIX)/bin/"
+	$(MKDIR) "$(PREFIX)/Frameworks" "$(PREFIX)/bin"
+	$(RSYNC) "$(CARTHAGE_TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)/$(OUTPUT_FRAMEWORK)" "$(PREFIX)/Frameworks/"
+	$(CP) -f "$(CARTHAGE_TEMPORARY_FOLDER)$(BINARIES_FOLDER)/carthage" "$(PREFIX)/bin/"
 	install_name_tool -delete_rpath "@executable_path/../Frameworks" "$(PREFIX)/bin/carthage" # Avoid duplication of "@executable_path/../Frameworks"
 	install_name_tool -rpath "/Library/Frameworks" "@executable_path/../Frameworks" "$(PREFIX)/bin/carthage"
 	install_name_tool -rpath "/Library/Frameworks/CarthageKit.framework/Versions/Current/Frameworks" "@executable_path/../Frameworks/CarthageKit.framework/Versions/Current/Frameworks" "$(PREFIX)/bin/carthage"
@@ -65,7 +80,7 @@ package: installables
 		--component-plist "$(COMPONENTS_PLIST)" \
 		--identifier "org.carthage.carthage" \
 		--install-location "/" \
-		--root "$(TEMPORARY_FOLDER)" \
+		--root "$(CARTHAGE_TEMPORARY_FOLDER)" \
 		--version "$(VERSION_STRING)" \
 		"$(INTERNAL_PACKAGE)"
 
@@ -74,19 +89,19 @@ package: installables
   	--package-path "$(INTERNAL_PACKAGE)" \
    	"$(OUTPUT_PACKAGE)"
 
-	(cd "$(TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" && zip -q -r --symlinks - "$(OUTPUT_FRAMEWORK)") > "$(OUTPUT_FRAMEWORK_ZIP)"
+	(cd "$(CARTHAGE_TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" && zip -q -r --symlinks - "$(OUTPUT_FRAMEWORK)") > "$(OUTPUT_FRAMEWORK_ZIP)"
 
 swiftpm:
 	swift build -c release -Xswiftc -static-stdlib
 
 swiftpm_test:
-	rm -rf ./.build/debug/CarthagePackageTests.xctest
-	SWIFTPM_TEST_Carthage=YES swift test --specifier "" # Make SwiftPM just build the test bundle without running it
-	cp -R Tests/CarthageKitTests/Resources ./.build/debug/CarthagePackageTests.xctest/Contents
-	cp Tests/CarthageKitTests/fixtures/CartfilePrivateOnly.zip ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
+	$(RM_SAFELY) ./.build/debug/CarthagePackageTests.xctest
+	swift build --build-tests
+	$(CP) -R Tests/CarthageKitTests/Resources ./.build/debug/CarthagePackageTests.xctest/Contents
+	$(CP) Tests/CarthageKitTests/fixtures/CartfilePrivateOnly.zip ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
 	script/copy-fixtures ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
-	SWIFTPM_TEST_Carthage=YES swift test --skip-build
+	swift test --skip-build
 
 swiftpm_install: swiftpm
-	mkdir -p "$(PREFIX)/bin"
-	cp -f ./.build/release/carthage "$(PREFIX)/bin/"
+	$(MKDIR) "$(PREFIX)/bin"
+	$(CP) -f ./.build/release/carthage "$(PREFIX)/bin/"

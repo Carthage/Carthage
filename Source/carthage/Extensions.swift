@@ -9,13 +9,7 @@ import ReactiveSwift
 import ReactiveTask
 
 private let outputQueue = { () -> DispatchQueue in
-	let targetQueue: DispatchQueue
-	if #available(macOS 10.10, *) {
-		targetQueue = .global(qos: .userInitiated)
-	} else {
-		targetQueue = .global(priority: .high)
-	}
-
+	let targetQueue = DispatchQueue.global(qos: .userInitiated)
 	let queue = DispatchQueue(label: "org.carthage.carthage.outputQueue", target: targetQueue)
 
 	atexit_b {
@@ -49,8 +43,7 @@ internal func print<T>(_ object: T) {
 extension String {
 	/// Split the string into substrings separated by the given separators.
 	internal func split(maxSplits: Int = .max, omittingEmptySubsequences: Bool = true, separators: [Character] = [ ",", " " ]) -> [String] {
-		return characters
-			.split(maxSplits: maxSplits, omittingEmptySubsequences: omittingEmptySubsequences, whereSeparator: separators.contains)
+		return split(maxSplits: maxSplits, omittingEmptySubsequences: omittingEmptySubsequences, whereSeparator: separators.contains)
 			.map(String.init)
 	}
 }

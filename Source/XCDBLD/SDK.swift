@@ -26,13 +26,24 @@ public enum SDK: String {
 
 	public static let allSDKs: Set<SDK> = [.macOSX, .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator]
 
+	/// Returns whether this is a device SDK.
+	public var isDevice: Bool {
+		switch self {
+		case .macOSX, .iPhoneOS, .watchOS, .tvOS:
+			return true
+
+		case .iPhoneSimulator, .watchSimulator, .tvSimulator:
+			return false
+		}
+	}
+
 	/// Returns whether this is a simulator SDK.
 	public var isSimulator: Bool {
 		switch self {
 		case .iPhoneSimulator, .watchSimulator, .tvSimulator:
 			return true
 
-		case _:
+		case .macOSX, .iPhoneOS, .watchOS, .tvOS:
 			return false
 		}
 	}
@@ -52,6 +63,24 @@ public enum SDK: String {
 		case .macOSX:
 			return .macOS
 		}
+	}
+
+	private static var aliases: [String: SDK] {
+		return ["tvos": .tvOS]
+	}
+
+	public init?(rawValue: String) {
+		let lowerCasedRawValue = rawValue.lowercased()
+		let maybeSDK = SDK
+			.allSDKs
+			.map { ($0, $0.rawValue) }
+			.first(where: { (_, stringValue) in stringValue.lowercased() == lowerCasedRawValue })?
+			.0
+
+		guard let sdk = maybeSDK ?? SDK.aliases[lowerCasedRawValue] else {
+			return nil
+		}
+		self = sdk
 	}
 }
 

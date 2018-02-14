@@ -36,7 +36,7 @@ There are multiple options for installing Carthage:
 
 * **Homebrew:** You can use [Homebrew](http://brew.sh) and install the `carthage` tool on your system simply by running `brew update` and `brew install carthage`. (note: if you previously installed the binary version of Carthage, you should delete `/Library/Frameworks/CarthageKit.framework`).
 
-* **From source:** If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, then run `make install`. Requires Xcode 8.3 (Swift 3.1).
+* **From source:** If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, then run `make install`. Requires Xcode 9.0 (Swift 4.0).
 
 ## Adding frameworks to an application
 
@@ -95,6 +95,16 @@ When archiving your application for submission to the App Store or TestFlight, X
 
 Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.resolved][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.resolved][]**, because anyone else using the project will need that file to build the same framework versions.
 
+##### (Optionally) Add build phase to warn about outdated dependencies
+
+You can add a Run Script phase to automatically warn you when one of your dependencies is out of date.
+
+1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
+
+```sh
+/usr/local/bin/carthage outdated --xcode-warnings
+```
+
 ##### Swift binary framework download compatibility
 
 Carthage will check to make sure that downloaded Swift (and mixed Objective-C/Swift) frameworks were built with the same version of Swift that is in use locally. If there is a version mismatch, Carthage will proceed to build the framework from source. If the framework cannot be built from source, Carthage will fail.
@@ -134,6 +144,17 @@ or
 ```
 carthage update Box Result
 ```
+
+##### Experimental Resolver
+
+A rewrite of the logic for upgrading frameworks was done with the aim of increasing speed and reducing memory usage. It is currently an opt-in feature. It can be used by passing `--new-resolver` to the update command, e.g.,
+
+```
+carthage update --new-resolver Box
+```
+
+If you are experiencing performance problems during updates, please give the new resolver a try
+
 
 ### Nested dependencies
 

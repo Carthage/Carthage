@@ -197,7 +197,7 @@ class DependencySpec: QuickSpec {
 			}
 
 			context("binary") {
-				it("should read a URL") {
+				it("should read a URL with https scheme") {
 					let scanner = Scanner(string: "binary \"https://mysupercoolinternalwebhost.com/\"")
 
 					let dependency = Dependency.from(scanner).value
@@ -205,12 +205,20 @@ class DependencySpec: QuickSpec {
 					expect(dependency) == .binary(URL(string: "https://mysupercoolinternalwebhost.com/")!)
 				}
 
+				it("should read a URL with file scheme") {
+					let scanner = Scanner(string: "binary \"file:///my/domain/com/framework.json\"")
+					
+					let dependency = Dependency.from(scanner).value
+					
+					expect(dependency) == .binary(URL(string: "file:///my/domain/com/framework.json")!)
+				}
+
 				it("should fail with non-https URL") {
 					let scanner = Scanner(string: "binary \"nope\"")
 
 					let error = Dependency.from(scanner).error
 
-					expect(error) == ScannableError(message: "non-https URL found for dependency type `binary`", currentLine: "binary \"nope\"")
+					expect(error) == ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: "binary \"nope\"")
 				}
 
 				it("should fail with invalid URL") {

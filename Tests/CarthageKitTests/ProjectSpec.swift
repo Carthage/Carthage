@@ -17,27 +17,26 @@ class ProjectSpec: QuickSpec {
 			let buildDirectoryURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
 			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
-				var builtSchemes: [String] = []
-
 				let project = Project(directoryURL: directoryURL)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
 					.flatten(.concat)
 					.ignoreTaskData()
 					.on(value: { project, scheme in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
-						builtSchemes.append(scheme)
 					})
-					.wait()
+					.map { _, scheme in scheme }
+					.collect()
+					.single()!
 				expect(result.error).to(beNil())
 
-				return builtSchemes
+				return result.value!.map { $0.name }
 			}
 
 			beforeEach {
 				_ = try? FileManager.default.removeItem(at: buildDirectoryURL)
 				// Pre-fetch the repos so we have a cache for the given tags
 				let sourceRepoUrl = directoryURL.appendingPathComponent("SourceRepos")
-				["TestFramework1", "TestFramework2", "TestFramework3"].forEach { repo in
+				for repo in ["TestFramework1", "TestFramework2", "TestFramework3"] {
 					let urlPath = sourceRepoUrl.appendingPathComponent(repo).path
 					_ = cloneOrFetch(dependency: .git(GitURL(urlPath)), preferHTTPS: false)
 						.wait()
@@ -57,7 +56,7 @@ class ProjectSpec: QuickSpec {
 
 			it("should determine build order without repo cache") {
 				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
-				["TestFramework3", "TestFramework2", "TestFramework1"].forEach { dep in
+				for dep in ["TestFramework3", "TestFramework2", "TestFramework1"] {
 					_ = try? FileManager.default.removeItem(at: Constants.Dependency.repositoriesURL.appendingPathComponent(dep))
 				}
 				// Without the repo cache, it won't know to build frameworks 2 and 3 unless it reads the Cartfile from the checkout directory
@@ -97,9 +96,17 @@ class ProjectSpec: QuickSpec {
 
 					var header = try! String(contentsOf: swiftHeaderURL)
 
-					let range = header.range(of: swiftVersionResult.value!)!
+					// Sanitize “effective-3.2 ” value.
+					if
+						let effectiveVersionRegex = try? NSRegularExpression(pattern: "effective-[0-9.]+ "),
+						let match = effectiveVersionRegex.firstMatch(in: header, range: NSRange(header.startIndex..., in: header)),
+						let effectiveVersionRange = Range(match.range(at: 0), in: header)
+					{
+						header.replaceSubrange(effectiveVersionRange, with: "")
+					}
 
-					header.replaceSubrange(range, with: version)
+					let versionRange = header.range(of: swiftVersionResult.value!)!
+					header.replaceSubrange(versionRange, with: version)
 
 					try! header.write(to: swiftHeaderURL, atomically: true, encoding: header.fastestEncoding)
 				}
@@ -280,7 +287,7 @@ class ProjectSpec: QuickSpec {
 					if clearFetchTime {
 						FetchCache.clearFetchTimes()
 					}
-					cloneOrFetch(commitish: commitish).start(Observer(
+					cloneOrFetch(commitish: commitish).start(Signal.Observer(
 						value: { event, _ in action(event) },
 						completed: done
 					))
@@ -399,6 +406,105 @@ class ProjectSpec: QuickSpec {
 				expect(events) == [.downloadingBinaryFrameworkDefinition(.binary(testDefinitionURL), testDefinitionURL)]
 			}
 		}
+
+		describe("outdated dependencies") {
+			it("should return return available updates for outdated dependencies") {
+				var db: DB = [
+					github1: [
+						.v1_0_0: [:]
+					],
+					github2: [
+						.v1_0_0: [:],
+						.v1_1_0: [:],
+						.v2_0_0: [:]
+					],
+					github3: [
+						.v1_0_0: [:],
+						.v1_1_0: [:],
+						.v1_2_0: [:],
+						.v2_0_0: [:],
+						.v2_0_1: [:]
+					],
+					github4: [
+						.v1_0_0: [:],
+						.v1_2_0: [:],
+						.v3_0_0_beta_1: [:],
+						.v3_0_0: [:]
+					],
+					github5: [
+						.v1_0_0: [:]
+					],
+					github6: [
+						.v1_0_0: [:]
+					]
+				]
+				let currentSHA = "2ea246ae4573538886ffb946d70d141583443734"
+				let nextSHA = "809b8eb20f4b6b9e805b62de3084fbc7fcde54cc"
+				db.references = [
+					github3: [
+						"2.0": PinnedVersion("v2.0.1")
+					],
+					github4: [
+						"2.0": PinnedVersion("v2.0.1")
+					],
+					github5: [
+						"development": PinnedVersion(currentSHA)
+					],
+					github6: [
+						"development": PinnedVersion(nextSHA)
+					]
+				]
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "OutdatedDependencies", withExtension: nil)!
+				let project = Project(directoryURL: directoryURL)
+
+				let result = project.outdatedDependencies(false, useNewResolver: false, resolver: db.resolver()).single()
+				expect(result).notTo(beNil())
+				expect(result!.error).to(beNil())
+				expect(result!.value!).notTo(beNil())
+				
+				let outdatedDependencies = result!.value!.reduce(into: [:], { (result, next) in
+					result[next.0] = (next.1, next.2, next.3)
+				})
+
+				// Github 1 has no updates available
+				expect(outdatedDependencies[github1]).to(beNil())
+				
+				// Github 2 is currently at 1.0.0, can be updated to the latest version which is 2.0.0
+				// Github 2 has no constraint in the Cartfile
+				expect(outdatedDependencies[github2]!.0) == PinnedVersion("v1.0.0")
+				expect(outdatedDependencies[github2]!.1) == PinnedVersion("v2.0.0")
+				expect(outdatedDependencies[github2]!.2) == PinnedVersion("v2.0.0")
+				
+				// Github 3 is currently at 2.0.0, latest is 2.0.1, to which it can be updated
+				// Github 3 has a constraint in the Cartfile
+				expect(outdatedDependencies[github3]!.0) == PinnedVersion("v2.0.0")
+				expect(outdatedDependencies[github3]!.1) == PinnedVersion("v2.0.1")
+				expect(outdatedDependencies[github3]!.2) == PinnedVersion("v2.0.1")
+				
+				// Github 4 is currently at 2.0.0, latest is 3.0.0, but it can only be updated to 2.0.1
+				expect(outdatedDependencies[github4]!.0) == PinnedVersion("v2.0.0")
+				expect(outdatedDependencies[github4]!.1) == PinnedVersion("v2.0.1")
+				expect(outdatedDependencies[github4]!.2) == PinnedVersion("v3.0.0")
+				
+				// Github 5 is pinned to a branch and is already at the most recent commit, so it should not be displayed
+				expect(outdatedDependencies[github5]).to(beNil())
+				
+				// Github 6 is pinned ot a branch which has new commits, so it should be displayed
+				expect(outdatedDependencies[github6]!.0) == PinnedVersion(currentSHA)
+				expect(outdatedDependencies[github6]!.1) == PinnedVersion(nextSHA)
+				expect(outdatedDependencies[github6]!.2) == PinnedVersion("v1.0.0")
+			}
+		}
+
+		describe("platformForFramework") {
+			let testStaticFrameworkURL = Bundle(for: type(of: self)).url(forResource: "Alamofire.framework", withExtension: nil)!
+			// Checks the framework's executable binary, not the Info.plist.
+			// The Info.plist is missing from Alamofire's bundle on purpose.
+			it("should check the framework's executable binary and produce a platform") {
+				let actualPlatform = platformForFramework(testStaticFrameworkURL).first()?.value
+				expect(actualPlatform) == .iOS
+			}
+		}
 	}
 }
 
@@ -416,4 +522,12 @@ extension ProjectEvent {
 		}
 		return false
 	}
+}
+
+private func ==<A: Equatable, B: Equatable>(lhs: [(A, B)], rhs: [(A, B)]) -> Bool {
+	guard lhs.count == rhs.count else { return false }
+	for (lhs, rhs) in zip(lhs, rhs) {
+		guard lhs == rhs else { return false }
+	}
+	return true
 }

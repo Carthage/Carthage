@@ -1,44 +1,34 @@
 import Foundation
-import Runes
-import Argo
-import Curry
 import ReactiveSwift
 import ReactiveTask
 import Result
 import XCDBLD
 
-struct CachedFramework {
+struct CachedFramework: Codable {
+	enum CodingKeys: CodingKey, String {
+		case name = "name"
+		case hash = "hash"
+	}
+
 	let name: String
 	let hash: String
-
-	static let nameKey = "name"
-	static let hashKey = "hash"
-
-	func toJSONObject() -> Any {
-		return [
-			CachedFramework.nameKey: name,
-			CachedFramework.hashKey: hash,
-		]
-	}
 }
 
-extension CachedFramework: Argo.Decodable {
-	static func decode(_ json: JSON) -> Decoded<CachedFramework> {
-		return curry(self.init)
-			<^> json <| CachedFramework.nameKey
-			<*> json <| CachedFramework.hashKey
+struct VersionFile: Codable {
+	enum CodingKeys: CodingKey, String {
+		case commitish = "commitish"
+		case macOS = "Mac"
+		case iOS = "iOS"
+		case watchOS = "watchOS"
+		case tvOS = "tvOS"
 	}
-}
 
-struct VersionFile {
 	let commitish: String
 
 	let macOS: [CachedFramework]?
 	let iOS: [CachedFramework]?
 	let watchOS: [CachedFramework]?
 	let tvOS: [CachedFramework]?
-
-	static let commitishKey = "commitish"
 
 	/// The extension representing a serialized VersionFile.
 	static let pathExtension = "version"
@@ -59,18 +49,6 @@ struct VersionFile {
 		}
 	}
 
-	func toJSONObject() -> Any {
-		var dict: [String: Any] = [
-			VersionFile.commitishKey: commitish,
-		]
-		for platform in Platform.supportedPlatforms {
-			if let caches = self[platform] {
-				dict[platform.rawValue] = caches.map { $0.toJSONObject() }
-			}
-		}
-		return dict
-	}
-
 	init(commitish: String, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
 		self.commitish = commitish
 
@@ -81,11 +59,12 @@ struct VersionFile {
 	}
 
 	init?(url: URL) {
-		guard FileManager.default.fileExists(atPath: url.path),
+		guard
+			FileManager.default.fileExists(atPath: url.path),
 			let jsonData = try? Data(contentsOf: url),
-			let json = try? JSONSerialization.jsonObject(with: jsonData, options: .allowFragments),
-			let versionFile: VersionFile = Argo.decode(json) else {
-				return nil
+			let versionFile = try? JSONDecoder().decode(VersionFile.self, from: jsonData) else
+		{
+			return nil
 		}
 		self = versionFile
 	}
@@ -105,7 +84,7 @@ struct VersionFile {
 	/// Sends the hashes of the provided cached framework's binaries in the
 	/// order that they were provided in.
 	func hashes(for cachedFrameworks: [CachedFramework], platform: Platform, binariesDirectoryURL: URL) -> SignalProducer<String?, CarthageError> {
-		return SignalProducer(cachedFrameworks)
+		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<String?, CarthageError> in
 				let frameworkBinaryURL = self.frameworkBinaryURL(for: cachedFramework, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
 
@@ -131,21 +110,19 @@ struct VersionFile {
 		binariesDirectoryURL: URL,
 		localSwiftVersion: String
 	) -> SignalProducer<Bool, CarthageError> {
-		return SignalProducer(cachedFrameworks)
+		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<Bool, CarthageError> in
 				let frameworkURL = self.frameworkURL(for: cachedFramework, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
 
-				return isSwiftFramework(frameworkURL)
-					.flatMap(.concat) { isSwift -> SignalProducer<Bool, SwiftVersionError> in
-						if !isSwift {
-							return SignalProducer(value: true)
-						}
-
-						return frameworkSwiftVersion(frameworkURL).map { swiftVersion -> Bool in
+				if !isSwiftFramework(frameworkURL) {
+					return SignalProducer(value: true)
+				} else {
+					return frameworkSwiftVersion(frameworkURL)
+						.map { swiftVersion -> Bool in
 							return swiftVersion == localSwiftVersion
 						}
-					}
-					.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
+						.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
+				}
 			}
 	}
 
@@ -181,35 +158,26 @@ struct VersionFile {
 				SignalProducer(cachedFrameworks),
 				SignalProducer(swiftVersionMatches)
 			)
-			.map { (hash, cachedFramework, swiftVersionMatches) -> Bool in
+			.map { hash, cachedFramework, swiftVersionMatches -> Bool in
 				if let hash = hash {
 					return hash == cachedFramework.hash && swiftVersionMatches
 				} else {
 					return false
 				}
 			}
-			.reduce(true) { (result, current) -> Bool in
+			.reduce(true) { result, current -> Bool in
 				return result && current
 			}
 	}
 
 	func write(to url: URL) -> Result<(), CarthageError> {
 		return Result(at: url, attempt: {
-			let json = toJSONObject()
-			let jsonData = try JSONSerialization.data(withJSONObject: json, options: .prettyPrinted)
+			let encoder = JSONEncoder()
+			encoder.outputFormatting = .prettyPrinted
+
+			let jsonData = try encoder.encode(self)
 			try jsonData.write(to: $0, options: .atomic)
 		})
-	}
-}
-
-extension VersionFile: Argo.Decodable {
-	static func decode(_ json: JSON) -> Decoded<VersionFile> {
-		return curry(self.init)
-			<^> json <| VersionFile.commitishKey
-			<*> json <||? Platform.macOS.rawValue
-			<*> json <||? Platform.iOS.rawValue
-			<*> json <||? Platform.watchOS.rawValue
-			<*> json <||? Platform.tvOS.rawValue
 	}
 }
 
@@ -255,7 +223,7 @@ public func createVersionFileForCommitish(
 		platformCaches[platform.rawValue] = []
 	}
 
-	let writeVersionFile = SignalProducer<(), CarthageError>.attempt {
+	let writeVersionFile = SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
 		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
 
@@ -343,7 +311,7 @@ private func hashForFileAtURL(_ frameworkFileURL: URL) -> SignalProducer<String,
 			guard let taskOutput = String(data: data, encoding: .utf8) else {
 				return .failure(.readFailed(frameworkFileURL, nil))
 			}
-			
+
 			let hashStr = taskOutput.components(separatedBy: CharacterSet.whitespaces)[0]
 			return .success(hashStr.trimmingCharacters(in: .whitespacesAndNewlines))
 		}

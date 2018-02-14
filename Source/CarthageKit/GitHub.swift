@@ -5,15 +5,9 @@ import Tentacle
 
 /// The User-Agent to use for GitHub requests.
 private func gitHubUserAgent() -> String {
-	let bundle = Bundle.main
-
-	let get: (_ key: String) -> String? = { bundle.object(forInfoDictionaryKey: $0) as? String }
-	let version = get("CFBundleShortVersionString")
-		?? get(kCFBundleVersionKey as String)
-		?? "unknown"
-
-	let identifier = bundle.bundleIdentifier
-	return "\(String(describing: identifier))/\(version)"
+	let identifier = Constants.bundleIdentifier
+	let version = CarthageKitVersion.current.value
+	return "\(identifier)/\(version)"
 }
 
 extension Server {
@@ -45,10 +39,10 @@ extension Repository {
 	/// Enterprise instances.
 	public static func fromIdentifier(_ identifier: String) -> Result<(Server, Repository), ScannableError> {
 		// ‘owner/name’ → GitHub.com
-		let range = NSRange(location: 0, length: identifier.utf16.count)
+		let range = NSRange(identifier.startIndex..., in: identifier)
 		if let match = nwoRegex.firstMatch(in: identifier, range: range) {
-			let owner = (identifier as NSString).substring(with: match.range(at: 1))
-			let name = (identifier as NSString).substring(with: match.range(at: 2))
+			let owner = String(identifier[Range(match.range(at: 1), in: identifier)!])
+			let name = String(identifier[Range(match.range(at: 2), in: identifier)!])
 			return .success((.dotCom, self.init(owner: owner, name: strippingGitSuffix(name))))
 		}
 
@@ -91,10 +85,8 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 		.flatMap(.concat) { string in
 			return string.linesProducer
 		}
-		.reduce([:]) { (values: [String: String], line: String) -> [String: String] in
-			var values = values
-
-			let parts = line.characters
+		.reduce(into: [:]) { (values: inout [String: String], line: String) in
+			let parts = line
 				.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }
 				.map(String.init)
 
@@ -104,8 +96,6 @@ private func credentialsFromGit(forServer server: Server) -> (String, String)? {
 
 				values[key] = value
 			}
-
-			return values
 		}
 		.map { (values: [String: String]) -> (String, String)? in
 			if let username = values["username"], let password = values["password"] {
@@ -125,11 +115,8 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 		// Treat the input as comma-separated series of domains and tokens.
 		// (e.g., `GITHUB_ACCESS_TOKEN="github.com=XXXXXXXXXXXXX,enterprise.local/ghe=YYYYYYYYY"`)
 		let records = accessTokenInput
-			.characters
 			.split(omittingEmptySubsequences: true) { $0 == "," }
-			.reduce([:]) { (values: [String: String], record) in
-				var values = values
-
+			.reduce(into: [:]) { (values: inout [String: String], record) in
 				let parts = record.split(maxSplits: 1, omittingEmptySubsequences: true) { $0 == "=" }.map(String.init)
 				switch parts.count {
 				case 1:
@@ -144,8 +131,6 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 				default:
 					break
 				}
-
-				return values
 			}
 		return records[server.url.host!]
 	}

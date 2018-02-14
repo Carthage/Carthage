@@ -5,20 +5,9 @@ import Result
 import ReactiveSwift
 import ReactiveTask
 import XCDBLD
+import Curry
 
 extension BuildOptions: OptionsProtocol {
-	public static func create(_ configuration: String) -> (BuildPlatform) -> (String?) -> (String?) -> (Bool) -> BuildOptions {
-		return { buildPlatform in { toolchain in { derivedDataPath in { cacheBuilds in
-			return self.init(
-				configuration: configuration,
-				platforms: buildPlatform.platforms,
-				toolchain: toolchain,
-				derivedDataPath: derivedDataPath,
-				cacheBuilds: cacheBuilds
-			)
-		} } } }
-	}
-
 	public static func evaluate(_ mode: CommandMode) -> Result<BuildOptions, CommandantError<CarthageError>> {
 		return evaluate(mode, addendum: "")
 	}
@@ -27,9 +16,9 @@ extension BuildOptions: OptionsProtocol {
 		var platformUsage = "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')"
 		platformUsage += addendum
 
-		return create
+		return curry(self.init)
 			<*> mode <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
-			<*> mode <| Option(key: "platform", defaultValue: .all, usage: platformUsage)
+			<*> (mode <| Option<BuildPlatform>(key: "platform", defaultValue: .all, usage: platformUsage)).map { $0.platforms }
 			<*> mode <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
@@ -47,30 +36,15 @@ public struct BuildCommand: CommandProtocol {
 		public let logPath: String?
 		public let dependenciesToBuild: [String]?
 
-		public static func create(_ buildOptions: BuildOptions) -> (Bool) -> (ColorOptions) -> (Bool) -> (String) -> (String?) -> ([String]) -> Options {
-			return { skipCurrent in { colorOptions in { isVerbose in { directoryPath in { logPath in { dependenciesToBuild in
-				let dependenciesToBuild: [String]? = dependenciesToBuild.isEmpty ? nil : dependenciesToBuild
-				return self.init(
-					buildOptions: buildOptions,
-					skipCurrent: skipCurrent,
-					colorOptions: colorOptions,
-					isVerbose: isVerbose,
-					directoryPath: directoryPath,
-					logPath: logPath,
-					dependenciesToBuild: dependenciesToBuild
-				)
-			} } } } } }
-		}
-
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
-			return create
+			return curry(self.init)
 				<*> BuildOptions.evaluate(mode)
 				<*> mode <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 				<*> ColorOptions.evaluate(mode)
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
-				<*> mode <| Argument(defaultValue: [], usage: "the dependency names to build")
+				<*> (mode <| Argument(defaultValue: [], usage: "the dependency names to build")).map { $0.isEmpty ? nil : $0 }
 		}
 	}
 
@@ -85,7 +59,7 @@ public struct BuildCommand: CommandProtocol {
 	/// Builds a project with the given options.
 	public func buildWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		return self.openLoggingHandle(options)
-			.flatMap(.merge) { (stdoutHandle, temporaryURL) -> SignalProducer<(), CarthageError> in
+			.flatMap(.merge) { stdoutHandle, temporaryURL -> SignalProducer<(), CarthageError> in
 				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 
 				let buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
@@ -121,7 +95,7 @@ public struct BuildCommand: CommandProtocol {
 								stderrHandle.write(data)
 
 							case let .success(project, scheme):
-								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme) + " in " + formatting.projectName(project.description))
+								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme.name) + " in " + formatting.projectName(project.description))
 							}
 						}
 					)
@@ -138,14 +112,14 @@ public struct BuildCommand: CommandProtocol {
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeValues { eventSink.put($0) }
 
-		let buildProducer = project.loadCombinedCartfile()
+		let buildProducer = project.loadResolvedCartfile()
 			.map { _ in project }
 			.flatMapError { error -> SignalProducer<Project, CarthageError> in
 				if options.skipCurrent {
 					return SignalProducer(error: error)
 				} else {
-					// Ignore Cartfile loading failures. Assume the user just
-					// wants to build the enclosing project.
+					// Ignore Cartfile.resolved loading failure. Assume the user
+					// just wants to build the enclosing project.
 					return .empty
 				}
 			}
@@ -175,7 +149,7 @@ public struct BuildCommand: CommandProtocol {
 	/// Opens an existing file, if provided, or creates a temporary file if not, returning a handle and the URL to the
 	/// file.
 	private func openLogFile(_ path: String?) -> SignalProducer<(FileHandle, URL), CarthageError> {
-		return SignalProducer.attempt {
+		return SignalProducer { () -> Result<(FileHandle, URL), CarthageError> in
 			if let path = path {
 				if !FileManager.default.fileExists(atPath: path) {
 					FileManager.default.createFile(atPath: path, contents: nil, attributes: nil)
@@ -264,8 +238,8 @@ public enum BuildPlatform {
 			return [ .tvOS ]
 
 		case let .multiple(buildPlatforms):
-			return buildPlatforms.reduce([]) { set, buildPlatform in
-				return set.union(buildPlatform.platforms)
+			return buildPlatforms.reduce(into: []) { set, buildPlatform in
+				set.formUnion(buildPlatform.platforms)
 			}
 		}
 	}
@@ -325,10 +299,9 @@ extension BuildPlatform: ArgumentProtocol {
 		let tokens = string.split()
 
 		let findBuildPlatform: (String) -> BuildPlatform? = { string in
-			return self.acceptedStrings.lazy
-				.filter { key, _ in string.caseInsensitiveCompare(key) == .orderedSame }
+			return self.acceptedStrings
+				.first { key, _ in string.caseInsensitiveCompare(key) == .orderedSame }
 				.map { _, platform in platform }
-				.first
 		}
 
 		switch tokens.count {

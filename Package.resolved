@@ -1,0 +1,88 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Commandant",
+        "repositoryURL": "https://github.com/Carthage/Commandant.git",
+        "state": {
+          "branch": null,
+          "revision": "c281992c31c3f41c48b5036c5a38185eaec32626",
+          "version": "0.12.0"
+        }
+      },
+      {
+        "package": "Curry",
+        "repositoryURL": "https://github.com/thoughtbot/Curry.git",
+        "state": {
+          "branch": null,
+          "revision": "c9f1a37e0e12ad38af7933b9386bdc5f9e6222dc",
+          "version": "3.0.0"
+        }
+      },
+      {
+        "package": "Nimble",
+        "repositoryURL": "https://github.com/Quick/Nimble.git",
+        "state": {
+          "branch": null,
+          "revision": "22800b0954c89344bb8c87f8ab93378076716fb7",
+          "version": "7.0.3"
+        }
+      },
+      {
+        "package": "PrettyColors",
+        "repositoryURL": "https://github.com/jdhealy/PrettyColors.git",
+        "state": {
+          "branch": null,
+          "revision": "1954a28331668a706134dc315fe264b15b74984e",
+          "version": "5.0.1"
+        }
+      },
+      {
+        "package": "Quick",
+        "repositoryURL": "https://github.com/Quick/Quick.git",
+        "state": {
+          "branch": null,
+          "revision": "0ff81f2c665b4381f526bd656f8708dd52a9ea2f",
+          "version": "1.2.0"
+        }
+      },
+      {
+        "package": "ReactiveSwift",
+        "repositoryURL": "https://github.com/ReactiveCocoa/ReactiveSwift.git",
+        "state": {
+          "branch": null,
+          "revision": "2ec944c43ef9cf6b1380629e3ea483f62a7afaef",
+          "version": "3.0.0"
+        }
+      },
+      {
+        "package": "ReactiveTask",
+        "repositoryURL": "https://github.com/Carthage/ReactiveTask.git",
+        "state": {
+          "branch": null,
+          "revision": "202a5b4a35e7dfc42be0ba1235d18c3c1ce89830",
+          "version": "0.14.0"
+        }
+      },
+      {
+        "package": "Result",
+        "repositoryURL": "https://github.com/antitypical/Result.git",
+        "state": {
+          "branch": null,
+          "revision": "7477584259bfce2560a19e06ad9f71db441fff11",
+          "version": "3.2.4"
+        }
+      },
+      {
+        "package": "Tentacle",
+        "repositoryURL": "https://github.com/mdiep/Tentacle.git",
+        "state": {
+          "branch": null,
+          "revision": "2ac00b0cbfff50109f11ae4bfb03a03b0a02b4cf",
+          "version": "0.11.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -3,6 +3,7 @@ import Commandant
 import Foundation
 import Result
 import ReactiveSwift
+import Curry
 
 /// Type that encapsulates the configuration and evaluation of the `update` subcommand.
 public struct UpdateCommand: CommandProtocol {
@@ -10,9 +11,10 @@ public struct UpdateCommand: CommandProtocol {
 		public let checkoutAfterUpdate: Bool
 		public let buildAfterUpdate: Bool
 		public let isVerbose: Bool
+		public let logPath: String?
+		public let useNewResolver: Bool
 		public let buildOptions: CarthageKit.BuildOptions
 		public let checkoutOptions: CheckoutCommand.Options
-		public let logPath: String?
 		public let dependenciesToUpdate: [String]?
 
 		/// The build options corresponding to these options.
@@ -40,18 +42,22 @@ public struct UpdateCommand: CommandProtocol {
 			}
 		}
 
-		public static func create(_ checkoutAfterUpdate: Bool) -> (Bool) -> (Bool) -> (String?) -> (BuildOptions) -> (CheckoutCommand.Options) -> Options {
-			return { buildAfterUpdate in { isVerbose in { logPath in {  buildOptions in { checkoutOptions in
-				return self.init(
-					checkoutAfterUpdate: checkoutAfterUpdate,
-					buildAfterUpdate: buildAfterUpdate,
-					isVerbose: isVerbose,
-					buildOptions: buildOptions,
-					checkoutOptions: checkoutOptions,
-					logPath: logPath,
-					dependenciesToUpdate: checkoutOptions.dependenciesToCheckout
-				)
-			} } } } }
+		private init(checkoutAfterUpdate: Bool,
+		             buildAfterUpdate: Bool,
+		             isVerbose: Bool,
+		             logPath: String?,
+		             useNewResolver: Bool,
+		             buildOptions: BuildOptions,
+		             checkoutOptions: CheckoutCommand.Options
+		) {
+			self.checkoutAfterUpdate = checkoutAfterUpdate
+			self.buildAfterUpdate = buildAfterUpdate
+			self.isVerbose = isVerbose
+			self.logPath = logPath
+			self.useNewResolver = useNewResolver
+			self.buildOptions = buildOptions
+			self.checkoutOptions = checkoutOptions
+			self.dependenciesToUpdate = checkoutOptions.dependenciesToCheckout
 		}
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
@@ -60,11 +66,12 @@ public struct UpdateCommand: CommandProtocol {
 			let binariesAddendum = "\n(ignored if --no-build or --toolchain option is present)"
 			let dependenciesUsage = "the dependency names to update, checkout and build"
 
-			return create
+			return curry(self.init)
 				<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 				<*> mode <| Option(key: "build", defaultValue: true, usage: buildDescription)
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
+				<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
 				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
 				<*> CheckoutCommand.Options.evaluate(mode, useBinariesAddendum: binariesAddendum, dependenciesUsage: dependenciesUsage)
 		}
@@ -110,7 +117,7 @@ public struct UpdateCommand: CommandProtocol {
 				}
 
 				let updateDependencies = project.updateDependencies(
-					shouldCheckout: options.checkoutAfterUpdate, buildOptions: options.buildOptions,
+					shouldCheckout: options.checkoutAfterUpdate, useNewResolver: options.useNewResolver, buildOptions: options.buildOptions,
 					dependenciesToUpdate: options.dependenciesToUpdate
 				)
 

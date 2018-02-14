@@ -6,11 +6,11 @@ extension String {
 	/// Returns a producer that will enumerate each line of the receiver, then
 	/// complete.
 	internal var linesProducer: SignalProducer<String, NoError> {
-		return SignalProducer { observer, disposable in
+		return SignalProducer { observer, lifetime in
 			self.enumerateLines { line, stop in
 				observer.send(value: line)
 
-				if disposable.isDisposed {
+				if lifetime.hasEnded {
 					stop = true
 				}
 			}
@@ -22,22 +22,12 @@ extension String {
 	/// Strips off a trailing string, if present.
 	internal func stripping(suffix: String) -> String {
 		if hasSuffix(suffix) {
-			let end = characters.index(endIndex, offsetBy: -suffix.characters.count)
-			return self[startIndex..<end]
+			let end = index(endIndex, offsetBy: -suffix.count)
+			return String(self[startIndex..<end])
 		} else {
 			return self
 		}
 	}
-}
-
-/// Merges `rhs` into `lhs` and returns the result.
-internal func combineDictionaries<K, V>(_ lhs: [K: V], rhs: [K: V]) -> [K: V] {
-	var result = lhs
-	for (key, value) in rhs {
-		result.updateValue(value, forKey: key)
-	}
-
-	return result
 }
 
 extension Signal {
@@ -45,7 +35,7 @@ extension Signal {
 	/// occurs on `otherSignal` (repeats included).
 	fileprivate func permute<U>(with otherSignal: Signal<U, Error>) -> Signal<(Value, U), Error> {
 		// swiftlint:disable:previous cyclomatic_complexity function_body_length
-		return Signal<(Value, U), Error> { observer in
+		return Signal<(Value, U), Error> { observer, lifetime in
 			let lock = NSLock()
 			lock.name = "org.carthage.CarthageKit.permute"
 
@@ -55,6 +45,7 @@ extension Signal {
 			var otherCompleted = false
 
 			let compositeDisposable = CompositeDisposable()
+			lifetime += compositeDisposable
 
 			compositeDisposable += self.observe { event in
 				switch event {
@@ -115,8 +106,6 @@ extension Signal {
 					observer.sendInterrupted()
 				}
 			}
-
-			return compositeDisposable
 		}
 	}
 }
@@ -165,11 +154,11 @@ extension Signal where Value: EventProtocol, Value.Error == Error {
 	/// Dematerializes the signal, like dematerialize(), but only yields inner
 	/// Error events if no values were sent.
 	internal func dematerializeErrorsIfEmpty() -> Signal<Value.Value, Error> {
-		return Signal<Value.Value, Error> { observer in
+		return Signal<Value.Value, Error> { observer, lifetime in
 			var receivedValue = false
 			var receivedError: Error?
 
-			return self.observe { event in
+			lifetime += self.observe { event in
 				switch event {
 				case let .value(innerEvent):
 					switch innerEvent.event {
@@ -355,7 +344,7 @@ extension Reactive where Base: FileManager {
 		options: FileManager.DirectoryEnumerationOptions = [],
 		catchErrors: Bool = false
 	) -> SignalProducer<(FileManager.DirectoryEnumerator, URL), CarthageError> {
-		return SignalProducer { [base = self.base] observer, disposable in
+		return SignalProducer { [base = self.base] observer, lifetime in
 			let enumerator = base.enumerator(at: url, includingPropertiesForKeys: keys, options: options) { url, error in
 				if catchErrors {
 					return true
@@ -365,7 +354,7 @@ extension Reactive where Base: FileManager {
 				}
 			}!
 
-			while !disposable.isDisposed {
+			while !lifetime.hasEnded {
 				if let url = enumerator.nextObject() as? URL {
 					let value = (enumerator, url)
 					observer.send(value: value)
@@ -384,7 +373,7 @@ extension Reactive where Base: FileManager {
 	/// The template name should adhere to the format required by the mkdtemp()
 	/// function.
 	public func createTemporaryDirectoryWithTemplate(_ template: String) -> SignalProducer<URL, CarthageError> {
-		return SignalProducer.attempt { [base = self.base] () -> Result<String, CarthageError> in
+		return SignalProducer { [base = self.base] () -> Result<String, CarthageError> in
 			let temporaryDirectory: NSString
 			if #available(macOS 10.12, *) {
 				temporaryDirectory = base.temporaryDirectory.path as NSString
@@ -430,7 +419,7 @@ extension Reactive where Base: URLSession {
 	///         side error (i.e. when a response with status code other than
 	///         200...299 is received).
 	internal func download(with request: URLRequest) -> SignalProducer<(URL, URLResponse), AnyError> {
-		return SignalProducer { [base = self.base] observer, disposable in
+		return SignalProducer { [base = self.base] observer, lifetime in
 			let task = base.downloadTask(with: request) { url, response, error in
 				if let url = url, let response = response {
 					observer.send(value: (url, response))
@@ -440,33 +429,10 @@ extension Reactive where Base: URLSession {
 				}
 			}
 
-			disposable += {
+			lifetime.observeEnded {
 				task.cancel()
 			}
 			task.resume()
 		}
-	}
-}
-
-#if !swift(>=3.2)
-	extension NSTextCheckingResult {
-		internal func range(at idx: Int) -> NSRange {
-			return rangeAt(idx)
-		}
-	}
-#endif
-
-/// Creates a counted set from a sequence. The counted set is represented as a
-/// dictionary where the keys are elements from the sequence and values count
-/// how many times elements are present in the sequence.
-internal func buildCountedSet<S: Sequence>(_ sequence: S) -> [S.Iterator.Element: Int] {
-	return sequence.reduce([:]) { set, elem in
-		var set = set
-		if let count = set[elem] {
-			set[elem] = count + 1
-		} else {
-			set[elem] = 1
-		}
-		return set
 	}
 }
