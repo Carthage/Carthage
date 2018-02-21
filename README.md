@@ -48,20 +48,20 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled framework.
-1. On your application targets’ “General” settings tab, in the “Embedded Binaries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
+1. On your application targets’ `General` settings tab, in the `Embedded Binaries` section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 
 Additionally, you'll need to copy debug symbols for debugging and crash reporting on OS X.
 
-1. On your application target’s “Build Phases” settings tab, click the “+” icon and choose “New Copy Files Phase”.
-1. Click the “Destination” drop-down menu and select “Products Directory”.
+1. On your application target’s `Build Phases` settings tab, click the `+` icon and choose `New Copy Files Phase`.
+1. Click the `Destination` drop-down menu and select `Products Directory`.
 1. For each framework you’re using, drag and drop its corresponding dSYM file.
 
 ##### If you're building for iOS, tvOS, or watchOS
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one or download a pre-compiled framework.
-1. On your application targets’ “General” settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
-1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
+1. On your application targets’ `General` settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
+1. On your application targets’ `Build Phases` settings tab, click the `+` icon and choose `New Run Script Phase`. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
     ```sh
     /usr/local/bin/carthage copy-frameworks
@@ -99,7 +99,7 @@ Along the way, Carthage will have created some [build artifacts][Artifacts]. The
 
 You can add a Run Script phase to automatically warn you when one of your dependencies is out of date.
 
-1. On your application targets’ “Build Phases” settings tab, click the “+” icon and choose “New Run Script Phase”. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
+1. On your application targets’ `Build Phases` settings tab, click the `+` icon and choose `New Run Script Phase`. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
 ```sh
 /usr/local/bin/carthage outdated --xcode-warnings
@@ -123,9 +123,9 @@ After you’ve finished the above steps and pushed your changes, other users of 
 
 Using Carthage for the dependencies of any arbitrary target is fairly similar to [using Carthage for an application](#adding-frameworks-to-an-application). The main difference lies in how the frameworks are actually set up and linked in Xcode.
 
-Because unit test targets are missing the “Linked Frameworks and Libraries” section in their “General” settings tab, you must instead drag the [built frameworks][Carthage/Build] to the “Link Binaries With Libraries” build phase.
+Because unit test targets are missing the `Linked Frameworks and Libraries` section in their `General` settings tab, you must instead drag the [built frameworks][Carthage/Build] to the `Link Binaries With Libraries` build phase.
 
-In the Test target under the "Build Settings" tab, add `@loader_path/Frameworks` to the "Runpath Search Paths" if it isn't already present.
+In the Test target under the `Build Settings` tab, add `@loader_path/Frameworks` to the `Runpath Search Paths` if it isn't already present.
 
 In rare cases, you may want to also copy each dependency into the build product (e.g., to embed dependencies within the outer framework, or make sure dependencies are present in a test bundle). To do this, create a new “Copy Files” build phase with the “Frameworks” destination, then add the framework reference there as well.
 
@@ -133,7 +133,7 @@ In rare cases, you may want to also copy each dependency into the build product 
 
 If you’ve modified your [Cartfile][], or you want to update to the newest versions of each framework (subject to the requirements you’ve specified), simply run the `carthage update` command again.
 
-If you only want to update one , or specific, dependencies, pass them as a space-separated list to the `update` command. e.g.
+If you only want to update one, or specific, dependencies, pass them as a space-separated list to the `update` command. e.g.
 
 ```
 carthage update Box
@@ -180,7 +180,7 @@ Note that you should be [using submodules](#using-submodules-for-dependencies) b
 
 ### Caching builds
 
-By default Carthage will rebuild a dependency regardless of whether it's the same resolved version as before. Passing the `--cache-builds` will cause carthage to avoid rebuilding a dependency if it can. See information on [version files][VersionFile] for details on how carthage performs this caching.
+By default Carthage will rebuild a dependency regardless of whether it's the same resolved version as before. Passing the `--cache-builds` will cause carthage to avoid rebuilding a dependency if it can. See information on [version files][VersionFile] for details on how Carthage performs this caching.
 
 Note: At this time `--cache-builds` is incompatible with `--use-submodules`. Using both will result in working copy and committed changes to your submodule dependency not being correctly rebuilt. See [#1785](https://github.com/Carthage/Carthage/issues/1785) for details.
 
@@ -213,7 +213,7 @@ If you’re still not able to build your framework with Carthage, please [open a
 
 ### Tag stable releases
 
-Carthage determines which versions of your framework are available by searching through the tags published on the repository, and trying to interpret each tag name as a [semantic version](http://semver.org/). For example, in the tag `v1.2`, the semantic version is 1.2.0.
+Carthage determines which versions of your framework are available by searching through the tags published on the repository, and trying to interpret each tag name as a [semantic version](https://semver.org/). For example, in the tag `v1.2`, the semantic version is 1.2.0.
 
 Tags without any version number, or with any characters following the version number (e.g., `1.2-alpha-1`) are currently unsupported, and will be ignored.
 
@@ -275,8 +275,8 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	```
 1. Run `travis setup releases`, follow documentation [here](https://docs.travis-ci.com/user/deployment/releases/)
 
-	This command will encode your github credentials into the .travis.yml file in order to let travis upload the release to github.com
-	When prompted for the file to upload, enter $FRAMEWORK_NAME.framework.zip
+	This command will encode your Github credentials into the `.travis.yml` file in order to let travis upload the release to Github.com
+	When prompted for the file to upload, enter `$FRAMEWORK_NAME.framework.zip`
 
 1. Update the deploy section to run on tags:
 
@@ -312,7 +312,7 @@ Want to advertise that your project can be used with Carthage? You can add a com
 
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 
-… to your README, by simply inserting the following Markdown:
+… to your `README`, by simply inserting the following Markdown:
 
 ```markdown
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
