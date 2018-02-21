@@ -275,7 +275,7 @@ It is possible to use travis-ci in order to build and upload your tagged release
 	```
 1. Run `travis setup releases`, follow documentation [here](https://docs.travis-ci.com/user/deployment/releases/)
 
-	This command will encode your Github credentials into the `.travis.yml` file in order to let travis upload the release to Github.com
+	This command will encode your GitHub credentials into the `.travis.yml` file in order to let travis upload the release to GitHub.com
 	When prompted for the file to upload, enter `$FRAMEWORK_NAME.framework.zip`
 
 1. Update the deploy section to run on tags:
