@@ -48,20 +48,20 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled framework.
-1. On your application targets’ `General` settings tab, in the `Embedded Binaries` section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
+1. On your application targets’ _General_ settings tab, in the _Embedded Binaries_ section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 
 Additionally, you'll need to copy debug symbols for debugging and crash reporting on OS X.
 
-1. On your application target’s `Build Phases` settings tab, click the `+` icon and choose `New Copy Files Phase`.
-1. Click the `Destination` drop-down menu and select `Products Directory`.
+1. On your application target’s _Build Phases_ settings tab, click the _+_ icon and choose _New Copy Files Phase_.
+1. Click the _Destination_ drop-down menu and select _Products Directory_.
 1. For each framework you’re using, drag and drop its corresponding dSYM file.
 
 ##### If you're building for iOS, tvOS, or watchOS
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one or download a pre-compiled framework.
-1. On your application targets’ `General` settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
-1. On your application targets’ `Build Phases` settings tab, click the `+` icon and choose `New Run Script Phase`. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
+1. On your application targets’ _General_ settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
+1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
     ```sh
     /usr/local/bin/carthage copy-frameworks
@@ -123,9 +123,9 @@ After you’ve finished the above steps and pushed your changes, other users of 
 
 Using Carthage for the dependencies of any arbitrary target is fairly similar to [using Carthage for an application](#adding-frameworks-to-an-application). The main difference lies in how the frameworks are actually set up and linked in Xcode.
 
-Because unit test targets are missing the `Linked Frameworks and Libraries` section in their `General` settings tab, you must instead drag the [built frameworks][Carthage/Build] to the `Link Binaries With Libraries` build phase.
+Because unit test targets are missing the _Linked Frameworks and Libraries_ section in their _General_ settings tab, you must instead drag the [built frameworks][Carthage/Build] to the _Link Binaries With Libraries_ build phase.
 
-In the Test target under the `Build Settings` tab, add `@loader_path/Frameworks` to the `Runpath Search Paths` if it isn't already present.
+In the Test target under the _Build Settings_ tab, add `@loader_path/Frameworks` to the _Runpath Search Paths_ if it isn't already present.
 
 In rare cases, you may want to also copy each dependency into the build product (e.g., to embed dependencies within the outer framework, or make sure dependencies are present in a test bundle). To do this, create a new “Copy Files” build phase with the “Frameworks” destination, then add the framework reference there as well.
 
