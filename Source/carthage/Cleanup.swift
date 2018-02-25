@@ -5,7 +5,7 @@ import Result
 import Curry
 import ReactiveSwift
 
-/// Type that encapsulates the configuration and evaluation of the `version` subcommand.
+/// Type that encapsulates the configuration and evaluation of the `cleanup` subcommand.
 public struct CleanupCommand: CommandProtocol {
 	public let verb = "cleanup"
 	public let function = "Remove unneeded files from Carthage directory"

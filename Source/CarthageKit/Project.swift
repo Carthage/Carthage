@@ -826,49 +826,51 @@ public final class Project { // swiftlint:disable:this type_body_length
 		return loadResolvedCartfile()
 			.on { resolved in
 				struct Artifacts {
-					var ignoreCheckoutURLs = [URL]()
-					var ignoreVersionFileURLs = [URL]()
-					var ignoreBinaryURLs = [URL]()
+
+					var checkoutURLs = Set<URL>()
+					var versionFileURLs = Set<URL>()
+					var binaryURLs = Set<URL>()
+
 					private let directoryURL: URL
 
 					init(directoryURL: URL) {
 						self.directoryURL = directoryURL
 					}
 
-					func remove() {
-						removeCheckouts()
-						removeVersionFiles()
-						removeBinaries()
+					func removeUnneededItems() {
+						removeUnneededCheckouts()
+						removeUnneededVersionFiles()
+						removeUnneededBinaries()
 					}
 
-					private func removeCheckouts() {
+					private func removeUnneededCheckouts() {
 						removeContentsOfDirectory(
 							at: directoryURL.appendingPathComponent(
 								Constants.checkoutsFolderPath, isDirectory: true
 							),
-							filtering: { !ignoreCheckoutURLs.contains($0) }
+							filtering: { !checkoutURLs.contains($0) }
 						)
 					}
 
-					private func removeVersionFiles() {
+					private func removeUnneededVersionFiles() {
 						removeContentsOfDirectory(
 							at: directoryURL.appendingPathComponent(
 								Constants.binariesFolderPath, isDirectory: true
 							),
 							filtering: {
 								$0.pathExtension == VersionFile.pathExtension &&
-								!ignoreVersionFileURLs.contains($0)
+								!versionFileURLs.contains($0)
 							}
 						)
 					}
 
-					private func removeBinaries() {
+					private func removeUnneededBinaries() {
 						Platform.supportedPlatforms.forEach {
 							removeContentsOfDirectory(
 								at: directoryURL.appendingPathComponent(
 									$0.relativePath, isDirectory: true
 								),
-								filtering: { !ignoreBinaryURLs.contains($0) }
+								filtering: { !binaryURLs.contains($0) }
 							)
 						}
 					}
@@ -886,23 +888,31 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.reduce(into: Artifacts(directoryURL: self.directoryURL)) { artifacts, group in
 						let dependency = group.key
 
-						artifacts.ignoreCheckoutURLs.append(
+						// Checkout
+						artifacts.checkoutURLs.insert(
 							self.directoryURL
 								.appendingPathComponent(dependency.relativePath, isDirectory: true)
 								.resolvingSymlinksInPath()
 						)
+
+						// VersionFile
 						let versionFileURL = VersionFile
 							.url(for: dependency, rootDirectoryURL: self.directoryURL)
 							.resolvingSymlinksInPath()
-						guard let versionFile = VersionFile(url: versionFileURL) else { return }
-						artifacts.ignoreVersionFileURLs.append(versionFileURL)
+						guard let versionFile = VersionFile(url: versionFileURL) else {
+							// TODO: Error
+							return
+						}
+						artifacts.versionFileURLs.insert(versionFileURL)
+
+						// Build
 						let binariesDirectoryURL = self.directoryURL
 							.appendingPathComponent(
 								Constants.binariesFolderPath, isDirectory: true
 							)
 							.resolvingSymlinksInPath()
 
-						Platform.supportedPlatforms.forEach { platform in
+						let binaryURLs = Platform.supportedPlatforms.flatMap { platform -> [URL] in
 							let cachedFrameworks: [CachedFramework]?
 							switch platform {
 							case .macOS: cachedFrameworks = versionFile.macOS
@@ -910,25 +920,26 @@ public final class Project { // swiftlint:disable:this type_body_length
 							case .watchOS: cachedFrameworks = versionFile.watchOS
 							case .tvOS: cachedFrameworks = versionFile.tvOS
 							}
-							artifacts.ignoreBinaryURLs += (cachedFrameworks ?? [])
-								.flatMap { cachedFramework -> [URL] in
-									let frameworkURL = versionFile
-										.frameworkURL(
-											for: cachedFramework,
-											platform: platform,
-											binariesDirectoryURL: binariesDirectoryURL
-										)
-										.resolvingSymlinksInPath()
-									return [
-										frameworkURL,
-										URL(fileURLWithPath: frameworkURL.relativePath)
-											.appendingPathExtension("dSYM")
-											.resolvingSymlinksInPath(),
-									]
+
+							return (cachedFrameworks ?? []).flatMap { cachedFramework -> [URL] in
+								let frameworkURL = versionFile
+									.frameworkURL(
+										for: cachedFramework,
+										platform: platform,
+										binariesDirectoryURL: binariesDirectoryURL
+									)
+									.resolvingSymlinksInPath()
+								return [
+									frameworkURL,
+									URL(fileURLWithPath: frameworkURL.relativePath)
+										.appendingPathExtension("dSYM")
+										.resolvingSymlinksInPath(),
+								]
 							}
 						}
+						artifacts.binaryURLs.formUnion(binaryURLs)
 					}
-					.remove()
+					.removeUnneededItems()
 			}
 			.map { _ in }
 	}
