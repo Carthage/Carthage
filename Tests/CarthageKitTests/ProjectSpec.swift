@@ -461,34 +461,34 @@ class ProjectSpec: QuickSpec {
 				expect(result).notTo(beNil())
 				expect(result!.error).to(beNil())
 				expect(result!.value!).notTo(beNil())
-				
+
 				let outdatedDependencies = result!.value!.reduce(into: [:], { (result, next) in
 					result[next.0] = (next.1, next.2, next.3)
 				})
 
 				// Github 1 has no updates available
 				expect(outdatedDependencies[github1]).to(beNil())
-				
+
 				// Github 2 is currently at 1.0.0, can be updated to the latest version which is 2.0.0
 				// Github 2 has no constraint in the Cartfile
 				expect(outdatedDependencies[github2]!.0) == PinnedVersion("v1.0.0")
 				expect(outdatedDependencies[github2]!.1) == PinnedVersion("v2.0.0")
 				expect(outdatedDependencies[github2]!.2) == PinnedVersion("v2.0.0")
-				
+
 				// Github 3 is currently at 2.0.0, latest is 2.0.1, to which it can be updated
 				// Github 3 has a constraint in the Cartfile
 				expect(outdatedDependencies[github3]!.0) == PinnedVersion("v2.0.0")
 				expect(outdatedDependencies[github3]!.1) == PinnedVersion("v2.0.1")
 				expect(outdatedDependencies[github3]!.2) == PinnedVersion("v2.0.1")
-				
+
 				// Github 4 is currently at 2.0.0, latest is 3.0.0, but it can only be updated to 2.0.1
 				expect(outdatedDependencies[github4]!.0) == PinnedVersion("v2.0.0")
 				expect(outdatedDependencies[github4]!.1) == PinnedVersion("v2.0.1")
 				expect(outdatedDependencies[github4]!.2) == PinnedVersion("v3.0.0")
-				
+
 				// Github 5 is pinned to a branch and is already at the most recent commit, so it should not be displayed
 				expect(outdatedDependencies[github5]).to(beNil())
-				
+
 				// Github 6 is pinned ot a branch which has new commits, so it should be displayed
 				expect(outdatedDependencies[github6]!.0) == PinnedVersion(currentSHA)
 				expect(outdatedDependencies[github6]!.1) == PinnedVersion(nextSHA)
@@ -503,6 +503,54 @@ class ProjectSpec: QuickSpec {
 			it("should check the framework's executable binary and produce a platform") {
 				let actualPlatform = platformForFramework(testStaticFrameworkURL).first()?.value
 				expect(actualPlatform) == .iOS
+			}
+		}
+
+		describe("cleanup Carthage directory") {
+			let baseDirectoryURL = Bundle(for: type(of: self)).url(forResource: "CleanupTest", withExtension: nil)!
+
+			it("should successfully remove files not needed") {
+				let directoryURL = baseDirectoryURL.appendingPathComponent("Valid", isDirectory: true)
+				let project = Project(directoryURL: directoryURL)
+				var events = [ProjectEvent]()
+				project.projectEvents.observeValues { events.append($0) }
+
+				expect(project.removeUnneededItems().wait().error).to(beNil())
+
+				let removedItems = events.flatMap { event -> URL? in
+					guard case let .removingUnneededItem(url) = event else {
+						fail()
+						return nil
+					}
+					return url
+				}
+
+				let expectedPaths = [
+					("Build/Mac/TestFramework2.framework.dSYM", true),
+					("Build/Mac/TestFramework1.framework.dSYM", true),
+					("Build/iOS/TestFramework2.framework.dSYM", true),
+					("Build/iOS/TestFramework1.framework.dSYM", true),
+					("Build/Mac/TestFramework2.framework", true),
+					("Build/Mac/TestFramework1.framework", true),
+					("Build/iOS/TestFramework2.framework", true),
+					("Build/iOS/TestFramework1.framework", true),
+					("Checkouts/TestFramework1", true),
+					("Checkouts/TestFramework2", true),
+					("Build/iOS/59F47BB3-1D4F-3B7F-A0D3-273E2F5B9526.bcsymbolmap", false),
+					("Build/iOS/1047B36A-DF55-31AE-B619-D457C836A39D.bcsymbolmap", false),
+					("Build/iOS/D66A4E3C-FAB4-38A5-9863-D1A27A5C4B41.bcsymbolmap", false),
+					("Build/iOS/86E1998A-CF88-316A-87F7-EED06C281067.bcsymbolmap", false),
+					("Build/iOS/D52D59F2-6C0B-3690-A261-92CBCC93FB86.bcsymbolmap", false),
+					("Build/iOS/9998DD1F-6A06-3FDD-8F51-64BE2FD2C237.bcsymbolmap", false),
+					("Build/.TestFramework2.version", false),
+					("Build/.TestFramework1.version", false),
+				]
+
+				let expectedItems = Set(expectedPaths.map {
+					directoryURL.appendingPathComponent("Carthage/\($0)", isDirectory: $1)
+				})
+
+				expect(Set(removedItems)) == expectedItems
 			}
 		}
 	}
