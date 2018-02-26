@@ -88,6 +88,7 @@ public enum CarthageError: Error {
 	/// An internal error occurred
 	case internalError(description: String)
 
+	/// An expected VersionFile wasn't found
 	case versionFileNotFound(Dependency, URL)
 }
 
