@@ -87,6 +87,8 @@ public enum CarthageError: Error {
 
 	/// An internal error occurred
 	case internalError(description: String)
+
+	case versionFileNotFound(Dependency, URL)
 }
 
 extension CarthageError {
@@ -175,6 +177,9 @@ extension CarthageError: Equatable {
 			return left == right
 
 		case let (.internalError(left), .internalError(right)):
+			return left == right
+
+		case let (.versionFileNotFound(left), .versionFileNotFound(right)):
 			return left == right
 
 		default:
@@ -334,6 +339,9 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .internalError(description):
 			return description
+
+		case let .versionFileNotFound(dependency, url):
+			return "VersionFile for \(dependency.name) does not exit at \(url.path)"
 		}
 	}
 }

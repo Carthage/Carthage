@@ -845,7 +845,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						.resolvingSymlinksInPath()
 
 					guard let versionFile = VersionFile(url: versionFileURL) else {
-						return SignalProducer(error: CarthageError.internalError(description: "fuga"))
+						return SignalProducer(error: CarthageError.versionFileNotFound(dependency, versionFileURL))
 					}
 
 					versionFileURLs.insert(versionFileURL)
