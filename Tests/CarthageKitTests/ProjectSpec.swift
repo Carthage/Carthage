@@ -552,6 +552,19 @@ class ProjectSpec: QuickSpec {
 
 				expect(Set(removedItems)) == expectedItems
 			}
+
+			it("should fail if version files are missing") {
+				let directoryURL = baseDirectoryURL.appendingPathComponent("VersionFileMissing", isDirectory: true)
+				let project = Project(directoryURL: directoryURL)
+				var events = [ProjectEvent]()
+				project.projectEvents.observeValues { events.append($0) }
+
+				let dependencyName = "TestFramework3"
+				let error = project.removeUnneededItems().wait().error
+				let url = directoryURL.appendingPathComponent("Carthage/Build/.\(dependencyName).version", isDirectory: false)
+				expect(error) == CarthageError.versionFileNotFound(.git(GitURL(dependencyName)), url)
+				expect(events).to(beEmpty())
+			}
 		}
 	}
 }
