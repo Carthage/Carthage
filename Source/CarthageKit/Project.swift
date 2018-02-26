@@ -47,6 +47,8 @@ public enum ProjectEvent {
 
 	/// Building an uncached project.
 	case buildingUncached(Dependency)
+
+	case removingUnneededItem(URL)
 }
 
 extension ProjectEvent: Equatable {
@@ -822,126 +824,101 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 
-	public func removeUnneededItems() -> SignalProducer<Void, CarthageError> {
+	public func removeUnneededItems() -> SignalProducer<(), CarthageError> {
 		return loadResolvedCartfile()
-			.on { resolved in
-				struct Artifacts {
+			.flatMap(.merge) { resolved -> SignalProducer<URL, CarthageError> in
+				let fileManager = FileManager.default
 
-					var checkoutURLs = Set<URL>()
-					var versionFileURLs = Set<URL>()
-					var binaryURLs = Set<URL>()
+				var checkoutURLs = Set<URL>()
+				var versionFileURLs = Set<URL>()
+				var binaryURLs = Set<URL>()
 
-					private let directoryURL: URL
+				for (dependency, _) in resolved.dependencies {
+					checkoutURLs.insert(
+						self.directoryURL
+							.appendingPathComponent(dependency.relativePath, isDirectory: true)
+							.resolvingSymlinksInPath()
+					)
 
-					init(directoryURL: URL) {
-						self.directoryURL = directoryURL
+					let versionFileURL = VersionFile
+						.url(for: dependency, rootDirectoryURL: self.directoryURL)
+						.resolvingSymlinksInPath()
+
+					guard let versionFile = VersionFile(url: versionFileURL) else {
+						return SignalProducer(error: CarthageError.internalError(description: "fuga"))
 					}
 
-					func removeUnneededItems() {
-						removeUnneededCheckouts()
-						removeUnneededVersionFiles()
-						removeUnneededBinaries()
-					}
+					versionFileURLs.insert(versionFileURL)
 
-					private func removeUnneededCheckouts() {
-						removeContentsOfDirectory(
-							at: directoryURL.appendingPathComponent(
-								Constants.checkoutsFolderPath, isDirectory: true
-							),
-							filtering: { !checkoutURLs.contains($0) }
-						)
-					}
+					let binariesDirectoryURL = self.directoryURL
+						.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
+						.resolvingSymlinksInPath()
 
-					private func removeUnneededVersionFiles() {
-						removeContentsOfDirectory(
-							at: directoryURL.appendingPathComponent(
-								Constants.binariesFolderPath, isDirectory: true
-							),
-							filtering: {
-								$0.pathExtension == VersionFile.pathExtension &&
-								!versionFileURLs.contains($0)
-							}
-						)
-					}
-
-					private func removeUnneededBinaries() {
-						Platform.supportedPlatforms.forEach {
-							removeContentsOfDirectory(
-								at: directoryURL.appendingPathComponent(
-									$0.relativePath, isDirectory: true
-								),
-								filtering: { !binaryURLs.contains($0) }
-							)
+					binaryURLs.formUnion(Platform.supportedPlatforms.flatMap { platform -> [URL] in
+						let cachedFrameworks: [CachedFramework]?
+						switch platform {
+						case .macOS: cachedFrameworks = versionFile.macOS
+						case .iOS: cachedFrameworks = versionFile.iOS
+						case .watchOS: cachedFrameworks = versionFile.watchOS
+						case .tvOS: cachedFrameworks = versionFile.tvOS
 						}
-					}
-
-					private func removeContentsOfDirectory(at url: URL, filtering: (URL) -> Bool) {
-						let fileManager = FileManager.default
-						try? fileManager
-							.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
-							.filter { filtering($0.resolvingSymlinksInPath()) }
-							.forEach { try? fileManager.removeItem(at: $0.resolvingSymlinksInPath()) }
-					}
+						return (cachedFrameworks ?? []).flatMap { cachedFramework -> [URL] in
+							let frameworkURL = versionFile
+								.frameworkURL(
+									for: cachedFramework, platform: platform,
+									binariesDirectoryURL: binariesDirectoryURL
+								)
+								.resolvingSymlinksInPath()
+							return [
+								frameworkURL,
+								URL(fileURLWithPath: frameworkURL.relativePath)
+									.appendingPathExtension("dSYM")
+									.resolvingSymlinksInPath(),
+							]
+						}
+					})
 				}
 
-				resolved.dependencies
-					.reduce(into: Artifacts(directoryURL: self.directoryURL)) { artifacts, group in
-						let dependency = group.key
+				var urls: [URL] = []
+				urls += (try? fileManager
+					.contentsOfDirectory(
+						at: self.directoryURL.appendingPathComponent(
+							Constants.checkoutsFolderPath, isDirectory: true
+						),
+						includingPropertiesForKeys: nil
+					)
+					.map { $0.resolvingSymlinksInPath() }
+					.filter { !checkoutURLs.contains($0) }) ?? []
 
-						// Checkout
-						artifacts.checkoutURLs.insert(
-							self.directoryURL
-								.appendingPathComponent(dependency.relativePath, isDirectory: true)
-								.resolvingSymlinksInPath()
-						)
+				urls += (try? fileManager
+					.contentsOfDirectory(
+						at: self.directoryURL.appendingPathComponent(
+							Constants.binariesFolderPath, isDirectory: true
+						),
+						includingPropertiesForKeys: nil
+					)
+					.map { $0.resolvingSymlinksInPath() }
+					.filter { $0.pathExtension == VersionFile.pathExtension &&
+						!versionFileURLs.contains($0) }) ?? []
 
-						// VersionFile
-						let versionFileURL = VersionFile
-							.url(for: dependency, rootDirectoryURL: self.directoryURL)
-							.resolvingSymlinksInPath()
-						guard let versionFile = VersionFile(url: versionFileURL) else {
-							// TODO: Error
-							return
-						}
-						artifacts.versionFileURLs.insert(versionFileURL)
-
-						// Build
-						let binariesDirectoryURL = self.directoryURL
-							.appendingPathComponent(
-								Constants.binariesFolderPath, isDirectory: true
+				urls += Platform.supportedPlatforms
+					.flatMap { platform -> [URL] in
+						(try? fileManager
+							.contentsOfDirectory(
+								at: self.directoryURL.appendingPathComponent(
+									platform.relativePath, isDirectory: true
+								),
+								includingPropertiesForKeys: nil
 							)
-							.resolvingSymlinksInPath()
+							.map { $0.resolvingSymlinksInPath() }
+							.filter { !binaryURLs.contains($0) }) ?? []
+				}
 
-						let binaryURLs = Platform.supportedPlatforms.flatMap { platform -> [URL] in
-							let cachedFrameworks: [CachedFramework]?
-							switch platform {
-							case .macOS: cachedFrameworks = versionFile.macOS
-							case .iOS: cachedFrameworks = versionFile.iOS
-							case .watchOS: cachedFrameworks = versionFile.watchOS
-							case .tvOS: cachedFrameworks = versionFile.tvOS
-							}
-
-							return (cachedFrameworks ?? []).flatMap { cachedFramework -> [URL] in
-								let frameworkURL = versionFile
-									.frameworkURL(
-										for: cachedFramework,
-										platform: platform,
-										binariesDirectoryURL: binariesDirectoryURL
-									)
-									.resolvingSymlinksInPath()
-								return [
-									frameworkURL,
-									URL(fileURLWithPath: frameworkURL.relativePath)
-										.appendingPathExtension("dSYM")
-										.resolvingSymlinksInPath(),
-								]
-							}
-						}
-						artifacts.binaryURLs.formUnion(binaryURLs)
-					}
-					.removeUnneededItems()
+				return SignalProducer(Set(urls))
 			}
-			.map { _ in }
+			.on { self._projectEventsObserver.send(value: ProjectEvent.removingUnneededItem($0)) }
+			.flatMap(.merge, self.removeItem(at:))
+			.then(SignalProducer<(), CarthageError>.empty)
 	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,

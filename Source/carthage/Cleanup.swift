@@ -12,6 +12,7 @@ public struct CleanupCommand: CommandProtocol {
 
 	public struct Options: OptionsProtocol {
 		public let directoryPath: String
+		public let colorOptions: ColorOptions
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return curry(self.init)
@@ -19,12 +20,16 @@ public struct CleanupCommand: CommandProtocol {
 					key: "project-directory",
 					defaultValue: FileManager.default.currentDirectoryPath,
 					usage: "the directory containing the Carthage project"
-			)
+				)
+				<*> ColorOptions.evaluate(mode)
 		}
 
 		public func loadProject() -> Project {
 			let directoryURL = URL(fileURLWithPath: self.directoryPath, isDirectory: true)
-			return Project(directoryURL: directoryURL)
+			let project = Project(directoryURL: directoryURL)
+			var eventSink = ProjectEventSink(colorOptions: colorOptions)
+			project.projectEvents.observeValues { eventSink.put($0) }
+			return project
 		}
 	}
 
