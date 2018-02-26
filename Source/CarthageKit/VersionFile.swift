@@ -283,13 +283,11 @@ public func versionFileMatches(
 	let versionFileURL = VersionFile.url(for: dependency, rootDirectoryURL: rootDirectoryURL)
 
 	guard let versionFile = VersionFile(url: versionFileURL) else {
-		return .init(value: nil)
+		return SignalProducer(value: nil)
 	}
 
 	let rootBinariesURL = rootDirectoryURL
-		.appendingPathComponent(
-			Constants.binariesFolderPath, isDirectory: true
-		)
+		.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
 		.resolvingSymlinksInPath()
 
 	let commitish = version.commitish

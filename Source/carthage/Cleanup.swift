@@ -3,7 +3,6 @@ import Commandant
 import Foundation
 import Result
 import Curry
-import ReactiveSwift
 
 /// Type that encapsulates the configuration and evaluation of the `cleanup` subcommand.
 public struct CleanupCommand: CommandProtocol {
