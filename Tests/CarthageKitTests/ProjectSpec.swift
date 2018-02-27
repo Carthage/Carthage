@@ -505,6 +505,31 @@ class ProjectSpec: QuickSpec {
 				expect(actualPlatform) == .iOS
 			}
 		}
+
+		describe("transitiveDependencies") {
+			it("should find the correct dependencies") {
+				let cartfile = """
+				github "Alamofire/Alamofire" "4.6.0"
+				github "CocoaLumberjack/CocoaLumberjack" "3.4.1"
+				github "Moya/Moya" "10.0.2"
+				github "ReactiveCocoa/ReactiveSwift" "2.0.1"
+				github "ReactiveX/RxSwift" "4.1.2"
+				github "antitypical/Result" "3.2.4"
+				github "yapstudios/YapDatabase" "3.0.2"
+				"""
+
+				let resolvedCartfile = ResolvedCartfile.from(string: cartfile)
+				let project = Project(directoryURL: URL(string: "file://fake")!)
+
+				let result = project.transitiveDependencies(["Moya"], resolvedCartfile: resolvedCartfile.value!).single()
+
+				expect(result?.value).to(contain("Alamofire"))
+				expect(result?.value).to(contain("ReactiveSwift"))
+				expect(result?.value).to(contain("Result"))
+				expect(result?.value).to(contain("RxSwift"))
+				expect(result?.value?.count) == 4
+			}
+		}
 	}
 }
 
