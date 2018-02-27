@@ -125,8 +125,12 @@ extension Dependency: Scannable {
 				if let url = URL(string: urlString) {
 					if url.scheme == "https" || url.scheme == "file" {
 						return .success(self.binary(url))
+					} else if url.scheme == "relativeFile",
+						let path = URL(string: FileManager.default.currentDirectoryPath)?.appendingPathComponent(url.relativePath).absoluteString,
+						let url = URL(string: "file://\(path)"){
+						return .success(self.binary(url))
 					} else {
-						return .failure(ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
+						return .failure(ScannableError(message: "non-https, non-file, non-relative-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
 					}
 				} else {
 					return .failure(ScannableError(message: "invalid URL found for dependency type `binary`", currentLine: scanner.currentLine))
