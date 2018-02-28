@@ -34,7 +34,8 @@ git "https://enterprise.local/desktop/git-error-translations2.git"
 Dependencies that are only available as compiled binary `.framework`s are specified with the `binary` keyword and an https address that returns a binary project specification:
 
 ```
-binary "https://my.domain.com/release/MyFramework.json"
+binary "https://my.domain.com/release/MyFramework.json"   // Remote Hosted
+binary "relativePath/MyFramework.json"					   // Locally hosted at relative path
 ```
 
 
@@ -84,6 +85,9 @@ git "file:///directory/to/project" "branch"
 
 # A binary only framework
 binary "https://my.domain.com/release/MyFramework.json" ~> 2.3
+
+# A binary only framework via local relative path to binary project specification
+binary "relativePath/MyFramework.json" ~> 2.3
 ```
 
 ## Cartfile.private
@@ -141,4 +145,3 @@ For dependencies that do not have source code available, a binary project specif
 }
 
 ```
-
