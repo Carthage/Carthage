@@ -216,11 +216,10 @@ class DependencySpec: QuickSpec {
 				it("should read a URL with relativeFile scheme") {
 					let scanner = Scanner(string: "binary \"my/domain/com/framework.json\"")
 
-					let dependency = Dependency.from(scanner).value
+					let workingDirectory = URL(string: "file:///current/working/directory")!
+					let dependency = Dependency.from(scanner, base: workingDirectory).value
 
-					let url = URL(string: FileManager.default.currentDirectoryPath)!.appendingPathComponent("my/domain/com/framework.json")
-
-					expect(dependency) == .binary(url)
+					expect(dependency) == .binary(URL(string: "file:///current/working/directory/my/domain/com/framework.json")!)
 				}
 
 				it("should fail with invalid URL") {

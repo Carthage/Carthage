@@ -108,7 +108,7 @@ extension Dependency: Hashable {
 
 extension Dependency: Scannable {
 	/// Attempts to parse a Dependency.
-	public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
+	public static func from(_ scanner: Scanner, base: URL? = nil) -> Result<Dependency, ScannableError> {
 		let parser: (String) -> Result<Dependency, ScannableError>
 
 		if scanner.scanString("github", into: nil) {
@@ -126,7 +126,7 @@ extension Dependency: Scannable {
 					if url.scheme == "https" || url.scheme == "file" {
 						return .success(self.binary(url))
 					} else if url.scheme == nil,
-						let url = URL(string: FileManager.default.currentDirectoryPath)?.appendingPathComponent(url.relativePath) {
+						let url = URL(fileURLWithPath: url.relativePath, isDirectory: false, relativeTo: base) {
 						return .success(self.binary(url))
 					} else {
 						return .failure(ScannableError(message: "non-https, non-file, non-relative-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
