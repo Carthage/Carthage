@@ -7,5 +7,5 @@ public protocol Scannable {
 	///
 	/// If parsing fails, the scanner will be left at the first invalid
 	/// character (with any partially valid input already consumed).
-	static func from(_ scanner: Scanner, base: URL?) -> Result<Self, ScannableError>
+	static func from(_ scanner: Scanner) -> Result<Self, ScannableError>
 }

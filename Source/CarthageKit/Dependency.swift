@@ -108,7 +108,7 @@ extension Dependency: Hashable {
 
 extension Dependency: Scannable {
 	/// Attempts to parse a Dependency.
-	static func from(_ scanner: Scanner) -> Result<Self, ScannableError> {
+	public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
 		return from(scanner, base: nil)
 	}
 
@@ -129,10 +129,11 @@ extension Dependency: Scannable {
 				if let url = URL(string: urlString) {
 					if url.scheme == "https" || url.scheme == "file" {
 						return .success(self.binary(url))
-					} else if url.scheme == nil {
-						return .success(self.binary(URL(fileURLWithPath: url.relativePath, isDirectory: false, relativeTo: base)))
+					} else if url.scheme == nil,
+						let absoluteURL = absoluteFileURL(for: url.relativePath, base: base) {
+						return .success(self.binary(absoluteURL))
 					} else {
-						return .failure(ScannableError(message: "non-https, non-file, non-relative-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
+						return .failure(ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
 					}
 				} else {
 					return .failure(ScannableError(message: "invalid URL found for dependency type `binary`", currentLine: scanner.currentLine))
@@ -155,6 +156,26 @@ extension Dependency: Scannable {
 			return parser(address as String)
 		} else {
 			return .failure(ScannableError(message: "empty string after dependency type", currentLine: scanner.currentLine))
+		}
+	}
+
+	// MacOS 10.10 Compatibility Helper
+	private static func absoluteFileURL(for relativePath: String, base: URL?) -> URL? {
+		if #available(macOS 10.11, *) {
+			return URL(fileURLWithPath: relativePath, isDirectory: false, relativeTo: base).standardizedFileURL
+		} else {
+			guard let url = (base ?? URL(string: FileManager.default.currentDirectoryPath)),
+				var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else { return nil }
+
+			if components.scheme == nil {
+				components.scheme = "file"
+			}
+
+			if components.host == nil {
+				components.host = ""
+			}
+
+			return components.url?.appendingPathComponent(relativePath).standardizedFileURL
 		}
 	}
 }
