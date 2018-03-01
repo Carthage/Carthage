@@ -31,11 +31,11 @@ git "https://enterprise.local/desktop/git-error-translations2.git"
 
 ##### Binary only frameworks
 
-Dependencies that are only available as compiled binary `.framework`s are specified with the `binary` keyword and an https address that returns a binary project specification:
+Dependencies that are only available as compiled binary `.framework`s are specified with the `binary` keyword and as as an https address, or a relative path that returns a binary project specification:
 
 ```
 binary "https://my.domain.com/release/MyFramework.json"   // Remote Hosted
-binary "relativePath/MyFramework.json"					   // Locally hosted at relative path
+binary "relativePath/MyFramework.json"					   				// Locally hosted at relative path
 ```
 
 
