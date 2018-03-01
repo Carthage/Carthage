@@ -48,7 +48,7 @@ public struct CopyFrameworksCommand: CommandProtocol {
 private func copyFramework(_ source: URL, target: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
 		.flatMap(.merge) { url, codesigningIdentity -> SignalProducer<(), CarthageError> in
-			let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
+			let strip = stripFramework(url, keepingArchitectures: validArchitectures, strippingDebugSymbols: shouldStripDebugSymbols(), codesigningIdentity: codesigningIdentity)
 			if buildActionIsArchiveOrInstall() {
 				return strip
 					.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.deletingLastPathComponent()))
@@ -107,6 +107,11 @@ private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
 
 private func codeSigningAllowed() -> Bool {
 	return getEnvironmentVariable("CODE_SIGNING_ALLOWED")
+		.map { $0 == "YES" }.value ?? false
+}
+
+private func shouldStripDebugSymbols() -> Bool {
+	return getEnvironmentVariable("COPY_PHASE_STRIP")
 		.map { $0 == "YES" }.value ?? false
 }
 

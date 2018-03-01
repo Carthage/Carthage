@@ -182,7 +182,7 @@ class XcodeSpec: QuickSpec {
 			expect(resultURL?.value) == targetURL
 			expect(targetURL.path).to(beExistingDirectory())
 
-			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7", "arm64" ], codesigningIdentity: "-").wait()
+			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7", "arm64" ], strippingDebugSymbols: true, codesigningIdentity: "-").wait()
 			expect(strippingResult.value).notTo(beNil())
 
 			let strippedArchitectures = architecturesInPackage(targetURL)
@@ -191,6 +191,24 @@ class XcodeSpec: QuickSpec {
 
 			expect(strippedArchitectures?.value).notTo(contain("i386"))
 			expect(strippedArchitectures?.value).to(contain("armv7", "arm64"))
+
+			/// Check whether the resulting framework contains debug symbols
+			/// There are many suggestions on how to do this but no one single
+			/// accepted way. This seems to work best:
+			/// https://lists.apple.com/archives/unix-porting/2006/Feb/msg00021.html
+			let hasDebugSymbols = SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(targetURL) }
+				.flatMap(.merge) { binaryURL -> SignalProducer<Bool, CarthageError> in
+					let nmTask = Task("/usr/bin/xcrun", arguments: [ "nm", "-ap", binaryURL.path])
+					return nmTask.launch()
+						.ignoreTaskData()
+						.mapError(CarthageError.taskError)
+						.map { String(data: $0, encoding: .utf8) ?? "" }
+						.flatMap(.merge) { output -> SignalProducer<Bool, NoError> in
+							return SignalProducer(value: output.contains("SO "))
+					}
+			}.single()
+
+			expect(hasDebugSymbols?.value).to(equal(false))
 
 			let modulesDirectoryURL = targetURL.appendingPathComponent("Modules", isDirectory: true)
 			expect(FileManager.default.fileExists(atPath: modulesDirectoryURL.path)) == false
@@ -348,7 +366,7 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).to(beNil())
 
-			// Verify that the build products of all specified platforms exist 
+			// Verify that the build products of all specified platforms exist
 			// at the top level.
 			let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency.name).framework").path
 			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(dependency.name).framework").path
