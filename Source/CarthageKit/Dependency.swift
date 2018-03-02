@@ -129,9 +129,9 @@ extension Dependency: Scannable {
 				if let url = URL(string: urlString) {
 					if url.scheme == "https" || url.scheme == "file" {
 						return .success(self.binary(url))
-					} else if url.scheme == nil,
-						let absoluteURL = absoluteFileURL(for: url.relativePath, base: base) {
-						return .success(self.binary(absoluteURL))
+					} else if url.scheme == nil {
+						let abosoluteURL = URL(fileURLWithPath: url.relativePath, isDirectory: false, relativeTo: base).standardizedFileURL
+						return .success(self.binary(abosoluteURL))
 					} else {
 						return .failure(ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
 					}
@@ -156,26 +156,6 @@ extension Dependency: Scannable {
 			return parser(address as String)
 		} else {
 			return .failure(ScannableError(message: "empty string after dependency type", currentLine: scanner.currentLine))
-		}
-	}
-
-	// MacOS 10.10 Compatibility Helper
-	private static func absoluteFileURL(for relativePath: String, base: URL?) -> URL? {
-		if #available(macOS 10.11, *) {
-			return URL(fileURLWithPath: relativePath, isDirectory: false, relativeTo: base).standardizedFileURL
-		} else {
-			guard let url = (base ?? URL(string: FileManager.default.currentDirectoryPath)),
-				var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else { return nil }
-
-			if components.scheme == nil {
-				components.scheme = "file"
-			}
-
-			if components.host == nil {
-				components.host = ""
-			}
-
-			return components.url?.appendingPathComponent(relativePath).standardizedFileURL
 		}
 	}
 }
