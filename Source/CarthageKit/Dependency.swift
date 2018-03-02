@@ -130,8 +130,8 @@ extension Dependency: Scannable {
 					if url.scheme == "https" || url.scheme == "file" {
 						return .success(self.binary(url))
 					} else if url.scheme == nil {
-						let abosoluteURL = URL(fileURLWithPath: url.relativePath, isDirectory: false, relativeTo: base).standardizedFileURL
-						return .success(self.binary(abosoluteURL))
+						let absoluteURL = URL(fileURLWithPath: url.relativePath, isDirectory: false, relativeTo: base).standardizedFileURL
+						return .success(self.binary(absoluteURL))
 					} else {
 						return .failure(ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
 					}
