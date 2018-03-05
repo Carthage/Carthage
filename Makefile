@@ -17,7 +17,7 @@ CARTHAGE_EXECUTABLE=$(BUILT_BUNDLE)/Contents/MacOS/carthage
 FRAMEWORKS_FOLDER=/Library/Frameworks
 BINARIES_FOLDER=/usr/local/bin
 
-# ZSH_COMMAND · run single command in `zsh` shell, ignoring most `zsh` startup files. 
+# ZSH_COMMAND · run single command in `zsh` shell, ignoring most `zsh` startup files.
 ZSH_COMMAND := ZDOTDIR='/var/empty' zsh -o NO_GLOBAL_RCS -c
 # RM_SAFELY · `rm -rf` ensuring first and only parameter is non-null, contains more than whitespace, non-root if resolving absolutely.
 RM_SAFELY := $(ZSH_COMMAND) '[[ ! $${1:?} =~ "^[[:space:]]+\$$" ]] && [[ $${1:A} != "/" ]] && [[ $${\#} == "1" ]] && noglob rm -rf $${1:A}' --
@@ -92,15 +92,15 @@ package: installables
 	(cd "$(CARTHAGE_TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" && zip -q -r --symlinks - "$(OUTPUT_FRAMEWORK)") > "$(OUTPUT_FRAMEWORK_ZIP)"
 
 swiftpm:
-	swift build -c release -Xswiftc -static-stdlib
+	swift build -c release -Xswiftc -static-stdlib -Xswiftc "-target" -Xswiftc "x86_64-apple-macosx10.11"
 
 swiftpm_test:
 	$(RM_SAFELY) ./.build/debug/CarthagePackageTests.xctest
-	swift build --build-tests
+	swift build --build-tests -Xswiftc "-target" -Xswiftc "x86_64-apple-macosx10.11"
 	$(CP) -R Tests/CarthageKitTests/Resources ./.build/debug/CarthagePackageTests.xctest/Contents
 	$(CP) Tests/CarthageKitTests/fixtures/CartfilePrivateOnly.zip ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
 	script/copy-fixtures ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
-	swift test --skip-build
+	swift test --skip-build -Xswiftc "-target" -Xswiftc "x86_64-apple-macosx10.11"
 
 swiftpm_install: swiftpm
 	$(MKDIR) "$(PREFIX)/bin"
