@@ -869,10 +869,11 @@ public func buildInDirectory(
 	}
 }
 
-/// Strips a framework from unexpected architectures, optionally codesigning the
-/// result.
-public func stripFramework(_ frameworkURL: URL, keepingArchitectures: [String], codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
+/// Strips a framework from unexpected architectures and potentially debug symbols,
+/// optionally codesigning the result.
+public func stripFramework(_ frameworkURL: URL, keepingArchitectures: [String], strippingDebugSymbols: Bool, codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
 	let stripArchitectures = stripBinary(frameworkURL, keepingArchitectures: keepingArchitectures)
+	let stripSymbols = strippingDebugSymbols ? stripDebugSymbols(frameworkURL) : .empty
 
 	// Xcode doesn't copy `Headers`, `PrivateHeaders` and `Modules` directory at
 	// all.
@@ -883,6 +884,7 @@ public func stripFramework(_ frameworkURL: URL, keepingArchitectures: [String], 
 	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty
 
 	return stripArchitectures
+		.concat(stripSymbols)
 		.concat(stripHeaders)
 		.concat(stripPrivateHeaders)
 		.concat(stripModules)
@@ -1076,6 +1078,17 @@ public func architecturesInPackage(_ packageURL: URL) -> SignalProducer<String, 
 		}
 }
 
+/// Strips debug symbols from the given framework
+public func stripDebugSymbols(_ frameworkURL: URL) -> SignalProducer<(), CarthageError> {
+	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
+		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
+			let stripTask = Task("/usr/bin/xcrun", arguments: [ "strip", "-S","-o", binaryURL.path, binaryURL.path])
+			return stripTask.launch()
+				.mapError(CarthageError.taskError)
+		}
+		.then(SignalProducer<(), CarthageError>.empty)
+}
+
 /// Strips `Headers` directory from the given framework.
 public func stripHeadersDirectory(_ frameworkURL: URL) -> SignalProducer<(), CarthageError> {
 	return stripDirectory(named: "Headers", of: frameworkURL)
@@ -1181,7 +1194,7 @@ private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, Carthag
 }
 
 /// Returns the URL of a binary inside a given package.
-private func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
+public func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 	let bundle = Bundle(path: packageURL.path)
 	let packageType = (bundle?.object(forInfoDictionaryKey: "CFBundlePackageType") as? String).flatMap(PackageType.init)
 
