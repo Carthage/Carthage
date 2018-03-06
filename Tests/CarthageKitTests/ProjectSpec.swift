@@ -505,6 +505,39 @@ class ProjectSpec: QuickSpec {
 				expect(actualPlatform) == .iOS
 			}
 		}
+
+		describe("repositoryFileURL") {
+			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "owner", name: "name"))
+			let temporaryPath = (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString)
+			let temporaryURL = URL(fileURLWithPath: temporaryPath, isDirectory: true)
+
+			beforeEach {
+				expect { try FileManager.default.createDirectory(atPath: temporaryURL.path, withIntermediateDirectories: true) }.notTo(throwError())
+			}
+
+			afterEach {
+				_ = try? FileManager.default.removeItem(at: temporaryURL)
+			}
+
+			it("should append cacheName to baseURL") {
+				let url = CarthageKit.repositoryFileURL(for: dependency, baseURL: temporaryURL)
+
+				expect(url) == temporaryURL.appendingPathComponent(dependency.cacheName, isDirectory: true)
+			}
+
+			it("should move old cache to new cache") {
+				let fileManager = FileManager.default
+
+				let oldCacheUrl = temporaryURL.appendingPathComponent(dependency.name, isDirectory: true)
+				expect { try FileManager.default.createDirectory(atPath: oldCacheUrl.path, withIntermediateDirectories: true) }.notTo(throwError())
+
+				let url = CarthageKit.repositoryFileURL(for: dependency, baseURL: temporaryURL)
+
+				expect(url) == temporaryURL.appendingPathComponent(dependency.cacheName, isDirectory: true)
+				expect(fileManager.fileExists(atPath: oldCacheUrl.path)) == false
+				expect(fileManager.fileExists(atPath: url.path)) == true
+			}
+		}
 	}
 }
 

@@ -23,7 +23,26 @@ public enum Dependency {
 			return url.name ?? url.urlString
 
 		case let .binary(url):
-			return url.lastPathComponent.stripping(suffix: ".json")
+			let name = url.lastPathComponent.stripping(suffix: ".json")
+			// lastPathComponent gives empty string when no path
+			if name == "" {
+				return url.host ?? "unknown"
+			}
+			return name
+		}
+	}
+
+	public var cacheName: String {
+		switch self {
+		case let .gitHub(.dotCom, repo):
+			return "\(repo.name)_\(repo.owner)"
+		case let .gitHub(.enterprise(url), repo):
+			return "\(url.absoluteString.cacheSafeName)_\(repo.name)_\(repo.owner)"
+		case let .git(url):
+			// Replace all non a-z0-9 chars with _
+			return url.normalizedURLString.cacheSafeName
+		case let .binary(url):
+			return url.absoluteString.cacheSafeName
 		}
 	}
 

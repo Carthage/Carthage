@@ -28,6 +28,11 @@ extension String {
 			return self
 		}
 	}
+
+	// Replace all non a-z0-9 chars with _
+	internal var cacheSafeName: String {
+		return self.replacingOccurrences(of: "://", with: "_").components(separatedBy: CharacterSet.alphanumerics.inverted).joined(separator: "_")
+	}
 }
 
 extension Signal {
