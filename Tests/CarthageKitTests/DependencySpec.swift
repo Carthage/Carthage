@@ -213,12 +213,23 @@ class DependencySpec: QuickSpec {
 					expect(dependency) == .binary(URL(string: "file:///my/domain/com/framework.json")!)
 				}
 
-				it("should fail with non-https URL") {
-					let scanner = Scanner(string: "binary \"nope\"")
+				it("should read a URL with relative file path") {
+					let relativePath = "my/relative/path/framework.json"
+					let scanner = Scanner(string: "binary \"\(relativePath)\"")
 
-					let error = Dependency.from(scanner).error
+					let workingDirectory = URL(string: "file:///current/working/directory/")!
+					let dependency = Dependency.from(scanner, base: workingDirectory).value
 
-					expect(error) == ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: "binary \"nope\"")
+					expect(dependency) == .binary(URL(string: "\(workingDirectory)\(relativePath)")!)
+				}
+
+				it("should read a URL with an absolute path") {
+					let absolutePath = "/my/absolute/path/framework.json"
+					let scanner = Scanner(string: "binary \"\(absolutePath)\"")
+
+					let dependency = Dependency.from(scanner).value
+
+					expect(dependency) == .binary(URL(string: "file://\(absolutePath)")!)
 				}
 
 				it("should fail with invalid URL") {
