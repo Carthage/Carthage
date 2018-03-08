@@ -1021,6 +1021,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					.collect()
 					.map { installedDependencies -> [(Dependency, PinnedVersion)] in
+						// Filters out dependencies that we've downloaded binaries for
+						// but preserves the build order
 						return dependencies.filter { dependency -> Bool in
 							!installedDependencies.contains { $0 == dependency }
 						}
