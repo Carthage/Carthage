@@ -594,10 +594,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 				.flatMap(.concat) {
 					return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, pinnedVersion: pinnedVersion, toolchain: toolchain)
-						.on(value: { _ in
-							// Trash the checkouts folder when we've successfully copied binaries, to avoid building unnecessarily
-							_ = try? FileManager.default.trashItem(at: checkoutDirectoryURL, resultingItemURL: nil)
-						})
 				}
 				.flatMap(.concat) { self.removeItem(at: $0) }
 				.map { true }
