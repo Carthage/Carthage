@@ -127,7 +127,6 @@ class XcodeSpec: QuickSpec {
 
 			for dependency in dependencies {
 				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-					.flatten(.concat)
 					.ignoreTaskData()
 					.on(value: { project, scheme in // swiftlint:disable:this end_closure
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -137,7 +136,7 @@ class XcodeSpec: QuickSpec {
 				expect(result.error).to(beNil())
 			}
 
-			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this closure_params_parantheses
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -239,7 +238,7 @@ class XcodeSpec: QuickSpec {
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -268,7 +267,7 @@ class XcodeSpec: QuickSpec {
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -291,7 +290,7 @@ class XcodeSpec: QuickSpec {
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -312,7 +311,7 @@ class XcodeSpec: QuickSpec {
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -335,7 +334,6 @@ class XcodeSpec: QuickSpec {
 			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
-				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { project, scheme in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -357,7 +355,6 @@ class XcodeSpec: QuickSpec {
 			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
-				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { project, scheme in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -405,7 +402,6 @@ class XcodeSpec: QuickSpec {
 			let dependencyBuildURL = dependencyURL.appendingPathComponent(Constants.binariesFolderPath)
 
 			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
