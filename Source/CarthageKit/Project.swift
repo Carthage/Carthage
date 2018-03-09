@@ -354,6 +354,26 @@ public final class Project { // swiftlint:disable:this type_body_length
 		}
 	}
 
+	/// Finds all the transitive dependencies for the dependencies to checkout.
+	func transitiveDependencies(
+		_ dependenciesToCheckout: [String]?,
+		resolvedCartfile: ResolvedCartfile
+	) -> SignalProducer<[String], CarthageError> {
+		return SignalProducer(value: resolvedCartfile)
+			.map { resolvedCartfile -> [(Dependency, PinnedVersion)] in
+				return resolvedCartfile.dependencies
+					.filter { dep, _ in dependenciesToCheckout?.contains(dep.name) ?? false }
+			}
+			.flatMap(.merge) { dependencies -> SignalProducer<[String], CarthageError> in
+				return SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies)
+					.flatMap(.merge) { dependency, version -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> in
+						return self.dependencies(for: dependency, version: version)
+					}
+					.map { $0.0.name }
+					.collect()
+			}
+	}
+
 	/// Attempts to resolve a Git reference to a version.
 	private func resolvedGitReference(_ dependency: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
 		let repositoryURL = repositoryFileURL(for: dependency)
@@ -817,7 +837,16 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 
 		return loadResolvedCartfile()
-			.map { resolvedCartfile -> [(Dependency, PinnedVersion)] in
+			.flatMap(.latest) { resolvedCartfile -> SignalProducer<([String]?, ResolvedCartfile), CarthageError> in
+				guard let dependenciesToCheckout = dependenciesToCheckout else {
+					return SignalProducer(value: (nil, resolvedCartfile))
+				}
+
+				return self
+					.transitiveDependencies(dependenciesToCheckout, resolvedCartfile: resolvedCartfile)
+					.map { (dependenciesToCheckout + $0, resolvedCartfile) }
+			}
+			.map { dependenciesToCheckout, resolvedCartfile -> [(Dependency, PinnedVersion)] in
 				return resolvedCartfile.dependencies
 					.filter { dep, _ in dependenciesToCheckout?.contains(dep.name) ?? true }
 			}
