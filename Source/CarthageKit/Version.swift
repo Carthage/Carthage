@@ -8,7 +8,7 @@ import ReactiveSwift
 public protocol VersionType: Hashable {}
 
 /// A semantic version.
-public struct SemanticVersion: VersionType {
+public struct SemanticVersion: VersionType, Codable {
 	/// The major version.
 	///
 	/// Increments to this component represent incompatible API changes.
