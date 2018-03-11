@@ -994,7 +994,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		_ options: BuildOptions,
 		dependenciesToBuild: [String]? = nil,
 		sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
-	) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	) -> BuildSchemeProducer {
 		return loadResolvedCartfile()
 			.flatMap(.concat) { resolvedCartfile -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
@@ -1042,7 +1042,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 							return self.installBinaries(for: dependency, pinnedVersion: version, toolchain: options.toolchain)
 								.filterMap { installed -> (Dependency, PinnedVersion)? in
 									return installed ? (dependency, version) : nil
-							}
+								}
 						case let .binary(url):
 							return self.installBinariesForBinaryProject(url: url, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
 								.then(.init(value: (dependency, version)))
@@ -1058,7 +1058,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					.flatten()
 			}
-			.flatMap(.concat) { dependency, version -> SignalProducer<BuildSchemeProducer, CarthageError> in
+			.flatMap(.concat) { dependency, version -> BuildSchemeProducer in
 				let dependencyPath = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true).path
 				if !FileManager.default.fileExists(atPath: dependencyPath) {
 					return .empty
@@ -1071,21 +1071,68 @@ public final class Project { // swiftlint:disable:this type_body_length
 				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version.commitish, isDirectory: true)
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
-				return build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
-					.map { producer -> BuildSchemeProducer in
-						return producer.flatMapError { error in
-							switch error {
-							case .noSharedFrameworkSchemes:
-								// Log that building the dependency is being skipped,
-								// not to error out with `.noSharedFrameworkSchemes`
-								// to continue building other dependencies.
-								self._projectEventsObserver.send(value: .skippedBuilding(dependency, error.description))
-								return .empty
-
-							default:
-								return SignalProducer(error: error)
-							}
+				return self
+					.dependencySet(for: dependency, version: version)
+					.flatMap(.concat) { dependencies -> SignalProducer<(), CarthageError> in
+						// Don't create symlink the build folder if the dependencies doesn't have
+						// any Carthage dependencies.
+						if dependencies.isEmpty {
+							return .empty
 						}
+						return symlinkBuildPath(for: dependency, rootDirectoryURL: self.directoryURL)
+					}
+					.then(build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter))
+					.flatMapError { error in
+						switch error {
+						case .noSharedFrameworkSchemes:
+							// Log that building the dependency is being skipped,
+							// not to error out with `.noSharedFrameworkSchemes`
+							// to continue building other dependencies.
+							self._projectEventsObserver.send(value: .skippedBuilding(dependency, error.description))
+							return .empty
+
+						default:
+							return SignalProducer(error: error)
+						}
+					}
+			}
+	}
+}
+
+/// Creates symlink between the dependency build folder and the root build folder
+///
+/// Returns a signal indicating success
+private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+	return SignalProducer { () -> Result<(), CarthageError> in
+		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
+		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
+		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
+		let fileManager = FileManager.default
+
+		// Link this dependency's Carthage/Build folder to that of the root
+		// project, so it can see all products built already, and so we can
+		// automatically drop this dependency's product in the right place.
+		let dependencyBinariesURL = dependencyURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
+
+		let createDirectory = { try fileManager.createDirectory(at: $0, withIntermediateDirectories: true) }
+		return Result(at: rootBinariesURL, attempt: createDirectory)
+			.flatMap { _ in
+				Result(at: dependencyBinariesURL, attempt: fileManager.removeItem(at:))
+					.recover(with: Result(at: dependencyBinariesURL.deletingLastPathComponent(), attempt: createDirectory))
+			}
+			.flatMap { _ in
+				Result(at: rawDependencyURL, carthageError: CarthageError.readFailed, attempt: {
+						try $0.resourceValues(forKeys: [ .isSymbolicLinkKey ]).isSymbolicLink
+					})
+					.flatMap { isSymlink in
+						Result(at: dependencyBinariesURL, attempt: {
+							if isSymlink == true {
+								return try fileManager.createSymbolicLink(at: $0, withDestinationURL: rootBinariesURL)
+							} else {
+								let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: Constants.binariesFolderPath)
+								return try fileManager.createSymbolicLink(atPath: $0.path, withDestinationPath: linkDestinationPath)
+							}
+						})
 					}
 			}
 	}

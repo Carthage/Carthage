@@ -435,10 +435,11 @@ public typealias SDKFilterCallback = (_ sdks: [SDK], _ scheme: Scheme, _ configu
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme( // swiftlint:disable:this function_body_length cyclomatic_complexity
+public func buildScheme( // swiftlint:disable:this function_body_length function_parameter_count cyclomatic_complexity
 	_ scheme: Scheme,
 	withOptions options: BuildOptions,
 	inProject project: ProjectLocator,
+	rootDirectoryURL: URL,
 	workingDirectoryURL: URL,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> SignalProducer<TaskEvent<URL>, CarthageError> {
@@ -493,7 +494,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			return !sdks.isEmpty
 		}
 		.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<URL>, CarthageError> in
-			let folderURL = workingDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).resolvingSymlinksInPath()
+			let folderURL = rootDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).resolvingSymlinksInPath()
 
 			// TODO: Generalize this further?
 			switch sdks.count {
@@ -738,65 +739,23 @@ public func build(
 	_ rootDirectoryURL: URL,
 	withOptions options: BuildOptions,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
-) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+) -> BuildSchemeProducer {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
-	return symlinkBuildPath(for: dependency, rootDirectoryURL: rootDirectoryURL)
-		.map { _ -> BuildSchemeProducer in
-			return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
-				.mapError { error in
-					switch (dependency, error) {
-					case let (_, .noSharedFrameworkSchemes(_, platforms)):
-						return .noSharedFrameworkSchemes(dependency, platforms)
+	return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
+		.mapError { error in
+			switch (dependency, error) {
+			case let (_, .noSharedFrameworkSchemes(_, platforms)):
+				return .noSharedFrameworkSchemes(dependency, platforms)
 
-					case let (.gitHub(repo), .noSharedSchemes(project, _)):
-						return .noSharedSchemes(project, repo)
+			case let (.gitHub(repo), .noSharedSchemes(project, _)):
+				return .noSharedSchemes(project, repo)
 
-					default:
-						return error
-					}
-				}
+			default:
+				return error
+			}
 		}
-}
-
-/// Creates symlink between the dependency build folder and the root build folder
-///
-/// Returns a signal indicating success
-private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	return SignalProducer { () -> Result<(), CarthageError> in
-		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
-		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
-		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
-		let fileManager = FileManager.default
-
-		// Link this dependency's Carthage/Build folder to that of the root
-		// project, so it can see all products built already, and so we can
-		// automatically drop this dependency's product in the right place.
-		let dependencyBinariesURL = dependencyURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
-
-		let createDirectory = { try fileManager.createDirectory(at: $0, withIntermediateDirectories: true) }
-		return Result(at: rootBinariesURL, attempt: createDirectory)
-			.flatMap { _ in
-				Result(at: dependencyBinariesURL, attempt: fileManager.removeItem(at:))
-					.recover(with: Result(at: dependencyBinariesURL.deletingLastPathComponent(), attempt: createDirectory))
-			}
-			.flatMap { _ in
-				Result(at: rawDependencyURL, carthageError: CarthageError.readFailed, attempt: {
-						try $0.resourceValues(forKeys: [ .isSymbolicLinkKey ]).isSymbolicLink
-					})
-					.flatMap { isSymlink in
-						Result(at: dependencyBinariesURL, attempt: {
-							if isSymlink == true {
-								return try fileManager.createSymbolicLink(at: $0, withDestinationURL: rootBinariesURL)
-							} else {
-								let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: Constants.binariesFolderPath)
-								return try fileManager.createSymbolicLink(atPath: $0.path, withDestinationPath: linkDestinationPath)
-							}
-						})
-					}
-			}
-	}
 }
 
 /// Builds the any shared framework schemes found within the given directory.
@@ -806,7 +765,7 @@ public func buildInDirectory(
 	_ directoryURL: URL,
 	withOptions options: BuildOptions,
 	dependency: (dependency: Dependency, version: PinnedVersion)? = nil,
-	rootDirectoryURL: URL? = nil,
+	rootDirectoryURL: URL,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> BuildSchemeProducer {
 	precondition(directoryURL.isFileURL)
@@ -828,7 +787,7 @@ public func buildInDirectory(
 					return sdkFilter(filteredSDKs, scheme, configuration, project)
 				}
 
-				return buildScheme(scheme, withOptions: options, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
+				return buildScheme(scheme, withOptions: options, inProject: project, rootDirectoryURL: rootDirectoryURL, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
 					.mapError { error -> CarthageError in
 						if case let .taskError(taskError) = error {
 							return .buildFailed(taskError, log: nil)
@@ -842,7 +801,7 @@ public func buildInDirectory(
 			}
 			.collectTaskEvents()
 			.flatMapTaskEvents(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
-				guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
+				guard let dependency = dependency else {
 					return .empty
 				}
 
