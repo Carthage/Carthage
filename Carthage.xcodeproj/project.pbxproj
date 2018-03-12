@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		2190FA981FD5B2F0008D8A79 /* OutdatedDependencies in Resources */ = {isa = PBXBuildFile; fileRef = 2190FA961FD5B05F008D8A79 /* OutdatedDependencies */; };
 		21F11B481FE67A26009FB783 /* DB.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F11B461FE6787F009FB783 /* DB.swift */; };
+		0FDFEA7E2055D638008862E3 /* ProxyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7D2055D638008862E3 /* ProxyTests.swift */; };
+		0FDFEA802055FACE008862E3 /* Proxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7F2055FACE008862E3 /* Proxy.swift */; };
 		3A0472F31C782B4000097EC7 /* Algorithms.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0472F21C782B4000097EC7 /* Algorithms.swift */; };
 		3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0472F41C782D1D00097EC7 /* AlgorithmsSpec.swift */; };
 		3B19041E1E4CFE4A00A866AD /* FakeOldObjc.framework in Resources */ = {isa = PBXBuildFile; fileRef = 3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */; };
@@ -172,6 +174,8 @@
 /* Begin PBXFileReference section */
 		2190FA961FD5B05F008D8A79 /* OutdatedDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OutdatedDependencies; sourceTree = "<group>"; };
 		21F11B461FE6787F009FB783 /* DB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DB.swift; sourceTree = "<group>"; };
+		0FDFEA7D2055D638008862E3 /* ProxyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyTests.swift; sourceTree = "<group>"; };
+		0FDFEA7F2055FACE008862E3 /* Proxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Proxy.swift; sourceTree = "<group>"; };
 		3A0472F21C782B4000097EC7 /* Algorithms.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Algorithms.swift; sourceTree = "<group>"; };
 		3A0472F41C782D1D00097EC7 /* AlgorithmsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlgorithmsSpec.swift; sourceTree = "<group>"; };
 		3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeOldObjc.framework; sourceTree = "<group>"; };
@@ -513,6 +517,7 @@
 				D0A2025D1B114D1000C71375 /* ProducerQueue.swift */,
 				CD28C99C1E11846200322AF7 /* ProductType.swift */,
 				F603929819EA29F80050A6AF /* Project.swift */,
+				0FDFEA7F2055FACE008862E3 /* Proxy.swift */,
 				D01D82D61A10160700F0DD94 /* Resolver.swift */,
 				B17145EF1F43F797006DC662 /* NewResolver.swift */,
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
@@ -556,6 +561,7 @@
 				89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */,
 				CDA0B6C91C468E67006C499C /* GitURLSpec.swift */,
 				549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */,
+				0FDFEA7D2055D638008862E3 /* ProxyTests.swift */,
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
 				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
 				B1F27D3D1E45382B002D4754 /* VersionFileSpec.swift */,
@@ -847,6 +853,7 @@
 				CD3E530B1DE33095002C135C /* Availability.swift in Sources */,
 				3A0472F31C782B4000097EC7 /* Algorithms.swift in Sources */,
 				D0A2025E1B114D1000C71375 /* ProducerQueue.swift in Sources */,
+				0FDFEA802055FACE008862E3 /* Proxy.swift in Sources */,
 				D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */,
 				F603929919EA29F80050A6AF /* Project.swift in Sources */,
 				CDBE654C1F4BF0040060D94E /* Submodule.swift in Sources */,
@@ -863,6 +870,7 @@
 				D0DE89421A0F2D450030A3EC /* VersionSpec.swift in Sources */,
 				89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */,
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
+				0FDFEA7E2055D638008862E3 /* ProxyTests.swift in Sources */,
 				3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */,
 				BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */,
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,

@@ -144,14 +144,25 @@ extension Client {
 			Client.userAgent = gitHubUserAgent()
 		}
 
+		let urlSession = URLSession.proxiedSession
+
 		if !isAuthenticated {
-			self.init(server)
+			self.init(server, urlSession: urlSession)
 		} else if let token = tokenFromEnvironment(forServer: server) {
-			self.init(server, token: token)
+			self.init(server, token: token, urlSession: urlSession)
 		} else if let (username, password) = credentialsFromGit(forServer: server) {
-			self.init(server, username: username, password: password)
+			self.init(server, username: username, password: password, urlSession: urlSession)
 		} else {
-			self.init(server)
+			self.init(server, urlSession: urlSession)
 		}
+	}
+}
+
+extension URLSession {
+	public static var proxiedSession: URLSession {
+		let configuration = URLSessionConfiguration.default
+		configuration.connectionProxyDictionary = Proxy.value.connectionProxyDictionary
+
+		return URLSession(configuration: configuration)
 	}
 }
