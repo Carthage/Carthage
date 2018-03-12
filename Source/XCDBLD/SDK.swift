@@ -74,7 +74,7 @@ public enum SDK: String {
 		let maybeSDK = SDK
 			.allSDKs
 			.map { ($0, $0.rawValue) }
-			.first(where: { (_, stringValue) in stringValue.lowercased() == lowerCasedRawValue })?
+			.first { _, stringValue in stringValue.lowercased() == lowerCasedRawValue }?
 			.0
 
 		guard let sdk = maybeSDK ?? SDK.aliases[lowerCasedRawValue] else {
@@ -84,7 +84,6 @@ public enum SDK: String {
 	}
 }
 
-// TODO: this won't be necessary anymore in Swift 2.
 extension SDK: CustomStringConvertible {
 	public var description: String {
 		switch self {

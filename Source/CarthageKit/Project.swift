@@ -434,7 +434,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 								specifier = .any
 							}
 							result[dependency] = specifier
-					}
+						}
 				}
 				.flatMap(.merge) { resolver.resolve(dependencies: $0, lastResolved: nil, dependenciesToUpdate: nil) }
 		}
@@ -595,8 +595,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// Sends a boolean indicating whether binaries were installed.
 	private func installBinaries(for dependency: Dependency, pinnedVersion: PinnedVersion, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
-		let checkoutDirectoryURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
-
 		switch dependency {
 		case let .gitHub(server, repository):
 			let client = Client(server: server)
@@ -919,10 +917,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 		let fileManager = FileManager.default
 
 		return self.dependencySet(for: dependency, version: version)
-			.zip(with: // file system objects which might conflict with symlinks
-				list(treeish: version.commitish, atPath: carthageProjectCheckoutsPath, inRepository: repositoryURL)
-					.map { (path: String) in (path as NSString).lastPathComponent }
-					.collect()
+			// file system objects which might conflict with symlinks
+			.zip(with: list(treeish: version.commitish, atPath: carthageProjectCheckoutsPath, inRepository: repositoryURL)
+									.map { (path: String) in (path as NSString).lastPathComponent }
+									.collect()
 			)
 			.attemptMap { (dependencies: Set<Dependency>, components: [String]) -> Result<(), CarthageError> in
 				let names = dependencies
@@ -967,6 +965,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						// user wrote this directory, unaware of the precedent not to circumvent carthage’s management?
 						// directory exists as the result of rogue process or gamma ray?
 
+						// swiftlint:disable:next todo
 						// TODO: explore possibility of messaging user, informing that deleting said directory will result
 						// in symlink creation with carthage versions greater than 0.20.0, maybe with more broad advice on
 						// “from scratch” reproducability.
@@ -990,7 +989,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// be rebuilt unless otherwise specified via build options.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithOptions(
+	public func buildCheckedOutDependenciesWithOptions( // swiftlint:disable:this function_body_length
 		_ options: BuildOptions,
 		dependenciesToBuild: [String]? = nil,
 		sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }

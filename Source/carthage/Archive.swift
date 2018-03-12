@@ -37,6 +37,7 @@ public struct ArchiveCommand: CommandProtocol {
 	public let verb = "archive"
 	public let function = "Archives built frameworks into a zip that Carthage can use"
 
+	// swiftlint:disable:next function_body_length
 	public func run(_ options: Options) -> Result<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 

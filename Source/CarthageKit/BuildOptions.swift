@@ -15,8 +15,14 @@ public struct BuildOptions {
 	/// Whether to use downloaded binaries if possible.
 	public var useBinaries: Bool
 
-	public init(configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil,
-				derivedDataPath: String? = nil, cacheBuilds: Bool = true, useBinaries: Bool = true) {
+	public init(
+		configuration: String,
+		platforms: Set<Platform> = [],
+		toolchain: String? = nil,
+		derivedDataPath: String? = nil,
+		cacheBuilds: Bool = true,
+		useBinaries: Bool = true
+	) {
 		self.configuration = configuration
 		self.platforms = platforms
 		self.toolchain = toolchain

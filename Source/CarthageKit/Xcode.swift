@@ -102,7 +102,7 @@ public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments) -> 
 
 /// Finds schemes of projects or workspaces, which Carthage should build, found
 /// within the given directory.
-public func buildableSchemesInDirectory(
+public func buildableSchemesInDirectory( // swiftlint:disable:this function_body_length
 	_ directoryURL: URL,
 	withConfiguration configuration: String,
 	forPlatforms platforms: Set<Platform> = []
@@ -435,7 +435,7 @@ public typealias SDKFilterCallback = (_ sdks: [SDK], _ scheme: Scheme, _ configu
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and a signal
 /// which will send the URL to each product successfully built.
-public func buildScheme( // swiftlint:disable:this function_body_length function_parameter_count cyclomatic_complexity
+public func buildScheme( // swiftlint:disable:this function_body_length cyclomatic_complexity
 	_ scheme: Scheme,
 	withOptions options: BuildOptions,
 	inProject project: ProjectLocator,
@@ -496,7 +496,6 @@ public func buildScheme( // swiftlint:disable:this function_body_length function
 		.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<URL>, CarthageError> in
 			let folderURL = rootDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).resolvingSymlinksInPath()
 
-			// TODO: Generalize this further?
 			switch sdks.count {
 			case 1:
 				return build(sdk: sdks[0], with: buildArgs, in: workingDirectoryURL)
@@ -582,6 +581,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length function
 }
 
 /// Runs the build for a given sdk and build arguments, optionally performing a clean first
+// swiftlint:disable:next function_body_length
 private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectoryURL: URL) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
 	var argsForLoading = buildArgs
 	argsForLoading.sdk = sdk
@@ -761,7 +761,7 @@ public func build(
 /// Builds the any shared framework schemes found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
-public func buildInDirectory(
+public func buildInDirectory( // swiftlint:disable:this function_body_length
 	_ directoryURL: URL,
 	withOptions options: BuildOptions,
 	dependency: (dependency: Dependency, version: PinnedVersion)? = nil,
@@ -787,7 +787,14 @@ public func buildInDirectory(
 					return sdkFilter(filteredSDKs, scheme, configuration, project)
 				}
 
-				return buildScheme(scheme, withOptions: options, inProject: project, rootDirectoryURL: rootDirectoryURL, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
+				return buildScheme(
+						scheme,
+						withOptions: options,
+						inProject: project,
+						rootDirectoryURL: rootDirectoryURL,
+						workingDirectoryURL: directoryURL,
+						sdkFilter: wrappedSDKFilter
+					)
 					.mapError { error -> CarthageError in
 						if case let .taskError(taskError) = error {
 							return .buildFailed(taskError, log: nil)
@@ -1041,7 +1048,7 @@ public func architecturesInPackage(_ packageURL: URL) -> SignalProducer<String, 
 public func stripDebugSymbols(_ frameworkURL: URL) -> SignalProducer<(), CarthageError> {
 	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
 		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
-			let stripTask = Task("/usr/bin/xcrun", arguments: [ "strip", "-S","-o", binaryURL.path, binaryURL.path])
+			let stripTask = Task("/usr/bin/xcrun", arguments: [ "strip", "-S", "-o", binaryURL.path, binaryURL.path])
 			return stripTask.launch()
 				.mapError(CarthageError.taskError)
 		}
