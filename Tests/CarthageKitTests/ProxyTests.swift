@@ -13,6 +13,14 @@ class ProxySpec: QuickSpec {
 			}
 		}
 
+		describe("createProxyWithMalformedProxyValues") {
+			let proxy = Proxy(environment: ["http_proxy": "http:\\github.com:8888"])
+
+			it("should have nil dictionary") {
+				expect(proxy.connectionProxyDictionary).to(beNil())
+			}
+		}
+
 		describe("createProxyWithHTTPValues") {
 			let proxy = Proxy(environment: ["http_proxy": "http://github.com:8888", "HTTP_PROXY": "http://github.com:8888"])
 
