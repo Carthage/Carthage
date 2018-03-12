@@ -161,7 +161,7 @@ extension Client {
 extension URLSession {
 	public static var proxiedSession: URLSession {
 		let configuration = URLSessionConfiguration.default
-		configuration.connectionProxyDictionary = Proxy.value.connectionProxyDictionary
+		configuration.connectionProxyDictionary = Proxy.default.connectionProxyDictionary
 
 		return URLSession(configuration: configuration)
 	}

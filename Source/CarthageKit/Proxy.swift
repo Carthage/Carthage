@@ -4,10 +4,10 @@ struct Proxy {
 	let connectionProxyDictionary: [AnyHashable: Any]?
 
 	init(environment: [String: String]) {
-		let http = Proxy.makeHttpDictionary(environment)
-		let https = Proxy.makeHttpsDictionary(environment)
+		let HTTP = Proxy.makeHttpDictionary(environment)
+		let HTTPS = Proxy.makeHttpsDictionary(environment)
 
-		let combined = http.merging(https) { _, property in property }
+		let combined = HTTP.merging(HTTPS) { _, property in property }
 
 		// the proxy dictionary on URLSessionConfiguration must be nil so that it can default to the system proxy.
 		connectionProxyDictionary = combined.isEmpty ? nil : combined
@@ -49,5 +49,5 @@ struct Proxy {
 }
 
 extension Proxy {
-	static let value: Proxy = Proxy(environment: ProcessInfo.processInfo.environment)
+	static let `default`: Proxy = Proxy(environment: ProcessInfo.processInfo.environment)
 }
