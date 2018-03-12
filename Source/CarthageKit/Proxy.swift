@@ -1,3 +1,5 @@
+import Foundation
+
 struct Proxy {
 	let connectionProxyDictionary: [AnyHashable: Any]?
 

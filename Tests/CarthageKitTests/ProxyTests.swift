@@ -1,4 +1,5 @@
 @testable import CarthageKit
+import Foundation
 import Nimble
 import Quick
 
