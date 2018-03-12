@@ -4,16 +4,16 @@ struct Proxy {
 	let connectionProxyDictionary: [AnyHashable: Any]?
 
 	init(environment: [String: String]) {
-		let HTTP = Proxy.makeHttpDictionary(environment)
-		let HTTPS = Proxy.makeHttpsDictionary(environment)
+		let http = Proxy.makeHTTPDictionary(environment)
+		let https = Proxy.makeHTTPSDictionary(environment)
 
-		let combined = HTTP.merging(HTTPS) { _, property in property }
+		let combined = http.merging(https) { _, property in property }
 
 		// the proxy dictionary on URLSessionConfiguration must be nil so that it can default to the system proxy.
 		connectionProxyDictionary = combined.isEmpty ? nil : combined
 	}
 
-	private static func makeHttpDictionary(_ environment: [String: String]) -> [AnyHashable: Any] {
+	private static func makeHTTPDictionary(_ environment: [String: String]) -> [AnyHashable: Any] {
 		let vars = ["http_proxy", "HTTP_PROXY"]
 		guard let proxyURL = URL(string: vars.flatMap { environment[$0] }.first ?? "") else {
 			return [:]
@@ -30,7 +30,7 @@ struct Proxy {
 		return dictionary
 	}
 
-	private static func makeHttpsDictionary(_ environment: [String: String]) -> [AnyHashable: Any] {
+	private static func makeHTTPSDictionary(_ environment: [String: String]) -> [AnyHashable: Any] {
 		let vars = ["https_proxy", "HTTPS_PROXY"]
 		guard let proxyURL = URL(string: vars.flatMap { environment[$0] }.first ?? "") else {
 			return [:]
