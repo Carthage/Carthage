@@ -138,7 +138,7 @@ public func buildableSchemesInDirectory(
 						return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platforms))
 					}
 				}
-		}.flatMap(.merge) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+		}.flatMap(.merge) { scheme, project -> SignalProducer<(Scheme, ProjectLocator, ProjectLocator), CarthageError> in
 			return locator
 				// This scheduler hop is required to avoid disallowed recursive signals.
 				// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
@@ -157,13 +157,16 @@ public func buildableSchemesInDirectory(
 				// which the scheme is defined instead.
 				.concat(value: (project, []))
 				.take(first: 1)
-				.map { project, _ in (scheme, project) }
+				.map { host, _ in (scheme, project, host) }
 		}
-		.flatMap(.concurrent(limit: 4)) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+		.flatMap(.concurrent(limit: 4)) { (scheme: Scheme, project: ProjectLocator, host: ProjectLocator) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			/// Check whether we should the scheme by checking against the project. If we're building
+			/// from a workspace, then it might include additional targets that would trigger our
+			/// check.
 			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 			return shouldBuildScheme(buildArguments, platforms)
 				.filter { $0 }
-				.map { _ in (scheme, project) }
+				.map { _ in (scheme, host) }
 		}
 }
 
