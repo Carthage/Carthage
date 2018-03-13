@@ -130,15 +130,9 @@ public func buildableSchemesInDirectory(
 		// `.noSharedFrameworkSchemes`.
 		.filter { projects in !projects.isEmpty }
 		.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-			return schemesInProjects(projects)
-				.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-					if !schemes.isEmpty {
-						return .init(schemes)
-					} else {
-						return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platforms))
-					}
-				}
-		}.flatMap(.merge) { scheme, project -> SignalProducer<(Scheme, ProjectLocator, ProjectLocator), CarthageError> in
+			return schemesInProjects(projects).flatten()
+		}
+		.flatMap(.merge) { scheme, project -> SignalProducer<(Scheme, ProjectLocator, ProjectLocator), CarthageError> in
 			return locator
 				// This scheduler hop is required to avoid disallowed recursive signals.
 				// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
@@ -167,6 +161,14 @@ public func buildableSchemesInDirectory(
 			return shouldBuildScheme(buildArguments, platforms)
 				.filter { $0 }
 				.map { _ in (scheme, host) }
+		}
+		.collect()
+		.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			if !schemes.isEmpty {
+				return .init(schemes)
+			} else {
+				return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platforms))
+			}
 		}
 }
 
