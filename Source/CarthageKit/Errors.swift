@@ -260,7 +260,7 @@ extension CarthageError: CustomStringConvertible {
 		case let .noSharedFrameworkSchemes(dependency, platforms):
 			var description = "Dependency \"\(dependency.name)\" has no shared framework schemes"
 			if !platforms.isEmpty {
-				let platformsString = platforms.map { $0.description }.joined(separator: ", ")
+				let platformsString = platforms.map { $0.rawValue }.joined(separator: ", ")
 				description += " for any of the platforms: \(platformsString)"
 			}
 

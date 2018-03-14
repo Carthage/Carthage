@@ -17,6 +17,9 @@ opt_in_rules:
 - vertical_parameter_alignment_on_call
 
 disabled_rules:
+- closure_end_indentation
+- function_parameter_count
+- identifier_name
 - redundant_string_enum_value
 - superfluous_disable_command
 

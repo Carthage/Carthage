@@ -34,10 +34,3 @@ public enum Platform: String {
 		}
 	}
 }
-
-// TODO: this won't be necessary anymore with Swift 2.
-extension Platform: CustomStringConvertible {
-	public var description: String {
-		return rawValue
-	}
-}

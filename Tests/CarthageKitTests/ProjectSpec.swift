@@ -19,7 +19,6 @@ class ProjectSpec: QuickSpec {
 			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				let project = Project(directoryURL: directoryURL)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
-					.flatten(.concat)
 					.ignoreTaskData()
 					.on(value: { project, scheme in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -564,6 +563,31 @@ class ProjectSpec: QuickSpec {
 				let url = directoryURL.appendingPathComponent("Carthage/Build/.\(dependencyName).version", isDirectory: false)
 				expect(error) == CarthageError.versionFileNotFound(.git(GitURL(dependencyName)), url)
 				expect(events).to(beEmpty())
+			}
+		}
+
+		describe("transitiveDependencies") {
+			it("should find the correct dependencies") {
+				let cartfile = """
+				github "Alamofire/Alamofire" "4.6.0"
+				github "CocoaLumberjack/CocoaLumberjack" "3.4.1"
+				github "Moya/Moya" "10.0.2"
+				github "ReactiveCocoa/ReactiveSwift" "2.0.1"
+				github "ReactiveX/RxSwift" "4.1.2"
+				github "antitypical/Result" "3.2.4"
+				github "yapstudios/YapDatabase" "3.0.2"
+				"""
+
+				let resolvedCartfile = ResolvedCartfile.from(string: cartfile)
+				let project = Project(directoryURL: URL(string: "file://fake")!)
+
+				let result = project.transitiveDependencies(["Moya"], resolvedCartfile: resolvedCartfile.value!).single()
+
+				expect(result?.value).to(contain("Alamofire"))
+				expect(result?.value).to(contain("ReactiveSwift"))
+				expect(result?.value).to(contain("Result"))
+				expect(result?.value).to(contain("RxSwift"))
+				expect(result?.value?.count) == 4
 			}
 		}
 	}
