@@ -248,16 +248,17 @@ public func createVersionFileForCommitish(
 
 	if !buildProducts.isEmpty {
 		return SignalProducer<URL, CarthageError>(buildProducts)
-			.flatMap(.merge) { url -> SignalProducer<(String, URL), CarthageError> in
-				let frameworkName = url.deletingPathExtension().lastPathComponent
-				let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
-				return SignalProducer.zip(hashForFileAtURL(frameworkURL), SignalProducer<URL, CarthageError>(value: url))
-			}
-			.reduce(into: platformCaches) { (platformCaches: inout PlatformCaches, values: (String, URL)) in
-				let hash = values.0
-				let url = values.1
+			.flatMap(.merge) { url -> SignalProducer<(String, (String, String)), CarthageError> in
 				let frameworkName = url.deletingPathExtension().lastPathComponent
 				let platformName = url.deletingLastPathComponent().lastPathComponent
+				let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
+				let details = SignalProducer<(String, String), CarthageError>(value: (frameworkName, platformName))
+				return SignalProducer.zip(hashForFileAtURL(frameworkURL), details)
+			}
+			.reduce(into: platformCaches) { (platformCaches: inout PlatformCaches, values: (String, (String, String))) in
+				let hash = values.0
+				let platformName = values.1.0
+				let frameworkName = values.1.1
 
 				let cachedFramework = CachedFramework(name: frameworkName, hash: hash)
 				if var frameworks = platformCaches[platformName] {
