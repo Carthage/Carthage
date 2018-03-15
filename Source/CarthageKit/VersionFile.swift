@@ -253,7 +253,7 @@ public func createVersionFileForCommitish(
 				let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
 				return SignalProducer.zip(hashForFileAtURL(frameworkURL), SignalProducer<URL, CarthageError>(value: url))
 			}
-			.reduce(into: PlatformCaches()) { (platformCaches, values) in
+			.reduce(into: platformCaches) { (platformCaches: inout PlatformCaches, values: (String, URL)) in
 				let hash = values.0
 				let url = values.1
 				let frameworkName = url.deletingPathExtension().lastPathComponent
