@@ -207,7 +207,7 @@ private func createVersionFile(
 	_ commitish: String,
 	dependencyName: String,
 	rootDirectoryURL: URL,
-	platformCaches: [String:[CachedFramework]]
+	platformCaches: [String: [CachedFramework]]
 	) -> SignalProducer<(), CarthageError> {
 	return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
 		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
@@ -238,7 +238,7 @@ public func createVersionFileForCommitish(
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
 	if !buildProducts.isEmpty {
-		var platformCaches: [String:[CachedFramework]] = [:]
+		var platformCaches: [String: [CachedFramework]] = [:]
 
 		let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
 		for platform in platformsToCache {
@@ -253,7 +253,7 @@ public func createVersionFileForCommitish(
 				let details = SignalProducer<(String, String), CarthageError>(value: (platformName, frameworkName))
 				return SignalProducer.zip(hashForFileAtURL(frameworkURL), details)
 			}
-			.reduce(into: platformCaches) { (platformCaches: inout [String:[CachedFramework]], values: (String, (String, String))) in
+			.reduce(into: platformCaches) { (platformCaches: inout [String: [CachedFramework]], values: (String, (String, String))) in
 				let hash = values.0
 				let platformName = values.1.0
 				let frameworkName = values.1.1
