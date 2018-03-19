@@ -130,40 +130,48 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 		// `.noSharedFrameworkSchemes`.
 		.filter { projects in !projects.isEmpty }
 		.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-			return schemesInProjects(projects)
-				.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-					if !schemes.isEmpty {
-						return .init(schemes)
-					} else {
-						return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platforms))
-					}
-				}
-		}.flatMap(.merge) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			return schemesInProjects(projects).flatten()
+		}
+		.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			/// Check whether we should the scheme by checking against the project. If we're building
+			/// from a workspace, then it might include additional targets that would trigger our
+			/// check.
+			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+			return shouldBuildScheme(buildArguments, platforms)
+				.filter { $0 }
+				.map { _ in (scheme, project) }
+		}
+		.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
 			return locator
 				// This scheduler hop is required to avoid disallowed recursive signals.
 				// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
 				.start(on: QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
 				// Pick up the first workspace which can build the scheme.
-				.filter { project, schemes in
+				.flatMap(.concat) { project, schemes -> SignalProducer<ProjectLocator, CarthageError> in
 					switch project {
 					case .workspace where schemes.contains(scheme):
-						return true
+						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+						return shouldBuildScheme(buildArguments, platforms)
+							.filter { $0 }
+							.map { _ in project }
 
 					default:
-						return false
+						return .empty
 					}
 				}
 				// If there is no appropriate workspace, use the project in
 				// which the scheme is defined instead.
-				.concat(value: (project, []))
+				.concat(value: project)
 				.take(first: 1)
-				.map { project, _ in (scheme, project) }
+				.map { project in (scheme, project) }
 		}
-		.flatMap(.concurrent(limit: 4)) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-			return shouldBuildScheme(buildArguments, platforms)
-				.filter { $0 }
-				.map { _ in (scheme, project) }
+		.collect()
+		.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			if !schemes.isEmpty {
+				return .init(schemes)
+			} else {
+				return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platforms))
+			}
 		}
 }
 
