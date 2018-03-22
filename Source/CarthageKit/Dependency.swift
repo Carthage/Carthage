@@ -2,15 +2,10 @@ import Foundation
 import Result
 import Tentacle
 
-/// Protocol which supports URL + potential custom description
-public protocol URLConvertible: CustomStringConvertible {
-	var url: URL { get }
-}
-
 /// Uniquely identifies a project that can be used as a dependency.
 public enum Dependency {
 	/// Uniquely identifies a Binary Spec's resolved URL and its description
-	public struct BinaryURL: URLConvertible {
+	public struct BinaryURL: CustomStringConvertible {
 		/// A Resolved URL
 		public let url: URL
 
