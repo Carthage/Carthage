@@ -115,14 +115,10 @@ extension Dependency: Hashable {
 	}
 }
 
-extension Dependency.Binary: Comparable {
+extension Dependency.Binary: Equatable {
 	public static func == (_ lhs: Dependency.Binary, _ rhs: Dependency.Binary) -> Bool {
 		return lhs.absoluteURL == rhs.absoluteURL &&
 				lhs.representation == rhs.representation
-	}
-
-	public static func < (_ lhs: Dependency.Binary, _ rhs: Dependency.Binary) -> Bool {
-		return lhs.representation.caseInsensitiveCompare(rhs.representation) == .orderedAscending
 	}
 }
 
