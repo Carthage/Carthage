@@ -1,5 +1,4 @@
 @testable import CarthageKit
-import CarthageKit
 import Foundation
 import Nimble
 import Quick
@@ -90,7 +89,7 @@ class DependencySpec: QuickSpec {
 			context("binary") {
 				it("should be the last component of the URL") {
 					let url = URL(string: "https://server.com/myproject")!
-					let binary = Dependency.Binary(absoluteURL: url, representation: url.absoluteString)
+					let binary = Dependency.BinaryURL(url: url)
 					let dependency = Dependency.binary(binary)
 
 					expect(dependency.name) == "myproject"
@@ -98,7 +97,7 @@ class DependencySpec: QuickSpec {
 
 				it("should not include the trailing git suffix") {
 					let url = URL(string: "https://server.com/myproject.json")!
-					let binary = Dependency.Binary(absoluteURL: url, representation: url.absoluteString)
+					let binary = Dependency.BinaryURL(url: url)
 					let dependency = Dependency.binary(binary)
 
 					expect(dependency.name) == "myproject"
@@ -207,7 +206,7 @@ class DependencySpec: QuickSpec {
 
 					let dependency = Dependency.from(scanner).value
 					let url = URL(string: "https://mysupercoolinternalwebhost.com/")!
-					let binary = Dependency.Binary(absoluteURL: url, representation: url.absoluteString)
+					let binary = Dependency.BinaryURL(url: url)
 
 					expect(dependency) == .binary(binary)
 				}
@@ -217,7 +216,7 @@ class DependencySpec: QuickSpec {
 					
 					let dependency = Dependency.from(scanner).value
 					let url = URL(string: "file:///my/domain/com/framework.json")!
-					let binary = Dependency.Binary(absoluteURL: url, representation: url.absoluteString)
+					let binary = Dependency.BinaryURL(url: url)
 
 					expect(dependency) == .binary(binary)
 				}
@@ -230,7 +229,7 @@ class DependencySpec: QuickSpec {
 					let dependency = Dependency.from(scanner, base: workingDirectory).value
 
 					let url = URL(string: "file:///current/working/directory/my/relative/path/framework.json")!
-					let binary = Dependency.Binary(absoluteURL: url, representation: relativePath)
+					let binary = Dependency.BinaryURL(url: url, overloadedDescription: relativePath)
 
 					expect(dependency) == .binary(binary)
 				}
@@ -241,7 +240,7 @@ class DependencySpec: QuickSpec {
 
 					let dependency = Dependency.from(scanner).value
 					let url = URL(string: "file:///my/absolute/path/framework.json")!
-					let binary = Dependency.Binary(absoluteURL: url, representation: absolutePath)
+					let binary = Dependency.BinaryURL(url: url, overloadedDescription: absolutePath)
 
 					expect(dependency) == .binary(binary)
 				}

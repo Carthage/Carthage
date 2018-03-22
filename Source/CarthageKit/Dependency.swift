@@ -2,15 +2,29 @@ import Foundation
 import Result
 import Tentacle
 
+/// Protocol which supports URL + potential custom description
+public protocol URLConvertible: CustomStringConvertible {
+	var url: URL { get }
+}
+
 /// Uniquely identifies a project that can be used as a dependency.
 public enum Dependency {
+	/// Uniquely identifies a Binary Spec's resolved URL and its description
+	public struct BinaryURL: URLConvertible {
+		/// A Resolved URL
+		public let url: URL
 
-	public struct Binary {
-		// Actual Absolute URL
-		let absoluteURL: URL
+		/// An Optional custom description
+		public let overloadedDescription: String?
 
-		// Representative Value
-		let representation: String
+		public var description: String {
+			return overloadedDescription ?? url.description
+		}
+
+		init(url: URL, overloadedDescription: String? = nil) {
+			self.url = url
+			self.overloadedDescription = overloadedDescription
+		}
 	}
 
 	/// A repository hosted on GitHub.com or GitHub Enterprise.
@@ -20,7 +34,7 @@ public enum Dependency {
 	case git(GitURL)
 
 	/// A binary-only framework
-	case binary(Binary)
+	case binary(BinaryURL)
 
 	/// The unique, user-visible name for this project.
 	public var name: String {
@@ -31,8 +45,8 @@ public enum Dependency {
 		case let .git(url):
 			return url.name ?? url.urlString
 
-		case let .binary(binary):
-			return binary.absoluteURL.lastPathComponent.stripping(suffix: ".json")
+		case let .binary(url):
+			return url.url.lastPathComponent.stripping(suffix: ".json")
 		}
 	}
 
@@ -110,21 +124,8 @@ extension Dependency: Hashable {
 			return url.hashValue
 
 		case let .binary(binary):
-			return binary.hashValue
+			return binary.url.hashValue
 		}
-	}
-}
-
-extension Dependency.Binary: Equatable {
-	public static func == (_ lhs: Dependency.Binary, _ rhs: Dependency.Binary) -> Bool {
-		return lhs.absoluteURL == rhs.absoluteURL &&
-				lhs.representation == rhs.representation
-	}
-}
-
-extension Dependency.Binary: Hashable {
-	public var hashValue: Int {
-		return absoluteURL.hashValue ^ representation.hashValue
 	}
 }
 
@@ -150,10 +151,10 @@ extension Dependency: Scannable {
 			parser = { urlString in
 				if let url = URL(string: urlString) {
 					if url.scheme == "https" || url.scheme == "file" {
-						return .success(self.binary(Binary(absoluteURL: url, representation: url.absoluteString)))
+						return .success(self.binary(BinaryURL(url: url)))
 					} else if url.scheme == nil {
 						let absoluteURL = URL(fileURLWithPath: url.relativePath, isDirectory: false, relativeTo: base).standardizedFileURL
-						return .success(self.binary(Binary(absoluteURL: absoluteURL, representation: url.absoluteString)))
+						return .success(self.binary(BinaryURL(url: absoluteURL, overloadedDescription: url.absoluteString)))
 					} else {
 						return .failure(ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
 					}
@@ -200,7 +201,7 @@ extension Dependency: CustomStringConvertible {
 			return "git \"\(url)\""
 
 		case let .binary(binary):
-			return "binary \"\(binary.representation)\""
+			return "binary \"\(binary)\""
 		}
 	}
 }
@@ -222,5 +223,17 @@ extension Dependency {
 		case .binary:
 			return nil
 		}
+	}
+}
+
+extension Dependency.BinaryURL: Equatable {
+	public static func == (_ lhs: Dependency.BinaryURL, _ rhs: Dependency.BinaryURL) -> Bool {
+		return lhs.description == rhs.description
+	}
+}
+
+extension Dependency.BinaryURL: Hashable {
+	public var hashValue: Int {
+		return description.hashValue
 	}
 }

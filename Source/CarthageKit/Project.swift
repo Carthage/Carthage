@@ -226,25 +226,23 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.startOnQueue(cloneOrFetchQueue)
 	}
 
-	// Dane - what is this value used for?
-	func downloadBinaryFrameworkDefinition(binary: Dependency.Binary) -> SignalProducer<BinaryProject, CarthageError> {
+	func downloadBinaryFrameworkDefinition(binary: Dependency.BinaryURL) -> SignalProducer<BinaryProject, CarthageError> {
 		return SignalProducer<Project.CachedBinaryProjects, CarthageError>(value: self.cachedBinaryProjects)
 			.flatMap(.merge) { binaryProjectsByURL -> SignalProducer<BinaryProject, CarthageError> in
-				if let binaryProject = binaryProjectsByURL[binary.absoluteURL] {
+				if let binaryProject = binaryProjectsByURL[binary.url] {
 					return SignalProducer(value: binaryProject)
 				} else {
-					// What arguments create this?
-					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(binary), binary.absoluteURL))
+					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(binary), binary.url))
 
-					return URLSession.shared.reactive.data(with: URLRequest(url: binary.absoluteURL))
-						.mapError { CarthageError.readFailed(binary.absoluteURL, $0 as NSError) }
+					return URLSession.shared.reactive.data(with: URLRequest(url: binary.url))
+						.mapError { CarthageError.readFailed(binary.url, $0 as NSError) }
 						.attemptMap { data, _ in
 							return BinaryProject.from(jsonData: data).mapError { error in
-								return CarthageError.invalidBinaryJSON(binary.absoluteURL, error)
+								return CarthageError.invalidBinaryJSON(binary.url, error)
 							}
 						}
 						.on(value: { binaryProject in
-							self.cachedBinaryProjects[binary.absoluteURL] = binaryProject
+							self.cachedBinaryProjects[binary.url] = binaryProject
 						})
 				}
 			}
@@ -866,7 +864,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 	private func installBinariesForBinaryProject(
-		binary: Dependency.Binary,
+		binary: Dependency.BinaryURL,
 		pinnedVersion: PinnedVersion,
 		projectName: String,
 		toolchain: String?

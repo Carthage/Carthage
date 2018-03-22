@@ -361,7 +361,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should return definition") {
-				let binary = Dependency.Binary(absoluteURL: testDefinitionURL, representation: testDefinitionURL.absoluteString)
+				let binary = Dependency.BinaryURL(url: testDefinitionURL)
 				let actualDefinition = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.value
 
 				let expectedBinaryProject = BinaryProject(versions: [
@@ -373,7 +373,7 @@ class ProjectSpec: QuickSpec {
 
 			it("should return read failed if unable to download") {
 				let url = URL(string: "file:///thisfiledoesnotexist.json")!
-				let binary = Dependency.Binary(absoluteURL: url, representation: url.absoluteString)
+				let binary = Dependency.BinaryURL(url: url)
 				let actualError = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.error
 
 				switch actualError {
@@ -387,7 +387,7 @@ class ProjectSpec: QuickSpec {
 
 			it("should return an invalid binary JSON error if unable to parse file") {
 				let invalidDependencyURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/invalid", withExtension: "json")!
-				let binary = Dependency.Binary(absoluteURL: invalidDependencyURL, representation: invalidDependencyURL.absoluteString)
+				let binary = Dependency.BinaryURL(url: invalidDependencyURL)
 
 				let actualError = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.error
 
@@ -404,7 +404,7 @@ class ProjectSpec: QuickSpec {
 				var events = [ProjectEvent]()
 				project.projectEvents.observeValues { events.append($0) }
 
-				let binary = Dependency.Binary(absoluteURL: testDefinitionURL, representation: testDefinitionURL.absoluteString)
+				let binary = Dependency.BinaryURL(url: testDefinitionURL)
 				_ = project.downloadBinaryFrameworkDefinition(binary: binary).first()
 
 				expect(events) == [.downloadingBinaryFrameworkDefinition(.binary(binary), testDefinitionURL)]
