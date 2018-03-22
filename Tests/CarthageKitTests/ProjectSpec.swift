@@ -361,7 +361,8 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should return definition") {
-				let actualDefinition = project.downloadBinaryFrameworkDefinition(url: testDefinitionURL).first()?.value
+				let binary = Dependency.Binary(absoluteURL: testDefinitionURL, representation: testDefinitionURL.absoluteString)
+				let actualDefinition = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.value
 
 				let expectedBinaryProject = BinaryProject(versions: [
 					PinnedVersion("1.0"): URL(string: "https://my.domain.com/release/1.0.0/framework.zip")!,
@@ -371,7 +372,9 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should return read failed if unable to download") {
-				let actualError = project.downloadBinaryFrameworkDefinition(url: URL(string: "file:///thisfiledoesnotexist.json")!).first()?.error
+				let url = URL(string: "file:///thisfiledoesnotexist.json")!
+				let binary = Dependency.Binary(absoluteURL: url, representation: url.absoluteString)
+				let actualError = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.error
 
 				switch actualError {
 				case .some(.readFailed):
@@ -384,8 +387,9 @@ class ProjectSpec: QuickSpec {
 
 			it("should return an invalid binary JSON error if unable to parse file") {
 				let invalidDependencyURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/invalid", withExtension: "json")!
+				let binary = Dependency.Binary(absoluteURL: invalidDependencyURL, representation: invalidDependencyURL.absoluteString)
 
-				let actualError = project.downloadBinaryFrameworkDefinition(url: invalidDependencyURL).first()?.error
+				let actualError = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.error
 
 				switch actualError {
 				case .some(CarthageError.invalidBinaryJSON(invalidDependencyURL, BinaryJSONError.invalidJSON)):
@@ -400,9 +404,10 @@ class ProjectSpec: QuickSpec {
 				var events = [ProjectEvent]()
 				project.projectEvents.observeValues { events.append($0) }
 
-				_ = project.downloadBinaryFrameworkDefinition(url: testDefinitionURL).first()
+				let binary = Dependency.Binary(absoluteURL: testDefinitionURL, representation: testDefinitionURL.absoluteString)
+				_ = project.downloadBinaryFrameworkDefinition(binary: binary).first()
 
-				expect(events) == [.downloadingBinaryFrameworkDefinition(.binary(testDefinitionURL), testDefinitionURL)]
+				expect(events) == [.downloadingBinaryFrameworkDefinition(.binary(binary), testDefinitionURL)]
 			}
 		}
 
