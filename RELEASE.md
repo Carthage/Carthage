@@ -40,7 +40,9 @@ Edit the release you created. Add the `Carthage.pkg` and `CarthageKit.framework`
 ## 6. Update Homebrew (optional)
 Many people install Carthage with Homebrew. In order for them to upgrade, [the Homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/carthage.rb) needs to be updated.
 
-Normally only the tag and the SHA need to be updated in the formula. But if the supported Xcode versions have changed, that will need to be updated as well.
+Normally only `tag` and `revision` need to be updated in the formula. But if the supported Xcode versions have changed, that will need to be updated as well.
+The `sha256` values will be automatically changed by homebrew once the bottles are ready.
 
 Once you open a PR against the Homebrew repo, it’s typically merged within a few hours.
+You can open a PR from your own fork or from [Carthage/homebrew-core](https://github.com/Carthage/homebrew-core).
 
