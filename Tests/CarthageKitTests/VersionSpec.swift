@@ -19,6 +19,7 @@ class SemanticVersionSpec: QuickSpec {
 			expect(version) < SemanticVersion(major: 10, minor: 0, patch: 0)
 			expect(version) < SemanticVersion(major: 2, minor: 10, patch: 1)
 			expect(version) < SemanticVersion(major: 2, minor: 1, patch: 10)
+
 		}
 
 		it("should parse semantic versions") {
@@ -48,13 +49,19 @@ class VersionSpecifierSpec: QuickSpec {
 
 		describe("isSatisfied(by:)") {
 			let v0_1_0 = PinnedVersion("0.1.0")
+			let v0_1_0_pre23 = PinnedVersion("0.1.0-pre23")
+			let v0_1_0_build123 = PinnedVersion("v0_1_0+build123")
 			let v0_1_1 = PinnedVersion("0.1.1")
 			let v0_2_0 = PinnedVersion("0.2.0")
+			let v0_2_0_candidate = PinnedVersion("0.2.0-candidate")
 			let v1_3_2 = PinnedVersion("1.3.2")
 			let v2_0_2 = PinnedVersion("2.0.2")
 			let v2_1_1 = PinnedVersion("2.1.1")
+			let v2_1_1_build3345 = PinnedVersion("2.1.1+build3345")
+			let v2_1_1_alpha = PinnedVersion("2.1.1-alpha")
 			let v2_2_0 = PinnedVersion("2.2.0")
 			let v3_0_0 = PinnedVersion("3.0.0")
+			let nonSemantic = PinnedVersion("new-version")
 
 			it("should allow all versions for .any") {
 				let specifier = VersionSpecifier.any
@@ -63,6 +70,21 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.isSatisfied(by: v2_1_1)) == true
 				expect(specifier.isSatisfied(by: v2_2_0)) == true
 				expect(specifier.isSatisfied(by: v3_0_0)) == true
+				expect(specifier.isSatisfied(by: v0_1_0)) == true
+				expect(specifier.isSatisfied(by: v0_1_0_build123)) == true
+				expect(specifier.isSatisfied(by: v2_1_1_build3345)) == true
+			}
+			
+			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
+			it("should allow a non-semantic version for Any") {
+				let specifier = VersionSpecifier.any
+				expect(specifier.isSatisfied(by: nonSemantic)) == true
+			}
+			
+			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
+			it("should allow a pre-release version for Any") {
+				let specifier = VersionSpecifier.any
+				expect(specifier.isSatisfied(by: v2_1_1_alpha)) == true
 			}
 
 			it("should allow greater or equal versions for .atLeast") {
@@ -73,6 +95,50 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.isSatisfied(by: v2_2_0)) == true
 				expect(specifier.isSatisfied(by: v3_0_0)) == true
 			}
+			
+			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
+			it("should allow a non-semantic version for .atLeast") {
+				let specifier = VersionSpecifier.atLeast(SemanticVersion.from(v2_1_1).value!)
+				expect(specifier.isSatisfied(by: nonSemantic)) == true
+			}
+			
+			it("should not allow for a pre-release of the same non-pre-release version for .atLeast")
+			{
+				let specifier = VersionSpecifier.atLeast(SemanticVersion.from(v2_1_1).value!)
+				expect(specifier.isSatisfied(by: v2_1_1_alpha)) == true
+			}
+			
+			it("should allow for a build version of the same version for .atLeast")
+			{
+				let specifier = VersionSpecifier.atLeast(SemanticVersion.from(v2_1_1).value!)
+				expect(specifier.isSatisfied(by: v2_1_1_build3345)) == true
+			}
+			
+			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
+			it("should allow for a build version of a different version for .atLeast")
+			{
+				let specifier = VersionSpecifier.atLeast(SemanticVersion.from(v3_0_0).value!)
+				expect(specifier.isSatisfied(by: v2_1_1_build3345)) == true
+			}
+			
+			it("should allow for a build version of the same version for .compatibleWith")
+			{
+				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.from(v2_1_1).value!)
+				expect(specifier.isSatisfied(by: v2_1_1_build3345)) == true
+			}
+			
+			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
+			it("should allow for a build version of a different version for .compatibleWith")
+			{
+				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.from(v1_3_2).value!)
+				expect(specifier.isSatisfied(by: v2_1_1_build3345)) == true
+			}
+			
+			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
+			it("shold allow for a greater pre-release version for AtLease") {
+				let specifier = VersionSpecifier.atLeast(SemanticVersion.from(v2_0_2).value!)
+				expect(specifier.isSatisfied(by: v2_1_1_alpha)) == true
+			}
 
 			it("should allow greater or equal minor and patch versions for .compatibleWith") {
 				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.from(v2_1_1).value!)
@@ -82,6 +148,19 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.isSatisfied(by: v2_2_0)) == true
 				expect(specifier.isSatisfied(by: v3_0_0)) == false
 			}
+			
+			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
+			it("should allow a non-semantic version for .atLeast") {
+				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.from(v2_1_1).value!)
+				expect(specifier.isSatisfied(by: nonSemantic)) == true
+			}
+			
+			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
+			it("should allow equal minor and patch pre-release version for CompatibleWith") {
+				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.from(v2_1_1).value!)
+				expect(specifier.isSatisfied(by: v2_1_1_alpha)) == true
+			}
+
 
 			it("should only allow exact versions for .exactly") {
 				let specifier = VersionSpecifier.exactly(SemanticVersion.from(v2_2_0).value!)
@@ -90,6 +169,29 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.isSatisfied(by: v2_1_1)) == false
 				expect(specifier.isSatisfied(by: v2_2_0)) == true
 				expect(specifier.isSatisfied(by: v3_0_0)) == false
+			}
+			
+			it("should not allow a build version of a different version for .exactly") {
+				let specifier = VersionSpecifier.exactly(SemanticVersion.from(v1_3_2).value!)
+				expect(specifier.isSatisfied(by: v0_1_0_build123)) == true
+			}
+			
+			it("should not allow a build version of the same version for .exactly") {
+				let specifier = VersionSpecifier.exactly(SemanticVersion.from(v2_1_1).value!)
+				expect(specifier.isSatisfied(by: v2_1_1_build3345)) == true
+			}
+			
+			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
+			it("should allow for a non-semantic version for .exactly") {
+				let specifier = VersionSpecifier.exactly(SemanticVersion.from(v2_1_1).value!)
+				expect(specifier.isSatisfied(by: nonSemantic)) == true
+			}
+			
+			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
+			it("should allow any pre-release versions to satisfy 0.x") {
+				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.from(v0_1_0).value!)
+				expect(specifier.isSatisfied(by: v0_1_0_pre23)) == true
+				expect(specifier.isSatisfied(by: v0_2_0_candidate)) == true
 			}
 
 			it("should allow only greater patch versions to satisfy 0.x") {
