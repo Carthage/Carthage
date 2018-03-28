@@ -102,7 +102,8 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.isSatisfied(by: nonSemantic)) == true
 			}
 			
-			it("should not allow for a pre-release of the same non-pre-release version for .atLeast")
+			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
+			it("should allow for a pre-release of the same non-pre-release version for .atLeast")
 			{
 				let specifier = VersionSpecifier.atLeast(SemanticVersion.from(v2_1_1).value!)
 				expect(specifier.isSatisfied(by: v2_1_1_alpha)) == true
@@ -135,7 +136,7 @@ class VersionSpecifierSpec: QuickSpec {
 			}
 			
 			/// The following behavior does not follow the SemVer <https://semver.org/> specifications
-			it("shold allow for a greater pre-release version for AtLease") {
+			it("should allow for a greater pre-release version for .atLeast") {
 				let specifier = VersionSpecifier.atLeast(SemanticVersion.from(v2_0_2).value!)
 				expect(specifier.isSatisfied(by: v2_1_1_alpha)) == true
 			}
