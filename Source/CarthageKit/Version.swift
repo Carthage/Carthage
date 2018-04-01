@@ -8,6 +8,7 @@ import ReactiveSwift
 public protocol VersionType: Hashable {}
 
 /// A semantic version.
+/// - Note: See <http://semver.org/>
 public struct SemanticVersion: VersionType {
 	/// The major version.
 	///
@@ -24,6 +25,17 @@ public struct SemanticVersion: VersionType {
 	///
 	/// Increments to this component represent backwards-compatible bug fixes.
 	public let patch: Int
+	
+	/// The pre-release identifier
+	///
+	/// Indicates that the version is unstable
+	public let preRelease : String?
+	
+	/// The build metadata
+	///
+	/// Build metadata is ignored when comparing versions
+	public let buildMetadata : String?
+	
 
 	/// A list of the version components, in order from most significant to
 	/// least significant.
@@ -31,10 +43,12 @@ public struct SemanticVersion: VersionType {
 		return [ major, minor, patch ]
 	}
 
-	public init(major: Int, minor: Int, patch: Int) {
+	public init(major: Int, minor: Int, patch: Int, preRelease: String? = nil, buildMetadata: String? = nil) {
 		self.major = major
 		self.minor = minor
 		self.patch = patch
+		self.preRelease = preRelease
+		self.buildMetadata = buildMetadata
 	}
 
 	/// The set of all characters present in valid semantic versions.
@@ -52,8 +66,6 @@ public struct SemanticVersion: VersionType {
 			if scanner.isAtEnd {
 				return .success(version)
 			} else {
-				// Disallow versions like "1.0a5", because we only support
-				// SemVer right now.
 				return .failure(ScannableError(message: "syntax of version \"\(version)\" is unsupported", currentLine: scanner.currentLine))
 			}
 		}
@@ -64,12 +76,13 @@ extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
 	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, ScannableError> {
-		var version: NSString?
-		guard scanner.scanCharacters(from: versionCharacterSet, into: &version), let unwrapped = version else {
+		var versionBuffer: NSString?
+		guard scanner.scanCharacters(from: versionCharacterSet, into: &versionBuffer),
+			let version = versionBuffer as String? else {
 			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
 		}
 
-		let components = (unwrapped as String)
+		let components = version
 			.split(omittingEmptySubsequences: true) { $0 == "." }
 		if components.isEmpty {
 			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
@@ -87,11 +100,46 @@ extension SemanticVersion: Scannable {
 			return .failure(ScannableError(message: "expected minor version number", currentLine: scanner.currentLine))
 		}
 
+		let hasPatchComponent = components.count > 2
 		let patch = parseVersion(at: 2) ?? 0
+		
+		let preRelease = scanner.scanStringWithPrefix("-", until: "+")
+		let buildMetadata = scanner.scanStringWithPrefix("+", until: "")
 
-		return .success(self.init(major: major, minor: minor, patch: patch))
+		guard (preRelease == nil && buildMetadata == nil) || hasPatchComponent else {
+			return .failure(ScannableError(message: "can not have pre-release or build metadata without patch, in \"\(version)\""))
+		}
+		
+		return .success(self.init(major: major,
+		                          minor: minor,
+		                          patch: patch,
+		                          preRelease: preRelease,
+		                          buildMetadata: buildMetadata))
 	}
 }
+
+extension Scanner {
+	
+	/// Scans a string that is supposed to start with the given prefix, until the given
+	/// string is encountered.
+	/// - returns: the scanned string without the prefix. If the string does not start with the prefix,
+	/// or the scanner is at the end, it returns `nil`.
+	fileprivate func scanStringWithPrefix(_ prefix: String, until: String) -> String? {
+		if !self.isAtEnd {
+			var buffer : NSString? = nil
+			self.scanUpTo(until, into: &buffer)
+			guard let stringWithPrefix = buffer as String?, stringWithPrefix.hasPrefix(prefix) else {
+				return nil
+			}
+			let removeUntilIndex = stringWithPrefix.index(stringWithPrefix.startIndex, offsetBy: prefix.characters.count)
+			return String(stringWithPrefix.suffix(from: removeUntilIndex))
+		} else {
+			return nil
+		}
+	}
+}
+
+
 
 extension SemanticVersion: Comparable {
 	public static func < (_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
