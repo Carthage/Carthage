@@ -8,6 +8,7 @@ cache:
 branches:
   only:
     - master
+    - fix/semver-support
 matrix:
   include:
     - os: osx
