@@ -21,7 +21,7 @@ class SemanticVersionSpec: QuickSpec {
 			expect(version) < SemanticVersion(major: 2, minor: 1, patch: 10)
 			
 			expect(version) < SemanticVersion(major: 2, minor: 1, patch: 2, buildMetadata: "b421")
-			expect(version) == SemanticVersion(major: 2, minor: 1, patch: 1, buildMetadata: "b2334")
+			expect(version) != SemanticVersion(major: 2, minor: 1, patch: 1, buildMetadata: "b2334")
 			expect(version) > SemanticVersion(major: 2, minor: 1, patch: 0, buildMetadata: "b421")
 		}
 		
