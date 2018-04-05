@@ -48,7 +48,7 @@ public struct OutdatedCommand: CommandProtocol {
 	}
 
 	public struct Options: OptionsProtocol {
-		public let useSSH: Bool
+		public let useHTTPS: Bool
 		public let isVerbose: Bool
 		public let outputXcodeWarnings: Bool
 		public let colorOptions: ColorOptions
@@ -62,7 +62,7 @@ public struct OutdatedCommand: CommandProtocol {
 			)
 
 			return curry(self.init)
-				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
+				<*> mode <| Option(key: "use-https", defaultValue: false, usage: "use HTTPS for downloading GitHub repositories")
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> mode <| Option(key: "xcode-warnings", defaultValue: false, usage: "output Xcode compatible warning messages")
 				<*> ColorOptions.evaluate(mode, additionalUsage: UpdateType.legend)
@@ -74,7 +74,7 @@ public struct OutdatedCommand: CommandProtocol {
 		public func loadProject() -> SignalProducer<Project, CarthageError> {
 			let directoryURL = URL(fileURLWithPath: self.directoryPath, isDirectory: true)
 			let project = Project(directoryURL: directoryURL)
-			project.preferHTTPS = !self.useSSH
+			project.preferHTTPS = self.useHTTPS
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
 			project.projectEvents.observeValues { eventSink.put($0) }

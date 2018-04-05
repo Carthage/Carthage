@@ -54,7 +54,6 @@ _carthage() {
                         '--platform: :(all macOS iOS watchOS tvOS)' \
                         '--toolchain: :(com.apple.dt.toolchain.Swift_2_3 com.apple.dt.toolchain.XcodeDefault)' \
                         '--derived-data: :_directories' \
-                        '--use-ssh' \
                         '--use-submodules' \
                         '--no-use-binaries' \
                         '--color: :(auto always never)' \
@@ -79,7 +78,6 @@ _carthage() {
                         ;;
                 (checkout)
                     _arguments \
-                        '--use-ssh' \
                         '--use-submodules' \
                         '--no-use-binaries' \
                         '--color: :(auto always never)' \
@@ -101,7 +99,6 @@ _carthage() {
                     ;;
                 (outdated)
                     _arguments \
-                        '--use-ssh' \
                         '--verbose' \
                         '--color: :(auto always never)' \
                         '--project-directory: :_directories' \

@@ -29,7 +29,7 @@ complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l configuratio
 complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l platform -x -a "all macOS iOS watchOS tvOS"
 complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l toolchain -x -a "com.apple.dt.toolchain.Swift_2_3 com.apple.dt.toolchain.XcodeDefault"
 complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l derived-data -x -a '(__fish_complete_directories (commandline -ct))'
-complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l use-ssh
+complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l use-https
 complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l use-submodules
 complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l no-use-binaries
 complete -c carthage -n '__fish_prog_using_subcommand bootstrap' -l color -a "auto always never" -x
@@ -46,7 +46,7 @@ complete -c carthage -n '__fish_prog_using_subcommand build' -l verbose
 complete -c carthage -n '__fish_prog_using_subcommand build' -l project-directory -x -a '(__fish_complete_directories (commandline -ct))'
 complete -c carthage -n '__fish_prog_using_subcommand build' -l cache-builds
 
-complete -c carthage -n '__fish_prog_using_subcommand checkout' -l use-ssh
+complete -c carthage -n '__fish_prog_using_subcommand checkout' -l use-https
 complete -c carthage -n '__fish_prog_using_subcommand checkout' -l use-submodules
 complete -c carthage -n '__fish_prog_using_subcommand checkout' -l no-use-binaries
 complete -c carthage -n '__fish_prog_using_subcommand checkout' -l color -a "auto always never" -x
@@ -56,7 +56,7 @@ complete -c carthage -n '__fish_prog_using_subcommand fetch' -l color -a "auto a
 
 complete -c carthage -n '__fish_prog_using_subcommand help' -a "archive bootstrap build checkout copy-frameworks fetch help outdated update version" -f
 
-complete -c carthage -n '__fish_prog_using_subcommand outdated' -l use-ssh
+complete -c carthage -n '__fish_prog_using_subcommand outdated' -l use-https
 complete -c carthage -n '__fish_prog_using_subcommand outdated' -l verbose
 complete -c carthage -n '__fish_prog_using_subcommand outdated' -l color -a "auto always never" -x
 complete -c carthage -n '__fish_prog_using_subcommand outdated' -l project-directory -x -a '(__fish_complete_directories (commandline -ct))'
@@ -68,7 +68,7 @@ complete -c carthage -n '__fish_prog_using_subcommand update' -l configuration -
 complete -c carthage -n '__fish_prog_using_subcommand update' -l platform -x -a "all macOS iOS watchOS tvOS"
 complete -c carthage -n '__fish_prog_using_subcommand update' -l toolchain -x -a "com.apple.dt.toolchain.Swift_2_3 com.apple.dt.toolchain.XcodeDefault"
 complete -c carthage -n '__fish_prog_using_subcommand update' -l derived-data -x -a '(__fish_complete_directories (commandline -ct))'
-complete -c carthage -n '__fish_prog_using_subcommand update' -l use-ssh
+complete -c carthage -n '__fish_prog_using_subcommand update' -l use-https
 complete -c carthage -n '__fish_prog_using_subcommand update' -l use-submodules
 complete -c carthage -n '__fish_prog_using_subcommand update' -l no-use-binaries
 complete -c carthage -n '__fish_prog_using_subcommand update' -l color -a "auto always never" -x
