@@ -28,7 +28,7 @@ _carthage() {
                 ;;
             bootstrap|update)
                 COMPREPLY=($(compgen -W '--no-checkout --no-build --verbose --configuration \
-                    --platform --toolchain --derived-data --use-ssh --use-submodules \
+                    --platform --toolchain --derived-data --use-submodules \
                     --no-use-binaries --color --project-directory --cache-builds' -- ${cur}))
                 return 0
                 ;;
@@ -38,7 +38,7 @@ _carthage() {
                 return 0
                 ;;
             checkout)
-                COMPREPLY=($(compgen -W '--use-ssh --use-submodules --no-use-binaries \
+                COMPREPLY=($(compgen -W '--use-submodules --no-use-binaries \
                     --color --project-directory' -- ${cur}))
                 return 0
                 ;;
@@ -47,7 +47,7 @@ _carthage() {
                 return 0
                 ;;
             outdated)
-                COMPREPLY=($(compgen -W '--use-ssh --verbose --color \
+                COMPREPLY=($(compgen -W '--verbose --color \
                     --project-directory' -- ${cur}))
                 return 0
                 ;;
