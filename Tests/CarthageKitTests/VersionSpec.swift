@@ -112,9 +112,9 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.isSatisfied(by: v2_1_1_build3345)) == true
 			}
 			
-			it("should not allow a non-semantic version for Any") {
+			it("should allow a non-semantic version for Any") {
 				let specifier = VersionSpecifier.any
-				expect(specifier.isSatisfied(by: nonSemantic)) == false
+				expect(specifier.isSatisfied(by: nonSemantic)) == true
 			}
 			
 			it("should not allow a pre-release version for Any") {
@@ -131,9 +131,9 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.isSatisfied(by: v3_0_0)) == true
 			}
 			
-			it("should not allow a non-semantic version for .atLeast") {
+			it("should allow a non-semantic version for .atLeast") {
 				let specifier = VersionSpecifier.atLeast(SemanticVersion.from(v2_1_1).value!)
-				expect(specifier.isSatisfied(by: nonSemantic)) == false
+				expect(specifier.isSatisfied(by: nonSemantic)) == true
 			}
 			
 			it("should not allow for a pre-release of the same non-pre-release version for .atLeast")
@@ -180,12 +180,12 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.isSatisfied(by: v3_0_0)) == false
 			}
 			
-			it("should not allow a non-semantic version for .atLeast") {
+			it("should allow a non-semantic version for .compatibleWith") {
 				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.from(v2_1_1).value!)
-				expect(specifier.isSatisfied(by: nonSemantic)) == false
+				expect(specifier.isSatisfied(by: nonSemantic)) == true
 			}
 			
-			it("should not allow equal minor and patch pre-release version for CompatibleWith") {
+			it("should not allow equal minor and patch pre-release version for .compatibleWith") {
 				let specifier = VersionSpecifier.compatibleWith(SemanticVersion.from(v2_1_1).value!)
 				expect(specifier.isSatisfied(by: v2_1_1_alpha)) == false
 			}
@@ -210,9 +210,9 @@ class VersionSpecifierSpec: QuickSpec {
 				expect(specifier.isSatisfied(by: v2_1_1_build3345)) == false
 			}
 			
-			it("should not allow for a non-semantic version for .exactly") {
+			it("should allow for a non-semantic version for .exactly") {
 				let specifier = VersionSpecifier.exactly(SemanticVersion.from(v2_1_1).value!)
-				expect(specifier.isSatisfied(by: nonSemantic)) == false
+				expect(specifier.isSatisfied(by: nonSemantic)) == true
 			}
 			
 			it("should not allow any pre-release versions to satisfy 0.x") {

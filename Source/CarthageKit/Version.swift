@@ -332,10 +332,9 @@ public enum VersionSpecifier: VersionType {
 			if let semanticVersion = SemanticVersion.from(version).value {
 				return predicate(semanticVersion)
 			} else {
-				// Consider non-semantic versions (e.g., branches) not to meet
-				// any requirement as we can't guarantee any ordering nor
-				// compatibility
-				return false
+				// Consider non-semantic versions (e.g., branches) to meet every
+				// version range requirement
+				return true
 			}
 		}
 
