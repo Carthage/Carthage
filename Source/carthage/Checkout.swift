@@ -8,19 +8,19 @@ import Curry
 /// Type that encapsulates the configuration and evaluation of the `checkout` subcommand.
 public struct CheckoutCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
-		public let useSSH: Bool
+		public let useHTTPS: Bool
 		public let useSubmodules: Bool
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
 		public let dependenciesToCheckout: [String]?
 
-		private init(useSSH: Bool,
+		private init(useHTTPS: Bool,
 		             useSubmodules: Bool,
 		             colorOptions: ColorOptions,
 		             directoryPath: String,
 		             dependenciesToCheckout: [String]?
 		) {
-			self.useSSH = useSSH
+			self.useHTTPS = useHTTPS
 			self.useSubmodules = useSubmodules
 			self.colorOptions = colorOptions
 			self.directoryPath = directoryPath
@@ -33,7 +33,7 @@ public struct CheckoutCommand: CommandProtocol {
 
 		public static func evaluate(_ mode: CommandMode, dependenciesUsage: String) -> Result<Options, CommandantError<CarthageError>> {
 			return curry(self.init)
-				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
+				<*> mode <| Option(key: "use-https", defaultValue: false, usage: "use HTTPS for downloading GitHub repositories")
 				<*> mode <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 				<*> ColorOptions.evaluate(mode)
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
@@ -45,7 +45,7 @@ public struct CheckoutCommand: CommandProtocol {
 		public func loadProject() -> SignalProducer<Project, CarthageError> {
 			let directoryURL = URL(fileURLWithPath: self.directoryPath, isDirectory: true)
 			let project = Project(directoryURL: directoryURL)
-			project.preferHTTPS = !self.useSSH
+			project.preferHTTPS = self.useHTTPS
 			project.useSubmodules = self.useSubmodules
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
