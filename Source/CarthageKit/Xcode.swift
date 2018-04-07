@@ -500,7 +500,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			case 1:
 				return build(sdk: sdks[0], with: buildArgs, in: workingDirectoryURL)
 					.flatMapTaskEvents(.merge) { settings in
-						return copyBuildProductIntoDirectory(folderURL, settings)
+						return copyBuildProductIntoDirectory(settings.productDestinationPath(in: folderURL), settings)
 					}
 
 			case 2:
@@ -554,7 +554,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						return mergeBuildProducts(
 							deviceBuildSettings: deviceSettings,
 							simulatorBuildSettings: simulatorSettings,
-							into: folderURL
+							into: deviceSettings.productDestinationPath(in: folderURL)
 						)
 					}
 

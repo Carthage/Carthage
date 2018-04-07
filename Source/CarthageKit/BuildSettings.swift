@@ -283,6 +283,17 @@ public struct BuildSettings {
 	public var projectPath: Result<String, CarthageError> {
 		return self["PROJECT_FILE_PATH"]
 	}
+
+	/// Add subdirectory path if it's not possible to paste product to destination path
+	public func productDestinationPath(in destinationURL: URL) -> URL {
+		let directoryURL: URL
+		if frameworkType.value == .static {
+			directoryURL = destinationURL.appendingPathComponent("Static")
+		} else {
+			directoryURL = destinationURL
+		}
+		return directoryURL
+	}
 }
 
 extension BuildSettings: CustomStringConvertible {
