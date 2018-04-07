@@ -150,6 +150,7 @@ private func buildActionIsArchiveOrInstall() -> Bool {
 
 private func inputFiles() -> SignalProducer<String, CarthageError> {
 	let count: Result<Int, CarthageError> = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT").flatMap { count in
+		// swiftlint:disable:next identifier_name
 		if let i = Int(count) {
 			return .success(i)
 		} else {
