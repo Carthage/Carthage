@@ -643,6 +643,20 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 			// and https://developer.apple.com/library/content/qa/qa1964/_index.html.
 			let xcodebuildAction: BuildArguments.Action = sdk.isDevice ? .archive : .build
 			return BuildSettings.load(with: argsForLoading, for: xcodebuildAction)
+				.flatMap(.concat) { settings -> SignalProducer<BuildSettings, CarthageError> in
+					var arguments = argsForLoading
+					if let derivedDataPath = arguments.derivedDataPath {
+						if settings.frameworkType.value == .static {
+							arguments.derivedDataPath = derivedDataPath + "/Static/"
+						} else {
+							arguments.derivedDataPath = derivedDataPath + "/Dynamic/"
+						}
+						argsForBuilding.derivedDataPath = arguments.derivedDataPath
+						return BuildSettings.load(with: arguments, for: xcodebuildAction)
+					} else {
+						return BuildSettings.load(with: arguments, for: xcodebuildAction)
+					}
+				}
 				.filter { settings in
 					// Only copy build products that are frameworks
 					guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
