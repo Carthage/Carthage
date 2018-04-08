@@ -643,19 +643,36 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 			// and https://developer.apple.com/library/content/qa/qa1964/_index.html.
 			let xcodebuildAction: BuildArguments.Action = sdk.isDevice ? .archive : .build
 			return BuildSettings.load(with: argsForLoading, for: xcodebuildAction)
+/// Not sure which solution is better: separate derived data or cleaning TARGET_BUILD_DIR. Both look OK
+//				.flatMap(.concat) { settings -> SignalProducer<BuildSettings, CarthageError> in
+//					var arguments = argsForLoading
+//					if let derivedDataPath = arguments.derivedDataPath.flatMap(URL.init(string:)) {
+//						if settings.frameworkType.value == .static {
+//							arguments.derivedDataPath = derivedDataPath.appendingPathComponent("Static").path
+//						} else {
+//							arguments.derivedDataPath = derivedDataPath.appendingPathComponent("Dynamic").path
+//						}
+//						argsForBuilding.derivedDataPath = arguments.derivedDataPath
+//						return BuildSettings.load(with: arguments, for: xcodebuildAction)
+//					} else {
+//						return SignalProducer(error: CarthageError.invalidArgument(description: "To build dependency, you have to pass correct DerivedData path"))
+//					}
+//				}
 				.flatMap(.concat) { settings -> SignalProducer<BuildSettings, CarthageError> in
-					var arguments = argsForLoading
-					if let derivedDataPath = arguments.derivedDataPath {
-						if settings.frameworkType.value == .static {
-							arguments.derivedDataPath = derivedDataPath + "/Static/"
-						} else {
-							arguments.derivedDataPath = derivedDataPath + "/Dynamic/"
-						}
-						argsForBuilding.derivedDataPath = arguments.derivedDataPath
-						return BuildSettings.load(with: arguments, for: xcodebuildAction)
-					} else {
-						return BuildSettings.load(with: arguments, for: xcodebuildAction)
+
+					guard let buildDir = settings["TARGET_BUILD_DIR"].value else {
+						return SignalProducer(error: CarthageError.missingBuildSetting("Missing TARGET_BUILD_DIR in build settings \(settings)"))
 					}
+
+					let result = Task("/usr/bin/xcrun", arguments: ["rm", "-rf", buildDir])
+						.launch()
+						.wait()
+
+					if let error = result.error {
+						return SignalProducer(error: CarthageError.taskError(error))
+					}
+
+					return SignalProducer(value: settings)
 				}
 				.filter { settings in
 					// Only copy build products that are frameworks

@@ -28,6 +28,11 @@ extension String {
 			return self
 		}
 	}
+
+	/// Converts string to filepath URL and appending path component
+	public func appendingFilePathComponent(_ pathComponent: String) -> URL {
+		return URL(fileURLWithPath: self).appendingPathComponent(pathComponent)
+	}
 }
 
 extension Signal {

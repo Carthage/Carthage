@@ -6,7 +6,7 @@
 //
 //
 
-#import <Cocoa/Cocoa.h>
+@import Foundation;
 
 //! Project version number for TestFramework.
 FOUNDATION_EXPORT double TestFrameworkVersionNumber;

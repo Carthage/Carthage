@@ -426,11 +426,61 @@ class XcodeSpec: QuickSpec {
 	}
 }
 
+
+class XcodeSpecialSpec: QuickSpec {
+	override func spec() {
+
+		it("should build static and place result to subdirectory") {
+			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "DynamicAndStatic", withExtension: nil)!
+			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
+
+			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
+
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug",
+																				   platforms: [.iOS],
+																				   derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path))
+				.ignoreTaskData()
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+			expect(result.error).to(beNil())
+
+			let frameworkDynamicPath = _buildFolderURL.appendingPathComponent("iOS/TestFramework.framework").path
+			let frameworkStaticPath = _buildFolderURL.appendingPathComponent("iOS/Static/TestFramework.framework").path
+
+			let frameworkDynamicPackagePath = frameworkDynamicPath.appendingFilePathComponent("TestFramework").path
+			let frameworkStaticPackagePath = frameworkStaticPath.appendingFilePathComponent("TestFramework").path
+
+			expect(frameworkDynamicPath).to(beExistingDirectory())
+			expect(frameworkStaticPath).to(beExistingDirectory())
+			expect(frameworkDynamicPackagePath).to(beFramework(ofType: .dynamic))
+			expect(frameworkStaticPackagePath).to(beFramework(ofType: .static))
+
+			let result2 = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug",
+																					platforms: [.iOS],
+																					derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path))
+				.ignoreTaskData()
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+			expect(result2.error).to(beNil())
+			expect(frameworkDynamicPackagePath).to(stillBeFramework(ofType: .dynamic))
+			expect(frameworkStaticPackagePath).to(stillBeFramework(ofType: .static))
+		}
+	}
+}
+
 // MARK: Matcher
+
+internal func stillBeFramework(ofType: FrameworkType) -> Predicate<String> {
+	return beFramework(ofType: ofType)
+}
 
 internal func beFramework(ofType: FrameworkType) -> Predicate<String> {
 	return Predicate { actualExpression in
-		let message = "exist and be a \(ofType == .static ? "static" : "dynamic") type"
+		var message = "exist and be a \(ofType == .static ? "static" : "dynamic") type"
 		let actualPath = try actualExpression.evaluate()
 
 		guard let path = actualPath else {
@@ -454,6 +504,10 @@ internal func beFramework(ofType: FrameworkType) -> Predicate<String> {
 			resultBool = stringOutput.contains("current ar archive") && !stringOutput.contains("dynamically linked shared library")
 		} else {
 			resultBool = !stringOutput.contains("current ar archive") && stringOutput.contains("dynamically linked shared library")
+		}
+
+		if !resultBool {
+			message += ", got \(stringOutput)"
 		}
 
 		return PredicateResult(
