@@ -292,10 +292,8 @@ public struct BuildSettings {
 	/// Add subdirectory path if it's not possible to paste product to destination path
 	public func productDestinationPath(in destinationURL: URL) -> URL {
 		let directoryURL: URL
-		if let frameworkTypeOpt = frameworkType.value,
-			let frameworkType = frameworkTypeOpt,
-			frameworkType == .static {
-			directoryURL = destinationURL.appendingPathComponent(frameworkType.folderName)
+		if frameworkType.value == .static {
+			directoryURL = destinationURL.appendingPathComponent(FrameworkType.static.folderName)
 		} else {
 			directoryURL = destinationURL
 		}
