@@ -214,6 +214,16 @@ internal enum FrameworkType {
 			return nil
 		}
 	}
+
+	/// Folder name for subdirectory
+	var folderName: String {
+		switch self {
+		case .static:
+			return "Static"
+		case .dynamic:
+			return "Dynamic"
+		}
+	}
 }
 
 /// Describes the type of packages, given their CFBundlePackageType.
@@ -580,6 +590,40 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		}
 }
 
+/// Fixes problem when more than one xcode target has the same Product name for same Deployment target and configuration.
+///
+/// Not sure which solution is better: separate derived data or cleaning TARGET_BUILD_DIR. Both look OK.
+/// To enable separated derived data, change function signature.
+private func resolveSameTargetName(for settings: BuildSettings) -> SignalProducer<BuildSettings, CarthageError> {
+//	var arguments = argsForLoading
+//	if let derivedDataPath = arguments.derivedDataPath.flatMap(URL.init(string:)) {
+//		if settings.frameworkType.value == .static {
+//			arguments.derivedDataPath = derivedDataPath.appendingPathComponent(FrameworkType.static.folderName).path
+//		} else {
+//			arguments.derivedDataPath = derivedDataPath.appendingPathComponent(FrameworkType.dynamic.folderName).path
+//		}
+//		argsForBuilding.derivedDataPath = arguments.derivedDataPath
+//		return BuildSettings.load(with: arguments, for: xcodebuildAction)
+//	} else {
+//		return SignalProducer(error: CarthageError.invalidArgument(description: "To build dependency, you have to pass correct DerivedData path"))
+//	}
+
+	switch settings.targetBuildDir {
+	case .success(let buildDir):
+		let result = Task("/usr/bin/xcrun", arguments: ["rm", "-rf", buildDir])
+			.launch()
+			.wait()
+
+		if let error = result.error {
+			return SignalProducer(error: CarthageError.taskError(error))
+		}
+
+		return SignalProducer(value: settings)
+	case .failure(let error):
+		return SignalProducer(error: error)
+	}
+}
+
 /// Runs the build for a given sdk and build arguments, optionally performing a clean first
 private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectoryURL: URL) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
 	var argsForLoading = buildArgs
@@ -643,37 +687,6 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 			// and https://developer.apple.com/library/content/qa/qa1964/_index.html.
 			let xcodebuildAction: BuildArguments.Action = sdk.isDevice ? .archive : .build
 			return BuildSettings.load(with: argsForLoading, for: xcodebuildAction)
-/// Not sure which solution is better: separate derived data or cleaning TARGET_BUILD_DIR. Both look OK
-//				.flatMap(.concat) { settings -> SignalProducer<BuildSettings, CarthageError> in
-//					var arguments = argsForLoading
-//					if let derivedDataPath = arguments.derivedDataPath.flatMap(URL.init(string:)) {
-//						if settings.frameworkType.value == .static {
-//							arguments.derivedDataPath = derivedDataPath.appendingPathComponent("Static").path
-//						} else {
-//							arguments.derivedDataPath = derivedDataPath.appendingPathComponent("Dynamic").path
-//						}
-//						argsForBuilding.derivedDataPath = arguments.derivedDataPath
-//						return BuildSettings.load(with: arguments, for: xcodebuildAction)
-//					} else {
-//						return SignalProducer(error: CarthageError.invalidArgument(description: "To build dependency, you have to pass correct DerivedData path"))
-//					}
-//				}
-				.flatMap(.concat) { settings -> SignalProducer<BuildSettings, CarthageError> in
-
-					guard let buildDir = settings["TARGET_BUILD_DIR"].value else {
-						return SignalProducer(error: CarthageError.missingBuildSetting("Missing TARGET_BUILD_DIR in build settings \(settings)"))
-					}
-
-					let result = Task("/usr/bin/xcrun", arguments: ["rm", "-rf", buildDir])
-						.launch()
-						.wait()
-
-					if let error = result.error {
-						return SignalProducer(error: CarthageError.taskError(error))
-					}
-
-					return SignalProducer(value: settings)
-				}
 				.filter { settings in
 					// Only copy build products that are frameworks
 					guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
@@ -686,6 +699,10 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 					return !dependencyCheckoutDir.hasSubdirectory(projectURL)
 				}
 				.collect()
+				.flatMap(.concat) { settings -> SignalProducer<[BuildSettings], CarthageError> in
+					let producers = settings.map { resolveSameTargetName(for: $0) }
+					return SignalProducer(value: producers).flatten().flatten(.concat).collect()
+				}
 				.flatMap(.concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 					let bitcodeEnabled = settings.reduce(true) { $0 && ($1.bitcodeEnabled.value ?? false) }
 					if bitcodeEnabled {

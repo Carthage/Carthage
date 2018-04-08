@@ -430,6 +430,27 @@ class XcodeSpec: QuickSpec {
 class XcodeSpecialSpec: QuickSpec {
 	override func spec() {
 
+		it("should not copy build products from nested dependencies produced by workspace") {
+			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "WorkspaceWithDependency", withExtension: nil)!
+			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
+
+			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
+
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]))
+				.ignoreTaskData()
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+			expect(result.error).to(beNil())
+
+			let framework1Path = _buildFolderURL.appendingPathComponent("Mac/TestFramework1.framework").path
+			let framework2Path = _buildFolderURL.appendingPathComponent("Mac/TestFramework2.framework").path
+
+			expect(framework1Path).to(beExistingDirectory())
+			expect(framework2Path).notTo(beExistingDirectory())
+		}
+
 		it("should build static and place result to subdirectory") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "DynamicAndStatic", withExtension: nil)!
 			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
@@ -446,14 +467,14 @@ class XcodeSpecialSpec: QuickSpec {
 				.wait()
 			expect(result.error).to(beNil())
 
-			let frameworkDynamicPath = _buildFolderURL.appendingPathComponent("iOS/TestFramework.framework").path
-			let frameworkStaticPath = _buildFolderURL.appendingPathComponent("iOS/Static/TestFramework.framework").path
+			let frameworkDynamicURL = _buildFolderURL.appendingPathComponent("iOS/TestFramework.framework")
+			let frameworkStaticURL = _buildFolderURL.appendingPathComponent("iOS/Static/TestFramework.framework")
 
-			let frameworkDynamicPackagePath = frameworkDynamicPath.appendingFilePathComponent("TestFramework").path
-			let frameworkStaticPackagePath = frameworkStaticPath.appendingFilePathComponent("TestFramework").path
+			let frameworkDynamicPackagePath = frameworkDynamicURL.appendingPathComponent("TestFramework").path
+			let frameworkStaticPackagePath = frameworkStaticURL.appendingPathComponent("TestFramework").path
 
-			expect(frameworkDynamicPath).to(beExistingDirectory())
-			expect(frameworkStaticPath).to(beExistingDirectory())
+			expect(frameworkDynamicURL.path).to(beExistingDirectory())
+			expect(frameworkStaticURL.path).to(beExistingDirectory())
 			expect(frameworkDynamicPackagePath).to(beFramework(ofType: .dynamic))
 			expect(frameworkStaticPackagePath).to(beFramework(ofType: .static))
 

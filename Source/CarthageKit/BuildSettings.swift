@@ -284,11 +284,18 @@ public struct BuildSettings {
 		return self["PROJECT_FILE_PATH"]
 	}
 
+	/// Attempts to determine target build directory
+	public var targetBuildDir: Result<String, CarthageError> {
+		return self["TARGET_BUILD_DIR"]
+	}
+
 	/// Add subdirectory path if it's not possible to paste product to destination path
 	public func productDestinationPath(in destinationURL: URL) -> URL {
 		let directoryURL: URL
-		if frameworkType.value == .static {
-			directoryURL = destinationURL.appendingPathComponent("Static")
+		if let frameworkTypeOpt = frameworkType.value,
+			let frameworkType = frameworkTypeOpt,
+			frameworkType == .static {
+			directoryURL = destinationURL.appendingPathComponent(frameworkType.folderName)
 		} else {
 			directoryURL = destinationURL
 		}
