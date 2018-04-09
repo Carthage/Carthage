@@ -7,10 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		2190FA981FD5B2F0008D8A79 /* OutdatedDependencies in Resources */ = {isa = PBXBuildFile; fileRef = 2190FA961FD5B05F008D8A79 /* OutdatedDependencies */; };
-		21F11B481FE67A26009FB783 /* DB.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F11B461FE6787F009FB783 /* DB.swift */; };
 		0FDFEA7E2055D638008862E3 /* ProxyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7D2055D638008862E3 /* ProxyTests.swift */; };
 		0FDFEA802055FACE008862E3 /* Proxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7F2055FACE008862E3 /* Proxy.swift */; };
+		2190FA981FD5B2F0008D8A79 /* OutdatedDependencies in Resources */ = {isa = PBXBuildFile; fileRef = 2190FA961FD5B05F008D8A79 /* OutdatedDependencies */; };
+		21F11B481FE67A26009FB783 /* DB.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F11B461FE6787F009FB783 /* DB.swift */; };
 		3A0472F31C782B4000097EC7 /* Algorithms.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0472F21C782B4000097EC7 /* Algorithms.swift */; };
 		3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0472F41C782D1D00097EC7 /* AlgorithmsSpec.swift */; };
 		3B19041E1E4CFE4A00A866AD /* FakeOldObjc.framework in Resources */ = {isa = PBXBuildFile; fileRef = 3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */; };
@@ -172,10 +172,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		2190FA961FD5B05F008D8A79 /* OutdatedDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OutdatedDependencies; sourceTree = "<group>"; };
-		21F11B461FE6787F009FB783 /* DB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DB.swift; sourceTree = "<group>"; };
 		0FDFEA7D2055D638008862E3 /* ProxyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyTests.swift; sourceTree = "<group>"; };
 		0FDFEA7F2055FACE008862E3 /* Proxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Proxy.swift; sourceTree = "<group>"; };
+		2190FA961FD5B05F008D8A79 /* OutdatedDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OutdatedDependencies; sourceTree = "<group>"; };
+		21F11B461FE6787F009FB783 /* DB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DB.swift; sourceTree = "<group>"; };
 		3A0472F21C782B4000097EC7 /* Algorithms.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Algorithms.swift; sourceTree = "<group>"; };
 		3A0472F41C782D1D00097EC7 /* AlgorithmsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AlgorithmsSpec.swift; sourceTree = "<group>"; };
 		3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeOldObjc.framework; sourceTree = "<group>"; };
@@ -670,7 +670,7 @@
 			attributes = {
 				LastSwiftMigration = 0700;
 				LastSwiftUpdateCheck = 0700;
-				LastUpgradeCheck = 0900;
+				LastUpgradeCheck = 0930;
 				ORGANIZATIONNAME = Carthage;
 				TargetAttributes = {
 					D0D1216C19E87B05005E4BAA = {
@@ -927,6 +927,7 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -946,11 +947,13 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_SWIFT3_OBJC_INFERENCE = Off;
 				SWIFT_VERSION = 4.0;
 			};
@@ -1027,6 +1030,7 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1076,6 +1080,7 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
