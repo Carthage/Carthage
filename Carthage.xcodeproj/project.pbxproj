@@ -55,6 +55,7 @@
 		CD9A77991EDD7E2000A77B00 /* DuplicateDependencies in Resources */ = {isa = PBXBuildFile; fileRef = CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */; };
 		CD9A779B1EDD7FEB00A77B00 /* BinaryOnly in Resources */ = {isa = PBXBuildFile; fileRef = CD9A779A1EDD7FEB00A77B00 /* BinaryOnly */; };
 		CD9F3D931E6E6FC000B98A1A /* BinaryJSONError.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9F3D921E6E6FC000B98A1A /* BinaryJSONError.swift */; };
+		CD9FDF36207BBB17009C993A /* SwiftShims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9FDF35207BBB17009C993A /* SwiftShims.swift */; };
 		CDA0B6CA1C468E67006C499C /* GitURLSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA0B6C91C468E67006C499C /* GitURLSpec.swift */; };
 		CDB099241E6DC2D40030B4A8 /* ScannableError.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB099231E6DC2D40030B4A8 /* ScannableError.swift */; };
 		CDBE654C1F4BF0040060D94E /* Submodule.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDBE654B1F4BF0040060D94E /* Submodule.swift */; };
@@ -219,6 +220,7 @@
 		CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = DuplicateDependencies; sourceTree = "<group>"; };
 		CD9A779A1EDD7FEB00A77B00 /* BinaryOnly */ = {isa = PBXFileReference; lastKnownFileType = folder; path = BinaryOnly; sourceTree = "<group>"; };
 		CD9F3D921E6E6FC000B98A1A /* BinaryJSONError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryJSONError.swift; sourceTree = "<group>"; };
+		CD9FDF35207BBB17009C993A /* SwiftShims.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftShims.swift; sourceTree = "<group>"; };
 		CDA0B6C91C468E67006C499C /* GitURLSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitURLSpec.swift; sourceTree = "<group>"; };
 		CDB099231E6DC2D40030B4A8 /* ScannableError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScannableError.swift; sourceTree = "<group>"; };
 		CDBE654B1F4BF0040060D94E /* Submodule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Submodule.swift; sourceTree = "<group>"; };
@@ -523,6 +525,7 @@
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
 				CDB099231E6DC2D40030B4A8 /* ScannableError.swift */,
 				CDBE654B1F4BF0040060D94E /* Submodule.swift */,
+				CD9FDF35207BBB17009C993A /* SwiftShims.swift */,
 				3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */,
 				D0DE893F1A0F2CB00030A3EC /* Version.swift */,
 				F1CB3CFB1D63D05D00C9EB99 /* VersionFile.swift */,
@@ -855,6 +858,7 @@
 				D0A2025E1B114D1000C71375 /* ProducerQueue.swift in Sources */,
 				0FDFEA802055FACE008862E3 /* Proxy.swift in Sources */,
 				D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */,
+				CD9FDF36207BBB17009C993A /* SwiftShims.swift in Sources */,
 				F603929919EA29F80050A6AF /* Project.swift in Sources */,
 				CDBE654C1F4BF0040060D94E /* Submodule.swift in Sources */,
 				D069CA241A4E3B2700314A85 /* Archive.swift in Sources */,

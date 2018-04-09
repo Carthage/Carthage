@@ -15,7 +15,7 @@ struct Proxy {
 
 	private static func makeHTTPDictionary(_ environment: [String: String]) -> [AnyHashable: Any] {
 		let vars = ["http_proxy", "HTTP_PROXY"]
-		guard let proxyURL = URL(string: vars.flatMap { environment[$0] }.first ?? "") else {
+		guard let proxyURL = URL(string: vars.compactMap { environment[$0] }.first ?? "") else {
 			return [:]
 		}
 
@@ -32,7 +32,7 @@ struct Proxy {
 
 	private static func makeHTTPSDictionary(_ environment: [String: String]) -> [AnyHashable: Any] {
 		let vars = ["https_proxy", "HTTPS_PROXY"]
-		guard let proxyURL = URL(string: vars.flatMap { environment[$0] }.first ?? "") else {
+		guard let proxyURL = URL(string: vars.compactMap { environment[$0] }.first ?? "") else {
 			return [:]
 		}
 

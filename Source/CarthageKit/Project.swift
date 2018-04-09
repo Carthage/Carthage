@@ -484,7 +484,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			)
 			.map { ($0.dependencies, $1.dependencies, $2) }
 			.map { (currentDependencies, updatedDependencies, latestDependencies) -> [OutdatedDependency] in
-				return updatedDependencies.flatMap { (project, version) -> OutdatedDependency? in
+				return updatedDependencies.compactMap { (project, version) -> OutdatedDependency? in
 					if let resolved = currentDependencies[project], let latest = latestDependencies[project], resolved != version || resolved != latest {
 						if SemanticVersion.from(resolved).value == nil, version == resolved {
 							// If resolved version is not a semantic version but a commit
