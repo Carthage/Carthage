@@ -203,6 +203,27 @@ public func createVersionFile(
 	)
 }
 
+private func createVersionFile(
+	_ commitish: String,
+	dependencyName: String,
+	rootDirectoryURL: URL,
+	platformCaches: [String: [CachedFramework]]
+	) -> SignalProducer<(), CarthageError> {
+	return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
+		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
+		let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
+
+		let versionFile = VersionFile(
+			commitish: commitish,
+			macOS: platformCaches[Platform.macOS.rawValue],
+			iOS: platformCaches[Platform.iOS.rawValue],
+			watchOS: platformCaches[Platform.watchOS.rawValue],
+			tvOS: platformCaches[Platform.tvOS.rawValue])
+
+		return versionFile.write(to: versionFileURL)
+	}
+}
+
 /// Creates a version file for the dependency in the given root directory with:
 /// - The given commitish
 /// - The provided project name
@@ -216,47 +237,40 @@ public func createVersionFileForCommitish(
 	buildProducts: [URL],
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
-	var platformCaches: [String: [CachedFramework]] = [:]
-
-	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
-	for platform in platformsToCache {
-		platformCaches[platform.rawValue] = []
-	}
-
-	let writeVersionFile = SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
-		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
-		let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
-
-		let versionFile = VersionFile(
-			commitish: commitish,
-			macOS: platformCaches[Platform.macOS.rawValue],
-			iOS: platformCaches[Platform.iOS.rawValue],
-			watchOS: platformCaches[Platform.watchOS.rawValue],
-			tvOS: platformCaches[Platform.tvOS.rawValue])
-
-		return versionFile.write(to: versionFileURL)
-	}
-
 	if !buildProducts.isEmpty {
+		var platformCaches: [String: [CachedFramework]] = [:]
+
+		let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
+		for platform in platformsToCache {
+			platformCaches[platform.rawValue] = []
+		}
+
 		return SignalProducer<URL, CarthageError>(buildProducts)
-			.flatMap(.merge) { url -> SignalProducer<String, CarthageError> in
-				let platformName = url.deletingLastPathComponent().lastPathComponent
+			.flatMap(.merge) { url -> SignalProducer<(String, (String, String)), CarthageError> in
 				let frameworkName = url.deletingPathExtension().lastPathComponent
+				let platformName = url.deletingLastPathComponent().lastPathComponent
 				let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
-				return hashForFileAtURL(frameworkURL)
-					.on(value: { hash in
-						let cachedFramework = CachedFramework(name: frameworkName, hash: hash)
-						if var frameworks = platformCaches[platformName] {
-							frameworks.append(cachedFramework)
-							platformCaches[platformName] = frameworks
-						}
-					})
+				let details = SignalProducer<(String, String), CarthageError>(value: (platformName, frameworkName))
+				return SignalProducer.zip(hashForFileAtURL(frameworkURL), details)
 			}
-			.then(writeVersionFile)
+			.reduce(into: platformCaches) { (platformCaches: inout [String: [CachedFramework]], values: (String, (String, String))) in
+				let hash = values.0
+				let platformName = values.1.0
+				let frameworkName = values.1.1
+
+				let cachedFramework = CachedFramework(name: frameworkName, hash: hash)
+				if var frameworks = platformCaches[platformName] {
+					frameworks.append(cachedFramework)
+					platformCaches[platformName] = frameworks
+				}
+			}
+			.flatMap(.merge) { platformCaches -> SignalProducer<(), CarthageError> in
+				createVersionFile(commitish, dependencyName: dependencyName, rootDirectoryURL: rootDirectoryURL, platformCaches: platformCaches)
+			}
 	} else {
 		// Write out an empty version file for dependencies with no built frameworks, so cache builds can differentiate between
 		// no cache and a dependency that has no frameworks
-		return writeVersionFile
+		return createVersionFile(commitish, dependencyName: dependencyName, rootDirectoryURL: rootDirectoryURL, platformCaches: [:])
 	}
 }
 

@@ -127,7 +127,6 @@ class XcodeSpec: QuickSpec {
 
 			for dependency in dependencies {
 				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-					.flatten(.concat)
 					.ignoreTaskData()
 					.on(value: { project, scheme in // swiftlint:disable:this end_closure
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -137,7 +136,7 @@ class XcodeSpec: QuickSpec {
 				expect(result.error).to(beNil())
 			}
 
-			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this closure_params_parantheses
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -182,7 +181,7 @@ class XcodeSpec: QuickSpec {
 			expect(resultURL?.value) == targetURL
 			expect(targetURL.path).to(beExistingDirectory())
 
-			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7", "arm64" ], codesigningIdentity: "-").wait()
+			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7", "arm64" ], strippingDebugSymbols: true, codesigningIdentity: "-").wait()
 			expect(strippingResult.value).notTo(beNil())
 
 			let strippedArchitectures = architecturesInPackage(targetURL)
@@ -191,6 +190,24 @@ class XcodeSpec: QuickSpec {
 
 			expect(strippedArchitectures?.value).notTo(contain("i386"))
 			expect(strippedArchitectures?.value).to(contain("armv7", "arm64"))
+
+			/// Check whether the resulting framework contains debug symbols
+			/// There are many suggestions on how to do this but no one single
+			/// accepted way. This seems to work best:
+			/// https://lists.apple.com/archives/unix-porting/2006/Feb/msg00021.html
+			let hasDebugSymbols = SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(targetURL) }
+				.flatMap(.merge) { binaryURL -> SignalProducer<Bool, CarthageError> in
+					let nmTask = Task("/usr/bin/xcrun", arguments: [ "nm", "-ap", binaryURL.path])
+					return nmTask.launch()
+						.ignoreTaskData()
+						.mapError(CarthageError.taskError)
+						.map { String(data: $0, encoding: .utf8) ?? "" }
+						.flatMap(.merge) { output -> SignalProducer<Bool, NoError> in
+							return SignalProducer(value: output.contains("SO "))
+					}
+			}.single()
+
+			expect(hasDebugSymbols?.value).to(equal(false))
 
 			let modulesDirectoryURL = targetURL.appendingPathComponent("Modules", isDirectory: true)
 			expect(FileManager.default.fileExists(atPath: modulesDirectoryURL.path)) == false
@@ -217,11 +234,8 @@ class XcodeSpec: QuickSpec {
 		it("should build all subprojects for all platforms by default") {
 			let multipleSubprojects = "SampleMultipleSubprojects"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
-
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -238,7 +252,7 @@ class XcodeSpec: QuickSpec {
 			]
 
 			for (platform, framework) in expectedPlatformsFrameworks {
-				let path = _buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path
+				let path = buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path
 				expect(path).to(beExistingDirectory())
 			}
 		}
@@ -246,11 +260,8 @@ class XcodeSpec: QuickSpec {
 		it("should skip projects without shared framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
-
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -259,8 +270,8 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).to(beNil())
 
-			let macPath = _buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path
-			let iOSPath = _buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path
+			let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path
+			let iOSPath = buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path
 
 			for path in [ macPath, iOSPath ] {
 				expect(path).to(beExistingDirectory())
@@ -269,11 +280,8 @@ class XcodeSpec: QuickSpec {
 
 		it("should not copy build products from nested dependencies produced by workspace") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "WorkspaceWithDependency", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
-
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -281,8 +289,8 @@ class XcodeSpec: QuickSpec {
 				.wait()
 			expect(result.error).to(beNil())
 
-			let framework1Path = _buildFolderURL.appendingPathComponent("Mac/TestFramework1.framework").path
-			let framework2Path = _buildFolderURL.appendingPathComponent("Mac/TestFramework2.framework").path
+			let framework1Path = buildFolderURL.appendingPathComponent("Mac/TestFramework1.framework").path
+			let framework2Path = buildFolderURL.appendingPathComponent("Mac/TestFramework2.framework").path
 
 			expect(framework1Path).to(beExistingDirectory())
 			expect(framework2Path).notTo(beExistingDirectory())
@@ -290,11 +298,8 @@ class XcodeSpec: QuickSpec {
 
 		it("should error out with .noSharedFrameworkSchemes if there is no shared framework schemes") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "Swell-0.5.0", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
-
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -311,13 +316,13 @@ class XcodeSpec: QuickSpec {
 			}
 
 			expect(isExpectedError) == true
+			expect(result.error?.description) == "Dependency \"Swell-0.5.0\" has no shared framework schemes for any of the platforms: Mac"
 		}
 
 		it("should build for one platform") {
 			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
-				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { project, scheme in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -339,7 +344,6 @@ class XcodeSpec: QuickSpec {
 			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
-				.flatten(.concat)
 				.ignoreTaskData()
 				.on(value: { project, scheme in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -348,7 +352,7 @@ class XcodeSpec: QuickSpec {
 
 			expect(result.error).to(beNil())
 
-			// Verify that the build products of all specified platforms exist 
+			// Verify that the build products of all specified platforms exist
 			// at the top level.
 			let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency.name).framework").path
 			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(dependency.name).framework").path
@@ -375,28 +379,6 @@ class XcodeSpec: QuickSpec {
 		it("should not locate the project from a directory not containing it") {
 			let result = ProjectLocator.locate(in: directoryURL.appendingPathComponent("ReactiveCocoaLayout")).first()
 			expect(result).to(beNil())
-		}
-
-		it("should symlink the build directory") {
-			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
-			let version = PinnedVersion("0.1")
-
-			let dependencyURL =	directoryURL.appendingPathComponent(dependency.relativePath)
-			// Build
-			let buildURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
-			let dependencyBuildURL = dependencyURL.appendingPathComponent(Constants.binariesFolderPath)
-
-			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-				.flatten(.concat)
-				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
-					NSLog("Building scheme \"\(scheme)\" in \(project)")
-				})
-				.wait()
-
-			expect(result.error).to(beNil())
-
-			expect(dependencyBuildURL).to(beRelativeSymlinkToDirectory(buildURL))
 		}
 
 		it("should build static library and place result to subdirectory") {

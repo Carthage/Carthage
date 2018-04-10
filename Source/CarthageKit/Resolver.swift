@@ -2,6 +2,7 @@ import Foundation
 import Result
 import ReactiveSwift
 
+/// Protocol for resolving acyclic dependency graphs.
 public protocol ResolverProtocol {
 	init(
 		versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,

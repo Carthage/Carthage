@@ -102,7 +102,7 @@ public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments) -> 
 
 /// Finds schemes of projects or workspaces, which Carthage should build, found
 /// within the given directory.
-public func buildableSchemesInDirectory(
+public func buildableSchemesInDirectory( // swiftlint:disable:this function_body_length
 	_ directoryURL: URL,
 	withConfiguration configuration: String,
 	forPlatforms platforms: Set<Platform> = []
@@ -130,40 +130,48 @@ public func buildableSchemesInDirectory(
 		// `.noSharedFrameworkSchemes`.
 		.filter { projects in !projects.isEmpty }
 		.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-			return schemesInProjects(projects)
-				.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-					if !schemes.isEmpty {
-						return .init(schemes)
-					} else {
-						return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platforms))
-					}
-				}
-		}.flatMap(.merge) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			return schemesInProjects(projects).flatten()
+		}
+		.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			/// Check whether we should the scheme by checking against the project. If we're building
+			/// from a workspace, then it might include additional targets that would trigger our
+			/// check.
+			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+			return shouldBuildScheme(buildArguments, platforms)
+				.filter { $0 }
+				.map { _ in (scheme, project) }
+		}
+		.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
 			return locator
 				// This scheduler hop is required to avoid disallowed recursive signals.
 				// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
 				.start(on: QueueScheduler(qos: .default, name: "org.carthage.CarthageKit.Xcode.buildInDirectory"))
 				// Pick up the first workspace which can build the scheme.
-				.filter { project, schemes in
+				.flatMap(.concat) { project, schemes -> SignalProducer<ProjectLocator, CarthageError> in
 					switch project {
 					case .workspace where schemes.contains(scheme):
-						return true
+						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+						return shouldBuildScheme(buildArguments, platforms)
+							.filter { $0 }
+							.map { _ in project }
 
 					default:
-						return false
+						return .empty
 					}
 				}
 				// If there is no appropriate workspace, use the project in
 				// which the scheme is defined instead.
-				.concat(value: (project, []))
+				.concat(value: project)
 				.take(first: 1)
-				.map { project, _ in (scheme, project) }
+				.map { project in (scheme, project) }
 		}
-		.flatMap(.concurrent(limit: 4)) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-			return shouldBuildScheme(buildArguments, platforms)
-				.filter { $0 }
-				.map { _ in (scheme, project) }
+		.collect()
+		.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+			if !schemes.isEmpty {
+				return .init(schemes)
+			} else {
+				return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platforms))
+			}
 		}
 }
 
@@ -449,6 +457,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 	_ scheme: Scheme,
 	withOptions options: BuildOptions,
 	inProject project: ProjectLocator,
+	rootDirectoryURL: URL,
 	workingDirectoryURL: URL,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> SignalProducer<TaskEvent<URL>, CarthageError> {
@@ -503,9 +512,8 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			return !sdks.isEmpty
 		}
 		.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<URL>, CarthageError> in
-			let folderURL = workingDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).resolvingSymlinksInPath()
+			let folderURL = rootDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).resolvingSymlinksInPath()
 
-			// TODO: Generalize this further?
 			switch sdks.count {
 			case 1:
 				return build(sdk: sdks[0], with: buildArgs, in: workingDirectoryURL)
@@ -625,6 +633,7 @@ private func resolveSameTargetName(for settings: BuildSettings) -> SignalProduce
 }
 
 /// Runs the build for a given sdk and build arguments, optionally performing a clean first
+// swiftlint:disable:next function_body_length
 private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectoryURL: URL) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
 	var argsForLoading = buildArgs
 	argsForLoading.sdk = sdk
@@ -786,75 +795,33 @@ public func build(
 	_ rootDirectoryURL: URL,
 	withOptions options: BuildOptions,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
-) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+) -> BuildSchemeProducer {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
-	return symlinkBuildPath(for: dependency, rootDirectoryURL: rootDirectoryURL)
-		.map { _ -> BuildSchemeProducer in
-			return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
-				.mapError { error in
-					switch (dependency, error) {
-					case let (_, .noSharedFrameworkSchemes(_, platforms)):
-						return .noSharedFrameworkSchemes(dependency, platforms)
+	return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
+		.mapError { error in
+			switch (dependency, error) {
+			case let (_, .noSharedFrameworkSchemes(_, platforms)):
+				return .noSharedFrameworkSchemes(dependency, platforms)
 
-					case let (.gitHub(repo), .noSharedSchemes(project, _)):
-						return .noSharedSchemes(project, repo)
+			case let (.gitHub(repo), .noSharedSchemes(project, _)):
+				return .noSharedSchemes(project, repo)
 
-					default:
-						return error
-					}
-				}
+			default:
+				return error
+			}
 		}
-}
-
-/// Creates symlink between the dependency build folder and the root build folder
-///
-/// Returns a signal indicating success
-private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	return SignalProducer { () -> Result<(), CarthageError> in
-		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
-		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
-		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
-		let fileManager = FileManager.default
-
-		// Link this dependency's Carthage/Build folder to that of the root
-		// project, so it can see all products built already, and so we can
-		// automatically drop this dependency's product in the right place.
-		let dependencyBinariesURL = dependencyURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
-
-		let createDirectory = { try fileManager.createDirectory(at: $0, withIntermediateDirectories: true) }
-		return Result(at: rootBinariesURL, attempt: createDirectory)
-			.flatMap { _ in
-				Result(at: dependencyBinariesURL, attempt: fileManager.removeItem(at:))
-					.recover(with: Result(at: dependencyBinariesURL.deletingLastPathComponent(), attempt: createDirectory))
-			}
-			.flatMap { _ in
-				Result(at: rawDependencyURL, carthageError: CarthageError.readFailed, attempt: {
-						try $0.resourceValues(forKeys: [ .isSymbolicLinkKey ]).isSymbolicLink
-					})
-					.flatMap { isSymlink in
-						Result(at: dependencyBinariesURL, attempt: {
-							if isSymlink == true {
-								return try fileManager.createSymbolicLink(at: $0, withDestinationURL: rootBinariesURL)
-							} else {
-								let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: Constants.binariesFolderPath)
-								return try fileManager.createSymbolicLink(atPath: $0.path, withDestinationPath: linkDestinationPath)
-							}
-						})
-					}
-			}
-	}
 }
 
 /// Builds the any shared framework schemes found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
-public func buildInDirectory(
+public func buildInDirectory( // swiftlint:disable:this function_body_length
 	_ directoryURL: URL,
 	withOptions options: BuildOptions,
 	dependency: (dependency: Dependency, version: PinnedVersion)? = nil,
-	rootDirectoryURL: URL? = nil,
+	rootDirectoryURL: URL,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> BuildSchemeProducer {
 	precondition(directoryURL.isFileURL)
@@ -876,7 +843,14 @@ public func buildInDirectory(
 					return sdkFilter(filteredSDKs, scheme, configuration, project)
 				}
 
-				return buildScheme(scheme, withOptions: options, inProject: project, workingDirectoryURL: directoryURL, sdkFilter: wrappedSDKFilter)
+				return buildScheme(
+						scheme,
+						withOptions: options,
+						inProject: project,
+						rootDirectoryURL: rootDirectoryURL,
+						workingDirectoryURL: directoryURL,
+						sdkFilter: wrappedSDKFilter
+					)
 					.mapError { error -> CarthageError in
 						if case let .taskError(taskError) = error {
 							return .buildFailed(taskError, log: nil)
@@ -890,7 +864,7 @@ public func buildInDirectory(
 			}
 			.collectTaskEvents()
 			.flatMapTaskEvents(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
-				guard let dependency = dependency, let rootDirectoryURL = rootDirectoryURL else {
+				guard let dependency = dependency else {
 					return .empty
 				}
 
@@ -917,10 +891,11 @@ public func buildInDirectory(
 	}
 }
 
-/// Strips a framework from unexpected architectures, optionally codesigning the
-/// result.
-public func stripFramework(_ frameworkURL: URL, keepingArchitectures: [String], codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
+/// Strips a framework from unexpected architectures and potentially debug symbols,
+/// optionally codesigning the result.
+public func stripFramework(_ frameworkURL: URL, keepingArchitectures: [String], strippingDebugSymbols: Bool, codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
 	let stripArchitectures = stripBinary(frameworkURL, keepingArchitectures: keepingArchitectures)
+	let stripSymbols = strippingDebugSymbols ? stripDebugSymbols(frameworkURL) : .empty
 
 	// Xcode doesn't copy `Headers`, `PrivateHeaders` and `Modules` directory at
 	// all.
@@ -931,6 +906,7 @@ public func stripFramework(_ frameworkURL: URL, keepingArchitectures: [String], 
 	let sign = codesigningIdentity.map { codesign(frameworkURL, $0) } ?? .empty
 
 	return stripArchitectures
+		.concat(stripSymbols)
 		.concat(stripHeaders)
 		.concat(stripPrivateHeaders)
 		.concat(stripModules)
@@ -1124,6 +1100,17 @@ public func architecturesInPackage(_ packageURL: URL) -> SignalProducer<String, 
 		}
 }
 
+/// Strips debug symbols from the given framework
+public func stripDebugSymbols(_ frameworkURL: URL) -> SignalProducer<(), CarthageError> {
+	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
+		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
+			let stripTask = Task("/usr/bin/xcrun", arguments: [ "strip", "-S", "-o", binaryURL.path, binaryURL.path])
+			return stripTask.launch()
+				.mapError(CarthageError.taskError)
+		}
+		.then(SignalProducer<(), CarthageError>.empty)
+}
+
 /// Strips `Headers` directory from the given framework.
 public func stripHeadersDirectory(_ frameworkURL: URL) -> SignalProducer<(), CarthageError> {
 	return stripDirectory(named: "Headers", of: frameworkURL)
@@ -1229,7 +1216,7 @@ private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, Carthag
 }
 
 /// Returns the URL of a binary inside a given package.
-private func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
+public func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 	let bundle = Bundle(path: packageURL.path)
 	let packageType = (bundle?.object(forInfoDictionaryKey: "CFBundlePackageType") as? String).flatMap(PackageType.init)
 

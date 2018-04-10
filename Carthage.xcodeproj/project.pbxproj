@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0FDFEA7E2055D638008862E3 /* ProxyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7D2055D638008862E3 /* ProxyTests.swift */; };
+		0FDFEA802055FACE008862E3 /* Proxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7F2055FACE008862E3 /* Proxy.swift */; };
 		2190FA981FD5B2F0008D8A79 /* OutdatedDependencies in Resources */ = {isa = PBXBuildFile; fileRef = 2190FA961FD5B05F008D8A79 /* OutdatedDependencies */; };
 		21F11B481FE67A26009FB783 /* DB.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F11B461FE6787F009FB783 /* DB.swift */; };
 		3A0472F31C782B4000097EC7 /* Algorithms.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0472F21C782B4000097EC7 /* Algorithms.swift */; };
@@ -55,6 +57,7 @@
 		CD9A77991EDD7E2000A77B00 /* DuplicateDependencies in Resources */ = {isa = PBXBuildFile; fileRef = CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */; };
 		CD9A779B1EDD7FEB00A77B00 /* BinaryOnly in Resources */ = {isa = PBXBuildFile; fileRef = CD9A779A1EDD7FEB00A77B00 /* BinaryOnly */; };
 		CD9F3D931E6E6FC000B98A1A /* BinaryJSONError.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9F3D921E6E6FC000B98A1A /* BinaryJSONError.swift */; };
+		CD9FDF36207BBB17009C993A /* SwiftShims.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD9FDF35207BBB17009C993A /* SwiftShims.swift */; };
 		CDA0B6CA1C468E67006C499C /* GitURLSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA0B6C91C468E67006C499C /* GitURLSpec.swift */; };
 		CDB099241E6DC2D40030B4A8 /* ScannableError.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB099231E6DC2D40030B4A8 /* ScannableError.swift */; };
 		CDBE654C1F4BF0040060D94E /* Submodule.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDBE654B1F4BF0040060D94E /* Submodule.swift */; };
@@ -172,6 +175,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0FDFEA7D2055D638008862E3 /* ProxyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyTests.swift; sourceTree = "<group>"; };
+		0FDFEA7F2055FACE008862E3 /* Proxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Proxy.swift; sourceTree = "<group>"; };
 		2190FA961FD5B05F008D8A79 /* OutdatedDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OutdatedDependencies; sourceTree = "<group>"; };
 		21F11B461FE6787F009FB783 /* DB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DB.swift; sourceTree = "<group>"; };
 		3A0472F21C782B4000097EC7 /* Algorithms.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Algorithms.swift; sourceTree = "<group>"; };
@@ -218,6 +223,7 @@
 		CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = DuplicateDependencies; sourceTree = "<group>"; };
 		CD9A779A1EDD7FEB00A77B00 /* BinaryOnly */ = {isa = PBXFileReference; lastKnownFileType = folder; path = BinaryOnly; sourceTree = "<group>"; };
 		CD9F3D921E6E6FC000B98A1A /* BinaryJSONError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryJSONError.swift; sourceTree = "<group>"; };
+		CD9FDF35207BBB17009C993A /* SwiftShims.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftShims.swift; sourceTree = "<group>"; };
 		CDA0B6C91C468E67006C499C /* GitURLSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitURLSpec.swift; sourceTree = "<group>"; };
 		CDB099231E6DC2D40030B4A8 /* ScannableError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScannableError.swift; sourceTree = "<group>"; };
 		CDBE654B1F4BF0040060D94E /* Submodule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Submodule.swift; sourceTree = "<group>"; };
@@ -517,11 +523,13 @@
 				D0A2025D1B114D1000C71375 /* ProducerQueue.swift */,
 				CD28C99C1E11846200322AF7 /* ProductType.swift */,
 				F603929819EA29F80050A6AF /* Project.swift */,
+				0FDFEA7F2055FACE008862E3 /* Proxy.swift */,
 				D01D82D61A10160700F0DD94 /* Resolver.swift */,
 				B17145EF1F43F797006DC662 /* NewResolver.swift */,
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
 				CDB099231E6DC2D40030B4A8 /* ScannableError.swift */,
 				CDBE654B1F4BF0040060D94E /* Submodule.swift */,
+				CD9FDF35207BBB17009C993A /* SwiftShims.swift */,
 				3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */,
 				D0DE893F1A0F2CB00030A3EC /* Version.swift */,
 				F1CB3CFB1D63D05D00C9EB99 /* VersionFile.swift */,
@@ -560,6 +568,7 @@
 				89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */,
 				CDA0B6C91C468E67006C499C /* GitURLSpec.swift */,
 				549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */,
+				0FDFEA7D2055D638008862E3 /* ProxyTests.swift */,
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
 				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
 				B1F27D3D1E45382B002D4754 /* VersionFileSpec.swift */,
@@ -668,7 +677,7 @@
 			attributes = {
 				LastSwiftMigration = 0700;
 				LastSwiftUpdateCheck = 0700;
-				LastUpgradeCheck = 0900;
+				LastUpgradeCheck = 0930;
 				ORGANIZATIONNAME = Carthage;
 				TargetAttributes = {
 					D0D1216C19E87B05005E4BAA = {
@@ -853,7 +862,9 @@
 				CD3E530B1DE33095002C135C /* Availability.swift in Sources */,
 				3A0472F31C782B4000097EC7 /* Algorithms.swift in Sources */,
 				D0A2025E1B114D1000C71375 /* ProducerQueue.swift in Sources */,
+				0FDFEA802055FACE008862E3 /* Proxy.swift in Sources */,
 				D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */,
+				CD9FDF36207BBB17009C993A /* SwiftShims.swift in Sources */,
 				F603929919EA29F80050A6AF /* Project.swift in Sources */,
 				CDBE654C1F4BF0040060D94E /* Submodule.swift in Sources */,
 				D069CA241A4E3B2700314A85 /* Archive.swift in Sources */,
@@ -869,6 +880,7 @@
 				D0DE89421A0F2D450030A3EC /* VersionSpec.swift in Sources */,
 				89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */,
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
+				0FDFEA7E2055D638008862E3 /* ProxyTests.swift in Sources */,
 				3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */,
 				BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */,
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,
@@ -925,12 +937,13 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				SWIFT_SWIFT3_OBJC_INFERENCE = Off;
 				SWIFT_VERSION = 4.0;
@@ -944,11 +957,13 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_SWIFT3_OBJC_INFERENCE = Off;
 				SWIFT_VERSION = 4.0;
 			};
@@ -1025,11 +1040,12 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				SWIFT_SWIFT3_OBJC_INFERENCE = Off;
 				SWIFT_VERSION = 4.0;
 			};
@@ -1074,11 +1090,12 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				SWIFT_SWIFT3_OBJC_INFERENCE = Off;
 				SWIFT_VERSION = 4.0;
 			};

@@ -22,6 +22,7 @@ extension BuildOptions: OptionsProtocol {
 			<*> mode <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
+			<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: "use downloaded binaries when possible")
 	}
 }
 
@@ -63,7 +64,6 @@ public struct BuildCommand: CommandProtocol {
 				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 
 				let buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
-					.flatten(.concat)
 
 				let stderrHandle = options.isVerbose ? FileHandle.standardError : stdoutHandle
 
@@ -106,7 +106,7 @@ public struct BuildCommand: CommandProtocol {
 	/// Builds the project in the given directory, using the given options.
 	///
 	/// Returns a producer of producers, representing each scheme being built.
-	private func buildProjectInDirectoryURL(_ directoryURL: URL, options: Options) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	private func buildProjectInDirectoryURL(_ directoryURL: URL, options: Options) -> BuildSchemeProducer {
 		let project = Project(directoryURL: directoryURL)
 
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
@@ -130,7 +130,7 @@ public struct BuildCommand: CommandProtocol {
 		if options.skipCurrent {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions)
+			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions, rootDirectoryURL: directoryURL)
 				.flatMapError { error -> BuildSchemeProducer in
 					switch error {
 					case let .noSharedFrameworkSchemes(project, _):
@@ -142,7 +142,7 @@ public struct BuildCommand: CommandProtocol {
 						return SignalProducer(error: error)
 					}
 				}
-			return buildProducer.concat(value: currentProducers)
+			return buildProducer.concat(currentProducers)
 		}
 	}
 
