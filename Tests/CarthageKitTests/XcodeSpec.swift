@@ -389,7 +389,7 @@ class XcodeSpec: QuickSpec {
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug",
 																				   platforms: [.iOS],
-																				   derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path))
+																				   derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -397,8 +397,8 @@ class XcodeSpec: QuickSpec {
 				.wait()
 			expect(result.error).to(beNil())
 
-			let frameworkDynamicURL = _buildFolderURL.appendingPathComponent("iOS/TestFramework.framework")
-			let frameworkStaticURL = _buildFolderURL.appendingPathComponent("iOS/Static/TestFramework.framework")
+			let frameworkDynamicURL = buildFolderURL.appendingPathComponent("iOS/TestFramework.framework")
+			let frameworkStaticURL = buildFolderURL.appendingPathComponent("iOS/Static/TestFramework.framework")
 
 			let frameworkDynamicPackagePath = frameworkDynamicURL.appendingPathComponent("TestFramework").path
 			let frameworkStaticPackagePath = frameworkStaticURL.appendingPathComponent("TestFramework").path
@@ -410,7 +410,7 @@ class XcodeSpec: QuickSpec {
 
 			let result2 = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug",
 																					platforms: [.iOS],
-																					derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path))
+																					derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
 				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")

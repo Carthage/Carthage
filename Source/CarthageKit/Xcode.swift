@@ -600,7 +600,6 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 
 /// Fixes problem when more than one xcode target has the same Product name for same Deployment target and configuration by deleting TARGET_BUILD_DIR.
 private func resolveSameTargetName(for settings: BuildSettings) -> SignalProducer<BuildSettings, CarthageError> {
-
 	switch settings.targetBuildDir {
 	case .success(let buildDir):
 		let result = Task("/usr/bin/xcrun", arguments: ["rm", "-rf", buildDir])
