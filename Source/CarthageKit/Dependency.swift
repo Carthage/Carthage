@@ -2,26 +2,26 @@ import Foundation
 import Result
 import Tentacle
 
-/// Uniquely identifies a project that can be used as a dependency.
-public enum Dependency {
-	/// Uniquely identifies a Binary Spec's resolved URL and its description
-	public struct BinaryURL: CustomStringConvertible {
-		/// A Resolved URL
-		public let url: URL
+/// Uniquely identifies a Binary Spec's resolved URL and its description
+public struct BinaryURL: CustomStringConvertible {
+	/// A Resolved URL
+	public let url: URL
 
-		/// An Optional custom description
-		public let overloadedDescription: String?
+	/// An Optional custom description
+	public let overloadedDescription: String?
 
-		public var description: String {
-			return overloadedDescription ?? url.description
-		}
-
-		init(url: URL, overloadedDescription: String? = nil) {
-			self.url = url
-			self.overloadedDescription = overloadedDescription
-		}
+	public var description: String {
+		return overloadedDescription ?? url.description
 	}
 
+	init(url: URL, overloadedDescription: String? = nil) {
+		self.url = url
+		self.overloadedDescription = overloadedDescription
+	}
+}
+
+/// Uniquely identifies a project that can be used as a dependency.
+public enum Dependency {
 	/// A repository hosted on GitHub.com or GitHub Enterprise.
 	case gitHub(Server, Repository)
 
@@ -41,7 +41,7 @@ public enum Dependency {
 			return url.name ?? url.urlString
 
 		case let .binary(url):
-			return url.url.lastPathComponent.stripping(suffix: ".json")
+			return url.name
 		}
 	}
 
@@ -119,7 +119,7 @@ extension Dependency: Hashable {
 			return url.hashValue
 
 		case let .binary(binary):
-			return binary.url.hashValue
+			return binary.hashValue
 		}
 	}
 }
@@ -221,14 +221,21 @@ extension Dependency {
 	}
 }
 
-extension Dependency.BinaryURL: Equatable {
-	public static func == (_ lhs: Dependency.BinaryURL, _ rhs: Dependency.BinaryURL) -> Bool {
+extension BinaryURL: Equatable {
+	public static func == (_ lhs: BinaryURL, _ rhs: BinaryURL) -> Bool {
 		return lhs.description == rhs.description
 	}
 }
 
-extension Dependency.BinaryURL: Hashable {
+extension BinaryURL: Hashable {
 	public var hashValue: Int {
 		return description.hashValue
+	}
+}
+
+extension BinaryURL {
+	/// The unique, user-visible name for this project.
+	public var name: String {
+		return url.lastPathComponent.stripping(suffix: ".json")
 	}
 }

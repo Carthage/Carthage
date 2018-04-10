@@ -226,7 +226,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.startOnQueue(cloneOrFetchQueue)
 	}
 
-	func downloadBinaryFrameworkDefinition(binary: Dependency.BinaryURL) -> SignalProducer<BinaryProject, CarthageError> {
+	func downloadBinaryFrameworkDefinition(binary: BinaryURL) -> SignalProducer<BinaryProject, CarthageError> {
 		return SignalProducer<Project.CachedBinaryProjects, CarthageError>(value: self.cachedBinaryProjects)
 			.flatMap(.merge) { binaryProjectsByURL -> SignalProducer<BinaryProject, CarthageError> in
 				if let binaryProject = binaryProjectsByURL[binary.url] {
@@ -864,7 +864,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 	private func installBinariesForBinaryProject(
-		binary: Dependency.BinaryURL,
+		binary: BinaryURL,
 		pinnedVersion: PinnedVersion,
 		projectName: String,
 		toolchain: String?
