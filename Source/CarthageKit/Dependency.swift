@@ -7,16 +7,16 @@ public struct BinaryURL: CustomStringConvertible {
 	/// A Resolved URL
 	public let url: URL
 
-	/// An Optional custom description
-	public let overloadedDescription: String?
+	/// A custom description
+	public let resolvedDescription: String
 
 	public var description: String {
-		return overloadedDescription ?? url.description
+		return resolvedDescription
 	}
 
-	init(url: URL, overloadedDescription: String? = nil) {
+	init(url: URL, resolvedDescription: String) {
 		self.url = url
-		self.overloadedDescription = overloadedDescription
+		self.resolvedDescription = resolvedDescription
 	}
 }
 
@@ -146,10 +146,10 @@ extension Dependency: Scannable {
 			parser = { urlString in
 				if let url = URL(string: urlString) {
 					if url.scheme == "https" || url.scheme == "file" {
-						return .success(self.binary(BinaryURL(url: url)))
+						return .success(self.binary(BinaryURL(url: url, resolvedDescription: url.description)))
 					} else if url.scheme == nil {
 						let absoluteURL = URL(fileURLWithPath: url.relativePath, isDirectory: false, relativeTo: base).standardizedFileURL
-						return .success(self.binary(BinaryURL(url: absoluteURL, overloadedDescription: url.absoluteString)))
+						return .success(self.binary(BinaryURL(url: absoluteURL, resolvedDescription: url.absoluteString)))
 					} else {
 						return .failure(ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
 					}
