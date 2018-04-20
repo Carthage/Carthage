@@ -30,8 +30,6 @@
 		8AC381441FC3AA4A007CF7E8 /* Alamofire.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8AC381421FC3A900007CF7E8 /* Alamofire.framework */; settings = {ATTRIBUTES = (Required, ); }; };
 		8AC381451FC3AAE4007CF7E8 /* Alamofire.framework in Resources */ = {isa = PBXBuildFile; fileRef = 8AC381421FC3A900007CF7E8 /* Alamofire.framework */; };
 		90CDE7BE2003252C00D98F37 /* FakeOSSSwift.framework in Resources */ = {isa = PBXBuildFile; fileRef = 90CDE7BC2003249C00D98F37 /* FakeOSSSwift.framework */; };
-		94C41E402078F6500046A7E5 /* DynamicAndStatic in Resources */ = {isa = PBXBuildFile; fileRef = 94C41E3F2078F6500046A7E5 /* DynamicAndStatic */; };
-		94C41E412078F6520046A7E5 /* DynamicAndStatic in Resources */ = {isa = PBXBuildFile; fileRef = 94C41E3F2078F6500046A7E5 /* DynamicAndStatic */; };
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
 		A1411ED61EFC1BFD0060461F /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1411ED51EFC1BFD0060461F /* Constants.swift */; };
@@ -199,7 +197,6 @@
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
 		8AC381421FC3A900007CF7E8 /* Alamofire.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Alamofire.framework; sourceTree = "<group>"; };
 		90CDE7BC2003249C00D98F37 /* FakeOSSSwift.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeOSSSwift.framework; sourceTree = "<group>"; };
-		94C41E3F2078F6500046A7E5 /* DynamicAndStatic */ = {isa = PBXFileReference; lastKnownFileType = folder; name = DynamicAndStatic; path = Tests/CarthageKitTests/fixtures/DynamicAndStatic; sourceTree = SOURCE_ROOT; };
 		98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-bash-completion"; sourceTree = "<group>"; };
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
 		A1411ED51EFC1BFD0060461F /* Constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
@@ -365,7 +362,6 @@
 		CD6500D61EDD30FC00C2C3FB /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				94C41E3F2078F6500046A7E5 /* DynamicAndStatic */,
 				2190FA961FD5B05F008D8A79 /* OutdatedDependencies */,
 				CD9A779A1EDD7FEB00A77B00 /* BinaryOnly */,
 				CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */,
@@ -726,7 +722,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				94C41E412078F6520046A7E5 /* DynamicAndStatic in Resources */,
 				8AC381451FC3AAE4007CF7E8 /* Alamofire.framework in Resources */,
 				CD9A779B1EDD7FEB00A77B00 /* BinaryOnly in Resources */,
 				3B19041E1E4CFE4A00A866AD /* FakeOldObjc.framework in Resources */,
@@ -748,7 +743,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				94C41E402078F6500046A7E5 /* DynamicAndStatic in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
