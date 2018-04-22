@@ -21,7 +21,7 @@ struct Proxy {
 
 		var dictionary: [AnyHashable: Any] = [:]
 		dictionary[kCFNetworkProxiesHTTPEnable] = true
-		dictionary[kCFNetworkProxiesHTTPProxy] = proxyURL
+		dictionary[kCFNetworkProxiesHTTPProxy] = proxyURL.host
 
 		if let port = proxyURL.port {
 			dictionary[kCFNetworkProxiesHTTPPort] = port
@@ -38,7 +38,7 @@ struct Proxy {
 
 		var dictionary: [AnyHashable: Any] = [:]
 		dictionary[kCFNetworkProxiesHTTPSEnable] = true
-		dictionary[kCFNetworkProxiesHTTPSProxy] = proxyURL
+		dictionary[kCFNetworkProxiesHTTPSProxy] = proxyURL.host
 
 		if let port = proxyURL.port {
 			dictionary[kCFNetworkProxiesHTTPSPort] = port
