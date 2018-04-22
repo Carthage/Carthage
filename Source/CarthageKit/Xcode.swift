@@ -100,6 +100,9 @@ public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments) -> 
 	return xcodebuildTask([task], buildArguments)
 }
 
+/// The scheme info tuple.
+public typealias SchemeInfo = (Scheme, ProjectLocator, Bool)
+
 /// Finds schemes of projects or workspaces, which Carthage should build, found
 /// within the given directory.
 public func buildableSchemesInDirectory( // swiftlint:disable:this function_body_length
@@ -107,7 +110,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 	withConfiguration configuration: String,
 	forPlatforms platforms: Set<Platform> = [],
 	ignoreEntries: [IgnoreEntry] = []
-) -> SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError> {
+) -> SignalProducer<SchemeInfo, CarthageError> {
 	precondition(directoryURL.isFileURL)
 	let locator = ProjectLocator
 			.locate(in: directoryURL)
@@ -130,10 +133,10 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 		// Allow dependencies which have no projects, not to error out with
 		// `.noSharedFrameworkSchemes`.
 		.filter { projects in !projects.isEmpty }
-		.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError> in
+		.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<SchemeInfo, CarthageError> in
 			return schemesInProjects(projects, ignoreEntries: ignoreEntries).flatten()
 		}
-		.flatMap(.concurrent(limit: 4)) { scheme, project, skip -> SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError> in
+		.flatMap(.concurrent(limit: 4)) { scheme, project, skip -> SignalProducer<SchemeInfo, CarthageError> in
 			/// Check whether we should the scheme by checking against the project. If we're building
 			/// from a workspace, then it might include additional targets that would trigger our
 			/// check.
@@ -142,7 +145,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 				.filter { $0 }
 				.map { _ in (scheme, project, skip) }
 		}
-		.flatMap(.concurrent(limit: 4)) { scheme, project, skip -> SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError> in
+		.flatMap(.concurrent(limit: 4)) { scheme, project, skip -> SignalProducer<SchemeInfo, CarthageError> in
 			return locator
 				// This scheduler hop is required to avoid disallowed recursive signals.
 				// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
@@ -167,7 +170,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 				.map { project in (scheme, project, skip) }
 		}
 		.collect()
-		.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator, Bool)]) -> SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError> in
+		.flatMap(.merge) { (schemes: [SchemeInfo]) -> SignalProducer<SchemeInfo, CarthageError> in
 			if !schemes.isEmpty {
 				return .init(schemes)
 			} else {
@@ -178,7 +181,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 
 /// Sends pairs of a scheme and a project, the scheme actually resides in
 /// the project.
-public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])], ignoreEntries: [IgnoreEntry] = []) -> SignalProducer<[(Scheme, ProjectLocator, Bool)], CarthageError> {
+public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])], ignoreEntries: [IgnoreEntry] = []) -> SignalProducer<[SchemeInfo], CarthageError> {
 	return SignalProducer<(ProjectLocator, [Scheme]), CarthageError>(projects)
 		.map { (project: ProjectLocator, schemes: [Scheme]) in
 			// Only look for schemes that actually reside in the project
@@ -198,7 +201,7 @@ public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])], ignoreEn
 			}
 		}
 		.flatMap(.concat) { project, schemes in
-			return SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError>(schemes.map { scheme in
+			return SignalProducer<SchemeInfo, CarthageError>(schemes.map { scheme in
 				let skip = ignoreEntries.contains(where: { ignoreEntry -> Bool in
 					guard let projectName = ignoreEntry.project else {
 						return scheme.name == ignoreEntry.scheme
@@ -778,7 +781,8 @@ public func build(
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
-	return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version, ignoreEntries), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
+	let dependencyInfo = (dependency, version, ignoreEntries)
+	return buildInDirectory(dependencyURL, withOptions: options, dependency: dependencyInfo, rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
 		.mapError { error in
 			switch (dependency, error) {
 			case let (_, .noSharedFrameworkSchemes(_, platforms)):
@@ -793,13 +797,16 @@ public func build(
 		}
 }
 
+/// The dependency info tuple.
+public typealias DependencyInfo = (dependency: Dependency, version: PinnedVersion, ignoreEntries: [IgnoreEntry])
+
 /// Builds the any shared framework schemes found within the given directory.
 ///
 /// Returns a signal of all standard output from `xcodebuild`, and each scheme being built.
 public func buildInDirectory( // swiftlint:disable:this function_body_length
 	_ directoryURL: URL,
 	withOptions options: BuildOptions,
-	dependency: (dependency: Dependency, version: PinnedVersion, ignoreEntries: [IgnoreEntry])? = nil,
+	dependency: DependencyInfo? = nil,
 	rootDirectoryURL: URL,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> BuildSchemeProducer {
@@ -808,7 +815,8 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 	return BuildSchemeProducer { observer, lifetime in
 		// Use SignalProducer.replayLazily to avoid enumerating the given directory
 		// multiple times.
-		buildableSchemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms, ignoreEntries: dependency?.ignoreEntries ?? [])
+		let ignoreEntries = dependency?.ignoreEntries ?? []
+		buildableSchemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms, ignoreEntries: ignoreEntries)
 			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator, skip: Bool) -> SignalProducer<TaskEvent<URL>, CarthageError> in
 				let initialValue = (project, scheme, skip)
 
