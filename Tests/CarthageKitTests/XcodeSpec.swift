@@ -126,10 +126,14 @@ class XcodeSpec: QuickSpec {
 			let version = PinnedVersion("0.1")
 
 			for dependency in dependencies {
-				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+				let result = build(dependency: dependency, version: version, ignoreEntries: [], directoryURL, withOptions: BuildOptions(configuration: "Debug"))
 					.ignoreTaskData()
-					.on(value: { project, scheme in // swiftlint:disable:this end_closure
-						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					.on(value: { project, scheme, skip in // swiftlint:disable:this end_closure
+						if skip {
+							NSLog("Ignoring scheme \"\(scheme)\" in \(project)")
+						} else {
+							NSLog("Building scheme \"\(scheme)\" in \(project)")
+						}
 					})
 					.wait()
 
@@ -138,8 +142,12 @@ class XcodeSpec: QuickSpec {
 
 			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this closure_params_parantheses
-					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				.on(value: { project, scheme, skip in // swiftlint:disable:this closure_params_parantheses
+					if skip {
+						NSLog("Ignoring scheme \"\(scheme)\" in \(project)")
+					} else {
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					}
 				})
 				.wait()
 
@@ -237,8 +245,12 @@ class XcodeSpec: QuickSpec {
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
-					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				.on(value: { project, scheme, skip in // swiftlint:disable:this end_closure
+					if skip {
+						NSLog("Ignoring scheme \"\(scheme)\" in \(project)")
+					} else {
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					}
 				})
 				.wait()
 
@@ -263,8 +275,12 @@ class XcodeSpec: QuickSpec {
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
-					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				.on(value: { project, scheme, skip in // swiftlint:disable:this end_closure
+					if skip {
+						NSLog("Ignoring scheme \"\(scheme)\" in \(project)")
+					} else {
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					}
 				})
 				.wait()
 
@@ -283,8 +299,12 @@ class XcodeSpec: QuickSpec {
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
-					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				.on(value: { project, scheme, skip in // swiftlint:disable:this end_closure
+					if skip {
+						NSLog("Ignoring scheme \"\(scheme)\" in \(project)")
+					} else {
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					}
 				})
 				.wait()
 			expect(result.error).to(beNil())
@@ -301,8 +321,12 @@ class XcodeSpec: QuickSpec {
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
-					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				.on(value: { project, scheme, skip in // swiftlint:disable:this end_closure
+					if skip {
+						NSLog("Ignoring scheme \"\(scheme)\" in \(project)")
+					} else {
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					}
 				})
 				.wait()
 
@@ -322,10 +346,14 @@ class XcodeSpec: QuickSpec {
 		it("should build for one platform") {
 			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
+			let result = build(dependency: dependency, version: version, ignoreEntries: [], directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
 				.ignoreTaskData()
-				.on(value: { project, scheme in
-					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				.on(value: { project, scheme, skip in
+					if skip {
+						NSLog("Ignoring scheme \"\(scheme)\" in \(project)")
+					} else {
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					}
 				})
 				.wait()
 
@@ -340,13 +368,42 @@ class XcodeSpec: QuickSpec {
 			expect(FileManager.default.fileExists(atPath: incorrectPath, isDirectory: nil)) == false
 		}
 
+		it("should skip scheme when building for one platform") {
+			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
+			let version = PinnedVersion("0.1")
+			let result = build(dependency: dependency, version: version, ignoreEntries: [IgnoreEntry(project: nil, scheme: "Archimedes Mac")], directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
+				.ignoreTaskData()
+				.on(value: { project, scheme, skip in
+					if skip {
+						NSLog("Ignoring scheme \"\(scheme)\" in \(project)")
+					} else {
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					}
+				})
+				.wait()
+			
+			expect(result.error).to(beNil())
+			
+			// Verify that the build product was skipped.
+			let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency.name).framework").path
+			expect(FileManager.default.fileExists(atPath: macPath, isDirectory: nil)) == false
+
+			// Verify that the other platform wasn't built.
+			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(dependency.name).framework").path
+			expect(FileManager.default.fileExists(atPath: iosPath, isDirectory: nil)) == false
+		}
+		
 		it("should build for multiple platforms") {
 			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
-			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
+			let result = build(dependency: dependency, version: version, ignoreEntries: [], directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
 				.ignoreTaskData()
-				.on(value: { project, scheme in
-					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				.on(value: { project, scheme, skip in
+					if skip {
+						NSLog("Ignoring scheme \"\(scheme)\" in \(project)")
+					} else {
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					}
 				})
 				.wait()
 
@@ -360,6 +417,31 @@ class XcodeSpec: QuickSpec {
 			for path in [ macPath, iosPath ] {
 				expect(path).to(beExistingDirectory())
 			}
+		}
+		
+		it("should skip scheme when building for multiple platforms") {
+			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
+			let version = PinnedVersion("0.1")
+			let result = build(dependency: dependency, version: version, ignoreEntries: [IgnoreEntry(project: nil, scheme: "Archimedes Mac")], directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
+				.ignoreTaskData()
+				.on(value: { project, scheme, skip in
+					if skip {
+						NSLog("Ignoring scheme \"\(scheme)\" in \(project)")
+					} else {
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					}
+				})
+				.wait()
+			
+			expect(result.error).to(beNil())
+			
+			// Verify that the build products of all specified platforms exist
+			// at the top level.
+			let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency.name).framework").path
+			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(dependency.name).framework").path
+			
+			expect(FileManager.default.fileExists(atPath: macPath, isDirectory: nil)) == false
+			expect(iosPath).to(beExistingDirectory())
 		}
 
 		it("should locate the project") {

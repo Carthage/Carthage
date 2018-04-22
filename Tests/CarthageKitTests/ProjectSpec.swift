@@ -20,10 +20,13 @@ class ProjectSpec: QuickSpec {
 				let project = Project(directoryURL: directoryURL)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
 					.ignoreTaskData()
-					.on(value: { project, scheme in
-						NSLog("Building scheme \"\(scheme)\" in \(project)")
-					})
-					.map { _, scheme in scheme }
+					.on(value: { project, scheme, skip in
+						if skip {
+							NSLog("Ignoring scheme \"\(scheme)\" in \(project)")
+						} else {
+							NSLog("Building scheme \"\(scheme)\" in \(project)")
+						}					})
+					.map { _, scheme, _ in scheme }
 					.collect()
 					.single()!
 				expect(result.error).to(beNil())
