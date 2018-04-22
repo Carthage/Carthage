@@ -63,7 +63,12 @@ public struct BuildCommand: CommandProtocol {
 			.flatMap(.merge) { stdoutHandle, temporaryURL -> SignalProducer<(), CarthageError> in
 				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 
-				let buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
+				let buildProgress: BuildSchemeProducer
+				if let buildAsPaths = self.buildDependenciesAsPaths(directoryURL, options: options) {
+					buildProgress = buildAsPaths
+				} else {
+					buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
+				}
 
 				let stderrHandle = options.isVerbose ? FileHandle.standardError : stdoutHandle
 
@@ -143,6 +148,24 @@ public struct BuildCommand: CommandProtocol {
 					}
 				}
 			return buildProducer.concat(currentProducers)
+		}
+	}
+
+	private func buildDependenciesAsPaths(_ rootDirectoryURL: URL, options: Options) -> BuildSchemeProducer? {
+		let paths = options.dependenciesToBuild?.compactMap({ string -> URL? in
+			var isDirectory: ObjCBool = false
+			if let correctURL = URL(string: string),
+				FileManager.default.fileExists(atPath: correctURL.path, isDirectory: &isDirectory),
+				isDirectory.boolValue {
+				return URL(fileURLWithPath: string, isDirectory: true)
+			}
+			return nil
+		}) ?? []
+
+		if paths.count == 1 {
+			return buildInDirectory(paths[0], withOptions: options.buildOptions, rootDirectoryURL: rootDirectoryURL)
+		} else {
+			return nil
 		}
 	}
 
