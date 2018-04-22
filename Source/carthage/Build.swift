@@ -110,8 +110,12 @@ public struct BuildCommand: CommandProtocol {
 							case let .standardError(data):
 								stderrHandle.write(data)
 
-							case let .success(project, scheme):
-								carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme.name) + " in " + formatting.projectName(project.description))
+							case let .success(project, scheme, skip):
+								if skip {
+									carthage.println(formatting.bullets + "Ignoring scheme " + formatting.quote(scheme.name) + " in " + formatting.projectName(project.description))
+								} else {
+									carthage.println(formatting.bullets + "Building scheme " + formatting.quote(scheme.name) + " in " + formatting.projectName(project.description))
+								}
 							}
 						}
 					)

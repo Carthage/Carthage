@@ -212,6 +212,17 @@ public final class Project { // swiftlint:disable:this type_body_length
 		}
 	}
 
+	private func ignoreEntries() -> SignalProducer<[IgnoreEntry], CarthageError> {
+		return self
+			.loadIgnorefile()
+			.map { file in
+				return file.ignoreEntries
+			}
+			.flatMapError { _ in
+				return SignalProducer(value: [])
+			}
+	}
+
 	/// Writes the given Cartfile.resolved out to the project's directory.
 	public func writeResolvedCartfile(_ resolvedCartfile: ResolvedCartfile) -> Result<(), CarthageError> {
 		return Result(at: resolvedCartfileURL, attempt: {
@@ -1094,7 +1105,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 						}
 						return symlinkBuildPath(for: dependency, rootDirectoryURL: self.directoryURL)
 					}
-					.then(build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter))
+					.then(self.ignoreEntries().flatMap(.concat) { ignoreEntries in
+						return build(dependency: dependency, version: version, ignoreEntries: ignoreEntries, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+					})
 					.flatMapError { error in
 						switch error {
 						case .noSharedFrameworkSchemes:
