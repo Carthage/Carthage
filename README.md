@@ -228,6 +228,25 @@ By default Carthage will rebuild a dependency regardless of whether it's the sam
 
 Note: At this time `--cache-builds` is incompatible with `--use-submodules`. Using both will result in working copy and committed changes to your submodule dependency not being correctly rebuilt. See [#1785](https://github.com/Carthage/Carthage/issues/1785) for details.
 
+### Skip building schemes
+
+By default Carthage will build all shared schemes of a dependency. In some cases, framework authors might opt for using one repository for multiple different frameworks to be able to share code between them without much effort. In order to enhance build time, you can skip all schemes you don't need by creating a `Cartfile.ignore` in the same folder as your `Cartfile` with entries following this structure:
+
+```
+# Ignore unnecessary schemes in framework X
+scheme "NameOfSchemeToSkip-iOS"
+scheme "NameOfSchemeToSkip-macOS"
+```
+
+Carthage will then ignore the scheme when building your dependencies, it will still continue to check them out though. Note that comments can be added to structure the `Cartfile.ignore` by preceding a line with `#` just like in the `Cartfile`.
+
+In the rare case a dependency contains multiple projects with the same schemes names, you can also specify the exact project name like so:
+
+```
+scheme "ProjectName/NameOfSchemeToSkip-iOS"
+scheme "ProjectName/NameOfSchemeToSkip-macOS"
+```
+
 ### Bash/Zsh/Fish completion
 
 Auto completion of Carthage commands and options are available as documented in [Bash/Zsh/Fish Completion][Bash/Zsh/Fish Completion].
