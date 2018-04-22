@@ -16,7 +16,7 @@ class ProjectSpec: QuickSpec {
 			let directoryURL = Bundle(for: type(of: self)).url(forResource: "DependencyTest", withExtension: nil)!
 			let buildDirectoryURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+			func buildDependencyies(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [(String, Bool)] {
 				let project = Project(directoryURL: directoryURL)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
 					.ignoreTaskData()
@@ -26,16 +26,26 @@ class ProjectSpec: QuickSpec {
 						} else {
 							NSLog("Building scheme \"\(scheme)\" in \(project)")
 						}					})
-					.map { _, scheme, _ in scheme }
+					.map { _, scheme, skip in (scheme, skip) }
 					.collect()
 					.single()!
 				expect(result.error).to(beNil())
 
-				return result.value!.map { $0.name }
+				return result.value!.map { ($0.name, $1) }
 			}
 
+			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+				return buildDependencyies(platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild).map { $0.0 }
+			}
+			
+			func buildDependencyTestWithIgnored(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [(String, Bool)] {
+				return buildDependencyies(platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
+			}
+			
 			beforeEach {
 				_ = try? FileManager.default.removeItem(at: buildDirectoryURL)
+				_ = try? FileManager.default.removeItem(at: directoryURL.appendingPathComponent("Cartfile.ignore"))
+
 				// Pre-fetch the repos so we have a cache for the given tags
 				let sourceRepoUrl = directoryURL.appendingPathComponent("SourceRepos")
 				for repo in ["TestFramework1", "TestFramework2", "TestFramework3"] {
@@ -54,6 +64,21 @@ class ProjectSpec: QuickSpec {
 				expect(result.filter { $0.contains("Mac") }) == macOSexpected
 				expect(result.filter { $0.contains("iOS") }) == iOSExpected
 				expect(Set(result)) == Set<String>(macOSexpected + iOSExpected)
+			}
+			
+			it("should skip frameworks while building frameworks") {
+				let ignoreCartfile = Bundle(for: type(of: self)).url(forResource: "DependencyTestCartfile", withExtension: ".ignore")!
+				_ = try? FileManager.default.copyItem(at: ignoreCartfile, to: directoryURL.appendingPathComponent("Cartfile.ignore"))
+
+				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
+				let iOSExpected = ["TestFramework3_iOS", "TestFramework2_iOS"]
+				
+				let result = buildDependencyTestWithIgnored(platforms: [], cacheBuilds: false)
+				let filteredResults = result.filter { !$0.1 }.map { $0.0 }
+				
+				expect(filteredResults.filter { $0.contains("Mac") }) == macOSexpected
+				expect(filteredResults.filter { $0.contains("iOS") }) == iOSExpected
+				expect(Set(filteredResults)) == Set<String>(macOSexpected + iOSExpected)
 			}
 
 			it("should determine build order without repo cache") {
