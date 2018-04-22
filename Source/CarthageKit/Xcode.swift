@@ -105,8 +105,9 @@ public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments) -> 
 public func buildableSchemesInDirectory( // swiftlint:disable:this function_body_length
 	_ directoryURL: URL,
 	withConfiguration configuration: String,
-	forPlatforms platforms: Set<Platform> = []
-) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> {
+	forPlatforms platforms: Set<Platform> = [],
+	ignoreEntries: [IgnoreEntry] = []
+) -> SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError> {
 	precondition(directoryURL.isFileURL)
 	let locator = ProjectLocator
 			.locate(in: directoryURL)
@@ -129,19 +130,19 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 		// Allow dependencies which have no projects, not to error out with
 		// `.noSharedFrameworkSchemes`.
 		.filter { projects in !projects.isEmpty }
-		.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-			return schemesInProjects(projects).flatten()
+		.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError> in
+			return schemesInProjects(projects, ignoreEntries: ignoreEntries).flatten()
 		}
-		.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+		.flatMap(.concurrent(limit: 4)) { scheme, project, skip -> SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError> in
 			/// Check whether we should the scheme by checking against the project. If we're building
 			/// from a workspace, then it might include additional targets that would trigger our
 			/// check.
 			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
 			return shouldBuildScheme(buildArguments, platforms)
 				.filter { $0 }
-				.map { _ in (scheme, project) }
+				.map { _ in (scheme, project, skip) }
 		}
-		.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+		.flatMap(.concurrent(limit: 4)) { scheme, project, skip -> SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError> in
 			return locator
 				// This scheduler hop is required to avoid disallowed recursive signals.
 				// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
@@ -163,10 +164,10 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 				// which the scheme is defined instead.
 				.concat(value: project)
 				.take(first: 1)
-				.map { project in (scheme, project) }
+				.map { project in (scheme, project, skip) }
 		}
 		.collect()
-		.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+		.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator, Bool)]) -> SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError> in
 			if !schemes.isEmpty {
 				return .init(schemes)
 			} else {
@@ -177,7 +178,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 
 /// Sends pairs of a scheme and a project, the scheme actually resides in
 /// the project.
-public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<[(Scheme, ProjectLocator)], CarthageError> {
+public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])], ignoreEntries: [IgnoreEntry] = []) -> SignalProducer<[(Scheme, ProjectLocator, Bool)], CarthageError> {
 	return SignalProducer<(ProjectLocator, [Scheme]), CarthageError>(projects)
 		.map { (project: ProjectLocator, schemes: [Scheme]) in
 			// Only look for schemes that actually reside in the project
@@ -197,7 +198,15 @@ public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])]) -> Signa
 			}
 		}
 		.flatMap(.concat) { project, schemes in
-			return SignalProducer<(Scheme, ProjectLocator), CarthageError>(schemes.map { ($0, project) })
+			return SignalProducer<(Scheme, ProjectLocator, Bool), CarthageError>(schemes.map { scheme in
+				let skip = ignoreEntries.contains(where: { ignoreEntry -> Bool in
+					guard let projectName = ignoreEntry.project else {
+						return scheme.name == ignoreEntry.scheme
+					}
+					return project.name == projectName && scheme.name == ignoreEntry.scheme
+				})
+				return (scheme, project, skip)
+			})
 		}
 		.collect()
 }
@@ -735,7 +744,7 @@ public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<Tas
 ///
 /// A producer of this type will send the project and scheme name when building
 /// begins, then complete or error when building terminates.
-public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator, Scheme)>, CarthageError>
+public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator, Scheme, Bool)>, CarthageError>
 
 /// Attempts to build the dependency, then places its build product into the
 /// root directory given.
@@ -744,6 +753,7 @@ public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator,
 public func build(
 	dependency: Dependency,
 	version: PinnedVersion,
+	ignoreEntries: [IgnoreEntry],
 	_ rootDirectoryURL: URL,
 	withOptions options: BuildOptions,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
@@ -751,7 +761,7 @@ public func build(
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
-	return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
+	return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version, ignoreEntries), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
 		.mapError { error in
 			switch (dependency, error) {
 			case let (_, .noSharedFrameworkSchemes(_, platforms)):
@@ -772,7 +782,7 @@ public func build(
 public func buildInDirectory( // swiftlint:disable:this function_body_length
 	_ directoryURL: URL,
 	withOptions options: BuildOptions,
-	dependency: (dependency: Dependency, version: PinnedVersion)? = nil,
+	dependency: (dependency: Dependency, version: PinnedVersion, ignoreEntries: [IgnoreEntry])? = nil,
 	rootDirectoryURL: URL,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> BuildSchemeProducer {
@@ -781,9 +791,16 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 	return BuildSchemeProducer { observer, lifetime in
 		// Use SignalProducer.replayLazily to avoid enumerating the given directory
 		// multiple times.
-		buildableSchemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms)
-			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
-				let initialValue = (project, scheme)
+		buildableSchemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms, ignoreEntries: dependency?.ignoreEntries ?? [])
+			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator, skip: Bool) -> SignalProducer<TaskEvent<URL>, CarthageError> in
+				let initialValue = (project, scheme, skip)
+
+				if skip {
+					return SignalProducer(value: TaskEvent.success(URL(string: ".")!))
+						.on(started: {
+						observer.send(value: .success(initialValue))
+					})
+				}
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
 					let filteredSDKs: [SDK]
@@ -829,8 +846,8 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 			// Discard any Success values, since we want to
 			// use our initial value instead of waiting for
 			// completion.
-			.map { taskEvent -> TaskEvent<(ProjectLocator, Scheme)> in
-				let ignoredValue = (ProjectLocator.workspace(URL(string: ".")!), Scheme(""))
+			.map { taskEvent -> TaskEvent<(ProjectLocator, Scheme, Bool)> in
+				let ignoredValue = (ProjectLocator.workspace(URL(string: ".")!), Scheme(""), false)
 				return taskEvent.map { _ in ignoredValue }
 			}
 			.filter { taskEvent in

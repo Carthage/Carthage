@@ -29,6 +29,11 @@ public enum ProjectLocator {
 	public var level: Int {
 		return fileURL.pathComponents.count - 1
 	}
+
+	/// The name of the project or workspace.
+	public var name: String {
+		return fileURL.deletingPathExtension().lastPathComponent
+	}
 }
 
 extension ProjectLocator: Comparable {

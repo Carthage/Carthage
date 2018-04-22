@@ -94,6 +94,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 		return directoryURL.appendingPathComponent(Constants.Project.resolvedCartfilePath, isDirectory: false)
 	}
 
+	/// The file URL to the project's Cartfile.ignore.
+	public var ignorefileURL: URL {
+		return directoryURL.appendingPathComponent(Constants.Project.ignoreCartfilePath, isDirectory: false)
+	}
+
 	/// Whether to prefer HTTPS for cloning (vs. SSH).
 	public var preferHTTPS = true
 
@@ -196,6 +201,26 @@ public final class Project { // swiftlint:disable:this type_body_length
 				.mapError { .readFailed(self.resolvedCartfileURL, $0) }
 				.flatMap(ResolvedCartfile.from)
 		}
+	}
+
+	/// Reads the project's Cartfile.ignore.
+	public func loadIgnorefile() -> SignalProducer<Ignorefile, CarthageError> {
+		return SignalProducer {
+			Result(attempt: { try String(contentsOf: self.ignorefileURL, encoding: .utf8) })
+				.mapError { .readFailed(self.ignorefileURL, $0) }
+				.flatMap(Ignorefile.from)
+		}
+	}
+
+	private func ignoreEntries() -> SignalProducer<[IgnoreEntry], CarthageError> {
+		return self
+			.loadIgnorefile()
+			.map { file in
+				return file.ignoreEntries
+			}
+			.flatMapError { _ in
+				return SignalProducer(value: [])
+			}
 	}
 
 	/// Writes the given Cartfile.resolved out to the project's directory.
@@ -1080,7 +1105,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 						}
 						return symlinkBuildPath(for: dependency, rootDirectoryURL: self.directoryURL)
 					}
-					.then(build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter))
+					.then(self.ignoreEntries().flatMap(.concat) { ignoreEntries in
+						return build(dependency: dependency, version: version, ignoreEntries: ignoreEntries, self.directoryURL, withOptions: options, sdkFilter: sdkFilter)
+					})
 					.flatMapError { error in
 						switch error {
 						case .noSharedFrameworkSchemes:

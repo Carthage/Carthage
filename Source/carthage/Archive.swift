@@ -49,7 +49,7 @@ public struct ArchiveCommand: CommandProtocol {
 		} else {
 			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release")
-				.flatMap(.merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
+				.flatMap(.merge) { scheme, project, _ -> SignalProducer<BuildSettings, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 					return BuildSettings.load(with: buildArguments)
 				}
