@@ -568,23 +568,24 @@ public final class Project { // swiftlint:disable:this type_body_length
 						return checkFrameworkCompatibility(url, usingToolchain: toolchain)
 							.mapError { error in CarthageError.internalError(description: error.description) }
 					}
-					.flatMap(.merge) {
-						return self.copyFrameworkToBuildFolder($0)
-					}
+					.flatMap(.merge, self.copyFrameworkToBuildFolder)
 					.flatMap(.merge) { frameworkURLResult -> SignalProducer<Result<URL, CarthageError>, CarthageError> in
-
+						// For each result of the copy operation above
 						switch frameworkURLResult {
 						case .success(let frameworkURL):
+							// if successfull proceed with copying DSYM and BCSymbolMaps
 							return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
 								.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
 								.then(SignalProducer(value: .success(frameworkURL)))
 						case .failure(let error):
+							// else, forward the error
 							return SignalProducer(value: .failure(error))
 						}
 					}
 					.collect()
 					.flatMap(.concat) { frameworkURLsResults -> SignalProducer<(), CarthageError> in
-
+						// Once all results have been collected,
+						// separate successes and failures from the copy step
 						let (frameworkURLs, errors) = frameworkURLsResults.reduce(([URL](), [CarthageError]()), { acc, frameworkURLResult in
 							var mutableAcc = acc
 
@@ -598,10 +599,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 							return mutableAcc
 						})
 
+						// Forward all failures
 						for error in errors {
 							self._projectEventsObserver.send(value: .skippedCopying(dependency, error.description))
 						}
 
+						// Proceed with creaing version files for the successfull frameworks
 						return self.createVersionFilesForFrameworks(
 							frameworkURLs,
 							fromDirectoryURL: directoryURL,
@@ -726,18 +729,22 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// Sends the URL to the framework after copying.
 	private func copyFrameworkToBuildFolder(_ frameworkURL: URL) -> SignalProducer<Result<URL, CarthageError>, CarthageError> {
-		return platformForFramework(frameworkURL)
-			.map { .success($0) }
-			.flatMapError { SignalProducer(value: Result<Platform, CarthageError>(error: $0)) }
+		return platformForFramework(frameworkURL) // Try to determine the platform of the framework at given URL
+			.map { .success($0) } // If the platform is determined correctly, assert success
+			.flatMapError { SignalProducer(value: Result<Platform, CarthageError>(error: $0)) } // else, collect the error
 			.flatMap(.merge) { platformResult -> SignalProducer<Result<URL, CarthageError>, CarthageError> in
 
 				switch platformResult {
 				case .success(let platform):
+					// If the platfrom is determined correctly
 					let platformFolderURL = self.directoryURL.appendingPathComponent(platform.relativePath, isDirectory: true)
 					return SignalProducer(value: frameworkURL)
 						.copyFileURLsIntoDirectory(platformFolderURL)
+						// assert succes and forward the URL
 						.map { Result<URL, CarthageError>.success($0) }
+						// copying could still fail but don't collect this error
 				case .failure(let error):
+					// else the platform could not be determined, collect the error
 					return SignalProducer(value: Result<URL, CarthageError>.failure(error))
 				}
 			}
