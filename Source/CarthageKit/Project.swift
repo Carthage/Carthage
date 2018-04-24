@@ -586,16 +586,16 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.concat) { frameworkURLsResults -> SignalProducer<(), CarthageError> in
 
 						let (frameworkURLs, errors) = frameworkURLsResults.reduce(([URL](), [CarthageError]()), { acc, frameworkURLResult in
-							var mutalbeAcc = acc
+							var mutableAcc = acc
 
 							switch frameworkURLResult {
 							case .success(let url):
-								mutalbeAcc.0.append(url)
+								mutableAcc.0.append(url)
 							case .failure(let error):
-								mutalbeAcc.1.append(error)
+								mutableAcc.1.append(error)
 							}
 
-							return mutalbeAcc
+							return mutableAcc
 						})
 
 						for error in errors {
