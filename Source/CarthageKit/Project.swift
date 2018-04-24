@@ -573,7 +573,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						// For each result of the copy operation above
 						switch frameworkURLResult {
 						case .success(let frameworkURL):
-							// if successfull proceed with copying DSYM and BCSymbolMaps
+							// if successful proceed with copying DSYM and BCSymbolMaps
 							return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
 								.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
 								.then(SignalProducer(value: .success(frameworkURL)))
@@ -604,7 +604,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 							self._projectEventsObserver.send(value: .skippedCopying(dependency, error.description))
 						}
 
-						// Proceed with creaing version files for the successfull frameworks
+						// Proceed with creating version files for the successfull frameworks
 						return self.createVersionFilesForFrameworks(
 							frameworkURLs,
 							fromDirectoryURL: directoryURL,
@@ -729,7 +729,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// Sends the URL to the framework after copying.
 	private func copyFrameworkToBuildFolder(_ frameworkURL: URL) -> SignalProducer<Result<URL, CarthageError>, CarthageError> {
-		return platformForFramework(frameworkURL) // Try to determine the platform of the framework at given URL
+		return platformForFramework(frameworkURL) // Try to determine the platform of the framework at the given URL
 			.map { .success($0) } // If the platform is determined correctly, assert success
 			.flatMapError { SignalProducer(value: Result<Platform, CarthageError>(error: $0)) } // else, collect the error
 			.flatMap(.merge) { platformResult -> SignalProducer<Result<URL, CarthageError>, CarthageError> in
