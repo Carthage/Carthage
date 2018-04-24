@@ -118,6 +118,10 @@ internal struct ProjectEventSink {
 		case let .buildingUncached(dependency):
 			carthage.println(formatting.bullets + "No cache found for " + formatting.projectName(dependency.name)
 				+ ", building with all downstream dependencies")
+
+		case let .skippedCopying(dependency, message):
+			carthage.println(formatting.bullets + "Skipped copying of " + formatting.projectName(dependency.name)
+				+ " due to an error: " + formatting.quote(message))
 		}
 	}
 }
