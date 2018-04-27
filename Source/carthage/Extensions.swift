@@ -102,8 +102,13 @@ internal struct ProjectEventSink {
 				+ ".framework binary due to the error:\n\t" + formatting.quote(message))
 
 		case let .skippedInstallingBinaries(dependency, error):
-			carthage.println(formatting.bullets + "Skipped installing " + formatting.projectName(dependency.name)
-				+ ".framework binary due to the error:\n\t" + formatting.quote(String(describing: error)))
+			let output = """
+			\(formatting.bullets) Skipped installing \(formatting.projectName(dependency.name)).framework binary due to the error:
+				\(formatting.quote(String(describing: error)))
+
+			    Falling back to building from the source
+			"""
+			carthage.println(output)
 
 		case let .skippedBuilding(dependency, message):
 			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(dependency.name) + " due to the error:\n" + message)
