@@ -665,11 +665,6 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 				}
 				.collect()
 				.flatMap(.concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
-					let bitcodeEnabled = settings.reduce(true) { $0 && ($1.bitcodeEnabled.value ?? false) }
-					if bitcodeEnabled {
-						argsForBuilding.bitcodeGenerationMode = .bitcode
-					}
-
 					let actions: [String] = {
 						var result: [String] = [xcodebuildAction.rawValue]
 
