@@ -1281,6 +1281,16 @@ private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, C
 				return (pathComponent as NSString).pathExtension == "framework"
 			}
 			return frameworksInURL.count == 1
+		}.filter { url in
+
+			let packageType: PackageType? = Bundle(url: url)?.packageType
+
+			switch packageType {
+			case .framework?, .bundle?:
+				return true
+			default:
+				return false
+			}
 		}
 }
 
