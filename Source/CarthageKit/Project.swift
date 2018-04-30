@@ -108,7 +108,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	public init(directoryURL: URL) {
 		precondition(directoryURL.isFileURL)
-
 		let (signal, observer) = Signal<ProjectEvent, NoError>.pipe()
 		projectEvents = signal
 		_projectEventsObserver = observer
@@ -136,6 +135,23 @@ public final class Project { // swiftlint:disable:this type_body_length
 	public func loadCombinedCartfile() -> SignalProducer<Cartfile, CarthageError> {
 		let cartfileURL = directoryURL.appendingPathComponent(Constants.Project.cartfilePath, isDirectory: false)
 		let privateCartfileURL = directoryURL.appendingPathComponent(Constants.Project.privateCartfilePath, isDirectory: false)
+
+		// Because the file system Carthage is interacting with may be case sensitive a validation must be
+		// performed to ensure proper file naming. See: https://github.com/Carthage/Carthage/issues/1336
+		func validateFilenamesOfCartfiles() -> Bool {
+			let workingDirectory = (try? FileManager.default.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: [], options: .skipsHiddenFiles)) ?? []
+
+			func isValidFile(name: String) -> Bool {
+				let cartfileURL = directoryURL.appendingPathComponent(name)
+				if FileManager.default.fileExists(atPath: cartfileURL.path) {
+					return workingDirectory.first(where:{ $0.lastPathComponent == name }) != nil
+				}
+				return true
+			}
+			// DISCUSS: This could cause some issues. Based on the name `Constants.Project.cartfilePath` it suggests that
+			// the string is a path and not a file name.
+			return isValidFile(name: Constants.Project.cartfilePath) && isValidFile(name: Constants.Project.privateCartfilePath)
+		}
 
 		func isNoSuchFileError(_ error: CarthageError) -> Bool {
 			switch error {
@@ -172,6 +188,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 		return SignalProducer.zip(cartfile, privateCartfile)
 			.attemptMap { cartfile, privateCartfile -> Result<Cartfile, CarthageError> in
 				var cartfile = cartfile
+
+				if !validateFilenamesOfCartfiles() {
+					let error = CarthageError.readFailed(cartfileURL, NSError(domain: NSCocoaErrorDomain, code: NSFileReadNoSuchFileError, userInfo: nil))
+					return .failure(error)
+				}
 
 				let duplicateDeps = duplicateDependenciesIn(cartfile, privateCartfile).map { dependency in
 					return DuplicateDependency(
