@@ -39,6 +39,9 @@ public enum ProjectEvent {
 	/// any framework schemes.
 	case skippedBuilding(Dependency, String)
 
+	/// Copying of a framework is being skipped because of some issue with the binary
+	case skippedCopying(Dependency, String)
+
 	/// Building the project is being skipped because it is cached.
 	case skippedBuildingCached(Dependency)
 
@@ -73,6 +76,8 @@ extension ProjectEvent: Equatable {
 		case let (.skippedBuilding(leftIdentifier, leftRevision), .skippedBuilding(rightIdentifier, rightRevision)):
 			return leftIdentifier == rightIdentifier && leftRevision == rightRevision
 
+		case let (.skippedCopying(leftIdentifier, leftError), .skippedCopying(rightIdentifier, rightError)):
+			return leftIdentifier == rightIdentifier && leftError == rightError
 		default:
 			return false
 		}
@@ -551,7 +556,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Sends the temporary URL of the unzipped directory
 	private func unarchiveAndCopyBinaryFrameworks(
 		zipFile: URL,
-		projectName: String,
+		dependency: Dependency,
 		pinnedVersion: PinnedVersion,
 		toolchain: String?
 	) -> SignalProducer<URL, CarthageError> {
@@ -564,19 +569,47 @@ public final class Project { // swiftlint:disable:this type_body_length
 							.mapError { error in CarthageError.internalError(description: error.description) }
 					}
 					.flatMap(.merge, self.copyFrameworkToBuildFolder)
-					.flatMap(.merge) { frameworkURL -> SignalProducer<URL, CarthageError> in
-						return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
-							.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
-							.then(SignalProducer(value: frameworkURL))
+					.flatMap(.merge) { frameworkURLResult -> SignalProducer<Result<URL, CarthageError>, CarthageError> in
+						// For each result of the copy operation above
+						switch frameworkURLResult {
+						case .success(let frameworkURL):
+							// if successful proceed with copying DSYM and BCSymbolMaps
+							return self.copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
+								.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
+								.then(SignalProducer(value: .success(frameworkURL)))
+						case .failure(let error):
+							// else, forward the error
+							return SignalProducer(value: .failure(error))
+						}
 					}
 					.collect()
-					.flatMap(.concat) { frameworkURLs -> SignalProducer<(), CarthageError> in
+					.flatMap(.concat) { frameworkURLsResults -> SignalProducer<(), CarthageError> in
+						// Once all results have been collected,
+						// separate successes and failures from the copy step
+						let (frameworkURLs, errors) = frameworkURLsResults.reduce(([URL](), [CarthageError]()), { acc, frameworkURLResult in
+							var mutableAcc = acc
+
+							switch frameworkURLResult {
+							case .success(let url):
+								mutableAcc.0.append(url)
+							case .failure(let error):
+								mutableAcc.1.append(error)
+							}
+
+							return mutableAcc
+						})
+
+						// Forward all failures
+						for error in errors {
+							self._projectEventsObserver.send(value: .skippedCopying(dependency, error.description))
+						}
+
+						// Proceed with creating version files for the successfull frameworks
 						return self.createVersionFilesForFrameworks(
 							frameworkURLs,
 							fromDirectoryURL: directoryURL,
-							projectName: projectName,
-							commitish: pinnedVersion.commitish
-						)
+							projectName: dependency.name,
+							commitish: pinnedVersion.commitish)
 					}
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 			}
@@ -594,7 +627,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-	private func installBinaries(for dependency: Dependency, pinnedVersion: PinnedVersion, toolchain: String?) -> SignalProducer<Bool, CarthageError> {
+	private func installBinaries(
+		for dependency: Dependency,
+		pinnedVersion: PinnedVersion,
+		toolchain: String?)
+		-> SignalProducer<Bool, CarthageError> {
 		switch dependency {
 		case let .gitHub(server, repository):
 			let client = Client(server: server)
@@ -611,7 +648,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 					)
 				}
 				.flatMap(.concat) {
-					return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, pinnedVersion: pinnedVersion, toolchain: toolchain)
+					return self.unarchiveAndCopyBinaryFrameworks(
+						zipFile: $0,
+						dependency: dependency,
+						pinnedVersion: pinnedVersion,
+						toolchain: toolchain)
 				}
 				.flatMap(.concat) { self.removeItem(at: $0) }
 				.map { true }
@@ -687,12 +728,25 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// folder.
 	///
 	/// Sends the URL to the framework after copying.
-	private func copyFrameworkToBuildFolder(_ frameworkURL: URL) -> SignalProducer<URL, CarthageError> {
-		return platformForFramework(frameworkURL)
-			.flatMap(.merge) { platform -> SignalProducer<URL, CarthageError> in
-				let platformFolderURL = self.directoryURL.appendingPathComponent(platform.relativePath, isDirectory: true)
-				return SignalProducer(value: frameworkURL)
-					.copyFileURLsIntoDirectory(platformFolderURL)
+	private func copyFrameworkToBuildFolder(_ frameworkURL: URL) -> SignalProducer<Result<URL, CarthageError>, CarthageError> {
+		return platformForFramework(frameworkURL) // Try to determine the platform of the framework at the given URL
+			.map { .success($0) } // If the platform is determined correctly, assert success
+			.flatMapError { SignalProducer(value: Result<Platform, CarthageError>(error: $0)) } // else, collect the error
+			.flatMap(.merge) { platformResult -> SignalProducer<Result<URL, CarthageError>, CarthageError> in
+
+				switch platformResult {
+				case .success(let platform):
+					// If the platfrom is determined correctly
+					let platformFolderURL = self.directoryURL.appendingPathComponent(platform.relativePath, isDirectory: true)
+					return SignalProducer(value: frameworkURL)
+						.copyFileURLsIntoDirectory(platformFolderURL)
+						// assert succes and forward the URL
+						.map { Result<URL, CarthageError>.success($0) }
+						// copying could still fail but don't collect this error
+				case .failure(let error):
+					// else the platform could not be determined, collect the error
+					return SignalProducer(value: Result<URL, CarthageError>.failure(error))
+				}
 			}
 	}
 
@@ -866,7 +920,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	private func installBinariesForBinaryProject(
 		binary: BinaryURL,
 		pinnedVersion: PinnedVersion,
-		projectName: String,
+		dependecy: Dependency,
 		toolchain: String?
 	) -> SignalProducer<(), CarthageError> {
 		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(pinnedVersion))
@@ -882,7 +936,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { semanticVersion, frameworkURL in
 				return self.downloadBinary(dependency: Dependency.binary(binary), version: semanticVersion, url: frameworkURL)
 			}
-			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: projectName, pinnedVersion: pinnedVersion, toolchain: toolchain) }
+			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, dependency: dependecy, pinnedVersion: pinnedVersion, toolchain: toolchain) }
 			.flatMap(.concat) { self.removeItem(at: $0) }
 	}
 
@@ -1043,7 +1097,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 									return installed ? (dependency, version) : nil
 								}
 						case let .binary(binary):
-							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
+							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, dependecy: dependency, toolchain: options.toolchain)
 								.then(.init(value: (dependency, version)))
 						}
 					}
