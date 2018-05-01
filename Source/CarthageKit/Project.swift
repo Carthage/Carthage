@@ -1271,7 +1271,7 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, Carth
 }
 
 /// Sends the URL to each framework bundle found in the given directory.
-private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
 		.filter { !$0.pathComponents.contains("__MACOSX") }
 		.filter { url in
@@ -1295,7 +1295,7 @@ private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, C
 }
 
 /// Sends the URL to each dSYM found in the given directory
-private func dSYMsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+internal func dSYMsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, "com.apple.xcode.dsym")
 }
 
@@ -1317,7 +1317,7 @@ private func dSYMForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: 
 }
 
 /// Sends the URL to each bcsymbolmap found in the given directory.
-private func BCSymbolMapsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+internal func BCSymbolMapsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL)
 		.filter { url in url.pathExtension == "bcsymbolmap" }
 }

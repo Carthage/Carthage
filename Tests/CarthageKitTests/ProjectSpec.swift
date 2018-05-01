@@ -534,6 +534,15 @@ class ProjectSpec: QuickSpec {
 				expect(result?.value?.count) == 4
 			}
 		}
+
+		describe("frameworksInDirectory") {
+			it("should find all carthage compatible framework bundles and exclude improper ones") {
+				let directoryURL = Bundle(for: type(of: self)).url(forResource: "FilterBogusFrameworks", withExtension: nil)!
+
+				let result = CarthageKit.frameworksInDirectory(directoryURL).collect().single()
+				expect(result?.value?.count) == 3
+			}
+		}
 	}
 }
 
