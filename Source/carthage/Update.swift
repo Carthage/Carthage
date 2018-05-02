@@ -26,6 +26,7 @@ public struct UpdateCommand: CommandProtocol {
 				isVerbose: isVerbose,
 				directoryPath: checkoutOptions.directoryPath,
 				logPath: logPath,
+				archive: false,
 				dependenciesToBuild: dependenciesToUpdate
 			)
 		}
