@@ -225,7 +225,7 @@ internal enum FrameworkType {
 }
 
 /// Describes the type of packages, given their CFBundlePackageType.
-private enum PackageType: String {
+internal enum PackageType: String {
 	/// A .framework package.
 	case framework = "FMWK"
 
@@ -1165,9 +1165,8 @@ private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, Carthag
 /// Returns the URL of a binary inside a given package.
 public func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 	let bundle = Bundle(path: packageURL.path)
-	let packageType = (bundle?.object(forInfoDictionaryKey: "CFBundlePackageType") as? String).flatMap(PackageType.init)
 
-	switch packageType {
+	switch bundle?.packageType {
 	case .framework?, .bundle?:
 		if let binaryName = bundle?.object(forInfoDictionaryKey: "CFBundleExecutable") as? String {
 			return .success(packageURL.appendingPathComponent(binaryName))
