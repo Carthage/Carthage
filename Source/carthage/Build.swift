@@ -38,6 +38,19 @@ public struct BuildCommand: CommandProtocol {
 		public let archive: Bool
 		public let dependenciesToBuild: [String]?
 
+		/// If `archive` is true, this will be a producer that will archive
+		/// the project after the build.
+		///
+		/// Otherwise, this producer will be empty.
+		public var archiveProducer: SignalProducer<(), CarthageError> {
+			if archive {
+				let options = ArchiveCommand.Options(outputPath: nil, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: [])
+				return ArchiveCommand().archiveWithOptions(options)
+			} else {
+				return .empty
+			}
+		}
+
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return curry(self.init)
 				<*> BuildOptions.evaluate(mode)
@@ -56,6 +69,7 @@ public struct BuildCommand: CommandProtocol {
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return self.buildWithOptions(options)
+			.then(options.archiveProducer)
 			.waitOnCommand()
 	}
 
@@ -117,7 +131,7 @@ public struct BuildCommand: CommandProtocol {
 		let buildProducer = project.loadResolvedCartfile()
 			.map { _ in project }
 			.flatMapError { error -> SignalProducer<Project, CarthageError> in
-				if options.skipCurrent || options.archive {
+				if options.skipCurrent && !options.archive {
 					return SignalProducer(error: error)
 				} else {
 					// Ignore Cartfile.resolved loading failure. Assume the user
@@ -129,7 +143,7 @@ public struct BuildCommand: CommandProtocol {
 				return project.buildCheckedOutDependenciesWithOptions(options.buildOptions, dependenciesToBuild: options.dependenciesToBuild)
 			}
 
-		if options.skipCurrent || options.archive {
+		if options.skipCurrent && !options.archive {
 			return buildProducer
 		} else {
 			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions, rootDirectoryURL: directoryURL)
