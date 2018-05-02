@@ -285,7 +285,7 @@ public struct BuildSettings {
 	}
 
 	/// Attempts to determine target build directory
-	public var targetBuildDir: Result<String, CarthageError> {
+	public var targetBuildDirectory: Result<String, CarthageError> {
 		return self["TARGET_BUILD_DIR"]
 	}
 
