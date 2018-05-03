@@ -67,7 +67,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
     /usr/local/bin/carthage copy-frameworks
     ```
 
-1. Add the paths to the frameworks you want to use under “Input Files”, e.g.:
+1. Add the paths to the frameworks you want to use under “Input Files". For example:
 
     ```
     $(SRCROOT)/Carthage/Build/iOS/Result.framework
@@ -75,7 +75,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
     $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
     ```
 
-1. Add the paths to the copied frameworks to the “Output Files”, e.g.:
+1. Add the paths to the copied frameworks to the “Output Files”. For example:
 
     ```
     $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Result.framework

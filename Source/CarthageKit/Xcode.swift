@@ -235,7 +235,7 @@ internal enum FrameworkType {
 }
 
 /// Describes the type of packages, given their CFBundlePackageType.
-private enum PackageType: String {
+internal enum PackageType: String {
 	/// A .framework package.
 	case framework = "FMWK"
 
@@ -697,11 +697,6 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 					return SignalProducer(value: producers).flatten().flatten(.concat).collect()
 				}
 				.flatMap(.concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
-					let bitcodeEnabled = settings.reduce(true) { $0 && ($1.bitcodeEnabled.value ?? false) }
-					if bitcodeEnabled {
-						argsForBuilding.bitcodeGenerationMode = .bitcode
-					}
-
 					let actions: [String] = {
 						var result: [String] = [xcodebuildAction.rawValue]
 
@@ -1202,9 +1197,8 @@ private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, Carthag
 /// Returns the URL of a binary inside a given package.
 public func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 	let bundle = Bundle(path: packageURL.path)
-	let packageType = (bundle?.object(forInfoDictionaryKey: "CFBundlePackageType") as? String).flatMap(PackageType.init)
 
-	switch packageType {
+	switch bundle?.packageType {
 	case .framework?, .bundle?:
 		if let binaryName = bundle?.object(forInfoDictionaryKey: "CFBundleExecutable") as? String {
 			return .success(packageURL.appendingPathComponent(binaryName))

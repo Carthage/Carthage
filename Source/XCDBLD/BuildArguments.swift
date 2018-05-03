@@ -131,10 +131,6 @@ public struct BuildArguments {
 			}
 		}
 
-		if let bitcodeGenerationMode = bitcodeGenerationMode {
-			args += [ "BITCODE_GENERATION_MODE=\(bitcodeGenerationMode.rawValue)" ]
-		}
-
 		// Disable code signing requirement for all builds
 		// Frameworks get signed in the copy-frameworks action
 		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]

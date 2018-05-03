@@ -226,23 +226,23 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.startOnQueue(cloneOrFetchQueue)
 	}
 
-	func downloadBinaryFrameworkDefinition(url: URL) -> SignalProducer<BinaryProject, CarthageError> {
+	func downloadBinaryFrameworkDefinition(binary: BinaryURL) -> SignalProducer<BinaryProject, CarthageError> {
 		return SignalProducer<Project.CachedBinaryProjects, CarthageError>(value: self.cachedBinaryProjects)
 			.flatMap(.merge) { binaryProjectsByURL -> SignalProducer<BinaryProject, CarthageError> in
-				if let binaryProject = binaryProjectsByURL[url] {
+				if let binaryProject = binaryProjectsByURL[binary.url] {
 					return SignalProducer(value: binaryProject)
 				} else {
-					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(url), url))
+					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(binary), binary.url))
 
-					return URLSession.shared.reactive.data(with: URLRequest(url: url))
-						.mapError { CarthageError.readFailed(url, $0 as NSError) }
+					return URLSession.shared.reactive.data(with: URLRequest(url: binary.url))
+						.mapError { CarthageError.readFailed(binary.url, $0 as NSError) }
 						.attemptMap { data, _ in
 							return BinaryProject.from(jsonData: data).mapError { error in
-								return CarthageError.invalidBinaryJSON(url, error)
+								return CarthageError.invalidBinaryJSON(binary.url, error)
 							}
 						}
 						.on(value: { binaryProject in
-							self.cachedBinaryProjects[url] = binaryProject
+							self.cachedBinaryProjects[binary.url] = binaryProject
 						})
 				}
 			}
@@ -262,8 +262,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 				.flatMap(.merge) { repositoryURL in listTags(repositoryURL) }
 				.map { PinnedVersion($0) }
 
-		case let .binary(url):
-			fetchVersions = downloadBinaryFrameworkDefinition(url: url)
+		case let .binary(binary):
+			fetchVersions = downloadBinaryFrameworkDefinition(binary: binary)
 				.flatMap(.concat) { binaryProject -> SignalProducer<PinnedVersion, CarthageError> in
 					return SignalProducer(binaryProject.versions.keys)
 				}
@@ -864,23 +864,23 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 	private func installBinariesForBinaryProject(
-		url: URL,
+		binary: BinaryURL,
 		pinnedVersion: PinnedVersion,
 		projectName: String,
 		toolchain: String?
 	) -> SignalProducer<(), CarthageError> {
 		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(pinnedVersion))
 			.mapError { CarthageError(scannableError: $0) }
-			.combineLatest(with: self.downloadBinaryFrameworkDefinition(url: url))
+			.combineLatest(with: self.downloadBinaryFrameworkDefinition(binary: binary))
 			.attemptMap { semanticVersion, binaryProject -> Result<(SemanticVersion, URL), CarthageError> in
 				guard let frameworkURL = binaryProject.versions[pinnedVersion] else {
-					return .failure(CarthageError.requiredVersionNotFound(Dependency.binary(url), VersionSpecifier.exactly(semanticVersion)))
+					return .failure(CarthageError.requiredVersionNotFound(Dependency.binary(binary), VersionSpecifier.exactly(semanticVersion)))
 				}
 
 				return .success((semanticVersion, frameworkURL))
 			}
 			.flatMap(.concat) { semanticVersion, frameworkURL in
-				return self.downloadBinary(dependency: Dependency.binary(url), version: semanticVersion, url: frameworkURL)
+				return self.downloadBinary(dependency: Dependency.binary(binary), version: semanticVersion, url: frameworkURL)
 			}
 			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: projectName, pinnedVersion: pinnedVersion, toolchain: toolchain) }
 			.flatMap(.concat) { self.removeItem(at: $0) }
@@ -1042,8 +1042,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 								.filterMap { installed -> (Dependency, PinnedVersion)? in
 									return installed ? (dependency, version) : nil
 								}
-						case let .binary(url):
-							return self.installBinariesForBinaryProject(url: url, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
+						case let .binary(binary):
+							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
 								.then(.init(value: (dependency, version)))
 						}
 					}
@@ -1271,7 +1271,7 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, Carth
 }
 
 /// Sends the URL to each framework bundle found in the given directory.
-private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
 		.filter { !$0.pathComponents.contains("__MACOSX") }
 		.filter { url in
@@ -1281,11 +1281,21 @@ private func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, C
 				return (pathComponent as NSString).pathExtension == "framework"
 			}
 			return frameworksInURL.count == 1
+		}.filter { url in
+
+			let packageType: PackageType? = Bundle(url: url)?.packageType
+
+			switch packageType {
+			case .framework?, .bundle?:
+				return true
+			default:
+				return false
+			}
 		}
 }
 
 /// Sends the URL to each dSYM found in the given directory
-private func dSYMsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+internal func dSYMsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, "com.apple.xcode.dsym")
 }
 
@@ -1307,7 +1317,7 @@ private func dSYMForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: 
 }
 
 /// Sends the URL to each bcsymbolmap found in the given directory.
-private func BCSymbolMapsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+internal func BCSymbolMapsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL)
 		.filter { url in url.pathExtension == "bcsymbolmap" }
 }
