@@ -68,6 +68,10 @@ class SemanticVersionSpec: QuickSpec {
 			expect(SemanticVersion.from(PinnedVersion("v2.8-alpha")).value).to(beNil()) // pre-release should be after patch
 			expect(SemanticVersion.from(PinnedVersion("v2.8+build345")).value).to(beNil()) // build should be after patch
 			expect(SemanticVersion.from(PinnedVersion("null-string-beta-2")).value).to(beNil())
+			expect(SemanticVersion.from(PinnedVersion("1.4.5+")).value).to(beNil()) // missing build metadata after '+'
+			expect(SemanticVersion.from(PinnedVersion("1.4.5-alpha+")).value).to(beNil()) // missing build metadata after '+'
+			expect(SemanticVersion.from(PinnedVersion("1.4.5-")).value).to(beNil()) // missing pre-release after '-'
+			expect(SemanticVersion.from(PinnedVersion("1.4.5-+build43")).value).to(beNil()) // missing pre-release after '-'
 		}
 	}
 }

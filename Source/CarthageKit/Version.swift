@@ -118,6 +118,14 @@ extension SemanticVersion: Scannable {
 		
 		let preRelease = scanner.scanStringWithPrefix("-", until: "+")
 		let buildMetadata = scanner.scanStringWithPrefix("+", until: "")
+		
+		if let buildMetadata = buildMetadata, buildMetadata.isEmpty {
+			return .failure(ScannableError(message: "Build metadata is empty after '+', in \"\(version)\""))
+		}
+		
+		if let preRelease = preRelease, preRelease.isEmpty {
+			return .failure(ScannableError(message: "Pre-release is empty after '-', in \"\(version)\""))
+		}
 
 		guard (preRelease == nil && buildMetadata == nil) || hasPatchComponent else {
 			return .failure(ScannableError(message: "can not have pre-release or build metadata without patch, in \"\(version)\""))
