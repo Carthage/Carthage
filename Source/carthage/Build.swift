@@ -59,7 +59,7 @@ public struct BuildCommand: CommandProtocol {
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
-				<*> mode <| Option(key: "archive", defaultValue: false, usage: "don't skip building the Carthage project (in addition to its dependencies) and archive")
+				<*> mode <| Option(key: "archive", defaultValue: false, usage: "archive built frameworks from the current project (implies --no-skip-current)")
 				<*> (mode <| Argument(defaultValue: [], usage: "the dependency names to build")).map { $0.isEmpty ? nil : $0 }
 		}
 	}
