@@ -39,6 +39,11 @@ public struct ArchiveCommand: CommandProtocol {
 
 	// swiftlint:disable:next function_body_length
 	public func run(_ options: Options) -> Result<(), CarthageError> {
+		return archiveWithOptions(options)
+			.waitOnCommand()
+	}
+
+	public func archiveWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 
 		let frameworks: SignalProducer<[String], CarthageError>
@@ -116,9 +121,8 @@ public struct ArchiveCommand: CommandProtocol {
 					return zip(paths: paths, into: outputURL, workingDirectory: options.directoryPath).on(completed: {
 						carthage.println(formatting.bullets + "Created " + formatting.path(outputPath))
 					})
-				}
+			}
 		}
-		.waitOnCommand()
 	}
 }
 

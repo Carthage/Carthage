@@ -35,7 +35,21 @@ public struct BuildCommand: CommandProtocol {
 		public let isVerbose: Bool
 		public let directoryPath: String
 		public let logPath: String?
+		public let archive: Bool
 		public let dependenciesToBuild: [String]?
+
+		/// If `archive` is true, this will be a producer that will archive
+		/// the project after the build.
+		///
+		/// Otherwise, this producer will be empty.
+		public var archiveProducer: SignalProducer<(), CarthageError> {
+			if archive {
+				let options = ArchiveCommand.Options(outputPath: nil, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: [])
+				return ArchiveCommand().archiveWithOptions(options)
+			} else {
+				return .empty
+			}
+		}
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return curry(self.init)
@@ -45,6 +59,7 @@ public struct BuildCommand: CommandProtocol {
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
+				<*> mode <| Option(key: "archive", defaultValue: false, usage: "archive built frameworks from the current project (implies --no-skip-current)")
 				<*> (mode <| Argument(defaultValue: [], usage: "the dependency names to build")).map { $0.isEmpty ? nil : $0 }
 		}
 	}
@@ -54,6 +69,7 @@ public struct BuildCommand: CommandProtocol {
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return self.buildWithOptions(options)
+			.then(options.archiveProducer)
 			.waitOnCommand()
 	}
 
@@ -115,7 +131,7 @@ public struct BuildCommand: CommandProtocol {
 		let buildProducer = project.loadResolvedCartfile()
 			.map { _ in project }
 			.flatMapError { error -> SignalProducer<Project, CarthageError> in
-				if options.skipCurrent {
+				if options.skipCurrent && !options.archive {
 					return SignalProducer(error: error)
 				} else {
 					// Ignore Cartfile.resolved loading failure. Assume the user
@@ -127,7 +143,7 @@ public struct BuildCommand: CommandProtocol {
 				return project.buildCheckedOutDependenciesWithOptions(options.buildOptions, dependenciesToBuild: options.dependenciesToBuild)
 			}
 
-		if options.skipCurrent {
+		if options.skipCurrent && !options.archive {
 			return buildProducer
 		} else {
 			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions, rootDirectoryURL: directoryURL)
