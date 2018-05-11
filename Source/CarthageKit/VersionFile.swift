@@ -237,14 +237,14 @@ public func createVersionFileForCommitish(
 	buildProducts: [URL],
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
+	var platformCaches: [String: [CachedFramework]] = [:]
+	
+	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
+	for platform in platformsToCache {
+		platformCaches[platform.rawValue] = []
+	}
+	
 	if !buildProducts.isEmpty {
-		var platformCaches: [String: [CachedFramework]] = [:]
-
-		let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
-		for platform in platformsToCache {
-			platformCaches[platform.rawValue] = []
-		}
-
 		return SignalProducer<URL, CarthageError>(buildProducts)
 			.flatMap(.merge) { url -> SignalProducer<(String, (String, String)), CarthageError> in
 				let frameworkName = url.deletingPathExtension().lastPathComponent
@@ -270,7 +270,7 @@ public func createVersionFileForCommitish(
 	} else {
 		// Write out an empty version file for dependencies with no built frameworks, so cache builds can differentiate between
 		// no cache and a dependency that has no frameworks
-		return createVersionFile(commitish, dependencyName: dependencyName, rootDirectoryURL: rootDirectoryURL, platformCaches: [:])
+		return createVersionFile(commitish, dependencyName: dependencyName, rootDirectoryURL: rootDirectoryURL, platformCaches: platformCaches)
 	}
 }
 
