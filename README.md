@@ -4,29 +4,73 @@
 
 Carthage is intended to be the simplest way to add frameworks to your Cocoa application.
 
-The basic [workflow](#adding-frameworks-to-an-application) looks something like this:
-
-1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
-1. [Run Carthage](#adding-frameworks-to-an-application), which fetches and builds each framework you’ve listed.
-1. Drag the built `.framework` binaries into your application’s Xcode project.
-
 Carthage builds your dependencies and provides you with binary frameworks, but you retain full control over your project structure and setup. Carthage does not automatically modify your project files or your build settings.
 
-## Differences between Carthage and CocoaPods
+- [Quick Start](#quick-start)
+- [Installing Carthage](#installing-carthage)
+- [Adding frameworks to an application](#adding-frameworks-to-an-application)
+	- [Getting started](#getting-started)
+		- [If you're building for OS X](#if-youre-building-for-os-x)
+		- [If you're building for iOS, tvOS, or watchOS](#if-youre-building-for-ios-tvos-or-watchos)
+		- [For both platforms](#for-both-platforms)
+		- [(Optionally) Add build phase to warn about outdated dependencies](#optionally-add-build-phase-to-warn-about-outdated-dependencies)
+		- [Swift binary framework download compatibility](#swift-binary-framework-download-compatibility)
+	- [Running a project that uses Carthage](#running-a-project-that-uses-carthage)
+	- [Adding frameworks to unit tests or a framework](#adding-frameworks-to-unit-tests-or-a-framework)
+	- [Upgrading frameworks](#upgrading-frameworks)
+		- [Experimental Resolver](#experimental-resolver)
+	- [Nested dependencies](#nested-dependencies)
+	- [Using submodules for dependencies](#using-submodules-for-dependencies)
+	- [Automatically rebuilding dependencies](#automatically-rebuilding-dependencies)
+	- [Caching builds](#caching-builds)
+	- [Bash/Zsh/Fish completion](#bashzshfish-completion)
+- [Supporting Carthage for your framework](#supporting-carthage-for-your-framework)
+	- [Share your Xcode schemes](#share-your-xcode-schemes)
+	- [Resolve build failures](#resolve-build-failures)
+	- [Tag stable releases](#tag-stable-releases)
+	- [Archive prebuilt frameworks into one zip file](#archive-prebuilt-frameworks-into-one-zip-file)
+		- [Use travis-ci to upload your tagged prebuilt frameworks](#use-travis-ci-to-upload-your-tagged-prebuilt-frameworks)
+	- [Build static frameworks to speed up your app’s launch times](#build-static-frameworks-to-speed-up-your-apps-launch-times)
+	- [Declare your compatibility](#declare-your-compatibility)
+- [Known issues](#known-issues)
+	- [DWARFs symbol problem](#dwarfs-symbol-problem)
+- [CarthageKit](#carthagekit)
+- [Differences between Carthage and CocoaPods](#differences-between-carthage-and-cocoapods)
+- [License](#license)
 
-[CocoaPods](http://cocoapods.org/) is a long-standing dependency manager for Cocoa. So why was Carthage created?
+## Quick Start
 
-Firstly, CocoaPods (by default) automatically creates and updates an Xcode workspace for your application and all dependencies. Carthage builds framework binaries using `xcodebuild`, but leaves the responsibility of integrating them up to the user. CocoaPods’ approach is easier to use, while Carthage’s is flexible and unintrusive.
+1. Get Carthage by running `brew install carthage` or choose [another installation method]((#installing-carthage))
+1. Create a [Cartfile][] in the same directory where your `.xcodeproj` or `.xcworkspace` is
+1. List the desired dependencies in the [Cartfile][], for example:
 
-The goal of CocoaPods is listed in its [README](https://github.com/CocoaPods/CocoaPods/blob/1703a3464674baecf54bd7e766f4b37ed8fc43f7/README.md) as follows:
+	```
+	github "Alamofire/Alamofire" ~> 4.7.2
+	```
+	
+1. Run `carthage update`
+1. A `Cartfile.resolved` file and a `Carthage` directory will appear in the same directory where your `.xcodeproj` or `.xcworkspace` is
+1. Drag the built `.framework` binaries from `Carthage/Build/<platform>` into your application’s Xcode project.
+1. If you are using Carthage for an application, follow the remaining steps, otherwise stop here.
+1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
-> … to improve discoverability of, and engagement in, third party open-source libraries, by creating a more centralized ecosystem.
+    ```sh
+    /usr/local/bin/carthage copy-frameworks
+    ```
 
-By contrast, Carthage has been created as a _decentralized_ dependency manager. There is no central list of projects, which reduces maintenance work and avoids any central point of failure. However, project discovery is more difficult—users must resort to GitHub’s [Trending](https://github.com/trending?l=swift) pages or similar.
+1. Add the paths to the frameworks you want to use under “Input Files". For example:
 
-CocoaPods projects must also have what’s known as a [podspec](http://guides.cocoapods.org/syntax/podspec.html) file, which includes metadata about the project and specifies how it should be built. Carthage uses `xcodebuild` to build dependencies, instead of integrating them into a single workspace, it doesn’t have a similar specification file but your dependencies must include their own Xcode project that describes how to build their products.
+    ```
+    $(SRCROOT)/Carthage/Build/iOS/Alamofire.framework
+    ```
 
-Ultimately, we created Carthage because we wanted the simplest tool possible—a dependency manager that gets the job done without taking over the responsibility of Xcode, and without creating extra work for framework authors. CocoaPods offers many amazing features that Carthage will never have, at the expense of additional complexity.
+1. Add the paths to the copied frameworks to the “Output Files”. For example:
+
+    ```
+    $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Alamofire.framework
+    ```
+
+For an in depth guide, read on from [Adding frameworks to an application](#adding-frameworks-to-an-application)
 
 ## Installing Carthage
 
@@ -232,7 +276,7 @@ carthage archive YourFrameworkName
 
 Draft Releases will be automatically ignored, even if they correspond to the desired tag.
 
-#### Use travis-ci to upload your tagged prebuild frameworks
+#### Use travis-ci to upload your tagged prebuilt frameworks
 
 It is possible to use travis-ci in order to build and upload your tagged releases.
 
@@ -328,6 +372,22 @@ Most of the functionality of the `carthage` command line tool is actually encaps
 
 If you’re interested in using Carthage as part of another tool, or perhaps extending the functionality of Carthage, take a look at the [CarthageKit][] source code to see if the API fits your needs.
 
+## Differences between Carthage and CocoaPods
+
+[CocoaPods](http://cocoapods.org/) is a long-standing dependency manager for Cocoa. So why was Carthage created?
+
+Firstly, CocoaPods (by default) automatically creates and updates an Xcode workspace for your application and all dependencies. Carthage builds framework binaries using `xcodebuild`, but leaves the responsibility of integrating them up to the user. CocoaPods’ approach is easier to use, while Carthage’s is flexible and unintrusive.
+
+The goal of CocoaPods is listed in its [README](https://github.com/CocoaPods/CocoaPods/blob/1703a3464674baecf54bd7e766f4b37ed8fc43f7/README.md) as follows:
+
+> … to improve discoverability of, and engagement in, third party open-source libraries, by creating a more centralized ecosystem.
+
+By contrast, Carthage has been created as a _decentralized_ dependency manager. There is no central list of projects, which reduces maintenance work and avoids any central point of failure. However, project discovery is more difficult—users must resort to GitHub’s [Trending](https://github.com/trending?l=swift) pages or similar.
+
+CocoaPods projects must also have what’s known as a [podspec](http://guides.cocoapods.org/syntax/podspec.html) file, which includes metadata about the project and specifies how it should be built. Carthage uses `xcodebuild` to build dependencies, instead of integrating them into a single workspace, it doesn’t have a similar specification file but your dependencies must include their own Xcode project that describes how to build their products.
+
+Ultimately, we created Carthage because we wanted the simplest tool possible—a dependency manager that gets the job done without taking over the responsibility of Xcode, and without creating extra work for framework authors. CocoaPods offers many amazing features that Carthage will never have, at the expense of additional complexity.
+
 ## License
 
 Carthage is released under the [MIT License](LICENSE.md).
@@ -343,3 +403,4 @@ Header backdrop photo is released under the [CC BY-NC-SA 2.0](https://creativeco
 [CarthageKit]: Source/CarthageKit
 [VersionFile]: Documentation/VersionFile.md
 [StaticFrameworks]: Documentation/StaticFrameworks.md
+
