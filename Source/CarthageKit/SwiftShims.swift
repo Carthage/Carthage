@@ -4,12 +4,4 @@ extension Sequence {
 		return try flatMap(transform)
 	}
 }
-
-func == (lhs: FrameworkType??, rhs: FrameworkType) -> Bool {
-	if let unwrapOne = lhs,
-		let unwrapTwo = unwrapOne {
-		return unwrapTwo == rhs
-	}
-	return false
-}
 #endif

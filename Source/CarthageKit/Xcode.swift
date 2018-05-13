@@ -223,15 +223,8 @@ internal enum FrameworkType {
 		}
 	}
 
-	/// Folder name for subdirectory
-	var folderName: String {
-		switch self {
-		case .static:
-			return "Static"
-		case .dynamic:
-			return "Dynamic"
-		}
-	}
+	/// Folder name for static framework's subdirectory
+	static let staticFolderName = "Static"
 }
 
 /// Describes the type of packages, given their CFBundlePackageType.
@@ -691,11 +684,8 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 					let dependencyCheckoutDir = workingDirectoryURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true)
 					return !dependencyCheckoutDir.hasSubdirectory(projectURL)
 				}
+				.flatMap(.concat) { settings in resolveSameTargetName(for: settings) }
 				.collect()
-				.flatMap(.concat) { settings -> SignalProducer<[BuildSettings], CarthageError> in
-					let producers = settings.map { resolveSameTargetName(for: $0) }
-					return SignalProducer(value: producers).flatten().flatten(.concat).collect()
-				}
 				.flatMap(.concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 					let actions: [String] = {
 						var result: [String] = [xcodebuildAction.rawValue]
