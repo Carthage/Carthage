@@ -89,8 +89,19 @@ extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c".
 	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, ScannableError> {
+		
+		// According to https://git-scm.com/docs/git-check-ref-format,
+		// whitespace are not allowed in a tag, commit SHA, or branch name
+		// so I assume the version ends at the first space
+		var semanticVersionBuffer: NSString?
+		scanner.scanUpToCharacters(from: CharacterSet.whitespacesAndNewlines, into: &semanticVersionBuffer)
+		guard let semanticVersionString = semanticVersionBuffer as String? else {
+			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
+		}
+
+		let numericVersionScanner = Scanner(string: semanticVersionString)
 		var versionBuffer: NSString?
-		guard scanner.scanCharacters(from: versionCharacterSet, into: &versionBuffer),
+		guard numericVersionScanner.scanCharacters(from: versionCharacterSet, into: &versionBuffer),
 			let version = versionBuffer as String? else {
 			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
 		}
@@ -116,8 +127,8 @@ extension SemanticVersion: Scannable {
 		let hasPatchComponent = components.count > 2
 		let patch = parseVersion(at: 2) ?? 0
 		
-		let preRelease = scanner.scanStringWithPrefix("-", until: "+")
-		let buildMetadata = scanner.scanStringWithPrefix("+", until: "")
+		let preRelease = numericVersionScanner.scanStringWithPrefix("-", until: "+")
+		let buildMetadata = numericVersionScanner.scanStringWithPrefix("+", until: "")
 		
 		if let buildMetadata = buildMetadata, buildMetadata.isEmpty {
 			return .failure(ScannableError(message: "Build metadata is empty after '+', in \"\(version)\""))
