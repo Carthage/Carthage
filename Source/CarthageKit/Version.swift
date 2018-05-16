@@ -55,10 +55,7 @@ public struct SemanticVersion: VersionType {
 		self.preRelease = preRelease
 		self.buildMetadata = buildMetadata
 	}
-
-	/// The set of all characters present in valid semantic versions.
-	fileprivate static let versionCharacterSet = CharacterSet(charactersIn: "0123456789.")
-
+	
 	/// Attempts to parse a semantic version from a PinnedVersion.
 	public static func from(_ pinnedVersion: PinnedVersion) -> Result<SemanticVersion, ScannableError> {
 		let scanner = Scanner(string: pinnedVersion.commitish)
@@ -83,6 +80,23 @@ public struct SemanticVersion: VersionType {
 		                       patch: self.patch,
 		                       preRelease: self.preRelease)
 	}
+	
+	/// Set of valid characters for SemVer major.minor.patch section
+	fileprivate static let versionCharacterSet = CharacterSet(charactersIn: ".")
+		.union(CharacterSet.decimalDigits)
+	
+	fileprivate static let asciiAlphabeth = CharacterSet(
+		charactersIn: "abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ"
+	)
+	
+	/// Set of valid character for SemVer build metadata section
+	fileprivate static let invalidBuildMetadataCharacters = asciiAlphabeth
+		.union(CharacterSet.decimalDigits)
+		.union(CharacterSet.init(charactersIn: "-"))
+		.inverted
+	
+	/// Separator of pre-release components
+	fileprivate static let preReleaseComponentsSeparator = "."
 }
 
 extension SemanticVersion: Scannable {
@@ -119,12 +133,16 @@ extension SemanticVersion: Scannable {
 		let preRelease = scanner.scanStringWithPrefix("-", until: "+")
 		let buildMetadata = scanner.scanStringWithPrefix("+", until: "")
 		
-		if let buildMetadata = buildMetadata, buildMetadata.isEmpty {
-			return .failure(ScannableError(message: "Build metadata is empty after '+', in \"\(version)\""))
+		if let buildMetadata = buildMetadata,
+			let error = SemanticVersion.validateBuildMetadata(buildMetadata, fullVersion: version)
+		{
+			return .failure(error)
 		}
 		
-		if let preRelease = preRelease, preRelease.isEmpty {
-			return .failure(ScannableError(message: "Pre-release is empty after '-', in \"\(version)\""))
+		if let preRelease = preRelease,
+			let error = SemanticVersion.validatePreRelease(preRelease, fullVersion: version)
+		{
+			return .failure(error)
 		}
 
 		guard (preRelease == nil && buildMetadata == nil) || hasPatchComponent else {
@@ -136,6 +154,42 @@ extension SemanticVersion: Scannable {
 		                          patch: patch,
 		                          preRelease: preRelease,
 		                          buildMetadata: buildMetadata))
+	}
+	
+	/// Checks validity of a build metadata string and returns an error if not valid
+	static private func validateBuildMetadata(_ buildMetadata: String, fullVersion: String) -> ScannableError? {
+		guard !buildMetadata.isEmpty else {
+			return ScannableError(message: "Build metadata is empty after '+', in \"\(fullVersion)\"")
+		}
+		guard !buildMetadata.containsAny(invalidBuildMetadataCharacters) else {
+			return ScannableError(message: "Build metadata contains invalid characters, in \"\(fullVersion)\"")
+		}
+		return nil
+	}
+	
+	/// Checks validity of a pre-release string and returns an error if not valid
+	static private func validatePreRelease(_ preRelease: String, fullVersion: String) -> ScannableError? {
+		guard !preRelease.isEmpty else {
+			return ScannableError(message: "Pre-release is empty after '-', in \"\(fullVersion)\"")
+		}
+		
+		let components = preRelease.components(separatedBy: preReleaseComponentsSeparator)
+		guard components.first(where: { $0.containsAny(invalidBuildMetadataCharacters) }) == nil else {
+			return ScannableError(message: "Pre-release contains invalid characters, in \"\(fullVersion)\"")
+		}
+		
+		guard components.first(where: {$0.isEmpty }) == nil else {
+			return ScannableError(message: "Pre-release component is empty, in \"\(fullVersion)\"")
+		}
+		
+		guard components
+			.filter({ !$0.containsAny(CharacterSet.decimalDigits.inverted) && $0 != "0" })
+			.first(where: { $0.hasPrefix("0")}) // MUST NOT include leading zeros
+			== nil else
+		{
+			return ScannableError(message: "Pre-release contains leading zero component, in \"\(fullVersion)\"")
+		}
+		return nil
 	}
 }
 
@@ -608,3 +662,12 @@ public func intersection<S: Sequence>(_ specs: S) -> VersionSpecifier? where S.I
 		}
 	}
 }
+
+extension String {
+
+	/// Returns true if self contain any of the characters from the given set
+	fileprivate func containsAny(_ characterSet: CharacterSet) -> Bool {
+		return self.rangeOfCharacter(from: characterSet) != nil
+	}
+}
+
