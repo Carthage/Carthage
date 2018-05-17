@@ -2,13 +2,12 @@ import Foundation
 import Result
 import ReactiveSwift
 
-// swiftlint:disable missing_docs
 // swiftlint:disable vertical_parameter_alignment_on_call
 // swiftlint:disable vertical_parameter_alignment
 typealias DependencyEntry = (key: Dependency, value: VersionSpecifier)
 
 /// Responsible for resolving acyclic dependency graphs.
-public final class FastResolver: ResolverProtocol {
+public final class BackTrackingResolver: ResolverProtocol {
 	private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
 	private let resolvedGitReference: (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
 	private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
@@ -401,7 +400,6 @@ private final class DependencySet {
 		}
 
 		for (transitiveDependency, versionSpecifier) in transitiveDependencies {
-
 			if let cachedConflict = retriever.cachedError(for: transitiveDependency, with: versionSpecifier) {
 				rejectionError = cachedConflict
 				return
@@ -412,38 +410,53 @@ private final class DependencySet {
 				addUpdatableDependency(transitiveDependency)
 			}
 
-			let existingVersionSet = versions(for: transitiveDependency)
-
-			if existingVersionSet == nil || (existingVersionSet!.isPinned && isUpdatable) {
-				let validVersions = try retriever.findAllVersions(for: transitiveDependency, compatibleWith: versionSpecifier, isUpdatable: isUpdatable)
-
-				if !setVersions(validVersions, for: transitiveDependency) {
-					rejectionError = CarthageError.requiredVersionNotFound(transitiveDependency, versionSpecifier)
-					retriever.setCachedError(rejectionError!, for: transitiveDependency, with: versionSpecifier)
-					return
-				}
-
-				existingVersionSet?.pinnedVersionSpecifier = nil
-				validVersions.addSpec(DependencySpec(parent: parent, versionSpecifier: versionSpecifier))
-			} else if let versionSet = existingVersionSet {
-				let currentSpec = DependencySpec(parent: parent, versionSpecifier: versionSpecifier)
-				versionSet.addSpec(currentSpec)
-
-				if !constrainVersions(for: transitiveDependency, with: versionSpecifier) {
-					if let incompatibleSpec = versionSet.specs.first(where: { intersection($0.versionSpecifier, currentSpec.versionSpecifier) == nil }) {
-						let newRequirement: CarthageError.VersionRequirement = (specifier: versionSpecifier, fromDependency: parent)
-						let existingRequirement: CarthageError.VersionRequirement = (specifier: incompatibleSpec.versionSpecifier, fromDependency: incompatibleSpec.parent)
-						rejectionError = CarthageError.incompatibleRequirements(transitiveDependency, existingRequirement, newRequirement)
-						if incompatibleSpec.parent == nil {
-							retriever.setCachedError(rejectionError!, for: transitiveDependency, with: versionSpecifier)
-						}
-					} else {
-						rejectionError = CarthageError.unsatisfiableDependencyList([transitiveDependency.name])
-					}
-					return
-				}
+			let handled = try handle(dependency: transitiveDependency,
+									 from: DependencyTreeVersionSpecification(parent: parent, versionSpecifier: versionSpecifier),
+									 isUpdatable: isUpdatable)
+			if !handled {
+				// Errors were encountered, fail fast
+				return
 			}
 		}
+	}
+
+	private func handle(dependency: Dependency, from currentSpec: DependencyTreeVersionSpecification, isUpdatable: Bool) throws -> Bool {
+		let versionSpecifier = currentSpec.versionSpecifier
+		let parent = currentSpec.parent
+		let existingVersionSet = versions(for: dependency)
+
+		if existingVersionSet == nil || (existingVersionSet!.isPinned && isUpdatable) {
+			let validVersions = try retriever.findAllVersions(for: dependency, compatibleWith: versionSpecifier, isUpdatable: isUpdatable)
+
+			if !setVersions(validVersions, for: dependency) {
+				rejectionError = CarthageError.requiredVersionNotFound(dependency, versionSpecifier)
+				retriever.setCachedError(rejectionError!, for: dependency, with: versionSpecifier)
+				return false
+			}
+
+			existingVersionSet?.pinnedVersionSpecifier = nil
+			validVersions.addSpec(currentSpec)
+		} else if let versionSet = existingVersionSet {
+			versionSet.addSpec(currentSpec)
+
+			if !constrainVersions(for: dependency, with: versionSpecifier) {
+				let hasIntersectionWithCurrentSpec: (DependencyTreeVersionSpecification) -> Bool = { spec in
+					return intersection(spec.versionSpecifier, currentSpec.versionSpecifier) == nil
+				}
+				if let incompatibleSpec = versionSet.specs.first(where: hasIntersectionWithCurrentSpec) {
+					let newRequirement: CarthageError.VersionRequirement = (specifier: versionSpecifier, fromDependency: parent)
+					let existingRequirement: CarthageError.VersionRequirement = (specifier: incompatibleSpec.versionSpecifier, fromDependency: incompatibleSpec.parent)
+					rejectionError = CarthageError.incompatibleRequirements(dependency, existingRequirement, newRequirement)
+					if incompatibleSpec.parent == nil {
+						retriever.setCachedError(rejectionError!, for: dependency, with: versionSpecifier)
+					}
+				} else {
+					rejectionError = CarthageError.unsatisfiableDependencyList([dependency.name])
+				}
+				return false
+			}
+		}
+		return true
 	}
 }
 
@@ -465,6 +478,9 @@ extension Dictionary {
 		}
 	}
 
+	/**
+	Transforms the values of the dictionary with the specified transform and removes all values for the transform returns nil.
+	*/
 	fileprivate func filterMapValues<T>(_ transform: (Dictionary.Value) throws -> T?) rethrows -> [Dictionary.Key: T] {
 		var result = [Dictionary.Key: T]()
 		for (key, value) in self {

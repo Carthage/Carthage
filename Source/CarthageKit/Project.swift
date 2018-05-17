@@ -59,7 +59,7 @@ public enum ResolverType {
 		case .new:
 			return NewResolver.self
 		case .fast:
-			return FastResolver.self
+			return BackTrackingResolver.self
 		}
 	}
 }

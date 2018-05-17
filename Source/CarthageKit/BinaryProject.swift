@@ -8,7 +8,7 @@ public struct BinaryProject {
 
 	public static func from(jsonData: Data) -> Result<BinaryProject, BinaryJSONError> {
 		return Result<[String: String], AnyError>(attempt: { try jsonDecoder.decode([String: String].self, from: jsonData) })
-			.mapError { BinaryJSONError.invalidJSON($0.error) }
+			.mapError { .invalidJSON($0.error) }
 			.flatMap { json -> Result<BinaryProject, BinaryJSONError> in
 				var versions = [PinnedVersion: URL]()
 

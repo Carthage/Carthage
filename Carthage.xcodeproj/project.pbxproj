@@ -23,6 +23,8 @@
 		67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; };
 		67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		67C870081A7A04E100F6647C /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C870071A7A04E100F6647C /* Formatting.swift */; };
+		7469925320AD9119007AC8FF /* SortedSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7469925220AD9119007AC8FF /* SortedSet.swift */; };
+		7469925520AD9183007AC8FF /* ConcreteVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7469925420AD9183007AC8FF /* ConcreteVersion.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
 		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
 		8AC381441FC3AA4A007CF7E8 /* Alamofire.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8AC381421FC3A900007CF7E8 /* Alamofire.framework */; settings = {ATTRIBUTES = (Required, ); }; };
@@ -31,10 +33,8 @@
 		98400F5E1BD24DFA008C5DDE /* carthage-bash-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5A1BD24DC5008C5DDE /* carthage-bash-completion */; };
 		98400F5F1BD24DFA008C5DDE /* carthage-zsh-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */; };
 		A1411ED61EFC1BFD0060461F /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1411ED51EFC1BFD0060461F /* Constants.swift */; };
-		A83DF19DF04DB4F5201B961C /* SortedSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DF0ECE4F68B96D9A4161F /* SortedSet.swift */; };
-		A83DF3771197300D05A75AB7 /* ConcreteVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DFFF238006E94E8574ECF /* ConcreteVersion.swift */; };
-		A83DFA40C60153E8BDD32B78 /* FastResolverTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DFC55EC0BC1A0F9674D1C /* FastResolverTest.swift */; };
-		A83DFE484004ADF8794B4FEB /* FastResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DF22BD79BD0FAABCE8610 /* FastResolver.swift */; };
+		A83DFA40C60153E8BDD32B78 /* ConcreteVersionTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DFC55EC0BC1A0F9674D1C /* ConcreteVersionTest.swift */; };
+		A83DFE484004ADF8794B4FEB /* BackTrackingResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83DF22BD79BD0FAABCE8610 /* BackTrackingResolver.swift */; };
 		B17145F11F43F812006DC662 /* NewResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B17145EF1F43F797006DC662 /* NewResolver.swift */; };
 		B1F27D3E1E45382B002D4754 /* VersionFileSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F27D3D1E45382B002D4754 /* VersionFileSpec.swift */; };
 		B1F27D401E4541A1002D4754 /* TestVersionFile in Resources */ = {isa = PBXBuildFile; fileRef = B1F27D3F1E4541A1002D4754 /* TestVersionFile */; };
@@ -191,6 +191,8 @@
 		6724C8691A850A4600E47F00 /* Environment.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		67AFA9891A79430B00B7DA78 /* PrettyColors.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PrettyColors.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		67C870071A7A04E100F6647C /* Formatting.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
+		7469925220AD9119007AC8FF /* SortedSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SortedSet.swift; sourceTree = "<group>"; };
+		7469925420AD9183007AC8FF /* ConcreteVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcreteVersion.swift; sourceTree = "<group>"; };
 		82ABB0CF1EF7D43800AC2A75 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text; path = .swiftlint.yml; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
@@ -200,10 +202,8 @@
 		98400F5B1BD24DC5008C5DDE /* carthage-zsh-completion */ = {isa = PBXFileReference; lastKnownFileType = text; path = "carthage-zsh-completion"; sourceTree = "<group>"; };
 		A1411ED51EFC1BFD0060461F /* Constants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		A14BB69B1EFA36B90077ABF4 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text; name = .swiftlint.yml; path = Tests/.swiftlint.yml; sourceTree = SOURCE_ROOT; };
-		A83DF0ECE4F68B96D9A4161F /* SortedSet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SortedSet.swift; sourceTree = "<group>"; };
-		A83DF22BD79BD0FAABCE8610 /* FastResolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FastResolver.swift; sourceTree = "<group>"; };
-		A83DFC55EC0BC1A0F9674D1C /* FastResolverTest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FastResolverTest.swift; sourceTree = "<group>"; };
-		A83DFFF238006E94E8574ECF /* ConcreteVersion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConcreteVersion.swift; sourceTree = "<group>"; };
+		A83DF22BD79BD0FAABCE8610 /* BackTrackingResolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BackTrackingResolver.swift; sourceTree = "<group>"; };
+		A83DFC55EC0BC1A0F9674D1C /* ConcreteVersionTest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConcreteVersionTest.swift; sourceTree = "<group>"; };
 		B17145EF1F43F797006DC662 /* NewResolver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NewResolver.swift; sourceTree = "<group>"; };
 		B1F27D3D1E45382B002D4754 /* VersionFileSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionFileSpec.swift; sourceTree = "<group>"; };
 		B1F27D3F1E4541A1002D4754 /* TestVersionFile */ = {isa = PBXFileReference; explicitFileType = text.json; fileEncoding = 4; path = TestVersionFile; sourceTree = "<group>"; };
@@ -504,12 +504,14 @@
 				3A0472F21C782B4000097EC7 /* Algorithms.swift */,
 				D069CA231A4E3B2700314A85 /* Archive.swift */,
 				CD3E530A1DE33095002C135C /* Availability.swift */,
+				A83DF22BD79BD0FAABCE8610 /* BackTrackingResolver.swift */,
 				CD9F3D921E6E6FC000B98A1A /* BinaryJSONError.swift */,
 				BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */,
 				CDF9D3701CF1E54200DF5A6F /* BuildOptions.swift */,
 				CDE559281E12263A00ED7F5F /* BuildSettings.swift */,
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
 				CD43D9D91F41640E00CD60F6 /* CarthageKitVersion.swift */,
+				7469925420AD9183007AC8FF /* ConcreteVersion.swift */,
 				A1411ED51EFC1BFD0060461F /* Constants.swift */,
 				CDD7CF781F75ED88000E0EA5 /* Dependency.swift */,
 				CDF94D941E71144300200486 /* DuplicateDependency.swift */,
@@ -525,6 +527,7 @@
 				B17145EF1F43F797006DC662 /* NewResolver.swift */,
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
 				CDB099231E6DC2D40030B4A8 /* ScannableError.swift */,
+				7469925220AD9119007AC8FF /* SortedSet.swift */,
 				CDBE654B1F4BF0040060D94E /* Submodule.swift */,
 				3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */,
 				D0DE893F1A0F2CB00030A3EC /* Version.swift */,
@@ -532,9 +535,6 @@
 				BE0292481E403355004FB579 /* XCDBLDExtensions.swift */,
 				D01F8A5319EA2F1700643E7C /* Xcode.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
-				A83DF22BD79BD0FAABCE8610 /* FastResolver.swift */,
-				A83DF0ECE4F68B96D9A4161F /* SortedSet.swift */,
-				A83DFFF238006E94E8574ECF /* ConcreteVersion.swift */,
 			);
 			name = CarthageKit;
 			path = Source/CarthageKit;
@@ -563,6 +563,7 @@
 				D0C6E5731A57040B00A5E3E7 /* ArchiveSpec.swift */,
 				BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */,
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
+				A83DFC55EC0BC1A0F9674D1C /* ConcreteVersionTest.swift */,
 				BF3199BF1E32E078007DC0D1 /* DependencySpec.swift */,
 				89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */,
 				CDA0B6C91C468E67006C499C /* GitURLSpec.swift */,
@@ -573,7 +574,6 @@
 				D0DB09A319EA354200234B16 /* XcodeSpec.swift */,
 				21F11B461FE6787F009FB783 /* DB.swift */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
-				A83DFC55EC0BC1A0F9674D1C /* FastResolverTest.swift */,
 			);
 			name = CarthageKitTests;
 			path = Tests/CarthageKitTests;
@@ -754,7 +754,7 @@
 /* Begin PBXShellScriptBuildPhase section */
 		82ABB0CE1EF7D41300AC2A75 /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 12;
+			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
@@ -840,12 +840,14 @@
 				BF7A1A0B1E3A7AE9008CBCC5 /* BinaryProject.swift in Sources */,
 				D01D82D71A10160700F0DD94 /* Resolver.swift in Sources */,
 				CDB099241E6DC2D40030B4A8 /* ScannableError.swift in Sources */,
+				7469925320AD9119007AC8FF /* SortedSet.swift in Sources */,
 				BE02925D1E4036C8004FB579 /* XCDBLDExtensions.swift in Sources */,
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
 				CDE559291E12263A00ED7F5F /* BuildSettings.swift in Sources */,
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */,
+				7469925520AD9183007AC8FF /* ConcreteVersion.swift in Sources */,
 				CD43D9DA1F41640E00CD60F6 /* CarthageKitVersion.swift in Sources */,
 				CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */,
 				CDF94D951E71144300200486 /* DuplicateDependency.swift in Sources */,
@@ -863,9 +865,7 @@
 				F603929919EA29F80050A6AF /* Project.swift in Sources */,
 				CDBE654C1F4BF0040060D94E /* Submodule.swift in Sources */,
 				D069CA241A4E3B2700314A85 /* Archive.swift in Sources */,
-				A83DFE484004ADF8794B4FEB /* FastResolver.swift in Sources */,
-				A83DF19DF04DB4F5201B961C /* SortedSet.swift in Sources */,
-				A83DF3771197300D05A75AB7 /* ConcreteVersion.swift in Sources */,
+				A83DFE484004ADF8794B4FEB /* BackTrackingResolver.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -886,7 +886,7 @@
 				BF3199C01E32E078007DC0D1 /* DependencySpec.swift in Sources */,
 				CDA0B6CA1C468E67006C499C /* GitURLSpec.swift in Sources */,
 				B1F27D3E1E45382B002D4754 /* VersionFileSpec.swift in Sources */,
-				A83DFA40C60153E8BDD32B78 /* FastResolverTest.swift in Sources */,
+				A83DFA40C60153E8BDD32B78 /* ConcreteVersionTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
