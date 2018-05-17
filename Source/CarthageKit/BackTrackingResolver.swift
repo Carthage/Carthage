@@ -6,24 +6,36 @@ import ReactiveSwift
 // swiftlint:disable vertical_parameter_alignment
 typealias DependencyEntry = (key: Dependency, value: VersionSpecifier)
 
-/// Responsible for resolving acyclic dependency graphs.
+/**
+Resolver implementation based on an optimized Backtracking Algorithm.
+
+See: https://en.wikipedia.org/wiki/Backtracking
+
+The implementation does not use the react streaming APIs to be able to keep the time complexity down and have a simple algorithm.
+*/
 public final class BackTrackingResolver: ResolverProtocol {
 	private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
 	private let resolvedGitReference: (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
 	private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
 
+	/**
+	Current resolver state, accepted or rejected.
+	*/
 	private enum ResolverState {
 		case rejected, accepted
 	}
 
-	/// Instantiates a dependency graph resolver with the given behaviors.
-	///
-	/// versionsForDependency - Sends a stream of available versions for a
-	///                         dependency.
-	/// dependenciesForDependency - Loads the dependencies for a specific
-	///                             version of a dependency.
-	/// resolvedGitReference - Resolves an arbitrary Git reference to the
-	///                        latest object.
+	/**
+	Instantiates a resolver with the given strategies for retrieving the versions for a specific dependency, the set of dependencies for a pinned dependency and
+	for retrieving a pinned git reference.
+	
+	versionsForDependency - Sends a stream of available versions for a
+	                         dependency.
+	dependenciesForDependency - Loads the dependencies for a specific
+	                            version of a dependency.
+	resolvedGitReference - Resolves an arbitrary Git reference to the
+	                       	latest object.
+	*/
 	public init(
 		versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
 		dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
@@ -34,10 +46,12 @@ public final class BackTrackingResolver: ResolverProtocol {
 		self.resolvedGitReference = resolvedGitReference
 	}
 
-	/// Attempts to determine the latest valid version to use for each
-	/// dependency in `dependencies`, and all nested dependencies thereof.
-	///
-	/// Sends a dictionary with each dependency and its resolved version.
+	/**
+	Attempts to determine the most appropriate valid version to use for each
+	dependency in `dependencies`, and all nested dependencies thereof.
+
+	Sends a dictionary with each dependency and its resolved version.
+	*/
 	public func resolve(
 		dependencies: [Dependency: VersionSpecifier],
 		lastResolved: [Dependency: PinnedVersion]? = nil,
@@ -45,21 +59,12 @@ public final class BackTrackingResolver: ResolverProtocol {
 		) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
 		let result: Result<[Dependency: PinnedVersion], CarthageError>
 
-		let start = Date()
-
-		defer {
-			let end = Date()
-			print("Fast resolver took: \(end.timeIntervalSince(start)) s.")
-		}
-
-		// Ensure we start and finish with a clean slate
 		let pinnedVersions = lastResolved ?? [Dependency: PinnedVersion]()
 		let dependencyRetriever = DependencyRetriever(versionsForDependency: versionsForDependency,
 													  dependenciesForDependency: dependenciesForDependency,
 													  resolvedGitReference: resolvedGitReference,
 													  pinnedVersions: pinnedVersions)
 		let updatableDependencyNames = dependenciesToUpdate.map { Set($0) } ?? Set()
-
 		let requiredDependencies: AnySequence<DependencyEntry>
 		let hasSpecificDepedenciesToUpdate = !updatableDependencyNames.isEmpty
 
@@ -89,19 +94,17 @@ public final class BackTrackingResolver: ResolverProtocol {
 			}
 
 			result = .success(resolverResult.dependencySet.resolvedDependencies)
-			print("Resolver succeeded!")
 		} catch let error {
 			let carthageError: CarthageError = (error as? CarthageError) ?? CarthageError.internalError(description: error.localizedDescription)
 
 			result = .failure(carthageError)
-			print("Resolver failed with error: \(carthageError)")
 		}
 
 		return SignalProducer(result: result)
 	}
 
 	/**
-	Backtracking algorithm to resolve the dependency set.
+	Recursive backtracking algorithm to resolve the dependency set.
 	
 	See: https://en.wikipedia.org/wiki/Backtracking
 	*/
@@ -114,7 +117,9 @@ public final class BackTrackingResolver: ResolverProtocol {
 
 		var result: (state: ResolverState, dependencySet: DependencySet)? = nil
 		while result == nil {
+			// Use an autorelease pool here to keep memory usage down
 			try autoreleasepool {
+				// Keep iterating until there are no subsets to resolve anymore
 				if let subSet = try dependencySet.popSubSet() {
 					// Backtrack again with this subset
 					let nestedResult = try backtrack(dependencySet: subSet)
@@ -135,10 +140,18 @@ public final class BackTrackingResolver: ResolverProtocol {
 			}
 		}
 
+		// By definition result is not nil at this point, so it's ok to force unwrap
 		return result!
 	}
 }
 
+/**
+Class responsible for the retrieval of dependencies using the supplied closures as strategies.
+
+This class adds caching functionality to optimize for performance.
+
+It also keeps track of encountered conflicts.
+*/
 private final class DependencyRetriever {
 	private var pinnedVersions: [Dependency: PinnedVersion]
 	private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
@@ -255,6 +268,11 @@ private final class DependencyRetriever {
 	}
 }
 
+/**
+Set representing a complete dependency tree with all compatible versions per dependency.
+
+It uses ConcreteVersionSet as implementation.
+*/
 private final class DependencySet {
 	private var contents: [Dependency: ConcreteVersionSet]
 

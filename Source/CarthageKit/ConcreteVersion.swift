@@ -3,6 +3,7 @@ Wrapper around PinnedVersion/SementicVersion that can be ordered on relevance an
 
 Semantic versions are first, ordered descending, then versions that do not comply with the semantic structure (*.*.*).
 */
+
 // swiftlint:disable vertical_parameter_alignment
 struct ConcreteVersion: Comparable, CustomStringConvertible {
 	public let pinnedVersion: PinnedVersion

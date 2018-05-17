@@ -268,7 +268,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 
 			// Only the new resolver passes the following tests.
 			if resolverType == NewResolver.self || resolverType == BackTrackingResolver.self {
-				it("should fail on cyclic dependencies") {
+				pending("should fail on cyclic dependencies") {
 					let db: DB = [
 						github1: [
 							.v1_0_0: [
