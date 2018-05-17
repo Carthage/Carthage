@@ -210,7 +210,7 @@ class ProjectSpec: QuickSpec {
 					let result2 = buildNoSharedSchemesTest(platforms: [.iOS])
 					expect(result2) == []
 					
-					// Framework2 has no shared schemes, but invalidating its version file should result in its dependencies (Framework1) being rebuilt
+					// TestFramework2 has no shared schemes, but invalidating its version file should result in its dependencies (TestFramework1) being rebuilt
 					let framework2VersionFileURL = noSharedSchemesBuildDirectoryURL.appendingPathComponent(".TestFramework2.version", isDirectory: false)
 					let framework2VersionFilePath = framework2VersionFileURL.path
 					

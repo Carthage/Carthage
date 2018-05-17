@@ -324,7 +324,9 @@ extension FileManager: ReactiveExtensionsProvider {
 		try from.path.withCString { fromCStr in
 			try to.path.withCString { toCStr in
 				let state = copyfile_state_alloc()
-				let status = copyfile(fromCStr, toCStr, state, UInt32(COPYFILE_ALL | COPYFILE_RECURSIVE | COPYFILE_NOFOLLOW))
+				// Can't use COPYFILE_NOFOLLOW. Restriction relaxed to COPYFILE_NOFOLLOW_SRC
+				// http://openradar.appspot.com/32984063
+				let status = copyfile(fromCStr, toCStr, state, UInt32(COPYFILE_ALL | COPYFILE_RECURSIVE | COPYFILE_NOFOLLOW_SRC))
 				copyfile_state_free(state)
 				if status < 0 {
 					throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: nil)
