@@ -222,6 +222,9 @@ internal enum FrameworkType {
 			return nil
 		}
 	}
+
+	/// Folder name for static framework's subdirectory
+	static let staticFolderName = "Static"
 }
 
 /// Describes the type of packages, given their CFBundlePackageType.
@@ -316,7 +319,7 @@ private func mergeModuleIntoModule(_ sourceModuleDirectoryURL: URL, _ destinatio
 
 /// Determines whether the specified framework type should be built automatically.
 private func shouldBuildFrameworkType(_ frameworkType: FrameworkType?) -> Bool {
-	return frameworkType == .dynamic
+	return frameworkType != nil
 }
 
 /// Determines whether the given scheme should be built automatically.
@@ -338,7 +341,7 @@ private func shouldBuildScheme(_ buildArguments: BuildArguments, _ forPlatforms:
 			}
 		}
 		.filter(shouldBuildFrameworkType)
-		// If we find any dynamic framework target, we should indeed build this scheme.
+		// If we find any framework target, we should indeed build this scheme.
 		.map { _ in true }
 		// Otherwise, nope.
 		.concat(value: false)
@@ -508,7 +511,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			case 1:
 				return build(sdk: sdks[0], with: buildArgs, in: workingDirectoryURL)
 					.flatMapTaskEvents(.merge) { settings in
-						return copyBuildProductIntoDirectory(folderURL, settings)
+						return copyBuildProductIntoDirectory(settings.productDestinationPath(in: folderURL), settings)
 					}
 
 			case 2:
@@ -562,7 +565,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						return mergeBuildProducts(
 							deviceBuildSettings: deviceSettings,
 							simulatorBuildSettings: simulatorSettings,
-							into: folderURL
+							into: deviceSettings.productDestinationPath(in: folderURL)
 						)
 					}
 
@@ -586,6 +589,24 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				}
 				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
 		}
+}
+
+/// Fixes problem when more than one xcode target has the same Product name for same Deployment target and configuration by deleting TARGET_BUILD_DIR.
+private func resolveSameTargetName(for settings: BuildSettings) -> SignalProducer<BuildSettings, CarthageError> {
+	switch settings.targetBuildDirectory {
+	case .success(let buildDir):
+		let result = Task("/usr/bin/xcrun", arguments: ["rm", "-rf", buildDir])
+			.launch()
+			.wait()
+
+		if let error = result.error {
+			return SignalProducer(error: CarthageError.taskError(error))
+		}
+
+		return SignalProducer(value: settings)
+	case .failure(let error):
+		return SignalProducer(error: error)
+	}
 }
 
 /// Runs the build for a given sdk and build arguments, optionally performing a clean first
@@ -653,7 +674,7 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 			let xcodebuildAction: BuildArguments.Action = sdk.isDevice ? .archive : .build
 			return BuildSettings.load(with: argsForLoading, for: xcodebuildAction)
 				.filter { settings in
-					// Only copy build products that are dynamic frameworks
+					// Only copy build products that are frameworks
 					guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
 						return false
 					}
@@ -663,6 +684,7 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 					let dependencyCheckoutDir = workingDirectoryURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true)
 					return !dependencyCheckoutDir.hasSubdirectory(projectURL)
 				}
+				.flatMap(.concat) { settings in resolveSameTargetName(for: settings) }
 				.collect()
 				.flatMap(.concat) { settings -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> in
 					let actions: [String] = {

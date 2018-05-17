@@ -257,7 +257,7 @@ class XcodeSpec: QuickSpec {
 			}
 		}
 
-		it("should skip projects without shared dynamic framework schems") {
+		it("should skip projects without shared framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
 
@@ -380,10 +380,93 @@ class XcodeSpec: QuickSpec {
 			let result = ProjectLocator.locate(in: directoryURL.appendingPathComponent("ReactiveCocoaLayout")).first()
 			expect(result).to(beNil())
 		}
+
+		it("should build static library and place result to subdirectory") {
+			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "DynamicAndStatic", withExtension: nil)!
+			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
+
+			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
+
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug",
+																				   platforms: [.iOS],
+																				   derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL)
+				.ignoreTaskData()
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+			expect(result.error).to(beNil())
+
+			let frameworkDynamicURL = buildFolderURL.appendingPathComponent("iOS/TestFramework.framework")
+			let frameworkStaticURL = buildFolderURL.appendingPathComponent("iOS/Static/TestFramework.framework")
+
+			let frameworkDynamicPackagePath = frameworkDynamicURL.appendingPathComponent("TestFramework").path
+			let frameworkStaticPackagePath = frameworkStaticURL.appendingPathComponent("TestFramework").path
+
+			expect(frameworkDynamicURL.path).to(beExistingDirectory())
+			expect(frameworkStaticURL.path).to(beExistingDirectory())
+			expect(frameworkDynamicPackagePath).to(beFramework(ofType: .dynamic))
+			expect(frameworkStaticPackagePath).to(beFramework(ofType: .static))
+
+			let result2 = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug",
+																					platforms: [.iOS],
+																					derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL)
+				.ignoreTaskData()
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+			expect(result2.error).to(beNil())
+			expect(frameworkDynamicPackagePath).to(stillBeFramework(ofType: .dynamic))
+			expect(frameworkStaticPackagePath).to(stillBeFramework(ofType: .static))
+		}
 	}
 }
 
 // MARK: Matcher
+
+internal func stillBeFramework(ofType: FrameworkType) -> Predicate<String> {
+	return beFramework(ofType: ofType)
+}
+
+internal func beFramework(ofType: FrameworkType) -> Predicate<String> {
+	return Predicate { actualExpression in
+		var message = "exist and be a \(ofType == .static ? "static" : "dynamic") type"
+		let actualPath = try actualExpression.evaluate()
+
+		guard let path = actualPath else {
+			return PredicateResult(status: .fail, message: .expectedActualValueTo(message))
+		}
+
+		var stringOutput: String!
+
+		let result = Task("/usr/bin/xcrun", arguments: ["file", path])
+			.launch()
+			.ignoreTaskData()
+			.on(value: { data in
+				stringOutput = String(data: data, encoding: .utf8)
+			})
+			.wait()
+
+		expect(result.error).to(beNil())
+
+		let resultBool: Bool
+		if ofType == .static {
+			resultBool = stringOutput.contains("current ar archive") && !stringOutput.contains("dynamically linked shared library")
+		} else {
+			resultBool = !stringOutput.contains("current ar archive") && stringOutput.contains("dynamically linked shared library")
+		}
+
+		if !resultBool {
+			message += ", got \(stringOutput)"
+		}
+
+		return PredicateResult(
+			bool: resultBool,
+			message: .expectedActualValueTo(message)
+		)
+	}
+}
 
 internal func beExistingDirectory() -> Predicate<String> {
 	return Predicate { actualExpression in

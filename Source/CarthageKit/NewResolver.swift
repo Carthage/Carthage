@@ -368,6 +368,7 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 			guard case let .success(generatedGraph) = generateGraph() else { break }
 
 			let versions = generatedGraph.versions
+			// swiftlint:disable:next identifier_name
 			for i in (currentNodeValues.startIndex..<currentNodeValues.endIndex).reversed() {
 				let node = currentNodeValues[i].node
 				if !errorCache.dependencyIsValid(node.dependency, given: versions) {
@@ -387,6 +388,7 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 
 		// 'skip' any permutations as defined by 'startingIndex' by setting all subsequent values to their max. We don't count this as an 'incremented' occurrence.
 		if let startingIndex = startingIndex {
+			// swiftlint:disable:next identifier_name
 			for i in (startingIndex..<currentNodeValues.endIndex) {
 				currentNodeValues[i].skipRemaining()
 			}
@@ -394,6 +396,7 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 
 		// If we 'reset' for every dimension, we've hit the end
 		hasNext = false
+		// swiftlint:disable:next identifier_name
 		for i in (currentNodeValues.startIndex..<currentNodeValues.endIndex).reversed() {
 			if currentNodeValues[i].increment() == .incremented {
 				hasNext = true
