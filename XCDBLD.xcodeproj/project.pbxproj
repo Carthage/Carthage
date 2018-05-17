@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8A5C8CFE202BBBA4002242EB /* SDKSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A5C8CFC202BB81E002242EB /* SDKSpec.swift */; };
 		BE0292411E403278004FB579 /* BuildArguments.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0292401E403278004FB579 /* BuildArguments.swift */; };
 		BE0292431E403298004FB579 /* BuildArgumentsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0292421E403298004FB579 /* BuildArgumentsSpec.swift */; };
 		BE0292451E40330D004FB579 /* ProjectLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0292441E40330D004FB579 /* ProjectLocator.swift */; };
@@ -37,6 +38,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		8A5C8CFC202BB81E002242EB /* SDKSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SDKSpec.swift; sourceTree = "<group>"; };
 		BE0292401E403278004FB579 /* BuildArguments.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArguments.swift; sourceTree = "<group>"; };
 		BE0292421E403298004FB579 /* BuildArgumentsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildArgumentsSpec.swift; sourceTree = "<group>"; };
 		BE0292441E40330D004FB579 /* ProjectLocator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectLocator.swift; sourceTree = "<group>"; };
@@ -229,6 +231,7 @@
 				BE0292421E403298004FB579 /* BuildArgumentsSpec.swift */,
 				BE02924A1E40337A004FB579 /* ProjectLocatorSpec.swift */,
 				CD54FC591F39EA6700DCE10F /* XcodeVersionSpec.swift */,
+				8A5C8CFC202BB81E002242EB /* SDKSpec.swift */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
 			name = XCDBLDTests;
@@ -303,7 +306,7 @@
 			attributes = {
 				LastSwiftMigration = 0700;
 				LastSwiftUpdateCheck = 0700;
-				LastUpgradeCheck = 0900;
+				LastUpgradeCheck = 0930;
 				ORGANIZATIONNAME = Carthage;
 				TargetAttributes = {
 					D0D1216C19E87B05005E4BAA = {
@@ -372,6 +375,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BE0292431E403298004FB579 /* BuildArgumentsSpec.swift in Sources */,
+				8A5C8CFE202BBBA4002242EB /* SDKSpec.swift in Sources */,
 				CD54FC5A1F39EA6700DCE10F /* XcodeVersionSpec.swift in Sources */,
 				BE02924B1E40337A004FB579 /* ProjectLocatorSpec.swift in Sources */,
 			);
@@ -395,6 +399,7 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -414,11 +419,13 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_SWIFT3_OBJC_INFERENCE = Off;
 				SWIFT_VERSION = 4.0;
 			};
@@ -495,6 +502,7 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -544,6 +552,7 @@
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;

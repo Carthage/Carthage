@@ -48,13 +48,13 @@ public enum CarthageError: Error {
 	/// An error occurred parsing the binary-only framework definition file
 	case invalidBinaryJSON(URL, BinaryJSONError)
 
-	// An expected environment variable wasn't found.
+	/// An expected environment variable wasn't found.
 	case missingEnvironmentVariable(variable: String)
 
-	// An error occurred reading a framework's architectures.
+	/// An error occurred reading a framework's architectures.
 	case invalidArchitectures(description: String)
 
-	// An error occurred reading a dSYM or framework's UUIDs.
+	/// An error occurred reading a dSYM or framework's UUIDs.
 	case invalidUUIDs(description: String)
 
 	/// The project is not sharing any framework schemes, so Carthage cannot
@@ -72,7 +72,7 @@ public enum CarthageError: Error {
 	/// other cartfiles.
 	case duplicateDependencies([DuplicateDependency])
 
-	// There was a cycle between dependencies in the associated graph.
+	/// There was a cycle between dependencies in the associated graph.
 	case dependencyCycle([Dependency: Set<Dependency>])
 
 	/// A request to the GitHub API failed.
@@ -254,7 +254,7 @@ extension CarthageError: CustomStringConvertible {
 		case let .noSharedFrameworkSchemes(dependency, platforms):
 			var description = "Dependency \"\(dependency.name)\" has no shared framework schemes"
 			if !platforms.isEmpty {
-				let platformsString = platforms.map { $0.description }.joined(separator: ", ")
+				let platformsString = platforms.map { $0.rawValue }.joined(separator: ", ")
 				description += " for any of the platforms: \(platformsString)"
 			}
 

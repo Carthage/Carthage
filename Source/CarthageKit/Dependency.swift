@@ -2,6 +2,24 @@ import Foundation
 import Result
 import Tentacle
 
+/// Uniquely identifies a Binary Spec's resolved URL and its description
+public struct BinaryURL: CustomStringConvertible {
+	/// A Resolved URL
+	public let url: URL
+
+	/// A custom description
+	public let resolvedDescription: String
+
+	public var description: String {
+		return resolvedDescription
+	}
+
+	init(url: URL, resolvedDescription: String) {
+		self.url = url
+		self.resolvedDescription = resolvedDescription
+	}
+}
+
 /// Uniquely identifies a project that can be used as a dependency.
 public enum Dependency {
 	/// A repository hosted on GitHub.com or GitHub Enterprise.
@@ -11,7 +29,7 @@ public enum Dependency {
 	case git(GitURL)
 
 	/// A binary-only framework
-	case binary(URL)
+	case binary(BinaryURL)
 
 	/// The unique, user-visible name for this project.
 	public var name: String {
@@ -23,7 +41,7 @@ public enum Dependency {
 			return url.name ?? url.urlString
 
 		case let .binary(url):
-			return url.lastPathComponent.stripping(suffix: ".json")
+			return url.name
 		}
 	}
 
@@ -100,8 +118,8 @@ extension Dependency: Hashable {
 		case let .git(url):
 			return url.hashValue
 
-		case let .binary(url):
-			return url.hashValue
+		case let .binary(binary):
+			return binary.hashValue
 		}
 	}
 }
@@ -109,6 +127,10 @@ extension Dependency: Hashable {
 extension Dependency: Scannable {
 	/// Attempts to parse a Dependency.
 	public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
+		return from(scanner, base: nil)
+	}
+
+	public static func from(_ scanner: Scanner, base: URL? = nil) -> Result<Dependency, ScannableError> {
 		let parser: (String) -> Result<Dependency, ScannableError>
 
 		if scanner.scanString("github", into: nil) {
@@ -124,7 +146,10 @@ extension Dependency: Scannable {
 			parser = { urlString in
 				if let url = URL(string: urlString) {
 					if url.scheme == "https" || url.scheme == "file" {
-						return .success(self.binary(url))
+						return .success(self.binary(BinaryURL(url: url, resolvedDescription: url.description)))
+					} else if url.scheme == nil {
+						let absoluteURL = URL(fileURLWithPath: url.relativePath, isDirectory: false, relativeTo: base).standardizedFileURL
+						return .success(self.binary(BinaryURL(url: absoluteURL, resolvedDescription: url.absoluteString)))
 					} else {
 						return .failure(ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
 					}
@@ -170,8 +195,8 @@ extension Dependency: CustomStringConvertible {
 		case let .git(url):
 			return "git \"\(url)\""
 
-		case let .binary(url):
-			return "binary \"\(url.absoluteString)\""
+		case let .binary(binary):
+			return "binary \"\(binary)\""
 		}
 	}
 }
@@ -193,5 +218,24 @@ extension Dependency {
 		case .binary:
 			return nil
 		}
+	}
+}
+
+extension BinaryURL: Equatable {
+	public static func == (_ lhs: BinaryURL, _ rhs: BinaryURL) -> Bool {
+		return lhs.description == rhs.description
+	}
+}
+
+extension BinaryURL: Hashable {
+	public var hashValue: Int {
+		return description.hashValue
+	}
+}
+
+extension BinaryURL {
+	/// The unique, user-visible name for this project.
+	public var name: String {
+		return url.lastPathComponent.stripping(suffix: ".json")
 	}
 }

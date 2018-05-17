@@ -48,7 +48,12 @@ public struct CopyFrameworksCommand: CommandProtocol {
 private func copyFramework(_ source: URL, target: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
 		.flatMap(.merge) { url, codesigningIdentity -> SignalProducer<(), CarthageError> in
-			let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
+			let strip = stripFramework(
+				url,
+				keepingArchitectures: validArchitectures,
+				strippingDebugSymbols: shouldStripDebugSymbols(),
+				codesigningIdentity: codesigningIdentity
+			)
 			if buildActionIsArchiveOrInstall() {
 				return strip
 					.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.deletingLastPathComponent()))
@@ -110,6 +115,11 @@ private func codeSigningAllowed() -> Bool {
 		.map { $0 == "YES" }.value ?? false
 }
 
+private func shouldStripDebugSymbols() -> Bool {
+	return getEnvironmentVariable("COPY_PHASE_STRIP")
+		.map { $0 == "YES" }.value ?? false
+}
+
 // The fix for https://github.com/Carthage/Carthage/issues/1259
 private func appropriateDestinationFolder() -> Result<URL, CarthageError> {
 	if buildActionIsArchiveOrInstall() {
@@ -150,6 +160,7 @@ private func buildActionIsArchiveOrInstall() -> Bool {
 
 private func inputFiles() -> SignalProducer<String, CarthageError> {
 	let count: Result<Int, CarthageError> = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT").flatMap { count in
+		// swiftlint:disable:next identifier_name
 		if let i = Int(count) {
 			return .success(i)
 		} else {

@@ -1,4 +1,4 @@
-import CarthageKit
+@testable import CarthageKit
 import Foundation
 import Nimble
 import Quick
@@ -88,13 +88,17 @@ class DependencySpec: QuickSpec {
 
 			context("binary") {
 				it("should be the last component of the URL") {
-					let dependency = Dependency.binary(URL(string: "https://server.com/myproject")!)
+					let url = URL(string: "https://server.com/myproject")!
+					let binary = BinaryURL(url: url, resolvedDescription: url.description)
+					let dependency = Dependency.binary(binary)
 
 					expect(dependency.name) == "myproject"
 				}
 
 				it("should not include the trailing git suffix") {
-					let dependency = Dependency.binary(URL(string: "https://server.com/myproject.json")!)
+					let url = URL(string: "https://server.com/myproject.json")!
+					let binary = BinaryURL(url: url, resolvedDescription: url.description)
+					let dependency = Dependency.binary(binary)
 
 					expect(dependency.name) == "myproject"
 				}
@@ -201,24 +205,44 @@ class DependencySpec: QuickSpec {
 					let scanner = Scanner(string: "binary \"https://mysupercoolinternalwebhost.com/\"")
 
 					let dependency = Dependency.from(scanner).value
+					let url = URL(string: "https://mysupercoolinternalwebhost.com/")!
+					let binary = BinaryURL(url: url, resolvedDescription: url.description)
 
-					expect(dependency) == .binary(URL(string: "https://mysupercoolinternalwebhost.com/")!)
+					expect(dependency) == .binary(binary)
 				}
 
 				it("should read a URL with file scheme") {
 					let scanner = Scanner(string: "binary \"file:///my/domain/com/framework.json\"")
 					
 					let dependency = Dependency.from(scanner).value
-					
-					expect(dependency) == .binary(URL(string: "file:///my/domain/com/framework.json")!)
+					let url = URL(string: "file:///my/domain/com/framework.json")!
+					let binary = BinaryURL(url: url, resolvedDescription: url.description)
+
+					expect(dependency) == .binary(binary)
 				}
 
-				it("should fail with non-https URL") {
-					let scanner = Scanner(string: "binary \"nope\"")
+				it("should read a URL with relative file path") {
+					let relativePath = "my/relative/path/framework.json"
+					let scanner = Scanner(string: "binary \"\(relativePath)\"")
 
-					let error = Dependency.from(scanner).error
+					let workingDirectory = URL(string: "file:///current/working/directory/")!
+					let dependency = Dependency.from(scanner, base: workingDirectory).value
 
-					expect(error) == ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: "binary \"nope\"")
+					let url = URL(string: "file:///current/working/directory/my/relative/path/framework.json")!
+					let binary = BinaryURL(url: url, resolvedDescription: relativePath)
+
+					expect(dependency) == .binary(binary)
+				}
+
+				it("should read a URL with an absolute path") {
+					let absolutePath = "/my/absolute/path/framework.json"
+					let scanner = Scanner(string: "binary \"\(absolutePath)\"")
+
+					let dependency = Dependency.from(scanner).value
+					let url = URL(string: "file:///my/absolute/path/framework.json")!
+					let binary = BinaryURL(url: url, resolvedDescription: absolutePath)
+
+					expect(dependency) == .binary(binary)
 				}
 
 				it("should fail with invalid URL") {

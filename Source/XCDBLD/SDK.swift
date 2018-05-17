@@ -64,9 +64,26 @@ public enum SDK: String {
 			return .macOS
 		}
 	}
+
+	private static var aliases: [String: SDK] {
+		return ["tvos": .tvOS]
+	}
+
+	public init?(rawValue: String) {
+		let lowerCasedRawValue = rawValue.lowercased()
+		let maybeSDK = SDK
+			.allSDKs
+			.map { ($0, $0.rawValue) }
+			.first { _, stringValue in stringValue.lowercased() == lowerCasedRawValue }?
+			.0
+
+		guard let sdk = maybeSDK ?? SDK.aliases[lowerCasedRawValue] else {
+			return nil
+		}
+		self = sdk
+	}
 }
 
-// TODO: this won't be necessary anymore in Swift 2.
 extension SDK: CustomStringConvertible {
 	public var description: String {
 		switch self {

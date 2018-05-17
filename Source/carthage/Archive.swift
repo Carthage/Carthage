@@ -37,7 +37,13 @@ public struct ArchiveCommand: CommandProtocol {
 	public let verb = "archive"
 	public let function = "Archives built frameworks into a zip that Carthage can use"
 
+	// swiftlint:disable:next function_body_length
 	public func run(_ options: Options) -> Result<(), CarthageError> {
+		return archiveWithOptions(options)
+			.waitOnCommand()
+	}
+
+	public func archiveWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 
 		let frameworks: SignalProducer<[String], CarthageError>
@@ -47,18 +53,7 @@ public struct ArchiveCommand: CommandProtocol {
 			})
 		} else {
 			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
-			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
-				.collect()
-				.flatMap(.merge) { projects -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-					return schemesInProjects(projects)
-						.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-							if !schemes.isEmpty {
-								return .init(schemes)
-							} else {
-								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), []))
-							}
-						}
-				}
+			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release")
 				.flatMap(.merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 					return BuildSettings.load(with: buildArguments)
@@ -126,9 +121,8 @@ public struct ArchiveCommand: CommandProtocol {
 					return zip(paths: paths, into: outputURL, workingDirectory: options.directoryPath).on(completed: {
 						carthage.println(formatting.bullets + "Created " + formatting.path(outputPath))
 					})
-				}
+			}
 		}
-		.waitOnCommand()
 	}
 }
 

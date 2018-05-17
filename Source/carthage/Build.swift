@@ -22,6 +22,7 @@ extension BuildOptions: OptionsProtocol {
 			<*> mode <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
+			<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: "use downloaded binaries when possible")
 	}
 }
 
@@ -34,7 +35,21 @@ public struct BuildCommand: CommandProtocol {
 		public let isVerbose: Bool
 		public let directoryPath: String
 		public let logPath: String?
+		public let archive: Bool
 		public let dependenciesToBuild: [String]?
+
+		/// If `archive` is true, this will be a producer that will archive
+		/// the project after the build.
+		///
+		/// Otherwise, this producer will be empty.
+		public var archiveProducer: SignalProducer<(), CarthageError> {
+			if archive {
+				let options = ArchiveCommand.Options(outputPath: nil, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: [])
+				return ArchiveCommand().archiveWithOptions(options)
+			} else {
+				return .empty
+			}
+		}
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return curry(self.init)
@@ -44,6 +59,7 @@ public struct BuildCommand: CommandProtocol {
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline")
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
+				<*> mode <| Option(key: "archive", defaultValue: false, usage: "archive built frameworks from the current project (implies --no-skip-current)")
 				<*> (mode <| Argument(defaultValue: [], usage: "the dependency names to build")).map { $0.isEmpty ? nil : $0 }
 		}
 	}
@@ -53,6 +69,7 @@ public struct BuildCommand: CommandProtocol {
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
 		return self.buildWithOptions(options)
+			.then(options.archiveProducer)
 			.waitOnCommand()
 	}
 
@@ -63,7 +80,6 @@ public struct BuildCommand: CommandProtocol {
 				let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
 
 				let buildProgress = self.buildProjectInDirectoryURL(directoryURL, options: options)
-					.flatten(.concat)
 
 				let stderrHandle = options.isVerbose ? FileHandle.standardError : stdoutHandle
 
@@ -106,7 +122,7 @@ public struct BuildCommand: CommandProtocol {
 	/// Builds the project in the given directory, using the given options.
 	///
 	/// Returns a producer of producers, representing each scheme being built.
-	private func buildProjectInDirectoryURL(_ directoryURL: URL, options: Options) -> SignalProducer<BuildSchemeProducer, CarthageError> {
+	private func buildProjectInDirectoryURL(_ directoryURL: URL, options: Options) -> BuildSchemeProducer {
 		let project = Project(directoryURL: directoryURL)
 
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
@@ -115,7 +131,7 @@ public struct BuildCommand: CommandProtocol {
 		let buildProducer = project.loadResolvedCartfile()
 			.map { _ in project }
 			.flatMapError { error -> SignalProducer<Project, CarthageError> in
-				if options.skipCurrent {
+				if options.skipCurrent && !options.archive {
 					return SignalProducer(error: error)
 				} else {
 					// Ignore Cartfile.resolved loading failure. Assume the user
@@ -127,10 +143,10 @@ public struct BuildCommand: CommandProtocol {
 				return project.buildCheckedOutDependenciesWithOptions(options.buildOptions, dependenciesToBuild: options.dependenciesToBuild)
 			}
 
-		if options.skipCurrent {
+		if options.skipCurrent && !options.archive {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions)
+			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions, rootDirectoryURL: directoryURL)
 				.flatMapError { error -> BuildSchemeProducer in
 					switch error {
 					case let .noSharedFrameworkSchemes(project, _):
@@ -142,7 +158,7 @@ public struct BuildCommand: CommandProtocol {
 						return SignalProducer(error: error)
 					}
 				}
-			return buildProducer.concat(value: currentProducers)
+			return buildProducer.concat(currentProducers)
 		}
 	}
 

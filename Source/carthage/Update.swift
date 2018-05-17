@@ -27,6 +27,7 @@ public struct UpdateCommand: CommandProtocol {
 				isVerbose: isVerbose,
 				directoryPath: checkoutOptions.directoryPath,
 				logPath: logPath,
+				archive: false,
 				dependenciesToBuild: dependenciesToUpdate
 			)
 		}
@@ -66,7 +67,6 @@ public struct UpdateCommand: CommandProtocol {
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			let buildDescription = "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)"
 
-			let binariesAddendum = "\n(ignored if --no-build or --toolchain option is present)"
 			let dependenciesUsage = "the dependency names to update, checkout and build"
 
 			return curry(self.init)
@@ -77,22 +77,13 @@ public struct UpdateCommand: CommandProtocol {
 				<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
 				<*> mode <| Option(key: "fast-resolver", defaultValue: false, usage: "use the fast resolver codeline when calculating dependencies. Default is false")
 				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
-				<*> CheckoutCommand.Options.evaluate(mode, useBinariesAddendum: binariesAddendum, dependenciesUsage: dependenciesUsage)
+				<*> CheckoutCommand.Options.evaluate(mode, dependenciesUsage: dependenciesUsage)
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it
 		/// accordingly.
 		public func loadProject() -> SignalProducer<Project, CarthageError> {
 			return checkoutOptions.loadProject()
-				.on(value: { project in
-					// Never check out binaries if 
-					// 1. we're skipping the build step, or
-					// 2. `--toolchain` option is given
-					// because that means users may need the repository checkout.
-					if !self.buildAfterUpdate || self.buildOptions.toolchain != nil {
-						project.useBinaries = false
-					}
-				})
 		}
 	}
 

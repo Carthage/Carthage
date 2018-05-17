@@ -96,16 +96,6 @@ class BuildArgumentsSpec: QuickSpec {
 					subject.onlyActiveArchitecture = false
 				}
 			}
-
-			describe("specifying the bitcode generation mode") {
-				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=marker if .marker is set", arguments: ["BITCODE_GENERATION_MODE=marker"]) { subject in
-					subject.bitcodeGenerationMode = .marker
-				}
-
-				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=bitcode if .bitcode is set", arguments: ["BITCODE_GENERATION_MODE=bitcode"]) { subject in
-					subject.bitcodeGenerationMode = .bitcode
-				}
-			}
 		}
 	}
 }

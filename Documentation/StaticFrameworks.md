@@ -46,6 +46,11 @@ If your application has plugins or app extensions that need to share many framew
 
 To ensure that this new merged framework is a true merge of all of its dependent static frameworks, you should include the `-all_load`  flag in its `OTHER_LDFLAGS` build setting. This forces the linker to merge the full static framework into the dynamic framework (rather than just the parts that are used by your merged framework). If you don’t do this, consumers of the merged framework will likely encounter linker errors with undefined symbols.
 
+### Resolving linker warnings
+At this stage, your targets probably have their `Framework Search Paths` pointed at the `Carthage/Build/iOS` folder which now contains static frameworks. So you will start seeing: `ld: warning: Auto-Linking supplied 'X.framework/X', framework linker option at X.framework/X is not a dylib` for each of them when you compile. Unfortunately "Auto-Linking" is inferring frameworks that are used from your source, but doesn't know that your larger dynamic framework is providing them, and looks in `Framework Search Paths` for them. It finds the statics, hence the warnings.
+
+To work around this, you can point the targets that consume your large dynamic framework at a folder containing regular dynamic framework builds instead of the static ones. Your larger dynamic framework stuff points to the static ones though. This way Xcode knows what modules and symbols are available for the consumers, the linker will not actually auto-link to them because they are dylibs, but the linker also won't complain. The symbols are still provided by the larger dynamic frameowrk, which is loaded at app start. Note that this is a workaround, so use at your own risk!
+
 ## Linker flags
 If any of your frameworks contain Objective-C extensions, you will need to supply the `-ObjC` flag in your `OTHER_LDFLAGS` build setting to ensure that they’re successfully invoked. If you do not supply this flag, you will see a runtime crash whenever an Objective-C extension is invoked.
 
