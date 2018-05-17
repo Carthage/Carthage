@@ -1,3 +1,5 @@
+import Foundation
+
 /**
 A set which sorts its elements in natural order according to the Comparable protocol implementation.
 */

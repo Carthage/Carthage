@@ -1,3 +1,5 @@
+import Foundation
+
 /**
 Wrapper around PinnedVersion/SementicVersion that can be ordered on relevance and avoids multiple invocations of the parsing logic for the SemanticVersion from a string.
 
