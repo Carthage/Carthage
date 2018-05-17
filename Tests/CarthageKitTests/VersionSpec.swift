@@ -59,7 +59,7 @@ class SemanticVersionSpec: QuickSpec {
 			expect(SemanticVersion.from(PinnedVersion("2.8.2-alpha")).value) == SemanticVersion(major: 2, minor: 8, patch: 2, preRelease: "alpha")
 			expect(SemanticVersion.from(PinnedVersion("2.8.2-alpha+build234")).value) == SemanticVersion(major: 2, minor: 8, patch: 2, preRelease: "alpha", buildMetadata: "build234")
 			expect(SemanticVersion.from(PinnedVersion("2.8.2+build234")).value) == SemanticVersion(major: 2, minor: 8, patch: 2, buildMetadata: "build234")
-			
+			expect(SemanticVersion.from(PinnedVersion("2.8.2-alpha.2.1.0")).value) == SemanticVersion(major: 2, minor: 8, patch: 2, preRelease: "alpha.2.1.0")
 
 		}
 
@@ -70,6 +70,11 @@ class SemanticVersionSpec: QuickSpec {
 			expect(SemanticVersion.from(PinnedVersion("null-string-beta-2")).value).to(beNil())
 			expect(SemanticVersion.from(PinnedVersion("1.4.5+")).value).to(beNil()) // missing build metadata after '+'
 			expect(SemanticVersion.from(PinnedVersion("1.4.5-alpha+")).value).to(beNil()) // missing build metadata after '+'
+			expect(SemanticVersion.from(PinnedVersion("1.4.5-alpha#2")).value).to(beNil()) // non alphanumeric are  not allowed in pre-release
+			expect(SemanticVersion.from(PinnedVersion("1.4.5-alpha.2.01.0")).value).to(beNil()) // numeric identifiers in pre-release
+																								//version must not include leading zeros
+			expect(SemanticVersion.from(PinnedVersion("1.4.5-alpha.2..0")).value).to(beNil()) // empty pre-release component
+			expect(SemanticVersion.from(PinnedVersion("1.4.5+build@2")).value).to(beNil()) // non alphanumeric are not allowed in build metadata
 			expect(SemanticVersion.from(PinnedVersion("1.4.5-")).value).to(beNil()) // missing pre-release after '-'
 			expect(SemanticVersion.from(PinnedVersion("1.4.5-+build43")).value).to(beNil()) // missing pre-release after '-'
 		}
