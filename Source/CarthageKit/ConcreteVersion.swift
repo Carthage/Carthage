@@ -95,7 +95,7 @@ Additions/removals/lookups have O(log(N)) time complexity.
 
 This is intentionally a class instead of a struct to have control over when and how a copy is made of this set.
 */
-final class ConcreteVersionSet: Sequence {
+final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	public typealias Element = ConcreteVersion
 	public typealias Iterator = ConcreteVersionSetIterator
 
@@ -201,7 +201,7 @@ final class ConcreteVersionSet: Sequence {
 	*/
 	public func retainVersions(compatibleWith versionSpecifier: VersionSpecifier) {
 		// This is an optimization to achieve O(log(N)) time complexity for this method instead of O(N)
-		var range: Range<Int>? = nil
+		var range: Range<Int>?
 
 		switch versionSpecifier {
 		case .any, .gitReference:
@@ -254,6 +254,22 @@ final class ConcreteVersionSet: Sequence {
 
 			return ret
 		}
+	}
+
+	// MARK: - CustomStringConvertible
+
+	public var description: String {
+		var s = "["
+		var first = true
+		for concreteVersion in self {
+			if !first {
+				s += ", "
+			}
+			s += concreteVersion.description
+			first = false
+		}
+		s += "]"
+		return s
 	}
 
 	// MARK: - Private methods

@@ -139,7 +139,7 @@ public final class BackTrackingResolver: ResolverProtocol {
 				}
 			}
 		}
-		
+
 		// By definition result is not nil at this point (while loop only breaks when result is not nil)
 		guard let finalResult = result else {
 			preconditionFailure("Expected result to not be nil")
@@ -247,6 +247,8 @@ private final class DependencyRetriever {
 		guard !isUpdatable || !concreteVersionSet.isEmpty else {
 			throw CarthageError.requiredVersionNotFound(dependency, versionSpecifier)
 		}
+
+		print("Versions for dependency '\(dependency.name)' with versionSpecifier \(versionSpecifier): \(concreteVersionSet)")
 
 		return concreteVersionSet
 	}
