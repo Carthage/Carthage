@@ -664,12 +664,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { release -> SignalProducer<URL, CarthageError> in
 				return SignalProducer<Release.Asset, CarthageError>(release.assets)
 					.filter { asset in
-						guard asset.name.contains(Constants.Project.binaryAssetPattern) else {
+						if asset.name.range(of: Constants.Project.binaryAssetPattern) == nil {
 							return false
 						}
-						// Sometimes .zip archives have the wrong MIME-type. Check for an extension also.
-						return asset.name.lowercased().hasSuffix(Constants.Project.binaryAssetZipExtension) ||
-							Constants.Project.binaryAssetContentTypes.contains(asset.contentType)
+						return Constants.Project.binaryAssetContentTypes.contains(asset.contentType)
 					}
 					.flatMap(.concat) { asset -> SignalProducer<URL, CarthageError> in
 						let fileURL = fileURLToCachedBinary(dependency, release, asset)

@@ -96,12 +96,8 @@ public struct Constants {
 		/// tried as a binary framework.
 		public static let binaryAssetPattern = ".framework"
 
-		/// The extension of a zip archive. Sometimes zip archives added to a release
-		/// have an incorrect MIME type, so check for a mime type or an extension.
-		public static let binaryAssetZipExtension = ".zip"
-
 		/// MIME types allowed for GitHub Release assets, for them to be considered as
 		/// binary frameworks.
-		public static let binaryAssetContentTypes = ["application/zip"]
+		public static let binaryAssetContentTypes = ["application/zip", "application/octet-stream"]
 	}
 }
