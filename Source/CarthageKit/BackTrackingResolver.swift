@@ -4,14 +4,14 @@ import ReactiveSwift
 
 // swiftlint:disable vertical_parameter_alignment_on_call
 // swiftlint:disable vertical_parameter_alignment
-typealias DependencyEntry = (key: Dependency, value: VersionSpecifier)
+private typealias DependencyEntry = (key: Dependency, value: VersionSpecifier)
 
 /**
 Resolver implementation based on an optimized Backtracking Algorithm.
 
 See: https://en.wikipedia.org/wiki/Backtracking
 
-The implementation does not use the react streaming APIs to be able to keep the time complexity down and have a simple algorithm.
+The implementation does not use the reactive stream APIs to be able to keep the time complexity down and have a simple algorithm.
 */
 public final class BackTrackingResolver: ResolverProtocol {
 	private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
@@ -139,9 +139,12 @@ public final class BackTrackingResolver: ResolverProtocol {
 				}
 			}
 		}
-
-		// By definition result is not nil at this point, so it's ok to force unwrap
-		return result!
+		
+		// By definition result is not nil at this point (while loop only breaks when result is not nil)
+		guard let finalResult = result else {
+			preconditionFailure("Expected result to not be nil")
+		}
+		return finalResult
 	}
 }
 
@@ -271,7 +274,7 @@ private final class DependencyRetriever {
 /**
 Set representing a complete dependency tree with all compatible versions per dependency.
 
-It uses ConcreteVersionSet as implementation.
+It uses ConcreteVersionSet as implementation for storing the concrete compatible versions.
 */
 private final class DependencySet {
 	private var contents: [Dependency: ConcreteVersionSet]

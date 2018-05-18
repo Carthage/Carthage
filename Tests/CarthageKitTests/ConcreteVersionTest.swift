@@ -1,8 +1,3 @@
-//
-// Created by Werner Altewischer on 24/01/2018.
-// Copyright (c) 2018 Carthage. All rights reserved.
-//
-
 import Foundation
 import XCTest
 @testable import CarthageKit

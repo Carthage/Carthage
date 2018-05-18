@@ -50,6 +50,7 @@ struct ConcreteVersion: Comparable, CustomStringConvertible {
 		return s1 < s2 ? .orderedAscending : s2 < s1 ? .orderedDescending : .orderedSame
 	}
 
+	// All the comparison methods are intentionally defined inline (while the protocol only requires '<' and '==') to increase performance (requires 1 function call instead of 2 function calls this way).
 	public static func == (lhs: ConcreteVersion, rhs: ConcreteVersion) -> Bool {
 		return compare(lhs: lhs, rhs: rhs) == .orderedSame
 	}
@@ -200,7 +201,7 @@ final class ConcreteVersionSet: Sequence {
 	*/
 	public func retainVersions(compatibleWith versionSpecifier: VersionSpecifier) {
 		// This is an optimization to achieve O(log(N)) time complexity for this method instead of O(N)
-		var range: Range<Int>?
+		var range: Range<Int>? = nil
 
 		switch versionSpecifier {
 		case .any, .gitReference:
