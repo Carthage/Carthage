@@ -100,6 +100,13 @@ public final class BackTrackingResolver: ResolverProtocol {
 			result = .failure(carthageError)
 		}
 
+		switch result {
+		case .failure(let error):
+			print("Resolver failed with error: \(error)")
+		case .success(let dependencyDictionary):
+			print("Resolver succeeded with dependency set: \(dependencyDictionary)")
+		}
+
 		return SignalProducer(result: result)
 	}
 
@@ -259,6 +266,9 @@ private final class DependencyRetriever {
 			for: pinnedDependency,
 			byStoringDefault: try dependenciesForDependency(dependency, version.pinnedVersion).collect().first()!.dematerialize()
 		)
+
+		print("Dependencies for dependency '\(dependency.name)' with version \(version): \(result)")
+
 		return result
 	}
 
