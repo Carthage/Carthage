@@ -100,26 +100,49 @@ public struct SemanticVersion: VersionType {
 }
 
 extension SemanticVersion: Scannable {
+	
 	/// Attempts to parse a semantic version from a human-readable string of the
-	/// form "a.b.c".
+	/// form "a.b.c" from a string scanner. It assumes the string might contain a
+	/// comment coming from a Cartfile and will ignore the comment if present
 	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, ScannableError> {
+		return self.from(scanner, ignoreCartfileComments: true)
+	}
+	
+	/// Attempts to parse a semantic version from a human-readable string of the
+	/// form "a.b.c" from a string scanner.
+	/// - parameter ignoreCartfileComments: If `true`, it will ignore any potential Cartfile comment,
+	/// without consuming the following characters in the scanner. If `false`, Cartfile comments will cause
+	/// this method to return a failure.
+	/// - Note: Side effects on state of `scanner`: it will consume the parsed string
+	public static func from(_ scanner: Scanner, ignoreCartfileComments: Bool) -> Result<SemanticVersion, ScannableError> {
+		let numericVersionScanner: Scanner
 		
-		// According to https://git-scm.com/docs/git-check-ref-format,
-		// whitespace are not allowed in a tag, commit SHA, or branch name
-		// so I assume the version ends at the first space
-		var semanticVersionBuffer: NSString?
-		scanner.scanUpToCharacters(from: CharacterSet.whitespacesAndNewlines, into: &semanticVersionBuffer)
-		guard let semanticVersionString = semanticVersionBuffer as String? else {
-			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
+		if ignoreCartfileComments {
+			// scan everything before the comment, and continue the parsing
+			// considering only the scanned part
+			var semanticVersionBuffer: NSString?
+			scanner.scanUpToCharacters(
+				from: CharacterSet(charactersIn: Cartfile.commentIndicator),
+				into: &semanticVersionBuffer
+			)
+			guard let semanticVersionString = semanticVersionBuffer as String? else {
+				return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
+			}
+			numericVersionScanner = Scanner(
+				string: semanticVersionString.trimmingCharacters(
+					in: CharacterSet.whitespacesAndNewlines
+				)
+			)
+		} else {
+			numericVersionScanner = scanner
 		}
-
-		let numericVersionScanner = Scanner(string: semanticVersionString)
+		
 		var versionBuffer: NSString?
 		guard numericVersionScanner.scanCharacters(from: versionCharacterSet, into: &versionBuffer),
 			let version = versionBuffer as String? else {
 			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
 		}
-
+		
 		let components = version
 			.split(omittingEmptySubsequences: true) { $0 == "." }
 		if components.isEmpty {
@@ -143,6 +166,9 @@ extension SemanticVersion: Scannable {
 		
 		let preRelease = numericVersionScanner.scanStringWithPrefix("-", until: "+")
 		let buildMetadata = numericVersionScanner.scanStringWithPrefix("+", until: "")
+		guard numericVersionScanner.isAtEnd else {
+			return .failure(ScannableError(message: "expected valid version", currentLine: scanner.currentLine))
+		}
 		
 		if let buildMetadata = buildMetadata,
 			let error = SemanticVersion.validateBuildMetadata(buildMetadata, fullVersion: version)
@@ -159,7 +185,6 @@ extension SemanticVersion: Scannable {
 		guard (preRelease == nil && buildMetadata == nil) || hasPatchComponent else {
 			return .failure(ScannableError(message: "can not have pre-release or build metadata without patch, in \"\(version)\""))
 		}
-		
 		return .success(self.init(major: major,
 		                          minor: minor,
 		                          patch: patch,
@@ -209,8 +234,11 @@ extension Scanner {
 	/// Scans a string that is supposed to start with the given prefix, until the given
 	/// string is encountered.
 	/// - returns: the scanned string without the prefix. If the string does not start with the prefix,
-	/// or the scanner is at the end, it returns `nil`.
+	/// or the scanner is at the end, it returns `nil` without advancing the scanner.
 	fileprivate func scanStringWithPrefix(_ prefix: String, until: String) -> String? {
+		guard self.remainingString.hasPrefix(prefix) else {
+			return nil
+		}
 		if !self.isAtEnd {
 			var buffer : NSString? = nil
 			self.scanUpTo(until, into: &buffer)
@@ -222,6 +250,20 @@ extension Scanner {
 		} else {
 			return nil
 		}
+	}
+	
+	/// The index at which the receiver will start the next scan operation.
+	/// Will cause an error if the scanner is already at the end.
+	fileprivate var scanLocationIndex: String.Index {
+		return self.string.index(self.string.startIndex, offsetBy: self.scanLocation)
+	}
+	
+	/// The string that is left to scan. Accessing this variable will not advance the scanner location.
+	fileprivate var remainingString: String {
+		guard !self.isAtEnd else {
+			return ""
+		}
+		return String(self.string[self.scanLocationIndex...])
 	}
 }
 
