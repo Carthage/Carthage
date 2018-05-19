@@ -230,9 +230,7 @@ private final class DependencyRetriever {
 		}
 
 		public static func == (lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
-			// This is to optimize for the cache lookup speed.
-			// In the extremely rare case where a hash collision would occur, this would only result in the cache not being hit, which would not be a serious problem.
-			return lhs.hash == rhs.hash
+			return lhs.pinnedVersion == rhs.pinnedVersion && lhs.dependency == rhs.dependency
 		}
 	}
 	
@@ -257,9 +255,7 @@ private final class DependencyRetriever {
 		}
 
 		public static func == (lhs: DependencyVersionSpec, rhs: DependencyVersionSpec) -> Bool {
-			// This is to optimize for the cache lookup speed.
-			// In the extremely rare case where a hash collision would occur, this would only result in the cache not being hit, which would not be a serious problem.
-			return lhs.hash == rhs.hash
+			return lhs.isUpdatable == rhs.isUpdatable && lhs.versionSpecifier == rhs.versionSpecifier && lhs.dependency == rhs.dependency
 		}
 	}
 
