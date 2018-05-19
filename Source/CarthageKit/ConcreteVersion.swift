@@ -79,10 +79,18 @@ struct ConcreteVersion: Comparable, CustomStringConvertible {
 }
 
 /**
-Struct specifying a version specification as was defined by a parent dependency, or nil if it was defined at the top level (i.e. Cartfile)
+A Dependency with a concrete version.
 */
-struct DependencyTreeVersionSpecification {
-	let parent: Dependency?
+struct ConcreteVersionedDependency {
+	let dependency: Dependency
+	let concreteVersion: ConcreteVersion
+}
+
+/**
+A version specification as was defined by a concrete versioned dependency, or nil if it was defined at the top level (i.e. Cartfile)
+*/
+struct ConcreteVersionSetDefinition {
+	let definingDependency: ConcreteVersionedDependency?
 	let versionSpecifier: VersionSpecifier
 }
 
@@ -101,7 +109,10 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 
 	// MARK: - Public properties
 
-	public private(set) var specs: [DependencyTreeVersionSpecification]
+	/**
+	The collection of definitions that define the versions in this set.
+	*/
+	public private(set) var definitions: [ConcreteVersionSetDefinition]
 	public var pinnedVersionSpecifier: VersionSpecifier?
 
 	public var isPinned: Bool {
@@ -113,11 +124,23 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	private var semanticVersions: SortedSet<ConcreteVersion>
 	private var nonSemanticVersions: SortedSet<ConcreteVersion>
 
-	// MARK: - Public methods
+	// MARK: - Initializers
 
 	public convenience init() {
-		self.init(semanticVersions: SortedSet<ConcreteVersion>(), nonSemanticVersions: SortedSet<ConcreteVersion>(), specs: [DependencyTreeVersionSpecification]())
+		self.init(semanticVersions: SortedSet<ConcreteVersion>(), nonSemanticVersions: SortedSet<ConcreteVersion>(), definitions: [ConcreteVersionSetDefinition]())
 	}
+	
+	private init(semanticVersions: SortedSet<ConcreteVersion>,
+				 nonSemanticVersions: SortedSet<ConcreteVersion>,
+				 definitions: [ConcreteVersionSetDefinition],
+				 pinnedVersionSpecifier: VersionSpecifier? = nil) {
+		self.semanticVersions = semanticVersions
+		self.nonSemanticVersions = nonSemanticVersions
+		self.definitions = definitions
+		self.pinnedVersionSpecifier = pinnedVersionSpecifier
+	}
+	
+	// MARK: - Public methods
 
 	/**
 	Creates a copy of this set.
@@ -126,7 +149,7 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 		return ConcreteVersionSet(
 			semanticVersions: semanticVersions,
 			nonSemanticVersions: nonSemanticVersions,
-			specs: specs,
+			definitions: definitions,
 			pinnedVersionSpecifier: pinnedVersionSpecifier
 		)
 	}
@@ -155,8 +178,8 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	/**
 	Adds a dependency tree specification to the list of origins for the versions in this set.
 	*/
-	public func addSpec(_ spec: DependencyTreeVersionSpecification) {
-		specs.append(spec)
+	public func addDefinition(_ definition: ConcreteVersionSetDefinition) {
+		definitions.append(definition)
 	}
 
 	/**
@@ -273,16 +296,6 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	}
 
 	// MARK: - Private methods
-
-	private init(semanticVersions: SortedSet<ConcreteVersion>,
-				 nonSemanticVersions: SortedSet<ConcreteVersion>,
-				 specs: [DependencyTreeVersionSpecification],
-				 pinnedVersionSpecifier: VersionSpecifier? = nil) {
-		self.semanticVersions = semanticVersions
-		self.nonSemanticVersions = nonSemanticVersions
-		self.specs = specs
-		self.pinnedVersionSpecifier = pinnedVersionSpecifier
-	}
 
 	private func range(for versions: SortedSet<ConcreteVersion>, from lowerBound: ConcreteVersion, to upperBound: ConcreteVersion?) -> Range<Int>? {
 		var lowerIndex = 0

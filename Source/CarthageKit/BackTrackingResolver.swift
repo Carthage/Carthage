@@ -65,15 +65,15 @@ public final class BackTrackingResolver: ResolverProtocol {
 													  resolvedGitReference: resolvedGitReference,
 													  pinnedVersions: pinnedVersions)
 		let updatableDependencyNames = dependenciesToUpdate.map { Set($0) } ?? Set()
-		let requiredDependencies: AnySequence<DependencyEntry>
+		let requiredDependencies: [DependencyEntry]
 		let hasSpecificDepedenciesToUpdate = !updatableDependencyNames.isEmpty
 
 		if hasSpecificDepedenciesToUpdate {
-			requiredDependencies = AnySequence(dependencies.filter { dependency, _ in
+			requiredDependencies = dependencies.filter { dependency, _ in
 				updatableDependencyNames.contains(dependency.name) || pinnedVersions[dependency] != nil
-			})
+			}
 		} else {
-			requiredDependencies = AnySequence(dependencies)
+			requiredDependencies = Array(dependencies)
 		}
 
 		do {
@@ -100,13 +100,6 @@ public final class BackTrackingResolver: ResolverProtocol {
 			result = .failure(carthageError)
 		}
 
-		switch result {
-		case .failure(let error):
-			print("Resolver failed with error: \(error)")
-		case .success(let dependencyDictionary):
-			print("Resolver succeeded with dependency set: \(dependencyDictionary)")
-		}
-
 		return SignalProducer(result: result)
 	}
 
@@ -123,26 +116,39 @@ public final class BackTrackingResolver: ResolverProtocol {
 		}
 
 		var result: (state: ResolverState, dependencySet: DependencySet)? = nil
+		var lastRejectionError: CarthageError? = nil
 		while result == nil {
-			// Use an autorelease pool here to keep memory usage down
-			try autoreleasepool {
-				// Keep iterating until there are no subsets to resolve anymore
-				if let subSet = try dependencySet.popSubSet() {
+			// Keep iterating until there are no subsets to resolve anymore
+			if let subSet = try dependencySet.popSubSet() {
+				if subSet.isRejected {
+					if subSet === dependencySet {
+						result = (.rejected, subSet)
+					}
+					if subSet.rejectionError != nil {
+						lastRejectionError = subSet.rejectionError
+					}
+				} else {
 					// Backtrack again with this subset
 					let nestedResult = try backtrack(dependencySet: subSet)
-
 					switch nestedResult.state {
 					case .rejected:
 						if subSet === dependencySet {
 							result = (.rejected, subSet)
 						}
+						if subSet.rejectionError != nil {
+							lastRejectionError = subSet.rejectionError
+						}
 					case .accepted:
 						// Set contains all dependencies, we've got a winner
 						result = (.accepted, nestedResult.dependencySet)
 					}
-				} else {
-					// All done
-					result = (.rejected, dependencySet)
+				}
+				
+			} else {
+				// All done
+				result = (.rejected, dependencySet)
+				if dependencySet.rejectionError == nil {
+					dependencySet.rejectionError = lastRejectionError
 				}
 			}
 		}
@@ -152,6 +158,29 @@ public final class BackTrackingResolver: ResolverProtocol {
 			preconditionFailure("Expected result to not be nil")
 		}
 		return finalResult
+	}
+}
+
+private final class DependencyConflict {
+	// Error for the conflict
+	let error: CarthageError
+	
+	// Nil array means: conflict with root level definition
+	var conflictingDependencies: [ConcreteVersionedDependency]? = nil
+	
+	init(error: CarthageError, conflictingDependency: ConcreteVersionedDependency? = nil) {
+		self.error = error
+		if let nonNilConflictingDependency = conflictingDependency {
+			conflictingDependencies = [nonNilConflictingDependency]
+		}
+	}
+	
+	public func addConflictingDependency(_ conflictingDependency: ConcreteVersionedDependency?) {
+		if let nonNilConflictingDependency = conflictingDependency {
+			conflictingDependencies?.append(nonNilConflictingDependency)
+		} else {
+			conflictingDependencies = nil
+		}
 	}
 }
 
@@ -169,10 +198,11 @@ private final class DependencyRetriever {
 	private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
 
 	private var dependencyCache = [PinnedDependency: [DependencyEntry]]()
-	private var versionsCache = [VersionedDependency: ConcreteVersionSet]()
-	private var conflictCache = [VersionedDependency: CarthageError]()
+	private var versionsCache = [DependencyVersionSpec: ConcreteVersionSet]()
+	private var conflictCache = [PinnedDependency: DependencyConflict]()
+	public private(set) var problematicDependencies = Set<Dependency>()
 
-	init(
+	public init(
 		versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
 		dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
 		resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>,
@@ -183,34 +213,53 @@ private final class DependencyRetriever {
 		self.resolvedGitReference = resolvedGitReference
 		self.pinnedVersions = pinnedVersions
 	}
-
+	
 	private struct PinnedDependency: Hashable {
-		let dependency: Dependency
-		let pinnedVersion: PinnedVersion
-
-		public var hashValue: Int {
-			return 37 &* dependency.hashValue &+ pinnedVersion.hashValue
+		public let dependency: Dependency
+		public let pinnedVersion: PinnedVersion
+		private let hash: Int
+		
+		init(dependency: Dependency, pinnedVersion: PinnedVersion) {
+			self.dependency = dependency
+			self.pinnedVersion = pinnedVersion
+			self.hash = 37 &* dependency.hashValue &+ pinnedVersion.hashValue
 		}
 
-		public static func == (lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
-			return lhs.dependency == rhs.dependency && lhs.pinnedVersion == rhs.pinnedVersion
-		}
-	}
-
-	private struct VersionedDependency: Hashable {
-		let dependency: Dependency
-		let versionSpecifier: VersionSpecifier
-		let isUpdatable: Bool
-
 		public var hashValue: Int {
-			var hash = dependency.hashValue
-			hash = 37 &* hash &+ versionSpecifier.hashValue
-			hash = 37 &* hash &+ isUpdatable.hashValue
 			return hash
 		}
 
-		public static func == (lhs: VersionedDependency, rhs: VersionedDependency) -> Bool {
-			return lhs.dependency == rhs.dependency && lhs.versionSpecifier == rhs.versionSpecifier
+		public static func == (lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
+			// This is to optimize for the cache lookup speed.
+			// In the extremely rare case where a hash collision would occur, this would only result in the cache not being hit, which would not be a serious problem.
+			return lhs.hash == rhs.hash
+		}
+	}
+	
+	private struct DependencyVersionSpec: Hashable {
+		public let dependency: Dependency
+		public let versionSpecifier: VersionSpecifier
+		public let isUpdatable: Bool
+		private let hash: Int
+		
+		init(dependency: Dependency, versionSpecifier: VersionSpecifier, isUpdatable: Bool) {
+			self.dependency = dependency
+			self.versionSpecifier = versionSpecifier
+			self.isUpdatable = isUpdatable
+			var h = dependency.hashValue
+			h = 37 &* h &+ versionSpecifier.hashValue
+			h = 37 &* h &+ isUpdatable.hashValue
+			self.hash = h
+		}
+
+		public var hashValue: Int {
+			return hash
+		}
+
+		public static func == (lhs: DependencyVersionSpec, rhs: DependencyVersionSpec) -> Bool {
+			// This is to optimize for the cache lookup speed.
+			// In the extremely rare case where a hash collision would occur, this would only result in the cache not being hit, which would not be a serious problem.
+			return lhs.hash == rhs.hash
 		}
 	}
 
@@ -243,8 +292,8 @@ private final class DependencyRetriever {
 		return versionSet
 	}
 
-	func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier, isUpdatable: Bool) throws -> ConcreteVersionSet {
-		let versionedDependency = VersionedDependency(dependency: dependency, versionSpecifier: versionSpecifier, isUpdatable: isUpdatable)
+	public func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier, isUpdatable: Bool) throws -> ConcreteVersionSet {
+		let versionedDependency = DependencyVersionSpec(dependency: dependency, versionSpecifier: versionSpecifier, isUpdatable: isUpdatable)
 
 		let concreteVersionSet = try versionsCache.object(
 			for: versionedDependency,
@@ -255,31 +304,57 @@ private final class DependencyRetriever {
 			throw CarthageError.requiredVersionNotFound(dependency, versionSpecifier)
 		}
 
-		print("Versions for dependency '\(dependency.name)' with versionSpecifier \(versionSpecifier): \(concreteVersionSet)")
-
 		return concreteVersionSet
 	}
 
-	func findDependencies(for dependency: Dependency, version: ConcreteVersion) throws -> [DependencyEntry] {
+	public func findDependencies(for dependency: Dependency, version: ConcreteVersion) throws -> [DependencyEntry] {
 		let pinnedDependency = PinnedDependency(dependency: dependency, pinnedVersion: version.pinnedVersion)
-		let result: [DependencyEntry] = try dependencyCache.object(
+		var result: [DependencyEntry] = try dependencyCache.object(
 			for: pinnedDependency,
 			byStoringDefault: try dependenciesForDependency(dependency, version.pinnedVersion).collect().first()!.dematerialize()
 		)
-
-		print("Dependencies for dependency '\(dependency.name)' with version \(version): \(result)")
+		
+		// Sort according to relevance for faster processing: always process problematic dependencies first
+		if !problematicDependencies.isEmpty {
+			result.sort { (entry1, entry2) -> Bool in
+				if problematicDependencies.contains(entry1.key) && !problematicDependencies.contains(entry2.key) {
+					return true
+				} else {
+					return false
+				}
+			}
+		}
 
 		return result
 	}
 
-	func setCachedError(_ error: CarthageError, for dependency: Dependency, with versionSpecifier: VersionSpecifier) {
-		let key = VersionedDependency(dependency: dependency, versionSpecifier: versionSpecifier, isUpdatable: true)
-		conflictCache[key] = error
+	public func addCachedConflict(for dependency: ConcreteVersionedDependency, conflictingWith conflictingDependency: ConcreteVersionedDependency? = nil, error: CarthageError) {
+		storeCachedConflict(for: dependency, conflictingWith: conflictingDependency, error: error)
+		
+		// Add the inverse as well
+		if let nonNilConflictingDependency = conflictingDependency {
+			storeCachedConflict(for: nonNilConflictingDependency, conflictingWith: dependency, error: error)
+		}
 	}
-
-	func cachedError(for dependency: Dependency, with versionSpecifier: VersionSpecifier) -> CarthageError? {
-		let key = VersionedDependency(dependency: dependency, versionSpecifier: versionSpecifier, isUpdatable: true)
+	
+	private func storeCachedConflict(for dependency: ConcreteVersionedDependency, conflictingWith conflictingDependency: ConcreteVersionedDependency? = nil, error: CarthageError) {
+		let key = PinnedDependency(dependency: dependency.dependency, pinnedVersion: dependency.concreteVersion.pinnedVersion)
+		
+		if let existingConflict = conflictCache[key] {
+			existingConflict.addConflictingDependency(conflictingDependency)
+		} else {
+			conflictCache[key] = DependencyConflict(error: error, conflictingDependency: conflictingDependency)
+		}
+		addProblematicDependency(dependency.dependency)
+	}
+	
+	public func cachedConflict(for dependency: ConcreteVersionedDependency) -> DependencyConflict? {
+		let key = PinnedDependency(dependency: dependency.dependency, pinnedVersion: dependency.concreteVersion.pinnedVersion)
 		return conflictCache[key]
+	}
+	
+	public func addProblematicDependency(_ dependency: Dependency) {
+		problematicDependencies.insert(dependency)
 	}
 }
 
@@ -297,7 +372,7 @@ private final class DependencySet {
 
 	public private(set) var unresolvedDependencies: Set<Dependency>
 
-	public private(set) var rejectionError: CarthageError?
+	public var rejectionError: CarthageError?
 
 	public var isRejected: Bool {
 		return rejectionError != nil
@@ -323,6 +398,25 @@ private final class DependencySet {
 	public var resolvedDependencies: [Dependency: PinnedVersion] {
 		return contents.filterMapValues { $0.first?.pinnedVersion }
 	}
+	
+	public var nextUnresolvedDependency: Dependency? {
+		let problematicDependencies = retriever.problematicDependencies
+		
+		if problematicDependencies.count < unresolvedDependencies.count {
+			for problematicDependency in problematicDependencies {
+				if unresolvedDependencies.contains(problematicDependency) {
+					return problematicDependency
+				}
+			}
+		} else {
+			for unresolvedDependency in unresolvedDependencies {
+				if problematicDependencies.contains(unresolvedDependency) {
+					return unresolvedDependency
+				}
+			}
+		}
+		return unresolvedDependencies.first
+	}
 
 	private init(unresolvedDependencies: Set<Dependency>,
 				 updatableDependencyNames: Set<String>,
@@ -334,22 +428,27 @@ private final class DependencySet {
 		self.retriever = retriever
 	}
 
-	convenience init(requiredDependencies: AnySequence<DependencyEntry>,
+	convenience init(requiredDependencies: [DependencyEntry],
 							updatableDependencyNames: Set<String>,
 							retriever: DependencyRetriever) throws {
 		self.init(unresolvedDependencies: Set(requiredDependencies.map { $0.key }),
 				  updatableDependencyNames: updatableDependencyNames,
 				  contents: [Dependency: ConcreteVersionSet](),
 				  retriever: retriever)
-		try self.update(parent: nil, with: requiredDependencies)
+		try self.expand(parent: nil, with: requiredDependencies)
+	}
+	
+	public func rejectedCopy(rejectionError: CarthageError) -> DependencySet {
+		let dependencySet = DependencySet(unresolvedDependencies: Set<Dependency>(), updatableDependencyNames: Set<String>(), contents: [Dependency: ConcreteVersionSet](), retriever: self.retriever)
+		dependencySet.rejectionError = rejectionError
+		return dependencySet
 	}
 
 	public func removeVersion(_ version: ConcreteVersion, for dependency: Dependency) -> Bool {
 		if let versionSet = contents[dependency] {
 			versionSet.remove(version)
-			return true
+			return !versionSet.isEmpty
 		}
-
 		return false
 	}
 
@@ -394,10 +493,27 @@ private final class DependencySet {
 	}
 
 	public func popSubSet() throws -> DependencySet? {
-		while !unresolvedDependencies.isEmpty {
-			if let dependency = unresolvedDependencies.first, let versionSet = contents[dependency], let version = versionSet.first {
-				let count = versionSet.count
+		while !unresolvedDependencies.isEmpty && !isRejected {
+			if let dependency = self.nextUnresolvedDependency {
+				// Select the first version, which is also the most appropriate version (highest version corresponding with version specifier)
+				guard let versionSet = contents[dependency], let version = versionSet.first else {
+					// Empty version set for this dependency, so there's no more subsets to consider
+					return nil
+				}
+				
+				let concreteVersionedDependency = ConcreteVersionedDependency(dependency: dependency, concreteVersion: version)
+				let optionalCachedConflict = retriever.cachedConflict(for: concreteVersionedDependency)
 				let newSet: DependencySet
+				
+				if let cachedConflict = optionalCachedConflict, cachedConflict.conflictingDependencies == nil {
+					// Conflicts with the root level definitions: immediately exit with error
+					_ = removeVersion(version, for: dependency)
+					newSet = rejectedCopy(rejectionError: cachedConflict.error)
+					return newSet
+				}
+				
+				// Remove all versions except the selected version if needed. If the number of versions is already 1, we don't need a copy.
+				let count = versionSet.count
 				if count > 1 {
 					let copy = self.copy
 					let valid1 = copy.removeAllVersionsExcept(version, for: dependency)
@@ -412,11 +528,24 @@ private final class DependencySet {
 				} else {
 					newSet = self
 				}
-
-				let transitiveDependencies = try retriever.findDependencies(for: dependency, version: version)
-
-				try newSet.update(parent: dependency, with: AnySequence(transitiveDependencies), forceUpdatable: isUpdatableDependency(dependency))
-
+				
+				// Check for cached conflicts
+				if let cachedConflict = optionalCachedConflict, let conflictingDependencies = cachedConflict.conflictingDependencies {
+					// Remove all conflicting dependencies from this set
+					for concreteDependency in conflictingDependencies {
+						if newSet.removeVersion(concreteDependency.concreteVersion, for: concreteDependency.dependency) == false {
+							// Rejected
+							newSet.rejectionError = CarthageError.unsatisfiableDependencyList([concreteDependency.dependency.name])
+							break
+						}
+					}
+				}
+				
+				if !newSet.isRejected {
+					if try newSet.expand(parent: ConcreteVersionedDependency(dependency: dependency, concreteVersion: version), with: try retriever.findDependencies(for: dependency, version: version), forceUpdatable: isUpdatableDependency(dependency)) {
+						newSet.unresolvedDependencies.remove(dependency)
+					}
+				}
 				return newSet
 			}
 		}
@@ -424,67 +553,63 @@ private final class DependencySet {
 		return nil
 	}
 
-	public func update(parent: Dependency?, with transitiveDependencies: AnySequence<DependencyEntry>, forceUpdatable: Bool = false) throws {
-		if isRejected {
-			return
-		}
-		if let definedParent = parent {
-			unresolvedDependencies.remove(definedParent)
-		}
-
+	@discardableResult
+	public func expand(parent: ConcreteVersionedDependency?, with transitiveDependencies: [DependencyEntry], forceUpdatable: Bool = false) throws -> Bool {
 		for (transitiveDependency, versionSpecifier) in transitiveDependencies {
-			if let cachedConflict = retriever.cachedError(for: transitiveDependency, with: versionSpecifier) {
-				rejectionError = cachedConflict
-				return
-			}
-
 			let isUpdatable = forceUpdatable || isUpdatableDependency(transitiveDependency)
 			if forceUpdatable {
 				addUpdatableDependency(transitiveDependency)
 			}
 
-			let handled = try handle(dependency: transitiveDependency,
-									 from: DependencyTreeVersionSpecification(parent: parent, versionSpecifier: versionSpecifier),
-									 isUpdatable: isUpdatable)
-			if !handled {
+			guard try process(dependency: transitiveDependency,
+							  definedBy: ConcreteVersionSetDefinition(definingDependency: parent, versionSpecifier: versionSpecifier),
+							  isUpdatable: isUpdatable) == true else {
 				// Errors were encountered, fail fast
-				return
+				return false
 			}
 		}
+		return true
 	}
 
-	private func handle(dependency: Dependency, from currentSpec: DependencyTreeVersionSpecification, isUpdatable: Bool) throws -> Bool {
-		let versionSpecifier = currentSpec.versionSpecifier
-		let parent = currentSpec.parent
+	private func process(dependency: Dependency, definedBy definition: ConcreteVersionSetDefinition, isUpdatable: Bool) throws -> Bool {
+		let versionSpecifier = definition.versionSpecifier
+		let definingDependency = definition.definingDependency
 		let existingVersionSet = versions(for: dependency)
-
+		
 		if existingVersionSet == nil || (existingVersionSet!.isPinned && isUpdatable) {
 			let validVersions = try retriever.findAllVersions(for: dependency, compatibleWith: versionSpecifier, isUpdatable: isUpdatable)
 
 			if !setVersions(validVersions, for: dependency) {
-				rejectionError = CarthageError.requiredVersionNotFound(dependency, versionSpecifier)
-				retriever.setCachedError(rejectionError!, for: dependency, with: versionSpecifier)
+				let error = CarthageError.requiredVersionNotFound(dependency, versionSpecifier)
+				rejectionError = error
+				if let nonNilDefiningDependency = definingDependency {
+					retriever.addCachedConflict(for: nonNilDefiningDependency, error: error)
+				}
+				retriever.addProblematicDependency(dependency)
 				return false
 			}
 
 			existingVersionSet?.pinnedVersionSpecifier = nil
-			validVersions.addSpec(currentSpec)
+			validVersions.addDefinition(definition)
 		} else if let versionSet = existingVersionSet {
-			versionSet.addSpec(currentSpec)
+			versionSet.addDefinition(definition)
 
 			if !constrainVersions(for: dependency, with: versionSpecifier) {
-				let hasIntersectionWithCurrentSpec: (DependencyTreeVersionSpecification) -> Bool = { spec in
-					return intersection(spec.versionSpecifier, currentSpec.versionSpecifier) == nil
+				let hasIntersectionWithCurrentSpec: (ConcreteVersionSetDefinition) -> Bool = { spec in
+					return intersection(spec.versionSpecifier, definition.versionSpecifier) == nil
 				}
-				if let incompatibleSpec = versionSet.specs.first(where: hasIntersectionWithCurrentSpec) {
-					let newRequirement: CarthageError.VersionRequirement = (specifier: versionSpecifier, fromDependency: parent)
-					let existingRequirement: CarthageError.VersionRequirement = (specifier: incompatibleSpec.versionSpecifier, fromDependency: incompatibleSpec.parent)
-					rejectionError = CarthageError.incompatibleRequirements(dependency, existingRequirement, newRequirement)
-					if incompatibleSpec.parent == nil {
-						retriever.setCachedError(rejectionError!, for: dependency, with: versionSpecifier)
+				if let incompatibleDefinition = versionSet.definitions.first(where: hasIntersectionWithCurrentSpec) {
+					let newRequirement: CarthageError.VersionRequirement = (specifier: versionSpecifier, fromDependency: definition.definingDependency?.dependency)
+					let existingRequirement: CarthageError.VersionRequirement = (specifier: incompatibleDefinition.versionSpecifier, fromDependency: incompatibleDefinition.definingDependency?.dependency)
+					let error = CarthageError.incompatibleRequirements(dependency, existingRequirement, newRequirement)
+					rejectionError = error
+					if let nonNilDefiningDependency = definition.definingDependency {
+						retriever.addCachedConflict(for: nonNilDefiningDependency, conflictingWith: incompatibleDefinition.definingDependency, error: error)
 					}
+					retriever.addProblematicDependency(dependency)
 				} else {
 					rejectionError = CarthageError.unsatisfiableDependencyList([dependency.name])
+					retriever.addProblematicDependency(dependency)
 				}
 				return false
 			}

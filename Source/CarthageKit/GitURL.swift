@@ -4,11 +4,13 @@ import Foundation
 public struct GitURL {
 	/// The string representation of the URL.
 	public let urlString: String
+	internal let normalizedURLString: String
+	private let hash: Int
 
 	/// A normalized URL string, without protocol, authentication, or port
 	/// information. This is mostly useful for comparison, and not for any
 	/// actual Git operations.
-	internal var normalizedURLString: String {
+	private static func normalizedURLString(from urlString: String) -> String {
 		if let parsedURL = URL(string: urlString), let host = parsedURL.host {
 			// Normal, valid URL.
 			let path = strippingGitSuffix(parsedURL.path)
@@ -57,6 +59,10 @@ public struct GitURL {
 
 	public init(_ urlString: String) {
 		self.urlString = urlString
+		
+		// Pre-compute the normalizedURL and hash for faster cache lookups
+		self.normalizedURLString = GitURL.normalizedURLString(from: urlString)
+		self.hash = normalizedURLString.hashValue
 	}
 }
 
@@ -68,7 +74,7 @@ extension GitURL: Equatable {
 
 extension GitURL: Hashable {
 	public var hashValue: Int {
-		return normalizedURLString.hashValue
+		return hash
 	}
 }
 
