@@ -77,6 +77,8 @@ class SemanticVersionSpec: QuickSpec {
 			expect(SemanticVersion.from(PinnedVersion("1.4.5+build@2")).value).to(beNil()) // non alphanumeric are not allowed in build metadata
 			expect(SemanticVersion.from(PinnedVersion("1.4.5-")).value).to(beNil()) // missing pre-release after '-'
 			expect(SemanticVersion.from(PinnedVersion("1.4.5-+build43")).value).to(beNil()) // missing pre-release after '-'
+			expect(SemanticVersion.from(PinnedVersion("1.４.5")).value).to(beNil()) // Note that the `４` in this string is
+																					// a fullwidth character, not a halfwidth `4`
 		}
 		
 		it("Should not scan anything after a space as part of version") {

@@ -82,8 +82,10 @@ public struct SemanticVersion: VersionType {
 	}
 	
 	/// Set of valid characters for SemVer major.minor.patch section
-	fileprivate static let versionCharacterSet = CharacterSet(charactersIn: ".")
-		.union(CharacterSet.decimalDigits)
+	/// - note: Please use this instead of `CharacterSet.decimalDigits`, as
+	/// `decimalDigits` include more characters that are not contemplated in
+	/// the SemVer spects (e.g. `FULLWIDTH` version of digits, like `４`)
+	fileprivate static let versionCharacterSet = CharacterSet(charactersIn: "0123456789.")
 	
 	fileprivate static let asciiAlphabeth = CharacterSet(
 		charactersIn: "abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ"
