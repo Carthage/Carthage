@@ -19,22 +19,22 @@ class SemanticVersionSpec: QuickSpec {
 			expect(version) < SemanticVersion(major: 10, minor: 0, patch: 0)
 			expect(version) < SemanticVersion(major: 2, minor: 10, patch: 1)
 			expect(version) < SemanticVersion(major: 2, minor: 1, patch: 10)
-
+			
 			expect(version) < SemanticVersion(major: 2, minor: 1, patch: 2, buildMetadata: "b421")
 			expect(version) != SemanticVersion(major: 2, minor: 1, patch: 1, buildMetadata: "b2334")
 			expect(version) > SemanticVersion(major: 2, minor: 1, patch: 0, buildMetadata: "b421")
 		}
-
+		
 		it("should order pre-release versions correctly") {
 			let version = SemanticVersion(major: 2, minor: 1, patch: 1, preRelease: "alpha8")
-
+			
 			expect(version) < SemanticVersion(major: version.major, minor: version.minor, patch: version.patch)
 			expect(version) > SemanticVersion(major: version.major, minor: version.minor, patch: version.patch-1)
 			expect(version) == SemanticVersion(major: version.major, minor: version.minor, patch: version.patch, preRelease: version.preRelease)
-
+			
 			// As specified in http://semver.org/
 			// "Example: 1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 < 1.0.0-rc.1 < 1.0.0"
-
+			
 			expect(SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "alpha")) < SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "alpha.1")
 			expect(SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "alpha.1")) < SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "alpha.beta")
 			expect(SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "alpha.beta")) < SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "beta")
@@ -42,7 +42,7 @@ class SemanticVersionSpec: QuickSpec {
 			expect(SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "beta.2")) < SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "beta.11")
 			expect(SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "beta.11")) < SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "rc.1")
 			expect(SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "rc.1")) < SemanticVersion(major: 1, minor: 0, patch: 0)
-
+			
 			// now test the reverse (to catch error if the < function ALWAYS returns true)
 			expect(SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "alpha.1")) > SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "alpha")
 			expect(SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "alpha.beta")) > SemanticVersion(major: 1, minor: 0, patch: 0, preRelease: "alpha.1")
@@ -92,7 +92,7 @@ class SemanticVersionSpec: QuickSpec {
 			expect(SemanticVersion.from(Scanner(string: "2.8.2#comment"), ignoreCartfileComments: false).value).to(beNil())
 		}
 
-		it("Should not consume anything after space when scanning") {
+		it("Should not consume anything after `#` when scanning") {
 			let scanner = Scanner(string: "2.8.2+b12 #comment")
 			expect(SemanticVersion.from(scanner).value) == SemanticVersion(major: 2, minor: 8, patch: 2, preRelease: nil, buildMetadata: "b12")
 			var remaining: NSString? = nil

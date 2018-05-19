@@ -100,7 +100,6 @@ public struct SemanticVersion: VersionType {
 }
 
 extension SemanticVersion: Scannable {
-	
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c" from a string scanner. It assumes the string might contain a
 	/// comment coming from a Cartfile and will ignore the comment if present
@@ -142,7 +141,7 @@ extension SemanticVersion: Scannable {
 			let version = versionBuffer as String? else {
 			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
 		}
-		
+
 		let components = version
 			.split(omittingEmptySubsequences: true) { $0 == "." }
 		if components.isEmpty {
@@ -185,6 +184,7 @@ extension SemanticVersion: Scannable {
 		guard (preRelease == nil && buildMetadata == nil) || hasPatchComponent else {
 			return .failure(ScannableError(message: "can not have pre-release or build metadata without patch, in \"\(version)\""))
 		}
+		
 		return .success(self.init(major: major,
 		                          minor: minor,
 		                          patch: patch,
