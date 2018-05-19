@@ -27,8 +27,6 @@
 		67C870081A7A04E100F6647C /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C870071A7A04E100F6647C /* Formatting.swift */; };
 		7469925320AD9119007AC8FF /* SortedSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7469925220AD9119007AC8FF /* SortedSet.swift */; };
 		7469925520AD9183007AC8FF /* ConcreteVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7469925420AD9183007AC8FF /* ConcreteVersion.swift */; };
-		74B4920A20B0605B007A2AA4 /* DependencyTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B4920920B0605B007A2AA4 /* DependencyTest.swift */; };
-		74B4920C20B064F7007A2AA4 /* JSONOutputResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B4920B20B064F7007A2AA4 /* JSONOutputResolver.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
 		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
 		8A239F3C2097586F005F02F2 /* BundleExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A239F3A20975762005F02F2 /* BundleExtensions.swift */; };
@@ -201,8 +199,6 @@
 		67C870071A7A04E100F6647C /* Formatting.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
 		7469925220AD9119007AC8FF /* SortedSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SortedSet.swift; sourceTree = "<group>"; };
 		7469925420AD9183007AC8FF /* ConcreteVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcreteVersion.swift; sourceTree = "<group>"; };
-		74B4920920B0605B007A2AA4 /* DependencyTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DependencyTest.swift; sourceTree = "<group>"; };
-		74B4920B20B064F7007A2AA4 /* JSONOutputResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONOutputResolver.swift; sourceTree = "<group>"; };
 		82ABB0CF1EF7D43800AC2A75 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text; path = .swiftlint.yml; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
@@ -512,6 +508,7 @@
 		D0D1216E19E87B05005E4BAA /* CarthageKit */ = {
 			isa = PBXGroup;
 			children = (
+				D0D1217119E87B05005E4BAA /* CarthageKit.h */,
 				3A0472F21C782B4000097EC7 /* Algorithms.swift */,
 				D069CA231A4E3B2700314A85 /* Archive.swift */,
 				CD3E530A1DE33095002C135C /* Availability.swift */,
@@ -522,7 +519,6 @@
 				CDE559281E12263A00ED7F5F /* BuildSettings.swift */,
 				8A239F3A20975762005F02F2 /* BundleExtensions.swift */,
 				D0D1218F19E88A15005E4BAA /* Cartfile.swift */,
-				D0D1217119E87B05005E4BAA /* CarthageKit.h */,
 				CD43D9D91F41640E00CD60F6 /* CarthageKitVersion.swift */,
 				7469925420AD9183007AC8FF /* ConcreteVersion.swift */,
 				A1411ED51EFC1BFD0060461F /* Constants.swift */,
@@ -533,24 +529,23 @@
 				88ED56D519ECE34900CBF5C4 /* Git.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
 				CD43D9DD1F43074000CD60F6 /* GitURL.swift */,
-				74B4920B20B064F7007A2AA4 /* JSONOutputResolver.swift */,
-				B17145EF1F43F797006DC662 /* NewResolver.swift */,
 				D0A2025D1B114D1000C71375 /* ProducerQueue.swift */,
 				CD28C99C1E11846200322AF7 /* ProductType.swift */,
 				F603929819EA29F80050A6AF /* Project.swift */,
 				0FDFEA7F2055FACE008862E3 /* Proxy.swift */,
 				D01D82D61A10160700F0DD94 /* Resolver.swift */,
+				B17145EF1F43F797006DC662 /* NewResolver.swift */,
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
 				CDB099231E6DC2D40030B4A8 /* ScannableError.swift */,
 				7469925220AD9119007AC8FF /* SortedSet.swift */,
 				CDBE654B1F4BF0040060D94E /* Submodule.swift */,
-				D0D1216F19E87B05005E4BAA /* Supporting Files */,
 				CD9FDF35207BBB17009C993A /* SwiftShims.swift */,
 				3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */,
 				D0DE893F1A0F2CB00030A3EC /* Version.swift */,
 				F1CB3CFB1D63D05D00C9EB99 /* VersionFile.swift */,
 				BE0292481E403355004FB579 /* XCDBLDExtensions.swift */,
 				D01F8A5319EA2F1700643E7C /* Xcode.swift */,
+				D0D1216F19E87B05005E4BAA /* Supporting Files */,
 			);
 			name = CarthageKit;
 			path = Source/CarthageKit;
@@ -580,7 +575,6 @@
 				BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */,
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
 				A83DFC55EC0BC1A0F9674D1C /* ConcreteVersionTest.swift */,
-				74B4920920B0605B007A2AA4 /* DependencyTest.swift */,
 				BF3199BF1E32E078007DC0D1 /* DependencySpec.swift */,
 				89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */,
 				CDA0B6C91C468E67006C499C /* GitURLSpec.swift */,
@@ -870,7 +864,6 @@
 				8A239F3C2097586F005F02F2 /* BundleExtensions.swift in Sources */,
 				CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */,
 				CDF94D951E71144300200486 /* DuplicateDependency.swift in Sources */,
-				74B4920C20B064F7007A2AA4 /* JSONOutputResolver.swift in Sources */,
 				CD43D9DE1F43074000CD60F6 /* GitURL.swift in Sources */,
 				B17145F11F43F812006DC662 /* NewResolver.swift in Sources */,
 				3BE5BD9A1E4E5A7B00DDDC45 /* SwiftVersionError.swift in Sources */,
@@ -909,7 +902,6 @@
 				BF3199C01E32E078007DC0D1 /* DependencySpec.swift in Sources */,
 				CDA0B6CA1C468E67006C499C /* GitURLSpec.swift in Sources */,
 				B1F27D3E1E45382B002D4754 /* VersionFileSpec.swift in Sources */,
-				74B4920A20B0605B007A2AA4 /* DependencyTest.swift in Sources */,
 				A83DFA40C60153E8BDD32B78 /* ConcreteVersionTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -1441,17 +1441,3 @@ public func cloneOrFetch(
 				}
 		}
 }
-
-extension Project {
-	
-	// Function which outputs all possible dependencies to JSON files to the outputPath specified
-	func outputDependencies(outputPath: String) {
-		let resolverClass = JSONOutputResolver.self
-		let resolver = resolverClass.init(
-			versionsForDependency: versions(for:),
-			dependenciesForDependency: dependencies(for:version:),
-			resolvedGitReference: resolvedGitReference
-		)
-		_ = updatedResolvedCartfile(nil, resolver: resolver)
-	}
-}
