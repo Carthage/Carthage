@@ -1441,3 +1441,42 @@ public func cloneOrFetch(
 				}
 		}
 }
+
+// Diagnostic methods to be able to diagnose problems with the resolver with dependencies which cannot be tested 'live', e.g. for private repositories
+extension Project {
+	
+	// Function which outputs all possible dependencies and versions of those dependencies to the repository specified
+	func storeDependencies(repository: LocalRepository) -> SignalProducer<(), CarthageError> {
+		let resolver = DiagnosticResolver(
+			versionsForDependency: versions(for:),
+			dependenciesForDependency: dependencies(for:version:),
+			resolvedGitReference: resolvedGitReference
+		)
+		resolver.localRepository = repository
+		return updatedResolvedCartfile(nil, resolver: resolver).map { resolvedCartfile -> () in
+			return
+		}
+	}
+	
+	// Updates dependencies by using the specified repository instead of 'live' lookup for dependencies and their versions
+	func updateDependencies(
+		shouldCheckout: Bool = true,
+		resolverType: ResolverType = .normal,
+		buildOptions: BuildOptions,
+		dependenciesToUpdate: [String]? = nil,
+		repository: LocalRepository
+		) -> SignalProducer<(), CarthageError> {
+		let resolverClass = resolverType.resolverClass
+		let resolver = resolverClass.init(
+			versionsForDependency: repository.versions(for:),
+			dependenciesForDependency: repository.dependencies(for:version:),
+			resolvedGitReference: repository.resolvedGitReference
+		)
+		
+		return updatedResolvedCartfile(dependenciesToUpdate, resolver: resolver)
+			.attemptMap { resolvedCartfile -> Result<(), CarthageError> in
+				return self.writeResolvedCartfile(resolvedCartfile)
+			}
+			.then(shouldCheckout ? checkoutResolvedDependencies(dependenciesToUpdate, buildOptions: buildOptions) : .empty)
+	}
+}

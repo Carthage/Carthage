@@ -1,4 +1,4 @@
-import CarthageKit
+@testable import CarthageKit
 import Foundation
 import Nimble
 import Quick
@@ -265,6 +265,35 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 				expect(resolved.value).to(beNil())
 				expect(resolved.error).notTo(beNil())
 			}
+			
+			it("should correctly resolve complex conflicting dependencies") {
+				
+				let testCartfileURL = Bundle(for: ResolverBehavior.self).url(forResource: "Resolver/ConflictingDependencies/Cartfile", withExtension: "")!
+				let projectDirectoryURL = testCartfileURL.deletingLastPathComponent()
+				let repositoryURL = projectDirectoryURL.appendingPathComponent("Repository")
+				
+				let project = Project(directoryURL: projectDirectoryURL)
+				let repository = LocalRepository(directoryURL: repositoryURL)
+				
+				let signalProducer = project.updateDependencies(shouldCheckout: false,
+																resolverType: ResolverType.fast,
+																buildOptions: BuildOptions(configuration: "Debug", cacheBuilds: false, useBinaries: false),
+																dependenciesToUpdate: nil,
+																repository: repository)
+				do {
+					_ = try signalProducer.collect().first()!.dematerialize()
+					fail("Expected incompatibility error to be thrown")
+				} catch(let error) {
+					print("Caught error: \(error)")
+					switch error {
+					case CarthageError.incompatibleRequirements(_, _, _):
+						return
+					default:
+						break
+					}
+					fail("Expected incompatibleRequirements error to be thrown")
+				}
+			}
 
 			// Only the new resolver passes the following tests.
 			if resolverType == NewResolver.self || resolverType == BackTrackingResolver.self {
@@ -453,7 +482,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					fail("Expected no error to occur: \(error)")
 				}
 			}
-
+			
 			pending("should fail if no versions match the requirements and prerelease versions exist") {
 				let db: DB = [
 					github1: [

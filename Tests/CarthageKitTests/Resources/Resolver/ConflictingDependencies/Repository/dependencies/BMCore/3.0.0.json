@@ -1,0 +1,10 @@
+[
+  {
+    "versionSpecifier" : "~> 1.0.0",
+    "dependency" : {
+      "git" : {
+        "urlString" : "https:\/\/git.behindmedia.com\/Common\/BMStyleKitV2.git"
+      }
+    }
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "versionSpecifier" : "~> 1.0.4",
+    "dependency" : {
+      "git" : {
+        "urlString" : "https:\/\/git.behindmedia.com\/Common\/SwiftLint.git"
+      }
+    }
+  },
+  {
+    "versionSpecifier" : "~> 3.3.1",
+    "dependency" : {
+      "git" : {
+        "urlString" : "https:\/\/git.behindmedia.com\/Common\/BMCore.git"
+      }
+    }
+  },
+  {
+    "versionSpecifier" : "~> 3.0.9",
+    "dependency" : {
+      "git" : {
+        "urlString" : "https:\/\/git.behindmedia.com\/Common\/BMCommunication.git"
+      }
+    }
+  }
+]
