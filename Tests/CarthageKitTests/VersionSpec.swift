@@ -80,15 +80,21 @@ class SemanticVersionSpec: QuickSpec {
 			expect(SemanticVersion.from(PinnedVersion("1.４.5")).value).to(beNil()) // Note that the `４` in this string is
 																					// a fullwidth character, not a halfwidth `4`
 		}
-		
-		it("Should not scan anything after a space as part of version") {
+
+		it("Should ignore everything after a `#` as part of version") {
 			expect(SemanticVersion.from(Scanner(string: "1.4.5+ #comment")).value).to(beNil()) // invalid
 			expect(SemanticVersion.from(Scanner(string: "1.4.5- #comment")).value).to(beNil()) // invalid
 			expect(SemanticVersion.from(Scanner(string: "2.8.2-alpha #comment")).value) == SemanticVersion(major: 2, minor: 8, patch: 2, preRelease: "alpha")
 			expect(SemanticVersion.from(Scanner(string: "2.8.2 #comment")).value) == SemanticVersion(major: 2, minor: 8, patch: 2)
+			expect(SemanticVersion.from(Scanner(string: "2.8.2#comment")).value) == SemanticVersion(major: 2, minor: 8, patch: 2)
 		}
 		
-		it("Should not consume anything after space when scanning") {
+		it("Should not ignore everything after a `#` if told not to") {
+			expect(SemanticVersion.from(Scanner(string: "2.8.2-alpha #comment"), ignoreCartfileComments: false).value).to(beNil())
+			expect(SemanticVersion.from(Scanner(string: "2.8.2#comment"), ignoreCartfileComments: false).value).to(beNil())
+		}
+
+		it("Should not consume anything after `#` when scanning") {
 			let scanner = Scanner(string: "2.8.2+b12 #comment")
 			expect(SemanticVersion.from(scanner).value) == SemanticVersion(major: 2, minor: 8, patch: 2, preRelease: nil, buildMetadata: "b12")
 			var remaining: NSString? = nil

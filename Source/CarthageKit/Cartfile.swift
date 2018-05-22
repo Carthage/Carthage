@@ -7,6 +7,10 @@ public let carthageProjectCheckoutsPath = "Carthage/Checkouts"
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
+	
+	/// Any text following this character is considered a comment
+	static let commentIndicator = "#"
+	
 	/// The dependencies listed in the Cartfile.
 	public var dependencies: [Dependency: VersionSpecifier]
 
@@ -26,11 +30,10 @@ public struct Cartfile {
 		var duplicates: [Dependency] = []
 		var result: Result<(), CarthageError> = .success(())
 
-		let commentIndicator = "#"
 		string.enumerateLines { line, stop in
 			let scanner = Scanner(string: line)
 
-			if scanner.scanString(commentIndicator, into: nil) {
+			if scanner.scanString(Cartfile.commentIndicator, into: nil) {
 				// Skip the rest of the line.
 				return
 			}
@@ -64,7 +67,7 @@ public struct Cartfile {
 				return
 			}
 
-			if scanner.scanString(commentIndicator, into: nil) {
+			if scanner.scanString(Cartfile.commentIndicator, into: nil) {
 				// Skip the rest of the line.
 				return
 			}
