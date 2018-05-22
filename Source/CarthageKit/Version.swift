@@ -81,9 +81,15 @@ public struct SemanticVersion: VersionType {
 		                       preRelease: self.preRelease)
 	}
 	
+	/// Set of valid digts for SemVer versions
+	/// - note: Please use this instead of `CharacterSet.decimalDigits`, as
+	/// `decimalDigits` include more characters that are not contemplated in
+	/// the SemVer spects (e.g. `FULLWIDTH` version of digits, like `４`)
+	fileprivate static let semVerDecimalDigits = CharacterSet(charactersIn: "0123456789")
+	
 	/// Set of valid characters for SemVer major.minor.patch section
 	fileprivate static let versionCharacterSet = CharacterSet(charactersIn: ".")
-		.union(CharacterSet.decimalDigits)
+		.union(SemanticVersion.semVerDecimalDigits)
 	
 	fileprivate static let asciiAlphabeth = CharacterSet(
 		charactersIn: "abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ"
@@ -91,7 +97,7 @@ public struct SemanticVersion: VersionType {
 	
 	/// Set of valid character for SemVer build metadata section
 	fileprivate static let invalidBuildMetadataCharacters = asciiAlphabeth
-		.union(CharacterSet.decimalDigits)
+		.union(SemanticVersion.semVerDecimalDigits)
 		.union(CharacterSet.init(charactersIn: "-"))
 		.inverted
 	
@@ -194,7 +200,7 @@ extension SemanticVersion: Scannable {
 		}
 		
 		guard components
-			.filter({ !$0.containsAny(CharacterSet.decimalDigits.inverted) && $0 != "0" })
+			.filter({ !$0.containsAny(SemanticVersion.semVerDecimalDigits.inverted) && $0 != "0" })
 			.first(where: { $0.hasPrefix("0")}) // MUST NOT include leading zeros
 			== nil else
 		{
@@ -313,7 +319,7 @@ extension String {
 	
 	/// Returns the Int value of the string, if the string is only composed of digits
 	private var numericValue : Int? {
-		if !self.isEmpty && self.rangeOfCharacter(from: CharacterSet.decimalDigits.inverted) == nil {
+		if !self.isEmpty && self.rangeOfCharacter(from: SemanticVersion.semVerDecimalDigits.inverted) == nil {
 			return Int(self)
 		}
 		return nil
