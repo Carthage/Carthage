@@ -40,7 +40,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 
 ## Quick Start
 
-1. Get Carthage by running `brew install carthage` or choose [another installation method]((#installing-carthage))
+1. Get Carthage by running `brew install carthage` or choose [another installation method](#installing-carthage)
 1. Create a [Cartfile][] in the same directory where your `.xcodeproj` or `.xcworkspace` is
 1. List the desired dependencies in the [Cartfile][], for example:
 
