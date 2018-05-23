@@ -16,8 +16,11 @@ class ProjectSpec: QuickSpec {
 			let directoryURL = Bundle(for: type(of: self)).url(forResource: "DependencyTest", withExtension: nil)!
 			let buildDirectoryURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
-				let project = Project(directoryURL: directoryURL)
+			let noSharedSchemesDirectoryURL = Bundle(for: type(of: self)).url(forResource: "NoSharedSchemesTest", withExtension: nil)!
+			let noSharedSchemesBuildDirectoryURL = noSharedSchemesDirectoryURL.appendingPathComponent(Constants.binariesFolderPath)
+			
+			func build(directoryURL url: URL, platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+				let project = Project(directoryURL: url)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
 					.ignoreTaskData()
 					.on(value: { project, scheme in
@@ -29,6 +32,14 @@ class ProjectSpec: QuickSpec {
 				expect(result.error).to(beNil())
 
 				return result.value!.map { $0.name }
+			}
+			
+			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+				return build(directoryURL: directoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
+			}
+			
+			func buildNoSharedSchemesTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+				return build(directoryURL: noSharedSchemesDirectoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
 			}
 
 			beforeEach {
@@ -190,6 +201,25 @@ class ProjectSpec: QuickSpec {
 					let result2 = buildDependencyTest()
 					expect(result2.filter { $0.contains("Mac") }) == ["TestFramework1_Mac"]
 					expect(result2.filter { $0.contains("iOS") }) == ["TestFramework1_iOS"]
+				}
+				
+				it("should create and read a version file for a project with no shared schemes") {
+					let result = buildNoSharedSchemesTest(platforms: [.iOS])
+					expect(result) == ["TestFramework1_iOS"]
+
+					let result2 = buildNoSharedSchemesTest(platforms: [.iOS])
+					expect(result2) == []
+					
+					// TestFramework2 has no shared schemes, but invalidating its version file should result in its dependencies (TestFramework1) being rebuilt
+					let framework2VersionFileURL = noSharedSchemesBuildDirectoryURL.appendingPathComponent(".TestFramework2.version", isDirectory: false)
+					let framework2VersionFilePath = framework2VersionFileURL.path
+					
+					let json = try! String(contentsOf: framework2VersionFileURL, encoding: .utf8)
+					let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"v1.0\"", with: "\"commitish\" : \"v1.1\"")
+					_ = try! modifiedJson.write(toFile: framework2VersionFilePath, atomically: true, encoding: .utf8)
+					
+					let result3 = buildNoSharedSchemesTest(platforms: [.iOS])
+					expect(result3) == ["TestFramework1_iOS"]
 				}
 			}
 		}

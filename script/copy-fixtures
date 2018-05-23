@@ -12,7 +12,7 @@ fi
 current=$(cd "$(dirname $0)" && pwd)
 destination="$1"
 
-for fixture in "carthage-fixtures-ReactiveCocoaLayout-master" "CartfileOnly" "CartfilePrivateOnly" "NoCartfile" "SchemeDiscoverySampleForCarthage-0.2" "Swell-0.5.0" "SampleMultipleSubprojects" "SampleGitSubmodule" "DependencyTest" "WorkspaceWithDependency" "DynamicAndStatic" "WorkspaceWithDependency" "FilterBogusFrameworks"
+for fixture in "carthage-fixtures-ReactiveCocoaLayout-master" "CartfileOnly" "CartfilePrivateOnly" "NoCartfile" "SchemeDiscoverySampleForCarthage-0.2" "Swell-0.5.0" "SampleMultipleSubprojects" "SampleGitSubmodule" "DependencyTest" "WorkspaceWithDependency" "DynamicAndStatic" "WorkspaceWithDependency" "FilterBogusFrameworks" "NoSharedSchemesTest"
 do
     rm -Rf "$destination/__MACOSX"
     rm -Rf "$destination/$fixture"
