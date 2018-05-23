@@ -9,7 +9,7 @@ import Tentacle
 class LocalRepositoryTest: QuickSpec {
 	override func spec() {
 		// Use this test case to write a local repo to some folder for testing with problematic dependencies without requiring a live connection to the underlying git repo.
-		it("should create a local mock repository from live repositories") {
+		pending("should create a local mock repository from live repositories") {
 			let projectUrl = URL(fileURLWithPath: "/tmp/Carthage")
 			let repositoryUrl = URL(fileURLWithPath: "/tmp/Repository")
 			do {
