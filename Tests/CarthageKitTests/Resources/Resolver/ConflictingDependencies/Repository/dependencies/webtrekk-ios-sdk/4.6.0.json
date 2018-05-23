@@ -1,0 +1,20 @@
+[
+  {
+    "versionSpecifier" : "~> 3.0.0",
+    "dependency" : {
+      "gitHub" : {
+        "repositoryOwner" : "ashleymills",
+        "repositoryName" : "Reachability.swift"
+      }
+    }
+  },
+  {
+    "versionSpecifier" : "== 0.6.7",
+    "dependency" : {
+      "gitHub" : {
+        "repositoryOwner" : "krzyzanowskim",
+        "repositoryName" : "CryptoSwift"
+      }
+    }
+  }
+]

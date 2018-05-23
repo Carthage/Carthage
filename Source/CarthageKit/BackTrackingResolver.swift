@@ -80,7 +80,7 @@ public final class BackTrackingResolver: ResolverProtocol {
 			let dependencySet = try DependencySet(requiredDependencies: requiredDependencies,
 												  updatableDependencyNames: updatableDependencyNames,
 												  retriever: dependencyRetriever)
-			let resolverResult = try backtrack(dependencySet: dependencySet)
+			let resolverResult = try backtrack(dependencySet: dependencySet, rootDependencies: requiredDependencies.map { $0.0 })
 
 			switch resolverResult.state {
 			case .accepted:
@@ -108,11 +108,16 @@ public final class BackTrackingResolver: ResolverProtocol {
 	
 	See: https://en.wikipedia.org/wiki/Backtracking
 	*/
-	private func backtrack(dependencySet: DependencySet) throws -> (state: ResolverState, dependencySet: DependencySet) {
+	private func backtrack(dependencySet: DependencySet, rootDependencies: [Dependency]) throws -> (state: ResolverState, dependencySet: DependencySet) {
 		if dependencySet.isRejected {
 			return (.rejected, dependencySet)
 		} else if dependencySet.isComplete {
-			return (.accepted, dependencySet)
+			let valid = try dependencySet.validateForCyclicDepencies(rootDependencies: rootDependencies)
+			if valid {
+				return (.accepted, dependencySet)
+			} else {
+				return (.rejected, dependencySet)
+			}
 		}
 
 		var result: (state: ResolverState, dependencySet: DependencySet)? = nil
@@ -129,7 +134,7 @@ public final class BackTrackingResolver: ResolverProtocol {
 					}
 				} else {
 					// Backtrack again with this subset
-					let nestedResult = try backtrack(dependencySet: subSet)
+					let nestedResult = try backtrack(dependencySet: subSet, rootDependencies: rootDependencies)
 					switch nestedResult.state {
 					case .rejected:
 						if subSet === dependencySet {
@@ -548,9 +553,18 @@ private final class DependencySet {
 
 		return nil
 	}
+	
+	public func validateForCyclicDepencies(rootDependencies: [Dependency]) throws -> Bool {
+		var stack = [Dependency: Set<Dependency>]()
+		let foundCycle = try hasCycle(for: rootDependencies, parent: nil, stack: &stack)
+		if foundCycle {
+			rejectionError = CarthageError.dependencyCycle(stack)
+		}
+		return !foundCycle
+	}
 
 	@discardableResult
-	public func expand(parent: ConcreteVersionedDependency?, with transitiveDependencies: [DependencyEntry], forceUpdatable: Bool = false) throws -> Bool {
+	private func expand(parent: ConcreteVersionedDependency?, with transitiveDependencies: [DependencyEntry], forceUpdatable: Bool = false) throws -> Bool {
 		for (transitiveDependency, versionSpecifier) in transitiveDependencies {
 			let isUpdatable = forceUpdatable || isUpdatableDependency(transitiveDependency)
 			if forceUpdatable {
@@ -611,6 +625,35 @@ private final class DependencySet {
 			}
 		}
 		return true
+	}
+	
+	// Final check for a completely resolved set, whether there are no cyclic dependencies
+	private func hasCycle(for dependencies: [Dependency], parent: Dependency?, stack: inout [Dependency: Set<Dependency>]) throws -> Bool {
+		
+		if let definedParent = parent {
+			if stack[definedParent] == nil {
+				stack[definedParent] = Set(dependencies)
+			} else {
+				return true
+			}
+		}
+		
+		for dependency in dependencies {
+			if let versionSet = contents[dependency] {
+				// Only check the most appropriate version
+				if let version = versionSet.first {
+					let transitiveDependencies = try retriever.findDependencies(for: dependency, version: version).map { $0.0 }
+					if try hasCycle(for: transitiveDependencies, parent: dependency, stack: &stack) {
+						return true
+					}
+				}
+			}
+		}
+		
+		if let definedParent = parent {
+			stack[definedParent] = nil
+		}
+		return false
 	}
 }
 

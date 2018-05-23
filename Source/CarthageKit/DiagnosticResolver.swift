@@ -7,11 +7,12 @@ Resolver which logs all dependencies it encounters, and optionally stores them i
 */
 final class DiagnosticResolver: ResolverProtocol {
 	public var localRepository: LocalRepository?
+	public var ignoreErrors: Bool = false
 	private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
 	private let resolvedGitReference: (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
 	private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
 	
-	private var versionSets = [Dependency: ConcreteVersionSet]()
+	private var versionSets = [Dependency: [PinnedVersion]]()
 	private var handledDependencies = Set<PinnedDependency>()
 	
 	public init(
@@ -45,7 +46,7 @@ final class DiagnosticResolver: ResolverProtocol {
 		for (dependency, versionSpecifier) in dependencies {
 			let versionSet = try findAllVersions(for: dependency, compatibleWith: versionSpecifier)
 			for version in versionSet {
-				let pinnedDependency = PinnedDependency(dependency: dependency, pinnedVersion: version.pinnedVersion)
+				let pinnedDependency = PinnedDependency(dependency: dependency, pinnedVersion: version)
 				
 				if !handledDependencies.contains(pinnedDependency) {
 					handledDependencies.insert(pinnedDependency)
@@ -57,55 +58,67 @@ final class DiagnosticResolver: ResolverProtocol {
 		}
 	}
 	
-	private func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> ConcreteVersionSet {
-		
-		let versionSet: ConcreteVersionSet
-		if let cachedVersionSet = versionSets[dependency] {
-			versionSet = cachedVersionSet.copy
-		} else {
-			let cachedVersionSet = ConcreteVersionSet()
-			
-			let pinnedVersionsProducer: SignalProducer<PinnedVersion, CarthageError>
-			var gitReference: String? = nil
-			
-			switch versionSpecifier {
-			case .gitReference(let hash):
-				pinnedVersionsProducer = resolvedGitReference(dependency, hash)
-				gitReference = hash
-			default:
-				pinnedVersionsProducer = versionsForDependency(dependency)
+	private func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> [PinnedVersion] {
+		do {
+			let versionSet: [PinnedVersion]
+			if let cachedVersionSet = versionSets[dependency] {
+				versionSet = cachedVersionSet
+			} else {
+				var pinnedVersions = [PinnedVersion]()
+				let pinnedVersionsProducer: SignalProducer<PinnedVersion, CarthageError>
+				var gitReference: String? = nil
+				
+				switch versionSpecifier {
+				case .gitReference(let hash):
+					pinnedVersionsProducer = resolvedGitReference(dependency, hash)
+					gitReference = hash
+				default:
+					pinnedVersionsProducer = versionsForDependency(dependency)
+				}
+				
+				let concreteVersionsProducer = pinnedVersionsProducer.filterMap { pinnedVersion -> PinnedVersion? in
+					pinnedVersions.append(pinnedVersion)
+					return nil
+				}
+				
+				_ = try concreteVersionsProducer.collect().first()!.dematerialize()
+				
+				versionSets[dependency] = pinnedVersions
+				
+				try localRepository?.storePinnedVersions(pinnedVersions, for: dependency, gitReference: gitReference)
+				
+				versionSet = pinnedVersions
 			}
 			
-			let concreteVersionsProducer = pinnedVersionsProducer.filterMap { pinnedVersion -> PinnedVersion? in
-				let concreteVersion = ConcreteVersion(pinnedVersion: pinnedVersion)
-				cachedVersionSet.insert(concreteVersion)
-				return nil
+			print("Versions for dependency '\(dependency.name)': \(versionSet)")
+			
+			return versionSet
+		} catch(let error) {
+			print("Caught error while retrieving versions for \(dependency): \(error)")
+			if ignoreErrors {
+				return [PinnedVersion]()
+			} else {
+				throw error
 			}
-			
-			_ = try concreteVersionsProducer.collect().first()!.dematerialize()
-			
-			versionSets[dependency] = cachedVersionSet
-			versionSet = cachedVersionSet.copy
-			
-			let pinnedVersions: [PinnedVersion] = versionSet.map{ $0.pinnedVersion }
-			
-			try localRepository?.storePinnedVersions(pinnedVersions, for: dependency, gitReference: gitReference)
 		}
-		
-		versionSet.retainVersions(compatibleWith: versionSpecifier)
-		
-		print("Versions for dependency '\(dependency.name)' with versionSpecifier \(versionSpecifier): \(versionSet)")
-		
-		return versionSet
 	}
 	
-	private func findDependencies(for dependency: Dependency, version: ConcreteVersion) throws -> [(Dependency, VersionSpecifier)] {
-		let transitiveDependencies:  [(Dependency, VersionSpecifier)] = try dependenciesForDependency(dependency, version.pinnedVersion).collect().first()!.dematerialize()
-		
-		try localRepository?.storeTransitiveDependencies(transitiveDependencies, for: dependency, version: version.pinnedVersion)
-		
-		print("Dependencies for dependency '\(dependency.name)' with version \(version): \(transitiveDependencies)")
-		return transitiveDependencies
+	private func findDependencies(for dependency: Dependency, version: PinnedVersion) throws -> [(Dependency, VersionSpecifier)] {
+		do {
+			let transitiveDependencies:  [(Dependency, VersionSpecifier)] = try dependenciesForDependency(dependency, version).collect().first()!.dematerialize()
+			
+			try localRepository?.storeTransitiveDependencies(transitiveDependencies, for: dependency, version: version)
+			
+			print("Dependencies for dependency '\(dependency.name)' with version \(version): \(transitiveDependencies)")
+			return transitiveDependencies
+		} catch (let error) {
+			print("Caught error while retrieving dependencies for \(dependency) at version \(version): \(error)")
+			if ignoreErrors {
+				return [(Dependency, VersionSpecifier)]()
+			} else {
+				throw error
+			}
+		}
 	}
 	
 	private struct PinnedDependency: Hashable {

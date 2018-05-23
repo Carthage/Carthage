@@ -1,0 +1,11 @@
+[
+  {
+    "versionSpecifier" : "\"4.4.0\"",
+    "dependency" : {
+      "gitHub" : {
+        "repositoryOwner" : "apache",
+        "repositoryName" : "cordova-ios"
+      }
+    }
+  }
+]
