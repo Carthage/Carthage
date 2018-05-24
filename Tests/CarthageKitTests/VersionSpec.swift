@@ -64,6 +64,7 @@ class SemanticVersionSpec: QuickSpec {
 		}
 
 		it("should fail on invalid semantic versions") {
+			expect(SemanticVersion.from(PinnedVersion("release#2")).value).to(beNil()) // not a valid SemVer
 			expect(SemanticVersion.from(PinnedVersion("v1")).value).to(beNil())
 			expect(SemanticVersion.from(PinnedVersion("v2.8-alpha")).value).to(beNil()) // pre-release should be after patch
 			expect(SemanticVersion.from(PinnedVersion("v2.8+build345")).value).to(beNil()) // build should be after patch

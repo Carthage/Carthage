@@ -30,7 +30,8 @@ class CartfileSpec: QuickSpec {
 			let example1 = Dependency.gitHub(.dotCom, Repository(owner: "ExampleOrg", name: "ExamplePrj1"))
 			let example2 = Dependency.gitHub(.dotCom, Repository(owner: "ExampleOrg", name: "ExamplePrj2"))
 			let example3 = Dependency.gitHub(.dotCom, Repository(owner: "ExampleOrg", name: "ExamplePrj3"))
-
+			let example4 = Dependency.gitHub(.dotCom, Repository(owner: "ExampleOrg", name: "ExamplePrj4"))
+			
 			expect(cartfile.dependencies) == [
 				reactiveCocoa: .atLeast(SemanticVersion(major: 2, minor: 3, patch: 1)),
 				mantle: .compatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0)),
@@ -41,7 +42,8 @@ class CartfileSpec: QuickSpec {
 				errorTranslations2: .gitReference("development"),
 				example1: .atLeast(SemanticVersion(major: 3, minor: 0, patch: 2, preRelease: "pre")),
 				example2: .exactly(SemanticVersion(major: 3, minor: 0, patch: 2, preRelease: nil, buildMetadata: "build")),
-				example3: .exactly(SemanticVersion(major: 3, minor: 0, patch: 2))
+				example3: .exactly(SemanticVersion(major: 3, minor: 0, patch: 2)),
+				example4: .gitReference("release#2")
 			]
 		}
 
