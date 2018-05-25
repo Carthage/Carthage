@@ -90,7 +90,7 @@ final class DiagnosticResolver: ResolverProtocol {
 				versionSet = pinnedVersions
 			}
 
-			print("Versions for dependency '\(dependency.name)': \(versionSet)")
+			print("Versions for dependency '\(dependency)': \(versionSet)")
 
 			return versionSet
 		} catch let error {
@@ -109,7 +109,7 @@ final class DiagnosticResolver: ResolverProtocol {
 
 			try localRepository?.storeTransitiveDependencies(transitiveDependencies, for: dependency, version: version)
 
-			print("Dependencies for dependency '\(dependency.name)' with version \(version): \(transitiveDependencies)")
+			print("Dependencies for dependency '\(dependency)' with version \(version): \(transitiveDependencies)")
 			return transitiveDependencies
 		} catch let error {
 			print("Caught error while retrieving dependencies for \(dependency) at version \(version): \(error)")

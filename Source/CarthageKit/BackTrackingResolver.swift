@@ -87,7 +87,7 @@ public final class BackTrackingResolver: ResolverProtocol {
 
 			switch resolverResult.state {
 			case .accepted:
-				break
+				try resolverResult.dependencySet.eliminateSameNamedDependencies(rootEntries: requiredDependencies)
 			case .rejected:
 				if let rejectionError = dependencySet.rejectionError {
 					throw rejectionError
@@ -565,6 +565,52 @@ private final class DependencySet {
 		return !foundCycle
 	}
 
+	public func eliminateSameNamedDependencies(rootEntries: [DependencyEntry]) throws {
+		var names = Set<String>()
+		var duplicatedDependencyNames = Set<String>()
+		var versionSpecifiers = [Dependency: VersionSpecifier]()
+
+		for entry in rootEntries {
+			versionSpecifiers[entry.key] = entry.value
+		}
+
+		// Check for dependencies with the same name and store them in the duplicatedDependencyNames set
+		for (dependency, _) in contents {
+			let result = names.insert(dependency.name)
+			if !result.inserted {
+				duplicatedDependencyNames.insert(dependency.name)
+			}
+		}
+
+		// For the duplicatedDependencyNames: ensure only the dependency with the highest precedence versionSpecifier remains
+		for name in duplicatedDependencyNames {
+			let sameNamedDependencies = contents.compactMap { entry -> (dependency: Dependency, versionSpecifier: VersionSpecifier?)? in
+				let dependency = entry.key
+				if dependency.name == name {
+					return (dependency, versionSpecifiers[dependency])
+				} else {
+					return nil
+				}
+			}.sorted { entry1, entry2 -> Bool in
+				let precedence1 = (entry1.versionSpecifier?.precedence ?? 0)
+				let precedence2 = (entry2.versionSpecifier?.precedence ?? 0)
+				return precedence1 > precedence2
+			}
+
+			if sameNamedDependencies.count > 1 && (sameNamedDependencies[0].versionSpecifier == nil || sameNamedDependencies[1].versionSpecifier != nil) {
+				// Cannot determine precedence: report an error.
+				// Requires a specific versionSpecifier for exactly one of these dependencies in the root Cartfile.
+				let error = CarthageError.incompatibleDependencies(sameNamedDependencies.map { $0.dependency })
+				throw error
+			}
+
+			for i in 1..<sameNamedDependencies.count {
+				let dependency = sameNamedDependencies[i].dependency
+				contents[dependency] = nil
+			}
+		}
+	}
+
 	@discardableResult
 	private func expand(parent: ConcreteVersionedDependency?, with transitiveDependencies: [DependencyEntry], forceUpdatable: Bool = false) throws -> Bool {
 		for (transitiveDependency, versionSpecifier) in transitiveDependencies {
@@ -660,6 +706,23 @@ private final class DependencySet {
 			stack[definedParent] = nil
 		}
 		return false
+	}
+}
+
+extension VersionSpecifier {
+	fileprivate var precedence: Int {
+		switch self {
+		case .gitReference:
+			return 5
+		case .exactly:
+			return 4
+		case .compatibleWith:
+			return 3
+		case .atLeast:
+			return 2
+		case .any:
+			return 1
+		}
 	}
 }
 

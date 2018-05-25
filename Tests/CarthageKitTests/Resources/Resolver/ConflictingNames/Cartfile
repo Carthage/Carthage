@@ -1,0 +1,10 @@
+github "mugginsoft/TCMPortMapper" "master"
+github "colloquy/XMPPFramework" "colloquy-patches"
+github "shpakovski/MASPreferences" ~> 1.3
+github "sparkle-project/Sparkle" "master"
+github "AgileBits/onepassword-extension" "add-framework-support"
+github "colloquy/CocoaAsyncSocket" "colloquy-patches"
+github "CocoaLumberjack/CocoaLumberjack" ~> 3.4
+
+# Overwrite of sub-dependency
+github "colloquy/KissXML" "colloquy-patches"

@@ -33,6 +33,9 @@ public enum CarthageError: Error {
 	/// No entry could be found in Cartfile.resolved for a dependency with this name.
 	case unresolvedDependencies([String])
 
+	/// Conflicting dependencies, e.g. dependencies with the same name for which no definite resolution can be made.
+	case incompatibleDependencies([Dependency])
+
 	/// Failed to check out a repository.
 	case repositoryCheckoutFailed(workingDirectoryURL: URL, reason: String, underlyingError: NSError?)
 
@@ -312,6 +315,10 @@ extension CarthageError: CustomStringConvertible {
 		case let .unresolvedDependencies(names):
 			return "No entry found for \(names.count > 1 ? "dependencies" : "dependency") \(names.joined(separator: ", ")) in Cartfile.resolved – "
 				+ "please run `carthage update` if the dependency is contained in the project's Cartfile."
+
+		case let .incompatibleDependencies(dependencies):
+			return "No definite resolution could be made for incompatible dependencies [\(dependencies.map { $0.description }.joined(separator: ", "))"
+				+ "] - add a definition for exactly one of these dependencies in the project's Cartfile to resolve this."
 
 		case let .buildFailed(taskError, log):
 			var message = "Build Failed\n"

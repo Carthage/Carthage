@@ -265,7 +265,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 				expect(resolved.value).to(beNil())
 				expect(resolved.error).notTo(beNil())
 			}
-			
+
 			pending("should correctly resolve the latest version") {
 				
 				let testCartfileURL = Bundle(for: ResolverBehavior.self).url(forResource: "Resolver/LatestVersion/Cartfile", withExtension: "")!
@@ -279,15 +279,16 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 																		resolverType: ResolverType.from(resolverClass: resolverClass)!,
 																		dependenciesToUpdate: nil)
 				do {
-					let resolvedCartfile: ResolvedCartfile = try signalProducer.first()!.dematerialize()
+					let resolvedCartfile = try signalProducer.first()!.dematerialize()
 					
 					if let facebookDependency = resolvedCartfile.dependencies.first(where: { $0.key.name == "facebook-ios-sdk" }) {
 						expect(facebookDependency.value.commitish) == "4.33.0"
 					} else {
 						fail("Expected facebook dependency to be present")
 					}
-					
-					print("Dependencies: \(resolvedCartfile.dependencies)")
+
+					//Should not throw an error
+					_ = try project.buildOrderForResolvedCartfile(resolvedCartfile).first()?.dematerialize()
 					
 				} catch(let error) {
 					fail("Unexpected error thrown: \(error)")
@@ -309,7 +310,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 																			resolverType: ResolverType.from(resolverClass: resolverClass)!,
 																			dependenciesToUpdate: nil)
 					do {
-						_ = try signalProducer.first()!.dematerialize()
+						_ = try signalProducer.first()?.dematerialize()
 						fail("Expected incompatibility error to be thrown")
 					} catch(let error) {
 						print("Caught error: \(error)")
@@ -514,6 +515,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 		}
 		
 		if resolverClass == BackTrackingResolver.self {
+
 			it("should fail on cyclic dependencies") {
 				let db: DB = [
 					github1: [
@@ -545,6 +547,34 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					default:
 						fail("Expected error to be of type .dependencyCycle")
 					}
+				}
+			}
+
+			it("should correctly resolve items with conflicting names, giving precedence to pinned versions") {
+				let testCartfileURL = Bundle(for: ResolverBehavior.self).url(forResource: "Resolver/ConflictingNames/Cartfile", withExtension: "")!
+				let projectDirectoryURL = testCartfileURL.deletingLastPathComponent()
+				let repositoryURL = projectDirectoryURL.appendingPathComponent("Repository")
+
+				let project = Project(directoryURL: projectDirectoryURL)
+				let repository = LocalRepository(directoryURL: repositoryURL)
+
+				let signalProducer = project.resolveUpdatedDependencies(from: repository,
+																		resolverType: ResolverType.from(resolverClass: resolverClass)!,
+																		dependenciesToUpdate: nil)
+				do {
+					let resolvedCartfile = try signalProducer.first()!.dematerialize()
+
+					if let kissXMLDependency = resolvedCartfile.dependencies.first(where: { $0.key.name == "KissXML" }) {
+						expect(kissXMLDependency.value.commitish) == "88665bed750e0fec9ad8e1ffc992b5b3812008d3"
+					} else {
+						fail("Expected kissXMLDependency dependency to be present")
+					}
+
+					//Should not throw an error
+					_ = try project.buildOrderForResolvedCartfile(resolvedCartfile).first()?.dematerialize()
+
+				} catch(let error) {
+					fail("Unexpected error thrown: \(error)")
 				}
 			}
 		}

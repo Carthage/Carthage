@@ -320,9 +320,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 	/// Produces the sub dependencies of the given dependency. Uses the checked out directory if able
-	private func dependencySet(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<Set<Dependency>, CarthageError> {
+	private func dependencySet(for dependency: Dependency, version: PinnedVersion, mapping: ((Dependency) -> Dependency)? = nil) -> SignalProducer<Set<Dependency>, CarthageError> {
 		return self.dependencies(for: dependency, version: version, tryCheckoutDirectory: true)
-			.map { $0.0 }
+			.map { mapping?($0.0) ?? ($0.0) }
 			.collect()
 			.map { Set($0) }
 			.concat(value: Set())
@@ -811,7 +811,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 		// dependencies before the projects that depend on them.
 		return SignalProducer<(Dependency, PinnedVersion), CarthageError>(cartfile.dependencies.map { ($0, $1) })
 			.flatMap(.merge) { (dependency: Dependency, version: PinnedVersion) -> SignalProducer<DependencyGraph, CarthageError> in
-				return self.dependencySet(for: dependency, version: version)
+				// Added mapping from name -> Dependency based on the ResolvedCartfile because
+				// duplicate dependencies with the same name (e.g. github forks) should resolve to the same dependency.
+				return self.dependencySet(for: dependency, version: version, mapping: { cartfile.dependency(for: $0.name) ?? $0 })
 					.map { dependencies in
 						[dependency: dependencies]
 					}

@@ -1,0 +1,38 @@
+[
+  {
+    "versionSpecifier" : "~> 5.2.1",
+    "dependency" : {
+      "gitHub" : {
+        "repositoryOwner" : "robbiehanson",
+        "repositoryName" : "KissXML"
+      }
+    }
+  },
+  {
+    "versionSpecifier" : "~> 1.33.1",
+    "dependency" : {
+      "gitHub" : {
+        "repositoryOwner" : "chrisballinger",
+        "repositoryName" : "libidn-framework"
+      }
+    }
+  },
+  {
+    "versionSpecifier" : "~> 3.3.0",
+    "dependency" : {
+      "gitHub" : {
+        "repositoryOwner" : "CocoaLumberjack",
+        "repositoryName" : "CocoaLumberjack"
+      }
+    }
+  },
+  {
+    "versionSpecifier" : "~> 7.6.2",
+    "dependency" : {
+      "gitHub" : {
+        "repositoryOwner" : "robbiehanson",
+        "repositoryName" : "CocoaAsyncSocket"
+      }
+    }
+  }
+]
