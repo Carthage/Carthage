@@ -59,7 +59,7 @@ public struct GitURL {
 
 	public init(_ urlString: String) {
 		self.urlString = urlString
-		
+
 		// Pre-compute the normalizedURL and hash for faster cache lookups
 		self.normalizedURLString = GitURL.normalizedURLString(from: urlString)
 		self.hash = normalizedURLString.hashValue

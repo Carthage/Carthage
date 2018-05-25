@@ -129,7 +129,7 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	public convenience init() {
 		self.init(semanticVersions: SortedSet<ConcreteVersion>(), nonSemanticVersions: SortedSet<ConcreteVersion>(), definitions: [ConcreteVersionSetDefinition]())
 	}
-	
+
 	private init(semanticVersions: SortedSet<ConcreteVersion>,
 				 nonSemanticVersions: SortedSet<ConcreteVersion>,
 				 definitions: [ConcreteVersionSetDefinition],
@@ -139,7 +139,7 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 		self.definitions = definitions
 		self.pinnedVersionSpecifier = pinnedVersionSpecifier
 	}
-	
+
 	// MARK: - Public methods
 
 	/**
@@ -256,6 +256,7 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	}
 
 	public struct ConcreteVersionSetIterator: IteratorProtocol {
+		// swiftlint:disable next nesting
 		typealias Element = ConcreteVersion
 
 		private let versionSet: ConcreteVersionSet

@@ -51,7 +51,7 @@ public enum ProjectEvent {
 
 public enum ResolverType {
 	case normal, new, fast
-	
+
 	public var resolverClass: ResolverProtocol.Type {
 		switch self {
 		case .normal:
@@ -62,7 +62,7 @@ public enum ResolverType {
 			return BackTrackingResolver.self
 		}
 	}
-	
+
 	public static func from(resolverClass: ResolverProtocol.Type) -> ResolverType? {
 		if resolverClass == Resolver.self {
 			return .normal
@@ -1455,7 +1455,6 @@ public func cloneOrFetch(
 
 // Diagnostic methods to be able to diagnose problems with the resolver with dependencies which cannot be tested 'live', e.g. for private repositories
 extension Project {
-	
 	// Function which outputs all possible dependencies and versions of those dependencies to the repository specified
 	func storeDependencies(to repository: LocalRepository, ignoreErrors: Bool = false) -> SignalProducer<(), CarthageError> {
 		let resolver = DiagnosticResolver(
@@ -1465,11 +1464,9 @@ extension Project {
 		)
 		resolver.localRepository = repository
 		resolver.ignoreErrors = ignoreErrors
-		return updatedResolvedCartfile(nil, resolver: resolver).map { resolvedCartfile -> () in
-			return
-		}
+		return updatedResolvedCartfile(nil, resolver: resolver).map { _ -> Void in return }
 	}
-	
+
 	// Updates dependencies by using the specified repository instead of 'live' lookup for dependencies and their versions
 	func resolveUpdatedDependencies(
 		from repository: LocalRepository,
@@ -1481,7 +1478,7 @@ extension Project {
 			dependenciesForDependency: repository.dependencies(for:version:),
 			resolvedGitReference: repository.resolvedGitReference
 		)
-		
+
 		return updatedResolvedCartfile(dependenciesToUpdate, resolver: resolver)
 	}
 }
