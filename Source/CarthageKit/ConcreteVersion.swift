@@ -7,7 +7,7 @@ Semantic versions are first, ordered descending, then versions that do not compl
 */
 
 // swiftlint:disable vertical_parameter_alignment
-struct ConcreteVersion: Comparable, CustomStringConvertible {
+struct ConcreteVersion: Comparable, Hashable, CustomStringConvertible {
 	public let pinnedVersion: PinnedVersion
 	public let semanticVersion: SemanticVersion?
 
@@ -76,22 +76,34 @@ struct ConcreteVersion: Comparable, CustomStringConvertible {
 	public var description: String {
 		return pinnedVersion.description
 	}
+	
+	public var hashValue: Int {
+		return pinnedVersion.hashValue
+	}
 }
 
 /**
 A Dependency with a concrete version.
 */
-struct ConcreteVersionedDependency {
-	let dependency: Dependency
-	let concreteVersion: ConcreteVersion
+struct ConcreteVersionedDependency: Hashable {
+	public let dependency: Dependency
+	public let concreteVersion: ConcreteVersion
+	
+	public var hashValue: Int {
+		return 37 &* dependency.hashValue &+ concreteVersion.hashValue
+	}
+	
+	public static func ==(lhs: ConcreteVersionedDependency, rhs: ConcreteVersionedDependency) -> Bool {
+		return lhs.dependency == rhs.dependency && lhs.concreteVersion == rhs.concreteVersion
+	}
 }
 
 /**
 A version specification as was defined by a concrete versioned dependency, or nil if it was defined at the top level (i.e. Cartfile)
 */
 struct ConcreteVersionSetDefinition {
-	let definingDependency: ConcreteVersionedDependency?
-	let versionSpecifier: VersionSpecifier
+	public let definingDependency: ConcreteVersionedDependency?
+	public let versionSpecifier: VersionSpecifier
 }
 
 /**

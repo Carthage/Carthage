@@ -157,10 +157,10 @@ public final class BackTrackingResolver: ResolverProtocol {
 
 private final class DependencyConflict {
 	// Error for the conflict
-	let error: CarthageError
+	public let error: CarthageError
 
 	// Nil array means: conflict with root level definition
-	var conflictingDependencies: [ConcreteVersionedDependency]?
+	public private(set) var conflictingDependencies: Set<ConcreteVersionedDependency>?
 
 	init(error: CarthageError, conflictingDependency: ConcreteVersionedDependency? = nil) {
 		self.error = error
@@ -169,11 +169,14 @@ private final class DependencyConflict {
 		}
 	}
 
-	public func addConflictingDependency(_ conflictingDependency: ConcreteVersionedDependency?) {
+	@discardableResult
+	public func addConflictingDependency(_ conflictingDependency: ConcreteVersionedDependency?) -> Bool {
 		if let nonNilConflictingDependency = conflictingDependency {
-			conflictingDependencies?.append(nonNilConflictingDependency)
+			let result = conflictingDependencies?.insert(nonNilConflictingDependency)
+			return result?.inserted ?? true
 		} else {
 			conflictingDependencies = nil
+			return true
 		}
 	}
 }
@@ -339,13 +342,16 @@ private final class DependencyRetriever {
 
 	private func storeCachedConflict(for dependency: ConcreteVersionedDependency, conflictingWith conflictingDependency: ConcreteVersionedDependency? = nil, error: CarthageError) {
 		let key = PinnedDependency(dependency: dependency.dependency, pinnedVersion: dependency.concreteVersion.pinnedVersion)
-
+		let newConflict: Bool
 		if let existingConflict = conflictCache[key] {
-			existingConflict.addConflictingDependency(conflictingDependency)
+			newConflict = existingConflict.addConflictingDependency(conflictingDependency)
 		} else {
 			conflictCache[key] = DependencyConflict(error: error, conflictingDependency: conflictingDependency)
+			newConflict = true
 		}
-		addProblematicDependency(dependency.dependency)
+		if newConflict {
+			addProblematicDependency(dependency.dependency)
+		}
 	}
 
 	public func cachedConflict(for dependency: ConcreteVersionedDependency) -> DependencyConflict? {
