@@ -9,6 +9,7 @@ github "ExampleOrg/ExamplePrj1" >= 3.0.2-pre # With intra-line comment after ver
 github "ExampleOrg/ExamplePrj2" == 3.0.2+build # With intra-line comment after version
 github "ExampleOrg/ExamplePrj3" == 3.0.2 # With intra-line comment after version
 
+github "ExampleOrg/ExamplePrj4" "release#2" # this is not a SemVer
 
 # name with .git suffix
 github "danielgindi/ios-charts.git"
