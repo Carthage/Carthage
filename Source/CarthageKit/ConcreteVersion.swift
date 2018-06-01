@@ -76,7 +76,7 @@ struct ConcreteVersion: Comparable, Hashable, CustomStringConvertible {
 	public var description: String {
 		return pinnedVersion.description
 	}
-	
+
 	public var hashValue: Int {
 		return pinnedVersion.hashValue
 	}
@@ -88,12 +88,12 @@ A Dependency with a concrete version.
 struct ConcreteVersionedDependency: Hashable {
 	public let dependency: Dependency
 	public let concreteVersion: ConcreteVersion
-	
+
 	public var hashValue: Int {
 		return 37 &* dependency.hashValue &+ concreteVersion.hashValue
 	}
-	
-	public static func ==(lhs: ConcreteVersionedDependency, rhs: ConcreteVersionedDependency) -> Bool {
+
+	public static func == (lhs: ConcreteVersionedDependency, rhs: ConcreteVersionedDependency) -> Bool {
 		return lhs.dependency == rhs.dependency && lhs.concreteVersion == rhs.concreteVersion
 	}
 }

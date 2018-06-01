@@ -25,6 +25,9 @@
 		67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; };
 		67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		67C870081A7A04E100F6647C /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C870071A7A04E100F6647C /* Formatting.swift */; };
+		742F7D4320C126180012B4F2 /* DependencySet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 742F7D4220C126180012B4F2 /* DependencySet.swift */; };
+		742F7D4520C126780012B4F2 /* DictionaryExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 742F7D4420C126780012B4F2 /* DictionaryExtensions.swift */; };
+		742F7D4720C128020012B4F2 /* DependencyRetriever.swift in Sources */ = {isa = PBXBuildFile; fileRef = 742F7D4620C128020012B4F2 /* DependencyRetriever.swift */; };
 		7469925320AD9119007AC8FF /* SortedSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7469925220AD9119007AC8FF /* SortedSet.swift */; };
 		7469925520AD9183007AC8FF /* ConcreteVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7469925420AD9183007AC8FF /* ConcreteVersion.swift */; };
 		74B4920C20B064F7007A2AA4 /* DiagnosticResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B4920B20B064F7007A2AA4 /* DiagnosticResolver.swift */; };
@@ -201,6 +204,9 @@
 		6724C8691A850A4600E47F00 /* Environment.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		67AFA9891A79430B00B7DA78 /* PrettyColors.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PrettyColors.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		67C870071A7A04E100F6647C /* Formatting.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
+		742F7D4220C126180012B4F2 /* DependencySet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DependencySet.swift; sourceTree = "<group>"; };
+		742F7D4420C126780012B4F2 /* DictionaryExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryExtensions.swift; sourceTree = "<group>"; };
+		742F7D4620C128020012B4F2 /* DependencyRetriever.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DependencyRetriever.swift; sourceTree = "<group>"; };
 		7469925220AD9119007AC8FF /* SortedSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SortedSet.swift; sourceTree = "<group>"; };
 		7469925420AD9183007AC8FF /* ConcreteVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcreteVersion.swift; sourceTree = "<group>"; };
 		74B4920B20B064F7007A2AA4 /* DiagnosticResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticResolver.swift; sourceTree = "<group>"; };
@@ -532,7 +538,10 @@
 				7469925420AD9183007AC8FF /* ConcreteVersion.swift */,
 				A1411ED51EFC1BFD0060461F /* Constants.swift */,
 				CDD7CF781F75ED88000E0EA5 /* Dependency.swift */,
+				742F7D4620C128020012B4F2 /* DependencyRetriever.swift */,
+				742F7D4220C126180012B4F2 /* DependencySet.swift */,
 				74B4920B20B064F7007A2AA4 /* DiagnosticResolver.swift */,
+				742F7D4420C126780012B4F2 /* DictionaryExtensions.swift */,
 				CDF94D941E71144300200486 /* DuplicateDependency.swift */,
 				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
 				D074EDC41A049283001DE082 /* FrameworkExtensions.swift */,
@@ -883,6 +892,7 @@
 				B17145F11F43F812006DC662 /* NewResolver.swift in Sources */,
 				3BE5BD9A1E4E5A7B00DDDC45 /* SwiftVersionError.swift in Sources */,
 				D0DE89401A0F2CB00030A3EC /* Version.swift in Sources */,
+				742F7D4720C128020012B4F2 /* DependencyRetriever.swift in Sources */,
 				A1411ED61EFC1BFD0060461F /* Constants.swift in Sources */,
 				D01F8A5419EA2F1700643E7C /* Xcode.swift in Sources */,
 				CD9F3D931E6E6FC000B98A1A /* BinaryJSONError.swift in Sources */,
@@ -891,7 +901,9 @@
 				D0A2025E1B114D1000C71375 /* ProducerQueue.swift in Sources */,
 				0FDFEA802055FACE008862E3 /* Proxy.swift in Sources */,
 				D0D1219019E88A15005E4BAA /* Cartfile.swift in Sources */,
+				742F7D4320C126180012B4F2 /* DependencySet.swift in Sources */,
 				CD9FDF36207BBB17009C993A /* SwiftShims.swift in Sources */,
+				742F7D4520C126780012B4F2 /* DictionaryExtensions.swift in Sources */,
 				F603929919EA29F80050A6AF /* Project.swift in Sources */,
 				CDBE654C1F4BF0040060D94E /* Submodule.swift in Sources */,
 				D069CA241A4E3B2700314A85 /* Archive.swift in Sources */,
