@@ -38,14 +38,21 @@ public struct Cartfile {
 				return
 			}
 
-			guard !scannerWithComments.isAtEnd,
-				let remainingString = scannerWithComments.remainingSubstring else {
+			if scannerWithComments.isAtEnd {
 				// The line was all whitespace.
 				return
 			}
 			
+			guard let remainingString = scannerWithComments.remainingSubstring.map(String.init) else {
+				result = .failure(CarthageError.internalError(
+					description: "Can NSScanner split an extended grapheme cluster? If it does, this will be the error…"
+				))
+				stop = true
+				return
+			}
+			
 			let scannerWithoutComments = Scanner(
-				string: String(remainingString).strippingTrailingCartfileComment
+				string: remainingString.strippingTrailingCartfileComment
 					.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 			)
 
