@@ -111,7 +111,7 @@ extension SemanticVersion: Scannable {
 	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, ScannableError> {
 		
 		var versionBuffer: NSString?
-        guard scanner.scanCharacters(from: versionCharacterSet, into: &versionBuffer),
+		guard scanner.scanCharacters(from: versionCharacterSet, into: &versionBuffer),
 			let version = versionBuffer as String? else {
 			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
 		}

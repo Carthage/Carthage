@@ -181,11 +181,12 @@ extension String {
 	/// comment starts with the first `commentIndicator` that is not embedded in any quote
 	var strippingTrailingCartfileComment: String {
 		
-		// since Cartfile syntax doesn't support nested quotes, such as `"version-\"alpha\""`
-		// I can just consider any odd-number occurence of a quote as a quote-start, and any
+		// Since the Cartfile syntax doesn't support nested quotes, such as `"version-\"alpha\""`,
+		// simply consider any odd-number occurence of a quote as a quote-start, and any
 		// even-numbered occurrence of a quote as quote-end.
 		// The comment indicator (e.g. `#`) is the start of a comment if it's not nested in quotes.
-		// The following code works also for comment indicators that are are more than one character long (e.g. "//")
+		// The following code works also for comment indicators that are are more than one character
+		// long (e.g. double slashes)
 		
 		let quote = "\""
 		

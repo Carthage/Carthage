@@ -27,9 +27,9 @@ class CarfileCommentsSpec: QuickSpec {
 					"foo bar \"#baz\"",
 					"\"#quotes\" is the new \"quotes\"",
 					"\"#\""
-					]
-					.forEach {
-						expect($0.strippingTrailingCartfileComment) == $0
+				]
+				.forEach {
+					expect($0.strippingTrailingCartfileComment) == $0
 				}
 			}
 			
