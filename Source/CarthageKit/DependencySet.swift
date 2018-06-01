@@ -449,14 +449,10 @@ extension ConcreteVersionSet {
 	Returns the most appropriate definition for reporting a conflict with the specified versionSpecifier.
 	*/
 	fileprivate func conflictingDefinition(for versionSpecifier: VersionSpecifier) -> ConcreteVersionSetDefinition? {
-		guard !definitions.isEmpty else {
-			return nil
-		}
-
 		let hasNoIntersectionWithSpec: (ConcreteVersionSetDefinition) -> Bool = { spec in
 			return intersection(spec.versionSpecifier, versionSpecifier) == nil
 		}
 
-		return definitions.first(where: hasNoIntersectionWithSpec) ?? definitions.first!
+		return definitions.first(where: hasNoIntersectionWithSpec)
 	}
 }
