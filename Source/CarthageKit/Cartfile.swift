@@ -204,7 +204,8 @@ extension String {
 			}
 			if let range = chunk.range(of: Cartfile.commentIndicator) {
 				// there is a comment, return everything before its position
-				let previousChunks = quoteDelimitedChunks[..<offset]
+				let advancedOffset = (..<offset).relative(to: quoteDelimitedChunks)
+				let previousChunks = quoteDelimitedChunks[advancedOffset]
 				let chunkBeforeComment = chunk[..<range.lowerBound]
 				return (previousChunks + [chunkBeforeComment])
 					.joined(separator: quote) // readd the quotes that were removed in the initial split
