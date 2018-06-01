@@ -209,35 +209,33 @@ extension Scanner {
 	/// string is encountered.
 	/// - returns: the scanned string without the prefix. If the string does not start with the prefix,
 	/// or the scanner is at the end, it returns `nil` without advancing the scanner.
-	fileprivate func scanStringWithPrefix(_ prefix: String, until: String) -> String? {
-		guard self.remainingString.hasPrefix(prefix) else {
+	fileprivate func scanStringWithPrefix(_ prefix: Character, until: String) -> String? {
+		guard !self.isAtEnd, self.remainingSubstring?.first == prefix else { return nil }
+
+		var buffer: NSString? = nil
+		self.scanUpTo(until, into: &buffer)
+		guard let stringWithPrefix = buffer as String?, stringWithPrefix.first == prefix else {
 			return nil
 		}
-		if !self.isAtEnd {
-			var buffer : NSString? = nil
-			self.scanUpTo(until, into: &buffer)
-			guard let stringWithPrefix = buffer as String?, stringWithPrefix.hasPrefix(prefix) else {
-				return nil
-			}
-			let removeUntilIndex = stringWithPrefix.index(stringWithPrefix.startIndex, offsetBy: prefix.characters.count)
-			return String(stringWithPrefix.suffix(from: removeUntilIndex))
-		} else {
-			return nil
-		}
+
+		return String(stringWithPrefix.dropFirst())
 	}
-	
-	/// The index at which the receiver will start the next scan operation.
-	/// Will cause an error if the scanner is already at the end.
-	fileprivate var scanLocationIndex: String.Index {
-		return self.string.index(self.string.startIndex, offsetBy: self.scanLocation)
-	}
-	
-	/// The string that is left to scan. Accessing this variable will not advance the scanner location.
-	var remainingString: String {
-		guard !self.isAtEnd else {
-			return ""
+
+	/// The string (as `Substring?`) that is left to scan.
+	///
+	/// Accessing this variable will not advance the scanner location.
+	///
+	/// - returns: `nil` in the unlikely event `self.scanLocation` splits an extended grapheme cluster.
+	var remainingSubstring: Substring? {
+		return Range(
+			NSRange(
+				location: self.scanLocation /* our UTF-16 offset */,
+				length: (self.string as NSString).length - self.scanLocation
+			),
+			in: self.string
+		).map {
+			self.string[$0]
 		}
-		return String(self.string[self.scanLocationIndex...])
 	}
 }
 

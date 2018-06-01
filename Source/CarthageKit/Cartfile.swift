@@ -38,14 +38,14 @@ public struct Cartfile {
 				return
 			}
 
-			if scannerWithComments.isAtEnd {
+			guard !scannerWithComments.isAtEnd,
+				let remainingString = scannerWithComments.remainingSubstring else {
 				// The line was all whitespace.
 				return
 			}
 			
 			let scannerWithoutComments = Scanner(
-				string: scannerWithComments
-					.remainingString.strippingTrailingCartfileComment
+				string: String(remainingString).strippingTrailingCartfileComment
 					.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 			)
 
