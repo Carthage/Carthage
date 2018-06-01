@@ -96,10 +96,7 @@ final class DependencySet {
 	Returns the next unresolved dependency for processing. The dependency returned is the dependency with the highest likelyhood of producing a conflict.
 	*/
 	public var nextUnresolvedDependency: Dependency? {
-		for problematicDependency in retriever.problematicDependencies where unresolvedDependencies.contains(problematicDependency) {
-			return problematicDependency
-		}
-		return unresolvedDependencies.first
+		return retriever.problematicDependencies.first { unresolvedDependencies.contains($0) } ?? unresolvedDependencies.first
 	}
 
 	/**
@@ -441,18 +438,5 @@ extension VersionSpecifier {
 		case .any:
 			return 1
 		}
-	}
-}
-
-extension ConcreteVersionSet {
-	/**
-	Returns the most appropriate definition for reporting a conflict with the specified versionSpecifier.
-	*/
-	fileprivate func conflictingDefinition(for versionSpecifier: VersionSpecifier) -> ConcreteVersionSetDefinition? {
-		let hasNoIntersectionWithSpec: (ConcreteVersionSetDefinition) -> Bool = { spec in
-			return intersection(spec.versionSpecifier, versionSpecifier) == nil
-		}
-
-		return definitions.first(where: hasNoIntersectionWithSpec)
 	}
 }

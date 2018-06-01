@@ -261,6 +261,13 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 		}
 	}
 
+	/**
+	Returns the conflicting definition for the specified versionSpecifier, or nil if no conflict could be found.
+	*/
+	public func conflictingDefinition(for versionSpecifier: VersionSpecifier) -> ConcreteVersionSetDefinition? {
+		return definitions.first { intersection($0.versionSpecifier, versionSpecifier) == nil }
+	}
+
 	// MARK: - Sequence implementation
 
 	public func makeIterator() -> Iterator {
