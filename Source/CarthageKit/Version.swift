@@ -107,43 +107,11 @@ public struct SemanticVersion: VersionType {
 
 extension SemanticVersion: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
-	/// form "a.b.c" from a string scanner. It assumes the string might contain a
-	/// comment coming from a Cartfile and will ignore the comment if present
-	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, ScannableError> {
-		return self.from(scanner, ignoreCartfileComments: true)
-	}
-	
-	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c" from a string scanner.
-	/// - parameter ignoreCartfileComments: If `true`, it will ignore any potential Cartfile comment,
-	/// without consuming the following characters in the scanner. If `false`, Cartfile comments will cause
-	/// this method to return a failure.
-	/// - Note: Side effects on state of `scanner`: it will consume the parsed string
-	public static func from(_ scanner: Scanner, ignoreCartfileComments: Bool) -> Result<SemanticVersion, ScannableError> {
-		let numericVersionScanner: Scanner
-		
-		if ignoreCartfileComments {
-			// scan everything before the comment, and continue the parsing
-			// considering only the scanned part
-			var semanticVersionBuffer: NSString?
-			scanner.scanUpToCharacters(
-				from: CharacterSet(charactersIn: Cartfile.commentIndicator),
-				into: &semanticVersionBuffer
-			)
-			guard let semanticVersionString = semanticVersionBuffer as String? else {
-				return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
-			}
-			numericVersionScanner = Scanner(
-				string: semanticVersionString.trimmingCharacters(
-					in: CharacterSet.whitespacesAndNewlines
-				)
-			)
-		} else {
-			numericVersionScanner = scanner
-		}
+	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, ScannableError> {
 		
 		var versionBuffer: NSString?
-		guard numericVersionScanner.scanCharacters(from: versionCharacterSet, into: &versionBuffer),
+		guard scanner.scanCharacters(from: versionCharacterSet, into: &versionBuffer),
 			let version = versionBuffer as String? else {
 			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
 		}
@@ -169,9 +137,9 @@ extension SemanticVersion: Scannable {
 		let hasPatchComponent = components.count > 2
 		let patch = parseVersion(at: 2) ?? 0
 		
-		let preRelease = numericVersionScanner.scanStringWithPrefix("-", until: "+")
-		let buildMetadata = numericVersionScanner.scanStringWithPrefix("+", until: "")
-		guard numericVersionScanner.isAtEnd else {
+		let preRelease = scanner.scanStringWithPrefix("-", until: "+")
+		let buildMetadata = scanner.scanStringWithPrefix("+", until: "")
+		guard scanner.isAtEnd else {
 			return .failure(ScannableError(message: "expected valid version", currentLine: scanner.currentLine))
 		}
 		
@@ -258,7 +226,7 @@ extension Scanner {
 	/// Accessing this variable will not advance the scanner location.
 	///
 	/// - returns: `nil` in the unlikely event `self.scanLocation` splits an extended grapheme cluster.
-	fileprivate var remainingSubstring: Substring? {
+	var remainingSubstring: Substring? {
 		return Range(
 			NSRange(
 				location: self.scanLocation /* our UTF-16 offset */,
