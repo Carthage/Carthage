@@ -186,22 +186,23 @@ extension String {
 		// even-numbered occurrence of a quote as quote-end.
 		// The comment indicator (e.g. `#`) is the start of a comment if it's not nested in quotes.
 		// The following code works also for comment indicators that are are more than one character
-		// long (e.g. double slashes)
+		// long (e.g. double slashes).
 		
 		let quote = "\""
 		
 		// Splitting the string by quote will make odd-numbered chunks outside of quotes, and
 		// even-numbered chunks inside of quotes.
 		// `omittingEmptySubsequences` is needed to maintain this property even in case of empty quotes.
-		let quoteDelimitedChunks = self.split(separator: quote.first!,
-											  maxSplits: Int.max,
-											  omittingEmptySubsequences: false)
-		
+		let quoteDelimitedChunks = self.split(
+			separator: quote.first!,
+			maxSplits: Int.max,
+			omittingEmptySubsequences: false
+		)
 		
 		for (offset, chunk) in quoteDelimitedChunks.enumerated() {
 			let isInQuote = offset % 2 == 1 // even chunks are not in quotes, see comment above
 			if isInQuote {
-				continue // we don't consider comment indicators inside quotes
+				continue // don't consider comment indicators inside quotes
 			}
 			if let range = chunk.range(of: Cartfile.commentIndicator) {
 				// there is a comment, return everything before its position
