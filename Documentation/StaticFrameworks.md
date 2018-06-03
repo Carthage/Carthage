@@ -51,6 +51,8 @@ At this stage, your targets probably have their `Framework Search Paths` pointed
 
 To work around this, you can point the targets that consume your large dynamic framework at a folder containing regular dynamic framework builds instead of the static ones. Your larger dynamic framework stuff points to the static ones though. This way Xcode knows what modules and symbols are available for the consumers, the linker will not actually auto-link to them because they are dylibs, but the linker also won't complain. The symbols are still provided by the larger dynamic frameowrk, which is loaded at app start. Note that this is a workaround, so use at your own risk!
 
+Another linker warning you might faced with during large dynamic framework is: `ld: warning: Auto-Linking library not found for -lswiftCore`, as well as errors such as: `Undefined symbols for architecture x86_64: "Swift.String.init<A>(stringInterpolationSegment: A) -> Swift.String", referenced from:...`. To fix this issue you need to add an empty class withing this dynamic framework: `final class Empty {}`.
+
 ## Linker flags
 If any of your frameworks contain Objective-C extensions, you will need to supply the `-ObjC` flag in your `OTHER_LDFLAGS` build setting to ensure that they’re successfully invoked. If you do not supply this flag, you will see a runtime crash whenever an Objective-C extension is invoked.
 
