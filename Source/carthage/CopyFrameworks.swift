@@ -101,6 +101,7 @@ private func copyBCSymbolMapsForFramework(_ frameworkURL: URL, fromDirectory dir
 
 private func codeSigningIdentity() -> String? {
 	return getEnvironmentVariableIfPresent("EXPANDED_CODE_SIGN_IDENTITY")
+		.flatMap { $0.isEmpty ? nil : $0 }
 }
 
 private func codeSigningAllowed() -> Bool {
