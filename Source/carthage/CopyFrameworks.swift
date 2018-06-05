@@ -103,7 +103,9 @@ private func copyBCSymbolMapsForFramework(_ frameworkURL: URL, fromDirectory dir
 private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
 	return SignalProducer { () -> Result<String?, CarthageError> in
 		if codeSigningAllowed() {
-			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY").map { $0.isEmpty ? nil : $0 }
+			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")
+				.map { $0.isEmpty ? nil : $0 }
+				.flatMapError { _ in .success(nil) }
 		} else {
 			return .success(nil)
 		}
