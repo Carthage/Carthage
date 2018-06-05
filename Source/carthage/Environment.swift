@@ -12,7 +12,7 @@ internal func getEnvironmentVariable(_ variable: String) -> Result<String, Carth
 	}
 }
 
-internal func getEnvironmentVariableIfPresent(_ variable: String, isOptional: Bool = false) -> String? {
+internal func getEnvironmentVariableIfPresent(_ variable: String) -> String? {
 	let environment = ProcessInfo.processInfo.environment
 
 	return environment[variable]
