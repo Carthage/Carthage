@@ -5,7 +5,7 @@ import Result
 import XCDBLD
 
 struct CachedFramework: Codable {
-	enum CodingKeys: CodingKey, String {
+	enum CodingKeys: String, CodingKey {
 		case name = "name"
 		case hash = "hash"
 	}
@@ -15,7 +15,7 @@ struct CachedFramework: Codable {
 }
 
 struct VersionFile: Codable {
-	enum CodingKeys: CodingKey, String {
+	enum CodingKeys: String, CodingKey {
 		case commitish = "commitish"
 		case macOS = "Mac"
 		case iOS = "iOS"
