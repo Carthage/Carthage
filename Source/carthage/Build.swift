@@ -167,10 +167,7 @@ public struct BuildCommand: CommandProtocol {
 	private func openLogFile(_ path: String?) -> SignalProducer<(FileHandle, URL), CarthageError> {
 		return SignalProducer { () -> Result<(FileHandle, URL), CarthageError> in
 			if let path = path {
-				if !FileManager.default.fileExists(atPath: path) {
-					FileManager.default.createFile(atPath: path, contents: nil, attributes: nil)
-				}
-
+				FileManager.default.createFile(atPath: path, contents: nil, attributes: nil)
 				let fileURL = URL(fileURLWithPath: path, isDirectory: false)
 
 				guard let handle = FileHandle(forUpdatingAtPath: path) else {
