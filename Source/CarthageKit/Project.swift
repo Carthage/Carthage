@@ -1034,7 +1034,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return SignalProducer(dependencies)
 					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 						switch dependency {
-						case .git, .gitHub:
+						case .git where options.build, .gitHub where options.build:
 							guard options.useBinaries else {
 								return .empty
 							}
@@ -1042,6 +1042,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 								.filterMap { installed -> (Dependency, PinnedVersion)? in
 									return installed ? (dependency, version) : nil
 								}
+						case .git, .gitHub:
+							return .empty // If "--no-build" no need to build
+
 						case let .binary(binary):
 							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
 								.then(.init(value: (dependency, version)))
@@ -1088,7 +1091,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 							// not to error out with `.noSharedFrameworkSchemes`
 							// to continue building other dependencies.
 							self._projectEventsObserver.send(value: .skippedBuilding(dependency, error.description))
-							
+
 							if options.cacheBuilds {
 								// Create a version file for a dependency with no shared schemes
 								// so that its cache is not always considered invalid.
