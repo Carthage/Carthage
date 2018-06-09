@@ -46,7 +46,7 @@ class ProjectSpec: QuickSpec {
 			}
 
 			func buildDependencyTestWithIgnored(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [(String, Bool)] {
-				return buildDependencies(platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
+				return build(directoryURL: directoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
 			}
 
 			beforeEach {

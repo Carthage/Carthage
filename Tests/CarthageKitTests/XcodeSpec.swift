@@ -473,7 +473,7 @@ class XcodeSpec: QuickSpec {
 																				   platforms: [.iOS],
 																				   derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+				.on(value: { project, scheme, _ in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -494,7 +494,7 @@ class XcodeSpec: QuickSpec {
 																					platforms: [.iOS],
 																					derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+				.on(value: { project, scheme, _ in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
