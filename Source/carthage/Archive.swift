@@ -30,7 +30,7 @@ public struct ArchiveCommand: CommandProtocol {
 					usage: "the directory containing the Carthage project"
 				)
 				<*> ColorOptions.evaluate(mode)
-				<*> mode <| Argument(defaultValue: [], usage: argumentUsage)
+				<*> mode <| Argument(defaultValue: [], usage: argumentUsage, usageParameter: "framework names")
 		}
 	}
 
