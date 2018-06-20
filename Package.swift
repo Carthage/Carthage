@@ -16,8 +16,8 @@ let package = Package(
         .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "3.0.0"),
         .package(url: "https://github.com/mdiep/Tentacle.git", from: "0.11.0"),
         .package(url: "https://github.com/thoughtbot/Curry.git", from: "4.0.0"),
-        .package(url: "https://github.com/Quick/Quick.git", from: "1.2.0"),
-        .package(url: "https://github.com/Quick/Nimble.git", from: "7.0.2"),
+        .package(url: "https://github.com/Quick/Quick.git", from: "1.3.0"),
+        .package(url: "https://github.com/Quick/Nimble.git", from: "7.1.2"),
     ],
     targets: [
         .target(
