@@ -13,7 +13,7 @@ let package = Package(
         .package(url: "https://github.com/Carthage/ReactiveTask.git", from: "0.14.0"),
         .package(url: "https://github.com/Carthage/Commandant.git", from: "0.14.0"),
         .package(url: "https://github.com/jdhealy/PrettyColors.git", from: "5.0.0"),
-        .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "3.0.0"),
+        .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "3.1.0"),
         .package(url: "https://github.com/mdiep/Tentacle.git", from: "0.11.0"),
         .package(url: "https://github.com/thoughtbot/Curry.git", from: "4.0.0"),
         .package(url: "https://github.com/Quick/Quick.git", from: "1.3.0"),
