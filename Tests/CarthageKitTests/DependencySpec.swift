@@ -78,6 +78,12 @@ class DependencySpec: QuickSpec {
 
 					expect(dependency.name) == "myproject"
 				}
+                
+				it("should have percent encoding removed") {
+					let dependency = Dependency.git(GitURL("ssh://server.com/my%20project%20with%20spaces.git"))
+					
+					expect(dependency.name) == "my project with spaces"
+				}
 
 				it("should be the entire URL string if there is no last component") {
 					let dependency = Dependency.git(GitURL("whatisthisurleven"))
