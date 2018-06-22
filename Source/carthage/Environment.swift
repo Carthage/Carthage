@@ -12,6 +12,12 @@ internal func getEnvironmentVariable(_ variable: String) -> Result<String, Carth
 	}
 }
 
+internal func getEnvironmentVariableIfPresent(_ variable: String) -> String? {
+	let environment = ProcessInfo.processInfo.environment
+
+	return environment[variable]
+}
+
 /// Information about the possible parent terminal.
 internal struct Terminal {
 	/// Terminal type retrieved from `TERM` environment variable.

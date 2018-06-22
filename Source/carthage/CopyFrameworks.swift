@@ -46,13 +46,12 @@ public struct CopyFrameworksCommand: CommandProtocol {
 }
 
 private func copyFramework(_ source: URL, target: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-	return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
-		.flatMap(.merge) { url, codesigningIdentity -> SignalProducer<(), CarthageError> in
+	return copyProduct(source, target).flatMap(.latest) { url -> SignalProducer<(), CarthageError> in
 			let strip = stripFramework(
 				url,
 				keepingArchitectures: validArchitectures,
 				strippingDebugSymbols: shouldStripDebugSymbols(),
-				codesigningIdentity: codesigningIdentity
+				codesigningIdentity: codeSigningIdentity()
 			)
 			if buildActionIsArchiveOrInstall() {
 				return strip
@@ -100,13 +99,12 @@ private func copyBCSymbolMapsForFramework(_ frameworkURL: URL, fromDirectory dir
 		}
 }
 
-private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
-	return SignalProducer { () -> Result<String?, CarthageError> in
-		if codeSigningAllowed() {
-			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY").map { $0.isEmpty ? nil : $0 }
-		} else {
-			return .success(nil)
-		}
+private func codeSigningIdentity() -> String? {
+	if codeSigningAllowed() {
+		return getEnvironmentVariableIfPresent("EXPANDED_CODE_SIGN_IDENTITY")
+			.flatMap { $0.isEmpty ? nil : $0 }
+	} else {
+		return nil
 	}
 }
 
