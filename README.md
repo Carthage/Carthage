@@ -357,6 +357,7 @@ The workflow differs barely:
 
 However:
 
+- In your Carthage-compliant project's Cocoa Framework target's *Build Settings*, *Linking* section, set **Mach-O Type** to **Static Library**
 - Your statically linked frameworks will be built at *./Carthage/Build/$(PLATFORM_NAME)/Static*
 - You should not add any of static frameworks as input/output files in **carthage copy-frameworks** *Build Phase*
 
