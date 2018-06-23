@@ -348,7 +348,7 @@ If you embed many dynamic frameworks into your app, its pre-main launch times ma
 
 #### Carthage 0.30.0 or higher
 
-Since version 0.30.0 Carthage project rolls out support for statically linked frameworks written in Swift or Objective-C. Please note however that it specifically says *frameworks*, hence Darwin bundles with **.framework** extension and statically linked object archives inside. Carthage does not currently support static *library* schemes, nor are there any plans to introduce their support in the future.
+Since version 0.30.0 Carthage project rolls out support for statically linked frameworks written in Swift or Objective-C, support for which has been introduced in Xcode 9.4. Please note however that it specifically says *frameworks*, hence Darwin bundles with **.framework** extension and statically linked object archives inside. Carthage does not currently support static *library* schemes, nor are there any plans to introduce their support in the future.
 
 The workflow differs barely:
 
