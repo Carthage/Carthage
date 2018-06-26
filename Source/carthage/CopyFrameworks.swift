@@ -101,13 +101,29 @@ private func copyBCSymbolMapsForFramework(_ frameworkURL: URL, fromDirectory dir
 }
 
 private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
-	return SignalProducer { () -> Result<String?, CarthageError> in
-		if codeSigningAllowed() {
-			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY").map { $0.isEmpty ? nil : $0 }
-		} else {
-			return .success(nil)
+	return SignalProducer(codeSigningAllowed)
+		.attemptMap { codeSigningAllowed in
+			guard codeSigningAllowed == true else { return .success(nil) }
+
+			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")
+				.map { $0.isEmpty ? nil : $0 }
+				.flatMapError {
+					// See https://github.com/Carthage/Carthage/issues/2472#issuecomment-395134166 regarding Xcode 10 betas
+					// … or potentially non-beta Xcode releases of major version 10 or later.
+
+					switch getEnvironmentVariable("XCODE_PRODUCT_BUILD_VERSION") {
+					case .success(_):
+						// See the above issue.
+						return .success(nil)
+					case .failure(_):
+						// For users calling `carthage copy-frameworks` outside of Xcode (admittedly,
+						// a small fraction), this error is worthwhile in being a signpost in what’s
+						// necessary to add to achieve (for what most is the goal) of ensuring
+						// that code signing happens.
+						return .failure($0)
+					}
+				}
 		}
-	}
 }
 
 private func codeSigningAllowed() -> Bool {
