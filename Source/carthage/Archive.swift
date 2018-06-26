@@ -43,6 +43,7 @@ public struct ArchiveCommand: CommandProtocol {
 			.waitOnCommand()
 	}
 
+	// swiftlint:disable:next function_body_length
 	public func archiveWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 

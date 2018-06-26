@@ -49,7 +49,13 @@ struct VersionFile: Codable {
 		}
 	}
 
-	init(commitish: String, macOS: [CachedFramework]?, iOS: [CachedFramework]?, watchOS: [CachedFramework]?, tvOS: [CachedFramework]?) {
+	init(
+		commitish: String,
+		macOS: [CachedFramework]?,
+		iOS: [CachedFramework]?,
+		watchOS: [CachedFramework]?,
+		tvOS: [CachedFramework]?
+	) {
 		self.commitish = commitish
 
 		self.macOS = macOS
@@ -69,24 +75,44 @@ struct VersionFile: Codable {
 		self = versionFile
 	}
 
-	func frameworkURL(for cachedFramework: CachedFramework, platform: Platform, binariesDirectoryURL: URL) -> URL {
+	func frameworkURL(
+		for cachedFramework: CachedFramework,
+		platform: Platform,
+		binariesDirectoryURL: URL
+	) -> URL {
 		return binariesDirectoryURL
 			.appendingPathComponent(platform.rawValue, isDirectory: true)
 			.resolvingSymlinksInPath()
 			.appendingPathComponent("\(cachedFramework.name).framework", isDirectory: true)
 	}
 
-	func frameworkBinaryURL(for cachedFramework: CachedFramework, platform: Platform, binariesDirectoryURL: URL) -> URL {
-		return frameworkURL(for: cachedFramework, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
+	func frameworkBinaryURL(
+		for cachedFramework: CachedFramework,
+		platform: Platform,
+		binariesDirectoryURL: URL
+	) -> URL {
+		return frameworkURL(
+			for: cachedFramework,
+			platform: platform,
+			binariesDirectoryURL: binariesDirectoryURL
+		)
 			.appendingPathComponent("\(cachedFramework.name)", isDirectory: false)
 	}
 
 	/// Sends the hashes of the provided cached framework's binaries in the
 	/// order that they were provided in.
-	func hashes(for cachedFrameworks: [CachedFramework], platform: Platform, binariesDirectoryURL: URL) -> SignalProducer<String?, CarthageError> {
+	func hashes(
+		for cachedFrameworks: [CachedFramework],
+		platform: Platform,
+		binariesDirectoryURL: URL
+	) -> SignalProducer<String?, CarthageError> {
 		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<String?, CarthageError> in
-				let frameworkBinaryURL = self.frameworkBinaryURL(for: cachedFramework, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
+				let frameworkBinaryURL = self.frameworkBinaryURL(
+					for: cachedFramework,
+					platform: platform,
+					binariesDirectoryURL: binariesDirectoryURL
+				)
 
 				return hashForFileAtURL(frameworkBinaryURL)
 					.map { hash -> String? in
@@ -112,7 +138,11 @@ struct VersionFile: Codable {
 	) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
 			.flatMap(.concat) { cachedFramework -> SignalProducer<Bool, CarthageError> in
-				let frameworkURL = self.frameworkURL(for: cachedFramework, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
+				let frameworkURL = self.frameworkURL(
+					for: cachedFramework,
+					platform: platform,
+					binariesDirectoryURL: binariesDirectoryURL
+				)
 
 				if !isSwiftFramework(frameworkURL) {
 					return SignalProducer(value: true)
@@ -126,12 +156,21 @@ struct VersionFile: Codable {
 			}
 	}
 
-	func satisfies(platform: Platform, commitish: String, binariesDirectoryURL: URL, localSwiftVersion: String) -> SignalProducer<Bool, CarthageError> {
+	func satisfies(
+		platform: Platform,
+		commitish: String,
+		binariesDirectoryURL: URL,
+		localSwiftVersion: String
+	) -> SignalProducer<Bool, CarthageError> {
 		guard let cachedFrameworks = self[platform] else {
 			return SignalProducer(value: false)
 		}
 
-		let hashes = self.hashes(for: cachedFrameworks, platform: platform, binariesDirectoryURL: binariesDirectoryURL)
+		let hashes = self.hashes(
+			for: cachedFrameworks,
+			platform: platform,
+			binariesDirectoryURL: binariesDirectoryURL
+		)
 			.collect()
 
 		let swiftVersionMatches = self
@@ -143,11 +182,21 @@ struct VersionFile: Codable {
 
 		return SignalProducer.zip(hashes, swiftVersionMatches)
 			.flatMap(.concat) { hashes, swiftVersionMatches -> SignalProducer<Bool, CarthageError> in
-				return self.satisfies(platform: platform, commitish: commitish, hashes: hashes, swiftVersionMatches: swiftVersionMatches)
+				return self.satisfies(
+					platform: platform,
+					commitish: commitish,
+					hashes: hashes,
+					swiftVersionMatches: swiftVersionMatches
+				)
 			}
 	}
 
-	func satisfies(platform: Platform, commitish: String, hashes: [String?], swiftVersionMatches: [Bool]) -> SignalProducer<Bool, CarthageError> {
+	func satisfies(
+		platform: Platform,
+		commitish: String,
+		hashes: [String?],
+		swiftVersionMatches: [Bool]
+	) -> SignalProducer<Bool, CarthageError> {
 		guard let cachedFrameworks = self[platform], commitish == self.commitish else {
 			return SignalProducer(value: false)
 		}
@@ -174,13 +223,15 @@ struct VersionFile: Codable {
 		return Result(at: url, attempt: {
 			let encoder = JSONEncoder()
 			encoder.outputFormatting = .prettyPrinted
-			
+
 			let jsonData = try encoder.encode(self)
 			try FileManager
 				.default
-				.createDirectory(at: $0.deletingLastPathComponent(),
-								 withIntermediateDirectories: true,
-								 attributes: nil)
+				.createDirectory(
+					at: $0.deletingLastPathComponent(),
+					withIntermediateDirectories: true,
+					attributes: nil
+			)
 			try jsonData.write(to: $0, options: .atomic)
 		})
 	}
@@ -213,10 +264,13 @@ private func createVersionFile(
 	dependencyName: String,
 	rootDirectoryURL: URL,
 	platformCaches: [String: [CachedFramework]]
-	) -> SignalProducer<(), CarthageError> {
+) -> SignalProducer<(), CarthageError> {
 	return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
-		let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
-		let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
+		let rootBinariesURL = rootDirectoryURL
+			.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
+			.resolvingSymlinksInPath()
+		let versionFileURL = rootBinariesURL
+			.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
 
 		let versionFile = VersionFile(
 			commitish: commitish,
@@ -270,12 +324,22 @@ public func createVersionFileForCommitish(
 				}
 			}
 			.flatMap(.merge) { platformCaches -> SignalProducer<(), CarthageError> in
-				createVersionFile(commitish, dependencyName: dependencyName, rootDirectoryURL: rootDirectoryURL, platformCaches: platformCaches)
+				createVersionFile(
+					commitish,
+					dependencyName: dependencyName,
+					rootDirectoryURL: rootDirectoryURL,
+					platformCaches: platformCaches
+				)
 			}
 	} else {
 		// Write out an empty version file for dependencies with no built frameworks, so cache builds can differentiate between
 		// no cache and a dependency that has no frameworks
-		return createVersionFile(commitish, dependencyName: dependencyName, rootDirectoryURL: rootDirectoryURL, platformCaches: platformCaches)
+		return createVersionFile(
+			commitish,
+			dependencyName: dependencyName,
+			rootDirectoryURL: rootDirectoryURL,
+			platformCaches: platformCaches
+		)
 	}
 }
 
@@ -294,8 +358,11 @@ public func versionFileMatches(
 	rootDirectoryURL: URL,
 	toolchain: String?
 ) -> SignalProducer<Bool?, CarthageError> {
-	let rootBinariesURL = rootDirectoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true).resolvingSymlinksInPath()
-	let versionFileURL = rootBinariesURL.appendingPathComponent(".\(dependency.name).\(VersionFile.pathExtension)")
+	let rootBinariesURL = rootDirectoryURL
+		.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
+		.resolvingSymlinksInPath()
+	let versionFileURL = rootBinariesURL
+		.appendingPathComponent(".\(dependency.name).\(VersionFile.pathExtension)")
 	guard let versionFile = VersionFile(url: versionFileURL) else {
 		return SignalProducer(value: nil)
 	}
@@ -309,7 +376,12 @@ public func versionFileMatches(
 		.flatMap(.concat) { localSwiftVersion in
 			return SignalProducer<Platform, CarthageError>(platformsToCheck)
 				.flatMap(.merge) { platform in
-					return versionFile.satisfies(platform: platform, commitish: commitish, binariesDirectoryURL: rootBinariesURL, localSwiftVersion: localSwiftVersion)
+					return versionFile.satisfies(
+						platform: platform,
+						commitish: commitish,
+						binariesDirectoryURL: rootBinariesURL,
+						localSwiftVersion: localSwiftVersion
+					)
 				}
 				.reduce(true) { $0 && $1 }
 				.map { .some($0) }
