@@ -174,8 +174,13 @@ struct VersionFile: Codable {
 		return Result(at: url, attempt: {
 			let encoder = JSONEncoder()
 			encoder.outputFormatting = .prettyPrinted
-
+			
 			let jsonData = try encoder.encode(self)
+			try FileManager
+				.default
+				.createDirectory(at: $0.deletingLastPathComponent(),
+								 withIntermediateDirectories: true,
+								 attributes: nil)
 			try jsonData.write(to: $0, options: .atomic)
 		})
 	}
