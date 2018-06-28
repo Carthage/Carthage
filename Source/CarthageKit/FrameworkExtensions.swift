@@ -19,6 +19,12 @@ extension String {
 		}
 	}
 
+	/// Strips off a prefix string, if present.
+	internal func stripping(prefix: String) -> String {
+		guard hasPrefix(prefix) else { return self }
+		return String(self.dropFirst(prefix.count))
+	}
+
 	/// Strips off a trailing string, if present.
 	internal func stripping(suffix: String) -> String {
 		if hasSuffix(suffix) {

@@ -16,6 +16,8 @@
 		3B19041E1E4CFE4A00A866AD /* FakeOldObjc.framework in Resources */ = {isa = PBXBuildFile; fileRef = 3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */; };
 		3B19041F1E4CFE4A00A866AD /* FakeOldSwift.framework in Resources */ = {isa = PBXBuildFile; fileRef = 3B19041D1E4CFE3900A866AD /* FakeOldSwift.framework */; };
 		3BE5BD9A1E4E5A7B00DDDC45 /* SwiftVersionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */; };
+		4396DC8F20E4E8A8002EE967 /* MachHeaderSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4396DC8E20E4E8A8002EE967 /* MachHeaderSpec.swift */; };
+		43D7809520E4324E004BCDD6 /* MachHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4396DC8C20E3EF5C002EE967 /* MachHeader.swift */; };
 		5482DAF11A3849D700197FB8 /* CopyFrameworks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */; };
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */; };
@@ -183,6 +185,8 @@
 		3B19041C1E4CFE3900A866AD /* FakeOldObjc.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeOldObjc.framework; sourceTree = "<group>"; };
 		3B19041D1E4CFE3900A866AD /* FakeOldSwift.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeOldSwift.framework; sourceTree = "<group>"; };
 		3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SwiftVersionError.swift; sourceTree = "<group>"; };
+		4396DC8C20E3EF5C002EE967 /* MachHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MachHeader.swift; sourceTree = "<group>"; };
+		4396DC8E20E4E8A8002EE967 /* MachHeaderSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachHeaderSpec.swift; sourceTree = "<group>"; };
 		5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CopyFrameworks.swift; sourceTree = "<group>"; };
 		54911EF21A1D34EC00FFAE5F /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
 		5499CA961A2394B700783309 /* Components.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Components.plist; sourceTree = "<group>"; };
@@ -532,6 +536,7 @@
 				3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */,
 				D0DE893F1A0F2CB00030A3EC /* Version.swift */,
 				F1CB3CFB1D63D05D00C9EB99 /* VersionFile.swift */,
+				4396DC8C20E3EF5C002EE967 /* MachHeader.swift */,
 				BE0292481E403355004FB579 /* XCDBLDExtensions.swift */,
 				D01F8A5319EA2F1700643E7C /* Xcode.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
@@ -573,6 +578,7 @@
 				B1F27D3D1E45382B002D4754 /* VersionFileSpec.swift */,
 				D0DB09A319EA354200234B16 /* XcodeSpec.swift */,
 				21F11B461FE6787F009FB783 /* DB.swift */,
+				4396DC8E20E4E8A8002EE967 /* MachHeaderSpec.swift */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
 			name = CarthageKitTests;
@@ -844,6 +850,7 @@
 				D074EDC51A049283001DE082 /* FrameworkExtensions.swift in Sources */,
 				CDE559291E12263A00ED7F5F /* BuildSettings.swift in Sources */,
 				88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */,
+				43D7809520E4324E004BCDD6 /* MachHeader.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */,
 				CD43D9DA1F41640E00CD60F6 /* CarthageKitVersion.swift in Sources */,
@@ -883,6 +890,7 @@
 				BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */,
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,
 				549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */,
+				4396DC8F20E4E8A8002EE967 /* MachHeaderSpec.swift in Sources */,
 				D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */,
 				BF3199C01E32E078007DC0D1 /* DependencySpec.swift in Sources */,
 				CDA0B6CA1C468E67006C499C /* GitURLSpec.swift in Sources */,
