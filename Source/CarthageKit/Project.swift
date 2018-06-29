@@ -1282,23 +1282,34 @@ internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, 
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
 		.filter { !$0.pathComponents.contains("__MACOSX") }
 		.filter { url in
-
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
 				return (pathComponent as NSString).pathExtension == "framework"
 			}
 			return frameworksInURL.count == 1
 		}.filter { url in
-
-			let packageType: PackageType? = Bundle(url: url)?.packageType
+			// For reasons of speed and the fact that CLI-output structures can change,
+			// first try the safer method of reading the ‘Info.plist’ from the Framework’s bundle.
+			let bundle = Bundle(url: url)
+			let packageType: PackageType? = bundle?.packageType
 
 			switch packageType {
 			case .framework?, .bundle?:
 				return true
 			default:
-				return false
+				// In case no Info.plist exists check the Mach-O fileType
+				guard let executableURL = bundle?.executableURL else {
+					return false
+				}
+
+				return MachHeader.headers(forMachOFileAtUrl: executableURL)
+					.filter { MachHeader.carthageSupportedFileTypes.contains($0.fileType) }
+					.reduce(into: Set<UInt32>()) { $0.insert($1.fileType); return }
+					.map { $0.count == 1 }
+					.single()?
+					.value ?? false
 			}
-		}
+	}
 }
 
 /// Sends the URL to each dSYM found in the given directory

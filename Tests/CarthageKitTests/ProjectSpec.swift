@@ -18,7 +18,7 @@ class ProjectSpec: QuickSpec {
 
 			let noSharedSchemesDirectoryURL = Bundle(for: type(of: self)).url(forResource: "NoSharedSchemesTest", withExtension: nil)!
 			let noSharedSchemesBuildDirectoryURL = noSharedSchemesDirectoryURL.appendingPathComponent(Constants.binariesFolderPath)
-			
+
 			func build(directoryURL url: URL, platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				let project = Project(directoryURL: url)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
@@ -33,11 +33,11 @@ class ProjectSpec: QuickSpec {
 
 				return result.value!.map { $0.name }
 			}
-			
+
 			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				return build(directoryURL: directoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
 			}
-			
+
 			func buildNoSharedSchemesTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				return build(directoryURL: noSharedSchemesDirectoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
 			}
@@ -202,22 +202,22 @@ class ProjectSpec: QuickSpec {
 					expect(result2.filter { $0.contains("Mac") }) == ["TestFramework1_Mac"]
 					expect(result2.filter { $0.contains("iOS") }) == ["TestFramework1_iOS"]
 				}
-				
+
 				it("should create and read a version file for a project with no shared schemes") {
 					let result = buildNoSharedSchemesTest(platforms: [.iOS])
 					expect(result) == ["TestFramework1_iOS"]
 
 					let result2 = buildNoSharedSchemesTest(platforms: [.iOS])
 					expect(result2) == []
-					
+
 					// TestFramework2 has no shared schemes, but invalidating its version file should result in its dependencies (TestFramework1) being rebuilt
 					let framework2VersionFileURL = noSharedSchemesBuildDirectoryURL.appendingPathComponent(".TestFramework2.version", isDirectory: false)
 					let framework2VersionFilePath = framework2VersionFileURL.path
-					
+
 					let json = try! String(contentsOf: framework2VersionFileURL, encoding: .utf8)
 					let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"v1.0\"", with: "\"commitish\" : \"v1.1\"")
 					_ = try! modifiedJson.write(toFile: framework2VersionFilePath, atomically: true, encoding: .utf8)
-					
+
 					let result3 = buildNoSharedSchemesTest(platforms: [.iOS])
 					expect(result3) == ["TestFramework1_iOS"]
 				}
@@ -495,34 +495,34 @@ class ProjectSpec: QuickSpec {
 				expect(result).notTo(beNil())
 				expect(result!.error).to(beNil())
 				expect(result!.value!).notTo(beNil())
-				
+
 				let outdatedDependencies = result!.value!.reduce(into: [:], { (result, next) in
 					result[next.0] = (next.1, next.2, next.3)
 				})
 
 				// Github 1 has no updates available
 				expect(outdatedDependencies[github1]).to(beNil())
-				
+
 				// Github 2 is currently at 1.0.0, can be updated to the latest version which is 2.0.0
 				// Github 2 has no constraint in the Cartfile
 				expect(outdatedDependencies[github2]!.0) == PinnedVersion("v1.0.0")
 				expect(outdatedDependencies[github2]!.1) == PinnedVersion("v2.0.0")
 				expect(outdatedDependencies[github2]!.2) == PinnedVersion("v2.0.0")
-				
+
 				// Github 3 is currently at 2.0.0, latest is 2.0.1, to which it can be updated
 				// Github 3 has a constraint in the Cartfile
 				expect(outdatedDependencies[github3]!.0) == PinnedVersion("v2.0.0")
 				expect(outdatedDependencies[github3]!.1) == PinnedVersion("v2.0.1")
 				expect(outdatedDependencies[github3]!.2) == PinnedVersion("v2.0.1")
-				
+
 				// Github 4 is currently at 2.0.0, latest is 3.0.0, but it can only be updated to 2.0.1
 				expect(outdatedDependencies[github4]!.0) == PinnedVersion("v2.0.0")
 				expect(outdatedDependencies[github4]!.1) == PinnedVersion("v2.0.1")
 				expect(outdatedDependencies[github4]!.2) == PinnedVersion("v3.0.0")
-				
+
 				// Github 5 is pinned to a branch and is already at the most recent commit, so it should not be displayed
 				expect(outdatedDependencies[github5]).to(beNil())
-				
+
 				// Github 6 is pinned ot a branch which has new commits, so it should be displayed
 				expect(outdatedDependencies[github6]!.0) == PinnedVersion(currentSHA)
 				expect(outdatedDependencies[github6]!.1) == PinnedVersion(nextSHA)
