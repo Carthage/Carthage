@@ -52,8 +52,7 @@ public struct GitURL {
 		return components
 			.last
 			.map(String.init)
-			.map(strippingGitSuffix)?
-			.removingPercentEncoding
+			.map(strippingGitSuffix)
 	}
 
 	public init(_ urlString: String) {
