@@ -234,7 +234,7 @@ Auto completion of Carthage commands and options are available as documented in 
 
 ## Supporting Carthage for your framework
 
-**Carthage only officially supports dynamic frameworks**. Dynamic frameworks can be used on any version of OS X, but only on **iOS 8 or later**.
+**Carthage only officially supports dynamic frameworks**. Dynamic frameworks can be used on any version of OS X, but only on **iOS 8 or later**. Additionally, since version 0.30.0 Carhage supports **static** frameworks.
 
 Because Carthage has no centralized package list, and no project specification format, **most frameworks should build automatically**.
 
@@ -344,7 +344,26 @@ It is possible to use travis-ci in order to build and upload your tagged release
 
 ### Build static frameworks to speed up your app’s launch times
 
-If you embed many dynamic frameworks into your app, its pre-main launch times may be quite slow. Carthage is able to help mitigate this by building your dynamic frameworks as static frameworks instead. Static frameworks can be linked directly into your application or merged together into a larger dynamic framework with a few simple modifications to your workflow, which can result in dramatic reductions in pre-main lauch times. See the [StaticFrameworks][StaticFrameworks] doc for details.
+If you embed many dynamic frameworks into your app, its pre-main launch times may be quite slow. Carthage is able to help mitigate this by building your dynamic frameworks as static frameworks instead. Static frameworks can be linked directly into your application or merged together into a larger dynamic framework with a few simple modifications to your workflow, which can result in dramatic reductions in pre-main lauch times.
+
+#### Carthage 0.30.0 or higher
+
+Since version 0.30.0 Carthage project rolls out support for statically linked frameworks written in Swift or Objective-C, support for which has been introduced in Xcode 9.4. Please note however that it specifically says *frameworks*, hence Darwin bundles with **.framework** extension and statically linked object archives inside. Carthage does not currently support static *library* schemes, nor are there any plans to introduce their support in the future.
+
+The workflow differs barely:
+
+- You still need to tick your Carthage-compliant project's schemes as *shared* in *Product > Scheme > Manage Schemes...*, just as with dynamic binaries
+- You still need to link against static **.frameworks** in your project's *Build Phases* just as with dynamic binaries
+
+However:
+
+- In your Carthage-compliant project's Cocoa Framework target's *Build Settings*, *Linking* section, set **Mach-O Type** to **Static Library**
+- Your statically linked frameworks will be built at *./Carthage/Build/$(PLATFORM_NAME)/Static*
+- You should not add any of static frameworks as input/output files in **carthage copy-frameworks** *Build Phase*
+
+#### Carthage 0.29.0 or lower
+
+See the [StaticFrameworks][StaticFrameworks] doc for details.
 
 *Please note that a few caveats apply to this approach:*
 - Swift static frameworks are not officially supported by Apple
