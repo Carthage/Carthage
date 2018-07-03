@@ -47,6 +47,12 @@ public enum ProjectEvent {
 
 	/// Building an uncached project.
 	case buildingUncached(Dependency)
+
+	/// Launching a git task.
+	case launchingGitTask(Task)
+
+	/// Running a git task.
+	case runningGitTask(String)
 }
 
 extension ProjectEvent: Equatable {
