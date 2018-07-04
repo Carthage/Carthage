@@ -112,15 +112,21 @@ extension IgnoreEntry: Scannable {
 
 		if scanner.scanString("scheme", into: nil) {
 			parser = { name in
-				let ignoreEntry: IgnoreEntry = {
+				let ignoreEntryOptional: IgnoreEntry? = {
 					let nameComponents = name.components(separatedBy: "/")
-					if nameComponents.count == 1 {
+					switch nameComponents.count {
+					case 1:
 						return IgnoreEntry(project: nil, scheme: nameComponents[0])
-					} else {
+					case 2:
 						return IgnoreEntry(project: nameComponents.first!, scheme: nameComponents.last!)
+					default:
+						return nil
 					}
 				}()
 
+				guard let ignoreEntry = ignoreEntryOptional else {
+					return .failure(ScannableError(message: "invalid scheme declaration – allowed format: '(<project>/)?<scheme>", currentLine: scanner.currentLine))
+				}
 				return .success(ignoreEntry)
 			}
 		} else {
