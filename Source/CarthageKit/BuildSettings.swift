@@ -44,12 +44,15 @@ public struct BuildSettings {
 	/// Upon .success, sends one BuildSettings value for each target included in
 	/// the referenced scheme.
 	public static func load(with arguments: BuildArguments, for action: BuildArguments.Action? = nil) -> SignalProducer<BuildSettings, CarthageError> {
-		// xcodebuild (in Xcode 8) has a bug where xcodebuild -showBuildSettings
+		// xcodebuild (in Xcode 8.0) has a bug where xcodebuild -showBuildSettings
 		// can hang indefinitely on projects that contain core data models.
 		// rdar://27052195
 		// Including the action "clean" works around this issue, which is further
 		// discussed here: https://forums.developer.apple.com/thread/50372
-		let task = xcodebuildTask(["clean", "-showBuildSettings", "-skipUnavailableActions"], arguments)
+		//
+		// "archive" also works around the issue above so use it to determine if
+		// it is configured for the archive action.
+		let task = xcodebuildTask(["archive", "-showBuildSettings", "-skipUnavailableActions"], arguments)
 
 		return task.launch()
 			.ignoreTaskData()
