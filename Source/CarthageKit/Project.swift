@@ -371,6 +371,36 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					.map { $0.0.name }
 					.collect()
+		}
+	}
+
+	/// Finds all the transitive dependencies for the current project, grouped by their parent dependency.
+	func transitiveDependenciesAndVersionsByParent(
+		resolvedCartfile: ResolvedCartfile,
+		tryCheckoutDirectory: Bool
+	) -> SignalProducer<[Dependency: [(Dependency, VersionSpecifier)]], CarthageError> {
+		return SignalProducer(value: resolvedCartfile)
+			.map { resolvedCartfile -> [(Dependency, PinnedVersion)] in
+				return resolvedCartfile.dependencies
+					.map { k, v in (k, v) }
+			}
+			.flatMap(.merge) { dependencies -> SignalProducer<[Dependency: [(Dependency, VersionSpecifier)]], CarthageError> in
+				return SignalProducer(dependencies)
+					.flatMap(.merge) { dependencyAndPinnedVersion -> SignalProducer<(Dependency, (Dependency, VersionSpecifier)), CarthageError> in
+						let (dependency, pinnedVersion) = dependencyAndPinnedVersion
+						return self.dependencies(for: dependency, version: pinnedVersion, tryCheckoutDirectory: tryCheckoutDirectory)
+							.map { (dependency, $0) }
+					}
+					.collect()
+					.map { parentAndTransitiveDependencies in
+						var dict: [Dependency: [(Dependency, VersionSpecifier)]] = [:]
+						parentAndTransitiveDependencies.forEach { parentDependency, dependencyVersions in
+							var array = dict[parentDependency] ?? []
+							array.append(dependencyVersions)
+							dict[parentDependency] = array
+						}
+						return dict
+					}
 			}
 	}
 
@@ -1101,6 +1131,63 @@ public final class Project { // swiftlint:disable:this type_body_length
 							return SignalProducer(error: error)
 						}
 					}
+			}
+	}
+
+	/// Returns an array of CompatibilityInfo representing the pinned version
+	/// of each dependency in Cartfile.resolved which is incompatible with
+	/// one or more of the versions specified in a transitive dependency's
+	/// Cartfile.  The incompatible versions are stored in the
+	/// dependencyVersions property of the CompatibilityInfo object.
+	public func verify(resolvedCartfile: ResolvedCartfile? = nil) -> SignalProducer<[CompatibilityInfo], CarthageError> {
+		let resolvedProducer = (resolvedCartfile != nil) ? SignalProducer(value: resolvedCartfile!) : loadResolvedCartfile()
+		let lazyResolvedProducer = resolvedProducer.replayLazily(upTo: 1)
+
+		let pinnedVersions = lazyResolvedProducer
+			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+				return SignalProducer(resolved.dependencies.map { k, v in (k, v) })
+			}
+			.collect()
+
+		let versionSpecifiers = lazyResolvedProducer
+			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<[Dependency: [(Dependency, VersionSpecifier)]], CarthageError> in
+				return self.transitiveDependenciesAndVersionsByParent(resolvedCartfile: resolved, tryCheckoutDirectory: true)
+			}
+			.map { (dependencyDict: [Dependency: [(Dependency, VersionSpecifier)]]) -> [Dependency: [(Dependency, VersionSpecifier)]] in
+				var dict: [Dependency: [(Dependency, VersionSpecifier)]] = [:]
+				dependencyDict.forEach { parentDependency, dependencyVersions in
+					dependencyVersions.forEach { dependency, version in
+						var array = dict[dependency] ?? []
+						array.append((parentDependency, version))
+						dict[dependency] = array
+					}
+				}
+				return dict
+			}
+
+		return pinnedVersions.combineLatest(with: versionSpecifiers)
+			.map { (dependencyInfo: ([(Dependency, PinnedVersion)], [Dependency: [(Dependency, VersionSpecifier)]])) -> [CompatibilityInfo] in
+				let (dependenciesWithPinnedVersion, dependenciesWithVersionSpecifiers) = dependencyInfo
+				var result: [CompatibilityInfo] = []
+				for (dependency, pinnedVersion) in dependenciesWithPinnedVersion {
+					// Skip non-semantic resolved versions and transitive dependencies without semantic versions
+					if case .success = SemanticVersion.from(pinnedVersion), let dependencyVersions = dependenciesWithVersionSpecifiers[dependency] {
+						result.append(CompatibilityInfo(dependency: dependency, pinnedVersion: pinnedVersion, dependencyVersions: dependencyVersions))
+					}
+				}
+				return result
+			}
+			.map { (compatibilityInfos: [CompatibilityInfo]) -> [CompatibilityInfo] in
+				return compatibilityInfos.compactMap { compatibilityInfo in
+					let incompatibleVersions = compatibilityInfo.incompatibleVersions
+					if !incompatibleVersions.isEmpty {
+						return CompatibilityInfo(
+							dependency: compatibilityInfo.dependency,
+							pinnedVersion: compatibilityInfo.pinnedVersion,
+							dependencyVersions: incompatibleVersions)
+					}
+					return nil
+				}
 			}
 	}
 }
