@@ -2,8 +2,14 @@ github "ReactiveCocoa/ReactiveCocoa" >= 2.3.1
 github "Mantle/Mantle" ~> 1.0
 
 # here is a comment
-github "jspahrsummers/libextobjc" == 0.4.1
+github "jspahrsummers/libextobjc" == 0.4.1# With intra-line comment without space after version
 github "jspahrsummers/xcconfigs" # here is an intra-line comment
+
+github "ExampleOrg/ExamplePrj1" >= 3.0.2-pre # With intra-line comment after version
+github "ExampleOrg/ExamplePrj2" == 3.0.2+build # With intra-line comment after version
+github "ExampleOrg/ExamplePrj3" == 3.0.2 # With intra-line comment after version
+
+github "ExampleOrg/ExamplePrj4" "release#2" # this is not a SemVer
 
 # name with .git suffix
 github "danielgindi/ios-charts.git"

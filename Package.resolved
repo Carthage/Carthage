@@ -6,8 +6,8 @@
         "repositoryURL": "https://github.com/Carthage/Commandant.git",
         "state": {
           "branch": null,
-          "revision": "c281992c31c3f41c48b5036c5a38185eaec32626",
-          "version": "0.12.0"
+          "revision": "066bf9a79c37cf24fe4746ab7a1793b0359d1fe5",
+          "version": "0.14.0"
         }
       },
       {
@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/thoughtbot/Curry.git",
         "state": {
           "branch": null,
-          "revision": "c9f1a37e0e12ad38af7933b9386bdc5f9e6222dc",
-          "version": "3.0.0"
+          "revision": "b6bf27ec9d711f607a8c7da9ca69ee9eaa201a22",
+          "version": "4.0.1"
         }
       },
       {
@@ -24,8 +24,8 @@
         "repositoryURL": "https://github.com/Quick/Nimble.git",
         "state": {
           "branch": null,
-          "revision": "22800b0954c89344bb8c87f8ab93378076716fb7",
-          "version": "7.0.3"
+          "revision": "8023e3980d91b470ad073d6da843b73f2eeb1844",
+          "version": "7.1.2"
         }
       },
       {
@@ -42,8 +42,8 @@
         "repositoryURL": "https://github.com/Quick/Quick.git",
         "state": {
           "branch": null,
-          "revision": "0ff81f2c665b4381f526bd656f8708dd52a9ea2f",
-          "version": "1.2.0"
+          "revision": "3e3023569c8d4c4a0d000f58db765df53041117f",
+          "version": "1.3.0"
         }
       },
       {
@@ -51,8 +51,8 @@
         "repositoryURL": "https://github.com/ReactiveCocoa/ReactiveSwift.git",
         "state": {
           "branch": null,
-          "revision": "2ec944c43ef9cf6b1380629e3ea483f62a7afaef",
-          "version": "3.0.0"
+          "revision": "46fb4d4a8285286e54929add1d12f384675895c6",
+          "version": "3.1.0"
         }
       },
       {

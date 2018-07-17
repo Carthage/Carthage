@@ -7,6 +7,10 @@ public let carthageProjectCheckoutsPath = "Carthage/Checkouts"
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
+	
+	/// Any text following this character is considered a comment
+	static let commentIndicator = "#"
+	
 	/// The dependencies listed in the Cartfile.
 	public var dependencies: [Dependency: VersionSpecifier]
 
@@ -26,26 +30,38 @@ public struct Cartfile {
 		var duplicates: [Dependency] = []
 		var result: Result<(), CarthageError> = .success(())
 
-		let commentIndicator = "#"
 		string.enumerateLines { line, stop in
-			let scanner = Scanner(string: line)
+			let scannerWithComments = Scanner(string: line)
 
-			if scanner.scanString(commentIndicator, into: nil) {
+			if scannerWithComments.scanString(Cartfile.commentIndicator, into: nil) {
 				// Skip the rest of the line.
 				return
 			}
 
-			if scanner.isAtEnd {
+			if scannerWithComments.isAtEnd {
 				// The line was all whitespace.
 				return
 			}
+			
+			guard let remainingString = scannerWithComments.remainingSubstring.map(String.init) else {
+				result = .failure(CarthageError.internalError(
+					description: "Can NSScanner split an extended grapheme cluster? If it does, this will be the error…"
+				))
+				stop = true
+				return
+			}
+			
+			let scannerWithoutComments = Scanner(
+				string: remainingString.strippingTrailingCartfileComment
+					.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+			)
 
-			switch Dependency.from(scanner).fanout(VersionSpecifier.from(scanner)) {
+			switch Dependency.from(scannerWithoutComments).fanout(VersionSpecifier.from(scannerWithoutComments)) {
 			case let .success((dependency, version)):
 				if case .binary = dependency, case .gitReference = version {
 					result = .failure(
 						CarthageError.parseError(
-							description: "binary dependencies cannot have a git reference for the version specifier in line: \(scanner.currentLine)"
+							description: "binary dependencies cannot have a git reference for the version specifier in line: \(scannerWithComments.currentLine)"
 						)
 					)
 					stop = true
@@ -64,12 +80,7 @@ public struct Cartfile {
 				return
 			}
 
-			if scanner.scanString(commentIndicator, into: nil) {
-				// Skip the rest of the line.
-				return
-			}
-
-			if !scanner.isAtEnd {
+			if !scannerWithoutComments.isAtEnd {
 				result = .failure(CarthageError.parseError(description: "unexpected trailing characters in line: \(line)"))
 				stop = true
 			}
@@ -177,5 +188,48 @@ extension ResolvedCartfile: CustomStringConvertible {
 			.sorted { $0.key.description < $1.key.description }
 			.map { "\($0.key) \($0.value)\n" }
 			.joined(separator: "")
+	}
+}
+
+
+extension String {
+	
+	/// Returns self without any potential trailing Cartfile comment. A Cartfile
+	/// comment starts with the first `commentIndicator` that is not embedded in any quote
+	var strippingTrailingCartfileComment: String {
+		
+		// Since the Cartfile syntax doesn't support nested quotes, such as `"version-\"alpha\""`,
+		// simply consider any odd-number occurence of a quote as a quote-start, and any
+		// even-numbered occurrence of a quote as quote-end.
+		// The comment indicator (e.g. `#`) is the start of a comment if it's not nested in quotes.
+		// The following code works also for comment indicators that are are more than one character
+		// long (e.g. double slashes).
+		
+		let quote = "\""
+		
+		// Splitting the string by quote will make odd-numbered chunks outside of quotes, and
+		// even-numbered chunks inside of quotes.
+		// `omittingEmptySubsequences` is needed to maintain this property even in case of empty quotes.
+		let quoteDelimitedChunks = self.split(
+			separator: quote.first!,
+			maxSplits: Int.max,
+			omittingEmptySubsequences: false
+		)
+		
+		for (offset, chunk) in quoteDelimitedChunks.enumerated() {
+			let isInQuote = offset % 2 == 1 // even chunks are not in quotes, see comment above
+			if isInQuote {
+				continue // don't consider comment indicators inside quotes
+			}
+			if let range = chunk.range(of: Cartfile.commentIndicator) {
+				// there is a comment, return everything before its position
+				let advancedOffset = (..<offset).relative(to: quoteDelimitedChunks)
+				let previousChunks = quoteDelimitedChunks[advancedOffset]
+				let chunkBeforeComment = chunk[..<range.lowerBound]
+				return (previousChunks + [chunkBeforeComment])
+					.joined(separator: quote) // readd the quotes that were removed in the initial split
+			}
+		}
+		return self
 	}
 }

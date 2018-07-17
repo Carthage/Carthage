@@ -60,7 +60,7 @@ public struct BuildCommand: CommandProtocol {
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> mode <| Option(key: "archive", defaultValue: false, usage: "archive built frameworks from the current project (implies --no-skip-current)")
-				<*> (mode <| Argument(defaultValue: [], usage: "the dependency names to build")).map { $0.isEmpty ? nil : $0 }
+				<*> (mode <| Argument(defaultValue: [], usage: "the dependency names to build", usageParameter: "dependency names")).map { $0.isEmpty ? nil : $0 }
 		}
 	}
 
@@ -167,10 +167,7 @@ public struct BuildCommand: CommandProtocol {
 	private func openLogFile(_ path: String?) -> SignalProducer<(FileHandle, URL), CarthageError> {
 		return SignalProducer { () -> Result<(FileHandle, URL), CarthageError> in
 			if let path = path {
-				if !FileManager.default.fileExists(atPath: path) {
-					FileManager.default.createFile(atPath: path, contents: nil, attributes: nil)
-				}
-
+				FileManager.default.createFile(atPath: path, contents: nil, attributes: nil)
 				let fileURL = URL(fileURLWithPath: path, isDirectory: false)
 
 				guard let handle = FileHandle(forUpdatingAtPath: path) else {

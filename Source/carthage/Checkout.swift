@@ -37,7 +37,7 @@ public struct CheckoutCommand: CommandProtocol {
 				<*> mode <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 				<*> ColorOptions.evaluate(mode)
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
-				<*> (mode <| Argument(defaultValue: [], usage: dependenciesUsage)).map { $0.isEmpty ? nil : $0 }
+				<*> (mode <| Argument(defaultValue: [], usage: dependenciesUsage, usageParameter: "dependency names")).map { $0.isEmpty ? nil : $0 }
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it

@@ -30,7 +30,7 @@ public struct ArchiveCommand: CommandProtocol {
 					usage: "the directory containing the Carthage project"
 				)
 				<*> ColorOptions.evaluate(mode)
-				<*> mode <| Argument(defaultValue: [], usage: argumentUsage)
+				<*> mode <| Argument(defaultValue: [], usage: argumentUsage, usageParameter: "framework names")
 		}
 	}
 
@@ -43,6 +43,7 @@ public struct ArchiveCommand: CommandProtocol {
 			.waitOnCommand()
 	}
 
+	// swiftlint:disable:next function_body_length
 	public func archiveWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 
