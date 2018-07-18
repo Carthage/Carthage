@@ -80,6 +80,13 @@ class SemanticVersionSpec: QuickSpec {
 			expect(SemanticVersion.from(PinnedVersion("1.4.5-+build43")).value).to(beNil()) // missing pre-release after '-'
 			expect(SemanticVersion.from(PinnedVersion("1.４.5")).value).to(beNil()) // Note that the `４` in this string is
 																					// a fullwidth character, not a halfwidth `4`
+			expect(SemanticVersion.from(PinnedVersion("1.8.0.1")).value).to(beNil()) // not a valid SemVer, too many dots
+			expect(SemanticVersion.from(PinnedVersion("1.8..1")).value).to(beNil()) // not a valid SemVer, double dots
+			expect(SemanticVersion.from(PinnedVersion("1.8.1.")).value).to(beNil()) // not a valid SemVer, ends with dot
+			expect(SemanticVersion.from(PinnedVersion("1.8.")).value).to(beNil()) // not a valid SemVer, ends with dot
+			expect(SemanticVersion.from(PinnedVersion("1.")).value).to(beNil()) // not a valid SemVer, ends with dot
+			expect(SemanticVersion.from(PinnedVersion("1.8.0.alpha")).value).to(beNil()) // not a valid SemVer, pre-release is dot-separated
+
 		}
 	}
 }
