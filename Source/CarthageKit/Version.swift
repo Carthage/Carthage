@@ -117,9 +117,12 @@ extension SemanticVersion: Scannable {
 		}
 
 		let components = version
-			.split(omittingEmptySubsequences: true) { $0 == "." }
-		if components.isEmpty {
+			.split(omittingEmptySubsequences: false) { $0 == "." }
+		guard !components.isEmpty else {
 			return .failure(ScannableError(message: "expected version", currentLine: scanner.currentLine))
+		}
+		guard components.count <= 3 else {
+			return .failure(ScannableError(message: "found more than 3 dot-separated components in version", currentLine: scanner.currentLine))
 		}
 
 		func parseVersion(at index: Int) -> Int? {
@@ -135,7 +138,10 @@ extension SemanticVersion: Scannable {
 		}
 
 		let hasPatchComponent = components.count > 2
-		let patch = parseVersion(at: 2) ?? 0
+		let patch = parseVersion(at: 2)
+		guard (!hasPatchComponent || patch != nil) else {
+			return .failure(ScannableError(message: "invalid patch version", currentLine: scanner.currentLine))
+		}
 		
 		let preRelease = scanner.scanStringWithPrefix("-", until: "+")
 		let buildMetadata = scanner.scanStringWithPrefix("+", until: "")
@@ -161,7 +167,7 @@ extension SemanticVersion: Scannable {
 		
 		return .success(self.init(major: major,
 		                          minor: minor,
-		                          patch: patch,
+		                          patch: patch ?? 0,
 		                          preRelease: preRelease,
 		                          buildMetadata: buildMetadata))
 	}
