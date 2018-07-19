@@ -32,10 +32,7 @@
 		742F7D4720C128020012B4F2 /* DependencyRetriever.swift in Sources */ = {isa = PBXBuildFile; fileRef = 742F7D4620C128020012B4F2 /* DependencyRetriever.swift */; };
 		7469925320AD9119007AC8FF /* SortedSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7469925220AD9119007AC8FF /* SortedSet.swift */; };
 		7469925520AD9183007AC8FF /* ConcreteVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7469925420AD9183007AC8FF /* ConcreteVersion.swift */; };
-		74B4920C20B064F7007A2AA4 /* DiagnosticResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B4920B20B064F7007A2AA4 /* DiagnosticResolver.swift */; };
-		74B4921020B13ABF007A2AA4 /* LocalRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B4920F20B13ABF007A2AA4 /* LocalRepository.swift */; };
 		74FBFA1120B2E2EC00740569 /* Resolver in Resources */ = {isa = PBXBuildFile; fileRef = 74FBFA1020B2E2EC00740569 /* Resolver */; };
-		74FBFA1320B2F79200740569 /* LocalRepositorySpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FBFA1220B2F79200740569 /* LocalRepositorySpec.swift */; };
 		88ED56D619ECE34900CBF5C4 /* Git.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88ED56D519ECE34900CBF5C4 /* Git.swift */; };
 		89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */; };
 		8A239F3C2097586F005F02F2 /* BundleExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A239F3A20975762005F02F2 /* BundleExtensions.swift */; };
@@ -214,10 +211,7 @@
 		742F7D4620C128020012B4F2 /* DependencyRetriever.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DependencyRetriever.swift; sourceTree = "<group>"; };
 		7469925220AD9119007AC8FF /* SortedSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SortedSet.swift; sourceTree = "<group>"; };
 		7469925420AD9183007AC8FF /* ConcreteVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcreteVersion.swift; sourceTree = "<group>"; };
-		74B4920B20B064F7007A2AA4 /* DiagnosticResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticResolver.swift; sourceTree = "<group>"; };
-		74B4920F20B13ABF007A2AA4 /* LocalRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRepository.swift; sourceTree = "<group>"; };
 		74FBFA1020B2E2EC00740569 /* Resolver */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Resolver; sourceTree = "<group>"; };
-		74FBFA1220B2F79200740569 /* LocalRepositorySpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalRepositorySpec.swift; sourceTree = "<group>"; };
 		82ABB0CF1EF7D43800AC2A75 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text; path = .swiftlint.yml; sourceTree = "<group>"; };
 		88ED56D519ECE34900CBF5C4 /* Git.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Git.swift; sourceTree = "<group>"; };
 		89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkExtensionsSpec.swift; sourceTree = "<group>"; };
@@ -546,7 +540,6 @@
 				CDD7CF781F75ED88000E0EA5 /* Dependency.swift */,
 				742F7D4620C128020012B4F2 /* DependencyRetriever.swift */,
 				742F7D4220C126180012B4F2 /* DependencySet.swift */,
-				74B4920B20B064F7007A2AA4 /* DiagnosticResolver.swift */,
 				742F7D4420C126780012B4F2 /* DictionaryExtensions.swift */,
 				CDF94D941E71144300200486 /* DuplicateDependency.swift */,
 				D0AAAB4919FAEDB4007B24B3 /* Errors.swift */,
@@ -554,7 +547,6 @@
 				88ED56D519ECE34900CBF5C4 /* Git.swift */,
 				D0D1219119E88B8F005E4BAA /* GitHub.swift */,
 				CD43D9DD1F43074000CD60F6 /* GitURL.swift */,
-				74B4920F20B13ABF007A2AA4 /* LocalRepository.swift */,
 				B17145EF1F43F797006DC662 /* NewResolver.swift */,
 				D0A2025D1B114D1000C71375 /* ProducerQueue.swift */,
 				CD28C99C1E11846200322AF7 /* ProductType.swift */,
@@ -605,7 +597,6 @@
 				BF3199BF1E32E078007DC0D1 /* DependencySpec.swift */,
 				89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */,
 				CDA0B6C91C468E67006C499C /* GitURLSpec.swift */,
-				74FBFA1220B2F79200740569 /* LocalRepositorySpec.swift */,
 				549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */,
 				0FDFEA7D2055D638008862E3 /* ProxyTests.swift */,
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
@@ -894,10 +885,8 @@
 				7469925520AD9183007AC8FF /* ConcreteVersion.swift in Sources */,
 				CD43D9DA1F41640E00CD60F6 /* CarthageKitVersion.swift in Sources */,
 				8A239F3C2097586F005F02F2 /* BundleExtensions.swift in Sources */,
-				74B4921020B13ABF007A2AA4 /* LocalRepository.swift in Sources */,
 				CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */,
 				CDF94D951E71144300200486 /* DuplicateDependency.swift in Sources */,
-				74B4920C20B064F7007A2AA4 /* DiagnosticResolver.swift in Sources */,
 				CD43D9DE1F43074000CD60F6 /* GitURL.swift in Sources */,
 				B17145F11F43F812006DC662 /* NewResolver.swift in Sources */,
 				3BE5BD9A1E4E5A7B00DDDC45 /* SwiftVersionError.swift in Sources */,
@@ -940,7 +929,6 @@
 				BF3199C01E32E078007DC0D1 /* DependencySpec.swift in Sources */,
 				A940B2F520C0363F001C4C59 /* CartfileCommentsSpec.swift in Sources */,
 				CDA0B6CA1C468E67006C499C /* GitURLSpec.swift in Sources */,
-				74FBFA1320B2F79200740569 /* LocalRepositorySpec.swift in Sources */,
 				B1F27D3E1E45382B002D4754 /* VersionFileSpec.swift in Sources */,
 				A83DFA40C60153E8BDD32B78 /* ConcreteVersionTest.swift in Sources */,
 			);
