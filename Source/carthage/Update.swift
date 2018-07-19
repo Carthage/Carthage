@@ -36,7 +36,7 @@ public struct UpdateCommand: CommandProtocol {
 		///
 		/// Otherwise, this producer will be empty.
 		public var buildProducer: SignalProducer<(), CarthageError> {
-			if checkoutAfterUpdate && buildAfterUpdate {
+			if checkoutAfterUpdate {
 				return BuildCommand().buildWithOptions(buildCommandOptions)
 			} else {
 				return .empty
@@ -72,7 +72,7 @@ public struct UpdateCommand: CommandProtocol {
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
-				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
+				<*> BuildOptions.evaluate(mode, addendum: "")
 				<*> CheckoutCommand.Options.evaluate(mode, dependenciesUsage: dependenciesUsage)
 		}
 
