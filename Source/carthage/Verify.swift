@@ -13,19 +13,8 @@ public struct VerifyCommand: CommandProtocol {
 		return options.loadProject().flatMap(.concat) { project in
 				return project.verify()
 			}
-			.on(value: { (incompatibilities: [CompatibilityInfo]) in
-				if incompatibilities.isEmpty {
-					carthage.println("No incompatibilities found in Cartfile.resolved")
-				} else {
-					carthage.println("The following incompatibilities were found in Cartfile.resolved:")
-					incompatibilities.forEach { incompatibility in
-						for (dependency, version) in incompatibility.dependencyVersions {
-							let message = "\(incompatibility.dependency.name) is incompatible with \(dependency.name) \(version)"
-							let formatting = options.colorOptions.formatting
-							carthage.println(formatting.bullets + message)
-						}
-					}
-				}
+			.on(value: { _ in
+				carthage.println("No incompatibilities found in Cartfile.resolved")
 			})
 			.waitOnCommand()
 	}

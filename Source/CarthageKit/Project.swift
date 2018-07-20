@@ -1139,7 +1139,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// one or more of the versions specified in a transitive dependency's
 	/// Cartfile.  The incompatible versions are stored in the
 	/// dependencyVersions property of the CompatibilityInfo object.
-	public func verify(resolvedCartfile: ResolvedCartfile? = nil) -> SignalProducer<[CompatibilityInfo], CarthageError> {
+	public func verify(resolvedCartfile: ResolvedCartfile? = nil) -> SignalProducer<(), CarthageError> {
 		let resolvedProducer = (resolvedCartfile != nil) ? SignalProducer(value: resolvedCartfile!) : loadResolvedCartfile()
 		let lazyResolvedProducer = resolvedProducer.replayLazily(upTo: 1)
 
@@ -1177,8 +1177,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 				return result
 			}
-			.map { (compatibilityInfos: [CompatibilityInfo]) -> [CompatibilityInfo] in
-				return compatibilityInfos.compactMap { compatibilityInfo in
+			.flatMap(.merge) { (compatibilityInfos: [CompatibilityInfo]) -> SignalProducer<(), CarthageError> in
+				let incompatibleInfos: [CompatibilityInfo] = compatibilityInfos.compactMap { compatibilityInfo in
 					let incompatibleVersions = compatibilityInfo.incompatibleVersions
 					if !incompatibleVersions.isEmpty {
 						return CompatibilityInfo(
@@ -1188,6 +1188,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					return nil
 				}
+				return incompatibleInfos.isEmpty ? SignalProducer(value: ()) : SignalProducer(error: .incompatibleVersions(incompatibleInfos))
 			}
 	}
 }

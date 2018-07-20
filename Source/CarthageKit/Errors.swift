@@ -87,6 +87,9 @@ public enum CarthageError: Error {
 
 	/// An internal error occurred
 	case internalError(description: String)
+
+	/// Cartfile.resolved contains incompatible versions
+	case incompatibleVersions([CompatibilityInfo])
 }
 
 extension CarthageError {
@@ -334,6 +337,17 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .internalError(description):
 			return description
+
+		case let .incompatibleVersions(incompatibilities):
+			var message = "The following incompatibilities were found in Cartfile.resolved:\n"
+			var lines: [String] = []
+			incompatibilities.forEach { incompatibility in
+				for (dependency, version) in incompatibility.dependencyVersions {
+					lines.append("* \(incompatibility.dependency.name) is incompatible with \(dependency.name) \(version)")
+				}
+			}
+			message += lines.joined(separator: "\n")
+			return message
 		}
 	}
 }

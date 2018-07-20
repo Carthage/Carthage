@@ -6,6 +6,15 @@ import ReactiveSwift
 import Result
 import Tentacle
 
+private extension CarthageError {
+	var compatibilityInfos: [CompatibilityInfo] {
+		if case let .incompatibleVersions(infos) = self {
+			return infos
+		}
+		return []
+	}
+}
+
 class VerifySpec: QuickSpec {
 	override func spec() {
 		let validCartfile = """
@@ -61,7 +70,7 @@ class VerifySpec: QuickSpec {
 				
 				let result = project.verify(resolvedCartfile: resolvedCartfile.value!).single()
 				
-				expect(result?.value) == [CompatibilityInfo]()
+				expect(result?.value).notTo(beNil())
 			}
 			
 			it("should identify incompatibilities in an invalid Cartfile.resolved") {
@@ -74,18 +83,18 @@ class VerifySpec: QuickSpec {
 				let resolvedCartfile = ResolvedCartfile.from(string: invalidCartfile)
 				let project = Project(directoryURL: URL(string: "file://fake")!)
 				
-				let result = project.verify(resolvedCartfile: resolvedCartfile.value!).single()
+				let infos = project.verify(resolvedCartfile: resolvedCartfile.value!).single()?.error?.compatibilityInfos
 				
-				expect(result?.value?[0].dependency) == alamofireDependency
-				expect(result?.value?[0].pinnedVersion) == PinnedVersion("5.0.0")
+				expect(infos?[0].dependency) == alamofireDependency
+				expect(infos?[0].pinnedVersion) == PinnedVersion("5.0.0")
 				
-				expect(result?.value?[0].dependencyVersions.contains(where: { $0 == moya_4_1_0 })) == true
+				expect(infos?[0].dependencyVersions.contains(where: { $0 == moya_4_1_0 })) == true
 				
-				expect(result?.value?[1].dependency) == resultDependency
-				expect(result?.value?[1].pinnedVersion) == PinnedVersion("4.0.0")
+				expect(infos?[1].dependency) == resultDependency
+				expect(infos?[1].pinnedVersion) == PinnedVersion("4.0.0")
 				
-				expect(result?.value?[1].dependencyVersions.contains(where: { $0 == moya_3_1_0 })) == true
-				expect(result?.value?[1].dependencyVersions.contains(where: { $0 == reactiveSwift_3_2_1 })) == true
+				expect(infos?[1].dependencyVersions.contains(where: { $0 == moya_3_1_0 })) == true
+				expect(infos?[1].dependencyVersions.contains(where: { $0 == reactiveSwift_3_2_1 })) == true
 			}
 		}
 	}
