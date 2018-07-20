@@ -74,7 +74,7 @@ extension MachHeader {
 			"-macho",
 			"-private-header",
 			"-non-verbose",
-			url.resolvingSymlinksInPath().path
+			url.resolvingSymlinksInPath().path,
 			]
 		)
 
@@ -84,7 +84,7 @@ extension MachHeader {
 			.filter { !$0.isEmpty }
 			.flatMap(.merge) { (output: String) -> SignalProducer<(String, String), NoError> in
 				output.linesProducer.combinePrevious()
-			}.filterMap { (previousLine, currentLine) -> MachHeader? in
+			}.filterMap { previousLine, currentLine -> MachHeader? in
 
 				let previousLineComponents = previousLine
 					.components(separatedBy: CharacterSet.whitespaces)
@@ -94,7 +94,7 @@ extension MachHeader {
 					.filter { !$0.isEmpty }
 
 				let strippedComponents = currentLineComponents
-					.map { $0.stripping(prefix: "0x")}
+					.map { $0.stripping(prefix: "0x") }
 
 				let magicIdentifiers = [
 					MH_MAGIC_64,
@@ -111,17 +111,14 @@ extension MachHeader {
 					"filetype",
 					"ncmds",
 					"sizeofcmds",
-					"flags"
-					]
-					, !strippedComponents.isEmpty
-					, let magic = UInt32(strippedComponents.first!, radix:16)
-					, magicIdentifiers.first(where: { $0 ==  magic }) != nil else {
+					"flags",
+					], !strippedComponents.isEmpty, let magic = UInt32(strippedComponents.first!, radix:16), magicIdentifiers.first(where: { $0 == magic }) != nil else {
 						return  nil
 				}
 
 				guard
 					let cpuType = cpu_type_t(strippedComponents[1], radix: 10),
-					let cpuSubtype =  cpu_subtype_t(strippedComponents[2], radix: 10),
+					let cpuSubtype = cpu_subtype_t(strippedComponents[2], radix: 10),
 					let fileType = UInt32(strippedComponents[4], radix: 10),
 					let ncmds = UInt32(strippedComponents[5], radix: 10),
 					let sizeofcmds = UInt32(strippedComponents[6], radix: 10),

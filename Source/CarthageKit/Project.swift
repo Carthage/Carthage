@@ -1105,7 +1105,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 							// not to error out with `.noSharedFrameworkSchemes`
 							// to continue building other dependencies.
 							self._projectEventsObserver.send(value: .skippedBuilding(dependency, error.description))
-							
+
 							if options.cacheBuilds {
 								// Create a version file for a dependency with no shared schemes
 								// so that its cache is not always considered invalid.

@@ -90,7 +90,7 @@ public final class BackTrackingResolver: ResolverProtocol {
 				if let rejectionError = dependencySet.rejectionError {
 					throw rejectionError
 				} else {
-					throw CarthageError.unsatisfiableDependencyList(dependenciesToUpdate ?? dependencies.map { $0.key.name } )
+					throw CarthageError.unsatisfiableDependencyList(dependenciesToUpdate ?? dependencies.map { $0.key.name })
 				}
 			}
 

@@ -7,10 +7,10 @@ public let carthageProjectCheckoutsPath = "Carthage/Checkouts"
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
-	
+
 	/// Any text following this character is considered a comment
 	static let commentIndicator = "#"
-	
+
 	/// The dependencies listed in the Cartfile.
 	public var dependencies: [Dependency: VersionSpecifier]
 
@@ -42,7 +42,7 @@ public struct Cartfile {
 				// The line was all whitespace.
 				return
 			}
-			
+
 			guard let remainingString = scannerWithComments.remainingSubstring.map(String.init) else {
 				result = .failure(CarthageError.internalError(
 					description: "Can NSScanner split an extended grapheme cluster? If it does, this will be the error…"
@@ -50,7 +50,7 @@ public struct Cartfile {
 				stop = true
 				return
 			}
-			
+
 			let scannerWithoutComments = Scanner(
 				string: remainingString.strippingTrailingCartfileComment
 					.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
@@ -191,22 +191,21 @@ extension ResolvedCartfile: CustomStringConvertible {
 	}
 }
 
-
 extension String {
-	
+
 	/// Returns self without any potential trailing Cartfile comment. A Cartfile
 	/// comment starts with the first `commentIndicator` that is not embedded in any quote
 	var strippingTrailingCartfileComment: String {
-		
+
 		// Since the Cartfile syntax doesn't support nested quotes, such as `"version-\"alpha\""`,
 		// simply consider any odd-number occurence of a quote as a quote-start, and any
 		// even-numbered occurrence of a quote as quote-end.
 		// The comment indicator (e.g. `#`) is the start of a comment if it's not nested in quotes.
 		// The following code works also for comment indicators that are are more than one character
 		// long (e.g. double slashes).
-		
+
 		let quote = "\""
-		
+
 		// Splitting the string by quote will make odd-numbered chunks outside of quotes, and
 		// even-numbered chunks inside of quotes.
 		// `omittingEmptySubsequences` is needed to maintain this property even in case of empty quotes.
@@ -215,7 +214,7 @@ extension String {
 			maxSplits: Int.max,
 			omittingEmptySubsequences: false
 		)
-		
+
 		for (offset, chunk) in quoteDelimitedChunks.enumerated() {
 			let isInQuote = offset % 2 == 1 // even chunks are not in quotes, see comment above
 			if isInQuote {
