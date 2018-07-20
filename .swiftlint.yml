@@ -86,12 +86,6 @@ custom_rules:
     name: "Space Before Comment"
     message: "Always put a space line before a comment line and always comment code beforehand."
     severity: warning
-  unnecessary_case_break:
-    included: ".*.swift"
-    regex: '(case |default)(?:[^\n\}]+\n){2,}\s*break *\n|\n *\n *break(?:\n *\n|\n *\})'
-    name: "Unnecessary Case Break"
-    message: "Don't use break in switch cases – Swift breaks by default."
-    severity: warning
   vertical_whitespaces_around_mark:
     included: ".*.swift"
     regex: '\/\/\s*MARK:[^\n]*(\n)(?!\n)|(\n\n\n)[ \t]*\/\/\s*MARK:|[^\s{]\n[^\n\/]*\/\/\s*MARK:'
