@@ -1188,7 +1188,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					return nil
 				}
-				return incompatibleInfos.isEmpty ? SignalProducer(value: ()) : SignalProducer(error: .incompatibleVersions(incompatibleInfos))
+				return incompatibleInfos.isEmpty ? SignalProducer(value: ()) : SignalProducer(error: .verifyFailed(incompatibleInfos))
 			}
 	}
 }
