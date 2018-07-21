@@ -267,7 +267,14 @@ Carthage can automatically use prebuilt frameworks, instead of building from scr
 
 To offer prebuilt frameworks for a specific tag, the binaries for _all_ supported platforms should be zipped up together into _one_ archive, and that archive should be attached to a published Release corresponding to that tag. The attachment should include `.framework` in its name (e.g., `ReactiveCocoa.framework.zip`), to indicate to Carthage that it contains binaries.
 
-You can perform the archiving operation using the following command:
+You can perform the archiving operation using:
+
+```sh
+-carthage build --no-skip-current
+-carthage archive YourFrameworkName
+```
+
+or alternatively
 
 ```sh
 carthage build --archive
