@@ -483,8 +483,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 				latestDependencies(resolver: resolver)
 			)
 			.map { ($0.dependencies, $1.dependencies, $2) }
-			.map { (currentDependencies, updatedDependencies, latestDependencies) -> [OutdatedDependency] in
-				return updatedDependencies.compactMap { (project, version) -> OutdatedDependency? in
+			.map { currentDependencies, updatedDependencies, latestDependencies -> [OutdatedDependency] in
+				return updatedDependencies.compactMap { project, version -> OutdatedDependency? in
 					if let resolved = currentDependencies[project], let latest = latestDependencies[project], resolved != version || resolved != latest {
 						if SemanticVersion.from(resolved).value == nil, version == resolved {
 							// If resolved version is not a semantic version but a commit
@@ -1088,7 +1088,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 							// not to error out with `.noSharedFrameworkSchemes`
 							// to continue building other dependencies.
 							self._projectEventsObserver.send(value: .skippedBuilding(dependency, error.description))
-							
+
 							if options.cacheBuilds {
 								// Create a version file for a dependency with no shared schemes
 								// so that its cache is not always considered invalid.
