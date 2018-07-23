@@ -394,9 +394,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.collect()
 					.map { parentAndTransitiveDependencies in
 						var dict: [Dependency: [(Dependency, VersionSpecifier)]] = [:]
-						parentAndTransitiveDependencies.forEach { parentDependency, dependencyVersions in
+						parentAndTransitiveDependencies.forEach { parentDependency, requirements in
 							var array = dict[parentDependency] ?? []
-							array.append(dependencyVersions)
+							array.append(requirements)
 							dict[parentDependency] = array
 						}
 						return dict
@@ -1138,7 +1138,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// of each dependency in Cartfile.resolved which is incompatible with
 	/// one or more of the versions specified in a transitive dependency's
 	/// Cartfile.  The incompatible versions are stored in the
-	/// dependencyVersions property of the CompatibilityInfo object.
+	/// requirements property of the CompatibilityInfo object.
 	public func verify(resolvedCartfile: ResolvedCartfile) -> SignalProducer<(), CarthageError> {
 		let resolvedCartfileProducer = SignalProducer(value: resolvedCartfile).replayLazily(upTo: 1)
 
@@ -1154,8 +1154,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 			.map { (dependencyDict: [Dependency: [(Dependency, VersionSpecifier)]]) -> [Dependency: [(Dependency, VersionSpecifier)]] in
 				var dict: [Dependency: [(Dependency, VersionSpecifier)]] = [:]
-				dependencyDict.forEach { parentDependency, dependencyVersions in
-					dependencyVersions.forEach { dependency, version in
+				dependencyDict.forEach { parentDependency, requirements in
+					requirements.forEach { dependency, version in
 						var array = dict[dependency] ?? []
 						array.append((parentDependency, version))
 						dict[dependency] = array
@@ -1170,20 +1170,20 @@ public final class Project { // swiftlint:disable:this type_body_length
 				var result: [CompatibilityInfo] = []
 				for (dependency, pinnedVersion) in dependenciesWithPinnedVersion {
 					// Skip non-semantic resolved versions and transitive dependencies without semantic versions
-					if case .success = SemanticVersion.from(pinnedVersion), let dependencyVersions = dependenciesWithVersionSpecifiers[dependency] {
-						result.append(CompatibilityInfo(dependency: dependency, pinnedVersion: pinnedVersion, dependencyVersions: dependencyVersions))
+					if case .success = SemanticVersion.from(pinnedVersion), let requirements = dependenciesWithVersionSpecifiers[dependency] {
+						result.append(CompatibilityInfo(dependency: dependency, pinnedVersion: pinnedVersion, requirements: requirements))
 					}
 				}
 				return result
 			}
 			.flatMap(.merge) { (compatibilityInfos: [CompatibilityInfo]) -> SignalProducer<(), CarthageError> in
 				let incompatibleInfos: [CompatibilityInfo] = compatibilityInfos.compactMap { compatibilityInfo in
-					let incompatibleVersions = compatibilityInfo.incompatibleVersions
-					if !incompatibleVersions.isEmpty {
+					let incompatibleRequirements = compatibilityInfo.incompatibleRequirements
+					if !incompatibleRequirements.isEmpty {
 						return CompatibilityInfo(
 							dependency: compatibilityInfo.dependency,
 							pinnedVersion: compatibilityInfo.pinnedVersion,
-							dependencyVersions: incompatibleVersions)
+							requirements: incompatibleRequirements)
 					}
 					return nil
 				}

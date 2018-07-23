@@ -342,7 +342,7 @@ extension CarthageError: CustomStringConvertible {
 			var message = "The following incompatibilities were found in Cartfile.resolved:\n"
 			var lines: [String] = []
 			incompatibilities.forEach { incompatibility in
-				for (dependency, version) in incompatibility.dependencyVersions {
+				for (dependency, version) in incompatibility.requirements {
 					lines.append("* \(incompatibility.dependency.name) is incompatible with \(dependency.name) \(version)")
 				}
 			}

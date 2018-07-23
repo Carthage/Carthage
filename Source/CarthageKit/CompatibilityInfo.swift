@@ -9,16 +9,16 @@ public struct CompatibilityInfo: Equatable {
 	public let pinnedVersion: PinnedVersion
 	
 	/// Versions of this dependency with which it may or may not be compatible
-	public let dependencyVersions: [(Dependency, VersionSpecifier)]
+	public let requirements: [(Dependency, VersionSpecifier)]
 	
 	/// The versions which are not compatible with the pinned version of this dependency
-	public var incompatibleVersions: [(Dependency, VersionSpecifier)] {
-		return dependencyVersions.filter { _, version in !version.isSatisfied(by: pinnedVersion) }
+	public var incompatibleRequirements: [(Dependency, VersionSpecifier)] {
+		return requirements.filter { _, version in !version.isSatisfied(by: pinnedVersion) }
 	}
 
 	public static func == (lhs: CompatibilityInfo, rhs: CompatibilityInfo) -> Bool {
 		return lhs.dependency == rhs.dependency &&
 			lhs.pinnedVersion == rhs.pinnedVersion &&
-			lhs.dependencyVersions.elementsEqual(rhs.dependencyVersions, by: { $0.0 == $1.0 && $0.1 == $1.1 })
+			lhs.requirements.elementsEqual(rhs.requirements, by: { $0.0 == $1.0 && $0.1 == $1.1 })
 	}
 }

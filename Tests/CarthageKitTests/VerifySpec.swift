@@ -88,13 +88,13 @@ class VerifySpec: QuickSpec {
 				expect(infos?[0].dependency) == alamofireDependency
 				expect(infos?[0].pinnedVersion) == PinnedVersion("5.0.0")
 				
-				expect(infos?[0].dependencyVersions.contains(where: { $0 == moya_4_1_0 })) == true
+				expect(infos?[0].requirements.contains(where: { $0 == moya_4_1_0 })) == true
 				
 				expect(infos?[1].dependency) == resultDependency
 				expect(infos?[1].pinnedVersion) == PinnedVersion("4.0.0")
 				
-				expect(infos?[1].dependencyVersions.contains(where: { $0 == moya_3_1_0 })) == true
-				expect(infos?[1].dependencyVersions.contains(where: { $0 == reactiveSwift_3_2_1 })) == true
+				expect(infos?[1].requirements.contains(where: { $0 == moya_3_1_0 })) == true
+				expect(infos?[1].requirements.contains(where: { $0 == reactiveSwift_3_2_1 })) == true
 			}
 		}
 	}
