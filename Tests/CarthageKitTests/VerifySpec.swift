@@ -8,7 +8,7 @@ import Tentacle
 
 private extension CarthageError {
 	var compatibilityInfos: [CompatibilityInfo] {
-		if case let .verifyFailed(infos) = self {
+		if case let .invalidResolvedCartfile(infos) = self {
 			return infos
 		}
 		return []
