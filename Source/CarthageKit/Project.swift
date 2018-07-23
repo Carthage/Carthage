@@ -1139,17 +1139,16 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// one or more of the versions specified in a transitive dependency's
 	/// Cartfile.  The incompatible versions are stored in the
 	/// dependencyVersions property of the CompatibilityInfo object.
-	public func verify(resolvedCartfile: ResolvedCartfile? = nil) -> SignalProducer<(), CarthageError> {
-		let resolvedProducer = (resolvedCartfile != nil) ? SignalProducer(value: resolvedCartfile!) : loadResolvedCartfile()
-		let lazyResolvedProducer = resolvedProducer.replayLazily(upTo: 1)
+	public func verify(resolvedCartfile: ResolvedCartfile) -> SignalProducer<(), CarthageError> {
+		let resolvedCartfileProducer = SignalProducer(value: resolvedCartfile).replayLazily(upTo: 1)
 
-		let pinnedVersions = lazyResolvedProducer
+		let pinnedVersions = resolvedCartfileProducer
 			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				return SignalProducer(resolved.dependencies.map { k, v in (k, v) })
 			}
 			.collect()
 
-		let versionSpecifiers = lazyResolvedProducer
+		let versionSpecifiers = resolvedCartfileProducer
 			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<[Dependency: [(Dependency, VersionSpecifier)]], CarthageError> in
 				return self.transitiveDependenciesAndVersionsByParent(resolvedCartfile: resolved, tryCheckoutDirectory: true)
 			}

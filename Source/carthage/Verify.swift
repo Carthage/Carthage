@@ -10,8 +10,8 @@ public struct VerifyCommand: CommandProtocol {
 	public let function = "Verify that the dependencies in Cartfile.resolved are compatible"
 
 	public func run(_ options: CheckoutCommand.Options) -> Result<(), CarthageError> {
-		return options.loadProject().flatMap(.concat) { project in
-				return project.verify()
+		return options.loadProject().flatMap(.concat) { (project: Project) in
+				return project.loadResolvedCartfile().map { project.verify(resolvedCartfile: $0) }
 			}
 			.on(value: { _ in
 				carthage.println("No incompatibilities found in Cartfile.resolved")
