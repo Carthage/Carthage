@@ -112,10 +112,10 @@ private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
 					// … or potentially non-beta Xcode releases of major version 10 or later.
 
 					switch getEnvironmentVariable("XCODE_PRODUCT_BUILD_VERSION") {
-					case .success(_):
+					case .success:
 						// See the above issue.
 						return .success(nil)
-					case .failure(_):
+					case .failure:
 						// For users calling `carthage copy-frameworks` outside of Xcode (admittedly,
 						// a small fraction), this error is worthwhile in being a signpost in what’s
 						// necessary to add to achieve (for what most is the goal) of ensuring
