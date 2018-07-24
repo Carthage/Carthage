@@ -45,7 +45,7 @@ class VerifySpec: QuickSpec {
 		let yapDatabaseDependency = Dependency.gitHub(.dotCom, Repository(owner: "yapstudios", name: "YapDatabase"))
 		let cocoaLumberjackDependency = Dependency.gitHub(.dotCom, Repository(owner: "CocoaLumberjack", name: "CocoaLumberjack"))
 		
-		describe("transitiveDependenciesAndVersionsByParent") {
+		describe("requirementsByDependency") {
 			it("should group dependencies by parent dependency") {
 				let resolvedCartfile = ResolvedCartfile.from(string: validCartfile)
 				let project = Project(directoryURL: URL(string: "file://fake")!)
@@ -83,18 +83,27 @@ class VerifySpec: QuickSpec {
 				let resolvedCartfile = ResolvedCartfile.from(string: invalidCartfile)
 				let project = Project(directoryURL: URL(string: "file://fake")!)
 				
-				let infos = project.verify(resolvedCartfile: resolvedCartfile.value!).single()?.error?.compatibilityInfos
+				let error = project.verify(resolvedCartfile: resolvedCartfile.value!).single()?.error
+				let infos = error?.compatibilityInfos
 				
 				expect(infos?[0].dependency) == alamofireDependency
 				expect(infos?[0].pinnedVersion) == PinnedVersion("5.0.0")
 				
-				expect(infos?[0].requirements.contains(where: { $0 == moya_4_1_0 })) == true
+				expect(infos?[0].incompatibleRequirements.contains(where: { $0 == moya_4_1_0 })) == true
 				
 				expect(infos?[1].dependency) == resultDependency
 				expect(infos?[1].pinnedVersion) == PinnedVersion("4.0.0")
 				
-				expect(infos?[1].requirements.contains(where: { $0 == moya_3_1_0 })) == true
-				expect(infos?[1].requirements.contains(where: { $0 == reactiveSwift_3_2_1 })) == true
+				expect(infos?[1].incompatibleRequirements.contains(where: { $0 == moya_3_1_0 })) == true
+				expect(infos?[1].incompatibleRequirements.contains(where: { $0 == reactiveSwift_3_2_1 })) == true
+
+				expect(error?.description) ==
+					"""
+					The following incompatibilities were found in Cartfile.resolved:
+					* Alamofire "5.0.0" is incompatible with Moya ~> 4.1.0
+					* Result "4.0.0" is incompatible with Moya ~> 3.1.0
+					* Result "4.0.0" is incompatible with ReactiveSwift ~> 3.2.1
+					"""
 			}
 		}
 	}
