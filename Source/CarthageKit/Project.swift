@@ -784,7 +784,42 @@ public final class Project { // swiftlint:disable:this type_body_length
 				self._projectEventsObserver.send(value: .checkingOut(dependency, revision))
 			})
 	}
-
+	
+	///Checks out the given binary dependency into its intended working directory
+	private func checkoutBinaryDependency(
+		_ dependency: Dependency,
+		version: PinnedVersion,
+		binary: BinaryURL
+	) -> SignalProducer<(), CarthageError> {
+		
+		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(version))
+			.mapError { CarthageError(scannableError: $0) }
+			.combineLatest(with: self.downloadBinaryFrameworkDefinition(binary: binary))
+			.attemptMap { semanticVersion, binaryProject -> Result<(SemanticVersion, URL), CarthageError> in
+				guard let frameworkURL = binaryProject.versions[version] else {
+					return .failure(CarthageError.requiredVersionNotFound(Dependency.binary(binary), VersionSpecifier.exactly(semanticVersion)))
+				}
+				
+				return .success((semanticVersion, frameworkURL))
+			}
+			.flatMap(.concat) { semanticVersion, frameworkURL in
+				return self.downloadBinary(dependency: Dependency.binary(binary), version: semanticVersion, url: frameworkURL)
+			}
+			.flatMap(.concat, unarchive(archive:))
+			.flatMap(.concat) { unarchiveContentsDirectory -> SignalProducer<URL, CarthageError> in
+				let checkoutFolderURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
+				return self.removeItem(at: checkoutFolderURL)
+					.then(SignalProducer(value: unarchiveContentsDirectory))
+			}
+			.flatMap(.concat) { FileManager.default.reactive.enumerator(at: $0, includingPropertiesForKeys: nil, options: [.skipsSubdirectoryDescendants], catchErrors: false).map { _, url in url } }
+			.flatMap(.concat) { itemURL -> SignalProducer<URL, CarthageError> in
+				
+				let checkoutFolderURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
+				return SignalProducer(value: itemURL).copyFileURLsIntoDirectory(checkoutFolderURL)
+			}
+			.then(SignalProducer(value: ()))
+	}
+	
 	public func buildOrderForResolvedCartfile(
 		_ cartfile: ResolvedCartfile,
 		dependenciesToInclude: [String]? = nil
@@ -855,8 +890,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 						switch dependency {
 						case .git, .gitHub:
 							return self.checkoutOrCloneDependency(dependency, version: version, submodulesByPath: submodulesByPath)
-						case .binary:
-							return .empty
+						case .binary(let binary):
+							return self.checkoutBinaryDependency(dependency, version: version, binary: binary)
 						}
 					}
 			}
