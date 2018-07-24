@@ -1,17 +1,28 @@
 import Foundation
 
-/// Identifies a dependency, its pinned version, and versions of this dependency with which it may or may not be compatible
+/// Identifies a dependency, its pinned version, and its compatible and incompatible requirements
 public struct CompatibilityInfo {
-	/// The dependecy
+	/// The dependency
 	public let dependency: Dependency
 
-	/// The pinned version of the dependency
+	/// The pinned version of this dependency
 	public let pinnedVersion: PinnedVersion
 
-	/// Versions of this dependency with which it may or may not be compatible
-	public let requirements: [Dependency: VersionSpecifier]
+	/// Requirements with which the pinned version of this dependency may or may not be compatible
+	private let requirements: [Dependency: VersionSpecifier]
+	
+	public init(dependency: Dependency, pinnedVersion: PinnedVersion, requirements: [Dependency: VersionSpecifier]) {
+		self.dependency = dependency
+		self.pinnedVersion = pinnedVersion
+		self.requirements = requirements
+	}
+	
+	/// Requirements which are compatible with the pinned version of this dependency
+	public var compatibleRequirements: [Dependency: VersionSpecifier] {
+		return requirements.filter { _, version in version.isSatisfied(by: pinnedVersion) }
+	}
 
-	/// The versions which are not compatible with the pinned version of this dependency
+	/// Requirements which are not compatible with the pinned version of this dependency
 	public var incompatibleRequirements: [Dependency: VersionSpecifier] {
 		return requirements.filter { _, version in !version.isSatisfied(by: pinnedVersion) }
 	}
