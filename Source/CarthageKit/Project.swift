@@ -374,8 +374,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 		}
 	}
 
-	/// Finds all the transitive dependencies for the current project, grouped by their parent dependency.
-	func transitiveDependenciesAndVersionsByParent(
+	/// Finds the required dependencies and their corresponding version specifiers for each dependency in Cartfile.resolved.
+	func requirementsByDependency(
 		resolvedCartfile: ResolvedCartfile,
 		tryCheckoutDirectory: Bool
 	) -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> {
@@ -1157,7 +1157,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 		let dependencyRequirements = resolvedCartfileProducer
 			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
-				return self.transitiveDependenciesAndVersionsByParent(resolvedCartfile: resolved, tryCheckoutDirectory: true)
+				return self.requirementsByDependency(resolvedCartfile: resolved, tryCheckoutDirectory: true)
 			}
 			.flatMap(.merge) { dependencyDict -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
 				// Invert the requirements dictionary: [A: [B: 1, C: 2]] -> [B: [A: 1], C: [A: 2]]

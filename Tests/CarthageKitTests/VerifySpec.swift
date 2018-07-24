@@ -50,7 +50,7 @@ class VerifySpec: QuickSpec {
 				let resolvedCartfile = ResolvedCartfile.from(string: validCartfile)
 				let project = Project(directoryURL: URL(string: "file://fake")!)
 				
-				let result = project.transitiveDependenciesAndVersionsByParent(resolvedCartfile: resolvedCartfile.value!, tryCheckoutDirectory: false).single()
+				let result = project.requirementsByDependency(resolvedCartfile: resolvedCartfile.value!, tryCheckoutDirectory: false).single()
 				
 				expect(result?.value?.count) == 3
 				
