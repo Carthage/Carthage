@@ -1139,12 +1139,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 			}
 	}
-
-	/// Returns an array of CompatibilityInfo representing the pinned version
-	/// of each dependency in Cartfile.resolved which is incompatible with
-	/// one or more of the versions specified in a transitive dependency's
-	/// Cartfile.  The incompatible versions are stored in the
-	/// requirements property of the CompatibilityInfo object.
+	
+	/// Determines whether the requirements specified in this project's Cartfile.resolved
+	/// are compatible with the versions specified in the Cartfile for each of those projects.
+	///
+	/// Either emits a value to indicate success or an error.
 	public func verify(resolvedCartfile: ResolvedCartfile) -> SignalProducer<(), CarthageError> {
 		let resolvedCartfileProducer = SignalProducer(value: resolvedCartfile)
 			.promoteError(CarthageError.self)
