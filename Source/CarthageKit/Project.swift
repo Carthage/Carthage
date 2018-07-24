@@ -1150,11 +1150,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.promoteError(CarthageError.self)
 			.replayLazily(upTo: 1)
 
-		let resolvedVersions = resolvedCartfileProducer
-			.map { (resolved: ResolvedCartfile) -> [Dependency: PinnedVersion] in
-				return resolved.dependencies
-			}
-
 		let dependencyRequirements = resolvedCartfileProducer
 			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
 				return self.requirementsByDependency(resolvedCartfile: resolved, tryCheckoutDirectory: true)
@@ -1177,7 +1172,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return SignalProducer(value: dict)
 			}
 
-		return resolvedVersions.combineLatest(with: dependencyRequirements)
+		return resolvedCartfileProducer.map { (resolved: ResolvedCartfile) -> [Dependency: PinnedVersion] in
+				return resolved.dependencies
+			}
+			.combineLatest(with: dependencyRequirements)
 			.map { (dependencyInfo: ([Dependency: PinnedVersion], [Dependency: [Dependency: VersionSpecifier]])) -> [CompatibilityInfo] in
 				let (resolved, requirements) = dependencyInfo
 				var result: [CompatibilityInfo] = []
