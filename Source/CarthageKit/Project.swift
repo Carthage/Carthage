@@ -808,8 +808,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat, unarchive(archive:))
 			.flatMap(.concat) { unarchiveContentsDirectory -> SignalProducer<URL, CarthageError> in
 				let checkoutFolderURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
-				return self.removeItem(at: checkoutFolderURL)
-					.then(SignalProducer(value: unarchiveContentsDirectory))
+				try? FileManager.default.removeItem(at: checkoutFolderURL)
+				return SignalProducer(value: unarchiveContentsDirectory)
 			}
 			.flatMap(.concat) { FileManager.default.reactive.enumerator(at: $0, includingPropertiesForKeys: nil, options: [.skipsSubdirectoryDescendants], catchErrors: false).map { _, url in url } }
 			.flatMap(.concat) { itemURL -> SignalProducer<URL, CarthageError> in
