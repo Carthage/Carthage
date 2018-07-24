@@ -378,13 +378,13 @@ public final class Project { // swiftlint:disable:this type_body_length
 	func transitiveDependenciesAndVersionsByParent(
 		resolvedCartfile: ResolvedCartfile,
 		tryCheckoutDirectory: Bool
-	) -> SignalProducer<[Dependency: [(Dependency, VersionSpecifier)]], CarthageError> {
+	) -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> {
 		return SignalProducer(value: resolvedCartfile)
 			.map { resolvedCartfile -> [(Dependency, PinnedVersion)] in
 				return resolvedCartfile.dependencies
 					.map { k, v in (k, v) }
 			}
-			.flatMap(.merge) { dependencies -> SignalProducer<[Dependency: [(Dependency, VersionSpecifier)]], CarthageError> in
+			.flatMap(.merge) { dependencies -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
 				return SignalProducer(dependencies)
 					.flatMap(.merge) { dependencyAndPinnedVersion -> SignalProducer<(Dependency, (Dependency, VersionSpecifier)), CarthageError> in
 						let (dependency, pinnedVersion) = dependencyAndPinnedVersion
@@ -392,16 +392,22 @@ public final class Project { // swiftlint:disable:this type_body_length
 							.map { (dependency, $0) }
 					}
 					.collect()
-					.map { parentAndTransitiveDependencies in
-						var dict: [Dependency: [(Dependency, VersionSpecifier)]] = [:]
-						parentAndTransitiveDependencies.forEach { parentDependency, requirements in
-							var array = dict[parentDependency] ?? []
-							array.append(requirements)
-							dict[parentDependency] = array
+					.flatMap(.merge) { dependencyAndRequirements -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
+						var dict: [Dependency: [Dependency: VersionSpecifier]] = [:]
+						for (dependency, requirement) in dependencyAndRequirements {
+							let (requiredDependency, requiredVersion) = requirement
+							var requirementsDict = dict[dependency] ?? [:]
+
+							if requirementsDict[requiredDependency] != nil {
+								return SignalProducer(error: .duplicateDependencies([DuplicateDependency(dependency: requiredDependency, locations: [])]))
+							}
+
+							requirementsDict[requiredDependency] = requiredVersion
+							dict[dependency] = requirementsDict
 						}
-						return dict
+						return SignalProducer(value: dict)
 					}
-			}
+		}
 	}
 
 	/// Attempts to resolve a Git reference to a version.
@@ -1140,52 +1146,52 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Cartfile.  The incompatible versions are stored in the
 	/// requirements property of the CompatibilityInfo object.
 	public func verify(resolvedCartfile: ResolvedCartfile) -> SignalProducer<(), CarthageError> {
-		let resolvedCartfileProducer = SignalProducer(value: resolvedCartfile).replayLazily(upTo: 1)
+		let resolvedCartfileProducer = SignalProducer(value: resolvedCartfile)
+			.promoteError(CarthageError.self)
+			.replayLazily(upTo: 1)
 
-		let pinnedVersions = resolvedCartfileProducer
-			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
-				return SignalProducer(resolved.dependencies.map { k, v in (k, v) })
+		let resolvedVersions = resolvedCartfileProducer
+			.map { (resolved: ResolvedCartfile) -> [Dependency: PinnedVersion] in
+				return resolved.dependencies
 			}
-			.collect()
 
-		let versionSpecifiers = resolvedCartfileProducer
-			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<[Dependency: [(Dependency, VersionSpecifier)]], CarthageError> in
+		let dependencyRequirements = resolvedCartfileProducer
+			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
 				return self.transitiveDependenciesAndVersionsByParent(resolvedCartfile: resolved, tryCheckoutDirectory: true)
 			}
-			.map { (dependencyDict: [Dependency: [(Dependency, VersionSpecifier)]]) -> [Dependency: [(Dependency, VersionSpecifier)]] in
-				var dict: [Dependency: [(Dependency, VersionSpecifier)]] = [:]
-				dependencyDict.forEach { parentDependency, requirements in
-					requirements.forEach { dependency, version in
-						var array = dict[dependency] ?? []
-						array.append((parentDependency, version))
-						dict[dependency] = array
+			.flatMap(.merge) { dependencyDict -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
+				// Invert the requirements dictionary: [A: [B: 1, C: 2]] -> [B: [A: 1], C: [A: 2]]
+				var dict: [Dependency: [Dependency: VersionSpecifier]] = [:]
+				for (dependency, requirements) in dependencyDict {
+					for (requiredDependency, requiredVersion) in requirements {
+						var requirements = dict[requiredDependency] ?? [:]
+
+						if requirements[dependency] != nil {
+							return SignalProducer(error: .duplicateDependencies([DuplicateDependency(dependency: dependency, locations: [])]))
+						}
+
+						requirements[dependency] = requiredVersion
+						dict[requiredDependency] = requirements
 					}
 				}
-				return dict
+				return SignalProducer(value: dict)
 			}
 
-		return pinnedVersions.combineLatest(with: versionSpecifiers)
-			.map { (dependencyInfo: ([(Dependency, PinnedVersion)], [Dependency: [(Dependency, VersionSpecifier)]])) -> [CompatibilityInfo] in
-				let (dependenciesWithPinnedVersion, dependenciesWithVersionSpecifiers) = dependencyInfo
+		return resolvedVersions.combineLatest(with: dependencyRequirements)
+			.map { (dependencyInfo: ([Dependency: PinnedVersion], [Dependency: [Dependency: VersionSpecifier]])) -> [CompatibilityInfo] in
+				let (resolved, requirements) = dependencyInfo
 				var result: [CompatibilityInfo] = []
-				for (dependency, pinnedVersion) in dependenciesWithPinnedVersion {
+				resolved.forEach { dependency, pinnedVersion in
 					// Skip non-semantic resolved versions and transitive dependencies without semantic versions
-					if case .success = SemanticVersion.from(pinnedVersion), let requirements = dependenciesWithVersionSpecifiers[dependency] {
+					if case .success = SemanticVersion.from(pinnedVersion), let requirements = requirements[dependency] {
 						result.append(CompatibilityInfo(dependency: dependency, pinnedVersion: pinnedVersion, requirements: requirements))
 					}
 				}
 				return result
 			}
 			.flatMap(.merge) { (compatibilityInfos: [CompatibilityInfo]) -> SignalProducer<(), CarthageError> in
-				let incompatibleInfos: [CompatibilityInfo] = compatibilityInfos.compactMap { compatibilityInfo in
-					let incompatibleRequirements = compatibilityInfo.incompatibleRequirements
-					if !incompatibleRequirements.isEmpty {
-						return CompatibilityInfo(
-							dependency: compatibilityInfo.dependency,
-							pinnedVersion: compatibilityInfo.pinnedVersion,
-							requirements: incompatibleRequirements)
-					}
-					return nil
+				let incompatibleInfos: [CompatibilityInfo] = compatibilityInfos.filter { compatibilityInfo in
+					return !compatibilityInfo.incompatibleRequirements.isEmpty
 				}
 				return incompatibleInfos.isEmpty ? SignalProducer(value: ()) : SignalProducer(error: .invalidResolvedCartfile(incompatibleInfos))
 			}
