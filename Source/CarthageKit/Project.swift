@@ -991,7 +991,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// be rebuilt unless otherwise specified via build options.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithOptions( // swiftlint:disable:this function_body_length
+	public func buildCheckedOutDependenciesWithOptions( // swiftlint:disable:this cyclomatic_complexity function_body_length
 		_ options: BuildOptions,
 		dependenciesToBuild: [String]? = nil,
 		sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
@@ -1094,7 +1094,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 							if options.cacheBuilds {
 								// Create a version file for a dependency with no shared schemes
 								// so that its cache is not always considered invalid.
-								return createVersionFileForCommitish(version.commitish, dependencyName: dependency.name, platforms: options.platforms, buildProducts: [], rootDirectoryURL: self.directoryURL)
+								return createVersionFileForCommitish(version.commitish,
+																	 dependencyName: dependency.name,
+																	 platforms: options.platforms,
+																	 buildProducts: [],
+																	 rootDirectoryURL: self.directoryURL)
 									.then(BuildSchemeProducer.empty)
 							}
 							return .empty

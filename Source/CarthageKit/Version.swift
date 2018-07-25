@@ -199,6 +199,7 @@ extension SemanticVersion: Scannable {
 			return ScannableError(message: "Pre-release component is empty, in \"\(fullVersion)\"")
 		}
 
+		// swiftlint:disable:next first_where
 		guard components
 			.filter({ !$0.containsAny(SemanticVersion.semVerDecimalDigits.inverted) && $0 != "0" })
 			// MUST NOT include leading zeros
