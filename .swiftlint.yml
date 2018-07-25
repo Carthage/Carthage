@@ -39,6 +39,9 @@ file_length:
 file_header:
   required_pattern: ''
 
+function_body_length:
+  warning: 60
+
 trailing_comma:
   mandatory_comma: true
 
