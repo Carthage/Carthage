@@ -148,13 +148,15 @@ extension SemanticVersion: Scannable {
 			return .failure(ScannableError(message: "expected valid version", currentLine: scanner.currentLine))
 		}
 
-		if let buildMetadata = buildMetadata,
+		if
+			let buildMetadata = buildMetadata,
 			let error = SemanticVersion.validateBuildMetadata(buildMetadata, fullVersion: version)
 		{
 			return .failure(error)
 		}
-		
-		if let preRelease = preRelease,
+
+		if
+			let preRelease = preRelease,
 			let error = SemanticVersion.validatePreRelease(preRelease, fullVersion: version)
 		{
 			return .failure(error)
@@ -199,10 +201,9 @@ extension SemanticVersion: Scannable {
 
 		guard components
 			.filter({ !$0.containsAny(SemanticVersion.semVerDecimalDigits.inverted) && $0 != "0" })
-			.first(where: { $0.hasPrefix("0")}) // MUST NOT include leading zeros
-			== nil else
-		{
-			return ScannableError(message: "Pre-release contains leading zero component, in \"\(fullVersion)\"")
+			// MUST NOT include leading zeros
+			.first(where: { $0.hasPrefix("0") }) == nil else {
+				return ScannableError(message: "Pre-release contains leading zero component, in \"\(fullVersion)\"")
 		}
 		return nil
 	}
