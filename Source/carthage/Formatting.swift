@@ -57,7 +57,7 @@ public struct ColorOptions: OptionsProtocol {
 		let path: Wrap
 
 		/// Wraps a string with terminal colors and formatting or passes it through.
-		typealias Wrap = (_ string: String) -> String
+		typealias Wrap = (_ string: String) -> String // swiftlint:disable:this nesting
 
 		init(_ isColorful: Bool) {
 			self.isColorful = isColorful
