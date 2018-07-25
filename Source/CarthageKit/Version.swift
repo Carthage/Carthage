@@ -138,7 +138,7 @@ extension SemanticVersion: Scannable {
 
 		let hasPatchComponent = components.count > 2
 		let patch = parseVersion(at: 2)
-		guard (!hasPatchComponent || patch != nil) else {
+		guard !hasPatchComponent || patch != nil else {
 			return .failure(ScannableError(message: "invalid patch version", currentLine: scanner.currentLine))
 		}
 
