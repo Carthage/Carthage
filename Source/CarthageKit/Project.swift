@@ -789,7 +789,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 		_ cartfile: ResolvedCartfile,
 		dependenciesToInclude: [String]? = nil
 	) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> {
+		// swiftlint:disable:next nesting
 		typealias DependencyGraph = [Dependency: Set<Dependency>]
+
 		// A resolved cartfile already has all the recursive dependencies. All we need to do is sort
 		// out the relationships between them. Loading the cartfile will each will give us its
 		// dependencies. Building a recursive lookup table with this information will let us sort
