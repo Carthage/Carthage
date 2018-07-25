@@ -349,7 +349,7 @@ extension String {
 		// precedence than non-numeric identifiers"
 
 		guard let numericSelf = self.numericValue else {
-			guard let _ = other.numericValue else {
+			guard other.numericValue != nil else {
 				// other is not numeric, self is not numeric, compare strings
 				return self.compare(other) == .orderedAscending
 			}
