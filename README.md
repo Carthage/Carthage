@@ -171,7 +171,7 @@ Because unit test targets are missing the _Linked Frameworks and Libraries_ sect
 
 In the Test target under the _Build Settings_ tab, add `@loader_path/Frameworks` to the _Runpath Search Paths_ if it isn't already present.
 
-In rare cases, you may want to also copy each dependency into the build product (e.g., to embed dependencies within the outer framework, or make sure dependencies are present in a test bundle). To do this, create a new _Copy Files_ build phase with the _Frameworks_ destination, then add the framework reference there as well.
+In rare cases, you may want to also copy each dependency into the build product (e.g., to embed dependencies within the outer framework, or make sure dependencies are present in a test bundle). To do this, create a new _Copy Files_ build phase with the _Frameworks_ destination, then add the framework reference there as well. You shouldn't use the `carthage copy-frameworks` command since test bundles don't need frameworks stripped, and running concurrent instances of `copy-frameworks` (with parallel builds turn on) is not supported.
 
 ### Upgrading frameworks
 
