@@ -573,6 +573,128 @@ class ProjectSpec: QuickSpec {
 				expect(result?.value?.count) == 3
 			}
 		}
+		
+		describe("checkoutResolvedDependencies") {
+			
+			//setup the working directory
+			let projectTestWorkingDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!.appendingPathComponent(Constants.bundleIdentifier).appendingPathComponent("unit_tests").appendingPathComponent(UUID().uuidString)
+			try! FileManager.default.createDirectory(at: projectTestWorkingDirectory, withIntermediateDirectories: true, attributes: nil)
+			
+			//add some content
+			let binaryDependencyMockResourceFileName = UUID().uuidString
+			let binaryDependencyMockResourceFile  = projectTestWorkingDirectory.appendingPathComponent("\(binaryDependencyMockResourceFileName).txt")
+			let binaryDependencyMockResourceFileContents = UUID().uuidString
+			try! binaryDependencyMockResourceFileContents.write(to: binaryDependencyMockResourceFile, atomically: true, encoding: .utf8)
+			
+			//produce the mock zip file
+			let binaryDependencyMockZipName = UUID().uuidString
+			let binaryDependencyMockZip = projectTestWorkingDirectory.appendingPathComponent("\(binaryDependencyMockZipName).zip")
+			_ = zip(paths: [binaryDependencyMockResourceFile.lastPathComponent], into: binaryDependencyMockZip, workingDirectory: projectTestWorkingDirectory.path).wait()
+			
+			//make sure that the binaryDependencyZip file was created
+			XCTAssertTrue(FileManager.default.fileExists(atPath: binaryDependencyMockZip.path))
+			
+			//create the binary dependency definition file
+			let binaryDependencyDefinitionName = UUID().uuidString
+			let binaryDependencyDefinitionURL = projectTestWorkingDirectory.appendingPathComponent("\(binaryDependencyDefinitionName).json")
+			try!
+			"""
+			{
+				"1.0.0": "file://\(binaryDependencyMockZip.path)"
+			}
+			"""
+			.write(to: binaryDependencyDefinitionURL, atomically: true, encoding: .utf8)
+			
+			//create a Cartfile
+			let cartfileURL = projectTestWorkingDirectory.appendingPathComponent("Cartfile")
+			try!
+			"""
+			binary "file://\(binaryDependencyDefinitionURL.path)"
+			"""
+			.write(to: cartfileURL, atomically: true, encoding: .utf8)
+			
+			//create the Cartfile.resolved
+			let cartfileResolvedURL = projectTestWorkingDirectory.appendingPathComponent("Cartfile.resolved")
+			try!
+			"""
+			binary "file://\(binaryDependencyDefinitionURL)" "1.0.0"
+			"""
+			.write(to: cartfileResolvedURL, atomically: true, encoding: .utf8)
+			
+			//initialize the project
+			let project = Project(directoryURL: projectTestWorkingDirectory)
+			let checkoutDirectory = projectTestWorkingDirectory.appendingPathComponent("Carthage/Checkouts")
+			
+			_ = project.checkoutResolvedDependencies(buildOptions: nil).wait()
+			
+			it("should copy the binary depedencies to Carthage/Checkouts folder") {
+				
+				let binaryDependencyMockResourceFile = checkoutDirectory.appendingPathComponent("\(binaryDependencyDefinitionName)/\(binaryDependencyMockResourceFileName).txt")
+				expect(FileManager.default.fileExists(atPath: binaryDependencyMockResourceFile.path)).to(beTrue())
+				expect(expression: { try String(contentsOf: binaryDependencyMockResourceFile) }).to(equal(binaryDependencyMockResourceFileContents))
+			}
+		}
+		
+		describe("updateDependencies should checkout the binary dependencies") {
+			
+			//setup the working directory
+			let projectTestWorkingDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!.appendingPathComponent(Constants.bundleIdentifier).appendingPathComponent("unit_tests").appendingPathComponent(UUID().uuidString)
+			try! FileManager.default.createDirectory(at: projectTestWorkingDirectory, withIntermediateDirectories: true, attributes: nil)
+			
+			//add some content
+			let binaryDependencyMockResourceFileName = UUID().uuidString
+			let binaryDependencyMockResourceFile  = projectTestWorkingDirectory.appendingPathComponent("\(binaryDependencyMockResourceFileName).txt")
+			let binaryDependencyMockResourceFileContents = UUID().uuidString
+			try! binaryDependencyMockResourceFileContents.write(to: binaryDependencyMockResourceFile, atomically: true, encoding: .utf8)
+			
+			//produce the mock zip file
+			let binaryDependencyMockZipName = UUID().uuidString
+			let binaryDependencyMockZip = projectTestWorkingDirectory.appendingPathComponent("\(binaryDependencyMockZipName).zip")
+			_ = zip(paths: [binaryDependencyMockResourceFile.lastPathComponent], into: binaryDependencyMockZip, workingDirectory: projectTestWorkingDirectory.path).wait()
+			
+			//make sure that the binaryDependencyZip file was created
+			XCTAssertTrue(FileManager.default.fileExists(atPath: binaryDependencyMockZip.path))
+			
+			//create the binary dependency definition file
+			let binaryDependencyDefinitionName = UUID().uuidString
+			let binaryDependencyDefinitionURL = projectTestWorkingDirectory.appendingPathComponent("\(binaryDependencyDefinitionName).json")
+			try!
+			"""
+			{
+				"1.0.0": "file://\(binaryDependencyMockZip.path)"
+			}
+			"""
+			.write(to: binaryDependencyDefinitionURL, atomically: true, encoding: .utf8)
+			
+			//create a Cartfile
+			let cartfileURL = projectTestWorkingDirectory.appendingPathComponent("Cartfile")
+			try!
+			"""
+			binary "file://\(binaryDependencyDefinitionURL.path)"
+			"""
+			.write(to: cartfileURL, atomically: true, encoding: .utf8)
+			
+			//create the Cartfile.resolved
+			let cartfileResolvedURL = projectTestWorkingDirectory.appendingPathComponent("Cartfile.resolved")
+			try!
+			"""
+			binary "file://\(binaryDependencyDefinitionURL)" "1.0.0"
+			"""
+			.write(to: cartfileResolvedURL, atomically: true, encoding: .utf8)
+			
+			//initialize the project
+			let project = Project(directoryURL: projectTestWorkingDirectory)
+			let checkoutDirectory = projectTestWorkingDirectory.appendingPathComponent("Carthage/Checkouts")
+			
+			_ = project.updateDependencies(shouldCheckout: true, useNewResolver: true, buildOptions: BuildOptions(configuration: "Release"), dependenciesToUpdate: nil).wait()
+			
+			it("should copy the binary depedencies to Carthage/Checkouts folder") {
+				
+				let binaryDependencyMockResourceFile = checkoutDirectory.appendingPathComponent("\(binaryDependencyDefinitionName)/\(binaryDependencyMockResourceFileName).txt")
+				expect(FileManager.default.fileExists(atPath: binaryDependencyMockResourceFile.path)).to(beTrue())
+				expect(expression: { try String(contentsOf: binaryDependencyMockResourceFile) }).to(equal(binaryDependencyMockResourceFileContents))
+			}
+		}
 	}
 }
 
