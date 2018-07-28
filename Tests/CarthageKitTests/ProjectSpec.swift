@@ -592,7 +592,10 @@ class ProjectSpec: QuickSpec {
 			_ = zip(paths: [binaryDependencyMockResourceFile.lastPathComponent], into: binaryDependencyMockZip, workingDirectory: projectTestWorkingDirectory.path).wait()
 			
 			//make sure that the binaryDependencyZip file was created
-			XCTAssertTrue(FileManager.default.fileExists(atPath: binaryDependencyMockZip.path))
+			it("should create the binary dependency mock arhive", closure: {
+				
+				expect(FileManager.default.fileExists(atPath: binaryDependencyMockZip.path)).to(beTrue())
+			})
 			
 			//create the binary dependency definition file
 			let binaryDependencyDefinitionName = UUID().uuidString
@@ -653,7 +656,10 @@ class ProjectSpec: QuickSpec {
 			_ = zip(paths: [binaryDependencyMockResourceFile.lastPathComponent], into: binaryDependencyMockZip, workingDirectory: projectTestWorkingDirectory.path).wait()
 			
 			//make sure that the binaryDependencyZip file was created
-			XCTAssertTrue(FileManager.default.fileExists(atPath: binaryDependencyMockZip.path))
+			it("should create the binary dependency mock arhive", closure: {
+				
+				expect(FileManager.default.fileExists(atPath: binaryDependencyMockZip.path)).to(beTrue())
+			})
 			
 			//create the binary dependency definition file
 			let binaryDependencyDefinitionName = UUID().uuidString
