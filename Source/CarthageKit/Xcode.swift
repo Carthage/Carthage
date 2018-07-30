@@ -1188,21 +1188,16 @@ private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, Carthag
 public func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 	let bundle = Bundle(path: packageURL.path)
 
-	switch bundle?.packageType {
-	case .framework?, .bundle?:
-		if let binaryName = bundle?.object(forInfoDictionaryKey: "CFBundleExecutable") as? String {
-			return .success(packageURL.appendingPathComponent(binaryName))
-		}
+	if let executableURL = bundle?.executableURL {
+		return .success(executableURL)
+	}
 
-	case .dSYM?:
+	if bundle?.packageType == .dSYM {
 		let binaryName = packageURL.deletingPathExtension().deletingPathExtension().lastPathComponent
 		if !binaryName.isEmpty {
 			let binaryURL = packageURL.appendingPathComponent("Contents/Resources/DWARF/\(binaryName)")
 			return .success(binaryURL)
 		}
-
-	default:
-		break
 	}
 
 	return .failure(.readFailed(packageURL, nil))
