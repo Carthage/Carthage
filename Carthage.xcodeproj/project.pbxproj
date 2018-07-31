@@ -18,6 +18,7 @@
 		3BE5BD9A1E4E5A7B00DDDC45 /* SwiftVersionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */; };
 		4396DC8F20E4E8A8002EE967 /* MachHeaderSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4396DC8E20E4E8A8002EE967 /* MachHeaderSpec.swift */; };
 		43D7809520E4324E004BCDD6 /* MachHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4396DC8C20E3EF5C002EE967 /* MachHeader.swift */; };
+		4E353ACE2110E1CF006322D7 /* GlobalArguments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E353ACD2110E1CF006322D7 /* GlobalArguments.swift */; };
 		5482DAF11A3849D700197FB8 /* CopyFrameworks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */; };
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */; };
@@ -188,6 +189,7 @@
 		3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SwiftVersionError.swift; sourceTree = "<group>"; };
 		4396DC8C20E3EF5C002EE967 /* MachHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MachHeader.swift; sourceTree = "<group>"; };
 		4396DC8E20E4E8A8002EE967 /* MachHeaderSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachHeaderSpec.swift; sourceTree = "<group>"; };
+		4E353ACD2110E1CF006322D7 /* GlobalArguments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalArguments.swift; sourceTree = "<group>"; };
 		5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CopyFrameworks.swift; sourceTree = "<group>"; };
 		54911EF21A1D34EC00FFAE5F /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
 		5499CA961A2394B700783309 /* Components.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Components.plist; sourceTree = "<group>"; };
@@ -426,6 +428,7 @@
 				D05BD1981A26864F00A36A0E /* Extensions.swift */,
 				D02DB8DF1A4BC9B600097CDE /* Fetch.swift */,
 				67C870071A7A04E100F6647C /* Formatting.swift */,
+				4E353ACD2110E1CF006322D7 /* GlobalArguments.swift */,
 				D0D1211B19E87861005E4BAA /* main.swift */,
 				F128A7191B463D490044368C /* Outdated.swift */,
 				D0AAC23F1A14933100060F2E /* Update.swift */,
@@ -913,6 +916,7 @@
 				D095BA3C1A187D40007F15D6 /* Bootstrap.swift in Sources */,
 				54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */,
 				D0AAC2401A14933100060F2E /* Update.swift in Sources */,
+				4E353ACE2110E1CF006322D7 /* GlobalArguments.swift in Sources */,
 				D05BD1991A26864F00A36A0E /* Extensions.swift in Sources */,
 				6724C86A1A850A4600E47F00 /* Environment.swift in Sources */,
 				D03B32BF19EA49D8007788BE /* Build.swift in Sources */,

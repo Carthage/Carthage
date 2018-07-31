@@ -12,7 +12,9 @@ guard ensureGitVersion().first()?.value == true else {
 	exit(EXIT_FAILURE)
 }
 
-if let remoteVersion = remoteVersion(), CarthageKitVersion.current.value < remoteVersion {
+let globalOptions = GlobalOptions.consume(globalArguments: &CommandLine.arguments)
+
+if !globalOptions.skipRemoteVersionCheck, let remoteVersion = remoteVersion(), CarthageKitVersion.current.value < remoteVersion {
 	fputs("Please update to the latest Carthage version: \(remoteVersion). You currently are on \(CarthageKitVersion.current.value)" + "\n", stderr)
 }
 
