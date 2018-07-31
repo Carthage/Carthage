@@ -16,7 +16,8 @@ public func remoteVersion() -> SemanticVersion? {
 		.attemptMap { release -> Result<SemanticVersion, CarthageError> in
 			return SemanticVersion.from(Scanner(string: release.tag)).mapError(CarthageError.init(scannableError:))
 		}
-		.timeout(after: 0.5, raising: CarthageError.gitHubAPITimeout, on: QueueScheduler.main)
+		// Add timeout on different queue so that `first()` doesn't block timeout scheduling
+		.timeout(after: 0.5, raising: CarthageError.gitHubAPITimeout, on: QueueScheduler(qos: .default))
 		.first()
 
 	return latestRemoteVersion?.value
