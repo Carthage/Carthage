@@ -20,7 +20,7 @@ public func zip(paths: [String], into archiveURL: URL, workingDirectory: String)
 /// extension to detect archive type, then sends the file URL to that directory.
 public func unarchive(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
 	switch fileURL.pathExtension {
-	case "gz", "tgz", "bz2":
+	case "gz", "tgz", "bz2", "xz":
 		return untar(archive: fileURL)
 	default:
 		return unzip(archive: fileURL)
