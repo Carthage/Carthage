@@ -4,7 +4,7 @@ import ReactiveTask
 import Result
 import Tentacle
 
-/// Synchronously returns the newest Carthage release version,
+/// Synchronously returns the semantic version of the newest release,
 /// if the given producer emits it within a reasonable timeframe.
 ///
 public func remoteVersion(_ remoteVersionProducer: SignalProducer<Release, CarthageError>) -> SemanticVersion? {
