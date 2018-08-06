@@ -15,7 +15,7 @@ private extension CarthageError {
 	}
 }
 
-class VerifySpec: QuickSpec {
+class ValidateSpec: QuickSpec {
 	override func spec() {
 		let validCartfile = """
 					github "Alamofire/Alamofire" "4.6.0"
@@ -63,12 +63,12 @@ class VerifySpec: QuickSpec {
 			}
 		}
 		
-		describe("verify") {
+		describe("validate") {
 			it("should identify a valid Cartfile.resolved as compatible") {
 				let resolvedCartfile = ResolvedCartfile.from(string: validCartfile)
 				let project = Project(directoryURL: URL(string: "file://fake")!)
 				
-				let result = project.verify(resolvedCartfile: resolvedCartfile.value!).single()
+				let result = project.validate(resolvedCartfile: resolvedCartfile.value!).single()
 				
 				expect(result?.value).notTo(beNil())
 			}
@@ -83,7 +83,7 @@ class VerifySpec: QuickSpec {
 				let resolvedCartfile = ResolvedCartfile.from(string: invalidCartfile)
 				let project = Project(directoryURL: URL(string: "file://fake")!)
 				
-				let error = project.verify(resolvedCartfile: resolvedCartfile.value!).single()?.error
+				let error = project.validate(resolvedCartfile: resolvedCartfile.value!).single()?.error
 				let infos = error?.compatibilityInfos
 				
 				expect(infos?[0].dependency) == alamofireDependency

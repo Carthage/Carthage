@@ -30,7 +30,7 @@ registry.register(FetchCommand())
 registry.register(OutdatedCommand())
 registry.register(UpdateCommand())
 registry.register(VersionCommand())
-registry.register(VerifyCommand())
+registry.register(ValidateCommand())
 
 let helpCommand = HelpCommand(registry: registry)
 registry.register(helpCommand)

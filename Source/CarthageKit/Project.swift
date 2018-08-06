@@ -1145,12 +1145,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 			}
 	}
-	
+    
 	/// Determines whether the requirements specified in this project's Cartfile.resolved
 	/// are compatible with the versions specified in the Cartfile for each of those projects.
 	///
 	/// Either emits a value to indicate success or an error.
-	public func verify(resolvedCartfile: ResolvedCartfile) -> SignalProducer<(), CarthageError> {
+	public func validate(resolvedCartfile: ResolvedCartfile) -> SignalProducer<(), CarthageError> {
 		let resolvedCartfileProducer = SignalProducer(value: resolvedCartfile)
 			.promoteError(CarthageError.self)
 			.replayLazily(upTo: 1)
