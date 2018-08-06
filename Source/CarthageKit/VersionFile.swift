@@ -297,12 +297,12 @@ public func createVersionFileForCommitish(
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
 	var platformCaches: [String: [CachedFramework]] = [:]
-	
+
 	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
 	for platform in platformsToCache {
 		platformCaches[platform.rawValue] = []
 	}
-	
+
 	if !buildProducts.isEmpty {
 		return SignalProducer<URL, CarthageError>(buildProducts)
 			.flatMap(.merge) { url -> SignalProducer<(String, (String, String)), CarthageError> in
