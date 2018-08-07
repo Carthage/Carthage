@@ -1,5 +1,5 @@
 github "antitypical/Result" ~> 4.0
-github "Carthage/ReactiveTask" "master"
+github "Carthage/ReactiveTask" ~> 0.15
 github "Carthage/Commandant" ~> 0.15
 github "jdhealy/PrettyColors" ~> 5.0
 github "ReactiveCocoa/ReactiveSwift" ~> 4.0
