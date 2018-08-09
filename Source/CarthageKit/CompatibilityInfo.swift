@@ -1,4 +1,5 @@
 import Foundation
+import Result
 
 /// Identifies a dependency, its pinned version, and its compatible and incompatible requirements
 public struct CompatibilityInfo {
@@ -25,6 +26,26 @@ public struct CompatibilityInfo {
 	/// Requirements which are not compatible with the pinned version of this dependency
 	public var incompatibleRequirements: [Dependency: VersionSpecifier] {
 		return requirements.filter { _, version in !version.isSatisfied(by: pinnedVersion) }
+	}
+
+	/// Accepts a dictionary which maps a dependency to the pinned versions of the dependencies it requires.
+	/// Returns an inverted dictionary which maps a dependency to the dependencies that require it and the pinned version required.
+	/// e.g. [A: [B: 1, C: 2]] -> [B: [A: 1], C: [A: 2]]
+	public static func invert(requirements: [Dependency: [Dependency: VersionSpecifier]]) -> Result<[Dependency: [Dependency: VersionSpecifier]], CarthageError> {
+		var invertedRequirements: [Dependency: [Dependency: VersionSpecifier]] = [:]
+		for (dependency, requirements) in requirements {
+			for (requiredDependency, requiredVersion) in requirements {
+				var requirements = invertedRequirements[requiredDependency] ?? [:]
+
+				if requirements[dependency] != nil {
+					return .init(error: .duplicateDependencies([DuplicateDependency(dependency: dependency, locations: [])]))
+				}
+
+				requirements[dependency] = requiredVersion
+				invertedRequirements[requiredDependency] = requirements
+			}
+		}
+		return .init(invertedRequirements)
 	}
 }
 

@@ -1158,22 +1158,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
 				return self.requirementsByDependency(resolvedCartfile: resolved, tryCheckoutDirectory: true)
 			}
-			.flatMap(.merge) { dependencyDict -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
-				// Invert the requirements dictionary: [A: [B: 1, C: 2]] -> [B: [A: 1], C: [A: 2]]
-				var dict: [Dependency: [Dependency: VersionSpecifier]] = [:]
-				for (dependency, requirements) in dependencyDict {
-					for (requiredDependency, requiredVersion) in requirements {
-						var requirements = dict[requiredDependency] ?? [:]
-
-						if requirements[dependency] != nil {
-							return SignalProducer(error: .duplicateDependencies([DuplicateDependency(dependency: dependency, locations: [])]))
-						}
-
-						requirements[dependency] = requiredVersion
-						dict[requiredDependency] = requirements
-					}
-				}
-				return SignalProducer(value: dict)
+			.flatMap(.merge) { requirements -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
+				return .init(result: CompatibilityInfo.invert(requirements: requirements))
 			}
 
 		return resolvedCartfileProducer.map { (resolved: ResolvedCartfile) -> [Dependency: PinnedVersion] in
