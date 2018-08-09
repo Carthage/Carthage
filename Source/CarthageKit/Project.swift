@@ -381,10 +381,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 	) -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> {
 		return SignalProducer(value: resolvedCartfile)
 			.map { resolvedCartfile -> [(Dependency, PinnedVersion)] in
-				return resolvedCartfile.dependencies
-					.map { k, v in (k, v) }
+				return Array(resolvedCartfile.dependencies)
 			}
-			.flatMap(.merge) { dependencies -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
+			.flatMap(.concurrent(limit: 4)) { dependencies -> SignalProducer<[Dependency: [Dependency: VersionSpecifier]], CarthageError> in
 				return SignalProducer(dependencies)
 					.flatMap(.merge) { dependencyAndPinnedVersion -> SignalProducer<(Dependency, (Dependency, VersionSpecifier)), CarthageError> in
 						let (dependency, pinnedVersion) = dependencyAndPinnedVersion
