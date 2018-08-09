@@ -3,6 +3,8 @@ import Result
 
 /// Identifies a dependency, its pinned version, and its compatible and incompatible requirements
 public struct CompatibilityInfo {
+	public typealias Requirements = [Dependency: [Dependency: VersionSpecifier]]
+
 	/// The dependency
 	public let dependency: Dependency
 
@@ -31,8 +33,8 @@ public struct CompatibilityInfo {
 	/// Accepts a dictionary which maps a dependency to the pinned versions of the dependencies it requires.
 	/// Returns an inverted dictionary which maps a dependency to the dependencies that require it and the pinned version required.
 	/// e.g. [A: [B: 1, C: 2]] -> [B: [A: 1], C: [A: 2]]
-	public static func invert(requirements: [Dependency: [Dependency: VersionSpecifier]]) -> Result<[Dependency: [Dependency: VersionSpecifier]], CarthageError> {
-		var invertedRequirements: [Dependency: [Dependency: VersionSpecifier]] = [:]
+	public static func invert(requirements: Requirements) -> Result<Requirements, CarthageError> {
+		var invertedRequirements: Requirements = [:]
 		for (dependency, requirements) in requirements {
 			for (requiredDependency, requiredVersion) in requirements {
 				var requirements = invertedRequirements[requiredDependency] ?? [:]
