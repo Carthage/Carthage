@@ -31,7 +31,7 @@ public struct CompatibilityInfo {
 	}
 
 	/// Accepts a dictionary which maps a dependency to the pinned versions of the dependencies it requires.
-	/// Returns an inverted dictionary which maps a dependency to the dependencies that require it and the pinned version required.
+	/// Returns an inverted dictionary which maps a dependency to the dependencies that require it and the pinned version required
 	/// e.g. [A: [B: 1, C: 2]] -> [B: [A: 1], C: [A: 2]]
 	public static func invert(requirements: Requirements) -> Result<Requirements, CarthageError> {
 		var invertedRequirements: Requirements = [:]
@@ -48,6 +48,21 @@ public struct CompatibilityInfo {
 			}
 		}
 		return .init(invertedRequirements)
+	}
+
+	/// Constructs CompatibilityInfo objects for dependencies with incompatibilities
+	/// given a dictionary of dependencies with pinned versions and their corresponding requirements
+	public static func incompatibilities(for dependencies: [Dependency: PinnedVersion], requirements: CompatibilityInfo.Requirements) -> Result<[CompatibilityInfo], CarthageError> {
+		return CompatibilityInfo.invert(requirements: requirements)
+			.map { invertedRequirements -> [CompatibilityInfo] in
+				return dependencies.compactMap { dependency, version in
+					if case .success = SemanticVersion.from(version), let requirements = invertedRequirements[dependency] {
+						return CompatibilityInfo(dependency: dependency, pinnedVersion: version, requirements: requirements)
+					}
+					return nil
+				}
+				.filter { !$0.incompatibleRequirements.isEmpty }
+			}
 	}
 }
 

@@ -1154,31 +1154,19 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.promoteError(CarthageError.self)
 			.replayLazily(upTo: 1)
 
-		let invertedRequirements = resolvedCartfileProducer
+		let requirementsProducer = resolvedCartfileProducer
 			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<CompatibilityInfo.Requirements, CarthageError> in
 				return self.requirementsByDependency(resolvedCartfile: resolved, tryCheckoutDirectory: true)
-			}
-			.flatMap(.merge) { requirements -> SignalProducer<CompatibilityInfo.Requirements, CarthageError> in
-				return .init(result: CompatibilityInfo.invert(requirements: requirements))
 			}
 
 		return resolvedCartfileProducer.map { (resolved: ResolvedCartfile) -> [Dependency: PinnedVersion] in
 				return resolved.dependencies
 			}
-			.zip(with: invertedRequirements)
-			.flatMap(.concat) { (dependencyInfo: ([Dependency: PinnedVersion], CompatibilityInfo.Requirements)) -> SignalProducer<CompatibilityInfo, CarthageError> in
-				let (resolved, invertedRequirements) = dependencyInfo
-				var result: [CompatibilityInfo] = []
-				resolved.forEach { dependency, pinnedVersion in
-					// Skip non-semantic resolved versions and transitive dependencies without semantic versions
-					if case .success = SemanticVersion.from(pinnedVersion), let requirements = invertedRequirements[dependency] {
-						result.append(CompatibilityInfo(dependency: dependency, pinnedVersion: pinnedVersion, requirements: requirements))
-					}
-				}
-				return .init(result)
+			.zip(with: requirementsProducer)
+			.flatMap(.concat) { (info: ([Dependency: PinnedVersion], CompatibilityInfo.Requirements)) -> SignalProducer<[CompatibilityInfo], CarthageError> in
+				let (dependencies, requirements) = info
+				return .init(result: CompatibilityInfo.incompatibilities(for: dependencies, requirements: requirements))
 			}
-			.filter { !$0.incompatibleRequirements.isEmpty }
-			.collect()
 			.flatMap(.concat) { incompatibilities -> SignalProducer<(), CarthageError> in
 				return incompatibilities.isEmpty ? SignalProducer(value: ()) : SignalProducer(error: .invalidResolvedCartfile(incompatibilities))
 			}
