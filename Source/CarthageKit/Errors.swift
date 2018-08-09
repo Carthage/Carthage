@@ -340,15 +340,17 @@ extension CarthageError: CustomStringConvertible {
 
 		case let .invalidResolvedCartfile(incompatibilities):
 			var message = "The following incompatibilities were found in Cartfile.resolved:\n"
-			var lines: [String] = []
-			let sortedIncompatibilities = incompatibilities.sorted(by: { $0.dependency.name < $1.dependency.name })
-			sortedIncompatibilities.forEach { incompatibility in
-				let sortedRequirements = incompatibility.incompatibleRequirements.sorted(by: { $0.0.name < $1.0.name })
-				for (dependency, version) in sortedRequirements {
-					lines.append("* \(incompatibility.dependency.name) \(incompatibility.pinnedVersion) is incompatible with \(dependency.name) \(version)")
+			message += incompatibilities
+				.sorted { $0.dependency.name < $1.dependency.name }
+				.flatMap { incompatibility -> [String] in
+					let sortedRequirements = incompatibility
+						.incompatibleRequirements
+						.sorted { $0.0.name < $1.0.name }
+					return sortedRequirements.map { dependency, version in
+						return "* \(incompatibility.dependency.name) \(incompatibility.pinnedVersion) is incompatible with \(dependency.name) \(version)"
+					}
 				}
-			}
-			message += lines.joined(separator: "\n")
+				.joined(separator: "\n")
 			return message
 		}
 	}
