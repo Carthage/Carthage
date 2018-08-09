@@ -1108,8 +1108,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 	private func symlinkBuildPathIfNeeded(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<(), CarthageError> {
 		return dependencySet(for: dependency, version: version)
 			.flatMap(.merge) { dependencies -> SignalProducer<(), CarthageError> in
-				// Don't create symlink the build folder if the dependencies doesn't have
-				// any Carthage dependencies.
+				// Don't symlink the build folder if the dependency doesn't have
+				// any Carthage dependencies
 				if dependencies.isEmpty {
 					return .empty
 				}
