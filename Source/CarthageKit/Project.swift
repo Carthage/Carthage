@@ -1144,7 +1144,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 			}
 	}
-    
+
 	/// Determines whether the requirements specified in this project's Cartfile.resolved
 	/// are compatible with the versions specified in the Cartfile for each of those projects.
 	///
@@ -1179,8 +1179,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 		return resolvedCartfileProducer.map { (resolved: ResolvedCartfile) -> [Dependency: PinnedVersion] in
 				return resolved.dependencies
 			}
-			.combineLatest(with: dependencyRequirements)
-			.map { (dependencyInfo: ([Dependency: PinnedVersion], [Dependency: [Dependency: VersionSpecifier]])) -> [CompatibilityInfo] in
+			.zip(with: dependencyRequirements)
+			.flatMap(.concat) { (dependencyInfo: ([Dependency: PinnedVersion], [Dependency: [Dependency: VersionSpecifier]])) ->
+					SignalProducer<CompatibilityInfo, CarthageError> in
 				let (resolved, requirements) = dependencyInfo
 				var result: [CompatibilityInfo] = []
 				resolved.forEach { dependency, pinnedVersion in
@@ -1189,13 +1190,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 						result.append(CompatibilityInfo(dependency: dependency, pinnedVersion: pinnedVersion, requirements: requirements))
 					}
 				}
-				return result
+				return .init(result)
 			}
-			.flatMap(.merge) { (compatibilityInfos: [CompatibilityInfo]) -> SignalProducer<(), CarthageError> in
-				let incompatibleInfos: [CompatibilityInfo] = compatibilityInfos.filter { compatibilityInfo in
-					return !compatibilityInfo.incompatibleRequirements.isEmpty
-				}
-				return incompatibleInfos.isEmpty ? SignalProducer(value: ()) : SignalProducer(error: .invalidResolvedCartfile(incompatibleInfos))
+			.filter { !$0.incompatibleRequirements.isEmpty }
+			.collect()
+			.flatMap(.concat) { incompatibilities -> SignalProducer<(), CarthageError> in
+				return incompatibilities.isEmpty ? SignalProducer(value: ()) : SignalProducer(error: .invalidResolvedCartfile(incompatibilities))
 			}
 	}
 }

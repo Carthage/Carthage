@@ -10,13 +10,13 @@ public struct CompatibilityInfo {
 
 	/// Requirements with which the pinned version of this dependency may or may not be compatible
 	private let requirements: [Dependency: VersionSpecifier]
-	
+
 	public init(dependency: Dependency, pinnedVersion: PinnedVersion, requirements: [Dependency: VersionSpecifier]) {
 		self.dependency = dependency
 		self.pinnedVersion = pinnedVersion
 		self.requirements = requirements
 	}
-	
+
 	/// Requirements which are compatible with the pinned version of this dependency
 	public var compatibleRequirements: [Dependency: VersionSpecifier] {
 		return requirements.filter { _, version in version.isSatisfied(by: pinnedVersion) }
