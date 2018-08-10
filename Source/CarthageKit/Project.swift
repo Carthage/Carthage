@@ -1150,19 +1150,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 	///
 	/// Either emits a value to indicate success or an error.
 	public func validate(resolvedCartfile: ResolvedCartfile) -> SignalProducer<(), CarthageError> {
-		let resolvedCartfileProducer = SignalProducer(value: resolvedCartfile)
-			.promoteError(CarthageError.self)
-			.replayLazily(upTo: 1)
-
-		let requirementsProducer = resolvedCartfileProducer
-			.flatMap(.merge) { (resolved: ResolvedCartfile) -> SignalProducer<CompatibilityInfo.Requirements, CarthageError> in
-				return self.requirementsByDependency(resolvedCartfile: resolved, tryCheckoutDirectory: true)
+		return SignalProducer(value: resolvedCartfile)
+			.flatMap(.concat) { (resolved: ResolvedCartfile) -> SignalProducer<([Dependency: PinnedVersion], CompatibilityInfo.Requirements), CarthageError> in
+				return SignalProducer(value: resolved.dependencies).zip(with: self.requirementsByDependency(resolvedCartfile: resolved, tryCheckoutDirectory: true))
 			}
-
-		return resolvedCartfileProducer.map { (resolved: ResolvedCartfile) -> [Dependency: PinnedVersion] in
-				return resolved.dependencies
-			}
-			.zip(with: requirementsProducer)
 			.flatMap(.concat) { (info: ([Dependency: PinnedVersion], CompatibilityInfo.Requirements)) -> SignalProducer<[CompatibilityInfo], CarthageError> in
 				let (dependencies, requirements) = info
 				return .init(result: CompatibilityInfo.incompatibilities(for: dependencies, requirements: requirements))
