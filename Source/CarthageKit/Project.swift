@@ -1050,6 +1050,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 						}
 					}
 					.flatMap(.merge) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+						// Symlink the build folder of binary downloads for consistency with regular checkouts
+						// (even though it's not necessary since binary downloads aren't built by Carthage)
 						return self.symlinkBuildPathIfNeeded(for: dependency, version: version)
 							.then(.init(value: (dependency, version)))
 					}
