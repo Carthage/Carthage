@@ -1159,7 +1159,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return .init(result: CompatibilityInfo.incompatibilities(for: dependencies, requirements: requirements))
 			}
 			.flatMap(.concat) { incompatibilities -> SignalProducer<(), CarthageError> in
-				return incompatibilities.isEmpty ? SignalProducer(value: ()) : SignalProducer(error: .invalidResolvedCartfile(incompatibilities))
+				return incompatibilities.isEmpty ? .init(value: ()) : .init(error: .invalidResolvedCartfile(incompatibilities))
 			}
 	}
 }
