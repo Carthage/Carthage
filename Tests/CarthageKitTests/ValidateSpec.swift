@@ -83,8 +83,10 @@ class ValidateSpec: QuickSpec {
 				let v4 = VersionSpecifier.compatibleWith(SemanticVersion(major: 4, minor: 0, patch: 0))
 
 				let requirements = [a: [b: v1, c: v2], d: [c: v3, e: v4]]
-				let invertedRequirements = CompatibilityInfo.invert(requirements: requirements).value
-				expect(invertedRequirements) == [b: [a: v1], c: [a: v2, d: v3], e: [d: v4]]
+				let invertedRequirements = CompatibilityInfo.invert(requirements: requirements).value!
+				for expected in [b: [a: v1], c: [a: v2, d: v3], e: [d: v4]] {
+					expect(invertedRequirements.contains { $0.0 == expected.0 && $0.1 == expected.1 }) == true
+				}
 			}
 		}
 
