@@ -642,7 +642,16 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 					let devices = jsonObject["devices"]!
 					let allTargetSimulators = devices
 						.filter { $0.key.hasPrefix(platformName) }
-					let latestOSName = allTargetSimulators.keys.sorted().first!
+					func sortedByVersion(_ array: [String]) -> [String] {
+						return array.sorted { lhs, rhs in
+							guard let lhsVersion = lhs.split(separator: " ").last.flatMap(Float.init),
+								let rhsVersion = rhs.split(separator: " ").last.flatMap(Float.init) else {
+									return lhs < rhs
+							}
+							return lhsVersion < rhsVersion
+						}
+					}
+					let latestOSName = sortedByVersion(Array(allTargetSimulators.keys)).last!
 					return devices[latestOSName]!
 						.first { $0.isAvailable }
 						.map { simulator in
