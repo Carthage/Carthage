@@ -1,3 +1,5 @@
+import Foundation
+
 internal struct Simulator: Decodable {
 	enum Availavility: String, Decodable {
 		case available
