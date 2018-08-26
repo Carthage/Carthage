@@ -6,7 +6,7 @@ internal struct Simulator: Decodable {
 		case unavailable
 
 		init(from decoder: Decoder) throws {
-			var container = try decoder.singleValueContainer()
+			let container = try decoder.singleValueContainer()
 			let rawString = try container.decode(String.self)
 			if rawString == "(available)" {
 				self = .available
