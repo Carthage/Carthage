@@ -635,14 +635,15 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 				.ignoreTaskData()
 				.map { data in
 					let decoder = JSONDecoder()
-					// Like {"devices": {"iOS 12.0": [<simulators...>]}]
+					// simctl returns following JSON:
+					// {"devices": {"iOS 12.0": [<simulators...>]}]
 					let jsonObject = try! decoder.decode([String: [String: [Simulator]]].self, from: data) // swiftlint:disable:this force_try
 					let platformName = sdk.platform.rawValue
 					let devices = jsonObject["devices"]!
 					let allTargetSimulators = devices
 						.filter { $0.key.hasPrefix(platformName) }
-					let latestOS = allTargetSimulators.keys.sorted().first!
-					return devices[latestOS]!
+					let latestOSName = allTargetSimulators.keys.sorted().first!
+					return devices[latestOSName]!
 						.first { $0.isAvailable }
 						.map { simulator in
 						return "platform=\(platformName) Simulator,id=\(simulator.udid.uuidString)"
