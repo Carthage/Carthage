@@ -47,8 +47,8 @@ class SimulatorSpec: QuickSpec {
 			it("Single device should be parsed") {
 				let data = singleJSON.data(using: .utf8)!
 				let simulator = try! self.decoder.decode(Simulator.self, from: data)
-				expect(simulator.isAvailable).to(be(true))
-				expect(simulator.name).to(be("iPhone 5s"))
+				expect(simulator.isAvailable).to(equal(true))
+				expect(simulator.name).to(equal("iPhone 5s"))
 				expect(simulator.udid).to(equal(UUID(uuidString: "A52BF797-F6F8-47F1-B559-68B66B553B23")))
 			}
 			
