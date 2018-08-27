@@ -651,7 +651,9 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 							return lhsVersion < rhsVersion
 						}
 					}
-					let latestOSName = sortedByVersion(Array(allTargetSimulators.keys)).last!
+					guard let latestOSName = sortedByVersion(Array(allTargetSimulators.keys)).last else {
+						fatalError("No available simulators found to build this package for \(platformName)")
+					}
 					return devices[latestOSName]!
 						.first { $0.isAvailable }
 						.map { simulator in
