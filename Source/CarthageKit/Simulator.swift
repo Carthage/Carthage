@@ -1,7 +1,7 @@
 import Foundation
 
 internal struct Simulator: Decodable {
-	enum Availavility: String, Decodable {
+	enum Availability: String, Decodable {
 		case available
 		case unavailable
 
@@ -20,7 +20,7 @@ internal struct Simulator: Decodable {
 		return availability == .available
 	}
 
-	var availability: Availavility
+	var availability: Availability
 	var name: String
 	var udid: UUID
 }
