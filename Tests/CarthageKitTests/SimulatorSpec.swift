@@ -71,12 +71,12 @@ class SimulatorSpec: QuickSpec {
 					let data = loadJSON(for: "Simulators/availables")
 					let iPhoneSimulator = selectAvailableSimulator(of: .iPhoneSimulator, from: data)!
 					expect(iPhoneSimulator.udid).to(equal(UUID(uuidString: "A52BF797-F6F8-47F1-B559-68B66B553B23")!))
-					expect(iPhoneSimulator.availability).to(equal(.available))
+					expect(iPhoneSimulator.isAvailable).to(beTrue())
 					expect(iPhoneSimulator.name).to(equal("iPhone 5s"))
 					
 					let watchSimulator = selectAvailableSimulator(of: .watchSimulator, from: data)!
 					expect(watchSimulator.udid).to(equal(UUID(uuidString: "290C3D57-0FF0-407F-B33C-F1A55EA44019")!))
-					expect(watchSimulator.availability).to(equal(.available))
+					expect(watchSimulator.isAvailable).to(beTrue())
 					expect(watchSimulator.name).to(equal("Apple Watch - 38mm"))
 					
 					let tvSimulator = selectAvailableSimulator(of: .tvSimulator, from: data)
