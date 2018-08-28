@@ -68,7 +68,7 @@ class SimulatorSpec: QuickSpec {
 			
 			context("when there are available simulators") {
 				it("should return the first simulator of the latest version") {
-					let data = loadJSON(for: "Devices/availables")
+					let data = loadJSON(for: "Simulators/availables")
 					let iPhoneSimulator = selectAvailableSimulator(of: .iPhoneSimulator, from: data)!
 					expect(iPhoneSimulator.udid).to(equal(UUID(uuidString: "A52BF797-F6F8-47F1-B559-68B66B553B23")!))
 					expect(iPhoneSimulator.availability).to(equal(.available))
@@ -86,7 +86,7 @@ class SimulatorSpec: QuickSpec {
 			
 			context("when there is no available simulator") {
 				it("should return nil") {
-					let data = loadJSON(for: "Devices/unavailable")
+					let data = loadJSON(for: "Simulators/unavailable")
 					expect(selectAvailableSimulator(of: .watchSimulator, from: data)).to(beNil())
 				}
 			}
