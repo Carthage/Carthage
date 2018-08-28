@@ -214,7 +214,7 @@ extension CarthageError: CustomStringConvertible {
 			return description
 
 		case .noAvailableSimulators:
-			return "Could not found any available simulators"
+			return "Could not find any available simulators"
 
 		case let .incompatibleRequirements(dependency, first, second):
 			let requirement: (VersionRequirement) -> String = { arg in
