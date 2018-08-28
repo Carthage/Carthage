@@ -632,8 +632,9 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 		if sdk.isSimulator {
 			let destinationLookup = Task("/usr/bin/xcrun", arguments: [ "simctl", "list", "devices", "--json" ])
 			return destinationLookup.launch()
+				.mapError(CarthageError.taskError)
 				.ignoreTaskData()
-				.map { data in
+				.flatMap(.concat) { (data: Data) -> SignalProducer<String?, CarthageError> in
 					let decoder = JSONDecoder()
 					// simctl returns following JSON:
 					// {"devices": {"iOS 12.0": [<simulators...>]}]
@@ -652,15 +653,14 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 						}
 					}
 					guard let latestOSName = sortedByVersion(Array(allTargetSimulators.keys)).last else {
-						fatalError("No available simulators found to build this package for \(platformName)")
+						return .init(error: CarthageError.noAvailableSimulators)
 					}
-					return devices[latestOSName]!
+					return .init(value: devices[latestOSName]!
 						.first { $0.isAvailable }
 						.map { simulator in
-						return "platform=\(platformName) Simulator,id=\(simulator.udid.uuidString)"
-					}
+						    return "platform=\(platformName) Simulator,id=\(simulator.udid.uuidString)"
+					})
 				}
-				.mapError(CarthageError.taskError)
 		}
 		return SignalProducer(value: nil)
 	}

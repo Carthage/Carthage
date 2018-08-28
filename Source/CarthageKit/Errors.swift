@@ -42,6 +42,9 @@ public enum CarthageError: Error {
 	/// Failed to write a file or directory at the given URL.
 	case writeFailed(URL, NSError?)
 
+	/// No available simulators could be found
+	case noAvailableSimulators
+
 	/// An error occurred parsing a Carthage file or task result
 	case parseError(description: String)
 
@@ -209,6 +212,9 @@ extension CarthageError: CustomStringConvertible {
 			}
 
 			return description
+
+		case .noAvailableSimulators:
+			return "Could not found any available simulators"
 
 		case let .incompatibleRequirements(dependency, first, second):
 			let requirement: (VersionRequirement) -> String = { arg in
