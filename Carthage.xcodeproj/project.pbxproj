@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		076048E62132FF2F00657D20 /* Simulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076048E52132FF2F00657D20 /* Simulator.swift */; };
 		076048E82132FFB000657D20 /* SimulatorSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076048E72132FFB000657D20 /* SimulatorSpec.swift */; };
+		0790564C2135B4C2009FA96C /* Devices in Resources */ = {isa = PBXBuildFile; fileRef = 0790564B2135B4C1009FA96C /* Devices */; };
 		0FDFEA7E2055D638008862E3 /* ProxyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7D2055D638008862E3 /* ProxyTests.swift */; };
 		0FDFEA802055FACE008862E3 /* Proxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7F2055FACE008862E3 /* Proxy.swift */; };
 		2190FA981FD5B2F0008D8A79 /* OutdatedDependencies in Resources */ = {isa = PBXBuildFile; fileRef = 2190FA961FD5B05F008D8A79 /* OutdatedDependencies */; };
@@ -183,6 +184,7 @@
 /* Begin PBXFileReference section */
 		076048E52132FF2F00657D20 /* Simulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Simulator.swift; sourceTree = "<group>"; };
 		076048E72132FFB000657D20 /* SimulatorSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorSpec.swift; sourceTree = "<group>"; };
+		0790564B2135B4C1009FA96C /* Devices */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Devices; sourceTree = "<group>"; };
 		0FDFEA7D2055D638008862E3 /* ProxyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyTests.swift; sourceTree = "<group>"; };
 		0FDFEA7F2055FACE008862E3 /* Proxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Proxy.swift; sourceTree = "<group>"; };
 		2190FA961FD5B05F008D8A79 /* OutdatedDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OutdatedDependencies; sourceTree = "<group>"; };
@@ -378,6 +380,7 @@
 		CD6500D61EDD30FC00C2C3FB /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				0790564B2135B4C1009FA96C /* Devices */,
 				2190FA961FD5B05F008D8A79 /* OutdatedDependencies */,
 				CD9A779A1EDD7FEB00A77B00 /* BinaryOnly */,
 				CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */,
@@ -746,6 +749,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0790564C2135B4C2009FA96C /* Devices in Resources */,
 				8AC381451FC3AAE4007CF7E8 /* Alamofire.framework in Resources */,
 				CD9A779B1EDD7FEB00A77B00 /* BinaryOnly in Resources */,
 				3B19041E1E4CFE4A00A866AD /* FakeOldObjc.framework in Resources */,
