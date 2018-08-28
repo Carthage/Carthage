@@ -1,4 +1,5 @@
 import Foundation
+import XCDBLD
 
 internal struct Simulator: Decodable {
 	enum Availability: String, Decodable {
@@ -23,4 +24,33 @@ internal struct Simulator: Decodable {
 	var availability: Availability
 	var name: String
 	var udid: UUID
+}
+
+/// Select available simulator from output value of `simclt devices list`
+/// If there are multiple OSs for the SDK, the latest one would be selected.
+internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulator? {
+	let decoder = JSONDecoder()
+	// simctl returns following JSON:
+	// {"devices": {"iOS 12.0": [<simulators...>]}]
+	guard let jsonObject = try? decoder.decode([String: [String: [Simulator]]].self, from: data) else {
+		return nil
+	}
+	let platformName = sdk.platform.rawValue
+	let devices = jsonObject["devices"]!
+	let allTargetSimulators = devices
+		.filter { $0.key.hasPrefix(platformName) }
+	func sortedByVersion(_ osNames: [String]) -> [String] {
+		return osNames.sorted { lhs, rhs in
+			guard let lhsVersion = lhs.split(separator: " ").last.flatMap(Float.init),
+				let rhsVersion = rhs.split(separator: " ").last.flatMap(Float.init) else {
+					return lhs < rhs
+			}
+			return lhsVersion < rhsVersion
+		}
+	}
+	guard let latestOSName = sortedByVersion(Array(allTargetSimulators.keys)).last else {
+		return nil
+	}
+	return devices[latestOSName]?
+		.first { $0.isAvailable }
 }

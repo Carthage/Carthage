@@ -609,34 +609,6 @@ private func resolveSameTargetName(for settings: BuildSettings) -> SignalProduce
 	}
 }
 
-/// Select available simulator from output value of `simclt devices list`.
-internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulator? {
-	let decoder = JSONDecoder()
-	// simctl returns following JSON:
-	// {"devices": {"iOS 12.0": [<simulators...>]}]
-	guard let jsonObject = try? decoder.decode([String: [String: [Simulator]]].self, from: data) else {
-		return nil
-	}
-	let platformName = sdk.platform.rawValue
-	let devices = jsonObject["devices"]!
-	let allTargetSimulators = devices
-		.filter { $0.key.hasPrefix(platformName) }
-	func sortedByVersion(_ osNames: [String]) -> [String] {
-		return osNames.sorted { lhs, rhs in
-			guard let lhsVersion = lhs.split(separator: " ").last.flatMap(Float.init),
-				let rhsVersion = rhs.split(separator: " ").last.flatMap(Float.init) else {
-					return lhs < rhs
-			}
-			return lhsVersion < rhsVersion
-		}
-	}
-	guard let latestOSName = sortedByVersion(Array(allTargetSimulators.keys)).last else {
-		return nil
-	}
-	return devices[latestOSName]?
-		.first { $0.isAvailable }
-}
-
 /// Runs the build for a given sdk and build arguments, optionally performing a clean first
 // swiftlint:disable:next function_body_length
 private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectoryURL: URL) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
