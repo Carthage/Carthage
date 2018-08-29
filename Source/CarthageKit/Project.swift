@@ -371,6 +371,34 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					.map { $0.0.name }
 					.collect()
+		}
+	}
+
+	/// Finds the required dependencies and their corresponding version specifiers for each dependency in Cartfile.resolved.
+	func requirementsByDependency(
+		resolvedCartfile: ResolvedCartfile,
+		tryCheckoutDirectory: Bool
+	) -> SignalProducer<CompatibilityInfo.Requirements, CarthageError> {
+		return SignalProducer(resolvedCartfile.dependencies)
+			.flatMap(.concurrent(limit: 4)) { (dependency, pinnedVersion) -> SignalProducer<(Dependency, (Dependency, VersionSpecifier)), CarthageError> in
+				return self.dependencies(for: dependency, version: pinnedVersion, tryCheckoutDirectory: tryCheckoutDirectory)
+					.map { (dependency, $0) }
+			}
+			.collect()
+			.flatMap(.merge) { dependencyAndRequirements -> SignalProducer<CompatibilityInfo.Requirements, CarthageError> in
+				var dict: CompatibilityInfo.Requirements = [:]
+				for (dependency, requirement) in dependencyAndRequirements {
+					let (requiredDependency, requiredVersion) = requirement
+					var requirementsDict = dict[dependency] ?? [:]
+
+					if requirementsDict[requiredDependency] != nil {
+						return SignalProducer(error: .duplicateDependencies([DuplicateDependency(dependency: requiredDependency, locations: [])]))
+					}
+
+					requirementsDict[requiredDependency] = requiredVersion
+					dict[dependency] = requirementsDict
+				}
+				return SignalProducer(value: dict)
 			}
 	}
 
@@ -1107,6 +1135,25 @@ public final class Project { // swiftlint:disable:this type_body_length
 							return SignalProducer(error: error)
 						}
 					}
+			}
+	}
+
+	/// Determines whether the requirements specified in this project's Cartfile.resolved
+	/// are compatible with the versions specified in the Cartfile for each of those projects.
+	///
+	/// Either emits a value to indicate success or an error.
+	public func validate(resolvedCartfile: ResolvedCartfile) -> SignalProducer<(), CarthageError> {
+		return SignalProducer(value: resolvedCartfile)
+			.flatMap(.concat) { (resolved: ResolvedCartfile) -> SignalProducer<([Dependency: PinnedVersion], CompatibilityInfo.Requirements), CarthageError> in
+				let requirements = self.requirementsByDependency(resolvedCartfile: resolved, tryCheckoutDirectory: true)
+				return SignalProducer.zip(SignalProducer(value: resolved.dependencies), requirements)
+			}
+			.flatMap(.concat) { (info: ([Dependency: PinnedVersion], CompatibilityInfo.Requirements)) -> SignalProducer<[CompatibilityInfo], CarthageError> in
+				let (dependencies, requirements) = info
+				return .init(result: CompatibilityInfo.incompatibilities(for: dependencies, requirements: requirements))
+			}
+			.flatMap(.concat) { incompatibilities -> SignalProducer<(), CarthageError> in
+				return incompatibilities.isEmpty ? .init(value: ()) : .init(error: .invalidResolvedCartfile(incompatibilities))
 			}
 	}
 }

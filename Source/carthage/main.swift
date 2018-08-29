@@ -29,6 +29,7 @@ registry.register(CopyFrameworksCommand())
 registry.register(FetchCommand())
 registry.register(OutdatedCommand())
 registry.register(UpdateCommand())
+registry.register(ValidateCommand())
 registry.register(VersionCommand())
 
 let helpCommand = HelpCommand(registry: registry)
