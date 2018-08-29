@@ -32,11 +32,11 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 	let decoder = JSONDecoder()
 	// simctl returns following JSON:
 	// {"devices": {"iOS 12.0": [<simulators...>]}]
-	guard let jsonObject = try? decoder.decode([String: [String: [Simulator]]].self, from: data) else {
+	guard let jsonObject = try? decoder.decode([String: [String: [Simulator]]].self, from: data),
+		let devices = jsonObject["devices"] else {
 		return nil
 	}
 	let platformName = sdk.platform.rawValue
-	let devices = jsonObject["devices"]!
 	let allTargetSimulators = devices
 		.filter { $0.key.hasPrefix(platformName) }
 	func sortedByVersion(_ osNames: [String]) -> [String] {
