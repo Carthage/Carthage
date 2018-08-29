@@ -54,7 +54,7 @@ class ValidateSpec: QuickSpec {
 		describe("requirementsByDependency") {
 			it("should group dependencies by parent dependency") {
 				let resolvedCartfile = ResolvedCartfile.from(string: validCartfile)
-				let project = Project(directoryURL: URL(string: "file://fake")!)
+				let project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
 
 				let result = project.requirementsByDependency(resolvedCartfile: resolvedCartfile.value!, tryCheckoutDirectory: false).single()
 
@@ -131,7 +131,7 @@ class ValidateSpec: QuickSpec {
 		describe("validate") {
 			it("should identify a valid Cartfile.resolved as compatible") {
 				let resolvedCartfile = ResolvedCartfile.from(string: validCartfile)
-				let project = Project(directoryURL: URL(string: "file://fake")!)
+				let project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
 
 				let result = project.validate(resolvedCartfile: resolvedCartfile.value!).single()
 
@@ -140,7 +140,7 @@ class ValidateSpec: QuickSpec {
 
 			it("should identify incompatibilities in an invalid Cartfile.resolved") {
 				let resolvedCartfile = ResolvedCartfile.from(string: invalidCartfile)
-				let project = Project(directoryURL: URL(string: "file://fake")!)
+				let project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
 
 				let error = project.validate(resolvedCartfile: resolvedCartfile.value!).single()?.error
 				let infos = error?.compatibilityInfos
