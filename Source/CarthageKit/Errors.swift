@@ -43,7 +43,7 @@ public enum CarthageError: Error {
 	case writeFailed(URL, NSError?)
 
 	/// No available simulators could be found
-	case noAvailableSimulators
+	case noAvailableSimulators(platformName: String)
 
 	/// An error occurred parsing a Carthage file or task result
 	case parseError(description: String)
@@ -213,8 +213,8 @@ extension CarthageError: CustomStringConvertible {
 
 			return description
 
-		case .noAvailableSimulators:
-			return "Could not find any available simulators"
+		case let .noAvailableSimulators(platformName):
+			return "Could not find any available simulators for \(platformName)"
 
 		case let .incompatibleRequirements(dependency, first, second):
 			let requirement: (VersionRequirement) -> String = { arg in

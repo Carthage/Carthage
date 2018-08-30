@@ -638,7 +638,7 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 					if let selectedSimulator = selectAvailableSimulator(of: sdk, from: data) {
 						return .init(value: selectedSimulator)
 					} else {
-						return .init(error: CarthageError.noAvailableSimulators)
+						return .init(error: CarthageError.noAvailableSimulators(platformName: sdk.platform.rawValue))
 					}
 				}
 				.map { "platform=\(sdk.platform.rawValue) Simulator,id=\($0.udid.uuidString)" }
