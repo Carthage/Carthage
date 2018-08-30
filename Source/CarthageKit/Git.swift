@@ -161,7 +161,13 @@ public func checkoutRepositoryToDirectory(
 			return .success(environment)
 	}
 	.attempt { _ in
-		Result(attempt: { try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true) })
+		Result(attempt: {
+				if let isSymlink = try? workingDirectoryURL.resourceValues(forKeys: [ .isSymbolicLinkKey ]).isSymbolicLink, isSymlink == true {
+					// If the dependency is a symlink in the Checkouts directory, delete it before attempting checkout
+					_ = workingDirectoryURL.path.withCString(Darwin.unlink)
+				}
+				try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true)
+			})
 			.mapError {
 				CarthageError.repositoryCheckoutFailed(
 					workingDirectoryURL: workingDirectoryURL,

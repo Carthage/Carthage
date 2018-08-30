@@ -943,7 +943,15 @@ public final class Project { // swiftlint:disable:this type_body_length
 	) -> SignalProducer<(), CarthageError> {
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
-		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
+		let rawDependencyCheckoutsURL = dependencyURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true)
+
+		// If the dependency Checkouts directory is already a symlink, delete it so we don't resolve to the main Checkouts directory
+		let rawDependencyCheckoutsURLResource = try? rawDependencyCheckoutsURL.resourceValues(forKeys: [ .isSymbolicLinkKey ])
+		if rawDependencyCheckoutsURLResource?.isSymbolicLink == true {
+			_ = rawDependencyCheckoutsURL.path.withCString(Darwin.unlink)
+		}
+
+		let dependencyCheckoutsURL = rawDependencyCheckoutsURL.resolvingSymlinksInPath()
 		let fileManager = FileManager.default
 
 		return self.dependencySet(for: dependency, version: version)
@@ -991,14 +999,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 					if dependencyCheckoutURLResource?.isSymbolicLink == true {
 						_ = dependencyCheckoutURL.path.withCString(Darwin.unlink)
 					} else if dependencyCheckoutURLResource?.isDirectory == true {
-						// older version of carthage wrote this directory?
-						// user wrote this directory, unaware of the precedent not to circumvent carthage’s management?
-						// directory exists as the result of rogue process or gamma ray?
-
-						// swiftlint:disable:next todo
-						// TODO: explore possibility of messaging user, informing that deleting said directory will result
-						// in symlink creation with carthage versions greater than 0.20.0, maybe with more broad advice on
-						// “from scratch” reproducability.
+						// This directory may already exist if Carthage/Checkouts directory is checked into the
+						// dependency repository's source control, for instance when using submodules.
 						continue
 					}
 
