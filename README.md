@@ -58,13 +58,13 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
     /usr/local/bin/carthage copy-frameworks
     ```
 
-1. Add the paths to the frameworks you want to use under “Input Files". For example:
+- Add the paths to the frameworks you want to use under “Input Files". For example:
 
     ```
     $(SRCROOT)/Carthage/Build/iOS/Alamofire.framework
     ```
 
-1. Add the paths to the copied frameworks to the “Output Files”. For example:
+- Add the paths to the copied frameworks to the “Output Files”. For example:
 
     ```
     $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Alamofire.framework
