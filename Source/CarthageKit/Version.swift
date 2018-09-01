@@ -55,6 +55,15 @@ public struct SemanticVersion: VersionType {
 		self.buildMetadata = buildMetadata
 	}
 
+	internal init?(from versionName: String) {
+		let components = zip(versionName.split(separator: "."), 0..<3).compactMap { Int($0.0) ?? 0 }
+		self.major = components[0]
+		self.minor = components[1]
+		self.patch = components[2]
+		self.preRelease = nil
+		self.buildMetadata = nil
+	}
+
 	/// Attempts to parse a semantic version from a PinnedVersion.
 	public static func from(_ pinnedVersion: PinnedVersion) -> Result<SemanticVersion, ScannableError> {
 		let scanner = Scanner(string: pinnedVersion.commitish)

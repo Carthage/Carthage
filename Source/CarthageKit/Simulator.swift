@@ -41,8 +41,8 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 		.filter { $0.key.hasPrefix(platformName) }
 	func sortedByVersion(_ osNames: [String]) -> [String] {
 		return osNames.sorted { lhs, rhs in
-			guard let lhsVersion = lhs.split(separator: " ").last.flatMap(Float.init),
-				let rhsVersion = rhs.split(separator: " ").last.flatMap(Float.init) else {
+			guard let lhsVersion = SemanticVersion.from(PinnedVersion(lhs)).value,
+				let rhsVersion = SemanticVersion.from(PinnedVersion(rhs)).value else {
 					return lhs < rhs
 			}
 			return lhsVersion < rhsVersion
