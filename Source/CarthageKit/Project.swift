@@ -1077,6 +1077,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 								.then(.init(value: (dependency, version)))
 						}
 					}
+					.flatMap(.merge) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+						// Symlink the build folder of binary downloads for consistency with regular checkouts
+						// (even though it's not necessary since binary downloads aren't built by Carthage)
+						return self.symlinkBuildPathIfNeeded(for: dependency, version: version)
+							.then(.init(value: (dependency, version)))
+					}
 					.collect()
 					.map { installedDependencies -> [(Dependency, PinnedVersion)] in
 						// Filters out dependencies that we've downloaded binaries for
@@ -1100,16 +1106,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version.commitish, isDirectory: true)
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
-				return self
-					.dependencySet(for: dependency, version: version)
-					.flatMap(.concat) { dependencies -> SignalProducer<(), CarthageError> in
-						// Don't create symlink the build folder if the dependencies doesn't have
-						// any Carthage dependencies.
-						if dependencies.isEmpty {
-							return .empty
-						}
-						return symlinkBuildPath(for: dependency, rootDirectoryURL: self.directoryURL)
-					}
+				return self.symlinkBuildPathIfNeeded(for: dependency, version: version)
 					.then(build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter))
 					.flatMapError { error in
 						switch error {
@@ -1135,6 +1132,18 @@ public final class Project { // swiftlint:disable:this type_body_length
 							return SignalProducer(error: error)
 						}
 					}
+			}
+	}
+
+	private func symlinkBuildPathIfNeeded(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<(), CarthageError> {
+		return dependencySet(for: dependency, version: version)
+			.flatMap(.merge) { dependencies -> SignalProducer<(), CarthageError> in
+				// Don't symlink the build folder if the dependency doesn't have
+				// any Carthage dependencies
+				if dependencies.isEmpty {
+					return .empty
+				}
+				return symlinkBuildPath(for: dependency, rootDirectoryURL: self.directoryURL)
 			}
 	}
 
