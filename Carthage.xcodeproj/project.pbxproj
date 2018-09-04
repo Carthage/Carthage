@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		076048E62132FF2F00657D20 /* Simulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076048E52132FF2F00657D20 /* Simulator.swift */; };
+		076048E82132FFB000657D20 /* SimulatorSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076048E72132FFB000657D20 /* SimulatorSpec.swift */; };
+		0790564C2135B4C2009FA96C /* Simulators in Resources */ = {isa = PBXBuildFile; fileRef = 0790564B2135B4C1009FA96C /* Simulators */; };
 		0FDFEA7E2055D638008862E3 /* ProxyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7D2055D638008862E3 /* ProxyTests.swift */; };
 		0FDFEA802055FACE008862E3 /* Proxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7F2055FACE008862E3 /* Proxy.swift */; };
 		2190FA981FD5B2F0008D8A79 /* OutdatedDependencies in Resources */ = {isa = PBXBuildFile; fileRef = 2190FA961FD5B05F008D8A79 /* OutdatedDependencies */; };
@@ -182,6 +185,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		076048E52132FF2F00657D20 /* Simulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Simulator.swift; sourceTree = "<group>"; };
+		076048E72132FFB000657D20 /* SimulatorSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorSpec.swift; sourceTree = "<group>"; };
+		0790564B2135B4C1009FA96C /* Simulators */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Simulators; sourceTree = "<group>"; };
 		0FDFEA7D2055D638008862E3 /* ProxyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyTests.swift; sourceTree = "<group>"; };
 		0FDFEA7F2055FACE008862E3 /* Proxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Proxy.swift; sourceTree = "<group>"; };
 		2190FA961FD5B05F008D8A79 /* OutdatedDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OutdatedDependencies; sourceTree = "<group>"; };
@@ -380,6 +386,7 @@
 		CD6500D61EDD30FC00C2C3FB /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				0790564B2135B4C1009FA96C /* Simulators */,
 				2190FA961FD5B05F008D8A79 /* OutdatedDependencies */,
 				CD9A779A1EDD7FEB00A77B00 /* BinaryOnly */,
 				CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */,
@@ -546,6 +553,7 @@
 				B17145EF1F43F797006DC662 /* NewResolver.swift */,
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
 				CDB099231E6DC2D40030B4A8 /* ScannableError.swift */,
+				076048E52132FF2F00657D20 /* Simulator.swift */,
 				CDBE654B1F4BF0040060D94E /* Submodule.swift */,
 				CD9FDF35207BBB17009C993A /* SwiftShims.swift */,
 				3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */,
@@ -590,6 +598,7 @@
 				0FDFEA7D2055D638008862E3 /* ProxyTests.swift */,
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
 				4ED497FD2110D9500031F17B /* RemoteVersionSpec.swift */,
+				076048E72132FFB000657D20 /* SimulatorSpec.swift */,
 				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
 				B1F27D3D1E45382B002D4754 /* VersionFileSpec.swift */,
 				D0DB09A319EA354200234B16 /* XcodeSpec.swift */,
@@ -749,6 +758,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0790564C2135B4C2009FA96C /* Simulators in Resources */,
 				8AC381451FC3AAE4007CF7E8 /* Alamofire.framework in Resources */,
 				CD9A779B1EDD7FEB00A77B00 /* BinaryOnly in Resources */,
 				3B19041E1E4CFE4A00A866AD /* FakeOldObjc.framework in Resources */,
@@ -871,6 +881,7 @@
 				43D7809520E4324E004BCDD6 /* MachHeader.swift in Sources */,
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */,
+				076048E62132FF2F00657D20 /* Simulator.swift in Sources */,
 				CD43D9DA1F41640E00CD60F6 /* CarthageKitVersion.swift in Sources */,
 				8A239F3C2097586F005F02F2 /* BundleExtensions.swift in Sources */,
 				CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */,
@@ -912,6 +923,7 @@
 				BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */,
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,
 				549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */,
+				076048E82132FFB000657D20 /* SimulatorSpec.swift in Sources */,
 				4396DC8F20E4E8A8002EE967 /* MachHeaderSpec.swift in Sources */,
 				D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */,
 				BF3199C01E32E078007DC0D1 /* DependencySpec.swift in Sources */,
