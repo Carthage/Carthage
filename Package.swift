@@ -14,7 +14,7 @@ let package = Package(
         .package(url: "https://github.com/Carthage/Commandant.git", from: "0.15.0"),
         .package(url: "https://github.com/jdhealy/PrettyColors.git", from: "5.0.0"),
         .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "4.0.0"),
-        .package(url: "https://github.com/mdiep/Tentacle.git", .branch("master")),
+        .package(url: "https://github.com/mdiep/Tentacle.git", from: "0.12.0"),
         .package(url: "https://github.com/thoughtbot/Curry.git", from: "4.0.0"),
         .package(url: "https://github.com/Quick/Quick.git", from: "1.3.1"),
         .package(url: "https://github.com/Quick/Nimble.git", from: "7.1.3"),

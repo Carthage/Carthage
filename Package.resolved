@@ -77,9 +77,9 @@
         "package": "Tentacle",
         "repositoryURL": "https://github.com/mdiep/Tentacle.git",
         "state": {
-          "branch": "master",
-          "revision": "34395dd4a14d89508827f72feb7c37b0f20a8a2f",
-          "version": null
+          "branch": null,
+          "revision": "ace0aedb5bd90a41de254808dbe633813f7b1882",
+          "version": "0.12.0"
         }
       }
     ]
