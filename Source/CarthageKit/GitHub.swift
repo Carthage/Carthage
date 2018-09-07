@@ -49,6 +49,10 @@ extension Repository {
 		// Hostname-based → GitHub Enterprise
 		guard
 			let url = URL(string: identifier),
+			let scheme = url.scheme,
+			// Reject `git` or `ssh` protocol as a `github` origin as it does not make sense.
+			// See https://github.com/Carthage/Carthage/issues/2379.
+			(scheme == "http" || scheme == "https"),
 			let host = url.host,
 			case var pathComponents = url.pathComponents.filter({ $0 != "/" }),
 			pathComponents.count >= 2,
