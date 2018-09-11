@@ -575,16 +575,12 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		}
 		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
 			return UUIDsForFramework(builtProductURL)
-				.collect()
-				.flatMap(.concat) { uuids -> SignalProducer<TaskEvent<URL>, CarthageError> in
-					// Only attempt to create debug info if there is at least 
-					// one dSYM architecture UUID in the framework. This can 
-					// occur if the framework is a static framework packaged 
-					// like a dynamic framework.
-					if uuids.isEmpty {
-						return .empty
-					}
-
+				// Only attempt to create debug info if there is at least
+				// one dSYM architecture UUID in the framework. This can
+				// occur if the framework is a static framework packaged
+				// like a dynamic framework.
+				.take(first: 1)
+				.flatMap(.concat) { _ -> SignalProducer<TaskEvent<URL>, CarthageError> in
 					return createDebugInformation(builtProductURL)
 				}
 				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
