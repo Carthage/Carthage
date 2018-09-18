@@ -28,7 +28,7 @@ public struct Constants {
 	}()
 
 	/// ~/Library/Caches/org.carthage.CarthageKit/
-	private static let userCachesURL: URL = {
+	internal static let userCachesURL: URL = {
 		let fileManager = FileManager.default
 
 		let urlResult: Result<URL, NSError> = Result(catching: {

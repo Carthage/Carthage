@@ -42,6 +42,9 @@ public enum ProjectEvent {
 	/// Building the project is being skipped because it is cached.
 	case skippedBuildingCached(Dependency)
 
+	/// Copying from shared cache
+	case skippedBuildingCopyFromSharedCache(Dependency)
+
 	/// Rebuilding a cached project because of a version file/framework mismatch.
 	case rebuildingCached(Dependency)
 
@@ -132,8 +135,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	private var cachedBinaryProjects: CachedBinaryProjects = [:]
 	private let cachedBinaryProjectsQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.cachedBinaryProjectsQueue")
 
-	private lazy var xcodeVersionDirectory: String = XcodeVersion.make()
-		.map { "\($0.version)_\($0.buildVersion)" } ?? "Unknown"
+	private lazy var xcodeVersionDirectory: String = XcodeVersion.makeString()
 
 	/// Attempts to load Cartfile or Cartfile.private from the given directory,
 	/// merging their dependencies.
@@ -1160,6 +1162,25 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return dependenciesIncludingNext
 				}
 			}
+			.flatMap(.concat) { (dependencies: [(Dependency, PinnedVersion)]) -> SignalProducer<[(Dependency, PinnedVersion)], CarthageError> in
+				if options.cacheBuilds {
+					return self.copyBuiltFrameworksFromSharedCacheIfVersionMatches(for: dependencies, options: options)
+						.flatMap(.concat) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+							self._projectEventsObserver.send(value: .skippedBuildingCopyFromSharedCache(dependency))
+							return SignalProducer(value: (dependency, version))
+						}
+						.collect()
+						.map { copiedFromSharedCacheDependencies -> [(Dependency, PinnedVersion)] in
+							// Filters out dependencies that we've copied from shared cache
+							// but preserves the build order
+							return dependencies.filter { dependency -> Bool in
+								!copiedFromSharedCacheDependencies.contains { $0 == dependency }
+							}
+					}
+				} else {
+					return SignalProducer(dependencies).collect()
+				}
+			}
 			.flatMap(.concat) { (dependencies: [(Dependency, PinnedVersion)]) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				return SignalProducer(dependencies)
 					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
@@ -1232,6 +1253,37 @@ public final class Project { // swiftlint:disable:this type_body_length
 							return SignalProducer(error: error)
 						}
 					}
+			}
+	}
+
+	private func copyBuiltFrameworksFromSharedCacheIfVersionMatches(
+		for dependencies: [(Dependency, PinnedVersion)],
+		options: BuildOptions
+	) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> {
+		return SignalProducer(dependencies)
+			.flatMap(.concat) { dependency, version -> SignalProducer<(Dependency, PinnedVersion, URL, Bool?), CarthageError> in
+				let sharedCacheURLForDependency = sharedCacheURLFor(toolchain: options.toolchain, dependency: dependency, pinnedVersion: version)
+
+				return SignalProducer.combineLatest(
+					SignalProducer(value: dependency),
+					SignalProducer(value: version),
+					SignalProducer(value: sharedCacheURLForDependency),
+					versionFileMatches(dependency, version: version, platforms: options.platforms,
+									   rootDirectoryURL: sharedCacheURLForDependency, toolchain: options.toolchain))
+			}
+			.flatMap(.concat) { dependency, version, sharedCacheVersioned, sharedCacheMatches -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+				if let sharedCacheVersionFileMatches = sharedCacheMatches, sharedCacheVersionFileMatches {
+					return copyFrameworks(in: sharedCacheVersioned, to: self.directoryURL, projectName: dependency.name, pinnedVersion: version, toolchain: options.toolchain)
+						.collect()
+						.flatMap(.merge) { urls -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+							if urls.isEmpty {
+								return .empty
+							} else {
+								return SignalProducer(value: (dependency, version))
+							}
+					}
+				}
+				return .empty
 			}
 	}
 
@@ -1472,6 +1524,103 @@ internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, 
 					.value ?? false
 			}
 	}
+}
+
+internal func copyFrameworksAndCreateVersionFile(
+	_ frameworkURLs: [URL],
+	from directoryURL: URL,
+	to destinationURL: URL,
+	projectName: String,
+	pinnedVersion: PinnedVersion,
+	toolchain: String?
+) -> SignalProducer<URL, CarthageError> {
+	return SignalProducer(frameworkURLs)
+		.flatMap(.merge) { frameworkURL -> SignalProducer<URL, CarthageError> in
+			copyFramework(frameworkURL, toFolder: destinationURL)
+		}
+		.flatMap(.merge) { frameworkURL -> SignalProducer<URL, CarthageError> in
+			return copyDSYMToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL)
+				.then(copyBCSymbolMapsToBuildFolderForFramework(frameworkURL, fromDirectoryURL: directoryURL))
+				.then(SignalProducer(value: frameworkURL))
+		}
+		.collect()
+		.flatMap(.concat) { frameworkURLs -> SignalProducer<(), CarthageError> in
+			return createVersionFilesForFrameworks(
+				frameworkURLs,
+				fromDirectoryURL: destinationURL,
+				projectName: projectName,
+				commitish: pinnedVersion.commitish
+			)
+		}
+		.then(SignalProducer<URL, CarthageError>(value: directoryURL))
+}
+
+internal func copyFrameworks(
+	in directoryURL: URL,
+	to destinationURL: URL,
+	projectName: String,
+	pinnedVersion: PinnedVersion,
+	toolchain: String?
+) -> SignalProducer<URL, CarthageError> {
+	return frameworksInDirectory(directoryURL)
+		.flatMap(.merge) { url -> SignalProducer<URL, CarthageError> in
+			return checkFrameworkCompatibility(url, usingToolchain: toolchain)
+				.mapError { error in CarthageError.internalError(description: error.description) }
+		}
+		.collect()
+		.flatMap(.merge, { frameworkURLs -> SignalProducer<URL, CarthageError> in
+			copyFrameworksAndCreateVersionFile(frameworkURLs, from: directoryURL, to: destinationURL,
+											   projectName: projectName, pinnedVersion: pinnedVersion, toolchain: toolchain)
+		})
+}
+
+/// Copies any *.bcsymbolmap files matching the given framework and contained
+/// within the given directory URL to the directory that the framework
+/// resides within.
+///
+/// If no bcsymbolmap files are found for the given framework, completes with
+/// no values.
+///
+/// Sends the URLs of the bcsymbolmap files after copying.
+internal func copyBCSymbolMapsToBuildFolderForFramework(_ frameworkURL: URL, fromDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+	let destinationDirectoryURL = frameworkURL.deletingLastPathComponent()
+	return BCSymbolMapsForFramework(frameworkURL, inDirectoryURL: directoryURL)
+		.copyFileURLsIntoDirectory(destinationDirectoryURL)
+}
+
+/// Creates a .version file for all of the provided frameworks.
+internal func createVersionFilesForFrameworks(
+	_ frameworkURLs: [URL],
+	fromDirectoryURL directoryURL: URL,
+	projectName: String,
+	commitish: String
+	) -> SignalProducer<(), CarthageError> {
+	return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs,
+										 rootDirectoryURL: directoryURL)
+}
+
+/// Copies the framework at the given URL into the specified folder.
+///
+/// Sends the URL to the framework after copying.
+internal func copyFramework(_ frameworkURL: URL, toFolder folderURL: URL) -> SignalProducer<URL, CarthageError> {
+	return platformForFramework(frameworkURL)
+		.flatMap(.merge) { platform -> SignalProducer<URL, CarthageError> in
+			let platformFolderURL = folderURL.appendingPathComponent(platform.relativePath, isDirectory: true)
+			return SignalProducer(value: frameworkURL)
+				.copyFileURLsIntoDirectory(platformFolderURL)
+	}
+}
+
+/// Copies the DSYM matching the given framework and contained within the
+/// given directory URL to the directory that the framework resides within.
+///
+/// If no dSYM is found for the given framework, completes with no values.
+///
+/// Sends the URL of the dSYM after copying.
+internal func copyDSYMToBuildFolderForFramework(_ frameworkURL: URL, fromDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
+	let destinationDirectoryURL = frameworkURL.deletingLastPathComponent()
+	return dSYMForFramework(frameworkURL, inDirectoryURL: directoryURL)
+		.copyFileURLsIntoDirectory(destinationDirectoryURL)
 }
 
 /// Sends the URL to each dSYM found in the given directory

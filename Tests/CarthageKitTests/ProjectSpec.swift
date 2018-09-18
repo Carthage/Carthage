@@ -41,8 +41,13 @@ class ProjectSpec: QuickSpec {
 			func buildNoSharedSchemesTest(platforms: Set<SDK>? = nil, cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				return build(directoryURL: noSharedSchemesDirectoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
 			}
+			
+			func cleanSharedCache() {
+				_ = try? FileManager.default.removeItem(at: Constants.userCachesURL.appendingPathComponent("SharedCache"))
+			}
 
 			beforeEach {
+				cleanSharedCache()
 				_ = try? FileManager.default.removeItem(at: buildDirectoryURL)
 				// Pre-fetch the repos so we have a cache for the given tags
 				let sourceRepoUrl = directoryURL.appendingPathComponent("SourceRepos")
@@ -168,6 +173,7 @@ class ProjectSpec: QuickSpec {
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == []
 
+					cleanSharedCache()
 					let result3 = buildDependencyTest(platforms: [.macOS], cacheBuilds: false)
 					expect(result3) == expected
 				}
@@ -180,6 +186,7 @@ class ProjectSpec: QuickSpec {
 
 					overwriteFramework("TestFramework3", type: .dynamic, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 
+					cleanSharedCache()
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
 				}
@@ -197,6 +204,7 @@ class ProjectSpec: QuickSpec {
 					let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"v1.0\"", with: "\"commitish\" : \"v1.1\"")
 					_ = try! modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
 
+					cleanSharedCache()
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
 				}
@@ -217,6 +225,7 @@ class ProjectSpec: QuickSpec {
 						.reduce(true) { acc, next in return  acc && next }
 					expect(allDSymsRemoved) == true
 
+					cleanSharedCache()
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
 				}
@@ -229,8 +238,23 @@ class ProjectSpec: QuickSpec {
 
 					overwriteFramework("TestFramework2", type: .dynamic, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 
+					cleanSharedCache()
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == ["TestFramework2_Mac", "TestFramework1_Mac"]
+				}
+				
+				it("should not rebuild shared cached frameworks unnecessarily") {
+					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
+					
+					let result1 = buildDependencyTest(platforms: [.macOS])
+					expect(result1) == expected
+					
+					overwriteFramework("TestFramework1", type: .static, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					overwriteFramework("TestFramework2", type: .dynamic, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					overwriteFramework("TestFramework3", type: .dynamic, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+
+					let result2 = buildDependencyTest(platforms: [.macOS])
+					expect(result2) == []
 				}
 
 				it("should not rebuild cached frameworks (and dependencies) unnecessarily based on dSYMs") {
@@ -259,6 +283,7 @@ class ProjectSpec: QuickSpec {
 
 					overwriteFramework("TestFramework1", type: .static, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 
+					cleanSharedCache()
 					let result2 = buildDependencyTest()
 					expect(result2.filter { $0.contains("Mac") }) == ["TestFramework1_Mac"]
 					expect(result2.filter { $0.contains("iOS") }) == ["TestFramework1_iOS"]
@@ -279,6 +304,7 @@ class ProjectSpec: QuickSpec {
 					let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"v1.0\"", with: "\"commitish\" : \"v1.1\"")
 					_ = try! modifiedJson.write(toFile: framework2VersionFilePath, atomically: true, encoding: .utf8)
 
+					cleanSharedCache()
 					let result3 = buildNoSharedSchemesTest(platforms: [.iOS])
 					expect(result3) == ["TestFramework1_iOS"]
 				}

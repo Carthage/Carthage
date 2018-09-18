@@ -42,4 +42,8 @@ public struct XcodeVersion {
 			}
 			.single()?.value
 	}
+
+	public static func makeString() -> String {
+		return make().map { "\($0.version)_\($0.buildVersion)" } ?? "Unknown"
+	}
 }

@@ -6,6 +6,18 @@ import ReactiveSwift
 import ReactiveTask
 import XCDBLD
 
+/// Gets the shared cache file path URL for dependency at pinned version
+/// ~/Library/Caches/org.carthage.CarthageKit/SharedCache/XcodeVersion/DependencyName/Version, exemple :
+/// ~/Library/Caches/org.carthage.CarthageKit/SharedCache/9.4.1_9F2000/SwiftyUserDefaults/3.0.1
+internal func sharedCacheURLFor(toolchain: String?, dependency: Dependency, pinnedVersion: PinnedVersion) -> URL {
+	let sharedCacheURL = Constants.userCachesURL.appendingPathComponent("SharedCache")
+	let noSpacesToolchain = (toolchain ?? XcodeVersion.makeString()).replacingOccurrences(of: " ", with: "_")
+	let sharedCachePerToolchain = sharedCacheURL.appendingPathComponent(noSpacesToolchain, isDirectory: true)
+	let sharedCachePerDependency = sharedCachePerToolchain.appendingPathComponent(dependency.name, isDirectory: true)
+	let sharedCacheVersioned = sharedCachePerDependency.appendingPathComponent(pinnedVersion.commitish, isDirectory: true)
+	return sharedCacheVersioned
+}
+
 /// Emits the currect Swift version
 internal func swiftVersion(usingToolchain toolchain: String? = nil) -> SignalProducer<String, SwiftVersionError> {
 	return determineSwiftVersion(usingToolchain: toolchain).replayLazily(upTo: 1)
@@ -955,15 +967,23 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 						)
 						.flatMapError { _ in .empty }
 				}
-
-				return createVersionFile(
-					for: dependency.dependency,
-					version: dependency.version,
-					platforms: options.platforms,
-					buildProducts: urls,
-					rootDirectoryURL: rootDirectoryURL
-					)
-					.flatMapError { _ in .empty }
+				var copyToSharedCache = SignalProducer<(URL), CarthageError>.empty
+				if options.cacheBuilds {
+					let sharedCacheURLForDependency = sharedCacheURLFor(toolchain: options.toolchain, dependency: dependency.dependency, pinnedVersion: dependency.version)
+					copyToSharedCache = copyFrameworksAndCreateVersionFile(urls, from: rootDirectoryURL, to: sharedCacheURLForDependency,
+																		   projectName: dependency.dependency.name, pinnedVersion: dependency.version, toolchain: options.toolchain)
+							.flatMapError { _ in .empty }
+				}
+				return copyToSharedCache.then(
+					createVersionFile(
+						for: dependency.dependency,
+						version: dependency.version,
+						platforms: options.platforms,
+						buildProducts: urls,
+						rootDirectoryURL: rootDirectoryURL
+						)
+						.flatMapError { _ in SignalProducer<(), CarthageError>.empty }
+				)
 			}
 			// Discard any Success values, since we want to
 			// use our initial value instead of waiting for
