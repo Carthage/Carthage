@@ -45,6 +45,9 @@ bootstrap:
 test: clean bootstrap
 	xcodebuild $(XCODEFLAGS) -configuration Release ENABLE_TESTABILITY=YES test
 
+lint:
+	swiftlint --strict
+
 clean:
 	$(RM) "$(INTERNAL_PACKAGE)"
 	$(RM) "$(OUTPUT_PACKAGE)"
