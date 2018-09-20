@@ -380,7 +380,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		tryCheckoutDirectory: Bool
 	) -> SignalProducer<CompatibilityInfo.Requirements, CarthageError> {
 		return SignalProducer(resolvedCartfile.dependencies)
-			.flatMap(.concurrent(limit: 4)) { (dependency, pinnedVersion) -> SignalProducer<(Dependency, (Dependency, VersionSpecifier)), CarthageError> in
+			.flatMap(.concurrent(limit: 4)) { dependency, pinnedVersion -> SignalProducer<(Dependency, (Dependency, VersionSpecifier)), CarthageError> in
 				return self.dependencies(for: dependency, version: pinnedVersion, tryCheckoutDirectory: tryCheckoutDirectory)
 					.map { (dependency, $0) }
 			}

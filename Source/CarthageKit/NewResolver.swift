@@ -101,7 +101,7 @@ public struct NewResolver: ResolverProtocol {
 		return self.nodePermutations(for: dependencies, in: baseGraph, withParent: parent)
 			.flatMap { permutations in
 				// Only throw an error if no valid graph was produced by any of the permutations
-				var errResult: Result<DependencyGraph, CarthageError>? = nil
+				var errResult: Result<DependencyGraph, CarthageError>?
 				for nextGraphResult in permutations {
 					// Immediately fail if graph creation fails
 					guard case let .success(nextGraph) = nextGraphResult else { return errResult! }
@@ -361,7 +361,7 @@ private struct NodePermutations: Sequence, IteratorProtocol {
 	/// Generates the next valid graph, skipping over invalid permutations
 	/// Returns an error if any graph generation results in an error
 	private mutating func nextValidGraph() -> Result<DependencyGraph, CarthageError>? {
-		var result: Result<DependencyGraph, CarthageError>? = nil
+		var result: Result<DependencyGraph, CarthageError>?
 		// Skip any invalid permutations
 		while hasNext && result == nil {
 			result = generateGraph()
