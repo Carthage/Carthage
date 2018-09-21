@@ -23,6 +23,9 @@ extension BuildOptions: OptionsProtocol {
 			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
 			<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: "don't use downloaded binaries when possible")
+			<*> mode <| Option<BuildArguments.BuildSystemType>(key: "forced-build-system",
+															   defaultValue: .defaultForProject,
+															   usage: "force specific build system version (either 'new' or 'legacy')")
 	}
 }
 
@@ -337,5 +340,18 @@ extension BuildPlatform: ArgumentProtocol {
 			}
 			return .multiple(buildPlatforms)
 		}
+	}
+}
+
+extension BuildArguments.BuildSystemType: ArgumentProtocol {
+	public static let name = "forced-build-system"
+
+	private static let acceptedString: [String: BuildArguments.BuildSystemType] = [
+		"new": .new,
+		"legacy": .legacy,
+	]
+
+	public static func from(string: String) -> BuildArguments.BuildSystemType? {
+		return acceptedString.first { $0.key == string }?.value
 	}
 }

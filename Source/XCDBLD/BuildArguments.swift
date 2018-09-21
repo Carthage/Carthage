@@ -25,6 +25,18 @@ public struct BuildArguments {
 		case bitcode = "bitcode"
 	}
 
+	/// Represents a project setting used to decide which build system will be used.
+	public enum BuildSystemType {
+		/// Use the value from the project/workspace.
+		case defaultForProject
+
+		/// Force new build system introduced in Xcode 9
+		case new
+
+		/// Force legacy build system deprecated in Xcode 10
+		case legacy
+	}
+
 	/// The project to build.
 	public let project: ProjectLocator
 
@@ -56,13 +68,17 @@ public struct BuildArguments {
 	/// The build setting whether full bitcode should be embedded in the binary.
 	public var bitcodeGenerationMode: BitcodeGenerationMode?
 
+	/// The build setting whether to use the new, legacy or project's default build system.
+	public var buildSystemType: BuildSystemType?
+
 	public init(
 		project: ProjectLocator,
 		scheme: Scheme? = nil,
 		configuration: String? = nil,
 		derivedDataPath: String? = nil,
 		sdk: SDK? = nil,
-		toolchain: String? = nil
+		toolchain: String? = nil,
+		buildSystemType: BuildSystemType = .defaultForProject
 	) {
 		self.project = project
 		self.scheme = scheme
@@ -70,6 +86,7 @@ public struct BuildArguments {
 		self.derivedDataPath = derivedDataPath
 		self.sdk = sdk
 		self.toolchain = toolchain
+		self.buildSystemType = buildSystemType
 	}
 
 	/// The `xcodebuild` invocation corresponding to the receiver.
@@ -121,6 +138,17 @@ public struct BuildArguments {
 
 		if let destinationTimeout = destinationTimeout {
 			args += [ "-destination-timeout", String(destinationTimeout) ]
+		}
+
+		if let buildSystemType = buildSystemType {
+			switch buildSystemType {
+			case .new:
+				args += [ "-UseNewBuildSystem=YES"]
+			case .legacy:
+				args += [ "-UseNewBuildSystem=NO"]
+			case .defaultForProject:
+				break
+			}
 		}
 
 		if let onlyActiveArchitecture = onlyActiveArchitecture {

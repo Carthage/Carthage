@@ -461,7 +461,8 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		scheme: scheme,
 		configuration: options.configuration,
 		derivedDataPath: options.derivedDataPath,
-		toolchain: options.toolchain
+		toolchain: options.toolchain,
+		buildSystemType: options.buildSystemType
 	)
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
