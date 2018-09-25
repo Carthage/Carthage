@@ -57,6 +57,7 @@
 		BF7A1A0B1E3A7AE9008CBCC5 /* BinaryProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */; };
 		BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */; };
 		CD09E28B1F0E3FFB00A0378A /* FakeSwift.framework in Resources */ = {isa = PBXBuildFile; fileRef = CD09E2881F0E3F1400A0378A /* FakeSwift.framework */; };
+		CD1491CD2142CF6D000C9CE1 /* GitHubSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1491CC2142CF6D000C9CE1 /* GitHubSpec.swift */; };
 		CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD28C99C1E11846200322AF7 /* ProductType.swift */; };
 		CD3E530B1DE33095002C135C /* Availability.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3E530A1DE33095002C135C /* Availability.swift */; };
 		CD43D9DA1F41640E00CD60F6 /* CarthageKitVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD43D9D91F41640E00CD60F6 /* CarthageKitVersion.swift */; };
@@ -234,6 +235,7 @@
 		BF7A1A091E3A7188008CBCC5 /* BinaryProject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProject.swift; sourceTree = "<group>"; };
 		BFFA7A621E3AAFD200CB95A7 /* BinaryProjectSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BinaryProjectSpec.swift; sourceTree = "<group>"; };
 		CD09E2881F0E3F1400A0378A /* FakeSwift.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = FakeSwift.framework; sourceTree = "<group>"; };
+		CD1491CC2142CF6D000C9CE1 /* GitHubSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GitHubSpec.swift; sourceTree = "<group>"; };
 		CD28C99C1E11846200322AF7 /* ProductType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProductType.swift; sourceTree = "<group>"; };
 		CD3E530A1DE33095002C135C /* Availability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Availability.swift; sourceTree = "<group>"; };
 		CD43D9D91F41640E00CD60F6 /* CarthageKitVersion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CarthageKitVersion.swift; sourceTree = "<group>"; };
@@ -593,6 +595,7 @@
 				D0D121DF19E8999E005E4BAA /* CartfileSpec.swift */,
 				BF3199BF1E32E078007DC0D1 /* DependencySpec.swift */,
 				89A8F1771C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift */,
+				CD1491CC2142CF6D000C9CE1 /* GitHubSpec.swift */,
 				CDA0B6C91C468E67006C499C /* GitURLSpec.swift */,
 				549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */,
 				0FDFEA7D2055D638008862E3 /* ProxyTests.swift */,
@@ -920,6 +923,7 @@
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
 				0FDFEA7E2055D638008862E3 /* ProxyTests.swift in Sources */,
 				3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */,
+				CD1491CD2142CF6D000C9CE1 /* GitHubSpec.swift in Sources */,
 				BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */,
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,
 				549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */,
