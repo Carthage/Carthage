@@ -219,7 +219,7 @@ extension Scanner {
 	fileprivate func scanStringWithPrefix(_ prefix: Character, until: String) -> String? {
 		guard !self.isAtEnd, self.remainingSubstring?.first == prefix else { return nil }
 
-		var buffer: NSString? = nil
+		var buffer: NSString?
 		self.scanUpTo(until, into: &buffer)
 		guard let stringWithPrefix = buffer as String?, stringWithPrefix.first == prefix else {
 			return nil
