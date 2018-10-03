@@ -1,0 +1,21 @@
+git "https://git.behindmedia.com/NL/CommunicationNL.git" "cryptonite/updating-log-in-classes-to-support-migration"
+git "https://git.behindmedia.com/NL/NinaNL.git" ~> 0.0.1
+git "https://git.behindmedia.com/NL/ScanToolsNL.git" ~> 1.0
+
+git "https://git.behindmedia.com/Common/BMCommunication.git" ~> 3.2
+git "https://git.behindmedia.com/Common/BMCordova.git" ~> 0.28
+git "https://git.behindmedia.com/Common/BMCore.git" ~> 3.0
+git "https://git.behindmedia.com/Common/BMFormFields.git" ~> 1.0
+git "https://git.behindmedia.com/Common/BMFoundation.git" ~> 0.13
+git "https://git.behindmedia.com/Common/BMHybridPackage.git" ~> 1.0
+git "https://git.behindmedia.com/Common/BMMoneyTransfers.git" "0.1.0-hotfix1"
+git "https://git.behindmedia.com/Common/BMProducts.git" ~> 1.14
+git "https://git.behindmedia.com/Common/BMTransactions.git" ~> 0.2
+git "https://git.behindmedia.com/Common/BMWebtrekkAnalytics.git" ~> 1.0
+git "https://git.behindmedia.com/Common/SwiftLint.git" ~> 1.0
+git "https://git.behindmedia.com/Common/BuildScripts.git" ~> 1.0
+git "https://git.behindmedia.com/Common/BMBiometrics.git" ~> 0.1.4
+
+github "AliSoftware/OHHTTPStubs" == 6.1.0
+github "bitstadium/HockeySDK-iOS" == 4.1.6
+github "erikdoe/ocmock" == 3.3.1

@@ -1,0 +1,35 @@
+[
+  {
+    "versionSpecifier" : "~> 1.0.0",
+    "dependency" : {
+      "git" : {
+        "urlString" : "https:\/\/git.behindmedia.com\/Common\/SwiftLint.git"
+      }
+    }
+  },
+  {
+    "versionSpecifier" : "~> 1.0.0",
+    "dependency" : {
+      "git" : {
+        "urlString" : "https:\/\/git.behindmedia.com\/Common\/BuildScripts.git"
+      }
+    }
+  },
+  {
+    "versionSpecifier" : "~> 4.0.0",
+    "dependency" : {
+      "git" : {
+        "urlString" : "https:\/\/git.behindmedia.com\/Common\/BMCore.git"
+      }
+    }
+  },
+  {
+    "versionSpecifier" : "== 4.11.0",
+    "dependency" : {
+      "gitHub" : {
+        "repositoryOwner" : "Webtrekk",
+        "repositoryName" : "webtrekk-ios-sdk"
+      }
+    }
+  }
+]

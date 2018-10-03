@@ -41,9 +41,9 @@ extension ProjectLocator {
 			}
 			.filterMap { url -> ProjectLocator? in
 				if let uti = url.typeIdentifier.value {
-					if (UTTypeConformsTo(uti as CFString, "com.apple.dt.document.workspace" as CFString)) {
+					if UTTypeConformsTo(uti as CFString, "com.apple.dt.document.workspace" as CFString) {
 						return .workspace(url)
-					} else if (UTTypeConformsTo(uti as CFString, "com.apple.xcode.project" as CFString)) {
+					} else if UTTypeConformsTo(uti as CFString, "com.apple.xcode.project" as CFString) {
 						return .projectFile(url)
 					}
 				}

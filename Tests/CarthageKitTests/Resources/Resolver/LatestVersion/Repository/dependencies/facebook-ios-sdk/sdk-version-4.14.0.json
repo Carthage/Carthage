@@ -1,0 +1,11 @@
+[
+  {
+    "versionSpecifier" : "~> 1.7.0",
+    "dependency" : {
+      "gitHub" : {
+        "repositoryOwner" : "BoltsFramework",
+        "repositoryName" : "Bolts-ObjC"
+      }
+    }
+  }
+]

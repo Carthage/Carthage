@@ -1,0 +1,11 @@
+[
+  {
+    "versionSpecifier" : "~> 3.0.0",
+    "dependency" : {
+      "gitHub" : {
+        "repositoryOwner" : "ashleymills",
+        "repositoryName" : "Reachability.swift"
+      }
+    }
+  }
+]

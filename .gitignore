@@ -19,6 +19,7 @@ DerivedData
 *.xcuserstate
 *.xcscmblueprint
 .DS_Store
+.idea
 
 Carthage.pkg
 Carthage/Build

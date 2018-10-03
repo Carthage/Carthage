@@ -7,7 +7,6 @@ public let carthageProjectCheckoutsPath = "Carthage/Checkouts"
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
-
 	/// Any text following this character is considered a comment
 	static let commentIndicator = "#"
 
@@ -121,6 +120,15 @@ public struct Cartfile {
 	}
 }
 
+extension Cartfile: CustomStringConvertible {
+	public var description: String {
+		return dependencies
+			.sorted { $0.key.description < $1.key.description }
+			.map { "\($0.key) \($0.value)\n" }
+			.joined(separator: "")
+	}
+}
+
 /// Returns an array containing dependencies that are listed in both arguments.
 public func duplicateDependenciesIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile) -> [Dependency] {
 	let projects1 = cartfile1.dependencies.keys
@@ -175,10 +183,9 @@ extension ResolvedCartfile: CustomStringConvertible {
 }
 
 extension String {
-
-	/// Returns self without any potential trailing Cartfile comment. A Cartfile
-	/// comment starts with the first `commentIndicator` that is not embedded in any quote
-	var strippingTrailingCartfileComment: String {
+	  /// Returns self without any potential trailing Cartfile comment. A Cartfile
+	  /// comment starts with the first `commentIndicator` that is not embedded in any quote
+	  var strippingTrailingCartfileComment: String {
 
 		// Since the Cartfile syntax doesn't support nested quotes, such as `"version-\"alpha\""`,
 		// simply consider any odd-number occurence of a quote as a quote-start, and any

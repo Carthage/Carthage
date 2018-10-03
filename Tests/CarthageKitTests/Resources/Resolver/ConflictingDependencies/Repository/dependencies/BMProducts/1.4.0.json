@@ -1,0 +1,18 @@
+[
+  {
+    "versionSpecifier" : "~> 2.5.0",
+    "dependency" : {
+      "git" : {
+        "urlString" : "https:\/\/git.behindmedia.com\/Common\/BMCore.git"
+      }
+    }
+  },
+  {
+    "versionSpecifier" : "~> 3.0.0",
+    "dependency" : {
+      "git" : {
+        "urlString" : "https:\/\/git.behindmedia.com\/Common\/BMCommunication.git"
+      }
+    }
+  }
+]
