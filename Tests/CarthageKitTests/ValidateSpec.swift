@@ -114,7 +114,9 @@ class ValidateSpec: QuickSpec {
 									reactiveSwiftDependency: [resultDependency: v3_2_1],
 									yapDatabaseDependency: [cocoaLumberjackDependency: commitish]]
 
-				let infos = CompatibilityInfo.incompatibilities(for: dependencies, requirements: requirements).value
+				let infos = CompatibilityInfo.incompatibilities(for: dependencies, requirements: requirements)
+					.value?
+					.sorted { $0.dependency.name < $1.dependency.name }
 
 				expect(infos?[0].dependency) == alamofireDependency
 				expect(infos?[0].pinnedVersion) == PinnedVersion("6.0.0")
@@ -143,7 +145,7 @@ class ValidateSpec: QuickSpec {
 				let project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
 
 				let error = project.validate(resolvedCartfile: resolvedCartfile.value!).single()?.error
-				let infos = error?.compatibilityInfos
+				let infos = error?.compatibilityInfos.sorted { $0.dependency.name < $1.dependency.name }
 
 				expect(infos?[0].dependency) == alamofireDependency
 				expect(infos?[0].pinnedVersion) == PinnedVersion("5.0.0")
