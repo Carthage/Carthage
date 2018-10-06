@@ -26,6 +26,9 @@ class SimulatorSpec: QuickSpec {
 					expect(simulator.udid).to(equal(UUID(uuidString: "A52BF797-F6F8-47F1-B559-68B66B553B23")!))
 					expect(simulator.isAvailable).to(beTrue())
 					expect(simulator.name).to(equal("iPhone 5s"))
+					
+					let unavailableSimulator = simulators.last!
+					expect(unavailableSimulator.isAvailable).to(beFalse())
 				}
 			}
 			
@@ -42,6 +45,9 @@ class SimulatorSpec: QuickSpec {
 					expect(simulator.udid).to(equal(UUID(uuidString: "A52BF797-F6F8-47F1-B559-68B66B553B23")!))
 					expect(simulator.isAvailable).to(beTrue())
 					expect(simulator.name).to(equal("iPhone 5s"))
+					
+					let unavailableSimulator = simulators.last!
+					expect(unavailableSimulator.isAvailable).to(beFalse())
 				}
 			}
 		}

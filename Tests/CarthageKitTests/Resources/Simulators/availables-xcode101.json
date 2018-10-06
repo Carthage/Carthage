@@ -9,7 +9,7 @@
       },
       {
         "state" : "Shutdown",
-        "isAvailable" : "YES",
+        "isAvailable" : "NO",
         "name" : "iPhone 6",
         "udid" : "ABDA7BC1-DB72-4332-90C2-C3D9AA8A5003"
       },
