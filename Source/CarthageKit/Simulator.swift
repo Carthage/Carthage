@@ -2,26 +2,27 @@ import Foundation
 import XCDBLD
 
 internal struct Simulator: Decodable {
-	enum Availability: String, Decodable {
-		case available
-		case unavailable
-
-		init(from decoder: Decoder) throws {
-			let container = try decoder.singleValueContainer()
-			let rawString = try container.decode(String.self)
-			if rawString == "(available)" {
-				self = .available
-			} else {
-				self = .unavailable
-			}
-		}
+	enum CodingKeys: String, CodingKey {
+		case name
+		case udid
+		case isAvailable
+		case availability
 	}
 
-	var isAvailable: Bool {
-		return availability == .available
+	init(from decoder: Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		name = try container.decode(String.self, forKey: .name)
+		udid = try container.decode(UUID.self, forKey: .udid)
+		// To Xcode 10.0, Return values of `xcrun simctl list devices --json` contains `availability` field.
+		// Its value is possible to be `(available)` or `(unavailable)`.
+		// Since Xcode 10.1, `availability` field is obsolated.
+		// Using `isAvailable` instead. its value is possible to be `YES` or `NO`.
+		let availability = try container.decodeIfPresent(String.self, forKey: .availability)
+		let isAvailable = try container.decodeIfPresent(String.self, forKey: .isAvailable)
+		self.isAvailable = isAvailable == "YES" || availability == "(available)"
 	}
 
-	var availability: Availability
+	var isAvailable: Bool
 	var name: String
 	var udid: UUID
 }
