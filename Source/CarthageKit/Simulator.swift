@@ -9,7 +9,7 @@ internal struct Simulator: Decodable {
 		init(from decoder: Decoder) throws {
 			let container = try decoder.singleValueContainer()
 			let rawString = try container.decode(String.self)
-			if rawString == "(available)" {
+			if rawString == "YES" {
 				self = .available
 			} else {
 				self = .unavailable
@@ -17,11 +17,7 @@ internal struct Simulator: Decodable {
 		}
 	}
 
-	var isAvailable: Bool {
-		return availability == .available
-	}
-
-	var availability: Availability
+	var isAvailable: Availability
 	var name: String
 	var udid: UUID
 }
@@ -52,5 +48,5 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 		return nil
 	}
 	return devices[latestOSName]?
-		.first { $0.isAvailable }
+		.first { $0.isAvailable == Simulator.Availability.available }
 }
