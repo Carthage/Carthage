@@ -3,7 +3,7 @@
 CARTHAGE_TEMPORARY_FOLDER?=/tmp/Carthage.dst
 PREFIX?=/usr/local
 
-XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage' DSTROOT=$(CARTHAGE_TEMPORARY_FOLDER)
+XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage' DSTROOT=$(CARTHAGE_TEMPORARY_FOLDER) OTHER_LDFLAGS=-Wl,-headerpad_max_install_names 
 
 INTERNAL_PACKAGE=CarthageApp.pkg
 OUTPUT_PACKAGE=Carthage.pkg
