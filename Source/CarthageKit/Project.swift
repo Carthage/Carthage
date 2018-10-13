@@ -1123,6 +1123,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
 				return self.symlinkBuildPathIfNeeded(for: dependency, version: version)
+					.then(self.generateSwiftPackageManagerXcodeProjectIfAvailable(forDependencyAt: dependencyPath))
 					.then(build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter))
 					.flatMapError { error -> BuildSchemeProducer in
 						switch error {
