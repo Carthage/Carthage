@@ -1016,10 +1016,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 	public func generateSwiftPackageManagerXcodeProjectIfAvailable(forDependencyAt dependencyPath: String) -> SignalProducer<(), NoError> {
 		let files = (try? FileManager.default.contentsOfDirectory(atPath: dependencyPath)) ?? []
 
-		let hasXcodeProjectFile = files.lazy.filter { $0.hasSuffix(".xcodeproj") || $0.hasSuffix(".xcworkspace") }.first != nil
-		guard !hasXcodeProjectFile else { return .init(value: ()) }
+		let hasXcodeProjectFile = files.lazy.first { $0.hasSuffix(".xcodeproj") || $0.hasSuffix(".xcworkspace") } != nil
+		if hasXcodeProjectFile { return .init(value: ()) }
 
-		let hasPackageFile = files.lazy.filter { $0 == "Package.swift" }.first != nil
+		let hasPackageFile = files.lazy.first { $0 == "Package.swift" } != nil
 		guard hasPackageFile else { return .init(value: ()) }
 
 		let task = Task("/usr/bin/swift", arguments: [ "package", "generate-xcodeproj" ], workingDirectoryPath: dependencyPath)
