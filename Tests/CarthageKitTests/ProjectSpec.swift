@@ -223,6 +223,37 @@ class ProjectSpec: QuickSpec {
 				}
 			}
 		}
+		
+		describe("buildCheckedOutDependenciesWithOptions_swiftPackageManagerOnly") {
+			let directoryURL = Bundle(for: type(of: self)).url(forResource: "SwiftPackageManagerTest", withExtension: nil)!
+			let buildDirectoryURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
+			func buildFramework() -> [String] {
+				let project = Project(directoryURL: directoryURL)
+				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug"))
+					.ignoreTaskData()
+					.on(value: { (project, scheme) in
+						NSLog("Building scheme \"\(scheme)\" in \(project)")
+					})
+					.wait()
+				expect(result.error).to(beNil())
+				let files = (try? FileManager.default.contentsOfDirectory(atPath: buildDirectoryURL.path)) ?? []
+				return files
+					.filter { !$0.hasPrefix(".") }
+					.filter { dirname in
+						// returns platform directory names which contains "TestFramework.framework"
+						let frameworkPath = buildDirectoryURL.appendingPathComponent(dirname).appendingPathComponent("TestFramework.framework").path
+						return FileManager.default.fileExists(atPath: frameworkPath)
+				}
+			}
+			
+			beforeEach {
+				try? FileManager.default.removeItem(at: buildDirectoryURL)
+			}
+			fit("should build Swift Package Manager only framework") {
+				let result = Set(buildFramework())
+				expect(result).to(equal(["iOS", "Mac", "tvOS", "watchOS"]))
+			}
+		}
 
 		describe("loadCombinedCartfile") {
 			it("should load a combined Cartfile when only a Cartfile is present") {
