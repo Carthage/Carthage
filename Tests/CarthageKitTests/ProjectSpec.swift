@@ -231,9 +231,6 @@ class ProjectSpec: QuickSpec {
 				let project = Project(directoryURL: directoryURL)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug"))
 					.ignoreTaskData()
-					.on(value: { (project, scheme) in
-						NSLog("Building scheme \"\(scheme)\" in \(project)")
-					})
 					.wait()
 				expect(result.error).to(beNil())
 				let files = (try? FileManager.default.contentsOfDirectory(atPath: buildDirectoryURL.path)) ?? []
