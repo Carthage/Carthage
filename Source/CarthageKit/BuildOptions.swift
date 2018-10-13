@@ -1,11 +1,3 @@
-//
-//  BuildOptions.swift
-//  Carthage
-//
-//  Created by Syo Ikeda on 5/22/16.
-//  Copyright © 2016 Carthage. All rights reserved.
-//
-
 import XCDBLD
 
 /// The build options used for building `xcodebuild` command.
@@ -18,14 +10,24 @@ public struct BuildOptions {
 	public var toolchain: String?
 	/// The path to the custom derived data folder.
 	public var derivedDataPath: String?
-	/// Rebuild even if cached builds exist.
+	/// Whether to skip building if valid cached builds exist.
 	public var cacheBuilds: Bool
+	/// Whether to use downloaded binaries if possible.
+	public var useBinaries: Bool
 
-	public init(configuration: String, platforms: Set<Platform> = [], toolchain: String? = nil, derivedDataPath: String? = nil, cacheBuilds: Bool = true) {
+	public init(
+		configuration: String,
+		platforms: Set<Platform> = [],
+		toolchain: String? = nil,
+		derivedDataPath: String? = nil,
+		cacheBuilds: Bool = true,
+		useBinaries: Bool = true
+	) {
 		self.configuration = configuration
 		self.platforms = platforms
 		self.toolchain = toolchain
 		self.derivedDataPath = derivedDataPath
 		self.cacheBuilds = cacheBuilds
+		self.useBinaries = useBinaries
 	}
 }

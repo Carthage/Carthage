@@ -1,22 +1,16 @@
-//
-//  Cartfile.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-10-10.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import Foundation
 import Result
-import ReactiveSwift
-import Tentacle
 
 /// The relative path to a project's checked out dependencies.
-public let CarthageProjectCheckoutsPath = "Carthage/Checkouts"
+public let carthageProjectCheckoutsPath = "Carthage/Checkouts"
 
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
+
+	/// Any text following this character is considered a comment
+	static let commentIndicator = "#"
+
 	/// The dependencies listed in the Cartfile.
 	public var dependencies: [Dependency: VersionSpecifier]
 
@@ -36,27 +30,44 @@ public struct Cartfile {
 		var duplicates: [Dependency] = []
 		var result: Result<(), CarthageError> = .success(())
 
-		let commentIndicator = "#"
-		string.enumerateLines { (line, stop) in
-			let scanner = Scanner(string: line)
-			
-			if scanner.scanString(commentIndicator, into: nil) {
+		string.enumerateLines { line, stop in
+			let scannerWithComments = Scanner(string: line)
+
+			if scannerWithComments.scanString(Cartfile.commentIndicator, into: nil) {
 				// Skip the rest of the line.
 				return
 			}
 
-			if scanner.isAtEnd {
+			if scannerWithComments.isAtEnd {
 				// The line was all whitespace.
 				return
 			}
 
-			switch Dependency.from(scanner).fanout(VersionSpecifier.from(scanner)) {
+			guard let remainingString = scannerWithComments.remainingSubstring.map(String.init) else {
+				result = .failure(CarthageError.internalError(
+					description: "Can NSScanner split an extended grapheme cluster? If it does, this will be the error…"
+				))
+				stop = true
+				return
+			}
+
+			let scannerWithoutComments = Scanner(
+				string: remainingString.strippingTrailingCartfileComment
+					.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+			)
+
+			switch Dependency.from(scannerWithoutComments).fanout(VersionSpecifier.from(scannerWithoutComments)) {
 			case let .success((dependency, version)):
 				if case .binary = dependency, case .gitReference = version {
-					result = .failure(CarthageError.parseError(description: "binary dependencies cannot have a git reference for the version specifier in line: \(scanner.currentLine)"))
+					result = .failure(
+						CarthageError.parseError(
+							description: "binary dependencies cannot have a git reference for the version specifier in line: \(scannerWithComments.currentLine)"
+						)
+					)
 					stop = true
 					return
 				}
+
 				if dependencies[dependency] == nil {
 					dependencies[dependency] = version
 				} else {
@@ -69,12 +80,7 @@ public struct Cartfile {
 				return
 			}
 
-			if scanner.scanString(commentIndicator, into: nil) {
-				// Skip the rest of the line.
-				return
-			}
-
-			if !scanner.isAtEnd {
+			if !scannerWithoutComments.isAtEnd {
 				result = .failure(CarthageError.parseError(description: "unexpected trailing characters in line: \(line)"))
 				stop = true
 			}
@@ -90,27 +96,21 @@ public struct Cartfile {
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
 	public static func from(file cartfileURL: URL) -> Result<Cartfile, CarthageError> {
-		do {
-			let cartfileContents = try String(contentsOf: cartfileURL, encoding: .utf8)
-			return Cartfile
-				.from(string: cartfileContents)
-				.mapError { error in
-					guard case let .duplicateDependencies(dupes) = error else {
-						return error
+		return Result(attempt: { try String(contentsOf: cartfileURL, encoding: .utf8) })
+			.mapError { .readFailed(cartfileURL, $0) }
+			.flatMap(Cartfile.from(string:))
+			.mapError { error in
+				guard case let .duplicateDependencies(dupes) = error else { return error }
+
+				let dependencies = dupes
+					.map { dupe in
+						return DuplicateDependency(
+							dependency: dupe.dependency,
+							locations: [ cartfileURL.path ]
+						)
 					}
-					
-					let dependencies = dupes
-						.map { dupe in
-							return DuplicateDependency(
-								dependency: dupe.dependency,
-								locations: [ cartfileURL.path ]
-							)
-						}
-					return .duplicateDependencies(dependencies)
-				}
-		} catch let error as NSError {
-			return .failure(CarthageError.readFailed(cartfileURL, error))
-		}
+				return .duplicateDependencies(dependencies)
+			}
 	}
 
 	/// Appends the contents of another Cartfile to that of the receiver.
@@ -133,7 +133,7 @@ public func duplicateDependenciesIn(_ cartfile1: Cartfile, _ cartfile2: Cartfile
 public struct ResolvedCartfile {
 	/// The dependencies listed in the Cartfile.resolved.
 	public var dependencies: [Dependency: PinnedVersion]
-	
+
 	public init(dependencies: [Dependency: PinnedVersion]) {
 		self.dependencies = dependencies
 	}
@@ -174,161 +174,44 @@ extension ResolvedCartfile: CustomStringConvertible {
 	}
 }
 
-/// Uniquely identifies a project that can be used as a dependency.
-public enum Dependency {
-	/// A repository hosted on GitHub.com or GitHub Enterprise.
-	case gitHub(Server, Repository)
+extension String {
 
-	/// An arbitrary Git repository.
-	case git(GitURL)
+	/// Returns self without any potential trailing Cartfile comment. A Cartfile
+	/// comment starts with the first `commentIndicator` that is not embedded in any quote
+	var strippingTrailingCartfileComment: String {
 
-	/// A binary-only framework
-	case binary(URL)
+		// Since the Cartfile syntax doesn't support nested quotes, such as `"version-\"alpha\""`,
+		// simply consider any odd-number occurence of a quote as a quote-start, and any
+		// even-numbered occurrence of a quote as quote-end.
+		// The comment indicator (e.g. `#`) is the start of a comment if it's not nested in quotes.
+		// The following code works also for comment indicators that are are more than one character
+		// long (e.g. double slashes).
 
-	/// The unique, user-visible name for this project.
-	public var name: String {
-		switch self {
-		case let .gitHub(_, repo):
-			return repo.name
+		let quote = "\""
 
-		case let .git(url):
-			return url.name ?? url.urlString
+		// Splitting the string by quote will make odd-numbered chunks outside of quotes, and
+		// even-numbered chunks inside of quotes.
+		// `omittingEmptySubsequences` is needed to maintain this property even in case of empty quotes.
+		let quoteDelimitedChunks = self.split(
+			separator: quote.first!,
+			maxSplits: Int.max,
+			omittingEmptySubsequences: false
+		)
 
-		case let .binary(url):
-			return url.lastPathComponent.stripping(suffix: ".json")
-		}
-	}
-
-	/// The path at which this project will be checked out, relative to the
-	/// working directory of the main project.
-	public var relativePath: String {
-		return (CarthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
-	}
-}
-
-extension Dependency: Comparable {
-	public static func ==(_ lhs: Dependency, _ rhs: Dependency) -> Bool {
-		switch (lhs, rhs) {
-		case let (.gitHub(left), .gitHub(right)):
-			return left == right
-
-		case let (.git(left), .git(right)):
-			return left == right
-
-		case let (.binary(left), .binary(right)):
-			return left == right
-
-		default:
-			return false
-		}
-	}
-
-	public static func <(_ lhs: Dependency, _ rhs: Dependency) -> Bool {
-		return lhs.name.caseInsensitiveCompare(rhs.name) == .orderedAscending
-	}
-}
-
-extension Dependency: Hashable {
-	public var hashValue: Int {
-		switch self {
-		case let .gitHub(server, repo):
-			return server.hashValue ^ repo.hashValue
-
-		case let .git(url):
-			return url.hashValue
-
-		case let .binary(url):
-			return url.hashValue
-		}
-	}
-}
-
-extension Dependency: Scannable {
-	/// Attempts to parse a Dependency.
-	public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
-		let parser: (String) -> Result<Dependency, ScannableError>
-
-		if scanner.scanString("github", into: nil) {
-			parser = { repoIdentifier in
-				return Repository.fromIdentifier(repoIdentifier).map { self.gitHub($0, $1) }
+		for (offset, chunk) in quoteDelimitedChunks.enumerated() {
+			let isInQuote = offset % 2 == 1 // even chunks are not in quotes, see comment above
+			if isInQuote {
+				continue // don't consider comment indicators inside quotes
 			}
-		} else if scanner.scanString("git", into: nil) {
-			parser = { urlString in
-				return .success(self.git(GitURL(urlString)))
+			if let range = chunk.range(of: Cartfile.commentIndicator) {
+				// there is a comment, return everything before its position
+				let advancedOffset = (..<offset).relative(to: quoteDelimitedChunks)
+				let previousChunks = quoteDelimitedChunks[advancedOffset]
+				let chunkBeforeComment = chunk[..<range.lowerBound]
+				return (previousChunks + [chunkBeforeComment])
+					.joined(separator: quote) // readd the quotes that were removed in the initial split
 			}
-		} else if scanner.scanString("binary", into: nil) {
-			parser = { urlString in
-				if let url = URL(string: urlString) {
-					if url.scheme == "https" {
-						return .success(self.binary(url))
-					} else {
-						return .failure(ScannableError(message: "non-https URL found for dependency type `binary`", currentLine: scanner.currentLine))
-					}
-				} else {
-					return .failure(ScannableError(message: "invalid URL found for dependency type `binary`", currentLine: scanner.currentLine))
-				}
-			}
-		} else {
-			return .failure(ScannableError(message: "unexpected dependency type", currentLine: scanner.currentLine))
 		}
-
-		if !scanner.scanString("\"", into: nil) {
-			return .failure(ScannableError(message: "expected string after dependency type", currentLine: scanner.currentLine))
-		}
-
-		var address: NSString? = nil
-		if !scanner.scanUpTo("\"", into: &address) || !scanner.scanString("\"", into: nil) {
-			return .failure(ScannableError(message: "empty or unterminated string after dependency type", currentLine: scanner.currentLine))
-		}
-
-		if let address = address {
-			return parser(address as String)
-		} else {
-			return .failure(ScannableError(message: "empty string after dependency type", currentLine: scanner.currentLine))
-		}
+		return self
 	}
-}
-
-extension Dependency: CustomStringConvertible {
-	public var description: String {
-		switch self {
-		case let .gitHub(server, repo):
-			let repoDescription: String
-			switch server {
-			case .dotCom:
-				repoDescription = "\(repo.owner)/\(repo.name)"
-
-			case .enterprise:
-				repoDescription = "\(server.url(for: repo))"
-			}
-			return "github \"\(repoDescription)\""
-
-		case let .git(url):
-			return "git \"\(url)\""
-
-		case let .binary(url):
-			return "binary \"\(url.absoluteString)\""
-		}
-	}
-}
-
-extension Dependency {
-
-	/// Returns the URL that the dependency's remote repository exists at.
-	func gitURL(preferHTTPS: Bool) -> GitURL? {
-		switch self {
-		case let .gitHub(server, repository):
-			if preferHTTPS {
-				return server.httpsURL(for: repository)
-			} else {
-				return server.sshURL(for: repository)
-			}
-
-		case let .git(url):
-			return url
-		case .binary:
-			return nil
-		}
-	}
-	
 }

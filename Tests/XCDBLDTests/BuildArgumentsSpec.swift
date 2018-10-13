@@ -1,3 +1,4 @@
+import Foundation
 import Quick
 import Nimble
 import XCDBLD
@@ -12,7 +13,7 @@ class BuildArgumentsSpec: QuickSpec {
 				let codeSignArguments = [
 					"CODE_SIGNING_REQUIRED=NO",
 					"CODE_SIGN_IDENTITY=",
-					"CARTHAGE=YES"
+					"CARTHAGE=YES",
 				]
 
 				context("when configured with a workspace") {
@@ -45,21 +46,21 @@ class BuildArgumentsSpec: QuickSpec {
 			itCreatesBuildArguments("has a default set of arguments", arguments: []) { _ in }
 
 			itCreatesBuildArguments("includes the scheme if one is given", arguments: ["-scheme", "exampleScheme"]) { subject in
-				subject.scheme = "exampleScheme"
+				subject.scheme = Scheme("exampleScheme")
 			}
 
 			itCreatesBuildArguments("includes the configuration if one is given", arguments: ["-configuration", "exampleConfiguration"]) { subject in
 				subject.configuration = "exampleConfiguration"
 			}
-			
+
 			itCreatesBuildArguments("includes the derived data path", arguments: ["-derivedDataPath", "/path/to/derivedDataPath"]) { subject in
 				subject.derivedDataPath = "/path/to/derivedDataPath"
 			}
-			
+
 			itCreatesBuildArguments("includes empty derived data path", arguments: []) { subject in
 				subject.derivedDataPath = ""
 			}
-			
+
 			itCreatesBuildArguments("includes the the toolchain", arguments: ["-toolchain", "org.swift.3020160509a"]) { subject in
 				subject.toolchain = "org.swift.3020160509a"
 			}
@@ -93,16 +94,6 @@ class BuildArgumentsSpec: QuickSpec {
 
 				itCreatesBuildArguments("includes ONLY_ACTIVE_ARCH=NO if it's set to false", arguments: ["ONLY_ACTIVE_ARCH=NO"]) { subject in
 					subject.onlyActiveArchitecture = false
-				}
-			}
-
-			describe("specifying the bitcode generation mode") {
-				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=marker if .marker is set", arguments: ["BITCODE_GENERATION_MODE=marker"]) { subject in
-					subject.bitcodeGenerationMode = .marker
-				}
-
-				itCreatesBuildArguments("includes BITCODE_GENERATION_MODE=bitcode if .bitcode is set", arguments: ["BITCODE_GENERATION_MODE=bitcode"]) { subject in
-					subject.bitcodeGenerationMode = .bitcode
 				}
 			}
 		}

@@ -11,29 +11,48 @@ public struct BuildSettings {
 	/// All build settings given at initialization.
 	public let settings: [String: String]
 
-	public init(target: String, settings: [String: String]) {
+	/// The build arguments used for loading the settings.
+	public let arguments: BuildArguments
+
+	/// The designated xcodebuild action if present.
+	public let action: BuildArguments.Action?
+
+	internal init(
+		target: String,
+		settings: [String: String],
+		arguments: BuildArguments,
+		action: BuildArguments.Action?
+	) {
 		self.target = target
 		self.settings = settings
+		self.arguments = arguments
+		self.action = action
 	}
 
 	/// Matches lines of the forms:
 	///
 	/// Build settings for action build and target "ReactiveCocoaLayout Mac":
 	/// Build settings for action test and target CarthageKitTests:
-	private static let targetSettingsRegex = try! NSRegularExpression(pattern: "^Build settings for action (?:\\S+) and target \\\"?([^\":]+)\\\"?:$", options: [ .caseInsensitive, .anchorsMatchLines ])
+	private static let targetSettingsRegex = try! NSRegularExpression( // swiftlint:disable:this force_try
+		pattern: "^Build settings for action (?:\\S+) and target \\\"?([^\":]+)\\\"?:$",
+		options: [ .caseInsensitive, .anchorsMatchLines ]
+	)
 
 	/// Invokes `xcodebuild` to retrieve build settings for the given build
 	/// arguments.
 	///
 	/// Upon .success, sends one BuildSettings value for each target included in
 	/// the referenced scheme.
-	public static func loadWithArguments(_ arguments: BuildArguments) -> SignalProducer<BuildSettings, CarthageError> {
-		// xcodebuild (in Xcode 8) has a bug where xcodebuild -showBuildSettings
+	public static func load(with arguments: BuildArguments, for action: BuildArguments.Action? = nil) -> SignalProducer<BuildSettings, CarthageError> {
+		// xcodebuild (in Xcode 8.0) has a bug where xcodebuild -showBuildSettings
 		// can hang indefinitely on projects that contain core data models.
 		// rdar://27052195
 		// Including the action "clean" works around this issue, which is further
 		// discussed here: https://forums.developer.apple.com/thread/50372
-		let task = xcodebuildTask(["clean", "-showBuildSettings", "-skipUnavailableActions"], arguments)
+		//
+		// "archive" also works around the issue above so use it to determine if
+		// it is configured for the archive action.
+		let task = xcodebuildTask(["archive", "-showBuildSettings", "-skipUnavailableActions"], arguments)
 
 		return task.launch()
 			.ignoreTaskData()
@@ -48,13 +67,18 @@ public struct BuildSettings {
 				return String(data: data, encoding: .utf8)!
 			}
 			.flatMap(.merge) { string -> SignalProducer<BuildSettings, CarthageError> in
-				return SignalProducer { observer, disposable in
+				return SignalProducer { observer, lifetime in
 					var currentSettings: [String: String] = [:]
 					var currentTarget: String?
 
-					let flushTarget = { () -> () in
+					let flushTarget = { () -> Void in
 						if let currentTarget = currentTarget {
-							let buildSettings = self.init(target: currentTarget, settings: currentSettings)
+							let buildSettings = self.init(
+								target: currentTarget,
+								settings: currentSettings,
+								arguments: arguments,
+								action: action
+							)
 							observer.send(value: buildSettings)
 						}
 
@@ -63,23 +87,23 @@ public struct BuildSettings {
 					}
 
 					string.enumerateLines { line, stop in
-						if disposable.isDisposed {
+						if lifetime.hasEnded {
 							stop = true
 							return
 						}
 
-						if let result = self.targetSettingsRegex.firstMatch(in: line, range: NSMakeRange(0, line.utf16.count)) {
-							let targetRange = result.rangeAt(1)
+						if let result = self.targetSettingsRegex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) {
+							let targetRange = Range(result.range(at: 1), in: line)!
 
 							flushTarget()
-							currentTarget = (line as NSString).substring(with: targetRange)
+							currentTarget = String(line[targetRange])
 							return
 						}
 
 						let trimSet = CharacterSet.whitespacesAndNewlines
-						let components = line.characters
+						let components = line
 							.split(maxSplits: 1) { $0 == "=" }
-							.map { String($0).trimmingCharacters(in: trimSet) }
+							.map { $0.trimmingCharacters(in: trimSet) }
 
 						if components.count == 2 {
 							currentSettings[components[0]] = components[1]
@@ -96,8 +120,8 @@ public struct BuildSettings {
 	///
 	/// If an SDK is unrecognized or could not be determined, an error will be
 	/// sent on the returned signal.
-	public static func SDKsForScheme(_ scheme: String, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
-		return loadWithArguments(BuildArguments(project: project, scheme: scheme))
+	public static func SDKsForScheme(_ scheme: Scheme, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
+		return load(with: BuildArguments(project: project, scheme: scheme))
 			.take(first: 1)
 			.flatMap(.merge) { $0.buildSDKs }
 	}
@@ -117,7 +141,7 @@ public struct BuildSettings {
 		let supportedPlatforms = self["SUPPORTED_PLATFORMS"]
 
 		if let supportedPlatforms = supportedPlatforms.value {
-			let platforms = supportedPlatforms.characters.split { $0 == " " }.map(String.init)
+			let platforms = supportedPlatforms.split { $0 == " " }.map(String.init)
 			return SignalProducer<String, CarthageError>(platforms)
 				.map { platform in SignalProducer(result: SDK.from(string: platform)) }
 				.flatten(.merge)
@@ -149,18 +173,66 @@ public struct BuildSettings {
 		}
 	}
 
+	private var productsDirectoryURLDependingOnAction: Result<URL, CarthageError> {
+		if action == .archive {
+			return self["OBJROOT"]
+				.fanout(archiveIntermediatesBuildProductsPath)
+				.map { objroot, path -> URL in
+					let root = URL(fileURLWithPath: objroot, isDirectory: true)
+					return root.appendingPathComponent(path)
+				}
+		} else {
+			return builtProductsDirectoryURL
+		}
+	}
+
+	private var archiveIntermediatesBuildProductsPath: Result<String, CarthageError> {
+		let r1 = self["TARGET_NAME"]
+		guard let schemeOrTarget = arguments.scheme?.name ?? r1.value else { return r1 }
+
+		let basePath = "ArchiveIntermediates/\(schemeOrTarget)/BuildProductsPath"
+		let pathComponent: String
+
+		if
+			let buildDir = self["BUILD_DIR"].value,
+			let builtProductsDir = self["BUILT_PRODUCTS_DIR"].value,
+			builtProductsDir.hasPrefix(buildDir)
+		{
+			// This is required to support CocoaPods-generated projects.
+			// See https://github.com/AliSoftware/Reusable/issues/50#issuecomment-336434345 for the details.
+			pathComponent = String(builtProductsDir[buildDir.endIndex...]) // e.g., /Release-iphoneos/Reusable-iOS
+		} else {
+			let r2 = self["CONFIGURATION"]
+			guard let configuration = r2.value else { return r2 }
+
+			// A value almost certainly beginning with `-` or (lacking said value) an
+			// empty string to append without effect in the path below because Xcode
+			// expects the path like that.
+			let effectivePlatformName = self["EFFECTIVE_PLATFORM_NAME"].value ?? ""
+
+			// e.g.,
+			// - Release
+			// - Release-iphoneos
+			pathComponent = "\(configuration)\(effectivePlatformName)"
+		}
+
+		let path = (basePath as NSString).appendingPathComponent(pathComponent)
+		return .success(path)
+	}
+
 	/// Attempts to determine the relative path (from the build folder) to the
 	/// built executable.
 	public var executablePath: Result<String, CarthageError> {
 		return self["EXECUTABLE_PATH"]
 	}
 
-	/// Attempts to determine the URL to the built executable.
+	/// Attempts to determine the URL to the built executable, corresponding to
+	/// its xcodebuild action.
 	public var executableURL: Result<URL, CarthageError> {
-		return builtProductsDirectoryURL
+		return productsDirectoryURLDependingOnAction
 			.fanout(executablePath)
-			.map { builtProductsURL, executablePath in
-				return builtProductsURL.appendingPathComponent(executablePath)
+			.map { productsDirectoryURL, executablePath in
+				return productsDirectoryURL.appendingPathComponent(executablePath)
 			}
 	}
 
@@ -169,12 +241,13 @@ public struct BuildSettings {
 		return self["WRAPPER_NAME"]
 	}
 
-	/// Attempts to determine the URL to the built product's wrapper.
+	/// Attempts to determine the URL to the built product's wrapper, corresponding
+	/// to its xcodebuild action.
 	public var wrapperURL: Result<URL, CarthageError> {
-		return builtProductsDirectoryURL
+		return productsDirectoryURLDependingOnAction
 			.fanout(wrapperName)
-			.map { builtProductsURL, wrapperName in
-				return builtProductsURL.appendingPathComponent(wrapperName)
+			.map { productsDirectoryURL, wrapperName in
+				return productsDirectoryURL.appendingPathComponent(wrapperName)
 			}
 	}
 
@@ -212,6 +285,23 @@ public struct BuildSettings {
 	/// Attempts to determine the path to the project that contains the current target
 	public var projectPath: Result<String, CarthageError> {
 		return self["PROJECT_FILE_PATH"]
+	}
+
+	/// Attempts to determine target build directory
+	public var targetBuildDirectory: Result<String, CarthageError> {
+		return self["TARGET_BUILD_DIR"]
+	}
+
+	/// Add subdirectory path if it's not possible to paste product to destination path
+	public func productDestinationPath(in destinationURL: URL) -> URL {
+		let directoryURL: URL
+		let frameworkType = self.frameworkType.value.flatMap { $0 }
+		if frameworkType == .static {
+			directoryURL = destinationURL.appendingPathComponent(FrameworkType.staticFolderName)
+		} else {
+			directoryURL = destinationURL
+		}
+		return directoryURL
 	}
 }
 

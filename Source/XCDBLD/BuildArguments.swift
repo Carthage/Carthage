@@ -2,6 +2,19 @@ import Foundation
 
 /// Configures a build with Xcode.
 public struct BuildArguments {
+	/// Available actions for xcodebuild listed in `man xcodebuild`
+	public enum Action: String {
+		case build = "build"
+		case buildForTesting = "build-for-testing"
+		case analyze = "analyze"
+		case archive = "archive"
+		case test = "test"
+		case testWithoutBuilding = "test-without-building"
+		case installSrc = "install-src"
+		case install = "install"
+		case clean = "clean"
+	}
+
 	/// Represents a build setting whether full bitcode should be embedded in the
 	/// binary.
 	public enum BitcodeGenerationMode: String {
@@ -16,17 +29,17 @@ public struct BuildArguments {
 	public let project: ProjectLocator
 
 	/// The scheme to build in the project.
-	public var scheme: String?
+	public var scheme: Scheme?
 
 	/// The configuration to use when building the project.
 	public var configuration: String?
-	
+
 	/// The path to the derived data.
 	public var derivedDataPath: String?
 
 	/// The platform SDK to build for.
 	public var sdk: SDK?
-	
+
 	/// The Swift toolchain to use.
 	public var toolchain: String?
 
@@ -38,12 +51,19 @@ public struct BuildArguments {
 
 	/// The build setting whether the product includes only object code for
 	/// the native architecture.
-	public var onlyActiveArchitecture: Bool? = nil
+	public var onlyActiveArchitecture: Bool?
 
 	/// The build setting whether full bitcode should be embedded in the binary.
-	public var bitcodeGenerationMode: BitcodeGenerationMode? = nil
+	public var bitcodeGenerationMode: BitcodeGenerationMode?
 
-	public init(project: ProjectLocator, scheme: String? = nil, configuration: String? = nil, derivedDataPath: String? = nil, sdk: SDK? = nil, toolchain: String? = nil) {
+	public init(
+		project: ProjectLocator,
+		scheme: Scheme? = nil,
+		configuration: String? = nil,
+		derivedDataPath: String? = nil,
+		sdk: SDK? = nil,
+		toolchain: String? = nil
+	) {
 		self.project = project
 		self.scheme = scheme
 		self.configuration = configuration
@@ -65,13 +85,13 @@ public struct BuildArguments {
 		}
 
 		if let scheme = scheme {
-			args += [ "-scheme", scheme ]
+			args += [ "-scheme", scheme.name ]
 		}
 
 		if let configuration = configuration {
 			args += [ "-configuration", configuration ]
 		}
-		
+
 		if let derivedDataPath = derivedDataPath {
 			let standarizedPath = URL(fileURLWithPath: (derivedDataPath as NSString).expandingTildeInPath).standardizedFileURL.path
 			if !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
@@ -90,7 +110,7 @@ public struct BuildArguments {
 				args += [ "-sdk", sdk.rawValue ]
 			}
 		}
-		
+
 		if let toolchain = toolchain {
 			args += [ "-toolchain", toolchain ]
 		}
@@ -111,14 +131,10 @@ public struct BuildArguments {
 			}
 		}
 
-		if let bitcodeGenerationMode = bitcodeGenerationMode {
-			args += [ "BITCODE_GENERATION_MODE=\(bitcodeGenerationMode.rawValue)" ]
-		}
-
 		// Disable code signing requirement for all builds
 		// Frameworks get signed in the copy-frameworks action
 		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]
-		
+
 		args += [ "CARTHAGE=YES" ]
 
 		return args

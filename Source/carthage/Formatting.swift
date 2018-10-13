@@ -1,16 +1,9 @@
-//
-//  Formatting.swift
-//  Carthage
-//
-//  Created by J.D. Healy on 1/29/15.
-//  Copyright (c) 2015 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Foundation
 import Result
 import PrettyColors
+import Curry
 
 /// Wraps a string with terminal colors and formatting or passes it through, depending on `isColorful`.
 private func wrap(_ isColorful: Bool, wrap: Color.Wrap) -> (String) -> String {
@@ -24,42 +17,37 @@ public enum ColorArgument: String, ArgumentProtocol, CustomStringConvertible {
 	case auto = "auto"
 	case never = "never"
 	case always = "always"
-	
+
 	/// Whether to color and format.
 	public var isColorful: Bool {
 		switch self {
 		case .always:
 			return true
+
 		case .never:
 			return false
+
 		case .auto:
 			return Terminal.isTTY && !Terminal.isDumb
 		}
 	}
-	
+
 	public var description: String {
 		return self.rawValue
 	}
-	
+
 	public static let name = "color"
-	
+
 	public static func from(string: String) -> ColorArgument? {
 		return self.init(rawValue: string.lowercased())
 	}
-
-	#if swift(>=3)
-	#else
-	public static func fromString(string: String) -> ColorArgument? {
-		return from(string)
-	}
-	#endif
 }
 
 /// Options for whether to color and format terminal output.
 public struct ColorOptions: OptionsProtocol {
 	let argument: ColorArgument
 	let formatting: Formatting
-	
+
 	public struct Formatting {
 		let isColorful: Bool
 		let bullets: String
@@ -67,18 +55,17 @@ public struct ColorOptions: OptionsProtocol {
 		let url: Wrap
 		let projectName: Wrap
 		let path: Wrap
-		
-		
+
 		/// Wraps a string with terminal colors and formatting or passes it through.
-		typealias Wrap = (_ string: String) -> String
-		
+		typealias Wrap = (_ string: String) -> String // swiftlint:disable:this nesting
+
 		init(_ isColorful: Bool) {
 			self.isColorful = isColorful
-			bulletin      = wrap(isColorful, wrap: Color.Wrap(foreground: .blue, style: .bold))
-			bullets       = bulletin("***") + " "
-			url           = wrap(isColorful, wrap: Color.Wrap(styles: .underlined))
-			projectName   = wrap(isColorful, wrap: Color.Wrap(styles: .bold))
-			path          = wrap(isColorful, wrap: Color.Wrap(foreground: .yellow))
+			bulletin = wrap(isColorful, wrap: Color.Wrap(foreground: .blue, style: .bold))
+			bullets = bulletin("***") + " "
+			url = wrap(isColorful, wrap: Color.Wrap(styles: .underlined))
+			projectName = wrap(isColorful, wrap: Color.Wrap(styles: .bold))
+			path = wrap(isColorful, wrap: Color.Wrap(foreground: .yellow))
 		}
 
 		/// Wraps a string in bullets, one space of padding, and formatting.
@@ -91,13 +78,48 @@ public struct ColorOptions: OptionsProtocol {
 			return wrap(isColorful, wrap: Color.Wrap(foreground: .green))(quotationMark + string + quotationMark)
 		}
 	}
-	
-	public static func create(_ argument: ColorArgument) -> ColorOptions {
-		return self.init(argument: argument, formatting: Formatting(argument.isColorful))
+
+	private init(argument: ColorArgument) {
+		self.argument = argument
+		self.formatting = Formatting(argument.isColorful)
 	}
-	
-	public static func evaluate(_ m: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
-		return create
-			<*> m <| Option(key: "color", defaultValue: ColorArgument.auto, usage: "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')")
+
+	public static func evaluate(_ mode: CommandMode) -> Result<ColorOptions, CommandantError<CarthageError>> {
+		return self.evaluate(mode, additionalUsage: nil)
+	}
+
+	public static func evaluate(_ mode: CommandMode, additionalUsage: String? = nil) -> Result<ColorOptions, CommandantError<CarthageError>> {
+		var usage = "whether to apply color and terminal formatting (one of 'auto', 'always', or 'never')"
+		if let additionalUsage = additionalUsage {
+			usage += "\n" + additionalUsage
+		}
+		return curry(self.init)
+			<*> mode <| Option(
+				key: "color",
+				defaultValue: ColorArgument.auto,
+				usage: usage
+		)
+	}
+}
+
+extension OutdatedCommand.UpdateType {
+	var color: Color.Named.Color {
+		switch self {
+		case .newest:
+			return .green
+		case .newer:
+			return .yellow
+		case .ineligible:
+			return .red
+		}
+	}
+}
+
+extension ColorOptions.Formatting {
+	subscript(_ index: OutdatedCommand.UpdateType?) -> Wrap {
+		guard self.isColorful, let update = index else {
+			return { $0 }
+		}
+		return Color.Wrap(foreground: update.color).wrap
 	}
 }
