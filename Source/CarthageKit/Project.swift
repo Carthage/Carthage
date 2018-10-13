@@ -1014,11 +1014,14 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 	public func generateSwiftPackageManagerXcodeProjectIfAvailable(forDependencyAt dependencyPath: String) -> SignalProducer<(), NoError> {
+		// Search for each sub-dir recursively for Xcode Project file
+		let enumerator = FileManager.default.enumerator(atPath: dependencyPath)
+		while let fileOrFolder = enumerator?.nextObject() as? String {
+			let hasXcodeProjectFile = fileOrFolder.hasSuffix(".xcodeproj") || fileOrFolder.hasSuffix(".xcworkspace")
+			if hasXcodeProjectFile { return .init(value: ()) }
+		}
+
 		let files = (try? FileManager.default.contentsOfDirectory(atPath: dependencyPath)) ?? []
-
-		let hasXcodeProjectFile = files.lazy.first { $0.hasSuffix(".xcodeproj") || $0.hasSuffix(".xcworkspace") } != nil
-		if hasXcodeProjectFile { return .init(value: ()) }
-
 		let hasPackageFile = files.lazy.first { $0 == "Package.swift" } != nil
 		guard hasPackageFile else { return .init(value: ()) }
 
