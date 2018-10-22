@@ -148,6 +148,7 @@ struct VersionFile: Codable {
 					return SignalProducer(value: true)
 				} else {
 					return frameworkSwiftVersion(frameworkURL)
+						.flatMapError { _ in dSYMSwiftVersion(frameworkURL.appendingPathExtension("dSYM")) }
 						.map { swiftVersion -> Bool in
 							return swiftVersion == localSwiftVersion
 						}
