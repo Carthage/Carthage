@@ -17,6 +17,7 @@ struct CachedFramework: Codable {
 struct VersionFile: Codable {
 	enum CodingKeys: String, CodingKey {
 		case commitish = "commitish"
+		case swiftVersion = "swiftVersion"
 		case macOS = "Mac"
 		case iOS = "iOS"
 		case watchOS = "watchOS"
@@ -24,6 +25,7 @@ struct VersionFile: Codable {
 	}
 
 	let commitish: String
+	let swiftVersion: String
 
 	let macOS: [CachedFramework]?
 	let iOS: [CachedFramework]?
@@ -51,13 +53,14 @@ struct VersionFile: Codable {
 
 	init(
 		commitish: String,
+		swiftVersion: String,
 		macOS: [CachedFramework]?,
 		iOS: [CachedFramework]?,
 		watchOS: [CachedFramework]?,
 		tvOS: [CachedFramework]?
 	) {
 		self.commitish = commitish
-
+		self.swiftVersion = swiftVersion
 		self.macOS = macOS
 		self.iOS = iOS
 		self.watchOS = watchOS
@@ -247,12 +250,14 @@ struct VersionFile: Codable {
 public func createVersionFile(
 	for dependency: Dependency,
 	version: PinnedVersion,
+	swiftVersion: String,
 	platforms: Set<Platform>,
 	buildProducts: [URL],
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
 	return createVersionFileForCommitish(
 		version.commitish,
+		swiftVersion: swiftVersion,
 		dependencyName: dependency.name,
 		platforms: platforms,
 		buildProducts: buildProducts,
@@ -262,6 +267,7 @@ public func createVersionFile(
 
 private func createVersionFile(
 	_ commitish: String,
+	swiftVersion: String,
 	dependencyName: String,
 	rootDirectoryURL: URL,
 	platformCaches: [String: [CachedFramework]]
@@ -275,6 +281,7 @@ private func createVersionFile(
 
 		let versionFile = VersionFile(
 			commitish: commitish,
+			swiftVersion: swiftVersion,
 			macOS: platformCaches[Platform.macOS.rawValue],
 			iOS: platformCaches[Platform.iOS.rawValue],
 			watchOS: platformCaches[Platform.watchOS.rawValue],
@@ -292,6 +299,7 @@ private func createVersionFile(
 /// Returns a signal that succeeds once the file has been created.
 public func createVersionFileForCommitish(
 	_ commitish: String,
+	swiftVersion: String,
 	dependencyName: String,
 	platforms: Set<Platform> = Set(Platform.supportedPlatforms),
 	buildProducts: [URL],
@@ -327,6 +335,7 @@ public func createVersionFileForCommitish(
 			.flatMap(.merge) { platformCaches -> SignalProducer<(), CarthageError> in
 				createVersionFile(
 					commitish,
+					swiftVersion: swiftVersion,
 					dependencyName: dependencyName,
 					rootDirectoryURL: rootDirectoryURL,
 					platformCaches: platformCaches
@@ -337,6 +346,7 @@ public func createVersionFileForCommitish(
 		// no cache and a dependency that has no frameworks
 		return createVersionFile(
 			commitish,
+			swiftVersion: swiftVersion,
 			dependencyName: dependencyName,
 			rootDirectoryURL: rootDirectoryURL,
 			platformCaches: platformCaches

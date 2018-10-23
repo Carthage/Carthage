@@ -873,11 +873,18 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 					return .empty
 				}
 
-				return createVersionFile(
-					for: dependency.dependency, version: dependency.version,
-					platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL
-				)
-				.flatMapError { _ in .empty }
+				return swiftVersion(usingToolchain: options.toolchain)
+					.mapError { _ -> CarthageError in .unknownLocalSwiftVersionError }
+					.flatMap(.concat) { swiftVersionName in
+						return createVersionFile(
+							for: dependency.dependency,
+							version: dependency.version,
+							swiftVersion: swiftVersionName,
+							platforms: options.platforms,
+							buildProducts: urls,
+							rootDirectoryURL: rootDirectoryURL
+						)
+				}
 			}
 			// Discard any Success values, since we want to
 			// use our initial value instead of waiting for
