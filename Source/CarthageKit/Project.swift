@@ -600,7 +600,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.collect()
 					.flatMap(.concat) { frameworkURLs -> SignalProducer<(), CarthageError> in
 						return swiftVersion(usingToolchain: toolchain)
-							.mapError { _ -> CarthageError in .unknownLocalSwiftVersionError }
+							.mapError { _ -> CarthageError in .unknownLocalSwiftVersion }
 							.flatMap(.concat) { swiftVersionName in
 							return self.createVersionFilesForFrameworks(
 								frameworkURLs,
@@ -1130,7 +1130,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 								// Create a version file for a dependency with no shared schemes
 								// so that its cache is not always considered invalid.
 								return swiftVersion(usingToolchain: options.toolchain)
-									.mapError { _ -> CarthageError in .unknownLocalSwiftVersionError }
+									.mapError { _ -> CarthageError in .unknownLocalSwiftVersion }
 									.flatMap(.concat) { (swiftVersionName: String) in
 										createVersionFileForCommitish(version.commitish,
 													      swiftVersion: swiftVersionName,
