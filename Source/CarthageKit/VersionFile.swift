@@ -8,16 +8,17 @@ struct CachedFramework: Codable {
 	enum CodingKeys: String, CodingKey {
 		case name = "name"
 		case hash = "hash"
+		case swiftVersion = "swiftVersion"
 	}
 
 	let name: String
 	let hash: String
+	let swiftVersion: String
 }
 
 struct VersionFile: Codable {
 	enum CodingKeys: String, CodingKey {
 		case commitish = "commitish"
-		case swiftVersion = "swiftVersion"
 		case macOS = "Mac"
 		case iOS = "iOS"
 		case watchOS = "watchOS"
@@ -25,7 +26,6 @@ struct VersionFile: Codable {
 	}
 
 	let commitish: String
-	let swiftVersion: String
 
 	let macOS: [CachedFramework]?
 	let iOS: [CachedFramework]?
@@ -53,14 +53,12 @@ struct VersionFile: Codable {
 
 	init(
 		commitish: String,
-		swiftVersion: String,
 		macOS: [CachedFramework]?,
 		iOS: [CachedFramework]?,
 		watchOS: [CachedFramework]?,
 		tvOS: [CachedFramework]?
 	) {
 		self.commitish = commitish
-		self.swiftVersion = swiftVersion
 		self.macOS = macOS
 		self.iOS = iOS
 		self.watchOS = watchOS
@@ -267,7 +265,6 @@ public func createVersionFile(
 
 private func createVersionFile(
 	_ commitish: String,
-	swiftVersion: String,
 	dependencyName: String,
 	rootDirectoryURL: URL,
 	platformCaches: [String: [CachedFramework]]
@@ -281,7 +278,6 @@ private func createVersionFile(
 
 		let versionFile = VersionFile(
 			commitish: commitish,
-			swiftVersion: swiftVersion,
 			macOS: platformCaches[Platform.macOS.rawValue],
 			iOS: platformCaches[Platform.iOS.rawValue],
 			watchOS: platformCaches[Platform.watchOS.rawValue],
@@ -326,7 +322,7 @@ public func createVersionFileForCommitish(
 				let platformName = values.1.0
 				let frameworkName = values.1.1
 
-				let cachedFramework = CachedFramework(name: frameworkName, hash: hash)
+				let cachedFramework = CachedFramework(name: frameworkName, hash: hash, swiftVersion: swiftVersion)
 				if var frameworks = platformCaches[platformName] {
 					frameworks.append(cachedFramework)
 					platformCaches[platformName] = frameworks
@@ -335,7 +331,6 @@ public func createVersionFileForCommitish(
 			.flatMap(.merge) { platformCaches -> SignalProducer<(), CarthageError> in
 				createVersionFile(
 					commitish,
-					swiftVersion: swiftVersion,
 					dependencyName: dependencyName,
 					rootDirectoryURL: rootDirectoryURL,
 					platformCaches: platformCaches
@@ -346,7 +341,6 @@ public func createVersionFileForCommitish(
 		// no cache and a dependency that has no frameworks
 		return createVersionFile(
 			commitish,
-			swiftVersion: swiftVersion,
 			dependencyName: dependencyName,
 			rootDirectoryURL: rootDirectoryURL,
 			platformCaches: platformCaches

@@ -15,7 +15,6 @@ class VersionFileSpec: QuickSpec {
 			let versionFile = file!
 
 			expect(versionFile.commitish) == "v1.0"
-			expect(versionFile.swiftVersion) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 
 			// Check multiple frameworks
 			let iOSCache = versionFile.iOS
@@ -23,8 +22,10 @@ class VersionFileSpec: QuickSpec {
 			expect(iOSCache!.count) == 2
 			expect(iOSCache![0].name) == "TestFramework1"
 			expect(iOSCache![0].hash) == "ios-framework1-hash"
+			expect(iOSCache![0].swiftVersion) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 			expect(iOSCache![1].name) == "TestFramework2"
 			expect(iOSCache![1].hash) == "ios-framework2-hash"
+			expect(iOSCache![1].swiftVersion) == "4.2.1 (swiftlang-1000.11.42 clang-1000.11.45.1)"
 
 			// Check different number of frameworks for a platform
 			let macOSCache = versionFile.macOS
@@ -32,6 +33,7 @@ class VersionFileSpec: QuickSpec {
 			expect(macOSCache!.count) == 1
 			expect(macOSCache![0].name) == "TestFramework1"
 			expect(macOSCache![0].hash) == "mac-framework1-hash"
+			expect(iOSCache![0].swiftVersion) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 
 			// Check empty framework list
 			let tvOSCache = versionFile.tvOS
@@ -44,9 +46,10 @@ class VersionFileSpec: QuickSpec {
 		}
 
 		it("should write and read back a version file correctly") {
-			let framework = CachedFramework(name: "TestFramework", hash: "TestHASH")
+			let framework = CachedFramework(name: "TestFramework",
+							hash: "TestHASH",
+							swiftVersion: "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)")
 			let versionFile = VersionFile(commitish: "v1.0",
-						      swiftVersion: "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)",
 						      macOS: nil,
 						      iOS: [framework],
 						      watchOS: nil,
@@ -64,23 +67,23 @@ class VersionFileSpec: QuickSpec {
 			expect(newVersionFile).notTo(beNil())
 
 			expect(newVersionFile!.commitish) == versionFile.commitish
-			expect(newVersionFile!.swiftVersion) == versionFile.swiftVersion
 
 			expect(newVersionFile!.iOS).toNot(beNil())
 			let newCachedFramework = newVersionFile!.iOS!
 			expect(newCachedFramework.count) == 1
 			expect(newCachedFramework[0].name) == framework.name
 			expect(newCachedFramework[0].hash) == framework.hash
+			expect(newCachedFramework[0].swiftVersion) == framework.swiftVersion
 		}
 
 		it("should encode and decode correctly") {
 			let jsonDictionary: [String: Any] = [
 				"commitish": "v1.0",
-				"swiftVersion": "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)",
 				"iOS": [
 					[
 						"name": "TestFramework",
 						"hash": "TestHASH",
+						"swiftVersion": "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)",
 					],
 				],
 			]
@@ -91,7 +94,6 @@ class VersionFileSpec: QuickSpec {
 
 			let versionFile = file!
 			expect(versionFile.commitish) == "v1.0"
-			expect(versionFile.swiftVersion) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 
 			// Check multiple frameworks
 			let iOSCache = versionFile.iOS
@@ -99,6 +101,7 @@ class VersionFileSpec: QuickSpec {
 			expect(iOSCache!.count) == 1
 			expect(iOSCache![0].name) == "TestFramework"
 			expect(iOSCache![0].hash) == "TestHASH"
+			expect(iOSCache![0].swiftVersion) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 
 			let value = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(versionFile))) as? [String: Any]
 			expect(value).notTo(beNil())
@@ -108,6 +111,7 @@ class VersionFileSpec: QuickSpec {
 			let iosFramework = (newJSONDictionary["iOS"] as! [Any])[0] as! [String: String] // swiftlint:disable:this force_cast
 			expect(iosFramework["name"]) == "TestFramework"
 			expect(iosFramework["hash"]) == "TestHASH"
+			expect(iosFramework["swiftVersion"]) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 		}
 
 		func validate(file: VersionFile, matches: Bool, platform: Platform, commitish: String, hashes: [String?],
