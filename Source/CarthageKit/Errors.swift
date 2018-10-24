@@ -85,7 +85,7 @@ public enum CarthageError: Error {
 
 	case buildFailed(TaskError, log: URL?)
 
-	case unknownLocalSwiftVersion
+	case unknownFrameworkSwiftVersion
 
 	/// An error occurred while shelling out.
 	case taskError(TaskError)
@@ -340,8 +340,8 @@ extension CarthageError: CustomStringConvertible {
 
 			return message
 
-		case .unknownLocalSwiftVersion:
-			return SwiftVersionError.unknownLocalSwiftVersion.description
+		case .unknownFrameworkSwiftVersion:
+			return SwiftVersionError.unknownFrameworkSwiftVersion.description
 
 		case let .taskError(taskError):
 			return taskError.description

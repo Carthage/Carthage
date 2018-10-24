@@ -599,17 +599,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					.collect()
 					.flatMap(.concat) { frameworkURLs -> SignalProducer<(), CarthageError> in
-						return swiftVersion(usingToolchain: toolchain)
-							.mapError { _ -> CarthageError in .unknownLocalSwiftVersion }
-							.flatMap(.concat) { swiftVersionName in
 							return self.createVersionFilesForFrameworks(
 								frameworkURLs,
 								fromDirectoryURL: directoryURL,
 								projectName: projectName,
-								commitish: pinnedVersion.commitish,
-								swiftVersion: swiftVersionName
+								commitish: pinnedVersion.commitish
 							)
-						}
 					}
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 			}
@@ -760,11 +755,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 		_ frameworkURLs: [URL],
 		fromDirectoryURL directoryURL: URL,
 		projectName: String,
-		commitish: String,
-		swiftVersion: String
+		commitish: String
 	) -> SignalProducer<(), CarthageError> {
 		return createVersionFileForCommitish(commitish,
-						     swiftVersion: swiftVersion,
 						     dependencyName: projectName,
 						     buildProducts: frameworkURLs,
 						     rootDirectoryURL: self.directoryURL)
@@ -1129,17 +1122,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 							if options.cacheBuilds {
 								// Create a version file for a dependency with no shared schemes
 								// so that its cache is not always considered invalid.
-								return swiftVersion(usingToolchain: options.toolchain)
-									.mapError { _ -> CarthageError in .unknownLocalSwiftVersion }
-									.flatMap(.concat) { (swiftVersionName: String) in
-										createVersionFileForCommitish(version.commitish,
-													      swiftVersion: swiftVersionName,
-													      dependencyName: dependency.name,
-													      platforms: options.platforms,
-													      buildProducts: [],
-													      rootDirectoryURL: self.directoryURL)
-											.then(BuildSchemeProducer.empty)
-								}
+								return createVersionFileForCommitish(version.commitish,
+												     dependencyName: dependency.name,
+												     platforms: options.platforms,
+												     buildProducts: [],
+												     rootDirectoryURL: self.directoryURL)
+									.then(BuildSchemeProducer.empty)
 							}
 							return .empty
 
