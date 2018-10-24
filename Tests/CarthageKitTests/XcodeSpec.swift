@@ -467,7 +467,7 @@ internal func beFramework(ofType: FrameworkType) -> Predicate<String> {
 		}
 
 		if !resultBool {
-			message += ", got \(stringOutput)"
+			message += ", got \(stringOutput!)"
 		}
 
 		return PredicateResult(
