@@ -316,15 +316,15 @@ public func createVersionFileForCommitish(
 			.flatMap(.merge) { url -> SignalProducer<(String, FrameworkDetail), CarthageError> in
 				let frameworkName = url.deletingPathExtension().lastPathComponent
 				let platformName = url.deletingLastPathComponent().lastPathComponent
-				let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
-				return frameworkSwiftVersion(frameworkURL)
+				return frameworkSwiftVersion(url)
 					.mapError { _ -> CarthageError in .unknownFrameworkSwiftVersion }
 					.flatMap(.merge) { frameworkSwiftVersion -> SignalProducer<(String, FrameworkDetail), CarthageError> in
 					let frameworkDetail: FrameworkDetail = .init(platformName: platformName,
 										     frameworkName: frameworkName,
 										     frameworkSwiftVersion: frameworkSwiftVersion)
 					let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
-					return SignalProducer.zip(hashForFileAtURL(frameworkURL), details)
+					let binaryURL = url.appendingPathComponent(frameworkName, isDirectory: false)
+					return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
 				}
 			}
 			.reduce(into: platformCaches) { (platformCaches: inout [String: [CachedFramework]], values: (String, FrameworkDetail)) in
