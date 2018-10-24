@@ -599,12 +599,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					.collect()
 					.flatMap(.concat) { frameworkURLs -> SignalProducer<(), CarthageError> in
-							return self.createVersionFilesForFrameworks(
-								frameworkURLs,
-								fromDirectoryURL: directoryURL,
-								projectName: projectName,
-								commitish: pinnedVersion.commitish
-							)
+						return self.createVersionFilesForFrameworks(
+							frameworkURLs,
+							fromDirectoryURL: directoryURL,
+							projectName: projectName,
+							commitish: pinnedVersion.commitish
+						)
 					}
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
 			}
@@ -757,10 +757,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		projectName: String,
 		commitish: String
 	) -> SignalProducer<(), CarthageError> {
-		return createVersionFileForCommitish(commitish,
-						     dependencyName: projectName,
-						     buildProducts: frameworkURLs,
-						     rootDirectoryURL: self.directoryURL)
+		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
 	}
 
 	private let gitOperationQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.gitOperationQueue")
@@ -1123,10 +1120,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 								// Create a version file for a dependency with no shared schemes
 								// so that its cache is not always considered invalid.
 								return createVersionFileForCommitish(version.commitish,
-												     dependencyName: dependency.name,
-												     platforms: options.platforms,
-												     buildProducts: [],
-												     rootDirectoryURL: self.directoryURL)
+																	 dependencyName: dependency.name,
+																	 platforms: options.platforms,
+																	 buildProducts: [],
+																	 rootDirectoryURL: self.directoryURL)
 									.then(BuildSchemeProducer.empty)
 							}
 							return .empty
