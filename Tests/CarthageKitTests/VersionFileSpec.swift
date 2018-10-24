@@ -15,6 +15,7 @@ class VersionFileSpec: QuickSpec {
 			let versionFile = file!
 
 			expect(versionFile.commitish) == "v1.0"
+			expect(versionFile.swiftVersion) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 
 			// Check multiple frameworks
 			let iOSCache = versionFile.iOS
@@ -44,7 +45,12 @@ class VersionFileSpec: QuickSpec {
 
 		it("should write and read back a version file correctly") {
 			let framework = CachedFramework(name: "TestFramework", hash: "TestHASH")
-			let versionFile = VersionFile(commitish: "v1.0", macOS: nil, iOS: [framework], watchOS: nil, tvOS: nil)
+			let versionFile = VersionFile(commitish: "v1.0",
+						      swiftVersion: "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)",
+						      macOS: nil,
+						      iOS: [framework],
+						      watchOS: nil,
+						      tvOS: nil)
 
 			let versionFileURL = Bundle(for: type(of: self)).resourceURL!.appendingPathComponent("TestWriteVersionFile")
 
@@ -58,6 +64,7 @@ class VersionFileSpec: QuickSpec {
 			expect(newVersionFile).notTo(beNil())
 
 			expect(newVersionFile!.commitish) == versionFile.commitish
+			expect(newVersionFile!.swiftVersion) == versionFile.swiftVersion
 
 			expect(newVersionFile!.iOS).toNot(beNil())
 			let newCachedFramework = newVersionFile!.iOS!
@@ -69,6 +76,7 @@ class VersionFileSpec: QuickSpec {
 		it("should encode and decode correctly") {
 			let jsonDictionary: [String: Any] = [
 				"commitish": "v1.0",
+				"swiftVersion": "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)",
 				"iOS": [
 					[
 						"name": "TestFramework",
@@ -83,6 +91,7 @@ class VersionFileSpec: QuickSpec {
 
 			let versionFile = file!
 			expect(versionFile.commitish) == "v1.0"
+			expect(versionFile.swiftVersion) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 
 			// Check multiple frameworks
 			let iOSCache = versionFile.iOS

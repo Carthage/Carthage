@@ -1,5 +1,6 @@
 {
   "commitish": "v1.0",
+  "swiftVersion": "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)",
   "iOS": [
     {
       "name": "TestFramework1",
