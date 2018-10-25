@@ -1,23 +1,8 @@
-//
-//  ArchiveSpec.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2015-01-02.
-//  Copyright (c) 2015 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Foundation
 import Nimble
 import Quick
 import ReactiveSwift
-
-#if swift(>=3)
-#else
-	internal func type<T>(of t: T) -> T.Type {
-		return t.dynamicType
-	}
-#endif
 
 class ArchiveSpec: QuickSpec {
 	override func spec() {
@@ -45,7 +30,8 @@ class ArchiveSpec: QuickSpec {
 
 		describe("zipping") {
 			let originalCurrentDirectory = FileManager.default.currentDirectoryPath
-			let temporaryURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
+			let path = (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString)
+			let temporaryURL = URL(fileURLWithPath: path, isDirectory: true)
 			let archiveURL = temporaryURL.appendingPathComponent("archive.zip", isDirectory: false)
 
 			beforeEach {
@@ -79,7 +65,7 @@ class ArchiveSpec: QuickSpec {
 
 				let enumerationResult = FileManager.default.reactive
 					.enumerator(at: unzipResult?.value ?? temporaryURL)
-					.map { enumerator, url in url }
+					.map { _, url in url }
 					.map { $0.lastPathComponent }
 					.collect()
 					.single()
@@ -100,7 +86,7 @@ class ArchiveSpec: QuickSpec {
 				let symlinkPath = "symlink"
 				expect { try FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: destinationPath) }.notTo(throwError())
 				expect { try FileManager.default.destinationOfSymbolicLink(atPath: symlinkPath) } == destinationPath
-				
+
 				let result = zip(paths: [ symlinkPath, destinationPath ], into: archiveURL, workingDirectory: temporaryURL.path).wait()
 				expect(result.error).to(beNil())
 

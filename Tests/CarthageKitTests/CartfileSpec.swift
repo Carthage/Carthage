@@ -1,17 +1,11 @@
-//
-//  CartfileSpec.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-10-10.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Foundation
 import Result
 import Tentacle
 import Nimble
 import Quick
+
+// swiftlint:disable:this force_try
 
 class CartfileSpec: QuickSpec {
 	override func spec() {
@@ -29,8 +23,14 @@ class CartfileSpec: QuickSpec {
 			let libextobjc = Dependency.gitHub(.dotCom, Repository(owner: "jspahrsummers", name: "libextobjc"))
 			let xcconfigs = Dependency.gitHub(.dotCom, Repository(owner: "jspahrsummers", name: "xcconfigs"))
 			let iosCharts = Dependency.gitHub(.dotCom, Repository(owner: "danielgindi", name: "ios-charts"))
-			let errorTranslations = Dependency.gitHub(.enterprise(url: URL(string: "https://enterprise.local/ghe")!), Repository(owner: "desktop", name: "git-error-translations"))
+			let errorTranslations = Dependency.gitHub(
+				.enterprise(url: URL(string: "https://enterprise.local/ghe")!), Repository(owner: "desktop", name: "git-error-translations")
+			)
 			let errorTranslations2 = Dependency.git(GitURL("https://enterprise.local/desktop/git-error-translations2.git"))
+			let example1 = Dependency.gitHub(.dotCom, Repository(owner: "ExampleOrg", name: "ExamplePrj1"))
+			let example2 = Dependency.gitHub(.dotCom, Repository(owner: "ExampleOrg", name: "ExamplePrj2"))
+			let example3 = Dependency.gitHub(.dotCom, Repository(owner: "ExampleOrg", name: "ExamplePrj3"))
+			let example4 = Dependency.gitHub(.dotCom, Repository(owner: "ExampleOrg", name: "ExamplePrj4"))
 			
 			expect(cartfile.dependencies) == [
 				reactiveCocoa: .atLeast(SemanticVersion(major: 2, minor: 3, patch: 1)),
@@ -40,6 +40,10 @@ class CartfileSpec: QuickSpec {
 				iosCharts: .any,
 				errorTranslations: .any,
 				errorTranslations2: .gitReference("development"),
+				example1: .atLeast(SemanticVersion(major: 3, minor: 0, patch: 2, preRelease: "pre")),
+				example2: .exactly(SemanticVersion(major: 3, minor: 0, patch: 2, preRelease: nil, buildMetadata: "build")),
+				example3: .exactly(SemanticVersion(major: 3, minor: 0, patch: 2)),
+				example4: .gitReference("release#2")
 			]
 		}
 
@@ -53,7 +57,7 @@ class CartfileSpec: QuickSpec {
 			let resolvedCartfile = result.value!
 			expect(resolvedCartfile.dependencies) == [
 				.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
-				.git(GitURL("https://github.com/Mantle/Mantle.git")): PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47"),
+				.gitHub(.dotCom, Repository(owner: "Mantle", name: "Mantle")): PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47"),
 			]
 		}
 
@@ -68,15 +72,15 @@ class CartfileSpec: QuickSpec {
 				fail("Cartfile should error with duplicate dependencies")
 				return
 			}
-			
+
 			let dependencies = dupes
 				.map { $0.dependency }
 				.sorted { $0.description < $1.description }
 			expect(dupes.count) == 3
-			
+
 			let self2Dupe = dependencies[0]
 			expect(self2Dupe) == Dependency.gitHub(.dotCom, Repository(owner: "self2", name: "self2"))
-			
+
 			let self3Dupe = dependencies[1]
 			expect(self3Dupe) == Dependency.gitHub(.dotCom, Repository(owner: "self3", name: "self3"))
 		}
@@ -114,11 +118,13 @@ class CartfileSpec: QuickSpec {
 		}
 
 		it("should not allow a binary framework with git reference") {
-
 			let testCartfile = "binary \"https://server.com/myproject\" \"gitreference\""
 			let result = Cartfile.from(string: testCartfile)
 
-			expect(result.error).to(equal(CarthageError.parseError(description: "binary dependencies cannot have a git reference for the version specifier in line: binary \"https://server.com/myproject\" \"gitreference\"")))
+			expect(result.error) == .parseError(
+				description: "binary dependencies cannot have a git reference for the version specifier in line: "
+					+ "binary \"https://server.com/myproject\" \"gitreference\""
+			)
 		}
 	}
 }
@@ -132,8 +138,9 @@ class ResolvedCartfileSpec: QuickSpec {
 					.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveSwift")): PinnedVersion("v1.0.0"),
 					.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
 				])
-				
-				expect(resolvedCartfile.description) == "github \"ReactiveCocoa/ReactiveCocoa\" \"v2.3.1\"\ngithub \"ReactiveCocoa/ReactiveSwift\" \"v1.0.0\"\ngithub \"antitypical/Result\" \"3.0.0\"\n"
+
+				expect(resolvedCartfile.description) == "github \"ReactiveCocoa/ReactiveCocoa\" \"v2.3.1\"\ngithub \"ReactiveCocoa/ReactiveSwift\" "
+					+ "\"v1.0.0\"\ngithub \"antitypical/Result\" \"3.0.0\"\n"
 			}
 		}
 	}

@@ -1,11 +1,3 @@
-//
-//  main.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-10-10.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Foundation
@@ -16,12 +8,12 @@ import Result
 setlinebuf(stdout)
 
 guard ensureGitVersion().first()?.value == true else {
-	fputs("Carthage requires git \(CarthageRequiredGitVersion) or later.\n", stderr)
+	fputs("Carthage requires git \(carthageRequiredGitVersion) or later.\n", stderr)
 	exit(EXIT_FAILURE)
 }
 
-if let remoteVersion = remoteVersion(), localVersion() < remoteVersion {
-	fputs("Please update to the latest Carthage version: \(remoteVersion). You currently are on \(localVersion())" + "\n", stderr)
+if let remoteVersion = remoteVersion(), CarthageKitVersion.current.value < remoteVersion {
+	fputs("Please update to the latest Carthage version: \(remoteVersion). You currently are on \(CarthageKitVersion.current.value)" + "\n", stderr)
 }
 
 if let carthagePath = Bundle.main.executablePath {
@@ -37,6 +29,7 @@ registry.register(CopyFrameworksCommand())
 registry.register(FetchCommand())
 registry.register(OutdatedCommand())
 registry.register(UpdateCommand())
+registry.register(ValidateCommand())
 registry.register(VersionCommand())
 
 let helpCommand = HelpCommand(registry: registry)

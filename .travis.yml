@@ -12,35 +12,36 @@ matrix:
   include:
     - os: osx
       language: objective-c
-      osx_image: xcode8.3
+      osx_image: xcode9.4
       script: make test
-      env: JOB=CI_BUILD_TEST
+      env: JOB=CI_TEST
     - os: osx
       language: objective-c
-      osx_image: xcode8.3
-      script: make package
-      env: JOB=CI_BUILD_PACKAGE
-    - os: osx
-      language: objective-c
-      osx_image: xcode8.3
+      osx_image: xcode9.4
       script:
-        - make swiftpm
-        - .build/release/carthage version
-      env: JOB=CI_BUILD_SWIFTPM
+        - make swiftpm_test
+      env: JOB=CI_TEST_SWIFTPM
     - os: osx
       language: objective-c
-      osx_image: xcode8.3
+      osx_image: xcode9.4
       script:
         - brew uninstall carthage
         - HOMEBREW_NO_AUTO_UPDATE=1 brew install bats
         - make install
-        - bats Source/CarthageIntegration
+        - bats IntegrationTests
       env:
-        - JOB=INTEGRATION_TESTS
+        - JOB=CI_INTEGRATION_TESTS
+    - os: osx
+      language: objective-c
+      osx_image: xcode9.4
+      script:
+        - brew uninstall carthage
+        - HOMEBREW_NO_AUTO_UPDATE=1 brew install bats
+        - make swiftpm_install
+        - bats IntegrationTests
+      env:
+        - JOB=CI_INTEGRATION_TESTS_SWIFTPM
 notifications:
   email: false
   slack:
     secure: lblNhCx6581hiPskQQnH663QY/HHqs6y8rMCLIff1Ryq0ngBaTwBJZ6E5tAR8oWTGWg3nMAAm/AaJPQGFC9jnKxtpWJhuEF58RY+EBe1Rz3gjKmacvEZS+PW+k3cRrRPZr6Vh6D8d0cb1gfM7BvGZar21ipBC/WcnNden3LxZ+0=
-env:
-  global:
-    - secure: DofNs+Ej7JblkkGMTHOl4XMBfv0EKVvzZU7OOm7U6Hyxu0J0SN6E3s61Q4HUWOBvM3Yrxf+8jpFKI29w69WArmRPpmK6GCaZar8ldUBHNmN3gaeOaGmGyrmnre4hxHjJzc0E3HAmJ03v94HW5JwQzKpIUjxg4dSttJMT6WOmnxE=

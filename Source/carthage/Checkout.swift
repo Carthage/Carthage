@@ -1,50 +1,43 @@
-//
-//  Checkout.swift
-//  Carthage
-//
-//  Created by Alan Rogers on 11/10/2014.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Foundation
 import Result
 import ReactiveSwift
+import Curry
 
+/// Type that encapsulates the configuration and evaluation of the `checkout` subcommand.
 public struct CheckoutCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
 		public let useSSH: Bool
 		public let useSubmodules: Bool
-		public let useBinaries: Bool
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
 		public let dependenciesToCheckout: [String]?
 
-		public static func create(_ useSSH: Bool) -> (Bool) -> (Bool) -> (ColorOptions) -> (String) -> ([String]) -> Options {
-			return { useSubmodules in { useBinaries in { colorOptions in { directoryPath in { dependenciesToCheckout in
-				// Disable binary downloads when using submodules.
-				// See https://github.com/Carthage/Carthage/issues/419.
-				let shouldUseBinaries = useSubmodules ? false : useBinaries
-
-				let dependenciesToCheckout: [String]? = dependenciesToCheckout.isEmpty ? nil : dependenciesToCheckout
-
-				return self.init(useSSH: useSSH, useSubmodules: useSubmodules, useBinaries: shouldUseBinaries, colorOptions: colorOptions, directoryPath: directoryPath, dependenciesToCheckout: dependenciesToCheckout)
-			} } } } }
+		private init(useSSH: Bool,
+		             useSubmodules: Bool,
+		             colorOptions: ColorOptions,
+		             directoryPath: String,
+		             dependenciesToCheckout: [String]?
+		) {
+			self.useSSH = useSSH
+			self.useSubmodules = useSubmodules
+			self.colorOptions = colorOptions
+			self.directoryPath = directoryPath
+			self.dependenciesToCheckout = dependenciesToCheckout
 		}
 
-		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
-			return evaluate(m, useBinariesAddendum: "", dependenciesUsage: "the dependency names to checkout")
+		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+			return evaluate(mode, dependenciesUsage: "the dependency names to checkout")
 		}
 
-		public static func evaluate(_ m: CommandMode, useBinariesAddendum: String, dependenciesUsage: String) -> Result<Options, CommandantError<CarthageError>> {
-			return create
-				<*> m <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
-				<*> m <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
-				<*> m <| Option(key: "use-binaries", defaultValue: true, usage: "check out dependency repositories even when prebuilt frameworks exist, disabled if --use-submodules option is present" + useBinariesAddendum)
-				<*> ColorOptions.evaluate(m)
-				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
-				<*> m <| Argument(defaultValue: [], usage: dependenciesUsage)
+		public static func evaluate(_ mode: CommandMode, dependenciesUsage: String) -> Result<Options, CommandantError<CarthageError>> {
+			return curry(self.init)
+				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
+				<*> mode <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
+				<*> ColorOptions.evaluate(mode)
+				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
+				<*> (mode <| Argument(defaultValue: [], usage: dependenciesUsage, usageParameter: "dependency names")).map { $0.isEmpty ? nil : $0 }
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it
@@ -54,7 +47,6 @@ public struct CheckoutCommand: CommandProtocol {
 			let project = Project(directoryURL: directoryURL)
 			project.preferHTTPS = !self.useSSH
 			project.useSubmodules = self.useSubmodules
-			project.useBinaries = self.useBinaries
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
 			project.projectEvents.observeValues { eventSink.put($0) }
@@ -62,7 +54,7 @@ public struct CheckoutCommand: CommandProtocol {
 			return SignalProducer(value: project)
 		}
 	}
-	
+
 	public let verb = "checkout"
 	public let function = "Check out the project's dependencies"
 

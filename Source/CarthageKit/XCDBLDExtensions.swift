@@ -16,7 +16,7 @@ extension Platform {
 	/// be stored.
 	public var relativePath: String {
 		let subfolderName = rawValue
-		return (CarthageBinariesFolderPath as NSString).appendingPathComponent(subfolderName)
+		return (Constants.binariesFolderPath as NSString).appendingPathComponent(subfolderName)
 	}
 }
 
@@ -29,9 +29,9 @@ extension ProjectLocator {
 
 		return gitmodulesEntriesInRepository(directoryURL, revision: nil)
 			.map { directoryURL.appendingPathComponent($0.path) }
-			.concat(value: directoryURL.appendingPathComponent(CarthageProjectCheckoutsPath))
+			.concat(value: directoryURL.appendingPathComponent(carthageProjectCheckoutsPath))
 			.collect()
-			.flatMap(.merge) { directoriesToSkip in
+			.flatMap(.merge) { directoriesToSkip -> SignalProducer<URL, CarthageError> in
 				return FileManager.default.reactive
 					.enumerator(at: directoryURL.resolvingSymlinksInPath(), includingPropertiesForKeys: [ .typeIdentifierKey ], options: enumerationOptions, catchErrors: true)
 					.map { _, url in url }
@@ -41,9 +41,9 @@ extension ProjectLocator {
 			}
 			.filterMap { url -> ProjectLocator? in
 				if let uti = url.typeIdentifier.value {
-					if (UTTypeConformsTo(uti as CFString, "com.apple.dt.document.workspace" as CFString)) {
+					if UTTypeConformsTo(uti as CFString, "com.apple.dt.document.workspace" as CFString) {
 						return .workspace(url)
-					} else if (UTTypeConformsTo(uti as CFString, "com.apple.xcode.project" as CFString)) {
+					} else if UTTypeConformsTo(uti as CFString, "com.apple.xcode.project" as CFString) {
 						return .projectFile(url)
 					}
 				}
@@ -53,9 +53,9 @@ extension ProjectLocator {
 			.map { $0.sorted() }
 			.flatMap(.merge) { SignalProducer<ProjectLocator, CarthageError>($0) }
 	}
-	
+
 	/// Sends each scheme found in the receiver.
-	public func schemes() -> SignalProducer<String, CarthageError> {
+	public func schemes() -> SignalProducer<Scheme, CarthageError> {
 		let task = xcodebuildTask("-list", BuildArguments(project: self))
 
 		return task.launch()
@@ -86,16 +86,19 @@ extension ProjectLocator {
 			.skip { line in !line.hasSuffix("Schemes:") }
 			.skip(first: 1)
 			.take { line in !line.isEmpty }
-			.map { line in line.trimmingCharacters(in: .whitespaces) }
+			.map { line in
+				let trimmed = line.trimmingCharacters(in: .whitespaces)
+				return Scheme(trimmed)
+			}
 	}
 }
 
-extension SDK {	
+extension SDK {
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
 	public static func from(string: String) -> Result<SDK, CarthageError> {
 		return Result(self.init(rawValue: string.lowercased()), failWith: .parseError(description: "unexpected SDK key \"\(string)\""))
 	}
-	
+
 	/// Split the given SDKs into simulator ones and device ones.
 	internal static func splitSDKs<S: Sequence>(_ sdks: S) -> (simulators: [SDK], devices: [SDK]) where S.Iterator.Element == SDK {
 		return (

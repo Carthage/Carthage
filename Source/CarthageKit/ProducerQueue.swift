@@ -1,11 +1,3 @@
-//
-//  ProducerQueue.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2015-05-23.
-//  Copyright (c) 2015 Carthage. All rights reserved.
-//
-
 import Dispatch
 import Foundation
 import ReactiveSwift
@@ -23,7 +15,7 @@ internal protocol ProducerQueue {
 	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error>
 }
 
-extension SignalProducerProtocol {
+extension SignalProducer {
 	/// Shorthand for enqueuing the given producer upon the given queue.
 	internal func startOnQueue(_ queue: ProducerQueue) -> SignalProducer<Value, Error> {
 		return queue.enqueue(self.producer)
@@ -44,9 +36,9 @@ internal final class SerialProducerQueue: ProducerQueue {
 	/// started, wait until the queue is empty to begin work, and block other
 	/// work while executing.
 	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
-		return SignalProducer { observer, disposable in
+		return SignalProducer { observer, lifetime in
 			self.queue.async {
-				if disposable.isDisposed {
+				if lifetime.hasEnded {
 					return
 				}
 
@@ -55,10 +47,10 @@ internal final class SerialProducerQueue: ProducerQueue {
 				self.queue.suspend()
 
 				producer.startWithSignal { signal, signalDisposable in
-					disposable.add(signalDisposable)
+					lifetime += signalDisposable
 
 					signal.observe { event in
-						observer.action(event)
+						observer.send(event)
 
 						if event.isTerminating {
 							self.queue.resume()
@@ -86,18 +78,18 @@ internal final class ConcurrentProducerQueue: ProducerQueue {
 	/// Creates a SignalProducer that will enqueue the given producer when 
 	/// started.
 	func enqueue<T, Error>(_ producer: SignalProducer<T, Error>) -> SignalProducer<T, Error> {
-		return SignalProducer { observer, disposable in
+		return SignalProducer { observer, lifetime in
 			let operation = Operation { operation in
-				if disposable.isDisposed {
+				if lifetime.hasEnded {
 					operation._isFinished = true
 					return
 				}
 
 				producer.startWithSignal { signal, signalDisposable in
-					disposable.add(signalDisposable)
+					lifetime += signalDisposable
 
 					signal.observe { event in
-						observer.action(event)
+						observer.send(event)
 
 						if event.isTerminating {
 							operation._isFinished = true

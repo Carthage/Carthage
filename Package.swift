@@ -1,26 +1,47 @@
+// swift-tools-version:4.0
 import PackageDescription
 
 let package = Package(
     name: "Carthage",
-    targets: [
-        Target(name: "XCDBLD"),
-        Target(name: "CarthageKit", dependencies: [ "XCDBLD" ]),
-        Target(name: "carthage", dependencies: [ "XCDBLD", "CarthageKit" ]),
+    products: [
+        .library(name: "XCDBLD", targets: ["XCDBLD"]),
+        .library(name: "CarthageKit", targets: ["CarthageKit"]),
+        .executable(name: "carthage", targets: ["carthage"]),
     ],
     dependencies: [
-        .Package(url: "https://github.com/antitypical/Result.git", majorVersion: 3, minor: 2),
-        .Package(url: "https://github.com/Carthage/ReactiveTask.git", versions: Version(0, 11, 1)..<Version(0, 11, .max)),
-        .Package(url: "https://github.com/Carthage/Commandant.git", majorVersion: 0, minor: 12),
-        .Package(url: "https://github.com/jdhealy/PrettyColors.git", majorVersion: 5),
-        .Package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", majorVersion: 1, minor: 1),
-        .Package(url: "https://github.com/mdiep/Tentacle.git", majorVersion: 0, minor: 7),
-        .Package(url: "https://github.com/thoughtbot/Argo.git", majorVersion: 4, minor: 1),
-        .Package(url: "https://github.com/thoughtbot/Runes.git", versions: Version(4, 0, 1)..<Version(4, .max, .max)),
+        .package(url: "https://github.com/antitypical/Result.git", from: "4.0.0"),
+        .package(url: "https://github.com/Carthage/ReactiveTask.git", from: "0.15.0"),
+        .package(url: "https://github.com/Carthage/Commandant.git", from: "0.15.0"),
+        .package(url: "https://github.com/jdhealy/PrettyColors.git", from: "5.0.0"),
+        .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "4.0.0"),
+        .package(url: "https://github.com/mdiep/Tentacle.git", from: "0.12.0"),
+        .package(url: "https://github.com/thoughtbot/Curry.git", from: "4.0.0"),
+        .package(url: "https://github.com/Quick/Quick.git", from: "1.3.1"),
+        .package(url: "https://github.com/Quick/Nimble.git", from: "7.3.0"),
     ],
-    exclude: [
-        "Source/CarthageIntegration",
-        "Source/Scripts",
-        "Source/carthage/swift-is-crashy.c",
-        "Tests/CarthageKitTests/FakeOldObjc.framework",
-    ]
+    targets: [
+        .target(
+            name: "XCDBLD", 
+            dependencies: ["Result", "ReactiveSwift", "ReactiveTask"]
+        ),
+        .testTarget(
+            name: "XCDBLDTests",
+            dependencies: ["XCDBLD", "Quick", "Nimble"]
+        ),
+        .target(
+            name: "CarthageKit", 
+            dependencies: ["XCDBLD", "Tentacle", "Curry"]
+        ),
+        .testTarget(
+            name: "CarthageKitTests",
+            dependencies: ["CarthageKit", "Quick", "Nimble"],
+            exclude: ["Resources/FakeOldObjc.framework"]
+        ),
+        .target(
+            name: "carthage", 
+            dependencies: ["XCDBLD", "CarthageKit", "Commandant", "Curry", "PrettyColors"],
+            exclude: ["swift-is-crashy.c"]
+        ),
+    ],
+    swiftLanguageVersions: [4]
 )

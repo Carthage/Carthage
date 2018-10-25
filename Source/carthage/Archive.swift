@@ -1,18 +1,12 @@
-//
-//  Archive.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2015-02-13.
-//  Copyright (c) 2015 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Foundation
 import Result
 import ReactiveSwift
 import XCDBLD
+import Curry
 
+/// Type that encapsulates the configuration and evaluation of the `archive` subcommand.
 public struct ArchiveCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
 		public let outputPath: String?
@@ -20,25 +14,37 @@ public struct ArchiveCommand: CommandProtocol {
 		public let colorOptions: ColorOptions
 		public let frameworkNames: [String]
 
-		static func create(_ outputPath: String?) -> (String) -> (ColorOptions) -> ([String]) -> Options {
-			return { directoryPath in { colorOptions in { frameworkNames in
-				return self.init(outputPath: outputPath, directoryPath: directoryPath, colorOptions: colorOptions, frameworkNames: frameworkNames)
-			} } }
-		}
+		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+			let argumentUsage = "the names of the built frameworks to archive without any extension "
+				+ "(or blank to pick up the frameworks in the current project built by `--no-skip-current`)"
 
-		public static func evaluate(_ m: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
-			return create
-				<*> m <| Option(key: "output", defaultValue: nil, usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)")
-				<*> m <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
-				<*> ColorOptions.evaluate(m)
-				<*> m <| Argument(defaultValue: [], usage: "the names of the built frameworks to archive without any extension (or blank to pick up the frameworks in the current project built by `--no-skip-current`)")
+			return curry(self.init)
+				<*> mode <| Option(
+					key: "output",
+					defaultValue: nil,
+					usage: "the path at which to create the zip file (or blank to infer it from the first one of the framework names)"
+				)
+				<*> mode <| Option(
+					key: "project-directory",
+					defaultValue: FileManager.default.currentDirectoryPath,
+					usage: "the directory containing the Carthage project"
+				)
+				<*> ColorOptions.evaluate(mode)
+				<*> mode <| Argument(defaultValue: [], usage: argumentUsage, usageParameter: "framework names")
 		}
 	}
-	
+
 	public let verb = "archive"
 	public let function = "Archives built frameworks into a zip that Carthage can use"
 
+	// swiftlint:disable:next function_body_length
 	public func run(_ options: Options) -> Result<(), CarthageError> {
+		return archiveWithOptions(options)
+			.waitOnCommand()
+	}
+
+	// swiftlint:disable:next function_body_length
+	public func archiveWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 
 		let frameworks: SignalProducer<[String], CarthageError>
@@ -48,21 +54,10 @@ public struct ArchiveCommand: CommandProtocol {
 			})
 		} else {
 			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
-			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", forPlatforms: [])
-				.collect()
-				.flatMap(.merge) { projects in
-					return schemesInProjects(projects)
-						.flatMap(.merge) { (schemes: [(String, ProjectLocator)]) -> SignalProducer<(String, ProjectLocator), CarthageError> in
-							if !schemes.isEmpty {
-								return .init(schemes)
-							} else {
-								return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), []))
-							}
-						}
-				}
+			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release")
 				.flatMap(.merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
-					return BuildSettings.loadWithArguments(buildArguments)
+					return BuildSettings.load(with: buildArguments)
 				}
 				.flatMap(.concat) { settings -> SignalProducer<String, CarthageError> in
 					if let wrapperName = settings.wrapperName.value, settings.productType.value == .framework {
@@ -76,7 +71,7 @@ public struct ArchiveCommand: CommandProtocol {
 		}
 
 		return frameworks.flatMap(.merge) { frameworks -> SignalProducer<(), CarthageError> in
-			return SignalProducer(Platform.supportedPlatforms)
+			return SignalProducer<Platform, CarthageError>(Platform.supportedPlatforms)
 				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
 					return SignalProducer(frameworks).map { framework in
 						return (platform.relativePath as NSString).appendingPathComponent(framework)
@@ -94,7 +89,7 @@ public struct ArchiveCommand: CommandProtocol {
 						.map { url in ((framework.relativePath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(url.lastPathComponent) }
 					let extraFilesProducer = SignalProducer(value: dSYM)
 						.concat(bcsymbolmapsProducer)
-						.filter { relativePath in FileManager.default.fileExists(atPath: framework.absolutePath) }
+						.filter { _ in FileManager.default.fileExists(atPath: framework.absolutePath) }
 					return SignalProducer(value: framework.relativePath)
 						.concat(extraFilesProducer)
 				}
@@ -103,14 +98,17 @@ public struct ArchiveCommand: CommandProtocol {
 				})
 				.collect()
 				.flatMap(.merge) { paths -> SignalProducer<(), CarthageError> in
-					
+
 					let foundFrameworks = paths
 						.lazy
 						.map { ($0 as NSString).lastPathComponent }
 						.filter { $0.hasSuffix(".framework") }
-					
+
 					if Set(foundFrameworks) != Set(frameworks) {
-						let error = CarthageError.invalidArgument(description: "Could not find any copies of \(frameworks.joined(separator: ", ")). Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'.")
+						let error = CarthageError.invalidArgument(
+							description: "Could not find any copies of \(frameworks.joined(separator: ", ")). "
+								+ "Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'."
+						)
 						return SignalProducer(error: error)
 					}
 
@@ -124,9 +122,8 @@ public struct ArchiveCommand: CommandProtocol {
 					return zip(paths: paths, into: outputURL, workingDirectory: options.directoryPath).on(completed: {
 						carthage.println(formatting.bullets + "Created " + formatting.path(outputPath))
 					})
-				}
+			}
 		}
-		.waitOnCommand()
 	}
 }
 

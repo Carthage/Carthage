@@ -1,11 +1,3 @@
-//
-//  XcodeSpec.swift
-//  Carthage
-//
-//  Created by Justin Spahr-Summers on 2014-10-11.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 @testable import CarthageKit
 import Foundation
 import Result
@@ -21,60 +13,81 @@ class XcodeSpec: QuickSpec {
 		// The fixture is maintained at https://github.com/ikesyo/carthage-fixtures-ReactiveCocoaLayout
 		let directoryURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
 		let projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
-		let buildFolderURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
-		let targetFolderURL = URL(fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString), isDirectory: true)
+		let buildFolderURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
+		let targetFolderURL = URL(
+			fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString),
+			isDirectory: true
+		)
 
 		beforeEach {
 			_ = try? FileManager.default.removeItem(at: buildFolderURL)
 			expect { try FileManager.default.createDirectory(atPath: targetFolderURL.path, withIntermediateDirectories: true) }.notTo(throwError())
 		}
-		
+
 		afterEach {
 			_ = try? FileManager.default.removeItem(at: targetFolderURL)
 		}
 
 		describe("determineSwiftInformation:") {
 			let currentSwiftVersion = swiftVersion().single()?.value
+			#if !SWIFT_PACKAGE
 			let testSwiftFramework = "Quick.framework"
 			let currentDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
 			let testSwiftFrameworkURL = currentDirectory.appendingPathComponent(testSwiftFramework)
+			#endif
 
+			#if !SWIFT_PACKAGE
 			it("should determine that a Swift framework is a Swift framework") {
-				let result = isSwiftFramework(testSwiftFrameworkURL).single()
-
-				expect(result?.value) == true
+				expect(isSwiftFramework(testSwiftFrameworkURL)) == true
 			}
+			#endif
 
 			it("should determine that an ObjC framework is not a Swift framework") {
 				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldObjc.framework", withExtension: nil)!
-				let result = isSwiftFramework(frameworkURL).single()
-
-				expect(result?.value) == false
+				expect(isSwiftFramework(frameworkURL)) == false
 			}
 
 			it("should determine a value for the local swift version") {
 				expect(currentSwiftVersion?.isEmpty) == false
 			}
 
+			#if !SWIFT_PACKAGE
 			it("should determine a framework's Swift version") {
 				let result = frameworkSwiftVersion(testSwiftFrameworkURL).single()
 
 				expect(FileManager.default.fileExists(atPath: testSwiftFrameworkURL.path)) == true
 				expect(result?.value) == currentSwiftVersion
 			}
+			#endif
 
+			it("should determine a framework's Swift version excluding an effective version") {
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeSwift.framework", withExtension: nil)!
+				let result = frameworkSwiftVersion(frameworkURL).single()
+
+				expect(result?.value) == "4.0 (swiftlang-900.0.43 clang-900.0.22.8)"
+			}
+
+			#if !SWIFT_PACKAGE
 			it("should determine when a Swift framework is compatible") {
 				let result = checkSwiftFrameworkCompatibility(testSwiftFrameworkURL, usingToolchain: nil).single()
 
 				expect(result?.value) == testSwiftFrameworkURL
 			}
+			#endif
 
 			it("should determine when a Swift framework is incompatible") {
 				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldSwift.framework", withExtension: nil)!
 				let result = checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: nil).single()
 
 				expect(result?.value).to(beNil())
-				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: currentSwiftVersion ?? "", framework: "0.0.0")
+				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: currentSwiftVersion ?? "", framework: "0.0.0 (swiftlang-800.0.63 clang-800.0.42.1)")
+			}
+
+			it("should determine a framework's Swift version for OSS toolchains from Swift.org") {
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOSSSwift.framework", withExtension: nil)!
+				let result = frameworkSwiftVersion(frameworkURL).single()
+
+				expect(result?.value) == "4.1-dev (LLVM 0fcc19c0d8, Clang 1696f82ad2, Swift 691139445e)"
 			}
 		}
 
@@ -82,7 +95,7 @@ class XcodeSpec: QuickSpec {
 			func relativePathsForProjectsInDirectory(_ directoryURL: URL) -> [String] {
 				let result = ProjectLocator
 					.locate(in: directoryURL)
-					.map { $0.fileURL.absoluteString.substring(from: directoryURL.absoluteString.endIndex) }
+					.map { String($0.fileURL.absoluteString[directoryURL.absoluteString.endIndex...]) }
 					.collect()
 					.first()
 				expect(result?.error).to(beNil())
@@ -92,7 +105,7 @@ class XcodeSpec: QuickSpec {
 			it("should not find anything in the Carthage Subdirectory") {
 				let relativePaths = relativePathsForProjectsInDirectory(directoryURL)
 				expect(relativePaths).toNot(beEmpty())
-				let pathsStartingWithCarthage = relativePaths.filter { $0.hasPrefix("\(CarthageProjectCheckoutsPath)/") }
+				let pathsStartingWithCarthage = relativePaths.filter { $0.hasPrefix("\(carthageProjectCheckoutsPath)/") }
 				expect(pathsStartingWithCarthage).to(beEmpty())
 			}
 
@@ -114,9 +127,8 @@ class XcodeSpec: QuickSpec {
 
 			for dependency in dependencies {
 				let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-					.flatten(.concat)
 					.ignoreTaskData()
-					.on(value: { (project, scheme) in
+					.on(value: { project, scheme in // swiftlint:disable:this end_closure
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 					})
 					.wait()
@@ -124,9 +136,9 @@ class XcodeSpec: QuickSpec {
 				expect(result.error).to(beNil())
 			}
 
-			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { (project, scheme) in
+				.on(value: { project, scheme in // swiftlint:disable:this closure_params_parantheses
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -169,34 +181,52 @@ class XcodeSpec: QuickSpec {
 			expect(resultURL?.value) == targetURL
 			expect(targetURL.path).to(beExistingDirectory())
 
-			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7" , "arm64" ], codesigningIdentity: "-").wait()
+			let strippingResult = stripFramework(targetURL, keepingArchitectures: [ "armv7", "arm64" ], strippingDebugSymbols: true, codesigningIdentity: "-").wait()
 			expect(strippingResult.value).notTo(beNil())
-			
+
 			let strippedArchitectures = architecturesInPackage(targetURL)
 				.collect()
 				.single()
-			
+
 			expect(strippedArchitectures?.value).notTo(contain("i386"))
 			expect(strippedArchitectures?.value).to(contain("armv7", "arm64"))
 
+			/// Check whether the resulting framework contains debug symbols
+			/// There are many suggestions on how to do this but no one single
+			/// accepted way. This seems to work best:
+			/// https://lists.apple.com/archives/unix-porting/2006/Feb/msg00021.html
+			let hasDebugSymbols = SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(targetURL) }
+				.flatMap(.merge) { binaryURL -> SignalProducer<Bool, CarthageError> in
+					let nmTask = Task("/usr/bin/xcrun", arguments: [ "nm", "-ap", binaryURL.path])
+					return nmTask.launch()
+						.ignoreTaskData()
+						.mapError(CarthageError.taskError)
+						.map { String(data: $0, encoding: .utf8) ?? "" }
+						.flatMap(.merge) { output -> SignalProducer<Bool, NoError> in
+							return SignalProducer(value: output.contains("SO "))
+					}
+			}.single()
+
+			expect(hasDebugSymbols?.value).to(equal(false))
+
 			let modulesDirectoryURL = targetURL.appendingPathComponent("Modules", isDirectory: true)
 			expect(FileManager.default.fileExists(atPath: modulesDirectoryURL.path)) == false
-			
+
 			var output: String = ""
 			let codeSign = Task("/usr/bin/xcrun", arguments: [ "codesign", "--verify", "--verbose", targetURL.path ])
-			
+
 			let codesignResult = codeSign.launch()
 				.on(value: { taskEvent in
 					switch taskEvent {
 					case let .standardError(data):
 						output += String(data: data, encoding: .utf8)!
-						
+
 					default:
 						break
 					}
 				})
 				.wait()
-			
+
 			expect(codesignResult.value).notTo(beNil())
 			expect(output).to(contain("satisfies its Designated Requirement"))
 		}
@@ -204,13 +234,10 @@ class XcodeSpec: QuickSpec {
 		it("should build all subprojects for all platforms by default") {
 			let multipleSubprojects = "SampleMultipleSubprojects"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
-
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { (project, scheme) in
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -221,33 +248,30 @@ class XcodeSpec: QuickSpec {
 				("iOS", "SampleiOSFramework"),
 				("Mac", "SampleMacFramework"),
 				("tvOS", "SampleTVFramework"),
-				("watchOS", "SampleWatchFramework")
+				("watchOS", "SampleWatchFramework"),
 			]
 
 			for (platform, framework) in expectedPlatformsFrameworks {
-				let path = _buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path
+				let path = buildFolderURL.appendingPathComponent("\(platform)/\(framework).framework").path
 				expect(path).to(beExistingDirectory())
 			}
 		}
 
-		it("should skip projects without shared dynamic framework schems") {
+		it("should skip projects without shared framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
-
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { (project, scheme) in
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
 
 			expect(result.error).to(beNil())
 
-			let macPath = _buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path
-			let iOSPath = _buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path
+			let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency).framework").path
+			let iOSPath = buildFolderURL.appendingPathComponent("iOS/\(dependency).framework").path
 
 			for path in [ macPath, iOSPath ] {
 				expect(path).to(beExistingDirectory())
@@ -256,20 +280,17 @@ class XcodeSpec: QuickSpec {
 
 		it("should not copy build products from nested dependencies produced by workspace") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "WorkspaceWithDependency", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
-
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { (project, scheme) in
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
 			expect(result.error).to(beNil())
 
-			let framework1Path = _buildFolderURL.appendingPathComponent("Mac/TestFramework1.framework").path
-			let framework2Path = _buildFolderURL.appendingPathComponent("Mac/TestFramework2.framework").path
+			let framework1Path = buildFolderURL.appendingPathComponent("Mac/TestFramework1.framework").path
+			let framework2Path = buildFolderURL.appendingPathComponent("Mac/TestFramework2.framework").path
 
 			expect(framework1Path).to(beExistingDirectory())
 			expect(framework2Path).notTo(beExistingDirectory())
@@ -277,13 +298,10 @@ class XcodeSpec: QuickSpec {
 
 		it("should error out with .noSharedFrameworkSchemes if there is no shared framework schemes") {
 			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "Swell-0.5.0", withExtension: nil)!
-			let _buildFolderURL = _directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
 
-			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
-
-			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"))
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { (project, scheme) in
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -298,15 +316,15 @@ class XcodeSpec: QuickSpec {
 			}
 
 			expect(isExpectedError) == true
+			expect(result.error?.description) == "Dependency \"Swell-0.5.0\" has no shared framework schemes for any of the platforms: Mac"
 		}
 
 		it("should build for one platform") {
 			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS ]))
-				.flatten(.concat)
 				.ignoreTaskData()
-				.on(value: { (project, scheme) in
+				.on(value: { project, scheme in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
@@ -326,16 +344,15 @@ class XcodeSpec: QuickSpec {
 			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
 			let version = PinnedVersion("0.1")
 			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [ .macOS, .iOS ]))
-				.flatten(.concat)
 				.ignoreTaskData()
-				.on(value: { (project, scheme) in
+				.on(value: { project, scheme in
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
 
 			expect(result.error).to(beNil())
 
-			// Verify that the build products of all specified platforms exist 
+			// Verify that the build products of all specified platforms exist
 			// at the top level.
 			let macPath = buildFolderURL.appendingPathComponent("Mac/\(dependency.name).framework").path
 			let iosPath = buildFolderURL.appendingPathComponent("iOS/\(dependency.name).framework").path
@@ -364,63 +381,127 @@ class XcodeSpec: QuickSpec {
 			expect(result).to(beNil())
 		}
 
-		it("should symlink the build directory") {
-			let dependency = Dependency.gitHub(.dotCom, Repository(owner: "github", name: "Archimedes"))
-			let version = PinnedVersion("0.1")
+		it("should build static library and place result to subdirectory") {
+			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "DynamicAndStatic", withExtension: nil)!
+			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			let dependencyURL =	directoryURL.appendingPathComponent(dependency.relativePath)
-			// Build
-			let buildURL = directoryURL.appendingPathComponent(CarthageBinariesFolderPath)
-			let dependencyBuildURL = dependencyURL.appendingPathComponent(CarthageBinariesFolderPath)
+			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
 
-			let result = build(dependency: dependency, version: version, directoryURL, withOptions: BuildOptions(configuration: "Debug"))
-				.flatten(.concat)
+			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug",
+																				   platforms: [.iOS],
+																				   derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
-				.on(value: { (project, scheme) in
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
 					NSLog("Building scheme \"\(scheme)\" in \(project)")
 				})
 				.wait()
-
 			expect(result.error).to(beNil())
 
-			expect(dependencyBuildURL).to(beRelativeSymlinkToDirectory(buildURL))
-		}
+			let frameworkDynamicURL = buildFolderURL.appendingPathComponent("iOS/TestFramework.framework")
+			let frameworkStaticURL = buildFolderURL.appendingPathComponent("iOS/Static/TestFramework.framework")
 
+			let frameworkDynamicPackagePath = frameworkDynamicURL.appendingPathComponent("TestFramework").path
+			let frameworkStaticPackagePath = frameworkStaticURL.appendingPathComponent("TestFramework").path
+
+			expect(frameworkDynamicURL.path).to(beExistingDirectory())
+			expect(frameworkStaticURL.path).to(beExistingDirectory())
+			expect(frameworkDynamicPackagePath).to(beFramework(ofType: .dynamic))
+			expect(frameworkStaticPackagePath).to(beFramework(ofType: .static))
+
+			let result2 = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug",
+																					platforms: [.iOS],
+																					derivedDataPath: Constants.Dependency.derivedDataURL.appendingPathComponent("TestFramework-o2nfjkdsajhwenrjle").path), rootDirectoryURL: directoryURL)
+				.ignoreTaskData()
+				.on(value: { project, scheme in // swiftlint:disable:this end_closure
+					NSLog("Building scheme \"\(scheme)\" in \(project)")
+				})
+				.wait()
+			expect(result2.error).to(beNil())
+			expect(frameworkDynamicPackagePath).to(stillBeFramework(ofType: .dynamic))
+			expect(frameworkStaticPackagePath).to(stillBeFramework(ofType: .static))
+		}
 	}
 }
 
 // MARK: Matcher
 
-internal func beExistingDirectory() -> MatcherFunc<String> {
-	return MatcherFunc { actualExpression, failureMessage in
-		failureMessage.postfixMessage = "exist and be a directory"
+internal func stillBeFramework(ofType: FrameworkType) -> Predicate<String> {
+	return beFramework(ofType: ofType)
+}
+
+internal func beFramework(ofType: FrameworkType) -> Predicate<String> {
+	return Predicate { actualExpression in
+		var message = "exist and be a \(ofType == .static ? "static" : "dynamic") type"
 		let actualPath = try actualExpression.evaluate()
 
 		guard let path = actualPath else {
-			return false
+			return PredicateResult(status: .fail, message: .expectedActualValueTo(message))
+		}
+
+		var stringOutput: String!
+
+		let result = Task("/usr/bin/xcrun", arguments: ["file", path])
+			.launch()
+			.ignoreTaskData()
+			.on(value: { data in
+				stringOutput = String(data: data, encoding: .utf8)
+			})
+			.wait()
+
+		expect(result.error).to(beNil())
+
+		let resultBool: Bool
+		if ofType == .static {
+			resultBool = stringOutput.contains("current ar archive") && !stringOutput.contains("dynamically linked shared library")
+		} else {
+			resultBool = !stringOutput.contains("current ar archive") && stringOutput.contains("dynamically linked shared library")
+		}
+
+		if !resultBool {
+			message += ", got \(stringOutput)"
+		}
+
+		return PredicateResult(
+			bool: resultBool,
+			message: .expectedActualValueTo(message)
+		)
+	}
+}
+
+internal func beExistingDirectory() -> Predicate<String> {
+	return Predicate { actualExpression in
+		var message = "exist and be a directory"
+		let actualPath = try actualExpression.evaluate()
+
+		guard let path = actualPath else {
+			return PredicateResult(status: .fail, message: .expectedActualValueTo(message))
 		}
 
 		var isDirectory: ObjCBool = false
 		let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
 
 		if !exists {
-			failureMessage.postfixMessage += ", but does not exist"
+			message += ", but does not exist"
 		} else if !isDirectory.boolValue {
-			failureMessage.postfixMessage += ", but is not a directory"
+			message += ", but is not a directory"
 		}
 
-		return exists && isDirectory.boolValue
+		return PredicateResult(
+			bool: exists && isDirectory.boolValue,
+			message: .expectedActualValueTo(message)
+		)
 	}
 }
 
-internal func beRelativeSymlinkToDirectory(_ directory: URL) -> MatcherFunc<URL> {
-	return MatcherFunc { actualExpression, failureMessage in
-		failureMessage.postfixMessage = "be a relative symlink to \(directory)"
+internal func beRelativeSymlinkToDirectory(_ directory: URL) -> Predicate<URL> {
+	return Predicate { actualExpression in
+		let message = "be a relative symlink to \(directory)"
 		let actualURL = try actualExpression.evaluate()
 
 		guard var url = actualURL else {
-			return false
+			return PredicateResult(status: .fail, message: .expectedActualValueTo(message))
 		}
+
 		var isSymlink: Bool = false
 		do {
 			url.removeCachedResourceValue(forKey: .isSymbolicLinkKey)
@@ -428,26 +509,28 @@ internal func beRelativeSymlinkToDirectory(_ directory: URL) -> MatcherFunc<URL>
 		} catch {}
 
 		guard isSymlink else {
-			failureMessage.postfixMessage += ", but is not a symlink"
-			return false
+			return PredicateResult(
+				status: .fail,
+				message: .expectedActualValueTo(message + ", but is not a symlink")
+			)
 		}
 
-		let destination = try! FileManager.default.destinationOfSymbolicLink(atPath: url.path)
+		let destination = try! FileManager.default.destinationOfSymbolicLink(atPath: url.path) // swiftlint:disable:this force_try
 
 		guard !(destination as NSString).isAbsolutePath else {
-			failureMessage.postfixMessage += ", but is not a relative symlink"
-			return false
+			return PredicateResult(
+				status: .fail,
+				message: .expectedActualValueTo(message + ", but is not a relative symlink")
+			)
 		}
 
 		let standardDestination = url.resolvingSymlinksInPath().standardizedFileURL
 		let desiredDestination = directory.standardizedFileURL
 
 		let urlsEqual = standardDestination == desiredDestination
-
-		if !urlsEqual {
-			failureMessage.postfixMessage += ", but does not point to the correct destination. Instead it points to \(standardDestination)"
-		}
-
-		return urlsEqual
+		let expectationMessage: ExpectationMessage = urlsEqual
+			? .expectedActualValueTo(message)
+			: .expectedActualValueTo(message + ", but does not point to the correct destination. Instead it points to \(standardDestination)")
+		return PredicateResult(bool: urlsEqual, message: expectationMessage)
 	}
 }

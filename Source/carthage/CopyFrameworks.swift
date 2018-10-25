@@ -1,18 +1,10 @@
-//
-//  CopyFramework.swift
-//  Carthage
-//
-//  Created by Robert Böhnke on 10/12/14.
-//  Copyright (c) 2014 Carthage. All rights reserved.
-//
-
 import CarthageKit
 import Commandant
 import Foundation
 import Result
 import ReactiveSwift
 
-
+/// Type that encapsulates the configuration and evaluation of the `copy-frameworks` subcommand.
 public struct CopyFrameworksCommand: CommandProtocol {
 	public let verb = "copy-frameworks"
 	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
@@ -22,11 +14,17 @@ public struct CopyFrameworksCommand: CommandProtocol {
 			.flatMap(.merge) { frameworkPath -> SignalProducer<(), CarthageError> in
 				let frameworkName = (frameworkPath as NSString).lastPathComponent
 
-				let source = Result(URL(fileURLWithPath: frameworkPath, isDirectory: true), failWith: CarthageError.invalidArgument(description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."))
+				let source = Result(
+					URL(fileURLWithPath: frameworkPath, isDirectory: true),
+					failWith: CarthageError.invalidArgument(
+						description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). "
+							+ "Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."
+					)
+				)
 				let target = frameworksFolder().map { $0.appendingPathComponent(frameworkName, isDirectory: true) }
 
 				return SignalProducer.combineLatest(SignalProducer(result: source), SignalProducer(result: target), SignalProducer(result: validArchitectures()))
-					.flatMap(.merge) { (source, target, validArchitectures) -> SignalProducer<(), CarthageError> in
+					.flatMap(.merge) { source, target, validArchitectures -> SignalProducer<(), CarthageError> in
 						return shouldIgnoreFramework(source, validArchitectures: validArchitectures)
 							.flatMap(.concat) { shouldIgnore -> SignalProducer<(), CarthageError> in
 								if shouldIgnore {
@@ -38,7 +36,7 @@ public struct CopyFrameworksCommand: CommandProtocol {
 									return SignalProducer.combineLatest(copyFrameworks, copydSYMs)
 										.then(SignalProducer<(), CarthageError>.empty)
 								}
-						}
+							}
 					}
 					// Copy as many frameworks as possible in parallel.
 					.start(on: QueueScheduler(name: "org.carthage.CarthageKit.CopyFrameworks.copy"))
@@ -49,8 +47,13 @@ public struct CopyFrameworksCommand: CommandProtocol {
 
 private func copyFramework(_ source: URL, target: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
 	return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
-		.flatMap(.merge) { (url, codesigningIdentity) -> SignalProducer<(), CarthageError> in
-			let strip = stripFramework(url, keepingArchitectures: validArchitectures, codesigningIdentity: codesigningIdentity)
+		.flatMap(.merge) { url, codesigningIdentity -> SignalProducer<(), CarthageError> in
+			let strip = stripFramework(
+				url,
+				keepingArchitectures: validArchitectures,
+				strippingDebugSymbols: shouldStripDebugSymbols(),
+				codesigningIdentity: codesigningIdentity
+			)
 			if buildActionIsArchiveOrInstall() {
 				return strip
 					.then(copyBCSymbolMapsForFramework(url, fromDirectory: source.deletingLastPathComponent()))
@@ -58,7 +61,7 @@ private func copyFramework(_ source: URL, target: URL, validArchitectures: [Stri
 			} else {
 				return strip
 			}
-	}
+		}
 }
 
 private func shouldIgnoreFramework(_ framework: URL, validArchitectures: [String]) -> SignalProducer<Bool, CarthageError> {
@@ -69,7 +72,8 @@ private func shouldIgnoreFramework(_ framework: URL, validArchitectures: [String
 			validArchitectures.filter(architectures.contains)
 		}
 		.map { remainingArchitectures in
-			// If removing the useless architectures results in an empty fat file, wat means that the framework does not have a binary for the given architecture, ignore the framework.
+			// If removing the useless architectures results in an empty fat file, 
+			// wat means that the framework does not have a binary for the given architecture, ignore the framework.
 			remainingArchitectures.isEmpty
 		}
 }
@@ -78,13 +82,12 @@ private func copyDebugSymbolsForFramework(_ source: URL, validArchitectures: [St
 	return SignalProducer(result: appropriateDestinationFolder())
 		.flatMap(.merge) { destinationURL in
 			return SignalProducer(value: source)
-				.map { return $0.appendingPathExtension("dSYM") }
+				.map { $0.appendingPathExtension("dSYM") }
 				.copyFileURLsIntoDirectory(destinationURL)
 				.flatMap(.merge) { dSYMURL in
 					return stripDSYM(dSYMURL, keepingArchitectures: validArchitectures)
 				}
-	    }
-
+		}
 }
 
 private func copyBCSymbolMapsForFramework(_ frameworkURL: URL, fromDirectory directoryURL: URL) -> SignalProducer<URL, CarthageError> {
@@ -98,17 +101,38 @@ private func copyBCSymbolMapsForFramework(_ frameworkURL: URL, fromDirectory dir
 }
 
 private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
-	return SignalProducer.attempt {
-		if codeSigningAllowed() {
-			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY").map { $0.isEmpty ? nil : $0 }
-		} else {
-			return .success(nil)
+	return SignalProducer(codeSigningAllowed)
+		.attemptMap { codeSigningAllowed in
+			guard codeSigningAllowed == true else { return .success(nil) }
+
+			return getEnvironmentVariable("EXPANDED_CODE_SIGN_IDENTITY")
+				.map { $0.isEmpty ? nil : $0 }
+				.flatMapError {
+					// See https://github.com/Carthage/Carthage/issues/2472#issuecomment-395134166 regarding Xcode 10 betas
+					// … or potentially non-beta Xcode releases of major version 10 or later.
+
+					switch getEnvironmentVariable("XCODE_PRODUCT_BUILD_VERSION") {
+					case .success:
+						// See the above issue.
+						return .success(nil)
+					case .failure:
+						// For users calling `carthage copy-frameworks` outside of Xcode (admittedly,
+						// a small fraction), this error is worthwhile in being a signpost in what’s
+						// necessary to add to achieve (for what most is the goal) of ensuring
+						// that code signing happens.
+						return .failure($0)
+					}
+				}
 		}
-	}
 }
 
 private func codeSigningAllowed() -> Bool {
 	return getEnvironmentVariable("CODE_SIGNING_ALLOWED")
+		.map { $0 == "YES" }.value ?? false
+}
+
+private func shouldStripDebugSymbols() -> Bool {
+	return getEnvironmentVariable("COPY_PHASE_STRIP")
 		.map { $0 == "YES" }.value ?? false
 }
 
@@ -141,7 +165,7 @@ private func frameworksFolder() -> Result<URL, CarthageError> {
 
 private func validArchitectures() -> Result<[String], CarthageError> {
 	return getEnvironmentVariable("VALID_ARCHS").map { architectures -> [String] in
-		architectures.components(separatedBy: " ")
+		return architectures.components(separatedBy: " ")
 	}
 }
 
@@ -151,16 +175,37 @@ private func buildActionIsArchiveOrInstall() -> Bool {
 }
 
 private func inputFiles() -> SignalProducer<String, CarthageError> {
-	let count: Result<Int, CarthageError> = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT").flatMap { count in
-		if let i = Int(count) {
-			return .success(i)
-		} else {
-			return .failure(.invalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
-		}
-	}
-
-	return SignalProducer(result: count)
-		.flatMap(.merge) { SignalProducer<Int, CarthageError>(0..<$0) }
-		.attemptMap { getEnvironmentVariable("SCRIPT_INPUT_FILE_\($0)") }
+	return SignalProducer(values: scriptInputFiles(), scriptInputFileLists())
+		.flatten(.merge)
 		.uniqueValues()
+}
+
+private func scriptInputFiles() -> SignalProducer<String, CarthageError> {
+	switch getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT") {
+	case .success(let count):
+		if let count = Int(count) {
+			return SignalProducer<Int, CarthageError>(0..<count).attemptMap { getEnvironmentVariable("SCRIPT_INPUT_FILE_\($0)") }
+		} else {
+			return SignalProducer(error: .invalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
+		}
+	case .failure:
+		return .empty
+	}
+}
+
+private func scriptInputFileLists() -> SignalProducer<String, CarthageError> {
+	switch getEnvironmentVariable("SCRIPT_INPUT_FILE_LIST_COUNT") {
+	case .success(let count):
+		if let count = Int(count) {
+			return SignalProducer<Int, CarthageError>(0..<count)
+				.attemptMap { getEnvironmentVariable("SCRIPT_INPUT_FILE_LIST_\($0)") }
+				.flatMap(.merge) { fileList in SignalProducer(result: Result(attempt: { try String(contentsOfFile: fileList) })) }
+				.map { $0.split(separator: "\n").map(String.init) }
+				.flatMap(.merge) { SignalProducer($0) }
+		} else {
+			return SignalProducer(error: .invalidArgument(description: "SCRIPT_INPUT_FILE_LIST_COUNT did not specify a number"))
+		}
+	case .failure:
+		return .empty
+	}
 }

@@ -7,12 +7,11 @@ public struct ScannableError: Error {
 		self.message = message
 		self.currentLine = currentLine
 	}
-
 }
 
 extension ScannableError: CustomStringConvertible {
 	public var description: String {
-		return currentLine.flatMap { "\(message) in line: \($0)" } ?? message
+		return currentLine.map { "\(message) in line: \($0)" } ?? message
 	}
 }
 
