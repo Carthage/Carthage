@@ -236,6 +236,11 @@ extension BinaryURL: Hashable {
 extension BinaryURL {
 	/// The unique, user-visible name for this project.
 	public var name: String {
-		return url.lastPathComponent.stripping(suffix: ".json")
+		let name = url.lastPathComponent.stripping(suffix: ".json")
+		// lastPathComponent gives empty string when no path
+		if name == "" {
+			return url.host ?? "unknown"
+		}
+		return name
 	}
 }

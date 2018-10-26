@@ -73,6 +73,12 @@ class DependencySpec: QuickSpec {
 					expect(dependency.name) == "myproject"
 				}
 
+				it("should be the domain when there is no path") {
+					let dependency = Dependency.git(GitURL("ssh://server.com"))
+
+					expect(dependency.name) == "server.com"
+				}
+
 				it("should not include the trailing git suffix") {
 					let dependency = Dependency.git(GitURL("ssh://server.com/myproject.git"))
 
@@ -105,6 +111,12 @@ class DependencySpec: QuickSpec {
 					let dependency = Dependency.binary(binary)
 
 					expect(dependency.name) == "myproject"
+				}
+
+				it("should be the domain when there is no path") {
+					let dependency = Dependency.git(GitURL("https://server.com"))
+
+					expect(dependency.name) == "server.com"
 				}
 
 				it("should not include the trailing git suffix") {
