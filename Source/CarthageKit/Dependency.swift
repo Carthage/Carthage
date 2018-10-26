@@ -45,6 +45,20 @@ public enum Dependency {
 		}
 	}
 
+	public var cacheName: String {
+		switch self {
+		case let .gitHub(.dotCom, repo):
+			return "\(name)/\(repo.owner)"
+		case let .gitHub(.enterprise(url), repo):
+			return "\(name)/\(url.absoluteString.cacheSafeName)_\(repo.owner)"
+		case let .git(url):
+			// Replace all non a-z0-9 chars with _
+			return "\(name)/\(url.normalizedURLString.cacheSafeName)"
+		case let .binary(url):
+			return "\(name)/\(url.url.absoluteString.cacheSafeName)"
+		}
+	}
+
 	/// The path at which this project will be checked out, relative to the
 	/// working directory of the main project.
 	public var relativePath: String {
