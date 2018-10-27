@@ -70,10 +70,17 @@ public struct Constants {
 		/// ~/Library/Caches/org.carthage.CarthageKit/binaries/
 		public static var assetsURL: URL = Constants.userCachesURL.appendingPathComponent("binaries", isDirectory: true)
 
-		/// The file URL to the directory in which cloned dependencies will be stored.
+		/// The file URL to the directory in which cloned repositories will be stored.
+		///
+		/// ~/Library/Caches/org.carthage.CarthageKit/repositories/
+		public static var repositoriesURL: URL = Constants.userCachesURL.appendingPathComponent("repositories", isDirectory: true)
+
+		/// The file URL to the directory in which cloned repositories will be stored in 0.31.1
+		/// and earlier versions
 		///
 		/// ~/Library/Caches/org.carthage.CarthageKit/dependencies/
-		public static var repositoriesURL: URL = Constants.userCachesURL.appendingPathComponent("dependencies", isDirectory: true)
+		internal static var oldRepositoriesURL: URL =
+			Constants.userCachesURL.appendingPathComponent("dependencies", isDirectory: true)
 
 		/// The file URL to the directory in which per-dependency derived data
 		/// directories will be stored.
