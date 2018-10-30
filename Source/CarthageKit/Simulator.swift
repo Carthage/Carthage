@@ -13,13 +13,18 @@ internal struct Simulator: Decodable {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
 		name = try container.decode(String.self, forKey: .name)
 		udid = try container.decode(UUID.self, forKey: .udid)
-		// To Xcode 10.0, Return values of `xcrun simctl list devices --json` contains `availability` field.
-		// Its value is possible to be `(available)` or `(unavailable)`.
-		// Since Xcode 10.1, `availability` field is obsolated.
-		// Using `isAvailable` instead. its value is possible to be `YES` or `NO`.
-		let availability = try container.decodeIfPresent(String.self, forKey: .availability)
-		let isAvailable = try container.decodeIfPresent(String.self, forKey: .isAvailable)
-		self.isAvailable = isAvailable == "YES" || availability == "(available)"
+		// Up until Xcode 10.0, values returned from `xcrun simctl list devices --json`
+		// include an `availability` string field.
+		// Its possible values are either `(available)` or `(unavailable)`.
+		// Starting from Xcode 10.1, the `availability` field has been marked as obsolete.
+		// and replaced with the `isAvailable` boolean field.
+		guard let isAvailable = try container.decodeIfPresent(Bool.self, forKey: .isAvailable) else {
+			// Fallback to Xcode <= 10.0 behavior using `availability`
+			let availability = try container.decodeIfPresent(String.self, forKey: .availability)
+			self.isAvailable = availability == "(available)"
+			return
+		}
+		self.isAvailable = isAvailable
 	}
 
 	var isAvailable: Bool
