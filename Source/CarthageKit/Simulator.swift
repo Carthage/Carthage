@@ -18,8 +18,14 @@ internal struct Simulator: Decodable {
 		// Since Xcode 10.1, `availability` field is obsolated.
 		// Using `isAvailable` instead. its value is possible to be `YES` or `NO`.
 		let availability = try container.decodeIfPresent(String.self, forKey: .availability)
-		let isAvailable = try container.decodeIfPresent(String.self, forKey: .isAvailable)
-		self.isAvailable = isAvailable == "YES" || availability == "(available)"
+		
+		do {
+			let isAvailable = try container.decodeIfPresent(String.self, forKey: .isAvailable)
+			self.isAvailable = isAvailable == "YES" || availability == "(available)"
+		} catch {
+			// Xcode 10.1 uses key `isAvailable` with bool value so try to keep it backward compatible
+			self.isAvailable = try container.decode(Bool.self, forKey: .isAvailable)
+		}
 	}
 
 	var isAvailable: Bool
