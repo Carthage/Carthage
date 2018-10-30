@@ -21,8 +21,6 @@ github "ReactiveCocoa/ReactiveCocoa" # GitHub.com
 github "https://enterprise.local/ghe/desktop/git-error-translations" # GitHub Enterprise
 ```
 
-`github` origin is for specifying by `owner/repo` form or using prebuilt binary download feature through its web API, so using `git` or `ssh` protocol for `github` origin does not make sense and will be an error.
-
 ##### Git repositories
 
 Other Git repositories are specified with the `git` keyword:
