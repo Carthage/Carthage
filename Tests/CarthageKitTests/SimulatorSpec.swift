@@ -32,6 +32,25 @@ class SimulatorSpec: QuickSpec {
 				}
 			}
 			
+			context("Xcode 10.1 beta") {
+				it("should be parsed") {
+					let decoder = JSONDecoder()
+					let data = loadJSON(for: "Simulators/availables-xcode101-beta")
+					let dictionary = try! decoder.decode([String: [String: [Simulator]]].self, from: data)
+					let devices = dictionary["devices"]!
+					
+					let simulators = devices["iOS 12.0"]!
+					expect(simulators.count).to(equal(2))
+					let simulator = simulators.first!
+					expect(simulator.udid).to(equal(UUID(uuidString: "A52BF797-F6F8-47F1-B559-68B66B553B23")!))
+					expect(simulator.isAvailable).to(beTrue())
+					expect(simulator.name).to(equal("iPhone 5s"))
+					
+					let unavailableSimulator = simulators.last!
+					expect(unavailableSimulator.isAvailable).to(beFalse())
+				}
+			}
+			
 			context("Xcode 10.1 or above") {
 				it("should be parsed") {
 					let decoder = JSONDecoder()
