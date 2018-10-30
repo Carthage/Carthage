@@ -2,12 +2,14 @@
     "devices" : {
         "iOS 12.0" : [
             {
+				"availability" : "(available)",
                 "state" : "Shutdown",
                 "isAvailable" : true,
                 "name" : "iPhone 5s",
                 "udid" : "A52BF797-F6F8-47F1-B559-68B66B553B23"
             },
             {
+				"availability" : "(available)",
                 "state" : "Shutdown",
                 "isAvailable" : false,
                 "name" : "iPhone 6",
@@ -16,12 +18,14 @@
         ],
         "watchOS 4.2" : [
             {
+				"availability" : "(available)",
                 "state" : "Shutdown",
                 "isAvailable" : true,
                 "name" : "Apple Watch - 38mm",
                 "udid" : "290C3D57-0FF0-407F-B33C-F1A55EA44019"
             },
             {
+				"availability" : "(available)",
                 "state" : "Shutdown",
                 "isAvailable" : false,
                 "name" : "Apple Watch - 42mm",
@@ -30,12 +34,14 @@
         ],
         "iOS 8.4" : [
             {
+				"availability" : "(available)",
                 "state" : "Shutdown",
                 "isAvailable" : true,
                 "name" : "iPhone 4s",
                 "udid" : "F6E70576-0167-448C-AE00-4AC624552796"
             },
             {
+				"availability" : "(available)",
                 "state" : "Shutdown",
                 "isAvailable" : false,
                 "name" : "iPhone 5",
@@ -44,3 +50,4 @@
         ],
     }
 }
+
