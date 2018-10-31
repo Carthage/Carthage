@@ -14,13 +14,13 @@ internal struct Simulator: Decodable {
 		name = try container.decode(String.self, forKey: .name)
 		udid = try container.decode(UUID.self, forKey: .udid)
 		
-		if let isAvailable = try container.decodeIfPresent(Bool.self, forKey: .isAvailable) {
+		if let isAvailable = try? container.decode(Bool.self, forKey: .isAvailable) {
 			// Xcode 10.1 ~
 			self.isAvailable = isAvailable
 		} else if let availability = try container.decodeIfPresent(String.self, forKey: .availability), availability == "(available)" {
 			// <= Xcode 10.0
 			self.isAvailable = true
-		} else if let isAvailable = try container.decodeIfPresent(String.self, forKey: .availability), isAvailable == "YES" {
+		} else if let isAvailable = try container.decodeIfPresent(String.self, forKey: .isAvailable), isAvailable == "YES" {
 			// Xcode 10.1 beta
 			self.isAvailable = true
 		} else {
