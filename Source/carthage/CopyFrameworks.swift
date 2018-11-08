@@ -10,7 +10,8 @@ public struct CopyFrameworksCommand: CommandProtocol {
 	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
 
 	public func run(_ options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
-		return inputFiles()
+		return migrateCacheIfNecessary()
+			.then(inputFiles())
 			.flatMap(.merge) { frameworkPath -> SignalProducer<(), CarthageError> in
 				let frameworkName = (frameworkPath as NSString).lastPathComponent
 

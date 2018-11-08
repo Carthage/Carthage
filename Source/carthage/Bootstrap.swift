@@ -12,7 +12,8 @@ public struct BootstrapCommand: CommandProtocol {
 	public func run(_ options: UpdateCommand.Options) -> Result<(), CarthageError> {
 		// Reuse UpdateOptions, since all `bootstrap` flags should correspond to
 		// `update` flags.
-		return options.loadProject()
+		return migrateCacheIfNecessary()
+			.then(options.loadProject())
 			.flatMap(.merge) { project -> SignalProducer<(), CarthageError> in
 				if !FileManager.default.fileExists(atPath: project.resolvedCartfileURL.path) {
 					let formatting = options.checkoutOptions.colorOptions.formatting

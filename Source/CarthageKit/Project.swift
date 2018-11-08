@@ -1517,3 +1517,39 @@ public func cloneOrFetch(
 				}
 		}
 }
+
+/// Migrate the cache directory in 0.31.1 or ealier
+public func migrateCacheIfNecessary() -> SignalProducer<(), CarthageError> {
+	let oldExists = FileManager.default.fileExists(atPath: Constants.Dependency.oldRepositoriesURL.path)
+	let newExists = FileManager.default.fileExists(atPath: Constants.Dependency.repositoriesURL.path)
+	let needMigrate = !newExists && oldExists
+
+	guard needMigrate else {
+		return SignalProducer.empty
+	}
+
+	return FileManager.default.reactive
+		.enumerator(at: Constants.Dependency.oldRepositoriesURL, options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], catchErrors: true)
+		.flatMap(.concat) { _, oldURL -> SignalProducer<(), CarthageError> in
+			return getRemoteURLInRepository(oldURL)
+				.flatMapError { _ -> SignalProducer<String, CarthageError> in
+					// Maybe not a git repository
+					return .empty
+				}
+				.map { remote -> Void in
+					let dependency = Dependency.git(GitURL(remote))
+
+					let destination = repositoryFileURL(for: dependency)
+
+					if !FileManager.default.fileExists(atPath: destination.absoluteString) {
+						let parent = destination.deletingLastPathComponent()
+
+						try? FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+						try? FileManager.default.moveItem(at: oldURL, to: destination)
+					}
+				}
+		}
+		.flatMapError { _ -> SignalProducer<(), CarthageError> in
+			return .empty
+		}
+}
