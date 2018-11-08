@@ -999,8 +999,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 					if dependencyCheckoutURLResource?.isSymbolicLink == true {
 						_ = dependencyCheckoutURL.path.withCString(Darwin.unlink)
 					} else if dependencyCheckoutURLResource?.isDirectory == true {
-						// This directory may already exist if Carthage/Checkouts directory is checked into the
-						// dependency repository's source control, for instance when using submodules.
+						// This directory may already exist if Carthage/Checkouts directory is checked into
+						// the dependency repository's source control, for instance when using submodules.
+						// Additionally, older versions of Carthage may have created this directory instead
+						// of symlinking it.
 						continue
 					}
 
