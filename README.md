@@ -58,13 +58,13 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
     /usr/local/bin/carthage copy-frameworks
     ```
 
-1. Add the paths to the frameworks you want to use under “Input Files". For example:
+- Add the paths to the frameworks you want to use under “Input Files". For example:
 
     ```
     $(SRCROOT)/Carthage/Build/iOS/Alamofire.framework
     ```
 
-1. Add the paths to the copied frameworks to the “Output Files”. For example:
+- Add the paths to the copied frameworks to the “Output Files”. For example:
 
     ```
     $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Alamofire.framework
@@ -80,7 +80,7 @@ There are multiple options for installing Carthage:
 
 * **Homebrew:** You can use [Homebrew](http://brew.sh) and install the `carthage` tool on your system simply by running `brew update` and `brew install carthage`. (note: if you previously installed the binary version of Carthage, you should delete `/Library/Frameworks/CarthageKit.framework`).
 
-* **From source:** If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, then run `make install`. Requires Xcode 9.0 (Swift 4.0).
+* **From source:** If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, then run `make install`. Requires Xcode 9.4 (Swift 4.1).
 
 ## Adding frameworks to an application
 
@@ -171,7 +171,7 @@ Because unit test targets are missing the _Linked Frameworks and Libraries_ sect
 
 In the Test target under the _Build Settings_ tab, add `@loader_path/Frameworks` to the _Runpath Search Paths_ if it isn't already present.
 
-In rare cases, you may want to also copy each dependency into the build product (e.g., to embed dependencies within the outer framework, or make sure dependencies are present in a test bundle). To do this, create a new _Copy Files_ build phase with the _Frameworks_ destination, then add the framework reference there as well.
+In rare cases, you may want to also copy each dependency into the build product (e.g., to embed dependencies within the outer framework, or make sure dependencies are present in a test bundle). To do this, create a new _Copy Files_ build phase with the _Frameworks_ destination, then add the framework reference there as well. You shouldn't use the `carthage copy-frameworks` command since test bundles don't need frameworks stripped, and running concurrent instances of `copy-frameworks` (with parallel builds turn on) is not supported.
 
 ### Upgrading frameworks
 
@@ -267,11 +267,17 @@ Carthage can automatically use prebuilt frameworks, instead of building from scr
 
 To offer prebuilt frameworks for a specific tag, the binaries for _all_ supported platforms should be zipped up together into _one_ archive, and that archive should be attached to a published Release corresponding to that tag. The attachment should include `.framework` in its name (e.g., `ReactiveCocoa.framework.zip`), to indicate to Carthage that it contains binaries.
 
-You can perform the archiving operation above with the `carthage archive` command as follows:
+You can perform the archiving operation using:
 
 ```sh
-carthage build --no-skip-current
-carthage archive YourFrameworkName
+-carthage build --no-skip-current
+-carthage archive YourFrameworkName
+```
+
+or alternatively
+
+```sh
+carthage build --archive
 ```
 
 Draft Releases will be automatically ignored, even if they correspond to the desired tag.

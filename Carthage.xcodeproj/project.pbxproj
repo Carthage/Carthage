@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		076048E62132FF2F00657D20 /* Simulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076048E52132FF2F00657D20 /* Simulator.swift */; };
+		076048E82132FFB000657D20 /* SimulatorSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 076048E72132FFB000657D20 /* SimulatorSpec.swift */; };
+		0790564C2135B4C2009FA96C /* Simulators in Resources */ = {isa = PBXBuildFile; fileRef = 0790564B2135B4C1009FA96C /* Simulators */; };
 		0FDFEA7E2055D638008862E3 /* ProxyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7D2055D638008862E3 /* ProxyTests.swift */; };
 		0FDFEA802055FACE008862E3 /* Proxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDFEA7F2055FACE008862E3 /* Proxy.swift */; };
 		2190FA981FD5B2F0008D8A79 /* OutdatedDependencies in Resources */ = {isa = PBXBuildFile; fileRef = 2190FA961FD5B05F008D8A79 /* OutdatedDependencies */; };
@@ -18,11 +21,13 @@
 		3BE5BD9A1E4E5A7B00DDDC45 /* SwiftVersionError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */; };
 		4396DC8F20E4E8A8002EE967 /* MachHeaderSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4396DC8E20E4E8A8002EE967 /* MachHeaderSpec.swift */; };
 		43D7809520E4324E004BCDD6 /* MachHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4396DC8C20E3EF5C002EE967 /* MachHeader.swift */; };
+		4EECF02D2115B26F00EA84D3 /* RemoteVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EECF02C2115B26F00EA84D3 /* RemoteVersion.swift */; };
+		4EECF02E2115B54F00EA84D3 /* RemoteVersionSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ED497FD2110D9500031F17B /* RemoteVersionSpec.swift */; };
 		5482DAF11A3849D700197FB8 /* CopyFrameworks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */; };
 		54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54911EF21A1D34EC00FFAE5F /* Version.swift */; };
 		549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */; };
 		575983761C0FF18C00B3D3CB /* carthage-fish-completion in Copy Scripts */ = {isa = PBXBuildFile; fileRef = 575983731C0FF16400B3D3CB /* carthage-fish-completion */; };
-		5F6BDC021DB2F1C8008C2EC5 /* BuildVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F6BDC011DB2F1C8008C2EC5 /* BuildVersion.swift */; };
+		5F6BDC021DB2F1C8008C2EC5 /* RemoteVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F6BDC011DB2F1C8008C2EC5 /* RemoteVersion.swift */; };
 		6724C86A1A850A4600E47F00 /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6724C8691A850A4600E47F00 /* Environment.swift */; };
 		67AFA98A1A79430B00B7DA78 /* PrettyColors.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; };
 		67AFA98B1A79433900B7DA78 /* PrettyColors.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 67AFA9891A79430B00B7DA78 /* PrettyColors.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -117,6 +122,9 @@
 		D0F551DC1A0D71AB0093311F /* TestCartfile.resolved in Resources */ = {isa = PBXBuildFile; fileRef = D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */; };
 		F128A71A1B463D490044368C /* Outdated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F128A7191B463D490044368C /* Outdated.swift */; };
 		F162F3421D63D8A900809D7E /* VersionFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CB3CFB1D63D05D00C9EB99 /* VersionFile.swift */; };
+		F1A39D5220F947D400FA88B6 /* Validate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A39D5120F947D400FA88B6 /* Validate.swift */; };
+		F1A39D5520F9AFA600FA88B6 /* CompatibilityInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A39D5320F9AF7600FA88B6 /* CompatibilityInfo.swift */; };
+		F1D2BBA020FD004800C95E0B /* ValidateSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D2BB9E20FD001000C95E0B /* ValidateSpec.swift */; };
 		F603929919EA29F80050A6AF /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = F603929819EA29F80050A6AF /* Project.swift */; };
 		F689C33619EA14D4006D1EFA /* Checkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66685FB19E8F1EC00487A88 /* Checkout.swift */; };
 /* End PBXBuildFile section */
@@ -184,6 +192,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		076048E52132FF2F00657D20 /* Simulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Simulator.swift; sourceTree = "<group>"; };
+		076048E72132FFB000657D20 /* SimulatorSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorSpec.swift; sourceTree = "<group>"; };
+		0790564B2135B4C1009FA96C /* Simulators */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Simulators; sourceTree = "<group>"; };
 		0FDFEA7D2055D638008862E3 /* ProxyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyTests.swift; sourceTree = "<group>"; };
 		0FDFEA7F2055FACE008862E3 /* Proxy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Proxy.swift; sourceTree = "<group>"; };
 		2190FA961FD5B05F008D8A79 /* OutdatedDependencies */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OutdatedDependencies; sourceTree = "<group>"; };
@@ -195,13 +206,15 @@
 		3BE5BD981E4E58ED00DDDC45 /* SwiftVersionError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SwiftVersionError.swift; sourceTree = "<group>"; };
 		4396DC8C20E3EF5C002EE967 /* MachHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MachHeader.swift; sourceTree = "<group>"; };
 		4396DC8E20E4E8A8002EE967 /* MachHeaderSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachHeaderSpec.swift; sourceTree = "<group>"; };
+		4ED497FD2110D9500031F17B /* RemoteVersionSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteVersionSpec.swift; sourceTree = "<group>"; };
+		4EECF02C2115B26F00EA84D3 /* RemoteVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteVersion.swift; sourceTree = "<group>"; };
 		5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CopyFrameworks.swift; sourceTree = "<group>"; };
 		54911EF21A1D34EC00FFAE5F /* Version.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Version.swift; sourceTree = "<group>"; };
 		5499CA961A2394B700783309 /* Components.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Components.plist; sourceTree = "<group>"; };
 		5499CA971A2394B700783309 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProjectSpec.swift; sourceTree = "<group>"; };
 		575983731C0FF16400B3D3CB /* carthage-fish-completion */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "carthage-fish-completion"; sourceTree = "<group>"; };
-		5F6BDC011DB2F1C8008C2EC5 /* BuildVersion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BuildVersion.swift; sourceTree = "<group>"; };
+		5F6BDC011DB2F1C8008C2EC5 /* RemoteVersion.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RemoteVersion.swift; sourceTree = "<group>"; };
 		6724C8691A850A4600E47F00 /* Environment.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		67AFA9891A79430B00B7DA78 /* PrettyColors.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PrettyColors.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		67C870071A7A04E100F6647C /* Formatting.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
@@ -310,7 +323,10 @@
 		D0E7B65819E9CA0800EDBA4D /* carthage */ = {isa = PBXFileReference; lastKnownFileType = text; path = carthage; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0F551DB1A0D71AB0093311F /* TestCartfile.resolved */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestCartfile.resolved; sourceTree = "<group>"; };
 		F128A7191B463D490044368C /* Outdated.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Outdated.swift; sourceTree = "<group>"; };
+		F1A39D5120F947D400FA88B6 /* Validate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Validate.swift; sourceTree = "<group>"; };
+		F1A39D5320F9AF7600FA88B6 /* CompatibilityInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CompatibilityInfo.swift; sourceTree = "<group>"; };
 		F1CB3CFB1D63D05D00C9EB99 /* VersionFile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VersionFile.swift; sourceTree = "<group>"; };
+		F1D2BB9E20FD001000C95E0B /* ValidateSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValidateSpec.swift; sourceTree = "<group>"; };
 		F603929819EA29F80050A6AF /* Project.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
 		F66685FB19E8F1EC00487A88 /* Checkout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Checkout.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -384,6 +400,7 @@
 		CD6500D61EDD30FC00C2C3FB /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				0790564B2135B4C1009FA96C /* Simulators */,
 				2190FA961FD5B05F008D8A79 /* OutdatedDependencies */,
 				CD9A779A1EDD7FEB00A77B00 /* BinaryOnly */,
 				CD9A77981EDD7E2000A77B00 /* DuplicateDependencies */,
@@ -433,7 +450,6 @@
 				D00105051A8EA74E0059D0A0 /* Archive.swift */,
 				D095BA3B1A187D40007F15D6 /* Bootstrap.swift */,
 				D03B32BE19EA49D8007788BE /* Build.swift */,
-				5F6BDC011DB2F1C8008C2EC5 /* BuildVersion.swift */,
 				F66685FB19E8F1EC00487A88 /* Checkout.swift */,
 				5482DAF01A3849D700197FB8 /* CopyFrameworks.swift */,
 				6724C8691A850A4600E47F00 /* Environment.swift */,
@@ -441,8 +457,10 @@
 				D02DB8DF1A4BC9B600097CDE /* Fetch.swift */,
 				67C870071A7A04E100F6647C /* Formatting.swift */,
 				D0D1211B19E87861005E4BAA /* main.swift */,
+				5F6BDC011DB2F1C8008C2EC5 /* RemoteVersion.swift */,
 				F128A7191B463D490044368C /* Outdated.swift */,
 				D0AAC23F1A14933100060F2E /* Update.swift */,
+				F1A39D5120F947D400FA88B6 /* Validate.swift */,
 				54911EF21A1D34EC00FFAE5F /* Version.swift */,
 				D026578B1B143BA000E833B5 /* swift-is-crashy.c */,
 				5499CA981A2394BD00783309 /* Supporting Files */,
@@ -533,6 +551,7 @@
 				D0D1217119E87B05005E4BAA /* CarthageKit.h */,
 				CD43D9D91F41640E00CD60F6 /* CarthageKitVersion.swift */,
 				7469925420AD9183007AC8FF /* ConcreteVersion.swift */,
+				F1A39D5320F9AF7600FA88B6 /* CompatibilityInfo.swift */,
 				A1411ED51EFC1BFD0060461F /* Constants.swift */,
 				CDD7CF781F75ED88000E0EA5 /* Dependency.swift */,
 				742F7D4620C128020012B4F2 /* DependencyRetriever.swift */,
@@ -550,9 +569,12 @@
 				F603929819EA29F80050A6AF /* Project.swift */,
 				0FDFEA7F2055FACE008862E3 /* Proxy.swift */,
 				D01D82D61A10160700F0DD94 /* Resolver.swift */,
+				7469925220AD9119007AC8FF /* SortedSet.swift */,
+				4EECF02C2115B26F00EA84D3 /* RemoteVersion.swift */,
+				B17145EF1F43F797006DC662 /* NewResolver.swift */,
 				D0DE89431A0F2D9B0030A3EC /* Scannable.swift */,
 				CDB099231E6DC2D40030B4A8 /* ScannableError.swift */,
-				7469925220AD9119007AC8FF /* SortedSet.swift */,
+				076048E52132FF2F00657D20 /* Simulator.swift */,
 				CDBE654B1F4BF0040060D94E /* Submodule.swift */,
 				D0D1216F19E87B05005E4BAA /* Supporting Files */,
 				CD9FDF35207BBB17009C993A /* SwiftShims.swift */,
@@ -597,12 +619,16 @@
 				549B47AF1A4F17FF002498C7 /* ProjectSpec.swift */,
 				0FDFEA7D2055D638008862E3 /* ProxyTests.swift */,
 				D01D82DC1A10B01D00F0DD94 /* ResolverSpec.swift */,
+				4ED497FD2110D9500031F17B /* RemoteVersionSpec.swift */,
+				076048E72132FFB000657D20 /* SimulatorSpec.swift */,
+				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
 				B1F27D3D1E45382B002D4754 /* VersionFileSpec.swift */,
 				D0DE89411A0F2D450030A3EC /* VersionSpec.swift */,
 				D0DB09A319EA354200234B16 /* XcodeSpec.swift */,
 				A940B2F320C033C9001C4C59 /* CartfileCommentsSpec.swift */,
 				21F11B461FE6787F009FB783 /* DB.swift */,
 				4396DC8E20E4E8A8002EE967 /* MachHeaderSpec.swift */,
+				F1D2BB9E20FD001000C95E0B /* ValidateSpec.swift */,
 				D0D1217C19E87B05005E4BAA /* Supporting Files */,
 			);
 			name = CarthageKitTests;
@@ -755,6 +781,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0790564C2135B4C2009FA96C /* Simulators in Resources */,
 				8AC381451FC3AAE4007CF7E8 /* Alamofire.framework in Resources */,
 				CD9A779B1EDD7FEB00A77B00 /* BinaryOnly in Resources */,
 				3B19041E1E4CFE4A00A866AD /* FakeOldObjc.framework in Resources */,
@@ -879,6 +906,7 @@
 				D0D1219219E88B8F005E4BAA /* GitHub.swift in Sources */,
 				CD28C99D1E11846200322AF7 /* ProductType.swift in Sources */,
 				7469925520AD9183007AC8FF /* ConcreteVersion.swift in Sources */,
+				076048E62132FF2F00657D20 /* Simulator.swift in Sources */,
 				CD43D9DA1F41640E00CD60F6 /* CarthageKitVersion.swift in Sources */,
 				8A239F3C2097586F005F02F2 /* BundleExtensions.swift in Sources */,
 				CDF9D3711CF1E54200DF5A6F /* BuildOptions.swift in Sources */,
@@ -903,6 +931,8 @@
 				CDBE654C1F4BF0040060D94E /* Submodule.swift in Sources */,
 				D069CA241A4E3B2700314A85 /* Archive.swift in Sources */,
 				A83DFE484004ADF8794B4FEB /* BackTrackingResolver.swift in Sources */,
+				F1A39D5520F9AFA600FA88B6 /* CompatibilityInfo.swift in Sources */,
+				4EECF02D2115B26F00EA84D3 /* RemoteVersion.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -912,14 +942,17 @@
 			files = (
 				21F11B481FE67A26009FB783 /* DB.swift in Sources */,
 				D0D121E019E8999E005E4BAA /* CartfileSpec.swift in Sources */,
+				F1D2BBA020FD004800C95E0B /* ValidateSpec.swift in Sources */,
 				D0DE89421A0F2D450030A3EC /* VersionSpec.swift in Sources */,
 				89A8F1781C24AB3C00C0E75A /* FrameworkExtensionsSpec.swift in Sources */,
+				4EECF02E2115B54F00EA84D3 /* RemoteVersionSpec.swift in Sources */,
 				D0DB09A419EA354200234B16 /* XcodeSpec.swift in Sources */,
 				0FDFEA7E2055D638008862E3 /* ProxyTests.swift in Sources */,
 				3A0472F61C7836EA00097EC7 /* AlgorithmsSpec.swift in Sources */,
 				BFFA7A631E3AAFD200CB95A7 /* BinaryProjectSpec.swift in Sources */,
 				D0C6E5741A57040B00A5E3E7 /* ArchiveSpec.swift in Sources */,
 				549B47B11A4F1A34002498C7 /* ProjectSpec.swift in Sources */,
+				076048E82132FFB000657D20 /* SimulatorSpec.swift in Sources */,
 				4396DC8F20E4E8A8002EE967 /* MachHeaderSpec.swift in Sources */,
 				D01D82DD1A10B01D00F0DD94 /* ResolverSpec.swift in Sources */,
 				BF3199C01E32E078007DC0D1 /* DependencySpec.swift in Sources */,
@@ -937,7 +970,7 @@
 				67C870081A7A04E100F6647C /* Formatting.swift in Sources */,
 				D02DB8E01A4BC9B600097CDE /* Fetch.swift in Sources */,
 				5482DAF11A3849D700197FB8 /* CopyFrameworks.swift in Sources */,
-				5F6BDC021DB2F1C8008C2EC5 /* BuildVersion.swift in Sources */,
+				5F6BDC021DB2F1C8008C2EC5 /* RemoteVersion.swift in Sources */,
 				D095BA3C1A187D40007F15D6 /* Bootstrap.swift in Sources */,
 				54911EF31A1D34EC00FFAE5F /* Version.swift in Sources */,
 				D0AAC2401A14933100060F2E /* Update.swift in Sources */,
@@ -946,6 +979,7 @@
 				D03B32BF19EA49D8007788BE /* Build.swift in Sources */,
 				F128A71A1B463D490044368C /* Outdated.swift in Sources */,
 				D0E7B65619E9C76900EDBA4D /* main.swift in Sources */,
+				F1A39D5220F947D400FA88B6 /* Validate.swift in Sources */,
 				D00105061A8EA74E0059D0A0 /* Archive.swift in Sources */,
 				D026578C1B143BA000E833B5 /* swift-is-crashy.c in Sources */,
 				F689C33619EA14D4006D1EFA /* Checkout.swift in Sources */,

@@ -387,7 +387,7 @@ class ProjectSpec: QuickSpec {
 			let testDefinitionURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/successful", withExtension: "json")!
 
 			beforeEach {
-				project = Project(directoryURL: URL(string: "file://fake")!)
+				project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
 			}
 
 			it("should return definition") {
@@ -553,7 +553,7 @@ class ProjectSpec: QuickSpec {
 				"""
 
 				let resolvedCartfile = ResolvedCartfile.from(string: cartfile)
-				let project = Project(directoryURL: URL(string: "file://fake")!)
+				let project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
 
 				let result = project.transitiveDependencies(["Moya"], resolvedCartfile: resolvedCartfile.value!).single()
 

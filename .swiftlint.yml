@@ -14,12 +14,12 @@ opt_in_rules:
 - redundant_nil_coalescing
 - switch_case_on_newline
 - unneeded_parentheses_in_closure_argument
-- vertical_parameter_alignment_on_call
 
 disabled_rules:
 - closure_end_indentation
 - function_parameter_count
 - identifier_name
+- no_fallthrough_only # https://github.com/realm/SwiftLint/issues/2276
 - redundant_string_enum_value
 - superfluous_disable_command
 
@@ -40,16 +40,13 @@ file_length:
 file_header:
   required_pattern: ''
 
+function_body_length:
+  warning: 60
+
 trailing_comma:
   mandatory_comma: true
 
 custom_rules:
-  closing_brace_whitespace:
-    included: ".*.swift"
-    regex: '(?:\n| {2,})\}\)? *\n *[^ \n\})\]]'
-    name: "Closing Brace Whitespace"
-    message: "Empty line required after closing curly braces if code with same indentation follows."
-    severity: warning
   if_as_guard:
     included: ".*.swift"
     regex: '\n *if [^\{]+\{\s*(?:return|break|continue)[^\n]*\n *\}(?! *else)'
@@ -86,35 +83,11 @@ custom_rules:
     name: "Space Before Comment"
     message: "Always put a space line before a comment line and always comment code beforehand."
     severity: warning
-  unnecessary_case_break:
-    included: ".*.swift"
-    regex: '(case |default)(?:[^\n\}]+\n){2,}\s*break *\n|\n *\n *break(?:\n *\n|\n *\})'
-    name: "Unnecessary Case Break"
-    message: "Don't use break in switch cases – Swift breaks by default."
-    severity: warning
-  unnecessary_nil_assignment:
-    included: ".*.swift"
-    regex: 'var \S+\s*:\s*[^\s]+\?\s*=\s*nil'
-    name: "Unnecessary Nil Assignment"
-    message: "Don't assign nil as a value when defining an optional type – it's nil by default."
-    severity: warning
   vertical_whitespaces_around_mark:
     included: ".*.swift"
     regex: '\/\/\s*MARK:[^\n]*(\n)(?!\n)|(\n\n\n)[ \t]*\/\/\s*MARK:|[^\s{]\n[^\n\/]*\/\/\s*MARK:'
     name: "Vertical Whitespaces Around MARK:"
     message: "Include a single vertical whitespace (empty line) before and after MARK: comments."
-  vertical_whitespace_opening_braces:
-    included: ".*.swift"
-    regex: '[{(\[][ \t]*\n[ \t]*\n'
-    name: "Vertical Whitespace after Opening Braces"
-    message: "Don't include vertical whitespace (empty line) after opening braces."
-    severity: warning
-  vertical_whitespace_closing_braces:
-    included: ".*.swift"
-    regex: '\n[ \t]*\n[ \t]*[)}\]]'
-    name: "Vertical Whitespace before Closing Braces"
-    message: "Don't include vertical whitespace (empty line) before closing braces."
-    severity: warning
   whitespace_comment_start:
     included: ".*.swift"
     regex: '[^:#][^:#]\/\/[^\s\/]'

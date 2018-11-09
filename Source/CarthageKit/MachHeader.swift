@@ -26,17 +26,14 @@ struct MachHeader {
 	let reserved: UInt32?
 
 	var is64BitHeader: Bool {
-
 		return magic == MH_MAGIC_64 || magic == MH_CIGAM_64
 	}
 
 	var is32BitHeader: Bool {
-
 		return !is64BitHeader
 	}
 
 	var endianess: Endianness {
-
 		return magic == MH_CIGAM_64 || magic == MH_CIGAM ? .big : .little
 	}
 }
@@ -65,7 +62,6 @@ extension MachHeader {
 	///            0xfeedfacf 16777223          3  0x00           1     8       1720 0x00002000
 	///
 	/// - See Also:  [LLVM MachODump.cpp](https://llvm.org/viewvc/llvm-project/llvm/trunk/tools/llvm-objdump/MachODump.cpp?view=markup&pathrev=225383###see%C2%B7line%C2%B72745)
-
 	static func headers(forMachOFileAtUrl url: URL) -> SignalProducer<MachHeader, CarthageError> {
 
 		// This is the command `otool -h` actually invokes
@@ -103,6 +99,7 @@ extension MachHeader {
 					MH_CIGAM,
 					].lazy
 
+				// swiftlint:disable comma
 				guard previousLineComponents == [
 					"magic",
 					"cputype",
@@ -112,9 +109,13 @@ extension MachHeader {
 					"ncmds",
 					"sizeofcmds",
 					"flags",
-					], !strippedComponents.isEmpty, let magic = UInt32(strippedComponents.first!, radix:16), magicIdentifiers.first(where: { $0 == magic }) != nil else {
+					]
+					, !strippedComponents.isEmpty
+					, let magic = UInt32(strippedComponents.first!, radix: 16)
+					, magicIdentifiers.first(where: { $0 == magic }) != nil else {
 						return  nil
 				}
+				// swiftlint:enable comma
 
 				guard
 					let cpuType = cpu_type_t(strippedComponents[1], radix: 10),

@@ -397,6 +397,34 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					.map { $0.0.name }
 					.collect()
+		}
+	}
+
+	/// Finds the required dependencies and their corresponding version specifiers for each dependency in Cartfile.resolved.
+	func requirementsByDependency(
+		resolvedCartfile: ResolvedCartfile,
+		tryCheckoutDirectory: Bool
+	) -> SignalProducer<CompatibilityInfo.Requirements, CarthageError> {
+		return SignalProducer(resolvedCartfile.dependencies)
+			.flatMap(.concurrent(limit: 4)) { dependency, pinnedVersion -> SignalProducer<(Dependency, (Dependency, VersionSpecifier)), CarthageError> in
+				return self.dependencies(for: dependency, version: pinnedVersion, tryCheckoutDirectory: tryCheckoutDirectory)
+					.map { (dependency, $0) }
+			}
+			.collect()
+			.flatMap(.merge) { dependencyAndRequirements -> SignalProducer<CompatibilityInfo.Requirements, CarthageError> in
+				var dict: CompatibilityInfo.Requirements = [:]
+				for (dependency, requirement) in dependencyAndRequirements {
+					let (requiredDependency, requiredVersion) = requirement
+					var requirementsDict = dict[dependency] ?? [:]
+
+					if requirementsDict[requiredDependency] != nil {
+						return SignalProducer(error: .duplicateDependencies([DuplicateDependency(dependency: requiredDependency, locations: [])]))
+					}
+
+					requirementsDict[requiredDependency] = requiredVersion
+					dict[dependency] = requirementsDict
+				}
+				return SignalProducer(value: dict)
 			}
 	}
 
@@ -503,8 +531,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 				latestDependencies(resolver: resolver)
 			)
 			.map { ($0.dependencies, $1.dependencies, $2) }
-			.map { (currentDependencies, updatedDependencies, latestDependencies) -> [OutdatedDependency] in
-				return updatedDependencies.compactMap { (project, version) -> OutdatedDependency? in
+			.map { currentDependencies, updatedDependencies, latestDependencies -> [OutdatedDependency] in
+				return updatedDependencies.compactMap { project, version -> OutdatedDependency? in
 					if let resolved = currentDependencies[project], let latest = latestDependencies[project], resolved != version || resolved != latest {
 						if SemanticVersion.from(resolved).value == nil, version == resolved {
 							// If resolved version is not a semantic version but a commit
@@ -804,7 +832,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 		_ cartfile: ResolvedCartfile,
 		dependenciesToInclude: [String]? = nil
 	) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> {
+		// swiftlint:disable:next nesting
 		typealias DependencyGraph = [Dependency: Set<Dependency>]
+
 		// A resolved cartfile already has all the recursive dependencies. All we need to do is sort
 		// out the relationships between them. Loading the cartfile will each will give us its
 		// dependencies. Building a recursive lookup table with this information will let us sort
@@ -1006,7 +1036,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// be rebuilt unless otherwise specified via build options.
 	///
 	/// Returns a producer-of-producers representing each scheme being built.
-	public func buildCheckedOutDependenciesWithOptions( // swiftlint:disable:this function_body_length
+	public func buildCheckedOutDependenciesWithOptions( // swiftlint:disable:this cyclomatic_complexity function_body_length
 		_ options: BuildOptions,
 		dependenciesToBuild: [String]? = nil,
 		sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
@@ -1047,7 +1077,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return dependenciesIncludingNext
 				}
 			}
-			.flatMap(.concat) { dependencies -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+			.flatMap(.concat) { (dependencies: [(Dependency, PinnedVersion)]) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				return SignalProducer(dependencies)
 					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 						switch dependency {
@@ -1063,6 +1093,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
 								.then(.init(value: (dependency, version)))
 						}
+					}
+					.flatMap(.merge) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
+						// Symlink the build folder of binary downloads for consistency with regular checkouts
+						// (even though it's not necessary since binary downloads aren't built by Carthage)
+						return self.symlinkBuildPathIfNeeded(for: dependency, version: version)
+							.then(.init(value: (dependency, version)))
 					}
 					.collect()
 					.map { installedDependencies -> [(Dependency, PinnedVersion)] in
@@ -1087,18 +1123,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 				let derivedDataVersioned = derivedDataPerDependency.appendingPathComponent(version.commitish, isDirectory: true)
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
-				return self
-					.dependencySet(for: dependency, version: version)
-					.flatMap(.concat) { dependencies -> SignalProducer<(), CarthageError> in
-						// Don't create symlink the build folder if the dependencies doesn't have
-						// any Carthage dependencies.
-						if dependencies.isEmpty {
-							return .empty
-						}
-						return symlinkBuildPath(for: dependency, rootDirectoryURL: self.directoryURL)
-					}
+				return self.symlinkBuildPathIfNeeded(for: dependency, version: version)
 					.then(build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter))
-					.flatMapError { error in
+					.flatMapError { error -> BuildSchemeProducer in
 						switch error {
 						case .noSharedFrameworkSchemes:
 							// Log that building the dependency is being skipped,
@@ -1109,7 +1136,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 							if options.cacheBuilds {
 								// Create a version file for a dependency with no shared schemes
 								// so that its cache is not always considered invalid.
-								return createVersionFileForCommitish(version.commitish, dependencyName: dependency.name, platforms: options.platforms, buildProducts: [], rootDirectoryURL: self.directoryURL)
+								return createVersionFileForCommitish(version.commitish,
+																	 dependencyName: dependency.name,
+																	 platforms: options.platforms,
+																	 buildProducts: [],
+																	 rootDirectoryURL: self.directoryURL)
 									.then(BuildSchemeProducer.empty)
 							}
 							return .empty
@@ -1118,6 +1149,37 @@ public final class Project { // swiftlint:disable:this type_body_length
 							return SignalProducer(error: error)
 						}
 					}
+			}
+	}
+
+	private func symlinkBuildPathIfNeeded(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<(), CarthageError> {
+		return dependencySet(for: dependency, version: version)
+			.flatMap(.merge) { dependencies -> SignalProducer<(), CarthageError> in
+				// Don't symlink the build folder if the dependency doesn't have
+				// any Carthage dependencies
+				if dependencies.isEmpty {
+					return .empty
+				}
+				return symlinkBuildPath(for: dependency, rootDirectoryURL: self.directoryURL)
+			}
+	}
+
+	/// Determines whether the requirements specified in this project's Cartfile.resolved
+	/// are compatible with the versions specified in the Cartfile for each of those projects.
+	///
+	/// Either emits a value to indicate success or an error.
+	public func validate(resolvedCartfile: ResolvedCartfile) -> SignalProducer<(), CarthageError> {
+		return SignalProducer(value: resolvedCartfile)
+			.flatMap(.concat) { (resolved: ResolvedCartfile) -> SignalProducer<([Dependency: PinnedVersion], CompatibilityInfo.Requirements), CarthageError> in
+				let requirements = self.requirementsByDependency(resolvedCartfile: resolved, tryCheckoutDirectory: true)
+				return SignalProducer.zip(SignalProducer(value: resolved.dependencies), requirements)
+			}
+			.flatMap(.concat) { (info: ([Dependency: PinnedVersion], CompatibilityInfo.Requirements)) -> SignalProducer<[CompatibilityInfo], CarthageError> in
+				let (dependencies, requirements) = info
+				return .init(result: CompatibilityInfo.incompatibilities(for: dependencies, requirements: requirements))
+			}
+			.flatMap(.concat) { incompatibilities -> SignalProducer<(), CarthageError> in
+				return incompatibilities.isEmpty ? .init(value: ()) : .init(error: .invalidResolvedCartfile(incompatibilities))
 			}
 	}
 }

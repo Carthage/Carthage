@@ -575,16 +575,12 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		}
 		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
 			return UUIDsForFramework(builtProductURL)
-				.collect()
-				.flatMap(.concat) { uuids -> SignalProducer<TaskEvent<URL>, CarthageError> in
-					// Only attempt to create debug info if there is at least 
-					// one dSYM architecture UUID in the framework. This can 
-					// occur if the framework is a static framework packaged 
-					// like a dynamic framework.
-					if uuids.isEmpty {
-						return .empty
-					}
-
+				// Only attempt to create debug info if there is at least
+				// one dSYM architecture UUID in the framework. This can
+				// occur if the framework is a static framework packaged
+				// like a dynamic framework.
+				.take(first: 1)
+				.flatMap(.concat) { _ -> SignalProducer<TaskEvent<URL>, CarthageError> in
 					return createDebugInformation(builtProductURL)
 				}
 				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
@@ -630,29 +626,18 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 		// Specifying destination seems to be required for building with
 		// simulator SDKs since Xcode 7.2.
 		if sdk.isSimulator {
-			let destinationLookup = Task("/usr/bin/xcrun", arguments: [ "simctl", "list", "devices" ])
+			let destinationLookup = Task("/usr/bin/xcrun", arguments: [ "simctl", "list", "devices", "--json" ])
 			return destinationLookup.launch()
+				.mapError(CarthageError.taskError)
 				.ignoreTaskData()
-				.map { data in
-					let string = String(data: data, encoding: .utf8)!
-					// The output as of Xcode 6.4 is structured text so we
-					// parse it using regex. The destination will be omitted
-					// altogether if parsing fails. Xcode 7.0 beta 4 added a
-					// JSON output option as `xcrun simctl list devices --json`
-					// so this can be switched once 7.0 becomes a requirement.
-					let platformName = sdk.platform.rawValue
-					let regex = try! NSRegularExpression( // swiftlint:disable:this force_try
-						pattern: "-- \(platformName) [0-9.]+ --\\n.*?\\(([0-9A-Z]{8}-([0-9A-Z]{4}-){3}[0-9A-Z]{12})\\)",
-						options: []
-					)
-					let lastDeviceResult = regex.matches(in: string, range: NSRange(string.startIndex..., in: string)).last
-					return lastDeviceResult.map { result in
-						// We use the ID here instead of the name as it's guaranteed to be unique, the name isn't.
-						let deviceID = string[Range(result.range(at: 1), in: string)!]
-						return "platform=\(platformName) Simulator,id=\(deviceID)"
+				.flatMap(.concat) { (data: Data) -> SignalProducer<Simulator, CarthageError> in
+					if let selectedSimulator = selectAvailableSimulator(of: sdk, from: data) {
+						return .init(value: selectedSimulator)
+					} else {
+						return .init(error: CarthageError.noAvailableSimulators(platformName: sdk.platform.rawValue))
 					}
 				}
-				.mapError(CarthageError.taskError)
+				.map { "platform=\(sdk.platform.rawValue) Simulator,id=\($0.udid.uuidString)" }
 		}
 		return SignalProducer(value: nil)
 	}
@@ -1188,21 +1173,16 @@ private func UUIDsFromDwarfdump(_ url: URL) -> SignalProducer<Set<UUID>, Carthag
 public func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 	let bundle = Bundle(path: packageURL.path)
 
-	switch bundle?.packageType {
-	case .framework?, .bundle?:
-		if let binaryName = bundle?.object(forInfoDictionaryKey: "CFBundleExecutable") as? String {
-			return .success(packageURL.appendingPathComponent(binaryName))
-		}
+	if let executableURL = bundle?.executableURL {
+		return .success(executableURL)
+	}
 
-	case .dSYM?:
+	if bundle?.packageType == .dSYM {
 		let binaryName = packageURL.deletingPathExtension().deletingPathExtension().lastPathComponent
 		if !binaryName.isEmpty {
 			let binaryURL = packageURL.appendingPathComponent("Contents/Resources/DWARF/\(binaryName)")
 			return .success(binaryURL)
 		}
-
-	default:
-		break
 	}
 
 	return .failure(.readFailed(packageURL, nil))

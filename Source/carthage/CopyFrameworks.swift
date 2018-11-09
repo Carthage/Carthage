@@ -112,10 +112,10 @@ private func codeSigningIdentity() -> SignalProducer<String?, CarthageError> {
 					// … or potentially non-beta Xcode releases of major version 10 or later.
 
 					switch getEnvironmentVariable("XCODE_PRODUCT_BUILD_VERSION") {
-					case .success(_):
+					case .success:
 						// See the above issue.
 						return .success(nil)
-					case .failure(_):
+					case .failure:
 						// For users calling `carthage copy-frameworks` outside of Xcode (admittedly,
 						// a small fraction), this error is worthwhile in being a signpost in what’s
 						// necessary to add to achieve (for what most is the goal) of ensuring
@@ -175,17 +175,37 @@ private func buildActionIsArchiveOrInstall() -> Bool {
 }
 
 private func inputFiles() -> SignalProducer<String, CarthageError> {
-	let count: Result<Int, CarthageError> = getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT").flatMap { count in
-		// swiftlint:disable:next identifier_name
-		if let i = Int(count) {
-			return .success(i)
-		} else {
-			return .failure(.invalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
-		}
-	}
-
-	return SignalProducer(result: count)
-		.flatMap(.merge) { SignalProducer<Int, CarthageError>(0..<$0) }
-		.attemptMap { getEnvironmentVariable("SCRIPT_INPUT_FILE_\($0)") }
+	return SignalProducer(values: scriptInputFiles(), scriptInputFileLists())
+		.flatten(.merge)
 		.uniqueValues()
+}
+
+private func scriptInputFiles() -> SignalProducer<String, CarthageError> {
+	switch getEnvironmentVariable("SCRIPT_INPUT_FILE_COUNT") {
+	case .success(let count):
+		if let count = Int(count) {
+			return SignalProducer<Int, CarthageError>(0..<count).attemptMap { getEnvironmentVariable("SCRIPT_INPUT_FILE_\($0)") }
+		} else {
+			return SignalProducer(error: .invalidArgument(description: "SCRIPT_INPUT_FILE_COUNT did not specify a number"))
+		}
+	case .failure:
+		return .empty
+	}
+}
+
+private func scriptInputFileLists() -> SignalProducer<String, CarthageError> {
+	switch getEnvironmentVariable("SCRIPT_INPUT_FILE_LIST_COUNT") {
+	case .success(let count):
+		if let count = Int(count) {
+			return SignalProducer<Int, CarthageError>(0..<count)
+				.attemptMap { getEnvironmentVariable("SCRIPT_INPUT_FILE_LIST_\($0)") }
+				.flatMap(.merge) { fileList in SignalProducer(result: Result(attempt: { try String(contentsOfFile: fileList) })) }
+				.map { $0.split(separator: "\n").map(String.init) }
+				.flatMap(.merge) { SignalProducer($0) }
+		} else {
+			return SignalProducer(error: .invalidArgument(description: "SCRIPT_INPUT_FILE_LIST_COUNT did not specify a number"))
+		}
+	case .failure:
+		return .empty
+	}
 }
