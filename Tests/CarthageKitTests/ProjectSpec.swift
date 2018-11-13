@@ -96,7 +96,12 @@ class ProjectSpec: QuickSpec {
 					try! data.write(to: binaryURL, options: .atomic)
 				}
 
-				func overwriteSwiftVersion(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL, withVersion version: String) {
+				func overwriteSwiftVersion(
+					_ frameworkName: String,
+					forPlatformName platformName: String,
+					inDirectory buildDirectoryURL: URL,
+					withVersion version: String)
+				{
 					let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
 					let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
 					let swiftHeaderURL = frameworkURL.swiftHeaderURL()!
@@ -119,6 +124,24 @@ class ProjectSpec: QuickSpec {
 					header.replaceSubrange(versionRange, with: version)
 
 					try! header.write(to: swiftHeaderURL, atomically: true, encoding: header.fastestEncoding)
+				}
+
+				func removeDsym(
+					_ frameworkName: String,
+					forPlatformName platformName: String,
+					inDirectory buildDirectoryURL: URL) -> Bool
+				{
+					let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
+					let dSYMURL = platformURL
+						.appendingPathComponent("\(frameworkName).framework.dSYM", isDirectory: true)
+
+					do {
+						try FileManager.default.removeItem(at: dSYMURL)
+						return true
+					}
+					catch {
+						return false
+					}
 				}
 
 				it("should not rebuild cached frameworks unless instructed to ignore cached builds") {
@@ -169,7 +192,15 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					overwriteSwiftVersion("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL, withVersion: "1.0 (swiftlang-000.0.1 clang-000.0.0.1)")
+					overwriteSwiftVersion("TestFramework3",
+										  forPlatformName: "Mac",
+										  inDirectory: buildDirectoryURL,
+										  withVersion: "1.0 (swiftlang-000.0.1 clang-000.0.0.1)")
+
+					let allDSymsRemoved = expected
+						.compactMap { removeDsym($0.dropLast(4).description, forPlatformName: "Mac", inDirectory: buildDirectoryURL) }
+						.reduce(true) { acc, next in return  acc && next }
+					expect(allDSymsRemoved) == true
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
@@ -185,6 +216,22 @@ class ProjectSpec: QuickSpec {
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == ["TestFramework2_Mac", "TestFramework1_Mac"]
+				}
+
+				it("should not rebuild cached frameworks (and dependencies) unnecessarily based on dSYMs") {
+					let expected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
+
+					let result1 = buildDependencyTest(platforms: [.macOS])
+					expect(result1) == expected
+
+					// Overwrite one header, this should trigger cheking the dSYM instead
+					overwriteSwiftVersion("TestFramework3",
+										  forPlatformName: "Mac",
+										  inDirectory: buildDirectoryURL,
+										  withVersion: "1.0 (swiftlang-000.0.1 clang-000.0.0.1)")
+
+					let result2 = buildDependencyTest(platforms: [.macOS])
+					expect(result2) == []
 				}
 
 				it("should rebuild a framework for all platforms even a cached framework is invalid for only a single platform") {

@@ -36,7 +36,7 @@ private func compilerVersionArguments(usingToolchain toolchain: String?) -> [Str
 private func parseSwiftVersionCommand(output: String?) -> String? {
 	guard
 		let output = output,
-		let regex = try? NSRegularExpression(pattern: "Apple Swift version ([^\\s]+) .*\\((.+)\\)", options: []),
+		let regex = try? NSRegularExpression(pattern: "Apple Swift version ([^\\s]+) .*\\((.[^\\)]+)\\)", options: []),
 		let match = regex.firstMatch(in: output, options: [], range: NSRange(output.startIndex..., in: output))
 		else
 	{
@@ -52,16 +52,67 @@ private func parseSwiftVersionCommand(output: String?) -> String? {
 
 /// Determines the Swift version of a framework at a given `URL`.
 internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, SwiftVersionError> {
+
 	guard
 		let swiftHeaderURL = frameworkURL.swiftHeaderURL(),
 		let data = try? Data(contentsOf: swiftHeaderURL),
 		let contents = String(data: data, encoding: .utf8),
 		let swiftVersion = parseSwiftVersionCommand(output: contents)
 		else {
-			return SignalProducer(error: .unknownFrameworkSwiftVersion)
+			return SignalProducer(error: .unknownFrameworkSwiftVersion(message: "Could not derive version from header file."))
 	}
 
 	return SignalProducer(value: swiftVersion)
+}
+
+internal func dSYMSwiftVersion(_ dSYMURL: URL) -> SignalProducer<String, SwiftVersionError> {
+
+	// Pick one architecture
+	guard let arch = architecturesInPackage(dSYMURL).first()?.value else {
+		return SignalProducer(error: .unknownFrameworkSwiftVersion(message: "No architectures found in dSYM."))
+	}
+
+	// Check the .debug_info section left from the compiler in the dSYM.
+	let task = Task("/usr/bin/xcrun", arguments: ["dwarfdump", "--arch=\(arch)", "--debug-info", dSYMURL.path])
+
+	//	$ dwarfdump --debug-info Carthage/Build/iOS/Swiftz.framework.dSYM
+	//		----------------------------------------------------------------------
+	//	File: Carthage/Build/iOS/Swiftz.framework.dSYM/Contents/Resources/DWARF/Swiftz (i386)
+	//	----------------------------------------------------------------------
+	//	.debug_info contents:
+	//
+	//	0x00000000: Compile Unit: length = 0x000000ac  version = 0x0004  abbr_offset = 0x00000000  addr_size = 0x04  (next CU at 0x000000b0)
+	//
+	//	0x0000000b: TAG_compile_unit [1] *
+	//	AT_producer( "Apple Swift version 4.1.2 effective-3.3.2 (swiftlang-902.0.54 clang-902.0.39.2) -emit-object /Users/Tommaso/<redacted>
+
+	let versions: [String]?  = task.launch(standardInput: nil)
+		.ignoreTaskData()
+		.map { String(data: $0, encoding: .utf8) ?? "" }
+		.filter { !$0.isEmpty }
+		.flatMap(.merge) { (output: String) -> SignalProducer<String, NoError> in
+			output.linesProducer
+		}
+		.filter { $0.contains("AT_producer") }
+		.uniqueValues()
+		.map { parseSwiftVersionCommand(output: .some($0)) }
+		.skipNil()
+		.uniqueValues()
+		.collect()
+		.single()?
+		.value
+
+	let numberOfVersions = versions?.count ?? 0
+	guard numberOfVersions != 0 else {
+		return SignalProducer(error: .unknownFrameworkSwiftVersion(message: "No version found in dSYM."))
+	}
+
+	guard numberOfVersions == 1 else {
+		let versionsString = versions!.joined(separator: " ")
+		return SignalProducer(error: .unknownFrameworkSwiftVersion(message: "More than one found in dSYM - \(versionsString) ."))
+	}
+
+	return SignalProducer<String, SwiftVersionError>(value: versions!.first!)
 }
 
 /// Determines whether a framework was built with Swift
