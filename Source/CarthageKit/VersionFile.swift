@@ -239,6 +239,43 @@ struct VersionFile: Codable {
 	}
 }
 
+/// Creates a version file for the current project in the
+/// Carthage/Build directory which associates its commitish with
+/// the hashes (e.g. SHA256) of the built frameworks for each platform
+/// in order to allow those frameworks to be skipped in future builds.
+///
+/// Derives the current project name from `git remote get-url origin`
+///
+/// Returns a signal that succeeds once the file has been created.
+public func createVersionFileForCurrentProject(
+	platforms: Set<Platform>,
+	buildProducts: [URL],
+	rootDirectoryURL: URL
+) -> SignalProducer<(), CarthageError> {
+	let currentProjectAsDependecy = launchGitTask(["remote", "get-url", "origin"])
+		.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+		.map { Dependency.git(GitURL($0)) }
+
+	let currentGitTagOrCommitish = launchGitTask(["rev-parse", "HEAD"])
+		.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+		.flatMap(.merge) { headCommitish in
+			launchGitTask(["describe", "--tags", "--exact-match", headCommitish])
+				.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+				.flatMapError { _  in SignalProducer(value: headCommitish) }
+		}
+
+	 return SignalProducer.zip(currentProjectAsDependecy, currentGitTagOrCommitish)
+		.flatMap(.merge) { currentProject, version in
+			createVersionFileForCommitish(
+				version,
+				dependencyName: currentProject.name,
+				platforms: platforms,
+				buildProducts: buildProducts,
+				rootDirectoryURL: rootDirectoryURL
+		)
+	}
+}
+
 /// Creates a version file for the current dependency in the
 /// Carthage/Build directory which associates its commitish with
 /// the hashes (e.g. SHA256) of the built frameworks for each platform

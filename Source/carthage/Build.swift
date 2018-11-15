@@ -123,15 +123,16 @@ public struct BuildCommand: CommandProtocol {
 	///
 	/// Returns a producer of producers, representing each scheme being built.
 	private func buildProjectInDirectoryURL(_ directoryURL: URL, options: Options) -> BuildSchemeProducer {
-		let project = Project(directoryURL: directoryURL)
+		let shouldBuildCurrentProject =  !options.skipCurrent || options.archive
 
+		let project = Project(directoryURL: directoryURL)
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeValues { eventSink.put($0) }
 
 		let buildProducer = project.loadResolvedCartfile()
 			.map { _ in project }
 			.flatMapError { error -> SignalProducer<Project, CarthageError> in
-				if options.skipCurrent && !options.archive {
+				if !shouldBuildCurrentProject {
 					return SignalProducer(error: error)
 				} else {
 					// Ignore Cartfile.resolved loading failure. Assume the user
@@ -143,7 +144,7 @@ public struct BuildCommand: CommandProtocol {
 				return project.buildCheckedOutDependenciesWithOptions(options.buildOptions, dependenciesToBuild: options.dependenciesToBuild)
 			}
 
-		if options.skipCurrent && !options.archive {
+		if !shouldBuildCurrentProject {
 			return buildProducer
 		} else {
 			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions, rootDirectoryURL: directoryURL)
