@@ -1435,6 +1435,21 @@ private func repositoryFileURL(for dependency: Dependency, baseURL: URL = Consta
 	return baseURL.appendingPathComponent(dependency.cacheName, isDirectory: true)
 }
 
+/// Sends the URL of a repository with the same name as the dependency
+public func firstRepositoryWithSameNameFileURL(for dependency: Dependency, baseURL: URL = Constants.Dependency.repositoriesURL) -> SignalProducer<URL?, NoError> {
+	let parent = repositoryFileURL(for: dependency, baseURL: baseURL).deletingLastPathComponent()
+	return FileManager.default.reactive
+		.enumerator(at: parent, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], catchErrors: true)
+		.take(first: 1)
+		.collect()
+		.map { array -> URL? in
+			return array.first?.1
+		}
+		.flatMapError { _ -> SignalProducer<URL?, NoError> in
+			return SignalProducer(value: nil)
+	}
+}
+
 /// Returns the string representing a relative path from a dependency back to the root
 internal func relativeLinkDestination(for dependency: Dependency, subdirectory: String) -> String {
 	let dependencySubdirectoryPath = (dependency.relativePath as NSString).appendingPathComponent(subdirectory)
@@ -1473,7 +1488,7 @@ public func cloneOrFetch(
 		.flatMap(.merge) { (remoteURL: GitURL) -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 			return isGitRepository(repositoryURL)
 				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
-					if isRepository {
+					let fetchIfNecessaryProducer: () -> SignalProducer<(ProjectEvent?, URL), CarthageError> = {
 						let fetchProducer: () -> SignalProducer<(ProjectEvent?, URL), CarthageError> = {
 							guard FetchCache.needsFetch(forURL: remoteURL) else {
 								return SignalProducer(value: (nil, repositoryURL))
@@ -1503,16 +1518,50 @@ public func cloneOrFetch(
 						} else {
 							return fetchProducer()
 						}
+					}
+
+					if isRepository {
+						return fetchIfNecessaryProducer()
 					} else {
 						// Either the directory didn't exist or it did but wasn't a git repository
 						// (Could happen if the process is killed during a previous directory creation)
-						// So we remove it, then clone
+						// So we remove it.
 						_ = try? fileManager.removeItem(at: repositoryURL)
-						return SignalProducer(value: (.cloning(dependency), repositoryURL))
-							.concat(
-								cloneRepository(remoteURL, repositoryURL)
-									.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
-							)
+
+						// If there is another repository with the same name, it is probably a fork.
+						// So we fetch from that fork, this can save a lot of time cloning the whole
+						// repository if it's actually a fork.
+						return firstRepositoryWithSameNameFileURL(for: dependency, baseURL: destinationURL)
+							.flatMap(.merge) { url -> SignalProducer<URL?, NoError> in
+								if let url = url {
+									return isGitRepository(url).map { isRepository in
+										return isRepository ? url : nil
+									}
+								} else {
+									return SignalProducer(value: nil)
+								}
+							}
+							.flatMap(.merge) { anotherRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
+								let cloneProducer: () -> SignalProducer<(ProjectEvent?, URL), CarthageError> = {
+									return SignalProducer(value: (.cloning(dependency), repositoryURL))
+										.concat(
+											cloneRepository(remoteURL, repositoryURL)
+												.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
+									)
+								}
+
+								if let anotherRepository = anotherRepository {
+									return SignalProducer<Void, CarthageError> { () -> Result<Void, CarthageError> in
+										return Result(at: repositoryURL, attempt: { repositoryURL -> Void in
+											try FileManager.default.copyItem(at: anotherRepository, to: repositoryURL)
+										})
+									}
+									.then(launchGitTask([ "remote", "set-url", "origin", remoteURL.urlString ], repositoryFileURL: repositoryURL))
+									.then(fetchIfNecessaryProducer())
+								} else {
+									return cloneProducer()
+								}
+						}
 					}
 				}
 		}
