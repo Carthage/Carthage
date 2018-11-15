@@ -493,7 +493,7 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 							repositoryFileURL: repositoryFileURL
 						)
 					)
-					.then(launchGitTask([ "submodule", "--quiet", "sync", "--recursive" ], repositoryFileURL: repositoryFileURL))
+					.then(launchGitTask([ "submodule", "--quiet", "sync", "--recursive" ], repositoryFileURL: submoduleDirectoryURL))
 					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
 					.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
 					.then(SignalProducer<(), CarthageError>.empty)
