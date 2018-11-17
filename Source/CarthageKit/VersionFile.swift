@@ -8,12 +8,12 @@ struct CachedFramework: Codable {
 	enum CodingKeys: String, CodingKey {
 		case name = "name"
 		case hash = "hash"
-		case swiftVersion = "swiftVersion"
+		case swiftToolchainVersion = "swiftToolchainVersion"
 	}
 
 	let name: String
 	let hash: String
-	let swiftVersion: String
+	let swiftToolchainVersion: String
 }
 
 struct VersionFile: Codable {
@@ -333,7 +333,7 @@ public func createVersionFileForCommitish(
 				let frameworkName = values.1.frameworkName
 				let frameworkSwiftVersion = values.1.frameworkSwiftVersion
 
-				let cachedFramework = CachedFramework(name: frameworkName, hash: hash, swiftVersion: frameworkSwiftVersion)
+				let cachedFramework = CachedFramework(name: frameworkName, hash: hash, swiftToolchainVersion: frameworkSwiftVersion)
 				if var frameworks = platformCaches[platformName] {
 					frameworks.append(cachedFramework)
 					platformCaches[platformName] = frameworks
