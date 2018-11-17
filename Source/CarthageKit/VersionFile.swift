@@ -317,7 +317,7 @@ public func createVersionFileForCommitish(
 				let frameworkName = url.deletingPathExtension().lastPathComponent
 				let platformName = url.deletingLastPathComponent().lastPathComponent
 				return frameworkSwiftVersion(url)
-					.mapError { _ -> CarthageError in .unknownFrameworkSwiftVersion }
+					.mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
 					.flatMap(.merge) { frameworkSwiftVersion -> SignalProducer<(String, FrameworkDetail), CarthageError> in
 					let frameworkDetail: FrameworkDetail = .init(platformName: platformName,
 										     frameworkName: frameworkName,
