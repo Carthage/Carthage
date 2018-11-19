@@ -8,10 +8,12 @@ struct CachedFramework: Codable {
 	enum CodingKeys: String, CodingKey {
 		case name = "name"
 		case hash = "hash"
+		case swiftToolchainVersion = "swiftToolchainVersion"
 	}
 
 	let name: String
 	let hash: String
+	let swiftToolchainVersion: String
 }
 
 struct VersionFile: Codable {
@@ -57,7 +59,6 @@ struct VersionFile: Codable {
 		tvOS: [CachedFramework]?
 	) {
 		self.commitish = commitish
-
 		self.macOS = macOS
 		self.iOS = iOS
 		self.watchOS = watchOS
@@ -304,21 +305,35 @@ public func createVersionFileForCommitish(
 		platformCaches[platform.rawValue] = []
 	}
 
+	struct FrameworkDetail {
+		let platformName: String
+		let frameworkName: String
+		let frameworkSwiftVersion: String
+	}
+
 	if !buildProducts.isEmpty {
 		return SignalProducer<URL, CarthageError>(buildProducts)
-			.flatMap(.merge) { url -> SignalProducer<(String, (String, String)), CarthageError> in
+			.flatMap(.merge) { url -> SignalProducer<(String, FrameworkDetail), CarthageError> in
 				let frameworkName = url.deletingPathExtension().lastPathComponent
 				let platformName = url.deletingLastPathComponent().lastPathComponent
-				let frameworkURL = url.appendingPathComponent(frameworkName, isDirectory: false)
-				let details = SignalProducer<(String, String), CarthageError>(value: (platformName, frameworkName))
-				return SignalProducer.zip(hashForFileAtURL(frameworkURL), details)
+				return frameworkSwiftVersion(url)
+					.mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
+					.flatMap(.merge) { frameworkSwiftVersion -> SignalProducer<(String, FrameworkDetail), CarthageError> in
+					let frameworkDetail: FrameworkDetail = .init(platformName: platformName,
+										     frameworkName: frameworkName,
+										     frameworkSwiftVersion: frameworkSwiftVersion)
+					let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
+					let binaryURL = url.appendingPathComponent(frameworkName, isDirectory: false)
+					return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
+				}
 			}
-			.reduce(into: platformCaches) { (platformCaches: inout [String: [CachedFramework]], values: (String, (String, String))) in
+			.reduce(into: platformCaches) { (platformCaches: inout [String: [CachedFramework]], values: (String, FrameworkDetail)) in
 				let hash = values.0
-				let platformName = values.1.0
-				let frameworkName = values.1.1
+				let platformName = values.1.platformName
+				let frameworkName = values.1.frameworkName
+				let frameworkSwiftVersion = values.1.frameworkSwiftVersion
 
-				let cachedFramework = CachedFramework(name: frameworkName, hash: hash)
+				let cachedFramework = CachedFramework(name: frameworkName, hash: hash, swiftToolchainVersion: frameworkSwiftVersion)
 				if var frameworks = platformCaches[platformName] {
 					frameworks.append(cachedFramework)
 					platformCaches[platformName] = frameworks
