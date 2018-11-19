@@ -3,17 +3,20 @@
   "iOS": [
     {
       "name": "TestFramework1",
-      "hash": "ios-framework1-hash"
+      "hash": "ios-framework1-hash",
+      "swiftToolchainVersion": "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
     },
     {
       "name": "TestFramework2",
-      "hash": "ios-framework2-hash"
+      "hash": "ios-framework2-hash",
+      "swiftToolchainVersion": "4.2.1 (swiftlang-1000.11.42 clang-1000.11.45.1)"
     }
   ],
   "Mac": [
     {
       "name": "TestFramework1",
-      "hash": "mac-framework1-hash"
+      "hash": "mac-framework1-hash",
+      "swiftToolchainVersion": "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
     }
   ],
   "tvOS": []
