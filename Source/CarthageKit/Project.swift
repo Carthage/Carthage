@@ -1204,14 +1204,19 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 		}
 
-		return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
-			repositoryCheck("remove submodule checkout") {
-				try FileManager.default.removeItem(at: submoduleDirectoryURL)
+		let dependencyForSubmodule = Dependency.git(submodule.url)
+
+		return cloneOrFetchDependency(dependencyForSubmodule, commitish: submodule.sha)
+			.flatMap(.merge) { repositoryURL -> SignalProducer<String, CarthageError> in
+				return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
+					repositoryCheck("remove submodule checkout") {
+						try FileManager.default.removeItem(at: submoduleDirectoryURL)
+					}
+				}
+				.then(cloneRepository(GitURL(repositoryURL.path), submoduleDirectoryURL, isBare: false))
 			}
-		}
-		.then(cloneRepository(submodule.url, workingDirectoryURL.appendingPathComponent(submodule.path), isBare: false))
-		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-		.then(purgeGitDirectories)
+			.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+			.then(purgeGitDirectories)
 	}
 }
 
