@@ -803,7 +803,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						.then(
 							submodulesInRepository(repositoryURL, revision: revision)
 								.flatMap(.merge) {
-									cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL)
+									self.cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL)
 								}
 						)
 				}
@@ -1164,6 +1164,54 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { incompatibilities -> SignalProducer<(), CarthageError> in
 				return incompatibilities.isEmpty ? .init(value: ()) : .init(error: .invalidResolvedCartfile(incompatibilities))
 			}
+	}
+
+	/// Clones the given submodule into the working directory of its parent
+	/// repository, but without any Git metadata.
+	public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+		let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
+
+		func repositoryCheck<T>(_ description: String, attempt closure: () throws -> T) -> Result<T, CarthageError> {
+			do {
+				return .success(try closure())
+			} catch let error as NSError {
+				let reason = "could not \(description)"
+				return .failure(
+					.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: reason, underlyingError: error)
+				)
+			}
+		}
+
+		let purgeGitDirectories = FileManager.default.reactive
+			.enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
+			.attemptMap { enumerator, url -> Result<(), CarthageError> in
+				return repositoryCheck("enumerate name of descendant at \(url.path)", attempt: {
+					try url.resourceValues(forKeys: [ .nameKey ]).name
+				})
+				.flatMap { (name: String?) in
+					guard name == ".git" else { return .success(()) }
+
+					return repositoryCheck("determine whether \(url.path) is a directory", attempt: {
+						try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory!
+					})
+					.flatMap { (isDirectory: Bool) in
+						if isDirectory { enumerator.skipDescendants() }
+
+						return repositoryCheck("remove \(url.path)") {
+							try FileManager.default.removeItem(at: url)
+						}
+					}
+				}
+		}
+
+		return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
+			repositoryCheck("remove submodule checkout") {
+				try FileManager.default.removeItem(at: submoduleDirectoryURL)
+			}
+		}
+		.then(cloneRepository(submodule.url, workingDirectoryURL.appendingPathComponent(submodule.path), isBare: false))
+		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+		.then(purgeGitDirectories)
 	}
 }
 

@@ -176,57 +176,9 @@ public func checkoutRepositoryToDirectory(
 	.then(SignalProducer<(), CarthageError>.empty)
 }
 
-/// Clones the given submodule into the working directory of its parent
-/// repository, but without any Git metadata.
-public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
-
-	func repositoryCheck<T>(_ description: String, attempt closure: () throws -> T) -> Result<T, CarthageError> {
-		do {
-			return .success(try closure())
-		} catch let error as NSError {
-			let reason = "could not \(description)"
-			return .failure(
-				.repositoryCheckoutFailed(workingDirectoryURL: submoduleDirectoryURL, reason: reason, underlyingError: error)
-			)
-		}
-	}
-
-	let purgeGitDirectories = FileManager.default.reactive
-		.enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
-		.attemptMap { enumerator, url -> Result<(), CarthageError> in
-			return repositoryCheck("enumerate name of descendant at \(url.path)", attempt: {
-					try url.resourceValues(forKeys: [ .nameKey ]).name
-				})
-				.flatMap { (name: String?) in
-					guard name == ".git" else { return .success(()) }
-
-					return repositoryCheck("determine whether \(url.path) is a directory", attempt: {
-							try url.resourceValues(forKeys: [ .isDirectoryKey ]).isDirectory!
-						})
-						.flatMap { (isDirectory: Bool) in
-							if isDirectory { enumerator.skipDescendants() }
-
-							return repositoryCheck("remove \(url.path)") {
-								try FileManager.default.removeItem(at: url)
-							}
-						}
-				}
-		}
-
-	return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
-		repositoryCheck("remove submodule checkout") {
-			try FileManager.default.removeItem(at: submoduleDirectoryURL)
-		}
-	}
-	.then(cloneRepository(submodule.url, workingDirectoryURL.appendingPathComponent(submodule.path), isBare: false))
-	.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-	.then(purgeGitDirectories)
-}
-
 /// Recursively checks out the given submodule's revision, in its working
 /// directory.
-private func checkoutSubmodule(_ submodule: Submodule, _ submoduleWorkingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+public func checkoutSubmodule(_ submodule: Submodule, _ submoduleWorkingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
 	return launchGitTask([ "checkout", "--quiet", submodule.sha ], repositoryFileURL: submoduleWorkingDirectoryURL)
 		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleWorkingDirectoryURL))
 		.then(SignalProducer<(), CarthageError>.empty)
