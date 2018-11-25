@@ -252,9 +252,38 @@ public func createVersionFileForCurrentProject(
 	buildProducts: [URL],
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
-	let currentProjectAsDependecy = launchGitTask(["remote", "get-url", "origin"])
+
+	// List all remotes known for this repository
+	let allRemotes = launchGitTask(["remote"])
+		.flatMap(.concat) { $0.linesProducer }
 		.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-		.map { Dependency.git(GitURL($0)) }
+
+	// For each remote, get the `get-url`
+	let allRemoteURLs = allRemotes
+		.flatMap(.concat) { launchGitTask(["remote", "get-url", $0]) }
+		.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+		.collect()
+
+	let currentProjectAsDependecy = allRemoteURLs
+		// Assess the popularity of each remote url
+		.map { $0.reduce([String: Int]()) { map, remoteURL in
+			var remoteURLPopularityMap = map
+			remoteURLPopularityMap[remoteURL] = (map[remoteURL] ?? 0) + 1
+			return remoteURLPopularityMap
+			}
+		}
+		// Sort remotes by popularity or alphabetically in case of a draw
+		.map { (remoteURLPopularityMap: [String: Int]) -> (url: String, popularity: Int) in
+			remoteURLPopularityMap.sorted { lhs, rhs in
+				if lhs.value == rhs.value {
+					return lhs.key < rhs.key
+				}
+				return lhs.value > rhs.value
+			}
+		    // This should never happen... but use a fallback anyways
+			.first ?? ("_Current", 0)
+		}
+		.map { Dependency.git(GitURL($0.url)) }
 
 	let currentGitTagOrCommitish = launchGitTask(["rev-parse", "HEAD"])
 		.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
