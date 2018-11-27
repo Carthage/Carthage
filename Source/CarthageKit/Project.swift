@@ -1183,7 +1183,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 		}
 
 		let purgeGitDirectories = FileManager.default.reactive
-			.enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
+			.enumerator(at: submoduleDirectoryURL,
+						includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ],
+						options: [ .skipsSubdirectoryDescendants ],
+						catchErrors: true)
 			.attemptMap { enumerator, url -> Result<(), CarthageError> in
 				return repositoryCheck("enumerate name of descendant at \(url.path)", attempt: {
 					try url.resourceValues(forKeys: [ .nameKey ]).name
@@ -1215,7 +1218,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 				.then(cloneRepository(GitURL(repositoryURL.path), submoduleDirectoryURL, isBare: false))
 			}
-			.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+			.then(checkoutRepositoryToDirectory(submoduleDirectoryURL, submoduleDirectoryURL, force: false, revision: submodule.sha))
+			.then(submodulesInRepository(submoduleDirectoryURL)
+				.flatMap(.merge) { submodule -> SignalProducer<(), CarthageError> in
+					return self.cloneSubmoduleInWorkingDirectory(submodule, submoduleDirectoryURL)
+				}
+			)
 			.then(purgeGitDirectories)
 	}
 }
