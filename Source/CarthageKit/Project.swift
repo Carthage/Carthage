@@ -793,7 +793,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				if let submodule = submodule {
 					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
 					// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
-					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
+					return self.addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
 						.startOnQueue(self.gitOperationQueue)
 						.then(symlinkCheckoutPaths)
 				} else {
@@ -1225,6 +1225,59 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 			)
 			.then(purgeGitDirectories)
+	}
+
+	/// Adds the given submodule to the given repository, cloning from `fetchURL` if
+	/// the desired revision does not exist or the submodule needs to be cloned.
+	public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Submodule, _ fetchURL: GitURL) -> SignalProducer<(), CarthageError> {
+		let submoduleDirectoryURL = repositoryFileURL.appendingPathComponent(submodule.path, isDirectory: true)
+
+		return isGitRepository(submoduleDirectoryURL)
+			.map { isRepository in
+				// Check if the submodule is initialized/updated already.
+				return isRepository && FileManager.default.fileExists(atPath: submoduleDirectoryURL.appendingPathComponent(".git").path)
+			}
+			.flatMap(.merge) { submoduleExists -> SignalProducer<(), CarthageError> in
+				if submoduleExists {
+					// Just check out and stage the correct revision.
+					return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
+						.then(
+							launchGitTask(
+								["config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.url.urlString],
+								repositoryFileURL: repositoryFileURL
+							)
+						)
+						.then(launchGitTask([ "submodule", "--quiet", "sync", "--recursive", submoduleDirectoryURL.path ], repositoryFileURL: repositoryFileURL))
+						.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+						.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
+						.then(SignalProducer<(), CarthageError>.empty)
+				} else {
+					// `git clone` will fail if there's an existing file at that path, so try to remove
+					// anything that's currently there. If this fails, then we're no worse off.
+					// This can happen if you first do `carthage checkout` and then try it again with
+					// `--use-submodules`, e.g.
+					if FileManager.default.fileExists(atPath: submoduleDirectoryURL.path) {
+						try? FileManager.default.removeItem(at: submoduleDirectoryURL)
+					}
+
+					let addSubmodule = launchGitTask(
+							["submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.url.urlString, submodule.path],
+							repositoryFileURL: repositoryFileURL
+						)
+						// A .failure to add usually means the folder was already added
+						// to the index. That's okay.
+						.flatMapError { _ in SignalProducer<String, CarthageError>.empty }
+
+					// If it doesn't exist, clone and initialize a submodule from our
+					// local bare repository.
+					return cloneRepository(fetchURL, submoduleDirectoryURL, isBare: false)
+						.then(launchGitTask([ "remote", "set-url", "origin", submodule.url.urlString ], repositoryFileURL: submoduleDirectoryURL))
+						.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+						.then(addSubmodule)
+						.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
+						.then(SignalProducer<(), CarthageError>.empty)
+				}
+			}
 	}
 }
 
