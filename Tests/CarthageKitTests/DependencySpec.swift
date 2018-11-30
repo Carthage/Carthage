@@ -190,6 +190,12 @@ class DependencySpec: QuickSpec {
 
 					expect(dependency.cacheName) == "myproject/server_com_myname_myproject"
 				}
+
+				it("should be recognized as a github repository") {
+					let dependency = Dependency.git(GitURL("https://github.com/owner/name.git"))
+
+					expect(dependency.cacheName) == "name/owner"
+				}
 			}
 
 			context("binary") {
