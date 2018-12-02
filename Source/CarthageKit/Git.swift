@@ -183,14 +183,6 @@ public func checkoutRepositoryToDirectory(
 	.then(SignalProducer<(), CarthageError>.empty)
 }
 
-/// Recursively checks out the given submodule's revision, in its working
-/// directory.
-public func checkoutSubmodule(_ submodule: Submodule, _ submoduleWorkingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	return launchGitTask([ "checkout", "--quiet", submodule.sha ], repositoryFileURL: submoduleWorkingDirectoryURL)
-		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleWorkingDirectoryURL))
-		.then(SignalProducer<(), CarthageError>.empty)
-}
-
 /// Parses each key/value entry from the given config file contents, optionally
 /// stripping a known prefix/suffix off of each key.
 private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keySuffix: String = "") -> SignalProducer<(String, String), NoError> {
