@@ -79,6 +79,24 @@ extension ProjectEvent: Equatable {
 	}
 }
 
+/// Use these queues to ensure there is only one write operation in a specific local
+/// repository directory at a time.
+internal struct RepositoryOperationQueues {
+	private static var queues: Atomic<[URL: SerialProducerQueue]> = Atomic([:])
+
+	internal static func queue(forLocalRepositoryURL url: URL) -> SerialProducerQueue {
+		return queues.modify { queues -> SerialProducerQueue in
+			if let queue = queues[url] {
+				return queue
+			} else {
+				let newQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.cloneOrFetchQueue-\(url.absoluteString)")
+				queues[url] = newQueue
+				return newQueue
+			}
+		}
+	}
+}
+
 /// Represents a project that is using Carthage.
 public final class Project { // swiftlint:disable:this type_body_length
 	/// File URL to the root directory of the project.
@@ -797,7 +815,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						.startOnQueue(self.gitOperationQueue)
 						.then(symlinkCheckoutPaths)
 				} else {
-					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, force: true, revision: revision)
+					return checkoutRepositoryToDirectoryOnQueue(repositoryURL, workingDirectoryURL, force: true, revision: revision)
 						// For checkouts of “ideally bare” repositories of `dependency`, we add its submodules by cloning ourselves, after symlinking.
 						.then(symlinkCheckoutPaths)
 						.then(
@@ -1217,8 +1235,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 				}
 				.then(cloneRepository(GitURL(repositoryURL.path), submoduleDirectoryURL, isBare: false))
+				.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: submoduleDirectoryURL))
 			}
-			.then(checkoutRepositoryToDirectory(submoduleDirectoryURL, submoduleDirectoryURL, force: false, revision: submodule.sha))
+			.then(checkoutRepositoryToDirectoryOnQueue(submoduleDirectoryURL, submoduleDirectoryURL, force: false, revision: submodule.sha))
 			.then(submodulesInRepository(submoduleDirectoryURL)
 				.flatMap(.merge) { submodule -> SignalProducer<(), CarthageError> in
 					return self.cloneSubmoduleInWorkingDirectory(submodule, submoduleDirectoryURL)
@@ -1562,6 +1581,28 @@ internal func relativeLinkDestination(for dependency: Dependency, subdirectory: 
 	return linkDestinationPath
 }
 
+/// Checks out the working tree of the given (ideally bare) repository, at the
+/// specified revision, to the given folder, in a queue to prevent any race condition.
+/// If the folder does not exist, it will be created.
+internal func checkoutRepositoryToDirectoryOnQueue(
+	_ repositoryFileURL: URL,
+	_ workingDirectoryURL: URL,
+	force: Bool,
+	revision: String = "HEAD"
+) -> SignalProducer<(), CarthageError> {
+	if repositoryFileURL != workingDirectoryURL {
+		// Git will try to lock the repositoryFileURL by creating a index.lock file.
+		// If the file already exists, the git operation will fail, so this queue
+		// is necessary.
+		return checkoutRepositoryToDirectory(repositoryFileURL, workingDirectoryURL, force: force, revision: revision)
+			.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: workingDirectoryURL))
+			.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: repositoryFileURL))
+	} else {
+		return checkoutRepositoryToDirectory(repositoryFileURL, workingDirectoryURL, force: force, revision: revision)
+			.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: workingDirectoryURL))
+	}
+}
+
 /// Clones the given project to the given destination URL (defaults to the global
 /// repositories folder), or fetches inside it if it has already been cloned.
 /// Optionally takes a commitish to check for prior to fetching.
@@ -1630,4 +1671,5 @@ public func cloneOrFetch(
 					}
 				}
 		}
+		.startOnQueue(RepositoryOperationQueues.queue(forLocalRepositoryURL: repositoryURL))
 }
