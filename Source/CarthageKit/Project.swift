@@ -797,7 +797,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						.startOnQueue(self.gitOperationQueue)
 						.then(symlinkCheckoutPaths)
 				} else {
-					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, revision: revision)
+					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, force: true, revision: revision)
 						// For checkouts of “ideally bare” repositories of `dependency`, we add its submodules by cloning ourselves, after symlinking.
 						.then(symlinkCheckoutPaths)
 						.then(

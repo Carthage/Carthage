@@ -153,6 +153,7 @@ public func contentsOfFileInRepository(_ repositoryFileURL: URL, _ path: String,
 public func checkoutRepositoryToDirectory(
 	_ repositoryFileURL: URL,
 	_ workingDirectoryURL: URL,
+	force: Bool,
 	revision: String = "HEAD"
 ) -> SignalProducer<(), CarthageError> {
 	return SignalProducer { () -> Result<[String: String], CarthageError> in
@@ -170,8 +171,14 @@ public func checkoutRepositoryToDirectory(
 				)
 			}
 	}
-	.flatMap(.concat) { environment in
-		return launchGitTask([ "checkout", "--quiet", "--force", revision ], repositoryFileURL: repositoryFileURL, environment: environment)
+	.flatMap(.concat) { (environment: [String: String]) -> SignalProducer<String, CarthageError> in
+		var arguments = [ "checkout", "--quiet" ]
+		if force {
+			arguments.append("--force")
+		}
+		arguments.append(revision)
+
+		return launchGitTask(arguments, repositoryFileURL: repositoryFileURL, environment: environment)
 	}
 	.then(SignalProducer<(), CarthageError>.empty)
 }
