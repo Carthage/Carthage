@@ -498,6 +498,14 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 					.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
 					.then(SignalProducer<(), CarthageError>.empty)
 			} else {
+				// `git clone` will fail if there's an existing file at that path, so try to remove
+				// anything that's currently there. If this fails, then we're no worse off.
+				// This can happen if you first do `carthage checkout` and then try it again with
+				// `--use-submodules`, e.g.
+				if FileManager.default.fileExists(atPath: submoduleDirectoryURL.path) {
+					try? FileManager.default.removeItem(at: submoduleDirectoryURL)
+				}
+
 				let addSubmodule = launchGitTask(
 						["submodule", "--quiet", "add", "--force", "--name", submodule.name, "--", submodule.url.urlString, submodule.path],
 						repositoryFileURL: repositoryFileURL
