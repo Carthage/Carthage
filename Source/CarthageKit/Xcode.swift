@@ -876,24 +876,24 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 			}
 			.collectTaskEvents()
 			.flatMapTaskEvents(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
-				let isCurrentProject = dependency == nil
 
-				if isCurrentProject {
+				guard let dependency = dependency else {
+
 					return createVersionFileForCurrentProject(platforms: options.platforms,
-							buildProducts: urls,
-							rootDirectoryURL: rootDirectoryURL
-						)
-						.flatMapError { _ in .empty }
-				} else {
-					return createVersionFile(
-						for: dependency!.dependency,
-						version: dependency!.version,
-						platforms: options.platforms,
-						buildProducts: urls,
-						rootDirectoryURL: rootDirectoryURL
+															  buildProducts: urls,
+															  rootDirectoryURL: rootDirectoryURL
 						)
 						.flatMapError { _ in .empty }
 				}
+
+				return createVersionFile(
+					for: dependency.dependency,
+					version: dependency.version,
+					platforms: options.platforms,
+					buildProducts: urls,
+					rootDirectoryURL: rootDirectoryURL
+					)
+					.flatMapError { _ in .empty }
 			}
 			// Discard any Success values, since we want to
 			// use our initial value instead of waiting for
