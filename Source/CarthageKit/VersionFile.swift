@@ -239,6 +239,101 @@ struct VersionFile: Codable {
 	}
 }
 
+/// Creates a version file for the current project in the
+/// Carthage/Build directory which associates its commitish with
+/// the hashes (e.g. SHA256) of the built frameworks for each platform
+/// in order to allow those frameworks to be skipped in future builds.
+///
+/// Derives the current project name from `git remote get-url origin`
+///
+/// Returns a signal that succeeds once the file has been created.
+public func createVersionFileForCurrentProject(
+	platforms: Set<Platform>,
+	buildProducts: [URL],
+	rootDirectoryURL: URL
+) -> SignalProducer<(), CarthageError> {
+
+	/*
+	List all remotes known for this repository
+	and keep only the "fetch" urls by which the current repository
+	would be known for the purpose of fetching anyways.
+
+	Example of well-formed output:
+
+		$ git remote -v
+		origin   https://github.com/blender/Carthage.git (fetch)
+		origin   https://github.com/blender/Carthage.git (push)
+		upstream https://github.com/Carthage/Carthage.git (fetch)
+		upstream https://github.com/Carthage/Carthage.git (push)
+
+	Example of ill-formed output where upstream does not have a url:
+
+		$ git remote -v
+		origin   https://github.com/blender/Carthage.git (fetch)
+		origin   https://github.com/blender/Carthage.git (push)
+		upstream
+	*/
+	let allRemoteURLs = launchGitTask(["remote", "-v"])
+		.flatMap(.concat) { $0.linesProducer }
+		.map { $0.components(separatedBy: .whitespacesAndNewlines) }
+		.filter { $0.count >= 3 && $0.last == "(fetch)" } // Discard ill-formed output as of example
+		.map { ($0[0], $0[1]) }
+		.collect()
+
+	let currentProjectName = allRemoteURLs
+		// Assess the popularity of each remote url
+		.map { $0.reduce([String: (popularity: Int, remoteNameAndURL: (name: String, url: String))]()) { remoteURLPopularityMap, remoteNameAndURL in
+			let (remoteName, remoteUrl) = remoteNameAndURL
+			var remoteURLPopularityMap = remoteURLPopularityMap
+			if let existingEntry = remoteURLPopularityMap[remoteName] {
+				remoteURLPopularityMap[remoteName] = (existingEntry.popularity + 1, existingEntry.remoteNameAndURL)
+			} else {
+				remoteURLPopularityMap[remoteName] = (0, (remoteName, remoteUrl))
+			}
+			return remoteURLPopularityMap
+			}
+		}
+		// Pick "origin" if it exists,
+		// otherwise sort remotes by popularity
+	    // or alphabetically in case of a draw
+		.map { (remotePopularityMap: [String: (popularity: Int, remoteNameAndURL: (name: String, url: String))]) -> String in
+			guard let origin = remotePopularityMap["origin"] else {
+				let urlOfMostPopularRemote = remotePopularityMap.sorted { lhs, rhs in
+					if lhs.value.popularity == rhs.value.popularity {
+						return lhs.key < rhs.key
+					}
+					return lhs.value.popularity > rhs.value.popularity
+				}
+				.first?.value.remoteNameAndURL.url
+
+				// If the reposiroty is not pushed to any remote
+				// the list of remotes is empty, so call the current project... "_Current"
+				return urlOfMostPopularRemote.flatMap { Dependency.git(GitURL($0)).name } ?? "_Current"
+			}
+
+			return Dependency.git(GitURL(origin.remoteNameAndURL.url)).name
+		}
+
+	let currentGitTagOrCommitish = launchGitTask(["rev-parse", "HEAD"])
+		.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+		.flatMap(.merge) { headCommitish in
+			launchGitTask(["describe", "--tags", "--exact-match", headCommitish])
+				.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+				.flatMapError { _  in SignalProducer(value: headCommitish) }
+		}
+
+	 return SignalProducer.zip(currentProjectName, currentGitTagOrCommitish)
+		.flatMap(.merge) { currentProjectNameString, version in
+			createVersionFileForCommitish(
+				version,
+				dependencyName: currentProjectNameString,
+				platforms: platforms,
+				buildProducts: buildProducts,
+				rootDirectoryURL: rootDirectoryURL
+		)
+	}
+}
+
 /// Creates a version file for the current dependency in the
 /// Carthage/Build directory which associates its commitish with
 /// the hashes (e.g. SHA256) of the built frameworks for each platform

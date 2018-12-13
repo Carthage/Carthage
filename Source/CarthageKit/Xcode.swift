@@ -804,8 +804,12 @@ public func build(
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
-	return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
-		.mapError { error in
+	return buildInDirectory(dependencyURL,
+							withOptions: options,
+							dependency: (dependency, version),
+							rootDirectoryURL: rootDirectoryURL,
+							sdkFilter: sdkFilter
+		).mapError { error in
 			switch (dependency, error) {
 			case let (_, .noSharedFrameworkSchemes(_, platforms)):
 				return .noSharedFrameworkSchemes(dependency, platforms)
@@ -834,7 +838,10 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 	return BuildSchemeProducer { observer, lifetime in
 		// Use SignalProducer.replayLazily to avoid enumerating the given directory
 		// multiple times.
-		buildableSchemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms)
+		buildableSchemesInDirectory(directoryURL,
+									withConfiguration: options.configuration,
+									forPlatforms: options.platforms
+			)
 			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
 				let initialValue = (project, scheme)
 
@@ -869,15 +876,24 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 			}
 			.collectTaskEvents()
 			.flatMapTaskEvents(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
+
 				guard let dependency = dependency else {
-					return .empty
+
+					return createVersionFileForCurrentProject(platforms: options.platforms,
+															  buildProducts: urls,
+															  rootDirectoryURL: rootDirectoryURL
+						)
+						.flatMapError { _ in .empty }
 				}
 
 				return createVersionFile(
-					for: dependency.dependency, version: dependency.version,
-					platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL
-				)
-				.flatMapError { _ in .empty }
+					for: dependency.dependency,
+					version: dependency.version,
+					platforms: options.platforms,
+					buildProducts: urls,
+					rootDirectoryURL: rootDirectoryURL
+					)
+					.flatMapError { _ in .empty }
 			}
 			// Discard any Success values, since we want to
 			// use our initial value instead of waiting for
@@ -898,7 +914,13 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 
 /// Strips a framework from unexpected architectures and potentially debug symbols,
 /// optionally codesigning the result.
-public func stripFramework(_ frameworkURL: URL, keepingArchitectures: [String], strippingDebugSymbols: Bool, codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
+public func stripFramework(
+	_ frameworkURL: URL,
+	keepingArchitectures: [String],
+	strippingDebugSymbols: Bool,
+	codesigningIdentity: String? = nil
+) -> SignalProducer<(), CarthageError> {
+
 	let stripArchitectures = stripBinary(frameworkURL, keepingArchitectures: keepingArchitectures)
 	let stripSymbols = strippingDebugSymbols ? stripDebugSymbols(frameworkURL) : .empty
 
