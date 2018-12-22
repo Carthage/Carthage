@@ -3,7 +3,7 @@
 CARTHAGE_TEMPORARY_FOLDER?=/tmp/Carthage.dst
 PREFIX?=/usr/local
 
-XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage' DSTROOT=$(CARTHAGE_TEMPORARY_FOLDER) OTHER_LDFLAGS=-Wl,-headerpad_max_install_names 
+XCODEFLAGS=-workspace 'Carthage.xcworkspace' -scheme 'carthage' DSTROOT=$(CARTHAGE_TEMPORARY_FOLDER) OTHER_LDFLAGS=-Wl,-headerpad_max_install_names
 
 INTERNAL_PACKAGE=CarthageApp.pkg
 OUTPUT_PACKAGE=Carthage.pkg
@@ -92,15 +92,15 @@ package: installables
 	(cd "$(CARTHAGE_TEMPORARY_FOLDER)$(FRAMEWORKS_FOLDER)" && zip -q -r --symlinks - "$(OUTPUT_FRAMEWORK)") > "$(OUTPUT_FRAMEWORK_ZIP)"
 
 swiftpm:
-	swift build -c release -Xswiftc -static-stdlib -Xswiftc "-target" -Xswiftc "x86_64-apple-macosx10.11"
+	swift build -c release -Xswiftc -static-stdlib
 
 swiftpm_test:
 	$(RM_SAFELY) ./.build/debug/CarthagePackageTests.xctest
-	swift build --build-tests -Xswiftc "-target" -Xswiftc "x86_64-apple-macosx10.11"
+	swift build --build-tests
 	$(CP) -R Tests/CarthageKitTests/Resources ./.build/debug/CarthagePackageTests.xctest/Contents
 	$(CP) Tests/CarthageKitTests/fixtures/CartfilePrivateOnly.zip ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
 	script/copy-fixtures ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
-	swift test --skip-build -Xswiftc "-target" -Xswiftc "x86_64-apple-macosx10.11"
+	swift test --skip-build
 
 swiftpm_install: swiftpm
 	$(MKDIR) "$(PREFIX)/bin"
