@@ -1,5 +1,5 @@
 /// A duplicate dependency, used in CarthageError.duplicateDependencies.
-public struct DuplicateDependency {
+public struct DuplicateDependency: Equatable {
 	/// The duplicate dependency
 	public let dependency: Dependency
 
@@ -31,8 +31,6 @@ extension DuplicateDependency: CustomStringConvertible {
 			+ ")"
 	}
 }
-
-extension DuplicateDependency: Equatable {}
 
 extension DuplicateDependency: Comparable {
 	public static func < (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {

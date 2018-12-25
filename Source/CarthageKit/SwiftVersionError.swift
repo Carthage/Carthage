@@ -1,6 +1,6 @@
 import Foundation
 
-internal enum SwiftVersionError: Error {
+internal enum SwiftVersionError: Error, Equatable {
 	/// An error in determining the local Swift version
 	case unknownLocalSwiftVersion
 
@@ -26,5 +26,3 @@ extension SwiftVersionError: CustomStringConvertible {
 		}
 	}
 }
-
-extension SwiftVersionError: Equatable {}

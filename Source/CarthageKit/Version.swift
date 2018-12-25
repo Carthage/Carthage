@@ -6,7 +6,7 @@ import ReactiveSwift
 
 /// A semantic version.
 /// - Note: See <http://semver.org/>
-public struct SemanticVersion {
+public struct SemanticVersion: Hashable {
 	/// The major version.
 	///
 	/// Increments to this component represent incompatible API changes.
@@ -243,8 +243,6 @@ extension Scanner {
 	}
 }
 
-extension SemanticVersion: Equatable {}
-
 extension SemanticVersion: Comparable {
 	public static func < (_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
 		if lhs.components == rhs.components {
@@ -253,8 +251,6 @@ extension SemanticVersion: Comparable {
 		return lhs.components.lexicographicallyPrecedes(rhs.components)
 	}
 }
-
-extension SemanticVersion: Hashable {}
 
 extension SemanticVersion: CustomStringConvertible {
 	public var description: String {

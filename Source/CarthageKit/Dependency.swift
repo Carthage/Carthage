@@ -21,7 +21,7 @@ public struct BinaryURL: CustomStringConvertible {
 }
 
 /// Uniquely identifies a project that can be used as a dependency.
-public enum Dependency {
+public enum Dependency: Hashable {
 	/// A repository hosted on GitHub.com or GitHub Enterprise.
 	case gitHub(Server, Repository)
 
@@ -87,15 +87,11 @@ extension Dependency {
 	}
 }
 
-extension Dependency: Equatable {}
-
 extension Dependency: Comparable {
 	public static func < (_ lhs: Dependency, _ rhs: Dependency) -> Bool {
 		return lhs.name.caseInsensitiveCompare(rhs.name) == .orderedAscending
 	}
 }
-
-extension Dependency: Hashable {}
 
 extension Dependency: Scannable {
 	/// Attempts to parse a Dependency.

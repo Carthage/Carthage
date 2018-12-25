@@ -1,5 +1,5 @@
 /// A Git submodule.
-public struct Submodule {
+public struct Submodule: Hashable {
 	/// The name of the submodule. Usually (but not always) the same as the
 	/// path.
 	public let name: String
@@ -20,8 +20,6 @@ public struct Submodule {
 		self.sha = sha
 	}
 }
-
-extension Submodule: Hashable {}
 
 extension Submodule: CustomStringConvertible {
 	public var description: String {

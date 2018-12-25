@@ -214,7 +214,7 @@ public struct BuildCommand: CommandProtocol {
 }
 
 /// Represents the user's chosen platform to build for.
-public enum BuildPlatform {
+public enum BuildPlatform: Equatable {
 	/// Build for all available platforms.
 	case all
 
@@ -258,8 +258,6 @@ public enum BuildPlatform {
 		}
 	}
 }
-
-extension BuildPlatform: Equatable {}
 
 extension BuildPlatform: CustomStringConvertible {
 	public var description: String {
