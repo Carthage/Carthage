@@ -52,6 +52,12 @@ public struct SemanticVersion: Hashable {
 		self.buildMetadata = buildMetadata
 	}
 
+	public var hashValue: Int {
+		return components.reduce(0) { $0 ^ $1.hashValue }
+	}
+}
+
+extension SemanticVersion {
 	/// Attempts to parse a semantic version from a PinnedVersion.
 	public static func from(_ pinnedVersion: PinnedVersion) -> Result<SemanticVersion, ScannableError> {
 		let scanner = Scanner(string: pinnedVersion.commitish)
