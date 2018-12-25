@@ -32,11 +32,9 @@ extension DuplicateDependency: CustomStringConvertible {
 	}
 }
 
-extension DuplicateDependency: Comparable {
-	public static func == (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
-		return lhs.dependency == rhs.dependency && lhs.locations == rhs.locations
-	}
+extension DuplicateDependency: Equatable {}
 
+extension DuplicateDependency: Comparable {
 	public static func < (_ lhs: DuplicateDependency, _ rhs: DuplicateDependency) -> Bool {
 		if lhs.description < rhs.description {
 			return true

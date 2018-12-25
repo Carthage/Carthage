@@ -27,20 +27,4 @@ extension SwiftVersionError: CustomStringConvertible {
 	}
 }
 
-extension SwiftVersionError: Equatable {
-	static func == (lhs: SwiftVersionError, rhs: SwiftVersionError) -> Bool {
-		switch (lhs, rhs) {
-		case (.unknownLocalSwiftVersion, .unknownLocalSwiftVersion):
-			return true
-
-		case let (.unknownFrameworkSwiftVersion(lhsMessage), .unknownFrameworkSwiftVersion(rhsMessage)):
-			return lhsMessage == rhsMessage
-
-		case let (.incompatibleFrameworkSwiftVersions(la, lb), .incompatibleFrameworkSwiftVersions(ra, rb)):
-			return la == ra && lb == rb
-
-		default:
-			return false
-		}
-	}
-}
+extension SwiftVersionError: Equatable {}

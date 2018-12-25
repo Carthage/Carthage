@@ -15,8 +15,4 @@ extension ScannableError: CustomStringConvertible {
 	}
 }
 
-extension ScannableError: Equatable {
-	public static func == (lhs: ScannableError, rhs: ScannableError) -> Bool {
-		return lhs.description == rhs.description && lhs.currentLine == rhs.currentLine
-	}
-}
+extension ScannableError: Equatable {}

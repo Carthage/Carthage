@@ -21,15 +21,7 @@ public struct Submodule {
 	}
 }
 
-extension Submodule: Hashable {
-	public static func == (_ lhs: Submodule, _ rhs: Submodule) -> Bool {
-		return lhs.name == rhs.name && lhs.path == rhs.path && lhs.url == rhs.url && lhs.sha == rhs.sha
-	}
-
-	public var hashValue: Int {
-		return name.hashValue
-	}
-}
+extension Submodule: Hashable {}
 
 extension Submodule: CustomStringConvertible {
 	public var description: String {

@@ -66,10 +66,4 @@ public struct CompatibilityInfo {
 	}
 }
 
-extension CompatibilityInfo: Equatable {
-	public static func == (_ lhs: CompatibilityInfo, _ rhs: CompatibilityInfo) -> Bool {
-		return lhs.dependency == rhs.dependency &&
-			lhs.pinnedVersion == rhs.pinnedVersion &&
-			lhs.requirements == rhs.requirements
-	}
-}
+extension CompatibilityInfo: Equatable {}

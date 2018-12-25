@@ -87,42 +87,15 @@ extension Dependency {
 	}
 }
 
+extension Dependency: Equatable {}
+
 extension Dependency: Comparable {
-	public static func == (_ lhs: Dependency, _ rhs: Dependency) -> Bool {
-		switch (lhs, rhs) {
-		case let (.gitHub(left), .gitHub(right)):
-			return left == right
-
-		case let (.git(left), .git(right)):
-			return left == right
-
-		case let (.binary(left), .binary(right)):
-			return left == right
-
-		default:
-			return false
-		}
-	}
-
 	public static func < (_ lhs: Dependency, _ rhs: Dependency) -> Bool {
 		return lhs.name.caseInsensitiveCompare(rhs.name) == .orderedAscending
 	}
 }
 
-extension Dependency: Hashable {
-	public var hashValue: Int {
-		switch self {
-		case let .gitHub(server, repo):
-			return server.hashValue ^ repo.hashValue
-
-		case let .git(url):
-			return url.hashValue
-
-		case let .binary(binary):
-			return binary.hashValue
-		}
-	}
-}
+extension Dependency: Hashable {}
 
 extension Dependency: Scannable {
 	/// Attempts to parse a Dependency.

@@ -37,8 +37,4 @@ public struct BinaryProject {
 	}
 }
 
-extension BinaryProject: Equatable {
-	public static func == (lhs: BinaryProject, rhs: BinaryProject) -> Bool {
-		return lhs.versions == rhs.versions
-	}
-}
+extension BinaryProject: Equatable {}
