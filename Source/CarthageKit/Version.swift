@@ -4,12 +4,9 @@ import Foundation
 import Result
 import ReactiveSwift
 
-/// An abstract type representing a way to specify versions.
-public protocol VersionType: Hashable {}
-
 /// A semantic version.
 /// - Note: See <http://semver.org/>
-public struct SemanticVersion: VersionType {
+public struct SemanticVersion {
 	/// The major version.
 	///
 	/// Increments to this component represent incompatible API changes.
@@ -368,7 +365,7 @@ extension String {
 }
 
 /// An immutable version that a project can be pinned to.
-public struct PinnedVersion: VersionType {
+public struct PinnedVersion: Hashable {
 	/// The commit SHA, or name of the tag, to pin to.
 	public let commitish: String
 
@@ -412,7 +409,7 @@ extension PinnedVersion: CustomStringConvertible {
 
 /// Describes which versions are acceptable for satisfying a dependency
 /// requirement.
-public enum VersionSpecifier: VersionType {
+public enum VersionSpecifier: Hashable {
 	case any
 	case atLeast(SemanticVersion)
 	case compatibleWith(SemanticVersion)
