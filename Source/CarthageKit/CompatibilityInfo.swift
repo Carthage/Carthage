@@ -2,7 +2,7 @@ import Foundation
 import Result
 
 /// Identifies a dependency, its pinned version, and its compatible and incompatible requirements
-public struct CompatibilityInfo {
+public struct CompatibilityInfo: Equatable {
 	public typealias Requirements = [Dependency: [Dependency: VersionSpecifier]]
 
 	/// The dependency
@@ -63,13 +63,5 @@ public struct CompatibilityInfo {
 				}
 				.filter { !$0.incompatibleRequirements.isEmpty }
 			}
-	}
-}
-
-extension CompatibilityInfo: Equatable {
-	public static func == (_ lhs: CompatibilityInfo, _ rhs: CompatibilityInfo) -> Bool {
-		return lhs.dependency == rhs.dependency &&
-			lhs.pinnedVersion == rhs.pinnedVersion &&
-			lhs.requirements == rhs.requirements
 	}
 }

@@ -4,12 +4,9 @@ import Foundation
 import Result
 import ReactiveSwift
 
-/// An abstract type representing a way to specify versions.
-public protocol VersionType: Hashable {}
-
 /// A semantic version.
 /// - Note: See <http://semver.org/>
-public struct SemanticVersion: VersionType {
+public struct SemanticVersion: Hashable {
 	/// The major version.
 	///
 	/// Increments to this component represent incompatible API changes.
@@ -55,6 +52,12 @@ public struct SemanticVersion: VersionType {
 		self.buildMetadata = buildMetadata
 	}
 
+	public var hashValue: Int {
+		return components.reduce(0) { $0 ^ $1.hashValue }
+	}
+}
+
+extension SemanticVersion {
 	/// Attempts to parse a semantic version from a PinnedVersion.
 	public static func from(_ pinnedVersion: PinnedVersion) -> Result<SemanticVersion, ScannableError> {
 		let scanner = Scanner(string: pinnedVersion.commitish)
@@ -253,18 +256,6 @@ extension SemanticVersion: Comparable {
 		}
 		return lhs.components.lexicographicallyPrecedes(rhs.components)
 	}
-
-	public static func == (_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
-		return lhs.components == rhs.components
-			&& lhs.preRelease == rhs.preRelease
-			&& lhs.buildMetadata == rhs.buildMetadata
-	}
-}
-
-extension SemanticVersion: Hashable {
-	public var hashValue: Int {
-		return components.reduce(0) { $0 ^ $1.hashValue }
-	}
 }
 
 extension SemanticVersion: CustomStringConvertible {
@@ -368,20 +359,12 @@ extension String {
 }
 
 /// An immutable version that a project can be pinned to.
-public struct PinnedVersion: VersionType {
+public struct PinnedVersion: Hashable {
 	/// The commit SHA, or name of the tag, to pin to.
 	public let commitish: String
 
 	public init(_ commitish: String) {
 		self.commitish = commitish
-	}
-
-	public var hashValue: Int {
-		return commitish.hashValue
-	}
-
-	public static func == (_ lhs: PinnedVersion, _ rhs: PinnedVersion) -> Bool {
-		return lhs.commitish == rhs.commitish
 	}
 }
 
@@ -412,7 +395,7 @@ extension PinnedVersion: CustomStringConvertible {
 
 /// Describes which versions are acceptable for satisfying a dependency
 /// requirement.
-public enum VersionSpecifier: VersionType {
+public enum VersionSpecifier: Hashable {
 	case any
 	case atLeast(SemanticVersion)
 	case compatibleWith(SemanticVersion)
@@ -473,47 +456,6 @@ public enum VersionSpecifier: VersionType {
 
 				return version.major == requirement.major && versionIsNewer
 			}
-		}
-	}
-
-	public var hashValue: Int {
-		switch self {
-		case .any:
-			return 0
-
-		case let .atLeast(version):
-			return 1 + version.hashValue
-
-		case let .compatibleWith(version):
-			return 2 + version.hashValue
-
-		case let .exactly(version):
-			return 3 + version.hashValue
-
-		case let .gitReference(commitish):
-			return commitish.hashValue
-		}
-	}
-
-	public static func == (_ lhs: VersionSpecifier, _ rhs: VersionSpecifier) -> Bool {
-		switch (lhs, rhs) {
-		case (.any, .any):
-			return true
-
-		case let (.exactly(left), .exactly(right)):
-			return left == right
-
-		case let (.atLeast(left), .atLeast(right)):
-			return left == right
-
-		case let (.compatibleWith(left), .compatibleWith(right)):
-			return left == right
-
-		case let (.gitReference(left), .gitReference(right)):
-			return left == right
-
-		default:
-			return false
 		}
 	}
 }

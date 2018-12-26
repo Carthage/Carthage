@@ -1,6 +1,6 @@
 import Foundation
 
-internal enum SwiftVersionError: Error {
+internal enum SwiftVersionError: Error, Equatable {
 	/// An error in determining the local Swift version
 	case unknownLocalSwiftVersion
 
@@ -23,24 +23,6 @@ extension SwiftVersionError: CustomStringConvertible {
 
 		case let .incompatibleFrameworkSwiftVersions(local, framework):
 			return "Incompatible Swift version - framework was built with \(framework) and the local version is \(local)."
-		}
-	}
-}
-
-extension SwiftVersionError: Equatable {
-	static func == (lhs: SwiftVersionError, rhs: SwiftVersionError) -> Bool {
-		switch (lhs, rhs) {
-		case (.unknownLocalSwiftVersion, .unknownLocalSwiftVersion):
-			return true
-
-		case let (.unknownFrameworkSwiftVersion(lhsMessage), .unknownFrameworkSwiftVersion(rhsMessage)):
-			return lhsMessage == rhsMessage
-
-		case let (.incompatibleFrameworkSwiftVersions(la, lb), .incompatibleFrameworkSwiftVersions(ra, rb)):
-			return la == ra && lb == rb
-
-		default:
-			return false
 		}
 	}
 }
