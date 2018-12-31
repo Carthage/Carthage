@@ -117,7 +117,10 @@ extension Dependency: Scannable {
 					if url.scheme == "https" || url.scheme == "file" {
 						return .success(self.binary(BinaryURL(url: url, resolvedDescription: url.description)))
 					} else if url.scheme == nil {
-						let absoluteURL = URL(fileURLWithPath: url.relativePath, isDirectory: false, relativeTo: base).standardizedFileURL
+						// This can use URL.init(fileURLWithPath:isDirectory:relativeTo:) once we can target 10.11+
+						let absoluteURL = url.relativePath
+							.withCString { URL(fileURLWithFileSystemRepresentation: $0, isDirectory: false, relativeTo: base) }
+							.standardizedFileURL
 						return .success(self.binary(BinaryURL(url: absoluteURL, resolvedDescription: url.absoluteString)))
 					} else {
 						return .failure(ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
