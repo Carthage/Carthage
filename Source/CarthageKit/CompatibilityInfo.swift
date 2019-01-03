@@ -1,5 +1,6 @@
 import Foundation
 import Result
+import Utility
 
 /// Identifies a dependency, its pinned version, and its compatible and incompatible requirements
 public struct CompatibilityInfo: Equatable {
@@ -56,7 +57,7 @@ public struct CompatibilityInfo: Equatable {
 		return CompatibilityInfo.invert(requirements: requirements)
 			.map { invertedRequirements -> [CompatibilityInfo] in
 				return dependencies.compactMap { dependency, version in
-					if case .success = SemanticVersion.from(version), let requirements = invertedRequirements[dependency] {
+					if case .success = Version.from(version), let requirements = invertedRequirements[dependency] {
 						return CompatibilityInfo(dependency: dependency, pinnedVersion: version, requirements: requirements)
 					}
 					return nil

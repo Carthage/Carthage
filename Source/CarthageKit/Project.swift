@@ -6,6 +6,10 @@ import ReactiveSwift
 import Tentacle
 import XCDBLD
 import ReactiveTask
+import Utility
+
+import struct Foundation.URL
+import enum XCDBLD.Platform
 
 /// Describes an event occurring to or with a project.
 public enum ProjectEvent {
@@ -514,7 +518,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.map { currentDependencies, updatedDependencies, latestDependencies -> [OutdatedDependency] in
 				return updatedDependencies.compactMap { project, version -> OutdatedDependency? in
 					if let resolved = currentDependencies[project], let latest = latestDependencies[project], resolved != version || resolved != latest {
-						if SemanticVersion.from(resolved).value == nil, version == resolved {
+						if Version.from(resolved).value == nil, version == resolved {
 							// If resolved version is not a semantic version but a commit
 							// it is a false-positive if `version` and `resolved` are the same
 							return nil
@@ -899,10 +903,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 		projectName: String,
 		toolchain: String?
 	) -> SignalProducer<(), CarthageError> {
-		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(pinnedVersion))
+		return SignalProducer<Version, ScannableError>(result: Version.from(pinnedVersion))
 			.mapError { CarthageError(scannableError: $0) }
 			.combineLatest(with: self.downloadBinaryFrameworkDefinition(binary: binary))
-			.attemptMap { semanticVersion, binaryProject -> Result<(SemanticVersion, URL), CarthageError> in
+			.attemptMap { semanticVersion, binaryProject -> Result<(Version, URL), CarthageError> in
 				guard let frameworkURL = binaryProject.versions[pinnedVersion] else {
 					return .failure(CarthageError.requiredVersionNotFound(Dependency.binary(binary), VersionSpecifier.exactly(semanticVersion)))
 				}
@@ -918,7 +922,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	/// Downloads the binary only framework file. Sends the URL to each downloaded zip, after it has been moved to a
 	/// less temporary location.
-	private func downloadBinary(dependency: Dependency, version: SemanticVersion, url: URL) -> SignalProducer<URL, CarthageError> {
+	private func downloadBinary(dependency: Dependency, version: Version, url: URL) -> SignalProducer<URL, CarthageError> {
 		let fileName = url.lastPathComponent
 		let fileURL = fileURLToCachedBinaryDependency(dependency, version, fileName)
 
@@ -1214,7 +1218,7 @@ private func fileURLToCachedBinary(_ dependency: Dependency, _ release: Release,
 }
 
 /// Constructs a file URL to where the binary only framework download should be cached
-private func fileURLToCachedBinaryDependency(_ dependency: Dependency, _ semanticVersion: SemanticVersion, _ fileName: String) -> URL {
+private func fileURLToCachedBinaryDependency(_ dependency: Dependency, _ semanticVersion: Version, _ fileName: String) -> URL {
 	// ~/Library/Caches/org.carthage.CarthageKit/binaries/MyBinaryProjectFramework/2.3.1/MyBinaryProject.framework.zip
 	return Constants.Dependency.assetsURL.appendingPathComponent("\(dependency.name)/\(semanticVersion)/\(fileName)")
 }

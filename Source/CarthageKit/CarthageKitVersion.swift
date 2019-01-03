@@ -1,6 +1,8 @@
+import Utility
+
 /// Defines the current CarthageKit version.
 public struct CarthageKitVersion {
-	public let value: SemanticVersion
+	public let value: Version
 
-	public static let current = CarthageKitVersion(value: SemanticVersion(major: 0, minor: 31, patch: 2))
+	public static let current = CarthageKitVersion(value: Version(0, 31, 2))
 }

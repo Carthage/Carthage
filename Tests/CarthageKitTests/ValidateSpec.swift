@@ -5,6 +5,9 @@ import Quick
 import ReactiveSwift
 import Result
 import Tentacle
+import Utility
+
+import struct Foundation.URL
 
 private extension CarthageError {
 	var compatibilityInfos: [CompatibilityInfo] {
@@ -47,9 +50,9 @@ class ValidateSpec: QuickSpec {
 
 		// These tuples represent the desired version of a dependency, paired with its parent dependency;
 		// moya_3_1_0 indicates that Moya expects a version compatible with 3.1.0 of *another* dependency
-		let moya_3_1_0 = (moyaDependency, VersionSpecifier.compatibleWith(SemanticVersion(major: 3, minor: 1, patch: 0)))
-		let moya_4_1_0 = (moyaDependency, VersionSpecifier.compatibleWith(SemanticVersion(major: 4, minor: 1, patch: 0)))
-		let reactiveSwift_3_2_1 = (reactiveSwiftDependency, VersionSpecifier.compatibleWith(SemanticVersion(major: 3, minor: 2, patch: 1)))
+		let moya_3_1_0 = (moyaDependency, VersionSpecifier.compatibleWith(Version(3, 1, 0)))
+		let moya_4_1_0 = (moyaDependency, VersionSpecifier.compatibleWith(Version(4, 1, 0)))
+		let reactiveSwift_3_2_1 = (reactiveSwiftDependency, VersionSpecifier.compatibleWith(Version(3, 2, 1)))
 
 		describe("requirementsByDependency") {
 			it("should group dependencies by parent dependency") {
@@ -77,10 +80,10 @@ class ValidateSpec: QuickSpec {
 				let d = Dependency.gitHub(.dotCom, Repository(owner: "d", name: "d"))
 				let e = Dependency.gitHub(.dotCom, Repository(owner: "e", name: "e"))
 
-				let v1 = VersionSpecifier.compatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0))
-				let v2 = VersionSpecifier.compatibleWith(SemanticVersion(major: 2, minor: 0, patch: 0))
-				let v3 = VersionSpecifier.compatibleWith(SemanticVersion(major: 3, minor: 0, patch: 0))
-				let v4 = VersionSpecifier.compatibleWith(SemanticVersion(major: 4, minor: 0, patch: 0))
+				let v1 = VersionSpecifier.compatibleWith(Version(1, 0, 0))
+				let v2 = VersionSpecifier.compatibleWith(Version(2, 0, 0))
+				let v3 = VersionSpecifier.compatibleWith(Version(3, 0, 0))
+				let v4 = VersionSpecifier.compatibleWith(Version(4, 0, 0))
 
 				let requirements = [a: [b: v1, c: v2], d: [c: v3, e: v4]]
 				let invertedRequirements = CompatibilityInfo.invert(requirements: requirements).value!
@@ -93,11 +96,11 @@ class ValidateSpec: QuickSpec {
 		describe("incompatibilities") {
 			it("should identify incompatible dependencies") {
 				let commitish = VersionSpecifier.gitReference("commitish")
-				let v4_0_0 = VersionSpecifier.compatibleWith(SemanticVersion(major: 4, minor: 0, patch: 0))
-				let v2_0_0 = VersionSpecifier.compatibleWith(SemanticVersion(major: 2, minor: 0, patch: 0))
-				let v4_1_0 = VersionSpecifier.compatibleWith(SemanticVersion(major: 4, minor: 1, patch: 0))
-				let v3_1_0 = VersionSpecifier.compatibleWith(SemanticVersion(major: 3, minor: 1, patch: 0))
-				let v3_2_1 = VersionSpecifier.compatibleWith(SemanticVersion(major: 3, minor: 2, patch: 1))
+				let v4_0_0 = VersionSpecifier.compatibleWith(Version(4, 0, 0))
+				let v2_0_0 = VersionSpecifier.compatibleWith(Version(2, 0, 0))
+				let v4_1_0 = VersionSpecifier.compatibleWith(Version(4, 1, 0))
+				let v3_1_0 = VersionSpecifier.compatibleWith(Version(3, 1, 0))
+				let v3_2_1 = VersionSpecifier.compatibleWith(Version(3, 2, 1))
 
 				let dependencies = [rxSwiftDependency: PinnedVersion("4.1.2"),
 									moyaDependency: PinnedVersion("10.0.2"),
