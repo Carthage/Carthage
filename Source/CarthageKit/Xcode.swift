@@ -230,14 +230,6 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 /// the project.
 public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<[(Scheme, ProjectLocator)], CarthageError> {
 	return SignalProducer<(ProjectLocator, [Scheme]), CarthageError>(projects)
-		.map { (project: ProjectLocator, schemes: [Scheme]) in
-			// Only look for schemes that actually reside in the project
-			let containedSchemes = schemes.filter { scheme -> Bool in
-				let schemePath = project.fileURL.appendingPathComponent("xcshareddata/xcschemes/\(scheme).xcscheme").path
-				return FileManager.default.fileExists(atPath: schemePath)
-			}
-			return (project, containedSchemes)
-		}
 		.filter { (project: ProjectLocator, schemes: [Scheme]) in
 			switch project {
 			case .projectFile where !schemes.isEmpty:
