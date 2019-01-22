@@ -3,63 +3,11 @@
 import Foundation
 import Result
 import ReactiveSwift
+import Utility
 
-/// A semantic version.
-/// - Note: See <http://semver.org/>
-public struct SemanticVersion: Hashable {
-	/// The major version.
-	///
-	/// Increments to this component represent incompatible API changes.
-	public let major: Int
-
-	/// The minor version.
-	///
-	/// Increments to this component represent backwards-compatible
-	/// enhancements.
-	public let minor: Int
-
-	/// The patch version.
-	///
-	/// Increments to this component represent backwards-compatible bug fixes.
-	public let patch: Int
-
-	/// The pre-release identifier
-	///
-	/// Indicates that the version is unstable
-	public let preRelease: String?
-
-	/// The build metadata
-	///
-	/// Build metadata is ignored when comparing versions
-	public let buildMetadata: String?
-
-	/// A list of the version components, in order from most significant to
-	/// least significant.
-	public var components: [Int] {
-		return [ major, minor, patch ]
-	}
-
-	/// Whether this is a prerelease version
-	public var isPreRelease: Bool {
-		return self.preRelease != nil
-	}
-
-	public init(major: Int, minor: Int, patch: Int, preRelease: String? = nil, buildMetadata: String? = nil) {
-		self.major = major
-		self.minor = minor
-		self.patch = patch
-		self.preRelease = preRelease
-		self.buildMetadata = buildMetadata
-	}
-
-	public var hashValue: Int {
-		return components.reduce(0) { $0 ^ $1.hashValue }
-	}
-}
-
-extension SemanticVersion {
+extension Version {
 	/// Attempts to parse a semantic version from a PinnedVersion.
-	public static func from(_ pinnedVersion: PinnedVersion) -> Result<SemanticVersion, ScannableError> {
+	public static func from(_ pinnedVersion: PinnedVersion) -> Result<Version, ScannableError> {
 		let scanner = Scanner(string: pinnedVersion.commitish)
 
 		// Skip leading characters, like "v" or "version-" or anything like
@@ -75,14 +23,6 @@ extension SemanticVersion {
 		}
 	}
 
-	/// The same SemanticVersion as self, except that the build metadata is discarded
-	public var discardingBuildMetadata: SemanticVersion {
-		return SemanticVersion(major: self.major,
-		                       minor: self.minor,
-		                       patch: self.patch,
-		                       preRelease: self.preRelease)
-	}
-
 	/// Set of valid digts for SemVer versions
 	/// - note: Please use this instead of `CharacterSet.decimalDigits`, as
 	/// `decimalDigits` include more characters that are not contemplated in
@@ -91,7 +31,7 @@ extension SemanticVersion {
 
 	/// Set of valid characters for SemVer major.minor.patch section
 	fileprivate static let versionCharacterSet = CharacterSet(charactersIn: ".")
-		.union(SemanticVersion.semVerDecimalDigits)
+		.union(Version.semVerDecimalDigits)
 
 	fileprivate static let asciiAlphabeth = CharacterSet(
 		charactersIn: "abcdefghijklmnopqrstuvxyzABCDEFGHIJKLMNOPQRSTUVXYZ"
@@ -99,7 +39,7 @@ extension SemanticVersion {
 
 	/// Set of valid character for SemVer build metadata section
 	fileprivate static let invalidBuildMetadataCharacters = asciiAlphabeth
-		.union(SemanticVersion.semVerDecimalDigits)
+		.union(Version.semVerDecimalDigits)
 		.union(CharacterSet(charactersIn: "-"))
 		.inverted
 
@@ -107,11 +47,10 @@ extension SemanticVersion {
 	fileprivate static let preReleaseComponentsSeparator = "."
 }
 
-extension SemanticVersion: Scannable {
+extension Version: Scannable {
 	/// Attempts to parse a semantic version from a human-readable string of the
 	/// form "a.b.c" from a string scanner.
-	public static func from(_ scanner: Scanner) -> Result<SemanticVersion, ScannableError> {
-
+	public static func from(_ scanner: Scanner) -> Result<Version, ScannableError> {
 		var versionBuffer: NSString?
 		guard scanner.scanCharacters(from: versionCharacterSet, into: &versionBuffer),
 			let version = versionBuffer as String? else {
@@ -153,14 +92,14 @@ extension SemanticVersion: Scannable {
 
 		if
 			let buildMetadata = buildMetadata,
-			let error = SemanticVersion.validateBuildMetadata(buildMetadata, fullVersion: version)
+			let error = Version.validateBuildMetadata(buildMetadata, fullVersion: version)
 		{
 			return .failure(error)
 		}
 
 		if
 			let preRelease = preRelease,
-			let error = SemanticVersion.validatePreRelease(preRelease, fullVersion: version)
+			let error = Version.validatePreRelease(preRelease, fullVersion: version)
 		{
 			return .failure(error)
 		}
@@ -169,11 +108,13 @@ extension SemanticVersion: Scannable {
 			return .failure(ScannableError(message: "can not have pre-release or build metadata without patch, in \"\(version)\""))
 		}
 
-		return .success(self.init(major: major,
-		                          minor: minor,
-		                          patch: patch ?? 0,
-		                          preRelease: preRelease,
-		                          buildMetadata: buildMetadata))
+		return .success(self.init(
+			major,
+			minor,
+			patch ?? 0,
+			prereleaseIdentifiers: preRelease?.split(separator: ".").map(String.init) ?? [],
+			buildMetadataIdentifiers: buildMetadata?.split(separator: ".").map(String.init) ?? []
+		))
 	}
 
 	/// Checks validity of a build metadata string and returns an error if not valid
@@ -204,7 +145,7 @@ extension SemanticVersion: Scannable {
 
 		// swiftlint:disable:next first_where
 		guard components
-			.filter({ !$0.containsAny(SemanticVersion.semVerDecimalDigits.inverted) && $0 != "0" })
+			.filter({ !$0.containsAny(Version.semVerDecimalDigits.inverted) && $0 != "0" })
 			// MUST NOT include leading zeros
 			.first(where: { $0.hasPrefix("0") }) == nil else {
 				return ScannableError(message: "Pre-release contains leading zero component, in \"\(fullVersion)\"")
@@ -249,83 +190,11 @@ extension Scanner {
 	}
 }
 
-extension SemanticVersion: Comparable {
-	public static func < (_ lhs: SemanticVersion, _ rhs: SemanticVersion) -> Bool {
-		if lhs.components == rhs.components {
-			return lhs.isPreReleaseLesser(preRelease: rhs.preRelease)
-		}
-		return lhs.components.lexicographicallyPrecedes(rhs.components)
-	}
-}
-
-extension SemanticVersion: CustomStringConvertible {
-	public var description: String {
-		var description = components.map { $0.description }.joined(separator: ".")
-		if let preRelease = self.preRelease {
-			description += "-\(preRelease)"
-		}
-		if let buildMetadata = self.buildMetadata {
-			description += "+\(buildMetadata)"
-		}
-		return description
-	}
-}
-
-extension SemanticVersion {
-
-	/// Compares the pre-release component with the given pre-release
-	/// assuming that the other components (major, minor, patch) are the same
-	private func isPreReleaseLesser(preRelease: String?) -> Bool {
-
-		// a non-pre-release is not lesser
-		guard let selfPreRelease = self.preRelease else {
-			return false
-		}
-
-		// a pre-release version is lesser than a non-pre-release
-		guard let otherPreRelease = preRelease else {
-			return true
-		}
-
-		// same pre-release version has no precedence. Build metadata could differ,
-		// but there is no ordering defined on build metadata
-		guard selfPreRelease != otherPreRelease else {
-			return false // undefined ordering
-		}
-
-		// Compare dot separated components one by one
-		// From http://semver.org/:
-		// "Precedence for two pre-release versions with the same major, minor, and patch
-		// version MUST be determined by comparing each dot separated identifier from left
-		// to right until a difference is found [...]. A larger set of pre-release fields
-		// has a higher precedence than a smaller set, if all of the preceding
-		// identifiers are equal."
-
-		let selfComponents = selfPreRelease.components(separatedBy: ".")
-		let otherComponents = otherPreRelease.components(separatedBy: ".")
-		let nonEqualComponents = zip(selfComponents, otherComponents)
-			.filter { $0.0 != $0.1 }
-
-		for (selfComponent, otherComponent) in nonEqualComponents {
-			return selfComponent.lesserThanPreReleaseVersionComponent(other: otherComponent)
-		}
-
-		// if I got here, the two pre-release are not the same, but there are not non-equal
-		// components, so one must have move pre-components than the other
-		return selfComponents.count < otherComponents.count
-	}
-
-	/// Returns whether a version has the same numeric components (major, minor, patch)
-	func hasSameNumericComponents(version: SemanticVersion) -> Bool {
-		return self.components == version.components
-	}
-}
-
 extension String {
 
 	/// Returns the Int value of the string, if the string is only composed of digits
 	private var numericValue: Int? {
-		if !self.isEmpty && self.rangeOfCharacter(from: SemanticVersion.semVerDecimalDigits.inverted) == nil {
+		if !self.isEmpty && self.rangeOfCharacter(from: Version.semVerDecimalDigits.inverted) == nil {
 			return Int(self)
 		}
 		return nil
@@ -393,19 +262,35 @@ extension PinnedVersion: CustomStringConvertible {
 	}
 }
 
+extension Version {
+	fileprivate var isPreRelease: Bool {
+		return !prereleaseIdentifiers.isEmpty
+	}
+
+	fileprivate var discardingBuildMetadata: Version {
+		return Version(major, minor, patch, prereleaseIdentifiers: prereleaseIdentifiers)
+	}
+
+	fileprivate func hasSameNumericComponents(version: Version) -> Bool {
+		return major == version.major
+			&& minor == version.minor
+			&& patch == version.patch
+	}
+}
+
 /// Describes which versions are acceptable for satisfying a dependency
 /// requirement.
 public enum VersionSpecifier: Hashable {
 	case any
-	case atLeast(SemanticVersion)
-	case compatibleWith(SemanticVersion)
-	case exactly(SemanticVersion)
+	case atLeast(Version)
+	case compatibleWith(Version)
+	case exactly(Version)
 	case gitReference(String)
 
 	/// Determines whether the given version satisfies this version specifier.
 	public func isSatisfied(by version: PinnedVersion) -> Bool {
-		func withSemanticVersion(_ predicate: (SemanticVersion) -> Bool) -> Bool {
-			if let semanticVersion = SemanticVersion.from(version).value {
+		func withVersion(_ predicate: (Version) -> Bool) -> Bool {
+			if let semanticVersion = Version.from(version).value {
 				return predicate(semanticVersion)
 			} else {
 				// Consider non-semantic versions (e.g., branches) to meet every
@@ -416,14 +301,14 @@ public enum VersionSpecifier: Hashable {
 
 		switch self {
 		case .any:
-			return withSemanticVersion { !$0.isPreRelease }
+			return withVersion { !$0.isPreRelease }
 		case .gitReference:
 			return true
 		case let .exactly(requirement):
-			return withSemanticVersion { $0 == requirement }
+			return withVersion { $0 == requirement }
 
 		case let .atLeast(requirement):
-			return withSemanticVersion { version in
+			return withVersion { version in
 				let versionIsNewer = version >= requirement
 
 				// Only pick a pre-release version if the requirement is also
@@ -433,7 +318,7 @@ public enum VersionSpecifier: Hashable {
 				return notPreReleaseOrSameComponents && versionIsNewer
 			}
 		case let .compatibleWith(requirement):
-			return withSemanticVersion { version in
+			return withVersion { version in
 
 				let versionIsNewer = version >= requirement
 				let notPreReleaseOrSameComponents =	!version.isPreRelease
@@ -464,11 +349,11 @@ extension VersionSpecifier: Scannable {
 	/// Attempts to parse a VersionSpecifier.
 	public static func from(_ scanner: Scanner) -> Result<VersionSpecifier, ScannableError> {
 		if scanner.scanString("==", into: nil) {
-			return SemanticVersion.from(scanner).map { .exactly($0) }
+			return Version.from(scanner).map { .exactly($0) }
 		} else if scanner.scanString(">=", into: nil) {
-			return SemanticVersion.from(scanner).map { .atLeast($0) }
+			return Version.from(scanner).map { .atLeast($0) }
 		} else if scanner.scanString("~>", into: nil) {
-			return SemanticVersion.from(scanner).map { .compatibleWith($0) }
+			return Version.from(scanner).map { .compatibleWith($0) }
 		} else if scanner.scanString("\"", into: nil) {
 			var refName: NSString?
 			if !scanner.scanUpTo("\"", into: &refName) || refName == nil {
@@ -507,7 +392,7 @@ extension VersionSpecifier: CustomStringConvertible {
 	}
 }
 
-private func intersection(atLeast: SemanticVersion, compatibleWith: SemanticVersion) -> VersionSpecifier? {
+private func intersection(atLeast: Version, compatibleWith: Version) -> VersionSpecifier? {
 	if atLeast.major > compatibleWith.major {
 		return nil
 	} else if atLeast.major < compatibleWith.major {
@@ -517,7 +402,7 @@ private func intersection(atLeast: SemanticVersion, compatibleWith: SemanticVers
 	}
 }
 
-private func intersection(atLeast: SemanticVersion, exactly: SemanticVersion) -> VersionSpecifier? {
+private func intersection(atLeast: Version, exactly: Version) -> VersionSpecifier? {
 	if atLeast > exactly {
 		return nil
 	}
@@ -525,7 +410,7 @@ private func intersection(atLeast: SemanticVersion, exactly: SemanticVersion) ->
 	return .exactly(exactly)
 }
 
-private func intersection(compatibleWith: SemanticVersion, exactly: SemanticVersion) -> VersionSpecifier? {
+private func intersection(compatibleWith: Version, exactly: Version) -> VersionSpecifier? {
 	if exactly.major != compatibleWith.major || compatibleWith > exactly {
 		return nil
 	}

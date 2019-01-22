@@ -4,6 +4,9 @@ import Result
 import Tentacle
 import Nimble
 import Quick
+import Utility
+
+import struct Foundation.URL
 
 // swiftlint:disable:this force_try
 
@@ -33,16 +36,16 @@ class CartfileSpec: QuickSpec {
 			let example4 = Dependency.gitHub(.dotCom, Repository(owner: "ExampleOrg", name: "ExamplePrj4"))
 			
 			expect(cartfile.dependencies) == [
-				reactiveCocoa: .atLeast(SemanticVersion(major: 2, minor: 3, patch: 1)),
-				mantle: .compatibleWith(SemanticVersion(major: 1, minor: 0, patch: 0)),
-				libextobjc: .exactly(SemanticVersion(major: 0, minor: 4, patch: 1)),
+				reactiveCocoa: .atLeast(Version(2, 3, 1)),
+				mantle: .compatibleWith(Version(1, 0, 0)),
+				libextobjc: .exactly(Version(0, 4, 1)),
 				xcconfigs: .any,
 				iosCharts: .any,
 				errorTranslations: .any,
 				errorTranslations2: .gitReference("development"),
-				example1: .atLeast(SemanticVersion(major: 3, minor: 0, patch: 2, preRelease: "pre")),
-				example2: .exactly(SemanticVersion(major: 3, minor: 0, patch: 2, preRelease: nil, buildMetadata: "build")),
-				example3: .exactly(SemanticVersion(major: 3, minor: 0, patch: 2)),
+				example1: .atLeast(Version(3, 0, 2, prereleaseIdentifiers: ["pre"])),
+				example2: .exactly(Version(3, 0, 2, buildMetadataIdentifiers: ["build"])),
+				example3: .exactly(Version(3, 0, 2)),
 				example4: .gitReference("release#2")
 			]
 		}
