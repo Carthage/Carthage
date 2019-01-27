@@ -44,8 +44,15 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 		return nil
 	}
 	let platformName = sdk.platform.rawValue
-	let allTargetSimulators = devices
-		.filter { $0.key.hasPrefix(platformName) }
+	func reducePlatformNames(_ result: inout [String: [Simulator]], _ entry: (key: String, value: [Simulator])) {
+		guard let range = entry.key.range(of: platformName) else { return }
+		let platform = entry.key
+			.suffix(from: range.lowerBound)
+			.replacingCharacters(in: range.upperBound..<entry.key.index(after: range.upperBound), with: " ")
+			.replacingOccurrences(of: "-", with: ".")
+		result[platform] = entry.value
+	}
+	let allTargetSimulators = devices.reduce(into: [:], reducePlatformNames)
 	func sortedByVersion(_ osNames: [String]) -> [String] {
 		return osNames.sorted { lhs, rhs in
 			guard let lhsVersion = SemanticVersion.from(PinnedVersion(lhs)).value,
@@ -58,6 +65,6 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 	guard let latestOSName = sortedByVersion(Array(allTargetSimulators.keys)).last else {
 		return nil
 	}
-	return devices[latestOSName]?
+	return allTargetSimulators[latestOSName]?
 		.first { $0.isAvailable }
 }
