@@ -12,7 +12,7 @@
         "availability" : "(unavailable, device type not supported by runtime)",
         "name" : "iPhone 6",
         "udid" : "ABDA7BC1-DB72-4332-90C2-C3D9AA8A5003"
-      },
+      }
     ],
     "watchOS 4.2" : [
       {
@@ -26,7 +26,7 @@
         "availability" : "(available)",
         "name" : "Apple Watch - 42mm",
         "udid" : "6F499604-363C-4AC8-B5D4-73742CA4D674"
-      },
+      }
     ],
     "iOS 8.4" : [
       {
@@ -40,7 +40,7 @@
         "availability" : "(available)",
         "name" : "iPhone 5",
         "udid" : "CF663E57-B922-4911-A118-C62497C77739"
-      },
-    ],
+      }
+    ]
   }
 }
