@@ -45,8 +45,11 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 		return nil
 	}
 	let platformName = sdk.platform.rawValue
-	let allTargetSimulators = devices
-		.filter { $0.key.hasPrefix(platformName) }
+	func reducePlatformNames(_ result: inout [String: [Simulator]], _ entry: (key: String, value: [Simulator])) {
+		guard let platformVersion = parsePlatformVersion(for: platformName, from: entry.key) else { return }
+		result[platformVersion] = entry.value
+	}
+	let allTargetSimulators = devices.reduce(into: [:], reducePlatformNames)
 	func sortedByVersion(_ osNames: [String]) -> [String] {
 		return osNames.sorted { lhs, rhs in
 			guard let lhsVersion = Version.from(PinnedVersion(lhs)).value,
@@ -59,6 +62,19 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 	guard let latestOSName = sortedByVersion(Array(allTargetSimulators.keys)).last else {
 		return nil
 	}
-	return devices[latestOSName]?
+	return allTargetSimulators[latestOSName]?
 		.first { $0.isAvailable }
+}
+
+/// Parses a matching platform and version from a given identifier.
+internal func parsePlatformVersion(for platformName: String, from identifier: String) -> String? {
+	guard let platformRange = identifier.range(of: platformName) else { return nil }
+
+	let nonDigitCharacters = CharacterSet.decimalDigits.inverted
+	let version = identifier
+		.suffix(from: platformRange.upperBound)
+		.split(whereSeparator: { $0.unicodeScalars.contains(where: { nonDigitCharacters.contains($0) }) })
+		.joined(separator: ".")
+
+	return "\(platformName) \(version)"
 }
