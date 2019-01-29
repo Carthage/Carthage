@@ -68,13 +68,13 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 
 /// Parses a matching platform and version from a given identifier.
 internal func parsePlatformVersion(for platformName: String, from identifier: String) -> String? {
-    guard let platformRange = identifier.range(of: platformName) else { return nil }
+	guard let platformRange = identifier.range(of: platformName) else { return nil }
 
-    let nonDigitCharacters = CharacterSet.decimalDigits.inverted
-    let version = identifier
-        .suffix(from: platformRange.upperBound)
-        .split(whereSeparator: { $0.unicodeScalars.contains(where: { nonDigitCharacters.contains($0) }) })
-        .joined(separator: ".")
+	let nonDigitCharacters = CharacterSet.decimalDigits.inverted
+	let version = identifier
+		.suffix(from: platformRange.upperBound)
+		.split(whereSeparator: { $0.unicodeScalars.contains(where: { nonDigitCharacters.contains($0) }) })
+		.joined(separator: ".")
 
-    return "\(platformName) \(version)"
+	return "\(platformName) \(version)"
 }
