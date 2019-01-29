@@ -172,5 +172,35 @@ class SimulatorSpec: QuickSpec {
 				}
 			}
 		}
+
+        describe("parsePlatformVersion(for:from:)") {
+            context("when the platform name is present") {
+                it("should return the platform version") {
+                    let platformVersion = parsePlatformVersion(for: "iOS", from: "iOS 12.1")
+                    expect(platformVersion).to(equal("iOS 12.1"))
+                }
+
+                context("when the identifier has a prefix") {
+                    it("should return the platform version") {
+                        let platformVersion = parsePlatformVersion(for: "iOS", from: "com.apple.CoreSimulator.SimRuntime.iOS-12-1")
+                        expect(platformVersion).to(equal("iOS 12.1"))
+                    }
+                }
+            }
+
+            context("when the platform name is missing") {
+                it("should return nil") {
+                    let platformVersion = parsePlatformVersion(for: "iOS", from: "watchOS 5.2")
+                    expect(platformVersion).to(beNil())
+                }
+
+                context("when the identifier has a prefix") {
+                    it("should return nil") {
+                        let platformVersion = parsePlatformVersion(for: "iOS", from: "com.apple.CoreSimulator.SimRuntime.watchOS-5-2")
+                        expect(platformVersion).to(beNil())
+                    }
+                }
+            }
+        }
 	}
 }
