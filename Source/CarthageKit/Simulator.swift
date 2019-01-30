@@ -49,7 +49,9 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 		guard let platformVersion = parsePlatformVersion(for: platformName, from: entry.key) else { return }
 		result[platformVersion] = entry.value
 	}
-	let allTargetSimulators = devices.reduce(into: [:], reducePlatformNames)
+	let allTargetSimulators = devices.filter({ _, devices in 
+		return devices.filter({ $0.isAvailable }).count > 0
+		}).reduce(into: [:], reducePlatformNames)
 	func sortedByVersion(_ osNames: [String]) -> [String] {
 		return osNames.sorted { lhs, rhs in
 			guard let lhsVersion = Version.from(PinnedVersion(lhs)).value,
