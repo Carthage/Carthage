@@ -166,7 +166,7 @@ class SimulatorSpec: QuickSpec {
 						expect(tvSimulator).to(beNil())
 					}
 
-					it("should return the first simulator of the latest available version when the latest installed simulator is unavailable") {
+					it("when the latest installed simulator is unavailable") {
 						let data = loadJSON(for: "Simulators/availables-xcode102-with-unavailable-latest-simulators")
 						let iPhoneSimulator = selectAvailableSimulator(of: .iPhoneSimulator, from: data)!
 						expect(iPhoneSimulator.udid).to(equal(UUID(uuidString: "12972BD8-0153-452B-83F7-F253EA75C4FE")!))
