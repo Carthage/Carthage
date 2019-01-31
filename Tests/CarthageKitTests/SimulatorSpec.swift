@@ -146,6 +146,26 @@ class SimulatorSpec: QuickSpec {
 					}
 				}
 
+				context("Xcode 10.1 after installing 10.2 beta") {
+					it("should return the first simulator of the latest version") {
+						let data = loadJSON(for: "Simulators/availables-xcode101-after-installing-102-beta")
+						let iPhoneSimulator = selectAvailableSimulator(of: .iPhoneSimulator, from: data)!
+						expect(iPhoneSimulator.udid).to(equal(UUID(uuidString: "12972BD8-0153-452B-83F7-F253EA75C4FE")!))
+						expect(iPhoneSimulator.isAvailable).to(beTrue())
+						expect(iPhoneSimulator.name).to(equal("iPhone 5s"))
+
+						let watchSimulator = selectAvailableSimulator(of: .watchSimulator, from: data)!
+						expect(watchSimulator.udid).to(equal(UUID(uuidString: "3E3C4790-EB16-445B-9C39-2BD22C54B37A")!))
+						expect(watchSimulator.isAvailable).to(beTrue())
+						expect(watchSimulator.name).to(equal("Apple Watch Series 2 - 38mm"))
+
+						let tvSimulator = selectAvailableSimulator(of: .tvSimulator, from: data)!
+						expect(tvSimulator.udid).to(equal(UUID(uuidString: "4747A322-2660-4025-B1F7-90373369F808")!))
+						expect(tvSimulator.isAvailable).to(beTrue())
+						expect(tvSimulator.name).to(equal("Apple TV"))
+					}
+				}
+
 				context("Xcode 10.2 beta") {
 					it("should return the first simulator of the latest version") {
 						let data = loadJSON(for: "Simulators/availables-xcode102-beta")
