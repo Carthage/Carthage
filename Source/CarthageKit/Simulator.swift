@@ -47,6 +47,7 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 	let platformName = sdk.platform.rawValue
 	func reducePlatformNames(_ result: inout [String: [Simulator]], _ entry: (key: String, value: [Simulator])) {
 		guard let platformVersion = parsePlatformVersion(for: platformName, from: entry.key) else { return }
+		guard entry.value.contains(where: { $0.isAvailable }) else { return }
 		result[platformVersion] = entry.value
 	}
 	let allTargetSimulators = devices.reduce(into: [:], reducePlatformNames)
