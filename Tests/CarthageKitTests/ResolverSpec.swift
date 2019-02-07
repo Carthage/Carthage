@@ -40,9 +40,9 @@ class ResolverSpec: QuickSpec {
 
 class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 	override static func spec(_ aContext: @escaping () -> ResolverProtocol.Type) {
-		let resolverClass = aContext()
+		let resolverType = aContext()
 		
-		describe("\(resolverClass)") {
+		describe("\(resolverType)") {
 
 			it("should resolve a simple Cartfile") {
 				let db: DB = [
@@ -56,7 +56,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					],
 					]
 
-				let resolved = db.resolve(resolverClass, [ github1: .exactly(.v0_1_0) ])
+				let resolved = db.resolve(resolverType, [ github1: .exactly(.v0_1_0) ])
 				
 				switch resolved {
 				case .success(let value):
@@ -89,7 +89,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					],
 					]
 
-				let resolved = db.resolve(resolverClass, [ github1: .any ])
+				let resolved = db.resolve(resolverType, [ github1: .any ])
 				
 				switch resolved {
 				case .success(let value):
@@ -133,7 +133,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					],
 					]
 
-				let resolved = db.resolve(resolverClass,
+				let resolved = db.resolve(resolverType,
 										  [
 											github1: .any,
 											// Newly added dependencies which are not inclued in the
@@ -170,7 +170,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					]
 				]
 
-				let resolved = db.resolve(resolverClass,
+				let resolved = db.resolve(resolverType,
 				                          [ github1: .any, git1: .any],
 				                          resolved: [ github1: .v1_0_0, git1: .v1_0_0 ],
 				                          updating: [ github1 ])
@@ -206,7 +206,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						.v2_0_1: [:],
 					]
 				]
-				let resolved = db.resolve(resolverClass, [github1: .any])
+				let resolved = db.resolve(resolverType, [github1: .any])
 				expect(resolved.value).to(beNil())
 				expect(resolved.error).notTo(beNil())
 			}
@@ -224,7 +224,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					]
 				]
 
-				let resolved = db.resolve(resolverClass, [ github1: .any, github2: .atLeast(.v1_0_0) ])
+				let resolved = db.resolve(resolverType, [ github1: .any, github2: .atLeast(.v1_0_0) ])
 				
 				switch resolved {
 				case .success(let value):
@@ -260,7 +260,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					],
 				]
 
-				let resolved = db.resolve(resolverClass, [ github1: .any, github2: .compatibleWith(.v1_0_0), github3: .compatibleWith(.v1_0_0) ])
+				let resolved = db.resolve(resolverType, [ github1: .any, github2: .compatibleWith(.v1_0_0), github3: .compatibleWith(.v1_0_0) ])
 				expect(resolved.value).to(beNil())
 				expect(resolved.error).notTo(beNil())
 			}
@@ -275,7 +275,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 				let repository = LocalRepository(directoryURL: repositoryURL)
 				
 				let signalProducer = project.resolveUpdatedDependencies(from: repository,
-																		resolverType: resolverClass.self,
+																		resolverType: resolverType.self,
 																		dependenciesToUpdate: nil)
 				do {
 					let resolvedCartfile = try signalProducer.first()!.dematerialize()
@@ -295,7 +295,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 			}
 
 			// Only the new resolver and fast resolvers pass the following tests.
-			if resolverClass == NewResolver.self {
+			if resolverType == NewResolver.self {
 				it("should correctly resolve complex conflicting dependencies") {
 					
 					let testCartfileURL = Bundle(for: ResolverBehavior.self).url(forResource: "Resolver/ConflictingDependencies/Cartfile", withExtension: "")!
@@ -306,7 +306,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					let repository = LocalRepository(directoryURL: repositoryURL)
 					
 					let signalProducer = project.resolveUpdatedDependencies(from: repository,
-																			resolverType: resolverClass.self,
+																			resolverType: resolverType.self,
 																			dependenciesToUpdate: nil)
 					do {
 						_ = try signalProducer.first()?.dematerialize()
@@ -348,7 +348,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						],
 						]
 
-					let resolved = db.resolve(resolverClass,
+					let resolved = db.resolve(resolverType,
 					                          [ github1: .any ],
 					                          resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
 					                          updating: [ github2 ]
@@ -391,7 +391,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 							.v1_2_0: [:],
 						],
 						]
-					let resolved = db.resolve(resolverClass,
+					let resolved = db.resolve(resolverType,
 					                          [ github1: .exactly(.v2_0_0) ],
 					                          resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
 					                          updating: [ github2 ]
@@ -428,7 +428,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					],
 				]
 
-				let resolved = db.resolve(resolverClass, [ github1: .any, github2: .any ])
+				let resolved = db.resolve(resolverType, [ github1: .any, github2: .any ])
 				
 				switch resolved {
 				case .success(let value):
@@ -467,7 +467,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					],
 					]
 
-				let resolved = db.resolve(resolverClass, [ github1: .any ])
+				let resolved = db.resolve(resolverType, [ github1: .any ])
 				
 				switch resolved {
 				case .success(let value):
@@ -494,19 +494,19 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					]
 
 				do {
-					let resolved = db.resolve(resolverClass, [ github1: .atLeast(.v3_0_0) ])
+					let resolved = db.resolve(resolverType, [ github1: .atLeast(.v3_0_0) ])
 					expect(resolved.value).to(beNil())
 					expect(resolved.error).notTo(beNil())
 				}
 				
 				do {
-					let resolved = db.resolve(resolverClass, [ github1: .compatibleWith(.v3_0_0) ])
+					let resolved = db.resolve(resolverType, [ github1: .compatibleWith(.v3_0_0) ])
 					expect(resolved.value).to(beNil())
 					expect(resolved.error).notTo(beNil())
 				}
 				
 				do {
-					let resolved = db.resolve(resolverClass, [ github1: .exactly(.v3_0_0) ])
+					let resolved = db.resolve(resolverType, [ github1: .exactly(.v3_0_0) ])
 					expect(resolved.value).to(beNil())
 					expect(resolved.error).notTo(beNil())
 				}
@@ -534,7 +534,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
                 ],
                 ]
 
-            let resolved = db.resolve(resolverClass, [ github1: .any, github2: .any ])
+            let resolved = db.resolve(resolverType, [ github1: .any, github2: .any ])
             expect(resolved.value).to(beNil())
             expect(resolved.error).notTo(beNil())
             if let error = resolved.error {
@@ -556,7 +556,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
             let repository = LocalRepository(directoryURL: repositoryURL)
 
             let signalProducer = project.resolveUpdatedDependencies(from: repository,
-                                                                    resolverType: resolverClass.self,
+                                                                    resolverType: resolverType.self,
                                                                     dependenciesToUpdate: nil)
             do {
                 let resolvedCartfile = try signalProducer.first()!.dematerialize()
