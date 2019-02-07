@@ -1,7 +1,9 @@
 import Foundation
+import Result
+import Utility
 
 /**
-Wrapper around PinnedVersion/SementicVersion that can be ordered on relevance and avoids multiple invocations of the parsing logic for the SemanticVersion from a string.
+Wrapper around PinnedVersion/SementicVersion that can be ordered on relevance and avoids multiple invocations of the parsing logic for the Version from a string.
 
 Semantic versions are first, ordered descending, then versions that do not comply with the semantic structure (*.*.*).
 */
@@ -9,7 +11,7 @@ Semantic versions are first, ordered descending, then versions that do not compl
 // swiftlint:disable vertical_parameter_alignment
 struct ConcreteVersion: Comparable, Hashable, CustomStringConvertible {
 	public let pinnedVersion: PinnedVersion
-	public let semanticVersion: SemanticVersion?
+	public let semanticVersion: Version?
 
 	public init(string: String) {
 		self.init(pinnedVersion: PinnedVersion(string))
@@ -17,7 +19,7 @@ struct ConcreteVersion: Comparable, Hashable, CustomStringConvertible {
 
 	public init(pinnedVersion: PinnedVersion) {
 		self.pinnedVersion = pinnedVersion
-		let result = SemanticVersion.from(pinnedVersion)
+		let result = Version.from(pinnedVersion)
 		switch result {
 		case .success(let semanticVersion):
 			self.semanticVersion = semanticVersion
@@ -26,22 +28,22 @@ struct ConcreteVersion: Comparable, Hashable, CustomStringConvertible {
 		}
 	}
 
-	public init(semanticVersion: SemanticVersion) {
+	public init(semanticVersion: Version) {
 		self.pinnedVersion = PinnedVersion(semanticVersion.description)
 		self.semanticVersion = semanticVersion
 	}
 
 	private static func compare(lhs: ConcreteVersion, rhs: ConcreteVersion) -> ComparisonResult {
-		let leftSemanticVersion = lhs.semanticVersion
-		let rightSemanticVersion = rhs.semanticVersion
+		let leftVersion = lhs.semanticVersion
+		let rightVersion = rhs.semanticVersion
 
-		if leftSemanticVersion != nil && rightSemanticVersion != nil {
-			let v1 = leftSemanticVersion!
-			let v2 = rightSemanticVersion!
+		if leftVersion != nil && rightVersion != nil {
+			let v1 = leftVersion!
+			let v2 = rightVersion!
 			return v1 < v2 ? .orderedDescending : v2 < v1 ? .orderedAscending : .orderedSame
-		} else if leftSemanticVersion != nil {
+		} else if leftVersion != nil {
 			return .orderedAscending
-		} else if rightSemanticVersion != nil {
+		} else if rightVersion != nil {
 			return .orderedDescending
 		}
 
@@ -134,25 +136,25 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	// MARK: - Private properties
 
 	private var semanticVersions: SortedSet<ConcreteVersion>
-	private var nonSemanticVersions: SortedSet<ConcreteVersion>
+	private var nonVersions: SortedSet<ConcreteVersion>
 	private var preReleaseVersions: SortedSet<ConcreteVersion>
 
 	// MARK: - Initializers
 
 	public convenience init() {
 		self.init(semanticVersions: SortedSet<ConcreteVersion>(),
-				  nonSemanticVersions: SortedSet<ConcreteVersion>(),
+				  nonVersions: SortedSet<ConcreteVersion>(),
 				  preReleaseVersions: SortedSet<ConcreteVersion>(),
 				  definitions: [ConcreteVersionSetDefinition]())
 	}
 
 	private init(semanticVersions: SortedSet<ConcreteVersion>,
-				 nonSemanticVersions: SortedSet<ConcreteVersion>,
+				 nonVersions: SortedSet<ConcreteVersion>,
 				 preReleaseVersions: SortedSet<ConcreteVersion>,
 				 definitions: [ConcreteVersionSetDefinition],
 				 pinnedVersionSpecifier: VersionSpecifier? = nil) {
 		self.semanticVersions = semanticVersions
-		self.nonSemanticVersions = nonSemanticVersions
+		self.nonVersions = nonVersions
 		self.preReleaseVersions = preReleaseVersions
 		self.definitions = definitions
 		self.pinnedVersionSpecifier = pinnedVersionSpecifier
@@ -166,7 +168,7 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	public var copy: ConcreteVersionSet {
 		return ConcreteVersionSet(
 			semanticVersions: semanticVersions,
-			nonSemanticVersions: nonSemanticVersions,
+			nonVersions: nonVersions,
 			preReleaseVersions: preReleaseVersions,
 			definitions: definitions,
 			pinnedVersionSpecifier: pinnedVersionSpecifier
@@ -177,21 +179,21 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	Number of elements in the set.
 	*/
 	public var count: Int {
-		return semanticVersions.count + nonSemanticVersions.count + preReleaseVersions.count
+		return semanticVersions.count + nonVersions.count + preReleaseVersions.count
 	}
 
 	/**
 	Whether the set has elements or not.
 	*/
 	public var isEmpty: Bool {
-		return semanticVersions.isEmpty && nonSemanticVersions.isEmpty && preReleaseVersions.isEmpty
+		return semanticVersions.isEmpty && nonVersions.isEmpty && preReleaseVersions.isEmpty
 	}
 
 	/**
 	First version in the set.
 	*/
 	public var first: ConcreteVersion? {
-		return self.semanticVersions.first ?? (self.preReleaseVersions.first ?? self.nonSemanticVersions.first)
+		return self.semanticVersions.first ?? (self.preReleaseVersions.first ?? self.nonVersions.first)
 	}
 
 	/**
@@ -213,7 +215,7 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 				return semanticVersions.insert(version)
 			}
 		} else {
-			return nonSemanticVersions.insert(version)
+			return nonVersions.insert(version)
 		}
 	}
 
@@ -229,7 +231,7 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 				return semanticVersions.remove(version)
 			}
 		} else {
-			return nonSemanticVersions.remove(version)
+			return nonVersions.remove(version)
 		}
 	}
 
@@ -245,10 +247,10 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 				preReleaseVersions.removeAll()
 				semanticVersions.removeAll(except: version)
 			}
-			nonSemanticVersions.removeAll()
+			nonVersions.removeAll()
 		} else {
 			semanticVersions.removeAll()
-			nonSemanticVersions.removeAll(except: version)
+			nonVersions.removeAll(except: version)
 			preReleaseVersions.removeAll(except: version)
 		}
 	}
@@ -275,17 +277,17 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 		case .atLeast(let requirement):
 			let lowerBound = ConcreteVersion(semanticVersion: requirement)
 			let preReleaseUpperBound = ConcreteVersion(semanticVersion:
-				SemanticVersion(major: requirement.major, minor: requirement.minor, patch: requirement.patch + 1))
+				Version(requirement.major, requirement.minor, requirement.patch + 1))
 			range = self.range(for: semanticVersions, from: lowerBound, to: nil)
 			// Prerelease versions require exactly the same numeric components (major/minor/patch)
 			preReleaseRange = self.range(for: preReleaseVersions, from: lowerBound, to: preReleaseUpperBound)
 		case .compatibleWith(let requirement):
 			let lowerBound = ConcreteVersion(semanticVersion: requirement)
 			let upperBound = requirement.major > 0 ?
-				ConcreteVersion(semanticVersion: SemanticVersion(major: requirement.major + 1, minor: 0, patch: 0)) :
-				ConcreteVersion(semanticVersion: SemanticVersion(major: 0, minor: requirement.minor + 1, patch: 0))
+				ConcreteVersion(semanticVersion: Version(requirement.major + 1, 0, 0)) :
+				ConcreteVersion(semanticVersion: Version(0, requirement.minor + 1, 0))
 			let preReleaseUpperBound = ConcreteVersion(semanticVersion:
-				SemanticVersion(major: requirement.major, minor: requirement.minor, patch: requirement.patch + 1))
+				Version(requirement.major, requirement.minor, requirement.patch + 1))
 			range = self.range(for: semanticVersions, from: lowerBound, to: upperBound)
 			preReleaseRange = self.range(for: preReleaseVersions, from: lowerBound, to: preReleaseUpperBound)
 		}
@@ -321,7 +323,7 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 		typealias Element = ConcreteVersion
 
 		private let versionSet: ConcreteVersionSet
-		private var iteratingSemanticVersions = true
+		private var iteratingVersions = true
 		private var iteratingPreReleaseVersions = false
 		private var currentIterator: SortedSet<ConcreteVersion>.Iterator
 
@@ -332,15 +334,15 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 
 		public mutating func next() -> Element? {
 			var ret = currentIterator.next()
-			if ret == nil && iteratingSemanticVersions {
-				iteratingSemanticVersions = false
+			if ret == nil && iteratingVersions {
+				iteratingVersions = false
 				iteratingPreReleaseVersions = true
 				currentIterator = versionSet.preReleaseVersions.makeIterator()
 				ret = currentIterator.next()
 			}
 			if ret == nil && iteratingPreReleaseVersions {
 				iteratingPreReleaseVersions = false
-				currentIterator = versionSet.nonSemanticVersions.makeIterator()
+				currentIterator = versionSet.nonVersions.makeIterator()
 				ret = currentIterator.next()
 			}
 			return ret

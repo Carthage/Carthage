@@ -345,7 +345,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 				]
 			}
 
-			pending("should fail if no versions match the requirements and prerelease versions exist") {
+			it("should fail if no versions match the requirements and prerelease versions exist") {
 				let db: DB = [
 					github1: [
 						.v1_0_0: [:],

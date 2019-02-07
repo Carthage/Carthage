@@ -263,7 +263,7 @@ extension PinnedVersion: CustomStringConvertible {
 }
 
 extension Version {
-	fileprivate var isPreRelease: Bool {
+	var isPreRelease: Bool {
 		return !prereleaseIdentifiers.isEmpty
 	}
 
