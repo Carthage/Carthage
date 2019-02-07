@@ -1,8 +1,9 @@
 import Foundation
 import Result
+import Utility
 
 /// Identifies a dependency, its pinned version, and its compatible and incompatible requirements
-public struct CompatibilityInfo {
+public struct CompatibilityInfo: Equatable {
 	public typealias Requirements = [Dependency: [Dependency: VersionSpecifier]]
 
 	/// The dependency
@@ -56,20 +57,12 @@ public struct CompatibilityInfo {
 		return CompatibilityInfo.invert(requirements: requirements)
 			.map { invertedRequirements -> [CompatibilityInfo] in
 				return dependencies.compactMap { dependency, version in
-					if case .success = SemanticVersion.from(version), let requirements = invertedRequirements[dependency] {
+					if case .success = Version.from(version), let requirements = invertedRequirements[dependency] {
 						return CompatibilityInfo(dependency: dependency, pinnedVersion: version, requirements: requirements)
 					}
 					return nil
 				}
 				.filter { !$0.incompatibleRequirements.isEmpty }
 			}
-	}
-}
-
-extension CompatibilityInfo: Equatable {
-	public static func == (_ lhs: CompatibilityInfo, _ rhs: CompatibilityInfo) -> Bool {
-		return lhs.dependency == rhs.dependency &&
-			lhs.pinnedVersion == rhs.pinnedVersion &&
-			lhs.requirements == rhs.requirements
 	}
 }

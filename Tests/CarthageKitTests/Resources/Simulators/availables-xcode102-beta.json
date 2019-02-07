@@ -1,6 +1,6 @@
 {
   "devices" : {
-    "iOS 12.0" : [
+    "com.apple.CoreSimulator.SimRuntime.iOS-12-0" : [
       {
         "availability" : "(available)",
         "state" : "Shutdown",
@@ -18,7 +18,7 @@
         "availabilityError" : "runtime profile not found"
       }
     ],
-    "watchOS 4.2" : [
+    "com.apple.CoreSimulator.SimRuntime.watchOS-4-2" : [
       {
         "availability" : "(available)",
         "state" : "Shutdown",
@@ -36,7 +36,7 @@
         "availabilityError" : "runtime profile not found"
       }
     ],
-    "iOS 8.4" : [
+    "com.apple.CoreSimulator.SimRuntime.iOS-8-4" : [
       {
         "availability" : "(available)",
         "state" : "Shutdown",

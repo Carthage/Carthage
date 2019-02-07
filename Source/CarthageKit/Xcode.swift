@@ -36,7 +36,7 @@ private func compilerVersionArguments(usingToolchain toolchain: String?) -> [Str
 private func parseSwiftVersionCommand(output: String?) -> String? {
 	guard
 		let output = output,
-		let regex = try? NSRegularExpression(pattern: "Apple Swift version ([^\\s]+) .*\\((.+)\\)", options: []),
+		let regex = try? NSRegularExpression(pattern: "Apple Swift version ([^\\s]+) .*\\((.[^\\)]+)\\)", options: []),
 		let match = regex.firstMatch(in: output, options: [], range: NSRange(output.startIndex..., in: output))
 		else
 	{
@@ -52,16 +52,67 @@ private func parseSwiftVersionCommand(output: String?) -> String? {
 
 /// Determines the Swift version of a framework at a given `URL`.
 internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, SwiftVersionError> {
+
 	guard
 		let swiftHeaderURL = frameworkURL.swiftHeaderURL(),
 		let data = try? Data(contentsOf: swiftHeaderURL),
 		let contents = String(data: data, encoding: .utf8),
 		let swiftVersion = parseSwiftVersionCommand(output: contents)
 		else {
-			return SignalProducer(error: .unknownFrameworkSwiftVersion)
+			return SignalProducer(error: .unknownFrameworkSwiftVersion(message: "Could not derive version from header file."))
 	}
 
 	return SignalProducer(value: swiftVersion)
+}
+
+internal func dSYMSwiftVersion(_ dSYMURL: URL) -> SignalProducer<String, SwiftVersionError> {
+
+	// Pick one architecture
+	guard let arch = architecturesInPackage(dSYMURL).first()?.value else {
+		return SignalProducer(error: .unknownFrameworkSwiftVersion(message: "No architectures found in dSYM."))
+	}
+
+	// Check the .debug_info section left from the compiler in the dSYM.
+	let task = Task("/usr/bin/xcrun", arguments: ["dwarfdump", "--arch=\(arch)", "--debug-info", dSYMURL.path])
+
+	//	$ dwarfdump --debug-info Carthage/Build/iOS/Swiftz.framework.dSYM
+	//		----------------------------------------------------------------------
+	//	File: Carthage/Build/iOS/Swiftz.framework.dSYM/Contents/Resources/DWARF/Swiftz (i386)
+	//	----------------------------------------------------------------------
+	//	.debug_info contents:
+	//
+	//	0x00000000: Compile Unit: length = 0x000000ac  version = 0x0004  abbr_offset = 0x00000000  addr_size = 0x04  (next CU at 0x000000b0)
+	//
+	//	0x0000000b: TAG_compile_unit [1] *
+	//	AT_producer( "Apple Swift version 4.1.2 effective-3.3.2 (swiftlang-902.0.54 clang-902.0.39.2) -emit-object /Users/Tommaso/<redacted>
+
+	let versions: [String]?  = task.launch(standardInput: nil)
+		.ignoreTaskData()
+		.map { String(data: $0, encoding: .utf8) ?? "" }
+		.filter { !$0.isEmpty }
+		.flatMap(.merge) { (output: String) -> SignalProducer<String, NoError> in
+			output.linesProducer
+		}
+		.filter { $0.contains("AT_producer") }
+		.uniqueValues()
+		.map { parseSwiftVersionCommand(output: .some($0)) }
+		.skipNil()
+		.uniqueValues()
+		.collect()
+		.single()?
+		.value
+
+	let numberOfVersions = versions?.count ?? 0
+	guard numberOfVersions != 0 else {
+		return SignalProducer(error: .unknownFrameworkSwiftVersion(message: "No version found in dSYM."))
+	}
+
+	guard numberOfVersions == 1 else {
+		let versionsString = versions!.joined(separator: " ")
+		return SignalProducer(error: .unknownFrameworkSwiftVersion(message: "More than one found in dSYM - \(versionsString) ."))
+	}
+
+	return SignalProducer<String, SwiftVersionError>(value: versions!.first!)
 }
 
 /// Determines whether a framework was built with Swift
@@ -753,8 +804,12 @@ public func build(
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 	let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 
-	return buildInDirectory(dependencyURL, withOptions: options, dependency: (dependency, version), rootDirectoryURL: rootDirectoryURL, sdkFilter: sdkFilter)
-		.mapError { error in
+	return buildInDirectory(dependencyURL,
+							withOptions: options,
+							dependency: (dependency, version),
+							rootDirectoryURL: rootDirectoryURL,
+							sdkFilter: sdkFilter
+		).mapError { error in
 			switch (dependency, error) {
 			case let (_, .noSharedFrameworkSchemes(_, platforms)):
 				return .noSharedFrameworkSchemes(dependency, platforms)
@@ -783,7 +838,10 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 	return BuildSchemeProducer { observer, lifetime in
 		// Use SignalProducer.replayLazily to avoid enumerating the given directory
 		// multiple times.
-		buildableSchemesInDirectory(directoryURL, withConfiguration: options.configuration, forPlatforms: options.platforms)
+		buildableSchemesInDirectory(directoryURL,
+									withConfiguration: options.configuration,
+									forPlatforms: options.platforms
+			)
 			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
 				let initialValue = (project, scheme)
 
@@ -818,15 +876,24 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 			}
 			.collectTaskEvents()
 			.flatMapTaskEvents(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
+
 				guard let dependency = dependency else {
-					return .empty
+
+					return createVersionFileForCurrentProject(platforms: options.platforms,
+															  buildProducts: urls,
+															  rootDirectoryURL: rootDirectoryURL
+						)
+						.flatMapError { _ in .empty }
 				}
 
 				return createVersionFile(
-					for: dependency.dependency, version: dependency.version,
-					platforms: options.platforms, buildProducts: urls, rootDirectoryURL: rootDirectoryURL
-				)
-				.flatMapError { _ in .empty }
+					for: dependency.dependency,
+					version: dependency.version,
+					platforms: options.platforms,
+					buildProducts: urls,
+					rootDirectoryURL: rootDirectoryURL
+					)
+					.flatMapError { _ in .empty }
 			}
 			// Discard any Success values, since we want to
 			// use our initial value instead of waiting for
@@ -847,7 +914,13 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 
 /// Strips a framework from unexpected architectures and potentially debug symbols,
 /// optionally codesigning the result.
-public func stripFramework(_ frameworkURL: URL, keepingArchitectures: [String], strippingDebugSymbols: Bool, codesigningIdentity: String? = nil) -> SignalProducer<(), CarthageError> {
+public func stripFramework(
+	_ frameworkURL: URL,
+	keepingArchitectures: [String],
+	strippingDebugSymbols: Bool,
+	codesigningIdentity: String? = nil
+) -> SignalProducer<(), CarthageError> {
+
 	let stripArchitectures = stripBinary(frameworkURL, keepingArchitectures: keepingArchitectures)
 	let stripSymbols = strippingDebugSymbols ? stripDebugSymbols(frameworkURL) : .empty
 

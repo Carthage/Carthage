@@ -21,6 +21,8 @@ github "ReactiveCocoa/ReactiveCocoa" # GitHub.com
 github "https://enterprise.local/ghe/desktop/git-error-translations" # GitHub Enterprise
 ```
 
+`github` origin is for specifying by `owner/repo` form or using prebuilt binary download feature through its web API, so using `git` or `ssh` protocol for `github` origin does not make sense and will be an error.
+
 ##### Git repositories
 
 Other Git repositories are specified with the `git` keyword:
@@ -31,7 +33,7 @@ git "https://enterprise.local/desktop/git-error-translations2.git"
 
 ##### Binary only frameworks
 
-Dependencies that are only available as compiled binary `.framework`s are specified with the `binary` keyword and as an `https://` URL, a `file://` URL, or a relative or an absolute path with no scheme, that returns a binary project specification:
+Dependencies that are only available as compiled binary `.framework`s are specified with the `binary` keyword and as an `https://` URL, a `file://` URL, or a relative or an absolute path with no scheme, that returns a [binary project specification](#binary-project-specification):
 
 ```
 binary "https://my.domain.com/release/MyFramework.json"   // Remote Hosted

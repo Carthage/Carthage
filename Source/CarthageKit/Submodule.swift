@@ -1,5 +1,5 @@
 /// A Git submodule.
-public struct Submodule {
+public struct Submodule: Hashable {
 	/// The name of the submodule. Usually (but not always) the same as the
 	/// path.
 	public let name: String
@@ -18,16 +18,6 @@ public struct Submodule {
 		self.path = path
 		self.url = url
 		self.sha = sha
-	}
-}
-
-extension Submodule: Hashable {
-	public static func == (_ lhs: Submodule, _ rhs: Submodule) -> Bool {
-		return lhs.name == rhs.name && lhs.path == rhs.path && lhs.url == rhs.url && lhs.sha == rhs.sha
-	}
-
-	public var hashValue: Int {
-		return name.hashValue
 	}
 }
 

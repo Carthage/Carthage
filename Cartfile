@@ -1,7 +1,0 @@
-github "antitypical/Result" ~> 4.0
-github "Carthage/ReactiveTask" ~> 0.15
-github "Carthage/Commandant" ~> 0.15
-github "jdhealy/PrettyColors" ~> 5.0
-github "ReactiveCocoa/ReactiveSwift" ~> 4.0
-github "mdiep/Tentacle" ~> 0.12
-github "thoughtbot/Curry" ~> 4.0

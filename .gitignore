@@ -21,4 +21,5 @@ DerivedData
 .DS_Store
 
 Carthage.pkg
-Carthage/Build
+CarthageApp.pkg
+Carthage.xcodeproj/

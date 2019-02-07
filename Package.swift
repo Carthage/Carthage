@@ -18,10 +18,11 @@ let package = Package(
         .package(url: "https://github.com/thoughtbot/Curry.git", from: "4.0.0"),
         .package(url: "https://github.com/Quick/Quick.git", from: "1.3.1"),
         .package(url: "https://github.com/Quick/Nimble.git", from: "7.3.0"),
+        .package(url: "https://github.com/apple/swift-package-manager.git", .branch("master")),
     ],
     targets: [
         .target(
-            name: "XCDBLD", 
+            name: "XCDBLD",
             dependencies: ["Result", "ReactiveSwift", "ReactiveTask"]
         ),
         .testTarget(
@@ -29,8 +30,8 @@ let package = Package(
             dependencies: ["XCDBLD", "Quick", "Nimble"]
         ),
         .target(
-            name: "CarthageKit", 
-            dependencies: ["XCDBLD", "Tentacle", "Curry"]
+            name: "CarthageKit",
+            dependencies: ["XCDBLD", "Tentacle", "Curry", "SwiftPM-auto"]
         ),
         .testTarget(
             name: "CarthageKitTests",
@@ -38,7 +39,7 @@ let package = Package(
             exclude: ["Resources/FakeOldObjc.framework"]
         ),
         .target(
-            name: "carthage", 
+            name: "carthage",
             dependencies: ["XCDBLD", "CarthageKit", "Commandant", "Curry", "PrettyColors"],
             exclude: ["swift-is-crashy.c"]
         ),

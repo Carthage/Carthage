@@ -3,6 +3,7 @@ import ReactiveSwift
 import Foundation
 import Result
 import Tentacle
+import Utility
 
 // swiftlint:disable no_extension_access_modifier
 let git1 = Dependency.git(GitURL("https://example.com/repo1"))
@@ -26,14 +27,14 @@ extension PinnedVersion {
 	static let v3_0_0 = PinnedVersion("v3.0.0")
 }
 
-extension SemanticVersion {
-	static let v0_1_0 = SemanticVersion(major: 0, minor: 1, patch: 0)
-	static let v1_0_0 = SemanticVersion(major: 1, minor: 0, patch: 0)
-	static let v1_1_0 = SemanticVersion(major: 1, minor: 1, patch: 0)
-	static let v1_2_0 = SemanticVersion(major: 1, minor: 2, patch: 0)
-	static let v2_0_0 = SemanticVersion(major: 2, minor: 0, patch: 0)
-	static let v2_0_1 = SemanticVersion(major: 2, minor: 0, patch: 1)
-	static let v3_0_0 = SemanticVersion(major: 3, minor: 0, patch: 0)
+extension Version {
+	static let v0_1_0 = Version(0, 1, 0)
+	static let v1_0_0 = Version(1, 0, 0)
+	static let v1_1_0 = Version(1, 1, 0)
+	static let v1_2_0 = Version(1, 2, 0)
+	static let v2_0_0 = Version(2, 0, 0)
+	static let v2_0_1 = Version(2, 0, 1)
+	static let v3_0_0 = Version(3, 0, 0)
 }
 // swiftlint:enable no_extension_access_modifier
 

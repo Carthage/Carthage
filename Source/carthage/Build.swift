@@ -123,15 +123,16 @@ public struct BuildCommand: CommandProtocol {
 	///
 	/// Returns a producer of producers, representing each scheme being built.
 	private func buildProjectInDirectoryURL(_ directoryURL: URL, options: Options) -> BuildSchemeProducer {
-		let project = Project(directoryURL: directoryURL)
+		let shouldBuildCurrentProject =  !options.skipCurrent || options.archive
 
+		let project = Project(directoryURL: directoryURL)
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeValues { eventSink.put($0) }
 
 		let buildProducer = project.loadResolvedCartfile()
 			.map { _ in project }
 			.flatMapError { error -> SignalProducer<Project, CarthageError> in
-				if options.skipCurrent && !options.archive {
+				if !shouldBuildCurrentProject {
 					return SignalProducer(error: error)
 				} else {
 					// Ignore Cartfile.resolved loading failure. Assume the user
@@ -143,7 +144,7 @@ public struct BuildCommand: CommandProtocol {
 				return project.buildCheckedOutDependenciesWithOptions(options.buildOptions, dependenciesToBuild: options.dependenciesToBuild)
 			}
 
-		if options.skipCurrent && !options.archive {
+		if !shouldBuildCurrentProject {
 			return buildProducer
 		} else {
 			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions, rootDirectoryURL: directoryURL)
@@ -213,7 +214,7 @@ public struct BuildCommand: CommandProtocol {
 }
 
 /// Represents the user's chosen platform to build for.
-public enum BuildPlatform {
+public enum BuildPlatform: Equatable {
 	/// Build for all available platforms.
 	case all
 
@@ -254,21 +255,6 @@ public enum BuildPlatform {
 			return buildPlatforms.reduce(into: []) { set, buildPlatform in
 				set.formUnion(buildPlatform.platforms)
 			}
-		}
-	}
-}
-
-extension BuildPlatform: Equatable {
-	public static func == (_ lhs: BuildPlatform, _ rhs: BuildPlatform) -> Bool {
-		switch (lhs, rhs) {
-		case let (.multiple(left), .multiple(right)):
-			return left == right
-
-		case (.all, .all), (.iOS, .iOS), (.macOS, .macOS), (.watchOS, .watchOS), (.tvOS, .tvOS):
-			return true
-
-		case _:
-			return false
 		}
 	}
 }

@@ -1,5 +1,5 @@
 /// Error parsing strings into types, used in Scannable protocol
-public struct ScannableError: Error {
+public struct ScannableError: Error, Equatable {
 	let message: String
 	let currentLine: String?
 
@@ -12,11 +12,5 @@ public struct ScannableError: Error {
 extension ScannableError: CustomStringConvertible {
 	public var description: String {
 		return currentLine.map { "\(message) in line: \($0)" } ?? message
-	}
-}
-
-extension ScannableError: Equatable {
-	public static func == (lhs: ScannableError, rhs: ScannableError) -> Bool {
-		return lhs.description == rhs.description && lhs.currentLine == rhs.currentLine
 	}
 }
