@@ -1,6 +1,7 @@
 import Foundation
 import Result
 import ReactiveSwift
+import Utility
 
 /// Responsible for resolving acyclic dependency graphs.
 public struct NewResolver: ResolverProtocol {
@@ -474,8 +475,8 @@ private final class DependencyNode {
 
 extension DependencyNode: Comparable {
 	fileprivate static func < (_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
-		let leftSemantic = SemanticVersion.from(lhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
-		let rightSemantic = SemanticVersion.from(rhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+		let leftSemantic = Version.from(lhs.proposedVersion).value ?? Version(0, 0, 0)
+		let rightSemantic = Version.from(rhs.proposedVersion).value ?? Version(0, 0, 0)
 
 		// Try higher versions first.
 		return leftSemantic > rightSemantic
@@ -484,8 +485,8 @@ extension DependencyNode: Comparable {
 	fileprivate static func == (_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
 		guard lhs.dependency == rhs.dependency else { return false }
 
-		let leftSemantic = SemanticVersion.from(lhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
-		let rightSemantic = SemanticVersion.from(rhs.proposedVersion).value ?? SemanticVersion(major: 0, minor: 0, patch: 0)
+		let leftSemantic = Version.from(lhs.proposedVersion).value ?? Version(0, 0, 0)
+		let rightSemantic = Version.from(rhs.proposedVersion).value ?? Version(0, 0, 0)
 		return leftSemantic == rightSemantic
 	}
 }

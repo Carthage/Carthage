@@ -117,6 +117,9 @@ public struct ArchiveCommand: CommandProtocol {
 
 					_ = try? FileManager
 						.default
+						.removeItem(at: outputURL)
+					_ = try? FileManager
+						.default
 						.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
 
 					return zip(paths: paths, into: outputURL, workingDirectory: options.directoryPath).on(completed: {

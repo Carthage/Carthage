@@ -7,7 +7,7 @@ import ReactiveSwift
 /// Type that encapsulates the configuration and evaluation of the `copy-frameworks` subcommand.
 public struct CopyFrameworksCommand: CommandProtocol {
 	public let verb = "copy-frameworks"
-	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE environment variable into the built app bundle"
+	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE and/or SCRIPT_INPUT_FILE_LIST environment variables into the built app bundle"
 
 	public func run(_ options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
 		return inputFiles()
@@ -18,7 +18,7 @@ public struct CopyFrameworksCommand: CommandProtocol {
 					URL(fileURLWithPath: frameworkPath, isDirectory: true),
 					failWith: CarthageError.invalidArgument(
 						description: "Could not find framework \"\(frameworkName)\" at path \(frameworkPath). "
-							+ "Ensure that the given path is appropriately entered and that your \"Input Files\" have been entered correctly."
+							+ "Ensure that the given path is appropriately entered and that your \"Input Files\" and \"Input File Lists\" have been entered correctly."
 					)
 				)
 				let target = frameworksFolder().map { $0.appendingPathComponent(frameworkName, isDirectory: true) }
@@ -199,7 +199,11 @@ private func scriptInputFileLists() -> SignalProducer<String, CarthageError> {
 		if let count = Int(count) {
 			return SignalProducer<Int, CarthageError>(0..<count)
 				.attemptMap { getEnvironmentVariable("SCRIPT_INPUT_FILE_LIST_\($0)") }
-				.flatMap(.merge) { fileList in SignalProducer(result: Result(attempt: { try String(contentsOfFile: fileList) })) }
+				.flatMap(.merge) { fileList -> SignalProducer<String, CarthageError> in
+					let fileListURL = URL(fileURLWithPath: fileList, isDirectory: true)
+					return SignalProducer<String, NSError>(result: Result(attempt: { try String(contentsOfFile: fileList) }))
+						.mapError { CarthageError.readFailed(fileListURL, $0) }
+				}
 				.map { $0.split(separator: "\n").map(String.init) }
 				.flatMap(.merge) { SignalProducer($0) }
 		} else {

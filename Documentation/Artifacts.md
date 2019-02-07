@@ -33,7 +33,7 @@ git "https://enterprise.local/desktop/git-error-translations2.git"
 
 ##### Binary only frameworks
 
-Dependencies that are only available as compiled binary `.framework`s are specified with the `binary` keyword and as an `https://` URL, a `file://` URL, or a relative or an absolute path with no scheme, that returns a binary project specification:
+Dependencies that are only available as compiled binary `.framework`s are specified with the `binary` keyword and as an `https://` URL, a `file://` URL, or a relative or an absolute path with no scheme, that returns a [binary project specification](#binary-project-specification):
 
 ```
 binary "https://my.domain.com/release/MyFramework.json"   // Remote Hosted

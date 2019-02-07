@@ -21,7 +21,7 @@ public struct BinaryURL: CustomStringConvertible {
 }
 
 /// Uniquely identifies a project that can be used as a dependency.
-public enum Dependency {
+public enum Dependency: Hashable {
 	/// A repository hosted on GitHub.com or GitHub Enterprise.
 	case gitHub(Server, Repository)
 
@@ -88,39 +88,8 @@ extension Dependency {
 }
 
 extension Dependency: Comparable {
-	public static func == (_ lhs: Dependency, _ rhs: Dependency) -> Bool {
-		switch (lhs, rhs) {
-		case let (.gitHub(left), .gitHub(right)):
-			return left == right
-
-		case let (.git(left), .git(right)):
-			return left == right
-
-		case let (.binary(left), .binary(right)):
-			return left == right
-
-		default:
-			return false
-		}
-	}
-
 	public static func < (_ lhs: Dependency, _ rhs: Dependency) -> Bool {
 		return lhs.name.caseInsensitiveCompare(rhs.name) == .orderedAscending
-	}
-}
-
-extension Dependency: Hashable {
-	public var hashValue: Int {
-		switch self {
-		case let .gitHub(server, repo):
-			return server.hashValue ^ repo.hashValue
-
-		case let .git(url):
-			return url.hashValue
-
-		case let .binary(binary):
-			return binary.hashValue
-		}
 	}
 }
 
@@ -148,7 +117,10 @@ extension Dependency: Scannable {
 					if url.scheme == "https" || url.scheme == "file" {
 						return .success(self.binary(BinaryURL(url: url, resolvedDescription: url.description)))
 					} else if url.scheme == nil {
-						let absoluteURL = URL(fileURLWithPath: url.relativePath, isDirectory: false, relativeTo: base).standardizedFileURL
+						// This can use URL.init(fileURLWithPath:isDirectory:relativeTo:) once we can target 10.11+
+						let absoluteURL = url.relativePath
+							.withCString { URL(fileURLWithFileSystemRepresentation: $0, isDirectory: false, relativeTo: base) }
+							.standardizedFileURL
 						return .success(self.binary(BinaryURL(url: absoluteURL, resolvedDescription: url.absoluteString)))
 					} else {
 						return .failure(ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))

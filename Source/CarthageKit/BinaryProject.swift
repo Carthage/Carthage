@@ -1,8 +1,11 @@
 import Foundation
 import Result
+import Utility
+
+import struct Foundation.URL
 
 /// Represents a binary dependency 
-public struct BinaryProject {
+public struct BinaryProject: Equatable {
 	private static let jsonDecoder = JSONDecoder()
 
 	public var versions: [PinnedVersion: URL]
@@ -15,7 +18,7 @@ public struct BinaryProject {
 
 				for (key, value) in json {
 					let pinnedVersion: PinnedVersion
-					switch SemanticVersion.from(Scanner(string: key)) {
+					switch Version.from(Scanner(string: key)) {
 					case .success:
 						pinnedVersion = PinnedVersion(key)
 					case let .failure(error):
@@ -34,11 +37,5 @@ public struct BinaryProject {
 
 				return .success(BinaryProject(versions: versions))
 			}
-	}
-}
-
-extension BinaryProject: Equatable {
-	public static func == (lhs: BinaryProject, rhs: BinaryProject) -> Bool {
-		return lhs.versions == rhs.versions
 	}
 }

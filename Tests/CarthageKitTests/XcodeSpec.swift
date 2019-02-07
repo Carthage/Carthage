@@ -58,6 +58,15 @@ class XcodeSpec: QuickSpec {
 				expect(FileManager.default.fileExists(atPath: testSwiftFrameworkURL.path)) == true
 				expect(result?.value) == currentSwiftVersion
 			}
+
+			it("should determine a dSYM's Swift version") {
+
+				let dSYMURL = testSwiftFrameworkURL.appendingPathExtension("dSYM")
+				expect(FileManager.default.fileExists(atPath: dSYMURL.path)) == true
+
+				let result = dSYMSwiftVersion(dSYMURL).single()
+				expect(result?.value) == currentSwiftVersion
+			}
 			#endif
 
 			it("should determine a framework's Swift version excluding an effective version") {
@@ -458,7 +467,7 @@ internal func beFramework(ofType: FrameworkType) -> Predicate<String> {
 		}
 
 		if !resultBool {
-			message += ", got \(String(describing: stringOutput))"
+			message += ", got \(stringOutput!)"
 		}
 
 		return PredicateResult(

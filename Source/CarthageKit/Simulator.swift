@@ -1,27 +1,35 @@
 import Foundation
+import Utility
 import XCDBLD
 
 internal struct Simulator: Decodable {
-	enum Availability: String, Decodable {
-		case available
-		case unavailable
+	enum CodingKeys: String, CodingKey {
+		case name
+		case udid
+		case isAvailable
+		case availability
+	}
 
-		init(from decoder: Decoder) throws {
-			let container = try decoder.singleValueContainer()
-			let rawString = try container.decode(String.self)
-			if rawString == "(available)" {
-				self = .available
-			} else {
-				self = .unavailable
-			}
+	init(from decoder: Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		name = try container.decode(String.self, forKey: .name)
+		udid = try container.decode(UUID.self, forKey: .udid)
+
+		if let isAvailable = try? container.decode(Bool.self, forKey: .isAvailable) {
+			// Xcode 10.1 ~
+			self.isAvailable = isAvailable
+		} else if let availability = try container.decodeIfPresent(String.self, forKey: .availability), availability == "(available)" {
+			// <= Xcode 10.0
+			self.isAvailable = true
+		} else if let isAvailable = try container.decodeIfPresent(String.self, forKey: .isAvailable), isAvailable == "YES" {
+			// Xcode 10.1 beta
+			self.isAvailable = true
+		} else {
+			self.isAvailable = false
 		}
 	}
 
-	var isAvailable: Bool {
-		return availability == .available
-	}
-
-	var availability: Availability
+	var isAvailable: Bool
 	var name: String
 	var udid: UUID
 }
@@ -37,12 +45,16 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 		return nil
 	}
 	let platformName = sdk.platform.rawValue
-	let allTargetSimulators = devices
-		.filter { $0.key.hasPrefix(platformName) }
+	func reducePlatformNames(_ result: inout [String: [Simulator]], _ entry: (key: String, value: [Simulator])) {
+		guard let platformVersion = parsePlatformVersion(for: platformName, from: entry.key) else { return }
+		guard entry.value.contains(where: { $0.isAvailable }) else { return }
+		result[platformVersion] = entry.value
+	}
+	let allTargetSimulators = devices.reduce(into: [:], reducePlatformNames)
 	func sortedByVersion(_ osNames: [String]) -> [String] {
 		return osNames.sorted { lhs, rhs in
-			guard let lhsVersion = SemanticVersion.from(PinnedVersion(lhs)).value,
-				let rhsVersion = SemanticVersion.from(PinnedVersion(rhs)).value else {
+			guard let lhsVersion = Version.from(PinnedVersion(lhs)).value,
+				let rhsVersion = Version.from(PinnedVersion(rhs)).value else {
 					return lhs < rhs
 			}
 			return lhsVersion < rhsVersion
@@ -51,6 +63,19 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 	guard let latestOSName = sortedByVersion(Array(allTargetSimulators.keys)).last else {
 		return nil
 	}
-	return devices[latestOSName]?
+	return allTargetSimulators[latestOSName]?
 		.first { $0.isAvailable }
+}
+
+/// Parses a matching platform and version from a given identifier.
+internal func parsePlatformVersion(for platformName: String, from identifier: String) -> String? {
+	guard let platformRange = identifier.range(of: platformName) else { return nil }
+
+	let nonDigitCharacters = CharacterSet.decimalDigits.inverted
+	let version = identifier
+		.suffix(from: platformRange.upperBound)
+		.split(whereSeparator: { $0.unicodeScalars.contains(where: { nonDigitCharacters.contains($0) }) })
+		.joined(separator: ".")
+
+	return "\(platformName) \(version)"
 }

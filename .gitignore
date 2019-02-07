@@ -22,4 +22,5 @@ DerivedData
 .idea
 
 Carthage.pkg
-Carthage/Build
+CarthageApp.pkg
+Carthage.xcodeproj/
