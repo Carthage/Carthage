@@ -135,19 +135,25 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 
 	private var semanticVersions: SortedSet<ConcreteVersion>
 	private var nonSemanticVersions: SortedSet<ConcreteVersion>
+	private var preReleaseVersions: SortedSet<ConcreteVersion>
 
 	// MARK: - Initializers
 
 	public convenience init() {
-		self.init(semanticVersions: SortedSet<ConcreteVersion>(), nonSemanticVersions: SortedSet<ConcreteVersion>(), definitions: [ConcreteVersionSetDefinition]())
+		self.init(semanticVersions: SortedSet<ConcreteVersion>(),
+				  nonSemanticVersions: SortedSet<ConcreteVersion>(),
+				  preReleaseVersions: SortedSet<ConcreteVersion>(),
+				  definitions: [ConcreteVersionSetDefinition]())
 	}
 
 	private init(semanticVersions: SortedSet<ConcreteVersion>,
 				 nonSemanticVersions: SortedSet<ConcreteVersion>,
+				 preReleaseVersions: SortedSet<ConcreteVersion>,
 				 definitions: [ConcreteVersionSetDefinition],
 				 pinnedVersionSpecifier: VersionSpecifier? = nil) {
 		self.semanticVersions = semanticVersions
 		self.nonSemanticVersions = nonSemanticVersions
+		self.preReleaseVersions = preReleaseVersions
 		self.definitions = definitions
 		self.pinnedVersionSpecifier = pinnedVersionSpecifier
 	}
@@ -161,6 +167,7 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 		return ConcreteVersionSet(
 			semanticVersions: semanticVersions,
 			nonSemanticVersions: nonSemanticVersions,
+			preReleaseVersions: preReleaseVersions,
 			definitions: definitions,
 			pinnedVersionSpecifier: pinnedVersionSpecifier
 		)
@@ -170,21 +177,21 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	Number of elements in the set.
 	*/
 	public var count: Int {
-		return semanticVersions.count + nonSemanticVersions.count
+		return semanticVersions.count + nonSemanticVersions.count + preReleaseVersions.count
 	}
 
 	/**
 	Whether the set has elements or not.
 	*/
 	public var isEmpty: Bool {
-		return semanticVersions.isEmpty && nonSemanticVersions.isEmpty
+		return semanticVersions.isEmpty && nonSemanticVersions.isEmpty && preReleaseVersions.isEmpty
 	}
 
 	/**
 	First version in the set.
 	*/
 	public var first: ConcreteVersion? {
-		return self.semanticVersions.first ?? self.nonSemanticVersions.first
+		return self.semanticVersions.first ?? (self.preReleaseVersions.first ?? self.nonSemanticVersions.first)
 	}
 
 	/**
@@ -199,8 +206,12 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	*/
 	@discardableResult
 	public func insert(_ version: ConcreteVersion) -> Bool {
-		if version.semanticVersion != nil {
-			return semanticVersions.insert(version)
+		if let semanticVersion = version.semanticVersion {
+			if semanticVersion.isPreRelease {
+				return preReleaseVersions.insert(version)
+			} else {
+				return semanticVersions.insert(version)
+			}
 		} else {
 			return nonSemanticVersions.insert(version)
 		}
@@ -211,8 +222,12 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	*/
 	@discardableResult
 	public func remove(_ version: ConcreteVersion) -> Bool {
-		if version.semanticVersion != nil {
-			return semanticVersions.remove(version)
+		if let semanticVersion = version.semanticVersion {
+			if semanticVersion.isPreRelease {
+				return preReleaseVersions.remove(version)
+			} else {
+				return semanticVersions.remove(version)
+			}
 		} else {
 			return nonSemanticVersions.remove(version)
 		}
@@ -222,12 +237,19 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	Removes all elements from the set.
 	*/
 	public func removeAll(except version: ConcreteVersion) {
-		if version.semanticVersion != nil {
-			semanticVersions.removeAll(except: version)
+		if let semanticVersion = version.semanticVersion {
+			if semanticVersion.isPreRelease {
+				semanticVersions.removeAll()
+				preReleaseVersions.removeAll(except: version)
+			} else {
+				preReleaseVersions.removeAll()
+				semanticVersions.removeAll(except: version)
+			}
 			nonSemanticVersions.removeAll()
 		} else {
 			semanticVersions.removeAll()
 			nonSemanticVersions.removeAll(except: version)
+			preReleaseVersions.removeAll(except: version)
 		}
 	}
 
@@ -236,28 +258,48 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 	*/
 	public func retainVersions(compatibleWith versionSpecifier: VersionSpecifier) {
 		// This is an optimization to achieve O(log(N)) time complexity for this method instead of O(N)
+		// Should be kept in sync with implementation of VersionSpecifier (better to move it there)
 		var range: Range<Int>?
+		var preReleaseRange: Range<Int>?
 
 		switch versionSpecifier {
-		case .any, .gitReference:
+		case .any:
+			preReleaseVersions.removeAll()
+			return
+		case .gitReference:
 			return
 		case .exactly(let requirement):
 			let fixedVersion = ConcreteVersion(semanticVersion: requirement)
 			range = self.range(for: semanticVersions, from: fixedVersion, to: fixedVersion)
+			preReleaseRange = self.range(for: preReleaseVersions, from: fixedVersion, to: fixedVersion)
 		case .atLeast(let requirement):
-			range = self.range(for: semanticVersions, from: ConcreteVersion(semanticVersion: requirement), to: nil)
+			let lowerBound = ConcreteVersion(semanticVersion: requirement)
+			let preReleaseUpperBound = ConcreteVersion(semanticVersion:
+				SemanticVersion(major: requirement.major, minor: requirement.minor, patch: requirement.patch + 1))
+			range = self.range(for: semanticVersions, from: lowerBound, to: nil)
+			// Prerelease versions require exactly the same numeric components (major/minor/patch)
+			preReleaseRange = self.range(for: preReleaseVersions, from: lowerBound, to: preReleaseUpperBound)
 		case .compatibleWith(let requirement):
 			let lowerBound = ConcreteVersion(semanticVersion: requirement)
 			let upperBound = requirement.major > 0 ?
 				ConcreteVersion(semanticVersion: SemanticVersion(major: requirement.major + 1, minor: 0, patch: 0)) :
 				ConcreteVersion(semanticVersion: SemanticVersion(major: 0, minor: requirement.minor + 1, patch: 0))
+			let preReleaseUpperBound = ConcreteVersion(semanticVersion:
+				SemanticVersion(major: requirement.major, minor: requirement.minor, patch: requirement.patch + 1))
 			range = self.range(for: semanticVersions, from: lowerBound, to: upperBound)
+			preReleaseRange = self.range(for: preReleaseVersions, from: lowerBound, to: preReleaseUpperBound)
 		}
 
 		if let nonNilRange = range {
 			semanticVersions.retain(range: nonNilRange)
 		} else {
 			semanticVersions.removeAll()
+		}
+
+		if let nonNilRange = preReleaseRange {
+			preReleaseVersions.retain(range: nonNilRange)
+		} else {
+			preReleaseVersions.removeAll()
 		}
 	}
 
@@ -280,6 +322,7 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 
 		private let versionSet: ConcreteVersionSet
 		private var iteratingSemanticVersions = true
+		private var iteratingPreReleaseVersions = false
 		private var currentIterator: SortedSet<ConcreteVersion>.Iterator
 
 		fileprivate init(_ versionSet: ConcreteVersionSet) {
@@ -291,10 +334,15 @@ final class ConcreteVersionSet: Sequence, CustomStringConvertible {
 			var ret = currentIterator.next()
 			if ret == nil && iteratingSemanticVersions {
 				iteratingSemanticVersions = false
+				iteratingPreReleaseVersions = true
+				currentIterator = versionSet.preReleaseVersions.makeIterator()
+				ret = currentIterator.next()
+			}
+			if ret == nil && iteratingPreReleaseVersions {
+				iteratingPreReleaseVersions = false
 				currentIterator = versionSet.nonSemanticVersions.makeIterator()
 				ret = currentIterator.next()
 			}
-
 			return ret
 		}
 	}

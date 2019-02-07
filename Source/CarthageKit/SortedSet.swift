@@ -71,6 +71,7 @@ struct SortedSet<T: Comparable>: Sequence, Collection {
 	*/
 	public mutating func retainAll(satisfying predicate: (Element) -> Bool) {
 		var newStorage = [Element]()
+		newStorage.reserveCapacity(storage.count)
 		for obj in storage {
 			if predicate(obj) {
 				newStorage.append(obj)

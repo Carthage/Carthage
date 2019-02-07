@@ -66,18 +66,25 @@ public struct UpdateCommand: CommandProtocol {
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			let buildDescription = "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)"
-
 			let dependenciesUsage = "the dependency names to update, checkout and build"
+			let option1 = Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
+			let option2 = Option(key: "build", defaultValue: true, usage: buildDescription)
+			let option3 = Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
+			let option4 = Option<String?>(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
+			let option5 = Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
+			let option6 = Option(key: "fast-resolver", defaultValue: false, usage: "use the fast resolver codeline when calculating dependencies. Default is false")
+			let buildOptions = BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
+			let checkoutOptions = CheckoutCommand.Options.evaluate(mode, dependenciesUsage: dependenciesUsage)
 
 			return curry(self.init)
-				<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
-				<*> mode <| Option(key: "build", defaultValue: true, usage: buildDescription)
-				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
-				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
-				<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
-				<*> mode <| Option(key: "fast-resolver", defaultValue: false, usage: "use the fast resolver codeline when calculating dependencies. Default is false")
-				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
-				<*> CheckoutCommand.Options.evaluate(mode, dependenciesUsage: dependenciesUsage)
+				<*> mode <| option1
+				<*> mode <| option2
+				<*> mode <| option3
+				<*> mode <| option4
+				<*> mode <| option5
+				<*> mode <| option6
+				<*> buildOptions
+				<*> checkoutOptions
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it

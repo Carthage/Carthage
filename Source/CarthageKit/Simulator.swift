@@ -13,7 +13,7 @@ internal struct Simulator: Decodable {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
 		name = try container.decode(String.self, forKey: .name)
 		udid = try container.decode(UUID.self, forKey: .udid)
-		
+
 		if let isAvailable = try? container.decode(Bool.self, forKey: .isAvailable) {
 			// Xcode 10.1 ~
 			self.isAvailable = isAvailable
