@@ -11,7 +11,10 @@ class MachHeaderSpec: QuickSpec {
 
 		describe("headers") {
 			it("should list all mach headers for a given Mach-O file") {
-				let directoryURL = Bundle(for: type(of: self)).url(forResource: "Alamofire.framework", withExtension: nil)!
+                guard let directoryURL = Bundle(for: type(of: self)).url(forResource: "Alamofire.framework", withExtension: nil) else {
+                    fail("Could not load Alamofire.framework from resources")
+                    return
+                }
 
 				let result = CarthageKit
 					.MachHeader

@@ -11,15 +11,23 @@ import XCDBLD
 class XcodeSpec: QuickSpec {
 	override func spec() {
 		// The fixture is maintained at https://github.com/ikesyo/carthage-fixtures-ReactiveCocoaLayout
-		let directoryURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil)!
-		let projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
-		let buildFolderURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
-		let targetFolderURL = URL(
-			fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString),
-			isDirectory: true
-		)
+        var directoryURL: URL!
+        var projectURL: URL!
+        var buildFolderURL: URL!
+        var targetFolderURL: URL!
 
 		beforeEach {
+            guard let nonNilURL = Bundle(for: type(of: self)).url(forResource: "carthage-fixtures-ReactiveCocoaLayout-master", withExtension: nil) else {
+                fail("Expected carthage-fixtures-ReactiveCocoaLayout-master to be loadable from resources")
+                return
+            }
+            directoryURL = nonNilURL
+            projectURL = directoryURL.appendingPathComponent("ReactiveCocoaLayout.xcodeproj")
+            buildFolderURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
+            targetFolderURL = URL(
+                fileURLWithPath: (NSTemporaryDirectory() as NSString).appendingPathComponent(ProcessInfo.processInfo.globallyUniqueString),
+                isDirectory: true
+            )
 			_ = try? FileManager.default.removeItem(at: buildFolderURL)
 			expect { try FileManager.default.createDirectory(atPath: targetFolderURL.path, withIntermediateDirectories: true) }.notTo(throwError())
 		}
@@ -43,7 +51,10 @@ class XcodeSpec: QuickSpec {
 			#endif
 
 			it("should determine that an ObjC framework is not a Swift framework") {
-				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldObjc.framework", withExtension: nil)!
+                guard let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldObjc.framework", withExtension: nil) else {
+                    fail("Could not load FakeOldObjc.framework from resources")
+                    return
+                }
 				expect(isSwiftFramework(frameworkURL)) == false
 			}
 
@@ -70,7 +81,10 @@ class XcodeSpec: QuickSpec {
 			#endif
 
 			it("should determine a framework's Swift version excluding an effective version") {
-				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeSwift.framework", withExtension: nil)!
+                guard let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeSwift.framework", withExtension: nil) else {
+                    fail("Could not load FakeSwift.framework from resources")
+                    return
+                }
 				let result = frameworkSwiftVersion(frameworkURL).single()
 
 				expect(result?.value) == "4.0 (swiftlang-900.0.43 clang-900.0.22.8)"
@@ -85,7 +99,10 @@ class XcodeSpec: QuickSpec {
 			#endif
 
 			it("should determine when a Swift framework is incompatible") {
-				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldSwift.framework", withExtension: nil)!
+                guard let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOldSwift.framework", withExtension: nil) else {
+                    fail("Could not load FakeOldSwift.framework from resources")
+                    return
+                }
 				let result = checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: nil).single()
 
 				expect(result?.value).to(beNil())
@@ -93,7 +110,10 @@ class XcodeSpec: QuickSpec {
 			}
 
 			it("should determine a framework's Swift version for OSS toolchains from Swift.org") {
-				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOSSSwift.framework", withExtension: nil)!
+                guard let frameworkURL = Bundle(for: type(of: self)).url(forResource: "FakeOSSSwift.framework", withExtension: nil) else {
+                    fail("Could not load FakeOSSSwift.framework from resources")
+                    return
+                }
 				let result = frameworkSwiftVersion(frameworkURL).single()
 
 				expect(result?.value) == "4.1-dev (LLVM 0fcc19c0d8, Clang 1696f82ad2, Swift 691139445e)"
@@ -120,7 +140,10 @@ class XcodeSpec: QuickSpec {
 
 			it("should not find anything that's listed as a git submodule") {
 				let multipleSubprojects = "SampleGitSubmodule"
-				let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
+                guard let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil) else {
+                    fail("Could not load SampleGitSubmodule from resources")
+                    return
+                }
 
 				let relativePaths = relativePathsForProjectsInDirectory(_directoryURL)
 				expect(relativePaths) == [ "SampleGitSubmodule.xcodeproj/" ]
@@ -242,7 +265,10 @@ class XcodeSpec: QuickSpec {
 
 		it("should build all subprojects for all platforms by default") {
 			let multipleSubprojects = "SampleMultipleSubprojects"
-			let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil)!
+            guard let _directoryURL = Bundle(for: type(of: self)).url(forResource: multipleSubprojects, withExtension: nil) else {
+                fail("Could not load SampleMultipleSubprojects from resources")
+                return
+            }
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
@@ -268,7 +294,10 @@ class XcodeSpec: QuickSpec {
 
 		it("should skip projects without shared framework schems") {
 			let dependency = "SchemeDiscoverySampleForCarthage"
-			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil)!
+            guard let _directoryURL = Bundle(for: type(of: self)).url(forResource: "\(dependency)-0.2", withExtension: nil) else {
+                fail("Could not load SchemeDiscoverySampleForCarthage from resources")
+                return
+            }
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug"), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
@@ -288,7 +317,10 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should not copy build products from nested dependencies produced by workspace") {
-			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "WorkspaceWithDependency", withExtension: nil)!
+            guard let _directoryURL = Bundle(for: type(of: self)).url(forResource: "WorkspaceWithDependency", withExtension: nil) else {
+                fail("Could not load WorkspaceWithDependency from resources")
+                return
+            }
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
@@ -306,7 +338,10 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should error out with .noSharedFrameworkSchemes if there is no shared framework schemes") {
-			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "Swell-0.5.0", withExtension: nil)!
+            guard let _directoryURL = Bundle(for: type(of: self)).url(forResource: "Swell-0.5.0", withExtension: nil) else {
+                fail("Could not load Swell-0.5.0 from resources")
+                return
+            }
 
 			let result = buildInDirectory(_directoryURL, withOptions: BuildOptions(configuration: "Debug", platforms: [.macOS]), rootDirectoryURL: directoryURL)
 				.ignoreTaskData()
@@ -391,7 +426,10 @@ class XcodeSpec: QuickSpec {
 		}
 
 		it("should build static library and place result to subdirectory") {
-			let _directoryURL = Bundle(for: type(of: self)).url(forResource: "DynamicAndStatic", withExtension: nil)!
+            guard let _directoryURL = Bundle(for: type(of: self)).url(forResource: "DynamicAndStatic", withExtension: nil) else {
+                fail("Could not load DynamicAndStatic from resources")
+                return
+            }
 			let _buildFolderURL = _directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
 			_ = try? FileManager.default.removeItem(at: _buildFolderURL)
@@ -447,7 +485,7 @@ internal func beFramework(ofType: FrameworkType) -> Predicate<String> {
 			return PredicateResult(status: .fail, message: .expectedActualValueTo(message))
 		}
 
-		var stringOutput: String!
+		var stringOutput: String?
 
 		let result = Task("/usr/bin/xcrun", arguments: ["file", path])
 			.launch()
@@ -460,14 +498,19 @@ internal func beFramework(ofType: FrameworkType) -> Predicate<String> {
 		expect(result.error).to(beNil())
 
 		let resultBool: Bool
-		if ofType == .static {
-			resultBool = stringOutput.contains("current ar archive") && !stringOutput.contains("dynamically linked shared library")
-		} else {
-			resultBool = !stringOutput.contains("current ar archive") && stringOutput.contains("dynamically linked shared library")
-		}
+
+        if let nonNilOutput = stringOutput {
+            if ofType == .static {
+                resultBool = nonNilOutput.contains("current ar archive") && !nonNilOutput.contains("dynamically linked shared library")
+            } else {
+                resultBool = !nonNilOutput.contains("current ar archive") && nonNilOutput.contains("dynamically linked shared library")
+            }
+        } else {
+            resultBool = false
+        }
 
 		if !resultBool {
-			message += ", got \(stringOutput!)"
+			message += ", got \(stringOutput ?? "nil")"
 		}
 
 		return PredicateResult(
@@ -524,7 +567,12 @@ internal func beRelativeSymlinkToDirectory(_ directory: URL) -> Predicate<URL> {
 			)
 		}
 
-		let destination = try! FileManager.default.destinationOfSymbolicLink(atPath: url.path) // swiftlint:disable:this force_try
+        guard let destination = try? FileManager.default.destinationOfSymbolicLink(atPath: url.path) else {
+            return PredicateResult(
+                status: .fail,
+                message: .expectedActualValueTo(message + ", but could not load destination")
+            )
+        }
 
 		guard !(destination as NSString).isAbsolutePath else {
 			return PredicateResult(

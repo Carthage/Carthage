@@ -22,7 +22,11 @@ class RemoteVersionSpec: QuickSpec {
 			}
 
 			it("should return version") {
-				let release = Release(id: 0, tag: "0.1.0", url: URL(string: "about:blank")!, assets: [])
+                guard let aboutURL = URL(string: "about:blank") else {
+                    fail("Expected aboutURL to not be nil")
+                    return
+                }
+				let release = Release(id: 0, tag: "0.1.0", url: aboutURL, assets: [])
 				let producer = SignalProducer<Release, CarthageError>(value: release)
 				expect(remoteVersion(producer)) == Version(0, 1, 0)
 			}

@@ -7,9 +7,11 @@ import ReactiveSwift
 class ArchiveSpec: QuickSpec {
 	override func spec() {
 		describe("unzipping") {
-			let archiveURL = Bundle(for: type(of: self)).url(forResource: "CartfilePrivateOnly", withExtension: "zip")!
-
-			it("should unzip archive to a temporary directory") {
+            it("should unzip archive to a temporary directory") {
+                guard let archiveURL = Bundle(for: type(of: self)).url(forResource: "CartfilePrivateOnly", withExtension: "zip") else {
+                    fail("Could not find CartfilePrivateOnly.zip in resources")
+                    return
+                }
 				let result = unarchive(archive: archiveURL).single()
 				expect(result).notTo(beNil())
 				expect(result?.error).to(beNil())

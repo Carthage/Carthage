@@ -13,13 +13,22 @@ import struct Foundation.URL
 class CartfileSpec: QuickSpec {
 	override func spec() {
 		it("should parse a Cartfile") {
-			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "")!
-			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
+            guard let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "") else {
+                fail("Could not find TestCartFile in resources")
+                return
+            }
+            guard let testCartfile = try? String(contentsOf: testCartfileURL, encoding: .utf8) else {
+                fail("Could not load Cartfile as string, is it UTF8 encoded?")
+                return
+            }
 
 			let result = Cartfile.from(string: testCartfile)
 			expect(result.error).to(beNil())
 
-			let cartfile = result.value!
+            guard let cartfile = result.value else {
+                fail("Cartfile could not be be parsed")
+                return
+            }
 
 			let reactiveCocoa = Dependency.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa"))
 			let mantle = Dependency.gitHub(.dotCom, Repository(owner: "Mantle", name: "Mantle"))
@@ -51,13 +60,22 @@ class CartfileSpec: QuickSpec {
 		}
 
 		it("should parse a Cartfile.resolved") {
-			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "resolved")!
-			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
+            guard let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "TestCartfile", withExtension: "resolved") else {
+                fail("Could not load TestCartfile.resolved from resources")
+                return
+            }
+            guard let testCartfile = try? String(contentsOf: testCartfileURL, encoding: .utf8) else {
+                fail("Could not load Cartfile as string, is it UTF8 encoded?")
+                return
+            }
 
 			let result = ResolvedCartfile.from(string: testCartfile)
 			expect(result.error).to(beNil())
 
-			let resolvedCartfile = result.value!
+            guard let resolvedCartfile = result.value else {
+                fail("Could not parse resolved cartfile")
+                return
+            }
 			expect(resolvedCartfile.dependencies) == [
 				.gitHub(.dotCom, Repository(owner: "ReactiveCocoa", name: "ReactiveCocoa")): PinnedVersion("v2.3.1"),
 				.gitHub(.dotCom, Repository(owner: "Mantle", name: "Mantle")): PinnedVersion("40abed6e58b4864afac235c3bb2552e23bc9da47"),
@@ -65,8 +83,14 @@ class CartfileSpec: QuickSpec {
 		}
 
 		it("should detect duplicate dependencies in a single Cartfile") {
-			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependenciesCartfile", withExtension: "")!
-			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
+            guard let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependenciesCartfile", withExtension: "") else {
+                fail("Could not load DuplicateDependenciesCartfile from resources")
+                return
+            }
+            guard let testCartfile = try? String(contentsOf: testCartfileURL, encoding: .utf8) else {
+                fail("Could not load Cartfile as string, is it UTF8 encoded?")
+                return
+            }
 
 			let result = Cartfile.from(string: testCartfile)
 			expect(result.error).notTo(beNil())
@@ -89,11 +113,23 @@ class CartfileSpec: QuickSpec {
 		}
 
 		it("should detect duplicate dependencies across two Cartfiles") {
-			let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile", withExtension: "")!
-			let testCartfile2URL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile.private", withExtension: "")!
+            guard let testCartfileURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile", withExtension: "") else {
+                fail("Could not load DuplicateDependencies/Cartfile from resources")
+                return
+            }
+            guard let testCartfile2URL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies/Cartfile.private", withExtension: "") else {
+                fail("Could not load DuplicateDependencies/Cartfile.private from resources")
+                return
+            }
 
-			let testCartfile = try! String(contentsOf: testCartfileURL, encoding: .utf8)
-			let testCartfile2 = try! String(contentsOf: testCartfile2URL, encoding: .utf8)
+            guard let testCartfile = try? String(contentsOf: testCartfileURL, encoding: .utf8) else {
+                fail("Could not load Cartfile as string, is it UTF8 encoded?")
+                return
+            }
+            guard let testCartfile2 = try? String(contentsOf: testCartfile2URL, encoding: .utf8) else {
+                fail("Could not load Cartfile as string, is it UTF8 encoded?")
+                return
+            }
 
 			let result = Cartfile.from(string: testCartfile)
 			expect(result.error).to(beNil())
@@ -101,10 +137,16 @@ class CartfileSpec: QuickSpec {
 			let result2 = Cartfile.from(string: testCartfile2)
 			expect(result2.error).to(beNil())
 
-			let cartfile = result.value!
+            guard let cartfile = result.value else {
+                fail("Could not parse Cartfile")
+                return
+            }
 			expect(cartfile.dependencies.count) == 5
 
-			let cartfile2 = result2.value!
+            guard let cartfile2 = result2.value else {
+                fail("Could not parse Cartfile")
+                return
+            }
 			expect(cartfile2.dependencies.count) == 3
 
 			let dupes = duplicateDependenciesIn(cartfile, cartfile2).sorted { $0.description < $1.description }

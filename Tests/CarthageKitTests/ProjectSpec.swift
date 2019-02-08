@@ -10,13 +10,23 @@ import XCDBLD
 
 // swiftlint:disable:this force_try
 
+private enum ProjectSpecError: Error {
+    case assertion(message: String)
+}
+
 class ProjectSpec: QuickSpec {
 	override func spec() {
 		describe("buildCheckedOutDependenciesWithOptions") {
-			let directoryURL = Bundle(for: type(of: self)).url(forResource: "DependencyTest", withExtension: nil)!
+            guard let directoryURL = Bundle(for: type(of: self)).url(forResource: "DependencyTest", withExtension: nil) else {
+                fail("Could not load DependencyTest from resources")
+                return
+            }
 			let buildDirectoryURL = directoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			let noSharedSchemesDirectoryURL = Bundle(for: type(of: self)).url(forResource: "NoSharedSchemesTest", withExtension: nil)!
+            guard let noSharedSchemesDirectoryURL = Bundle(for: type(of: self)).url(forResource: "NoSharedSchemesTest", withExtension: nil) else {
+                fail("Could not load NoSharedSchemesTest from resources")
+                return
+            }
 			let noSharedSchemesBuildDirectoryURL = noSharedSchemesDirectoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
 			func build(directoryURL url: URL, platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
@@ -79,37 +89,52 @@ class ProjectSpec: QuickSpec {
 				let repoDir = directoryURL.appendingPathComponent(carthageProjectCheckoutsPath)
 				let checkout = repoDir.appendingPathComponent("TestFramework1")
 				let tmpCheckout = repoDir.appendingPathComponent("TestFramework1_BACKUP")
-				try! FileManager.default.moveItem(at: checkout, to: tmpCheckout)
+                do {
+                    try FileManager.default.moveItem(at: checkout, to: tmpCheckout)
+                } catch {
+                    fail("Could not move checkout to tmpCheckout: \(error)")
+                    return
+                }
+
 				// Without the checkout, it should still figure out it needs to build 2 and 3.
 				let result = buildDependencyTest(platforms: [.macOS], cacheBuilds: false)
 				expect(result) == macOSexpected
-				try! FileManager.default.moveItem(at: tmpCheckout, to: checkout)
+                do {
+                    try FileManager.default.moveItem(at: tmpCheckout, to: checkout)
+                } catch {
+                    fail("Could not move tmpCheckout to checkout: \(error)")
+                    return
+                }
 			}
 
 			describe("createAndCheckVersionFiles") {
-				func overwriteFramework(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL) {
+				func overwriteFramework(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL) throws {
 					let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
 					let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
 					let binaryURL = frameworkURL.appendingPathComponent("\(frameworkName)", isDirectory: false)
 
 					let data = "junkdata".data(using: .utf8)!
-					try! data.write(to: binaryURL, options: .atomic)
+					try data.write(to: binaryURL, options: .atomic)
 				}
 
 				func overwriteSwiftVersion(
 					_ frameworkName: String,
 					forPlatformName platformName: String,
 					inDirectory buildDirectoryURL: URL,
-					withVersion version: String)
+					withVersion version: String) throws
 				{
 					let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
 					let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
-					let swiftHeaderURL = frameworkURL.swiftHeaderURL()!
+                    guard let swiftHeaderURL = frameworkURL.swiftHeaderURL() else {
+                        throw ProjectSpecError.assertion(message: "Could not get Swift header URL")
+                    }
 
-					let swiftVersionResult = swiftVersion().first()!
+                    guard let swiftVersionResult = swiftVersion().first() else {
+                        throw ProjectSpecError.assertion(message: "Expected at least one swift version to be present")
+                    }
 					expect(swiftVersionResult.error).to(beNil())
 
-					var header = try! String(contentsOf: swiftHeaderURL)
+                    var header = try String(contentsOf: swiftHeaderURL)
 
 					// Sanitize “effective-3.2 ” value.
 					if
@@ -123,7 +148,7 @@ class ProjectSpec: QuickSpec {
 					let versionRange = header.range(of: swiftVersionResult.value!)!
 					header.replaceSubrange(versionRange, with: version)
 
-					try! header.write(to: swiftHeaderURL, atomically: true, encoding: header.fastestEncoding)
+					try header.write(to: swiftHeaderURL, atomically: true, encoding: header.fastestEncoding)
 				}
 
 				func removeDsym(
@@ -163,7 +188,12 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+                    do {
+                        try overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+                    } catch {
+                        fail("Could not overwrite framework: \(error)")
+                        return
+                    }
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
@@ -178,9 +208,17 @@ class ProjectSpec: QuickSpec {
 					let preludeVersionFileURL = buildDirectoryURL.appendingPathComponent(".TestFramework3.version", isDirectory: false)
 					let preludeVersionFilePath = preludeVersionFileURL.path
 
-					let json = try! String(contentsOf: preludeVersionFileURL, encoding: .utf8)
+                    guard let json = try? String(contentsOf: preludeVersionFileURL, encoding: .utf8) else {
+                        fail("Could not load preludeVersionFile")
+                        return
+                    }
 					let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"v1.0\"", with: "\"commitish\" : \"v1.1\"")
-					_ = try! modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
+                    do {
+                        _ = try modifiedJson.write(toFile: preludeVersionFilePath, atomically: true, encoding: .utf8)
+                    } catch {
+                        fail("Could not write modified json to file: \(error)")
+                        return
+                    }
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
@@ -192,10 +230,15 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					overwriteSwiftVersion("TestFramework3",
-										  forPlatformName: "Mac",
-										  inDirectory: buildDirectoryURL,
-										  withVersion: "1.0 (swiftlang-000.0.1 clang-000.0.0.1)")
+                    do {
+                        try overwriteSwiftVersion("TestFramework3",
+                                              forPlatformName: "Mac",
+                                              inDirectory: buildDirectoryURL,
+                                              withVersion: "1.0 (swiftlang-000.0.1 clang-000.0.0.1)")
+                    } catch {
+                        fail("Could not overwrite swift version: \(error)")
+                        return
+                    }
 
 					let allDSymsRemoved = expected
 						.compactMap { removeDsym($0.dropLast(4).description, forPlatformName: "Mac", inDirectory: buildDirectoryURL) }
@@ -212,7 +255,12 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					overwriteFramework("TestFramework2", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+                    do {
+                        try overwriteFramework("TestFramework2", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+                    } catch {
+                        fail("Could not overwrite framework: \(error)")
+                        return
+                    }
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == ["TestFramework2_Mac", "TestFramework1_Mac"]
@@ -225,10 +273,15 @@ class ProjectSpec: QuickSpec {
 					expect(result1) == expected
 
 					// Overwrite one header, this should trigger cheking the dSYM instead
-					overwriteSwiftVersion("TestFramework3",
-										  forPlatformName: "Mac",
-										  inDirectory: buildDirectoryURL,
-										  withVersion: "1.0 (swiftlang-000.0.1 clang-000.0.0.1)")
+                    do {
+                        try overwriteSwiftVersion("TestFramework3",
+                                                  forPlatformName: "Mac",
+                                                  inDirectory: buildDirectoryURL,
+                                                  withVersion: "1.0 (swiftlang-000.0.1 clang-000.0.0.1)")
+                    } catch {
+                        fail("Could not overwrite swift version: \(error)")
+                        return
+                    }
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == []
@@ -243,7 +296,12 @@ class ProjectSpec: QuickSpec {
 					expect(result1.filter { $0.contains("iOS") }) == iOSExpected
 					expect(Set(result1)) == Set<String>(macOSexpected + iOSExpected)
 
-					overwriteFramework("TestFramework1", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+                    do {
+                        try overwriteFramework("TestFramework1", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+                    } catch {
+                        fail("Could not overwrite framework: \(error)")
+                        return
+                    }
 
 					let result2 = buildDependencyTest()
 					expect(result2.filter { $0.contains("Mac") }) == ["TestFramework1_Mac"]
@@ -261,9 +319,17 @@ class ProjectSpec: QuickSpec {
 					let framework2VersionFileURL = noSharedSchemesBuildDirectoryURL.appendingPathComponent(".TestFramework2.version", isDirectory: false)
 					let framework2VersionFilePath = framework2VersionFileURL.path
 
-					let json = try! String(contentsOf: framework2VersionFileURL, encoding: .utf8)
+                    guard let json = try? String(contentsOf: framework2VersionFileURL, encoding: .utf8) else {
+                        fail("Could not load framework version file")
+                        return
+                    }
 					let modifiedJson = json.replacingOccurrences(of: "\"commitish\" : \"v1.0\"", with: "\"commitish\" : \"v1.1\"")
-					_ = try! modifiedJson.write(toFile: framework2VersionFilePath, atomically: true, encoding: .utf8)
+                    do {
+                        _ = try modifiedJson.write(toFile: framework2VersionFilePath, atomically: true, encoding: .utf8)
+                    } catch {
+                        fail("Could not write modified json file: \(error)")
+                        return
+                    }
 
 					let result3 = buildNoSharedSchemesTest(platforms: [.iOS])
 					expect(result3) == ["TestFramework1_iOS"]
@@ -273,7 +339,10 @@ class ProjectSpec: QuickSpec {
 
 		describe("loadCombinedCartfile") {
 			it("should load a combined Cartfile when only a Cartfile is present") {
-				let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfileOnly", withExtension: nil)!
+                guard let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfileOnly", withExtension: nil) else {
+                    fail("Could not lead CartfileOnly from resources")
+                    return
+                }
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 				expect(result?.value).notTo(beNil())
@@ -284,7 +353,10 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should load a combined Cartfile when only a Cartfile.private is present") {
-				let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfilePrivateOnly", withExtension: nil)!
+                guard let directoryURL = Bundle(for: type(of: self)).url(forResource: "CartfilePrivateOnly", withExtension: nil) else {
+                    fail("Could not load CartfilePrivateOnly from resources")
+                    return
+                }
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 				expect(result?.value).notTo(beNil())
@@ -295,7 +367,10 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should detect duplicate dependencies across Cartfile and Cartfile.private") {
-				let directoryURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies", withExtension: nil)!
+                guard let directoryURL = Bundle(for: type(of: self)).url(forResource: "DuplicateDependencies", withExtension: nil) else {
+                    fail("Could not load DuplicateDependencies from resources")
+                    return
+                }
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 
@@ -319,7 +394,10 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should error when neither a Cartfile nor a Cartfile.private exists") {
-				let directoryURL = Bundle(for: type(of: self)).url(forResource: "NoCartfile", withExtension: nil)!
+                guard let directoryURL = Bundle(for: type(of: self)).url(forResource: "NoCartfile", withExtension: nil) else {
+                    fail("Could not load NoCartfile from resources")
+                    return
+                }
 				let result = Project(directoryURL: directoryURL).loadCombinedCartfile().single()
 				expect(result).notTo(beNil())
 
@@ -431,9 +509,13 @@ class ProjectSpec: QuickSpec {
 
 		describe("downloadBinaryFrameworkDefinition") {
 			var project: Project!
-			let testDefinitionURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/successful", withExtension: "json")!
-
-			beforeEach {
+            var testDefinitionURL: URL!
+            beforeEach {
+                guard let nonNilURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/successful", withExtension: "json") else {
+                    fail("Could not load BinaryOnly/successful.json from resources")
+                    return
+                }
+                testDefinitionURL = nonNilURL
 				project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
 			}
 
@@ -463,7 +545,10 @@ class ProjectSpec: QuickSpec {
 			}
 
 			it("should return an invalid binary JSON error if unable to parse file") {
-				let invalidDependencyURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/invalid", withExtension: "json")!
+                guard let invalidDependencyURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/invalid", withExtension: "json") else {
+                    fail("Could not load BinaryOnly/invalid.json from resources")
+                    return
+                }
 				let binary = BinaryURL(url: invalidDependencyURL, resolvedDescription: invalidDependencyURL.description)
 
 				let actualError = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.error
@@ -535,50 +620,61 @@ class ProjectSpec: QuickSpec {
 						"development": PinnedVersion(nextSHA)
 					]
 				]
-				let directoryURL = Bundle(for: type(of: self)).url(forResource: "OutdatedDependencies", withExtension: nil)!
+                guard let directoryURL = Bundle(for: type(of: self)).url(forResource: "OutdatedDependencies", withExtension: nil) else {
+                    fail("Could not load OutdatedDependencies from resources")
+                    return
+                }
 				let project = Project(directoryURL: directoryURL)
 
-				let result = project.outdatedDependencies(false, useNewResolver: false, resolver: db.resolver()).single()
-				expect(result).notTo(beNil())
-				expect(result!.error).to(beNil())
-				expect(result!.value!).notTo(beNil())
+                guard let result = project.outdatedDependencies(false, useNewResolver: false, resolver: db.resolver()).single() else {
+                    fail("Expected result to not be nil")
+                    return
+                }
+                expect(result.error).to(beNil())
+				expect(result.value).notTo(beNil())
 
-				let outdatedDependencies = result!.value!.reduce(into: [:], { (result, next) in
+				guard let outdatedDependencies = result.value?.reduce(into: [:], { (result, next) in
 					result[next.0] = (next.1, next.2, next.3)
-				})
+                }) else {
+                    fail("Expected value to not be nil")
+                    return
+                }
 
 				// Github 1 has no updates available
 				expect(outdatedDependencies[github1]).to(beNil())
 
 				// Github 2 is currently at 1.0.0, can be updated to the latest version which is 2.0.0
 				// Github 2 has no constraint in the Cartfile
-				expect(outdatedDependencies[github2]!.0) == PinnedVersion("v1.0.0")
-				expect(outdatedDependencies[github2]!.1) == PinnedVersion("v2.0.0")
-				expect(outdatedDependencies[github2]!.2) == PinnedVersion("v2.0.0")
+				expect(outdatedDependencies[github2]?.0) == PinnedVersion("v1.0.0")
+				expect(outdatedDependencies[github2]?.1) == PinnedVersion("v2.0.0")
+				expect(outdatedDependencies[github2]?.2) == PinnedVersion("v2.0.0")
 
 				// Github 3 is currently at 2.0.0, latest is 2.0.1, to which it can be updated
 				// Github 3 has a constraint in the Cartfile
-				expect(outdatedDependencies[github3]!.0) == PinnedVersion("v2.0.0")
-				expect(outdatedDependencies[github3]!.1) == PinnedVersion("v2.0.1")
-				expect(outdatedDependencies[github3]!.2) == PinnedVersion("v2.0.1")
+				expect(outdatedDependencies[github3]?.0) == PinnedVersion("v2.0.0")
+				expect(outdatedDependencies[github3]?.1) == PinnedVersion("v2.0.1")
+				expect(outdatedDependencies[github3]?.2) == PinnedVersion("v2.0.1")
 
 				// Github 4 is currently at 2.0.0, latest is 3.0.0, but it can only be updated to 2.0.1
-				expect(outdatedDependencies[github4]!.0) == PinnedVersion("v2.0.0")
-				expect(outdatedDependencies[github4]!.1) == PinnedVersion("v2.0.1")
-				expect(outdatedDependencies[github4]!.2) == PinnedVersion("v3.0.0")
+				expect(outdatedDependencies[github4]?.0) == PinnedVersion("v2.0.0")
+				expect(outdatedDependencies[github4]?.1) == PinnedVersion("v2.0.1")
+				expect(outdatedDependencies[github4]?.2) == PinnedVersion("v3.0.0")
 
 				// Github 5 is pinned to a branch and is already at the most recent commit, so it should not be displayed
 				expect(outdatedDependencies[github5]).to(beNil())
 
 				// Github 6 is pinned ot a branch which has new commits, so it should be displayed
-				expect(outdatedDependencies[github6]!.0) == PinnedVersion(currentSHA)
-				expect(outdatedDependencies[github6]!.1) == PinnedVersion(nextSHA)
-				expect(outdatedDependencies[github6]!.2) == PinnedVersion("v1.0.0")
+				expect(outdatedDependencies[github6]?.0) == PinnedVersion(currentSHA)
+				expect(outdatedDependencies[github6]?.1) == PinnedVersion(nextSHA)
+				expect(outdatedDependencies[github6]?.2) == PinnedVersion("v1.0.0")
 			}
 		}
 
 		describe("platformForFramework") {
-			let testStaticFrameworkURL = Bundle(for: type(of: self)).url(forResource: "Alamofire.framework", withExtension: nil)!
+            guard let testStaticFrameworkURL = Bundle(for: type(of: self)).url(forResource: "Alamofire.framework", withExtension: nil) else {
+                fail("Could not load Alomfire.framework from resources")
+                return
+            }
 			// Checks the framework's executable binary, not the Info.plist.
 			// The Info.plist is missing from Alamofire's bundle on purpose.
 			it("should check the framework's executable binary and produce a platform") {
@@ -602,7 +698,12 @@ class ProjectSpec: QuickSpec {
 				let resolvedCartfile = ResolvedCartfile.from(string: cartfile)
 				let project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
 
-				let result = project.transitiveDependencies(["Moya"], resolvedCartfile: resolvedCartfile.value!).single()
+                guard let resolvedCartfileValue = resolvedCartfile.value else {
+                    fail("Expected ResolvedCartfile value to not be nil")
+                    return
+                }
+
+				let result = project.transitiveDependencies(["Moya"], resolvedCartfile: resolvedCartfileValue).single()
 
 				expect(result?.value).to(contain("Alamofire"))
 				expect(result?.value).to(contain("ReactiveSwift"))
@@ -614,7 +715,10 @@ class ProjectSpec: QuickSpec {
 
 		describe("frameworksInDirectory") {
 			it("should find all carthage compatible framework bundles and exclude improper ones") {
-				let directoryURL = Bundle(for: type(of: self)).url(forResource: "FilterBogusFrameworks", withExtension: nil)!
+                guard let directoryURL = Bundle(for: type(of: self)).url(forResource: "FilterBogusFrameworks", withExtension: nil) else {
+                    fail("Could not load FilterBogusFrameworks from resources")
+                    return
+                }
 
 				let result = CarthageKit.frameworksInDirectory(directoryURL).collect().single()
 				expect(result?.value?.count) == 3

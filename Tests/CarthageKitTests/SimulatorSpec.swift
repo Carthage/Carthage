@@ -7,16 +7,21 @@ class SimulatorSpec: QuickSpec {
 	private let decoder = JSONDecoder()
 	
 	override func spec() {
-		func loadJSON(for resource: String) -> Data {
-			let url = Bundle(for: type(of: self)).url(forResource: resource, withExtension: "json")!
-			return try! Data(contentsOf: url)
+		func loadJSON(for resource: String) -> Data? {
+            guard let url = Bundle(for: type(of: self)).url(forResource: resource, withExtension: "json") else {
+                return nil
+            }
+			return try? Data(contentsOf: url)
 		}
 		
 		describe("Simulator") {
 			context("Xcode 10.0 or lower") {
 				it("should be parsed") {
 					let decoder = JSONDecoder()
-					let data = loadJSON(for: "Simulators/availables")
+                    guard let data = loadJSON(for: "Simulators/availables") else {
+                        fail("Could not load json from Simulators/availables")
+                        return
+                    }
 					let dictionary = try! decoder.decode([String: [String: [Simulator]]].self, from: data)
 					let devices = dictionary["devices"]!
 					
@@ -35,7 +40,10 @@ class SimulatorSpec: QuickSpec {
 			context("Xcode 10.1 beta") {
 				it("should be parsed") {
 					let decoder = JSONDecoder()
-					let data = loadJSON(for: "Simulators/availables-xcode101-beta")
+                    guard let data = loadJSON(for: "Simulators/availables-xcode101-beta") else {
+                        fail("Could not load json for Simulators/availables-xcode101-beta")
+                        return
+                    }
 					let dictionary = try! decoder.decode([String: [String: [Simulator]]].self, from: data)
 					let devices = dictionary["devices"]!
 					
@@ -54,7 +62,10 @@ class SimulatorSpec: QuickSpec {
 			context("Xcode 10.1") {
 				it("should be parsed") {
 					let decoder = JSONDecoder()
-					let data = loadJSON(for: "Simulators/availables-xcode101")
+                    guard let data = loadJSON(for: "Simulators/availables-xcode101") else {
+                        fail("Could not load json for Simulators/availables-xcode101-beta")
+                        return
+                    }
 					let dictionary = try! decoder.decode([String: [String: [Simulator]]].self, from: data)
 					let devices = dictionary["devices"]!
 					
@@ -73,7 +84,10 @@ class SimulatorSpec: QuickSpec {
 			context("Xcode 10.2 beta") {
 				it("should be parsed") {
 					let decoder = JSONDecoder()
-					let data = loadJSON(for: "Simulators/availables-xcode102-beta")
+                    guard let data = loadJSON(for: "Simulators/availables-xcode102-beta") else {
+                        fail("Could not load json for Simulators/availables-xcode102-beta")
+                        return
+                    }
 					let dictionary = try! decoder.decode([String: [String: [Simulator]]].self, from: data)
 					let devices = dictionary["devices"]!
 
@@ -94,7 +108,10 @@ class SimulatorSpec: QuickSpec {
 			context("when there are available simulators") {
 				context("Xcode 10.0 or lower") {
 					it("should return the first simulator of the latest version") {
-						let data = loadJSON(for: "Simulators/availables")
+                        guard let data = loadJSON(for: "Simulators/availables") else {
+                            fail("Could not load json for Simulators/availables")
+                            return
+                        }
 						let iPhoneSimulator = selectAvailableSimulator(of: .iPhoneSimulator, from: data)!
 						expect(iPhoneSimulator.udid).to(equal(UUID(uuidString: "A52BF797-F6F8-47F1-B559-68B66B553B23")!))
 						expect(iPhoneSimulator.isAvailable).to(beTrue())
@@ -112,7 +129,10 @@ class SimulatorSpec: QuickSpec {
 
 				context("Xcode 10.1 beta") {
 					it("should return the first simulator of the latest version") {
-						let data = loadJSON(for: "Simulators/availables-xcode101-beta")
+                        guard let data = loadJSON(for: "Simulators/availables-xcode101-beta") else {
+                            fail("Could not load json for Simulators/availables-xcode101-beta")
+                            return
+                        }
 						let iPhoneSimulator = selectAvailableSimulator(of: .iPhoneSimulator, from: data)!
 						expect(iPhoneSimulator.udid).to(equal(UUID(uuidString: "A52BF797-F6F8-47F1-B559-68B66B553B23")!))
 						expect(iPhoneSimulator.isAvailable).to(beTrue())
@@ -130,7 +150,10 @@ class SimulatorSpec: QuickSpec {
 
 				context("Xcode 10.1") {
 					it("should return the first simulator of the latest version") {
-						let data = loadJSON(for: "Simulators/availables-xcode101")
+                        guard let data = loadJSON(for: "Simulators/availables-xcode101") else {
+                            fail("Could not load json for Simulators/availables-xcode101")
+                            return
+                        }
 						let iPhoneSimulator = selectAvailableSimulator(of: .iPhoneSimulator, from: data)!
 						expect(iPhoneSimulator.udid).to(equal(UUID(uuidString: "A52BF797-F6F8-47F1-B559-68B66B553B23")!))
 						expect(iPhoneSimulator.isAvailable).to(beTrue())
@@ -148,7 +171,10 @@ class SimulatorSpec: QuickSpec {
 
 				context("When the latest installed simulator is unavailable") {
 					it("should return the first simulator of the latest version") {
-						let data = loadJSON(for: "Simulators/availables-xcode102-with-unavailable-latest-simulators")
+                        guard let data = loadJSON(for: "Simulators/availables-xcode102-with-unavailable-latest-simulators") else {
+                            fail("Could not load json for Simulators/availables-xcode102-with-unavailable-latest-simulators")
+                            return
+                        }
 						let iPhoneSimulator = selectAvailableSimulator(of: .iPhoneSimulator, from: data)!
 						expect(iPhoneSimulator.udid).to(equal(UUID(uuidString: "12972BD8-0153-452B-83F7-F253EA75C4FE")!))
 						expect(iPhoneSimulator.isAvailable).to(beTrue())
@@ -168,7 +194,10 @@ class SimulatorSpec: QuickSpec {
 
 				context("Xcode 10.2 beta") {
 					it("should return the first simulator of the latest version") {
-						let data = loadJSON(for: "Simulators/availables-xcode102-beta")
+                        guard let data = loadJSON(for: "Simulators/availables-xcode102-beta") else {
+                            fail("Could not load json for Simulators/availables-xcode102-beta")
+                            return
+                        }
 						let iPhoneSimulator = selectAvailableSimulator(of: .iPhoneSimulator, from: data)!
 						expect(iPhoneSimulator.udid).to(equal(UUID(uuidString: "A52BF797-F6F8-47F1-B559-68B66B553B23")!))
 						expect(iPhoneSimulator.isAvailable).to(beTrue())
@@ -187,7 +216,10 @@ class SimulatorSpec: QuickSpec {
 			
 			context("when there is no available simulator") {
 				it("should return nil") {
-					let data = loadJSON(for: "Simulators/unavailable")
+                    guard let data = loadJSON(for: "Simulators/unavailable") else {
+                        fail("Could not load data for Simulators/unavailable")
+                        return
+                    }
 					expect(selectAvailableSimulator(of: .watchSimulator, from: data)).to(beNil())
 				}
 			}

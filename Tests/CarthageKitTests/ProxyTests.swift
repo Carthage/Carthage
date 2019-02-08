@@ -26,15 +26,15 @@ class ProxySpec: QuickSpec {
 
 			it("should set the http properties") {
 				expect(proxy.connectionProxyDictionary).toNot(beNil())
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPEnable] as? Bool).to(beTrue())
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPProxy] as? String) == URL(string: "http://github.com:8888")?.host
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPPort] as? Int) == 8888
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPEnable] as? Bool).to(beTrue())
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPProxy] as? String) == URL(string: "http://github.com:8888")?.host
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPPort] as? Int) == 8888
 			}
 
 			it("should not set the https properties") {
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSEnable]).to(beNil())
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSProxy]).to(beNil())
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSPort]).to(beNil())
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPSEnable]).to(beNil())
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPSProxy]).to(beNil())
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPSPort]).to(beNil())
 			}
 		}
 
@@ -43,15 +43,15 @@ class ProxySpec: QuickSpec {
 
 			it("should set the https properties") {
 				expect(proxy.connectionProxyDictionary).toNot(beNil())
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSEnable] as? Bool).to(beTrue())
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSProxy] as? String) == URL(string: "https://github.com:8888")?.host
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSPort] as? Int) == 8888
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPSEnable] as? Bool).to(beTrue())
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPSProxy] as? String) == URL(string: "https://github.com:8888")?.host
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPSPort] as? Int) == 8888
 			}
 
 			it("should not set the http properties") {
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPEnable]).to(beNil())
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPProxy]).to(beNil())
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPPort]).to(beNil())
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPEnable]).to(beNil())
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPProxy]).to(beNil())
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPPort]).to(beNil())
 			}
 		}
 
@@ -65,12 +65,12 @@ class ProxySpec: QuickSpec {
 
 			it("should set the http properties") {
 				expect(proxy.connectionProxyDictionary).toNot(beNil())
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPEnable] as? Bool).to(beTrue())
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPProxy] as? String) == URL(string: "http://github.com:8888")?.host
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPPort] as? Int) == 8888
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSEnable] as? Bool).to(beTrue())
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSProxy] as? String) == URL(string: "https://github.com:443")?.host
-				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSPort] as? Int) == 443
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPEnable] as? Bool).to(beTrue())
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPProxy] as? String) == URL(string: "http://github.com:8888")?.host
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPPort] as? Int) == 8888
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPSEnable] as? Bool).to(beTrue())
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPSProxy] as? String) == URL(string: "https://github.com:443")?.host
+				expect(proxy.connectionProxyDictionary?[kCFNetworkProxiesHTTPSPort] as? Int) == 443
 			}
 		}
 	}

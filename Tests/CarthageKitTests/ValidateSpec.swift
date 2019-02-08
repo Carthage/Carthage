@@ -59,7 +59,12 @@ class ValidateSpec: QuickSpec {
 				let resolvedCartfile = ResolvedCartfile.from(string: validCartfile)
 				let project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
 
-				let result = project.requirementsByDependency(resolvedCartfile: resolvedCartfile.value!, tryCheckoutDirectory: false).single()
+                guard let resolvedCartfileValue = resolvedCartfile.value else {
+                    fail("Could not get resolved cartfile value")
+                    return
+                }
+
+				let result = project.requirementsByDependency(resolvedCartfile: resolvedCartfileValue, tryCheckoutDirectory: false).single()
 
 				expect(result?.value?.count) == 3
 
@@ -86,7 +91,10 @@ class ValidateSpec: QuickSpec {
 				let v4 = VersionSpecifier.compatibleWith(Version(4, 0, 0))
 
 				let requirements = [a: [b: v1, c: v2], d: [c: v3, e: v4]]
-				let invertedRequirements = CompatibilityInfo.invert(requirements: requirements).value!
+                guard let invertedRequirements = CompatibilityInfo.invert(requirements: requirements).value else {
+                    fail("Could not get invertedRequirements value")
+                    return
+                }
 				for expected in [b: [a: v1], c: [a: v2, d: v3], e: [d: v4]] {
 					expect(invertedRequirements.contains { $0.0 == expected.0 && $0.1 == expected.1 }) == true
 				}
@@ -137,9 +145,11 @@ class ValidateSpec: QuickSpec {
 			it("should identify a valid Cartfile.resolved as compatible") {
 				let resolvedCartfile = ResolvedCartfile.from(string: validCartfile)
 				let project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
-
-				let result = project.validate(resolvedCartfile: resolvedCartfile.value!).single()
-
+                guard let resolvedCartfileValue = resolvedCartfile.value else {
+                    fail("Could not get resolved cartfile value")
+                    return
+                }
+				let result = project.validate(resolvedCartfile: resolvedCartfileValue).single()
 				expect(result?.value).notTo(beNil())
 			}
 
@@ -147,7 +157,12 @@ class ValidateSpec: QuickSpec {
 				let resolvedCartfile = ResolvedCartfile.from(string: invalidCartfile)
 				let project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
 
-				let error = project.validate(resolvedCartfile: resolvedCartfile.value!).single()?.error
+                guard let resolvedCartfileValue = resolvedCartfile.value else {
+                    fail("Could not get resolved cartfile value")
+                    return
+                }
+
+				let error = project.validate(resolvedCartfile: resolvedCartfileValue).single()?.error
 				let infos = error?.compatibilityInfos.sorted { $0.dependency.name < $1.dependency.name }
 
 				expect(infos?[0].dependency) == alamofireDependency
