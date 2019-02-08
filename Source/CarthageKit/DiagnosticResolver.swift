@@ -34,7 +34,7 @@ public final class DiagnosticResolver: ResolverProtocol {
 
     private enum DiagnosticResolverError: Error {
         case versionRetrievalFailure(message: String)
-        case findDependenciesFailure(message: String)
+        case dependencyRetrievalFailure(message: String)
     }
 
     public convenience init(versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>, dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>, resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>) {
@@ -146,7 +146,7 @@ public final class DiagnosticResolver: ResolverProtocol {
     private func findDependencies(for dependency: Dependency, version: PinnedVersion) throws -> [(Dependency, VersionSpecifier)] {
         do {
             guard let transitiveDependencies: [(Dependency, VersionSpecifier)] = try dependenciesForDependency(dependency, version).collect().first()?.dematerialize() else {
-                throw DiagnosticResolverError.findDependenciesFailure(message: "Could not find transitive dependencies for dependency: \(dependency), version: \(version)")
+                throw DiagnosticResolverError.dependencyRetrievalFailure(message: "Could not find transitive dependencies for dependency: \(dependency), version: \(version)")
             }
 
             let storedDependency = self.dependencyMappings?[dependency] ?? dependency

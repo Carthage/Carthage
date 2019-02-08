@@ -10,7 +10,7 @@ Local repository for storing/loading dependencies and their versions. This is fo
 public final class LocalRepository {
 	private let directoryURL: URL
 
-	public init(directoryURL: URL, mappings: [Dependency: Dependency]? = nil) {
+	public init(directoryURL: URL) {
 		self.directoryURL = directoryURL
 	}
 
