@@ -1529,11 +1529,11 @@ extension Project {
 		let resolver = DiagnosticResolver(
 			versionsForDependency: versions(for:),
 			dependenciesForDependency: dependencies(for:version:),
-			resolvedGitReference: resolvedGitReference
+			resolvedGitReference: resolvedGitReference,
+            localRepository: repository
 		)
 
 		resolver.dependencyMappings = dependencyMappings
-		resolver.localRepository = repository
 		resolver.ignoreErrors = ignoreErrors
 
 		if let observer = eventObserver {

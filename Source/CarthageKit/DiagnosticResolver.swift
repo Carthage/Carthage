@@ -3,184 +3,195 @@ import Result
 import ReactiveSwift
 
 /**
-Signals for diagnostic resolver events
-*/
+ Signals for diagnostic resolver events
+ */
 public enum DiagnosticResolverEvent {
-	case foundVersions(versions: [PinnedVersion], dependency: Dependency, versionSpecifier: VersionSpecifier)
-	case foundTransitiveDependencies(transitiveDependencies: [(Dependency, VersionSpecifier)], dependency: Dependency, version: PinnedVersion)
-	case failedRetrievingTransitiveDependencies(error: Error, dependency: Dependency, version: PinnedVersion)
-	case failedRetrievingVersions(error: Error, dependency: Dependency, versionSpeficier: VersionSpecifier)
+    case foundVersions(versions: [PinnedVersion], dependency: Dependency, versionSpecifier: VersionSpecifier)
+    case foundTransitiveDependencies(transitiveDependencies: [(Dependency, VersionSpecifier)], dependency: Dependency, version: PinnedVersion)
+    case failedRetrievingTransitiveDependencies(error: Error, dependency: Dependency, version: PinnedVersion)
+    case failedRetrievingVersions(error: Error, dependency: Dependency, versionSpeficier: VersionSpecifier)
 }
 
 /**
-Resolver which logs all dependencies it encounters, and optionally stores them in the specified local repository.
-*/
+ Resolver which logs all dependencies it encounters, and optionally stores them in the specified local repository.
+ */
 public final class DiagnosticResolver: ResolverProtocol {
-	public var localRepository: LocalRepository?
-	public var ignoreErrors: Bool = false
-	private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
-	private let resolvedGitReference: (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
-	private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
+    private let localRepository: LocalRepository
+    private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
+    private let resolvedGitReference: (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
+    private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
 
-	private var versionSets = [Dependency: [PinnedVersion]]()
-	private var handledDependencies = Set<PinnedDependency>()
+    private var versionSets = [Dependency: [PinnedVersion]]()
+    private var handledDependencies = Set<PinnedDependency>()
 
-	// Specify mappings to anonimize private dependencies (which may not be disclosed as part of the diagnostics)
-	public var dependencyMappings: [Dependency: Dependency]?
+    public var ignoreErrors: Bool = false
 
-	public let diagnosticResolverEvents: Signal<DiagnosticResolverEvent, NoError>
-	private let diagnosticResolverEventPublisher: Signal<DiagnosticResolverEvent, NoError>.Observer
+    // Specify mappings to anonimize private dependencies (which may not be disclosed as part of the diagnostics)
+    public var dependencyMappings: [Dependency: Dependency]?
 
-	public init(
-		versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
-		dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
-		resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
-		) {
-		self.versionsForDependency = versionsForDependency
-		self.dependenciesForDependency = dependenciesForDependency
-		self.resolvedGitReference = resolvedGitReference
+    public let diagnosticResolverEvents: Signal<DiagnosticResolverEvent, NoError>
+    private let diagnosticResolverEventPublisher: Signal<DiagnosticResolverEvent, NoError>.Observer
 
-		let (signal, observer) = Signal<DiagnosticResolverEvent, NoError>.pipe()
-		diagnosticResolverEvents = signal
-		diagnosticResolverEventPublisher = observer
-	}
+    private enum DiagnosticResolverError: Error {
+        case versionRetrievalFailure(message: String)
+        case findDependenciesFailure(message: String)
+    }
 
-	public func resolve(
-		dependencies: [Dependency: VersionSpecifier],
-		lastResolved: [Dependency: PinnedVersion]? = nil,
-		dependenciesToUpdate: [String]? = nil
-		) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
-		let result: Result<[Dependency: PinnedVersion], CarthageError>
-		do {
-			try traverse(dependencies: Array(dependencies))
-			result = .success([Dependency: PinnedVersion]())
-		} catch let error as CarthageError {
-			result = .failure(error)
-		} catch {
-			result = .failure(CarthageError.internalError(description: error.localizedDescription))
-		}
-		return SignalProducer(result: result)
-	}
+    public convenience init(versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>, dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>, resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>) {
+        self.init(versionsForDependency: versionsForDependency,
+                  dependenciesForDependency: dependenciesForDependency,
+                  resolvedGitReference: resolvedGitReference,
+                  localRepository: LocalRepository(directoryURL: URL(fileURLWithPath: "/tmp")))
+    }
 
-	private func traverse(dependencies: [(Dependency, VersionSpecifier)]) throws {
-		for (dependency, versionSpecifier) in dependencies {
-			let versionSet = try findAllVersions(for: dependency, compatibleWith: versionSpecifier)
-			for version in versionSet {
-				let pinnedDependency = PinnedDependency(dependency: dependency, pinnedVersion: version)
+    public init(
+        versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
+        dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
+        resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>,
+        localRepository: LocalRepository) {
+        self.versionsForDependency = versionsForDependency
+        self.dependenciesForDependency = dependenciesForDependency
+        self.resolvedGitReference = resolvedGitReference
+        self.localRepository = localRepository
 
-				if !handledDependencies.contains(pinnedDependency) {
-					handledDependencies.insert(pinnedDependency)
+        let (signal, observer) = Signal<DiagnosticResolverEvent, NoError>.pipe()
+        diagnosticResolverEvents = signal
+        diagnosticResolverEventPublisher = observer
+    }
 
-					let transitiveDependencies = try findDependencies(for: dependency, version: version)
-					try traverse(dependencies: transitiveDependencies)
-				}
-			}
-		}
-	}
+    public func resolve(
+        dependencies: [Dependency: VersionSpecifier],
+        lastResolved: [Dependency: PinnedVersion]? = nil,
+        dependenciesToUpdate: [String]? = nil
+        ) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
+        let result: Result<[Dependency: PinnedVersion], CarthageError>
+        do {
+            try traverse(dependencies: Array(dependencies))
+            result = .success([Dependency: PinnedVersion]())
+        } catch let error as CarthageError {
+            result = .failure(error)
+        } catch {
+            result = .failure(CarthageError.internalError(description: error.localizedDescription))
+        }
+        return SignalProducer(result: result)
+    }
 
-	private func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> [PinnedVersion] {
-		do {
-			let versionSet: [PinnedVersion]
-			if let cachedVersionSet = versionSets[dependency] {
-				versionSet = cachedVersionSet
-			} else {
-				var pinnedVersions = [PinnedVersion]()
-				let pinnedVersionsProducer: SignalProducer<PinnedVersion, CarthageError>
-				var gitReference: String?
+    private func traverse(dependencies: [(Dependency, VersionSpecifier)]) throws {
+        for (dependency, versionSpecifier) in dependencies {
+            let versionSet = try findAllVersions(for: dependency, compatibleWith: versionSpecifier)
+            for version in versionSet {
+                let pinnedDependency = PinnedDependency(dependency: dependency, pinnedVersion: version)
 
-				switch versionSpecifier {
-				case .gitReference(let hash):
-					pinnedVersionsProducer = resolvedGitReference(dependency, hash)
-					gitReference = hash
-				default:
-					pinnedVersionsProducer = versionsForDependency(dependency)
-				}
+                if !handledDependencies.contains(pinnedDependency) {
+                    handledDependencies.insert(pinnedDependency)
 
-				let concreteVersionsProducer = pinnedVersionsProducer.filterMap { pinnedVersion -> PinnedVersion? in
-					pinnedVersions.append(pinnedVersion)
-					return nil
-				}
+                    let transitiveDependencies = try findDependencies(for: dependency, version: version)
+                    try traverse(dependencies: transitiveDependencies)
+                }
+            }
+        }
+    }
 
-				_ = try concreteVersionsProducer.collect().first()!.dematerialize()
+    private func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> [PinnedVersion] {
+        do {
+            let versionSet: [PinnedVersion]
+            if let cachedVersionSet = versionSets[dependency] {
+                versionSet = cachedVersionSet
+            } else {
+                let pinnedVersionsProducer: SignalProducer<PinnedVersion, CarthageError>
+                var gitReference: String?
 
-				versionSets[dependency] = pinnedVersions
+                switch versionSpecifier {
+                case .gitReference(let hash):
+                    pinnedVersionsProducer = resolvedGitReference(dependency, hash)
+                    gitReference = hash
+                default:
+                    pinnedVersionsProducer = versionsForDependency(dependency)
+                }
 
-				let storedDependency = self.dependencyMappings?[dependency] ?? dependency
-				try localRepository?.storePinnedVersions(pinnedVersions, for: storedDependency, gitReference: gitReference)
+                guard let pinnedVersions: [PinnedVersion] = try pinnedVersionsProducer.collect().first()?.dematerialize() else {
+                    throw DiagnosticResolverError.versionRetrievalFailure(message: "Could not collect versions for dependency: \(dependency) and versionSpeficier: \(versionSpecifier)")
+                }
+                versionSets[dependency] = pinnedVersions
 
-				versionSet = pinnedVersions
-			}
+                let storedDependency = self.dependencyMappings?[dependency] ?? dependency
+                try localRepository.storePinnedVersions(pinnedVersions, for: storedDependency, gitReference: gitReference)
 
-			let filteredVersionSet = versionSet.filter { pinnedVersion -> Bool in
-				versionSpecifier.isSatisfied(by: pinnedVersion)
-			}
+                versionSet = pinnedVersions
+            }
 
-			diagnosticResolverEventPublisher.send(value:
-				.foundVersions(versions: filteredVersionSet, dependency: dependency, versionSpecifier: versionSpecifier)
-			)
+            let filteredVersionSet = versionSet.filter { pinnedVersion -> Bool in
+                versionSpecifier.isSatisfied(by: pinnedVersion)
+            }
 
-			return filteredVersionSet
-		} catch let error {
+            diagnosticResolverEventPublisher.send(value:
+                .foundVersions(versions: filteredVersionSet, dependency: dependency, versionSpecifier: versionSpecifier)
+            )
 
-			diagnosticResolverEventPublisher.send(value:
-				.failedRetrievingVersions(error: error, dependency: dependency, versionSpeficier: versionSpecifier)
-			)
+            return filteredVersionSet
+        } catch let error {
 
-			if ignoreErrors {
-				return [PinnedVersion]()
-			} else {
-				throw error
-			}
-		}
-	}
+            diagnosticResolverEventPublisher.send(value:
+                .failedRetrievingVersions(error: error, dependency: dependency, versionSpeficier: versionSpecifier)
+            )
 
-	private func findDependencies(for dependency: Dependency, version: PinnedVersion) throws -> [(Dependency, VersionSpecifier)] {
-		do {
-			let transitiveDependencies: [(Dependency, VersionSpecifier)] = try dependenciesForDependency(dependency, version).collect().first()!.dematerialize()
+            if ignoreErrors {
+                return [PinnedVersion]()
+            } else {
+                throw error
+            }
+        }
+    }
 
-			let storedDependency = self.dependencyMappings?[dependency] ?? dependency
-			let storedTransitiveDependencies = transitiveDependencies.map { transitiveDependency, versionSpecifier -> (Dependency, VersionSpecifier) in
-				let storedTransitiveDependency = self.dependencyMappings?[transitiveDependency] ?? transitiveDependency
-				return (storedTransitiveDependency, versionSpecifier)
-			}
-			try localRepository?.storeTransitiveDependencies(storedTransitiveDependencies, for: storedDependency, version: version)
+    private func findDependencies(for dependency: Dependency, version: PinnedVersion) throws -> [(Dependency, VersionSpecifier)] {
+        do {
+            guard let transitiveDependencies: [(Dependency, VersionSpecifier)] = try dependenciesForDependency(dependency, version).collect().first()?.dematerialize() else {
+                throw DiagnosticResolverError.findDependenciesFailure(message: "Could not find transitive dependencies for dependency: \(dependency), version: \(version)")
+            }
 
-			diagnosticResolverEventPublisher.send(value:
-				.foundTransitiveDependencies(transitiveDependencies: transitiveDependencies, dependency: dependency, version: version)
-			)
+            let storedDependency = self.dependencyMappings?[dependency] ?? dependency
+            let storedTransitiveDependencies = transitiveDependencies.map { transitiveDependency, versionSpecifier -> (Dependency, VersionSpecifier) in
+                let storedTransitiveDependency = self.dependencyMappings?[transitiveDependency] ?? transitiveDependency
+                return (storedTransitiveDependency, versionSpecifier)
+            }
+            try localRepository.storeTransitiveDependencies(storedTransitiveDependencies, for: storedDependency, version: version)
 
-			return transitiveDependencies
-		} catch let error {
+            diagnosticResolverEventPublisher.send(value:
+                .foundTransitiveDependencies(transitiveDependencies: transitiveDependencies, dependency: dependency, version: version)
+            )
 
-			diagnosticResolverEventPublisher.send(value:
-				.failedRetrievingTransitiveDependencies(error: error, dependency: dependency, version: version)
-			)
+            return transitiveDependencies
+        } catch let error {
 
-			if ignoreErrors {
-				return [(Dependency, VersionSpecifier)]()
-			} else {
-				throw error
-			}
-		}
-	}
+            diagnosticResolverEventPublisher.send(value:
+                .failedRetrievingTransitiveDependencies(error: error, dependency: dependency, version: version)
+            )
 
-	private struct PinnedDependency: Hashable {
-		public let dependency: Dependency
-		public let pinnedVersion: PinnedVersion
-		private let hash: Int
+            if ignoreErrors {
+                return [(Dependency, VersionSpecifier)]()
+            } else {
+                throw error
+            }
+        }
+    }
 
-		init(dependency: Dependency, pinnedVersion: PinnedVersion) {
-			self.dependency = dependency
-			self.pinnedVersion = pinnedVersion
-			self.hash = 37 &* dependency.hashValue &+ pinnedVersion.hashValue
-		}
+    private struct PinnedDependency: Hashable {
+        public let dependency: Dependency
+        public let pinnedVersion: PinnedVersion
+        private let hash: Int
 
-		public var hashValue: Int {
-			return hash
-		}
+        init(dependency: Dependency, pinnedVersion: PinnedVersion) {
+            self.dependency = dependency
+            self.pinnedVersion = pinnedVersion
+            self.hash = 37 &* dependency.hashValue &+ pinnedVersion.hashValue
+        }
 
-		public static func == (lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
-			return lhs.pinnedVersion == rhs.pinnedVersion && lhs.dependency == rhs.dependency
-		}
-	}
+        public var hashValue: Int {
+            return hash
+        }
+
+        public static func == (lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
+            return lhs.pinnedVersion == rhs.pinnedVersion && lhs.dependency == rhs.dependency
+        }
+    }
 }
