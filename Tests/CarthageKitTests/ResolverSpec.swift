@@ -475,7 +475,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
             do {
                 _ = try signalProducer.first()?.dematerialize()
                 fail("Expected incompatibility error to be thrown")
-            } catch(let error) {
+            } catch {
                 print("Caught error: \(error)")
                 switch error {
                 case CarthageError.incompatibleRequirements(_, _, _):
@@ -514,7 +514,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
                 //Should not throw an error
                 _ = try project.buildOrderForResolvedCartfile(resolvedCartfile).first()?.dematerialize()
 
-            } catch(let error) {
+            } catch {
                 fail("Unexpected error thrown: \(error)")
             }
         }
@@ -548,7 +548,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
                 //Should not throw an error
                 _ = try project.buildOrderForResolvedCartfile(resolvedCartfile).first()?.dematerialize()
 
-            } catch(let error) {
+            } catch {
                 fail("Unexpected error thrown: \(error)")
             }
         }
@@ -579,7 +579,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
             expect(resolved.error).notTo(beNil())
             if let error = resolved.error {
                 switch error {
-                case .dependencyCycle(_):
+                case .dependencyCycle:
                     print("Dependency cycle error: \(error)")
                 default:
                     fail("Expected error to be of type .dependencyCycle")
