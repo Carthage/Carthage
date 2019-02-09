@@ -31,17 +31,26 @@ class ProjectSpec: QuickSpec {
 
 			func build(directoryURL url: URL, platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				let project = Project(directoryURL: url)
-				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
+				guard let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
 					.ignoreTaskData()
 					.on(value: { project, scheme in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
 					})
-					.map { _, scheme in scheme }
+					.map({ _, scheme in scheme })
 					.collect()
-					.single()!
+					.single() else {
+
+					fail("Could not build scheme")
+					return [String]()
+				}
 				expect(result.error).to(beNil())
 
-				return result.value!.map { $0.name }
+				guard let resultValue = result.value else {
+					fail("No result found")
+					return [String]()
+				}
+
+				return resultValue.map { $0.name }
 			}
 
 			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
@@ -145,9 +154,11 @@ class ProjectSpec: QuickSpec {
 						header.replaceSubrange(effectiveVersionRange, with: "")
 					}
 
-					let versionRange = header.range(of: swiftVersionResult.value!)!
-					header.replaceSubrange(versionRange, with: version)
+					guard let value = swiftVersionResult.value, let versionRange = header.range(of: value) else {
+						throw ProjectSpecError.assertion(message: "Could not get version range")
+					}
 
+					header.replaceSubrange(versionRange, with: version)
 					try header.write(to: swiftHeaderURL, atomically: true, encoding: header.fastestEncoding)
 				}
 
@@ -426,10 +437,14 @@ class ProjectSpec: QuickSpec {
 			@discardableResult
 			func addCommit() -> String {
 				_ = launchGitTask([ "commit", "--allow-empty", "-m \"Empty commit\"" ], repositoryFileURL: repositoryURL).wait()
-				return launchGitTask([ "rev-parse", "--short", "HEAD" ], repositoryFileURL: repositoryURL)
-					.last()!
-					.value!
-					.trimmingCharacters(in: .newlines)
+				guard let commit = launchGitTask([ "rev-parse", "--short", "HEAD" ], repositoryFileURL: repositoryURL)
+					.last()?
+					.value?
+					.trimmingCharacters(in: .newlines) else {
+                    fail("Could not get commit")
+                    return ""
+                }
+				return commit
 			}
 
 			func cloneOrFetch(commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
