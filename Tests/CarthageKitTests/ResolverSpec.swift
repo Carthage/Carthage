@@ -478,7 +478,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
             } catch {
                 print("Caught error: \(error)")
                 switch error {
-                case CarthageError.incompatibleRequirements(_, _, _):
+                case CarthageError.incompatibleRequirements:
                     return
                 default:
                     break
