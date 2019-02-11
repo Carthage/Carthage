@@ -34,7 +34,7 @@ public struct DiagnoseCommand: CommandProtocol {
 					usage: "an optional file containing mappings for dependencies to anonymize during the storage" +
 					" with format: <dependency string>=<mapped dependency string> (one mapping per line)")
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "show verbose dependency info as it is resolved")
-				<*> mode <| Option(key: "ignoreErrors", defaultValue: false, usage: "whether errors should be ignored while retrieving dependency information")
+				<*> mode <| Option(key: "ignore-errors", defaultValue: false, usage: "whether errors should be ignored while retrieving dependency information")
 				<*> ColorOptions.evaluate(mode)
 		}
 
@@ -83,9 +83,12 @@ public struct DiagnoseCommand: CommandProtocol {
 												 ignoreErrors: options.ignoreErrors,
 												 dependencyMappings: dependencyMappings,
 												 eventObserver: { logger.log(event: $0) })
-					.attemptMap { cartfile -> Result<URL, CarthageError> in
-					let cartfileURL = self.writeCartfile(cartfile, to: baseUrl)
-					return cartfileURL
+					.attemptMap { cartfiles -> Result<URL, CarthageError> in
+                        let cartfileURL = self.writeCartfile(cartfiles.0, to: baseUrl)
+                        if let resolvedCartfile = cartfiles.1 {
+                            _ = self.writeResolvedCartfile(resolvedCartfile, to: baseUrl)
+                        }
+                        return cartfileURL
 				}.map { cartfileURL -> URL in
 					carthage.println(formatting.bullets + "Finished storing diagnosis info into directory: \(baseUrl.path)")
 					carthage.println(formatting.bullets + "Please submit the contents of this directory to the Carthage team for review")
@@ -108,6 +111,14 @@ public struct DiagnoseCommand: CommandProtocol {
 			return cartfileURL
 		})
 	}
+
+    private func writeResolvedCartfile(_ cartfile: ResolvedCartfile, to directory: URL) -> Result<URL, CarthageError> {
+        return Result(attempt: { () -> (URL) in
+            let cartfileURL = ResolvedCartfile.url(in: directory)
+            try cartfile.description.write(to: cartfileURL, atomically: true, encoding: .utf8)
+            return cartfileURL
+        })
+    }
 
 	private func repositoryURL(for outputPath: String?) -> URL {
 		let directoryURL: URL
@@ -136,13 +147,19 @@ public struct DiagnoseCommand: CommandProtocol {
 				if components.count != 2 {
 					throw CarthageError.parseError(description: "Could not parse mapping file \(file) line #\(lineNumber): line should contain exactly one '=' sign")
 				} else {
-					do {
-						let keyDependency = try self.dependencyFrom(string: components[0])
-						let valueDependency = try self.dependencyFrom(string: components[1])
-						mappings[keyDependency] = valueDependency
-					} catch let error {
-						throw CarthageError.parseError(description: "Could not parse mapping file \(file) line #\(lineNumber): \(error.localizedDescription)")
-					}
+                    let keyDependency: Dependency
+                    let valueDependency: Dependency
+                    do {
+                        keyDependency = try self.dependencyFrom(string: components[0])
+                    } catch {
+                        throw CarthageError.parseError(description: "Could not parse mapping file \(file) line #\(lineNumber): \(error)")
+                    }
+                    do {
+                        valueDependency = try self.dependencyFrom(string: components[1])
+                    } catch {
+                        throw CarthageError.parseError(description: "Could not parse mapping file \(file) line #\(lineNumber): \(error)")
+                    }
+                    mappings[keyDependency] = valueDependency
 				}
 			}
 			lineNumber += 1

@@ -1525,7 +1525,7 @@ public func cloneOrFetch(
 // Diagnostic methods to be able to diagnose problems with the resolver with dependencies which cannot be tested 'live', e.g. for private repositories
 extension Project {
 	// Function which outputs all possible dependencies and versions of those dependencies to the repository specified
-	public func storeDependencies(to repository: LocalRepository, ignoreErrors: Bool = false, dependencyMappings: [Dependency: Dependency]? = nil, eventObserver: ((DiagnosticResolverEvent) -> Void)? = nil) -> SignalProducer<Cartfile, CarthageError> {
+    public func storeDependencies(to repository: LocalRepository, ignoreErrors: Bool = false, dependencyMappings: [Dependency: Dependency]? = nil, eventObserver: ((DiagnosticResolverEvent) -> Void)? = nil) -> SignalProducer<(Cartfile, ResolvedCartfile?), CarthageError> {
 		let resolver = DiagnosticResolver(
 			versionsForDependency: versions(for:),
 			dependenciesForDependency: dependencies(for:version:),
@@ -1546,20 +1546,28 @@ extension Project {
 
 		return SignalProducer
 			.zip(loadCombinedCartfile(), resolvedCartfile)
-			.flatMap(.merge) { cartfile, resolvedCartfile -> SignalProducer<Cartfile, CarthageError> in
+            .flatMap(.merge) { cartfile, resolvedCartfile -> SignalProducer<(Cartfile, ResolvedCartfile?), CarthageError> in
 				_ = resolver.resolve(
 					dependencies: cartfile.dependencies,
 					lastResolved: resolvedCartfile?.dependencies,
 					dependenciesToUpdate: nil
 				)
 
-				let mappedDependencies = Dictionary(uniqueKeysWithValues: cartfile.dependencies.map { dependency, versionSpecifier -> (Dependency, VersionSpecifier) in
+                let mappedDependencies: [Dependency: VersionSpecifier] = Dictionary(uniqueKeysWithValues: cartfile.dependencies.map { dependency, versionSpecifier -> (Dependency, VersionSpecifier) in
 					let mappedDependency = dependencyMappings?[dependency] ?? dependency
 					return (mappedDependency, versionSpecifier)
 				})
 
+                let mappedResolvedDependencies: [Dependency: PinnedVersion]? = resolvedCartfile.map {
+                    Dictionary(uniqueKeysWithValues: $0.dependencies.map { dependency, pinnedVersion -> (Dependency, PinnedVersion) in
+                        let mappedDependency = dependencyMappings?[dependency] ?? dependency
+                        return (mappedDependency, pinnedVersion)
+                    })
+                }
+
 				let mappedCartfile = Cartfile(dependencies: mappedDependencies)
-				return SignalProducer(value: mappedCartfile)
+                let mappedResolvedCartfile = mappedResolvedDependencies.map{ ResolvedCartfile(dependencies: $0) }
+				return SignalProducer(value: (mappedCartfile, mappedResolvedCartfile))
 		}
 	}
 
