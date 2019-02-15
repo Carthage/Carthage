@@ -175,13 +175,13 @@ extension Dependency: CustomStringConvertible {
 
 extension Dependency {
 	/// Returns the URL that the dependency's remote repository exists at.
-	func gitURL(preferHTTPS: Bool) -> GitURL? {
+	func gitURL(useSSH: Bool) -> GitURL? {
 		switch self {
 		case let .gitHub(server, repository):
-			if preferHTTPS {
-				return server.httpsURL(for: repository)
+			if useSSH {
+                return server.sshURL(for: repository)
 			} else {
-				return server.sshURL(for: repository)
+				return server.httpsURL(for: repository)
 			}
 
 		case let .git(url):

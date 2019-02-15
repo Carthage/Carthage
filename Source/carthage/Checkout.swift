@@ -8,7 +8,7 @@ import Curry
 /// Type that encapsulates the configuration and evaluation of the `checkout` subcommand.
 public struct CheckoutCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
-		public let useSSH: Bool
+        public let useSSH: Bool
 		public let useSubmodules: Bool
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
@@ -20,7 +20,7 @@ public struct CheckoutCommand: CommandProtocol {
 		             directoryPath: String,
 		             dependenciesToCheckout: [String]?
 		) {
-			self.useSSH = useSSH
+            self.useSSH = useSSH
 			self.useSubmodules = useSubmodules
 			self.colorOptions = colorOptions
 			self.directoryPath = directoryPath
@@ -45,7 +45,7 @@ public struct CheckoutCommand: CommandProtocol {
 		public func loadProject() -> SignalProducer<Project, CarthageError> {
 			let directoryURL = URL(fileURLWithPath: self.directoryPath, isDirectory: true)
 			let project = Project(directoryURL: directoryURL)
-			project.preferHTTPS = !self.useSSH
+			project.useSSH = self.useSSH
 			project.useSubmodules = self.useSubmodules
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)

@@ -74,7 +74,7 @@ public struct OutdatedCommand: CommandProtocol {
 		public func loadProject() -> SignalProducer<Project, CarthageError> {
 			let directoryURL = URL(fileURLWithPath: self.directoryPath, isDirectory: true)
 			let project = Project(directoryURL: directoryURL)
-			project.preferHTTPS = !self.useSSH
+			project.useSSH = self.useSSH
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
 			project.projectEvents.observeValues { eventSink.put($0) }

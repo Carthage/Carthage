@@ -25,7 +25,7 @@ public struct FetchCommand: CommandProtocol {
 		let dependency = Dependency.git(options.repositoryURL)
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 
-		return cloneOrFetch(dependency: dependency, preferHTTPS: true)
+		return cloneOrFetch(dependency: dependency, useSSH: false)
 			.on(value: { event, _ in
 				if let event = event {
 					eventSink.put(event)
