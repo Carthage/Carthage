@@ -123,7 +123,7 @@ extension Dependency: Scannable {
 							.standardizedFileURL
 						return .success(self.binary(BinaryURL(url: absoluteURL, resolvedDescription: url.absoluteString)))
 					} else {
-						return .failure(ScannableError(message: "non-https, non-file URL found for dependency type `binary`", currentLine: scanner.currentLine))
+						return .failure(ScannableError(message: "invalid URL scheme found for type `binary`, must be file or https", currentLine: scanner.currentLine))
 					}
 				} else {
 					return .failure(ScannableError(message: "invalid URL found for dependency type `binary`", currentLine: scanner.currentLine))

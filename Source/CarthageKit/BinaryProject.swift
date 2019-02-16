@@ -29,7 +29,7 @@ public struct BinaryProject: Equatable {
 						return .failure(BinaryJSONError.invalidURL(value))
 					}
 					guard binaryURL.scheme == "file" || binaryURL.scheme == "https" else {
-						return .failure(BinaryJSONError.nonHTTPSURL(binaryURL))
+						return .failure(BinaryJSONError.invalidURLScheme(binaryURL))
 					}
 
 					versions[pinnedVersion] = binaryURL

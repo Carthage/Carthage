@@ -11,8 +11,8 @@ public enum BinaryJSONError: Error {
 	/// Unable to parse a URL from a framework entry.
 	case invalidURL(String)
 
-	/// URL is non-HTTPS
-	case nonHTTPSURL(URL)
+	/// URL scheme is not supported or allowed
+	case invalidURLScheme(URL)
 }
 
 extension BinaryJSONError: CustomStringConvertible {
@@ -27,8 +27,8 @@ extension BinaryJSONError: CustomStringConvertible {
 		case let .invalidURL(string):
 			return "invalid URL: \(string)"
 
-		case let .nonHTTPSURL(url):
-			return "specified URL '\(url)' must be HTTPS"
+		case let .invalidURLScheme(url):
+            return "invalid scheme in URL: '\(url)', must be file or https"
 		}
 	}
 }
@@ -45,7 +45,7 @@ extension BinaryJSONError: Equatable {
 		case let (.invalidURL(left), .invalidURL(right)):
 			return left == right
 
-		case let (.nonHTTPSURL(left), .nonHTTPSURL(right)):
+		case let (.invalidURLScheme(left), .invalidURLScheme(right)):
 			return left == right
 
 		default:

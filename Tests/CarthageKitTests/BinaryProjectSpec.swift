@@ -71,7 +71,7 @@ class BinaryProjectSpec: QuickSpec {
 				let jsonData = "{ \"1.0\": \"http://my.domain.com/framework.zip\" }".data(using: .utf8)!
 				let actualError = BinaryProject.from(jsonData: jsonData).error
 
-				expect(actualError) == .nonHTTPSURL(URL(string: "http://my.domain.com/framework.zip")!)
+				expect(actualError) == .invalidURLScheme(URL(string: "http://my.domain.com/framework.zip")!)
 			}
 
 			it("should parse with a file url") {
