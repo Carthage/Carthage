@@ -10,7 +10,7 @@ public struct BinaryProject: Equatable {
 
 	public var versions: [PinnedVersion: URL]
 
-	public static func from(jsonData: Data) -> Result<BinaryProject, BinaryJSONError> {
+    public static func from(jsonData: Data, allowHTTP: Bool = false) -> Result<BinaryProject, BinaryJSONError> {
 		return Result<[String: String], AnyError>(attempt: { try jsonDecoder.decode([String: String].self, from: jsonData) })
 			.mapError { .invalidJSON($0.error) }
 			.flatMap { json -> Result<BinaryProject, BinaryJSONError> in
@@ -28,7 +28,7 @@ public struct BinaryProject: Equatable {
 					guard let binaryURL = URL(string: value) else {
 						return .failure(BinaryJSONError.invalidURL(value))
 					}
-                    guard binaryURL.schemeIsValid else {
+                    guard binaryURL.validateScheme(allowHTTP: allowHTTP) else {
                         return .failure(BinaryJSONError.invalidURLScheme(binaryURL))
                     }
 

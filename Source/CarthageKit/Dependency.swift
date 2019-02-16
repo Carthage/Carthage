@@ -94,12 +94,12 @@ extension Dependency: Comparable {
 }
 
 extension Dependency: Scannable {
-	/// Attempts to parse a Dependency.
-	public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
-		return from(scanner, base: nil)
-	}
-
-	public static func from(_ scanner: Scanner, base: URL? = nil) -> Result<Dependency, ScannableError> {
+    /// Attempts to parse a Dependency.
+    public static func from(_ scanner: Scanner) -> Result<Dependency, ScannableError> {
+        return from(scanner, base: nil, allowHTTP: false)
+    }
+    /// Attempts to parse a Dependency and adds the option to allow http.
+    public static func from(_ scanner: Scanner, base: URL? = nil, allowHTTP: Bool = false) -> Result<Dependency, ScannableError> {
 		let parser: (String) -> Result<Dependency, ScannableError>
 
 		if scanner.scanString("github", into: nil) {
@@ -114,7 +114,7 @@ extension Dependency: Scannable {
 		} else if scanner.scanString("binary", into: nil) {
 			parser = { urlString in
 				if let url = URL(string: urlString) {
-					if url.schemeIsValid {
+					if url.validateScheme(allowHTTP: allowHTTP) {
 						return .success(self.binary(BinaryURL(url: url, resolvedDescription: url.description)))
 					} else if url.scheme == nil {
 						// This can use URL.init(fileURLWithPath:isDirectory:relativeTo:) once we can target 10.11+

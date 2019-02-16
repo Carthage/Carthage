@@ -145,7 +145,7 @@ For dependencies that do not have source code available, a binary project specif
 * The JSON specification file name **should** have the same name as the framework and **not** be named **Carthage.json**, (example: MyFramework.json).
 * The JSON structure is a top-level dictionary with the key-value pairs of version / location.
 * The version **must** be a semantic version.  Git branches, tags and commits are not valid.
-* The location **must** be an `https` url.
+* The location **must** be an `https` url unless you use the `--allow-http` flag.
 
 #### Example binary project specification
 

@@ -25,7 +25,7 @@ public struct Cartfile {
 	}
 
 	/// Attempts to parse Cartfile information from a string.
-	public static func from(string: String) -> Result<Cartfile, CarthageError> {
+    public static func from(string: String, allowHTTP: Bool = false) -> Result<Cartfile, CarthageError> {
 		var dependencies: [Dependency: VersionSpecifier] = [:]
 		var duplicates: [Dependency] = []
 		var result: Result<(), CarthageError> = .success(())
@@ -56,7 +56,7 @@ public struct Cartfile {
 					.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 			)
 
-			switch Dependency.from(scannerWithoutComments).fanout(VersionSpecifier.from(scannerWithoutComments)) {
+            switch Dependency.from(scannerWithoutComments, allowHTTP: allowHTTP).fanout(VersionSpecifier.from(scannerWithoutComments)) {
 			case let .success((dependency, version)):
 				if case .binary = dependency, case .gitReference = version {
 					result = .failure(
@@ -95,10 +95,10 @@ public struct Cartfile {
 	}
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
-	public static func from(file cartfileURL: URL) -> Result<Cartfile, CarthageError> {
-		return Result(attempt: { try String(contentsOf: cartfileURL, encoding: .utf8) })
+    public static func from(file cartfileURL: URL, allowHTTP: Bool) -> Result<Cartfile, CarthageError> {
+		return Result(attempt: { (try String(contentsOf: cartfileURL, encoding: .utf8), allowHTTP) })
 			.mapError { .readFailed(cartfileURL, $0) }
-			.flatMap(Cartfile.from(string:))
+            .flatMap(Cartfile.from(string:allowHTTP:))
 			.mapError { error in
 				guard case let .duplicateDependencies(dupes) = error else { return error }
 
@@ -145,13 +145,13 @@ public struct ResolvedCartfile {
 	}
 
 	/// Attempts to parse Cartfile.resolved information from a string.
-	public static func from(string: String) -> Result<ResolvedCartfile, CarthageError> {
+    public static func from(string: String, allowHTTP: Bool = false) -> Result<ResolvedCartfile, CarthageError> {
 		var cartfile = self.init(dependencies: [:])
 		var result: Result<(), CarthageError> = .success(())
 
 		let scanner = Scanner(string: string)
 		scannerLoop: while !scanner.isAtEnd {
-			switch Dependency.from(scanner).fanout(PinnedVersion.from(scanner)) {
+            switch Dependency.from(scanner, allowHTTP: allowHTTP).fanout(PinnedVersion.from(scanner)) {
 			case let .success((dep, version)):
 				cartfile.dependencies[dep] = version
 

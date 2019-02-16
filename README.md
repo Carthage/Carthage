@@ -206,6 +206,12 @@ If the framework you want to add to your project has dependencies explicitly lis
 
 If the embedded framework in your project has dependencies to other frameworks you must  **link them to application target** (even if application target does not have dependency to that frameworks and never uses them).
 
+### Allow http for dependencies
+
+By default, Carthage does not allow downloading dependencies over http due to security issues. While it's safe to use http internally, Carthage can't know whether you're hitting an intranet server. To safeguard other users, http is not allowed. 
+
+You can override this safeguard by using the `--allow-http` flag.
+
 ### Using submodules for dependencies
 
 By default, Carthage will directly [check out][Carthage/Checkouts] dependencies’ source files into your project folder, leaving you to commit or ignore them as you choose. If you’d like to have dependencies available as Git submodules instead (perhaps so you can commit and push changes within them), you can run `carthage update` or `carthage checkout` with the `--use-submodules` flag.

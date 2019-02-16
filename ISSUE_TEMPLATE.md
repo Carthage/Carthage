@@ -4,6 +4,7 @@
 * `xcodebuild -version`: 
 * Are you using `--no-build`? 
 * Are you using `--no-use-binaries`? 
+* Are you using `--allow-http`?
 * Are you using `--use-submodules`? 
 * Are you using `--cache-builds`? 
 * Are you using `--new-resolver`? 

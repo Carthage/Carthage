@@ -10,14 +10,18 @@ class URLExtensionsSpec: QuickSpec {
             describe("schemeIsValid") {
                 it("should be true") {
                     let expected = true
-                    expect(URL(string: "https://github.com")?.schemeIsValid) == expected
-                    expect(URL(string: "file://github/com/binary.json")?.schemeIsValid) == expected
+                    expect(URL(string: "file://github/com/binary.json")?.validateScheme()) == expected
+                    expect(URL(string: "http://github.com")?.validateScheme(allowHTTP: true)) == expected
+                    expect(URL(string: "https://github.com")?.validateScheme()) == expected
+                    expect(URL(string: "https://github.com")?.validateScheme(allowHTTP: true)) == expected
+                    expect(URL(string: "https://github.com")?.validateScheme(allowHTTP: false)) == expected
                 }
                 it("should be false") {
                     let expected = false
-                    expect(URL(string: "invalid")?.schemeIsValid) == expected
-                    expect(URL(string: "invalid://github.com")?.schemeIsValid) == expected
-                    expect(URL(string: "http://github.com")?.schemeIsValid) == expected
+                    expect(URL(string: "invalid")?.validateScheme()) == expected
+                    expect(URL(string: "invalid://github.com")?.validateScheme()) == expected
+                    expect(URL(string: "http://github.com")?.validateScheme()) == expected
+                    expect(URL(string: "http://github.com")?.validateScheme(allowHTTP: false)) == expected
                 }
             }
         }

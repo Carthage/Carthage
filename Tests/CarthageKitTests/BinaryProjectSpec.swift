@@ -67,11 +67,22 @@ class BinaryProjectSpec: QuickSpec {
 				expect(actualError) == .invalidURL("💩")
 			}
 
-			it("should fail with a non HTTPS url") {
+			it("should fail with an http URL") {
 				let jsonData = "{ \"1.0\": \"http://my.domain.com/framework.zip\" }".data(using: .utf8)!
-				let actualError = BinaryProject.from(jsonData: jsonData).error
+				let actualError = BinaryProject.from(jsonData: jsonData, allowHTTP: false).error
 
 				expect(actualError) == .invalidURLScheme(URL(string: "http://my.domain.com/framework.zip")!)
+			}
+            
+			it("should parse with an http url if allowed") {
+				let jsonData = "{ \"1.0\": \"http://my.domain.com/framework.zip\" }".data(using: .utf8)!
+				let actualBinaryProject = BinaryProject.from(jsonData: jsonData, allowHTTP: true).value
+				
+				let expectedBinaryProject = BinaryProject(versions: [
+					PinnedVersion("1.0"): URL(string: "http://my.domain.com/framework.zip")!,
+				])
+				
+				expect(actualBinaryProject) == expectedBinaryProject
 			}
 
 			it("should parse with a file url") {

@@ -210,6 +210,16 @@ class DependencySpec: QuickSpec {
 
 					expect(dependency) == .binary(binary)
 				}
+                
+				it("should read a URL with http scheme if allowed") {
+					let scanner = Scanner(string: "binary \"http://mysupercoolinternalwebhost.com/\"")
+					
+					let dependency = Dependency.from(scanner, allowHTTP: true).value
+					let url = URL(string: "http://mysupercoolinternalwebhost.com/")!
+					let binary = BinaryURL(url: url, resolvedDescription: url.description)
+					
+					expect(dependency) == .binary(binary)
+				}
 
 				it("should read a URL with file scheme") {
 					let scanner = Scanner(string: "binary \"file:///my/domain/com/framework.json\"")

@@ -48,6 +48,7 @@ public struct OutdatedCommand: CommandProtocol {
 	}
 
 	public struct Options: OptionsProtocol {
+		public let allowHTTP: Bool
 		public let useSSH: Bool
 		public let isVerbose: Bool
 		public let outputXcodeWarnings: Bool
@@ -62,6 +63,7 @@ public struct OutdatedCommand: CommandProtocol {
 			)
 
 			return curry(self.init)
+                <*> mode <| Option(key: "allow-http", defaultValue: false, usage: "allow http for downloading dependencies")
 				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> mode <| Option(key: "xcode-warnings", defaultValue: false, usage: "output Xcode compatible warning messages")
@@ -74,6 +76,7 @@ public struct OutdatedCommand: CommandProtocol {
 		public func loadProject() -> SignalProducer<Project, CarthageError> {
 			let directoryURL = URL(fileURLWithPath: self.directoryPath, isDirectory: true)
 			let project = Project(directoryURL: directoryURL)
+			project.allowHTTP = self.allowHTTP
 			project.useSSH = self.useSSH
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
