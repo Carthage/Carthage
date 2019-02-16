@@ -28,7 +28,7 @@ extension BinaryJSONError: CustomStringConvertible {
 			return "invalid URL: \(string)"
 
 		case let .invalidURLScheme(url):
-            return "invalid scheme in URL: '\(url)', must be file or https"
+            return "invalid scheme in URL: '\(url)', must be \(URL.validSchemesMessage)"
 		}
 	}
 }
