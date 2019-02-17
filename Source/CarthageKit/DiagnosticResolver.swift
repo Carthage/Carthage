@@ -21,9 +21,6 @@ public final class DiagnosticResolver: ResolverProtocol {
     private let resolvedGitReference: (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
     private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
 
-    private var versionSets = [Dependency: [PinnedVersion]]()
-    private var handledDependencies = Set<PinnedDependency>()
-
     public var ignoreErrors: Bool = false
 
     // Specify mappings to anonimize private dependencies (which may not be disclosed as part of the diagnostics)
@@ -37,7 +34,9 @@ public final class DiagnosticResolver: ResolverProtocol {
         case dependencyRetrievalFailure(message: String)
     }
 
-    public convenience init(versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>, dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>, resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>) {
+    public convenience init(versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
+                            dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
+                            resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>) {
         self.init(versionsForDependency: versionsForDependency,
                   dependenciesForDependency: dependenciesForDependency,
                   resolvedGitReference: resolvedGitReference,
@@ -66,7 +65,11 @@ public final class DiagnosticResolver: ResolverProtocol {
         ) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
         let result: Result<[Dependency: PinnedVersion], CarthageError>
         do {
-            try traverse(dependencies: Array(dependencies))
+            var handledDependencies = Set<PinnedDependency>()
+            var cachedVersionSets = [Dependency: [PinnedVersion]]()
+            try traverse(dependencies: Array(dependencies),
+                         handledDependencies: &handledDependencies,
+                         cachedVersionSets: &cachedVersionSets)
             result = .success([Dependency: PinnedVersion]())
         } catch let error as CarthageError {
             result = .failure(error)
@@ -75,10 +78,14 @@ public final class DiagnosticResolver: ResolverProtocol {
         }
         return SignalProducer(result: result)
     }
-
-    private func traverse(dependencies: [(Dependency, VersionSpecifier)]) throws {
+    
+    private func traverse(dependencies: [(Dependency, VersionSpecifier)],
+                          handledDependencies: inout Set<PinnedDependency>,
+                          cachedVersionSets: inout [Dependency: [PinnedVersion]]) throws {
         for (dependency, versionSpecifier) in dependencies {
-            let versionSet = try findAllVersions(for: dependency, compatibleWith: versionSpecifier)
+            let versionSet = try findAllVersions(for: dependency,
+                                                 compatibleWith: versionSpecifier,
+                                                 cachedVersionSets: &cachedVersionSets)
             for version in versionSet {
                 let pinnedDependency = PinnedDependency(dependency: dependency, pinnedVersion: version)
 
@@ -86,16 +93,20 @@ public final class DiagnosticResolver: ResolverProtocol {
                     handledDependencies.insert(pinnedDependency)
 
                     let transitiveDependencies = try findDependencies(for: dependency, version: version)
-                    try traverse(dependencies: transitiveDependencies)
+                    try traverse(dependencies: transitiveDependencies,
+                                 handledDependencies: &handledDependencies,
+                                 cachedVersionSets: &cachedVersionSets)
                 }
             }
         }
     }
 
-    private func findAllVersions(for dependency: Dependency, compatibleWith versionSpecifier: VersionSpecifier) throws -> [PinnedVersion] {
+    private func findAllVersions(for dependency: Dependency,
+                                 compatibleWith versionSpecifier: VersionSpecifier,
+                                 cachedVersionSets: inout [Dependency: [PinnedVersion]]) throws -> [PinnedVersion] {
         do {
             let versionSet: [PinnedVersion]
-            if let cachedVersionSet = versionSets[dependency] {
+            if let cachedVersionSet = cachedVersionSets[dependency] {
                 versionSet = cachedVersionSet
             } else {
                 let pinnedVersionsProducer: SignalProducer<PinnedVersion, CarthageError>
@@ -112,7 +123,7 @@ public final class DiagnosticResolver: ResolverProtocol {
                 guard let pinnedVersions: [PinnedVersion] = try pinnedVersionsProducer.collect().first()?.dematerialize() else {
                     throw DiagnosticResolverError.versionRetrievalFailure(message: "Could not collect versions for dependency: \(dependency) and versionSpeficier: \(versionSpecifier)")
                 }
-                versionSets[dependency] = pinnedVersions
+                cachedVersionSets[dependency] = pinnedVersions
 
                 let storedDependency = self.dependencyMappings?[dependency] ?? dependency
                 try localRepository.storePinnedVersions(pinnedVersions, for: storedDependency, gitReference: gitReference)
