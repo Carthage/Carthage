@@ -5,7 +5,7 @@ import ReactiveSwift
 /**
 Signals for diagnostic resolver events
 */
-public enum DiagnosticResolverEvent {
+public enum DependencyCrawlerEvent {
 	case foundVersions(versions: [PinnedVersion], dependency: Dependency, versionSpecifier: VersionSpecifier)
 	case foundTransitiveDependencies(transitiveDependencies: [(Dependency, VersionSpecifier)], dependency: Dependency, version: PinnedVersion)
 	case failedRetrievingTransitiveDependencies(error: Error, dependency: Dependency, version: PinnedVersion)
@@ -13,71 +13,61 @@ public enum DiagnosticResolverEvent {
 }
 
 /**
-Resolver which logs all dependencies it encounters, and optionally stores them in the specified local repository.
+Class which logs all dependencies it encounters and stores them in the specified local store to be able to support subsequent offline test cases.
 */
-public final class DiagnosticResolver: ResolverProtocol {
-	private let localRepository: LocalRepository
+public final class DependencyCrawler {
+	private let store: LocalDependencyStore
 	private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
 	private let resolvedGitReference: (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
 	private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
 
-	public var ignoreErrors: Bool = false
+	public let ignoreErrors: Bool
 
-	// Specify mappings to anonimize private dependencies (which may not be disclosed as part of the diagnostics)
-	public var dependencyMappings: [Dependency: Dependency]?
+	// Specify mappings to anonymize private dependencies (which may not be disclosed as part of the diagnostics)
+	private var dependencyMappings: [Dependency: Dependency]?
 
-	public let diagnosticResolverEvents: Signal<DiagnosticResolverEvent, NoError>
-	private let diagnosticResolverEventPublisher: Signal<DiagnosticResolverEvent, NoError>.Observer
+	public let events: Signal<DependencyCrawlerEvent, NoError>
+	private let eventPublisher: Signal<DependencyCrawlerEvent, NoError>.Observer
 
-	private enum DiagnosticResolverError: Error {
+	private enum DependencyCrawlerError: Error {
 		case versionRetrievalFailure(message: String)
 		case dependencyRetrievalFailure(message: String)
 	}
 
-	public convenience init(versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
-							dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
-							resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>) {
-		self.init(versionsForDependency: versionsForDependency,
-				  dependenciesForDependency: dependenciesForDependency,
-				  resolvedGitReference: resolvedGitReference,
-				  localRepository: LocalRepository(directoryURL: URL(fileURLWithPath: "/tmp")))
-	}
-
 	public init(
-		versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
-		dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
-		resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>,
-		localRepository: LocalRepository) {
+			versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
+			dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
+			resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>,
+			store: LocalDependencyStore,
+			mappings: [Dependency: Dependency]? = nil,
+			ignoreErrors: Bool = false) {
 		self.versionsForDependency = versionsForDependency
 		self.dependenciesForDependency = dependenciesForDependency
 		self.resolvedGitReference = resolvedGitReference
-		self.localRepository = localRepository
+		self.store = store
+		self.dependencyMappings = mappings
+		self.ignoreErrors = ignoreErrors
 
-		let (signal, observer) = Signal<DiagnosticResolverEvent, NoError>.pipe()
-		diagnosticResolverEvents = signal
-		diagnosticResolverEventPublisher = observer
+		let (signal, observer) = Signal<DependencyCrawlerEvent, NoError>.pipe()
+		events = signal
+		eventPublisher = observer
 	}
 
-	public func resolve(
-		dependencies: [Dependency: VersionSpecifier],
-		lastResolved: [Dependency: PinnedVersion]? = nil,
-		dependenciesToUpdate: [String]? = nil
-		) -> SignalProducer<[Dependency: PinnedVersion], CarthageError> {
-		assert(dependenciesToUpdate == nil, "DiagnosticResolver does not have support for processing specific dependencies")
-		let result: Result<[Dependency: PinnedVersion], CarthageError>
+	public func traverse(dependencies: [Dependency: VersionSpecifier]) -> Result<(), CarthageError> {
+		let result: Result<(), CarthageError>
 		do {
 			var handledDependencies = Set<PinnedDependency>()
 			var cachedVersionSets = [Dependency: [PinnedVersion]]()
 			try traverse(dependencies: Array(dependencies),
 						 handledDependencies: &handledDependencies,
 						 cachedVersionSets: &cachedVersionSets)
-			result = .success([Dependency: PinnedVersion]())
+			result = .success(())
 		} catch let error as CarthageError {
 			result = .failure(error)
 		} catch {
 			result = .failure(CarthageError.internalError(description: error.localizedDescription))
 		}
-		return SignalProducer(result: result)
+		return result
 	}
 
 	private func traverse(dependencies: [(Dependency, VersionSpecifier)],
@@ -122,12 +112,12 @@ public final class DiagnosticResolver: ResolverProtocol {
 				}
 
 				guard let pinnedVersions: [PinnedVersion] = try pinnedVersionsProducer.collect().first()?.dematerialize() else {
-					throw DiagnosticResolverError.versionRetrievalFailure(message: "Could not collect versions for dependency: \(dependency) and versionSpeficier: \(versionSpecifier)")
+					throw DependencyCrawlerError.versionRetrievalFailure(message: "Could not collect versions for dependency: \(dependency) and versionSpeficier: \(versionSpecifier)")
 				}
 				cachedVersionSets[dependency] = pinnedVersions
 
 				let storedDependency = self.dependencyMappings?[dependency] ?? dependency
-				try localRepository.storePinnedVersions(pinnedVersions, for: storedDependency, gitReference: gitReference)
+				try store.storePinnedVersions(pinnedVersions, for: storedDependency, gitReference: gitReference)
 
 				versionSet = pinnedVersions
 			}
@@ -136,14 +126,14 @@ public final class DiagnosticResolver: ResolverProtocol {
 				versionSpecifier.isSatisfied(by: pinnedVersion)
 			}
 
-			diagnosticResolverEventPublisher.send(value:
+			eventPublisher.send(value:
 				.foundVersions(versions: filteredVersionSet, dependency: dependency, versionSpecifier: versionSpecifier)
 			)
 
 			return filteredVersionSet
 		} catch let error {
 
-			diagnosticResolverEventPublisher.send(value:
+			eventPublisher.send(value:
 				.failedRetrievingVersions(error: error, dependency: dependency, versionSpeficier: versionSpecifier)
 			)
 
@@ -158,7 +148,7 @@ public final class DiagnosticResolver: ResolverProtocol {
 	private func findDependencies(for dependency: Dependency, version: PinnedVersion) throws -> [(Dependency, VersionSpecifier)] {
 		do {
 			guard let transitiveDependencies: [(Dependency, VersionSpecifier)] = try dependenciesForDependency(dependency, version).collect().first()?.dematerialize() else {
-				throw DiagnosticResolverError.dependencyRetrievalFailure(message: "Could not find transitive dependencies for dependency: \(dependency), version: \(version)")
+				throw DependencyCrawlerError.dependencyRetrievalFailure(message: "Could not find transitive dependencies for dependency: \(dependency), version: \(version)")
 			}
 
 			let storedDependency = self.dependencyMappings?[dependency] ?? dependency
@@ -166,16 +156,16 @@ public final class DiagnosticResolver: ResolverProtocol {
 				let storedTransitiveDependency = self.dependencyMappings?[transitiveDependency] ?? transitiveDependency
 				return (storedTransitiveDependency, versionSpecifier)
 			}
-			try localRepository.storeTransitiveDependencies(storedTransitiveDependencies, for: storedDependency, version: version)
+			try store.storeTransitiveDependencies(storedTransitiveDependencies, for: storedDependency, version: version)
 
-			diagnosticResolverEventPublisher.send(value:
+			eventPublisher.send(value:
 				.foundTransitiveDependencies(transitiveDependencies: transitiveDependencies, dependency: dependency, version: version)
 			)
 
 			return transitiveDependencies
 		} catch let error {
 
-			diagnosticResolverEventPublisher.send(value:
+			eventPublisher.send(value:
 				.failedRetrievingTransitiveDependencies(error: error, dependency: dependency, version: version)
 			)
 

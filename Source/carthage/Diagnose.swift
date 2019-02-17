@@ -71,7 +71,7 @@ public struct DiagnoseCommand: CommandProtocol {
 
 				carthage.println(formatting.bullets + "Started storing diagnosis info into directory: \(baseUrl.path)")
 
-				let repository = LocalRepository(directoryURL: repositoryUrl)
+				let repository = LocalDependencyStore(directoryURL: repositoryUrl)
 				var dependencyMappings: [Dependency: Dependency]?
 				if let mappingsFilePath = options.mappingsFilePath {
 					carthage.println(formatting.bullets + "Using dependency mappings from file: \(mappingsFilePath)")
@@ -187,7 +187,7 @@ public struct DiagnoseCommand: CommandProtocol {
 			self.isVerbose = verbose
 		}
 
-		func log(event: DiagnosticResolverEvent) {
+		func log(event: DependencyCrawlerEvent) {
 			switch event {
 			case .foundVersions(let versions, let dependency, let versionSpecifier):
 				if isVerbose {

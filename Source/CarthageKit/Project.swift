@@ -1525,20 +1525,31 @@ public func cloneOrFetch(
 // Diagnostic methods to be able to diagnose problems with the resolver with dependencies
 // which cannot be tested 'live', e.g. for private repositories
 extension Project {
-	// Function which outputs all possible dependencies and versions of those dependencies to the repository specified
-	public func storeDependencies(to repository: LocalRepository, ignoreErrors: Bool = false, dependencyMappings: [Dependency: Dependency]? = nil, eventObserver: ((DiagnosticResolverEvent) -> Void)? = nil) -> SignalProducer<(Cartfile, ResolvedCartfile?), CarthageError> {
-		let resolver = DiagnosticResolver(
+
+	/// Stores all possible dependencies and versions of those dependencies in the specified local dependency store.
+	///
+	/// If ignoreErrors is true, failure for retrieving some of the transitive dependencies or their versions will not be fatal,
+	/// rather an empty collection is assumed.
+	///
+	/// Dependency mappings are used to anonymize dependencies to avoid disclosure of possible sensitive information.
+	/// Use key=source dependency and value=target dependency
+	///
+	/// Specify an event observer to be notified by events of the DependencyCrawler.
+	public func storeDependencies(to store: LocalDependencyStore,
+								  ignoreErrors: Bool = false,
+								  dependencyMappings: [Dependency: Dependency]? = nil,
+								  eventObserver: ((DependencyCrawlerEvent) -> Void)? = nil) -> SignalProducer<(Cartfile, ResolvedCartfile?), CarthageError> {
+		let crawler = DependencyCrawler(
 			versionsForDependency: versions(for:),
 			dependenciesForDependency: dependencies(for:version:),
 			resolvedGitReference: resolvedGitReference,
-			localRepository: repository
+			store: store,
+			mappings: dependencyMappings,
+			ignoreErrors: ignoreErrors
 		)
 
-		resolver.dependencyMappings = dependencyMappings
-		resolver.ignoreErrors = ignoreErrors
-
 		if let observer = eventObserver {
-			resolver.diagnosticResolverEvents.observeValues(observer)
+			crawler.events.observeValues(observer)
 		}
 
 		let resolvedCartfile: SignalProducer<ResolvedCartfile?, CarthageError> = loadResolvedCartfile()
@@ -1548,11 +1559,11 @@ extension Project {
 		return SignalProducer
 			.zip(loadCombinedCartfile(), resolvedCartfile)
 			.flatMap(.merge) { cartfile, resolvedCartfile -> SignalProducer<(Cartfile, ResolvedCartfile?), CarthageError> in
-				_ = resolver.resolve(
-					dependencies: cartfile.dependencies,
-					lastResolved: resolvedCartfile?.dependencies,
-					dependenciesToUpdate: nil
-				)
+				let result = crawler.traverse(dependencies: cartfile.dependencies)
+
+				if case .failure(let carthageError) = result {
+					return SignalProducer(error: carthageError)
+				}
 
 				let mappedDependencies: [Dependency: VersionSpecifier] = Dictionary(uniqueKeysWithValues: cartfile.dependencies.map { dependency, versionSpecifier -> (Dependency, VersionSpecifier) in
 					let mappedDependency = dependencyMappings?[dependency] ?? dependency
@@ -1572,15 +1583,16 @@ extension Project {
 		}
 	}
 
-	// Updates dependencies by using the specified repository instead of 'live' lookup for dependencies and their versions
+	/// Updates dependencies by using the specified local dependency store instead of 'live' lookup for dependencies and their versions
+	/// Returns a signal with the resulting ResolvedCartfile upon success or a CarthageError upon failure.
 	public func resolveUpdatedDependencies(
-		from repository: LocalRepository,
+		from store: LocalDependencyStore,
 		resolverType: ResolverProtocol.Type,
 		dependenciesToUpdate: [String]? = nil) -> SignalProducer<ResolvedCartfile, CarthageError> {
 		let resolver = resolverType.init(
-			versionsForDependency: repository.versions(for:),
-			dependenciesForDependency: repository.dependencies(for:version:),
-			resolvedGitReference: repository.resolvedGitReference
+			versionsForDependency: store.versions(for:),
+			dependenciesForDependency: store.dependencies(for:version:),
+			resolvedGitReference: store.resolvedGitReference
 		)
 
 		return updatedResolvedCartfile(dependenciesToUpdate, resolver: resolver)

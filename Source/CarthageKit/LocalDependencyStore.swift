@@ -5,9 +5,10 @@ import Result
 import ReactiveSwift
 
 /**
-Local repository for storing/loading dependencies and their versions. This is for testing without requiring live connection to real repositories.
+Local store for storing/loading dependencies and their versions.
+This is for testing without requiring live connection to real repositories.
 */
-public final class LocalRepository {
+public final class LocalDependencyStore {
 	private let directoryURL: URL
 
 	public init(directoryURL: URL) {

@@ -467,7 +467,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
             let repositoryURL = projectDirectoryURL.appendingPathComponent("Repository")
 
             let project = Project(directoryURL: projectDirectoryURL)
-            let repository = LocalRepository(directoryURL: repositoryURL)
+            let repository = LocalDependencyStore(directoryURL: repositoryURL)
 
             let signalProducer = project.resolveUpdatedDependencies(from: repository,
                                                                     resolverType: resolverType.self,
@@ -494,7 +494,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
             let repositoryURL = projectDirectoryURL.appendingPathComponent("Repository")
 
             let project = Project(directoryURL: projectDirectoryURL)
-            let repository = LocalRepository(directoryURL: repositoryURL)
+            let repository = LocalDependencyStore(directoryURL: repositoryURL)
 
             let signalProducer = project.resolveUpdatedDependencies(from: repository,
                                                                     resolverType: resolverType.self,
@@ -528,7 +528,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
             let repositoryURL = projectDirectoryURL.appendingPathComponent("Repository")
 
             let project = Project(directoryURL: projectDirectoryURL)
-            let repository = LocalRepository(directoryURL: repositoryURL)
+            let repository = LocalDependencyStore(directoryURL: repositoryURL)
 
             let signalProducer = project.resolveUpdatedDependencies(from: repository,
                                                                     resolverType: resolverType.self,
