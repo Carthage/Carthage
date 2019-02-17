@@ -15,40 +15,35 @@ public final class LocalRepository {
 	}
 
 	public func loadPinnedVersions(for dependency: Dependency, gitReference: String? = nil) throws -> [PinnedVersion] {
-		let fileURL = try self.pinnedVersionsURL(for: dependency, gitReference: gitReference)
+		let fileURL = canonicalPinnedVersionFileURL(for: dependency, gitReference: gitReference)
 		let data = try Data(contentsOf: fileURL)
 		return try JSONDecoder().decode([PinnedVersion].self, from: data)
 	}
 
 	public func loadTransitiveDependencies(for dependency: Dependency, version: PinnedVersion) throws -> [(Dependency, VersionSpecifier)] {
-		let fileURL = try self.transitiveDependenciesURL(for: dependency, version: version)
+		let fileURL = transitiveDependenciesURL(for: dependency, version: version)
 		let data = try Data(contentsOf: fileURL)
 		let versionSpecs = try JSONDecoder().decode([DependencyVersionSpecification].self, from: data)
 		return versionSpecs.map { ($0.dependency, $0.versionSpecifier) }
 	}
 
-	private func pinnedVersionsURL(for dependency: Dependency, gitReference: String? = nil, createDirs: Bool = false) throws -> URL {
+	private func canonicalPinnedVersionFileURL(for dependency: Dependency, gitReference: String? = nil) -> URL {
 		let fileName = (gitReference.map { "\($0).json" } ?? "default.json")
 		let fileURL = directoryURL.appendingPathComponent("versions").appendingPathComponent(dependency.name).appendingPathComponent(fileName)
-
-		if createDirs {
-			try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
-		}
 		return fileURL
 	}
 
-	private func transitiveDependenciesURL(for dependency: Dependency, version: PinnedVersion, createDirs: Bool = false) throws -> URL {
+	private func transitiveDependenciesURL(for dependency: Dependency, version: PinnedVersion) -> URL {
 		let fileName = "\(version.commitish).json"
 		let fileURL = directoryURL.appendingPathComponent("dependencies").appendingPathComponent(dependency.name).appendingPathComponent(fileName)
-
-		if createDirs {
-			try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
-		}
 		return fileURL
 	}
 
 	public func storePinnedVersions(_ pinnedVersions: [PinnedVersion], for dependency: Dependency, gitReference: String? = nil) throws {
-		let fileURL = try pinnedVersionsURL(for: dependency, gitReference: gitReference, createDirs: true)
+		let fileURL = canonicalPinnedVersionFileURL(for: dependency, gitReference: gitReference)
+
+		//Ensure the directory exists:
+		try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
 
 		let encoder = JSONEncoder()
 		encoder.outputFormatting = .prettyPrinted
@@ -59,7 +54,10 @@ public final class LocalRepository {
 	}
 
 	public func storeTransitiveDependencies(_ transitiveDependencies: [(Dependency, VersionSpecifier)], for dependency: Dependency, version: PinnedVersion) throws {
-		let fileURL = try transitiveDependenciesURL(for: dependency, version: version, createDirs: true)
+		let fileURL = transitiveDependenciesURL(for: dependency, version: version)
+
+		//Ensure the directory exits:
+		try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
 
 		let specs = transitiveDependencies.map { dependencyEntry -> DependencyVersionSpecification in
 			DependencyVersionSpecification(dependency: dependencyEntry.0, versionSpecifier: dependencyEntry.1)
@@ -82,7 +80,7 @@ public final class LocalRepository {
 				let carthageError = (error as? CarthageError) ?? CarthageError.internalError(description: error.localizedDescription)
 				return Result.failure(carthageError)
 			}
-		}.flatten()
+			}.flatten()
 	}
 
 	public func resolvedGitReference(_ dependency: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
@@ -94,7 +92,7 @@ public final class LocalRepository {
 				let carthageError = (error as? CarthageError) ?? CarthageError.internalError(description: error.localizedDescription)
 				return Result.failure(carthageError)
 			}
-		}.flatten()
+			}.flatten()
 	}
 
 	public func dependencies(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
@@ -106,7 +104,7 @@ public final class LocalRepository {
 				let carthageError = (error as? CarthageError) ?? CarthageError.internalError(description: error.localizedDescription)
 				return Result.failure(carthageError)
 			}
-		}.flatten()
+			}.flatten()
 	}
 }
 

@@ -1325,8 +1325,8 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, Carth
 
 			// Try to read what platfrom this binary is for. Attempt in order:
 			// 1. Read `DTSDKName` from Info.plist.
-			//    Some users are reporting that static frameworks don't have this key in the .plist,
-			//    so we fall back and check the binary of the executable itself.
+			//  Some users are reporting that static frameworks don't have this key in the .plist,
+			//  so we fall back and check the binary of the executable itself.
 			// 2. Read the LC_VERSION_<PLATFORM> from the framework's binary executable file
 
 			if let sdkNameFromBundle = bundle?.object(forInfoDictionaryKey: "DTSDKName") as? String {
@@ -1522,15 +1522,16 @@ public func cloneOrFetch(
 		}
 }
 
-// Diagnostic methods to be able to diagnose problems with the resolver with dependencies which cannot be tested 'live', e.g. for private repositories
+// Diagnostic methods to be able to diagnose problems with the resolver with dependencies
+// which cannot be tested 'live', e.g. for private repositories
 extension Project {
 	// Function which outputs all possible dependencies and versions of those dependencies to the repository specified
-    public func storeDependencies(to repository: LocalRepository, ignoreErrors: Bool = false, dependencyMappings: [Dependency: Dependency]? = nil, eventObserver: ((DiagnosticResolverEvent) -> Void)? = nil) -> SignalProducer<(Cartfile, ResolvedCartfile?), CarthageError> {
+	public func storeDependencies(to repository: LocalRepository, ignoreErrors: Bool = false, dependencyMappings: [Dependency: Dependency]? = nil, eventObserver: ((DiagnosticResolverEvent) -> Void)? = nil) -> SignalProducer<(Cartfile, ResolvedCartfile?), CarthageError> {
 		let resolver = DiagnosticResolver(
 			versionsForDependency: versions(for:),
 			dependenciesForDependency: dependencies(for:version:),
 			resolvedGitReference: resolvedGitReference,
-            localRepository: repository
+			localRepository: repository
 		)
 
 		resolver.dependencyMappings = dependencyMappings
@@ -1546,27 +1547,27 @@ extension Project {
 
 		return SignalProducer
 			.zip(loadCombinedCartfile(), resolvedCartfile)
-            .flatMap(.merge) { cartfile, resolvedCartfile -> SignalProducer<(Cartfile, ResolvedCartfile?), CarthageError> in
+			.flatMap(.merge) { cartfile, resolvedCartfile -> SignalProducer<(Cartfile, ResolvedCartfile?), CarthageError> in
 				_ = resolver.resolve(
 					dependencies: cartfile.dependencies,
 					lastResolved: resolvedCartfile?.dependencies,
 					dependenciesToUpdate: nil
 				)
 
-                let mappedDependencies: [Dependency: VersionSpecifier] = Dictionary(uniqueKeysWithValues: cartfile.dependencies.map { dependency, versionSpecifier -> (Dependency, VersionSpecifier) in
+				let mappedDependencies: [Dependency: VersionSpecifier] = Dictionary(uniqueKeysWithValues: cartfile.dependencies.map { dependency, versionSpecifier -> (Dependency, VersionSpecifier) in
 					let mappedDependency = dependencyMappings?[dependency] ?? dependency
 					return (mappedDependency, versionSpecifier)
 				})
 
-                let mappedResolvedDependencies: [Dependency: PinnedVersion]? = resolvedCartfile.map {
-                    Dictionary(uniqueKeysWithValues: $0.dependencies.map { dependency, pinnedVersion -> (Dependency, PinnedVersion) in
-                        let mappedDependency = dependencyMappings?[dependency] ?? dependency
-                        return (mappedDependency, pinnedVersion)
-                    })
-                }
+				let mappedResolvedDependencies: [Dependency: PinnedVersion]? = resolvedCartfile.map {
+					Dictionary(uniqueKeysWithValues: $0.dependencies.map { dependency, pinnedVersion -> (Dependency, PinnedVersion) in
+						let mappedDependency = dependencyMappings?[dependency] ?? dependency
+						return (mappedDependency, pinnedVersion)
+					})
+				}
 
 				let mappedCartfile = Cartfile(dependencies: mappedDependencies)
-                let mappedResolvedCartfile = mappedResolvedDependencies.map{ ResolvedCartfile(dependencies: $0) }
+				let mappedResolvedCartfile = mappedResolvedDependencies.map { ResolvedCartfile(dependencies: $0) }
 				return SignalProducer(value: (mappedCartfile, mappedResolvedCartfile))
 		}
 	}
