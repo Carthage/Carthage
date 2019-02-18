@@ -1535,6 +1535,8 @@ extension Project {
 	/// Use key=source dependency and value=target dependency
 	///
 	/// Specify an event observer to be notified by events of the DependencyCrawler.
+	///
+	/// Upon success this method returns the mapped Cartfile and optionally ResolvedCartfile.
 	public func storeDependencies(to store: LocalDependencyStore,
 								  ignoreErrors: Bool = false,
 								  dependencyMappings: [Dependency: Dependency]? = nil,

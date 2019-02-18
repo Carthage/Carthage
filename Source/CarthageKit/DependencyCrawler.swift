@@ -3,7 +3,7 @@ import Result
 import ReactiveSwift
 
 /**
-Signals for diagnostic resolver events
+Signals for DependencyCrawler events
 */
 public enum DependencyCrawlerEvent {
 	case foundVersions(versions: [PinnedVersion], dependency: Dependency, versionSpecifier: VersionSpecifier)
@@ -20,20 +20,29 @@ public final class DependencyCrawler {
 	private let versionsForDependency: (Dependency) -> SignalProducer<PinnedVersion, CarthageError>
 	private let resolvedGitReference: (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>
 	private let dependenciesForDependency: (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>
-
-	public let ignoreErrors: Bool
+	private let ignoreErrors: Bool
 
 	// Specify mappings to anonymize private dependencies (which may not be disclosed as part of the diagnostics)
 	private var dependencyMappings: [Dependency: Dependency]?
-
-	public let events: Signal<DependencyCrawlerEvent, NoError>
 	private let eventPublisher: Signal<DependencyCrawlerEvent, NoError>.Observer
+
+	/// DependencyCrawlerEvent
+	public let events: Signal<DependencyCrawlerEvent, NoError>
 
 	private enum DependencyCrawlerError: Error {
 		case versionRetrievalFailure(message: String)
 		case dependencyRetrievalFailure(message: String)
 	}
 
+	/**
+	Initializes with implementations for retrieving the versions, transitive dependencies and git references.
+
+	Uses the supplied local dependency store to store the encountered dependencies.
+
+	Optional mappings may be specified to anonymize the encountered dependencies (thereby removing sensitive information).
+
+	If ignoreErrors is true, any error during retrieval of the dependencies will not be fatal but will result in an empty array instead.
+	*/
 	public init(
 			versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
 			dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
@@ -53,15 +62,22 @@ public final class DependencyCrawler {
 		eventPublisher = observer
 	}
 
-	public func traverse(dependencies: [Dependency: VersionSpecifier]) -> Result<(), CarthageError> {
-		let result: Result<(), CarthageError>
+	/**
+	Recursively traverses the supplied dependencies taking into account their compatibleWith version specifiers.
+
+	Stores all dependencies in the LocalDependencyStore.
+
+	Returns a dictionary of all encountered dependencies with as value a set of all their encountered versions.
+	*/
+	public func traverse(dependencies: [Dependency: VersionSpecifier]) -> Result<[Dependency: Set<PinnedVersion>], CarthageError> {
+		let result: Result<[Dependency: Set<PinnedVersion>], CarthageError>
 		do {
 			var handledDependencies = Set<PinnedDependency>()
 			var cachedVersionSets = [Dependency: [PinnedVersion]]()
 			try traverse(dependencies: Array(dependencies),
 						 handledDependencies: &handledDependencies,
 						 cachedVersionSets: &cachedVersionSets)
-			result = .success(())
+			result = .success(handledDependencies.dictionaryRepresentation)
 		} catch let error as CarthageError {
 			result = .failure(error)
 		} catch {
@@ -176,24 +192,35 @@ public final class DependencyCrawler {
 			}
 		}
 	}
+}
 
-	private struct PinnedDependency: Hashable {
-		public let dependency: Dependency
-		public let pinnedVersion: PinnedVersion
-		private let hash: Int
+private struct PinnedDependency: Hashable {
+	public let dependency: Dependency
+	public let pinnedVersion: PinnedVersion
+	private let hash: Int
 
-		init(dependency: Dependency, pinnedVersion: PinnedVersion) {
-			self.dependency = dependency
-			self.pinnedVersion = pinnedVersion
-			self.hash = 37 &* dependency.hashValue &+ pinnedVersion.hashValue
-		}
+	init(dependency: Dependency, pinnedVersion: PinnedVersion) {
+		self.dependency = dependency
+		self.pinnedVersion = pinnedVersion
+		// Pre-compute hash for efficiency
+		self.hash = 37 &* dependency.hashValue &+ pinnedVersion.hashValue
+	}
 
-		public var hashValue: Int {
-			return hash
-		}
+	public var hashValue: Int {
+		return hash
+	}
 
-		public static func == (lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
-			return lhs.pinnedVersion == rhs.pinnedVersion && lhs.dependency == rhs.dependency
+	public static func == (lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
+		return lhs.pinnedVersion == rhs.pinnedVersion && lhs.dependency == rhs.dependency
+	}
+}
+
+extension Sequence where Element == PinnedDependency {
+	fileprivate var dictionaryRepresentation: [Dependency: Set<PinnedVersion>] {
+		return self.reduce(into: [Dependency: Set<PinnedVersion>]()) { dict, pinnedDependency in
+			var set = dict[pinnedDependency.dependency, default: Set<PinnedVersion>()]
+			set.insert(pinnedDependency.pinnedVersion)
+			dict[pinnedDependency.dependency] = set
 		}
 	}
 }
