@@ -481,7 +481,13 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		}
 		.reduce(into: [:]) { (sdksByPlatform: inout [Platform: Set<SDK>], sdk: SDK) in
 			let platform = sdk.platform
-
+			
+			guard !(options.noSimulators && sdk.isSimulator) else {
+				// SDK is a simulator and build options does not support
+				// simulators
+				return
+			}
+			
 			if var sdks = sdksByPlatform[platform] {
 				sdks.insert(sdk)
 				sdksByPlatform.updateValue(sdks, forKey: platform)
