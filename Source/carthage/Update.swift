@@ -20,9 +20,10 @@ public struct UpdateCommand: CommandProtocol {
 		/// The build options corresponding to these options.
 		public var buildCommandOptions: BuildCommand.Options {
 			return BuildCommand.Options(
+                allowHTTP: checkoutOptions.allowHTTP,
 				buildOptions: buildOptions,
-				skipCurrent: true,
-				colorOptions: checkoutOptions.colorOptions,
+                skipCurrent: true,
+                colorOptions: checkoutOptions.colorOptions,
 				isVerbose: isVerbose,
 				directoryPath: checkoutOptions.directoryPath,
 				logPath: logPath,
@@ -43,7 +44,7 @@ public struct UpdateCommand: CommandProtocol {
 			}
 		}
 
-		private init(checkoutAfterUpdate: Bool,
+        private init(checkoutAfterUpdate: Bool,
 		             buildAfterUpdate: Bool,
 		             isVerbose: Bool,
 		             logPath: String?,

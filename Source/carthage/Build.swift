@@ -29,7 +29,8 @@ extension BuildOptions: OptionsProtocol {
 /// Type that encapsulates the configuration and evaluation of the `build` subcommand.
 public struct BuildCommand: CommandProtocol {
 	public struct Options: OptionsProtocol {
-		public let buildOptions: BuildOptions
+        public let allowHTTP: Bool
+        public let buildOptions: BuildOptions
 		public let skipCurrent: Bool
 		public let colorOptions: ColorOptions
 		public let isVerbose: Bool
@@ -53,6 +54,7 @@ public struct BuildCommand: CommandProtocol {
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			return curry(self.init)
+                <*> mode <| Option(key: "allow-http", defaultValue: false, usage: "allow http for downloading dependencies")
 				<*> BuildOptions.evaluate(mode)
 				<*> mode <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 				<*> ColorOptions.evaluate(mode)
@@ -124,8 +126,8 @@ public struct BuildCommand: CommandProtocol {
 	/// Returns a producer of producers, representing each scheme being built.
 	private func buildProjectInDirectoryURL(_ directoryURL: URL, options: Options) -> BuildSchemeProducer {
 		let shouldBuildCurrentProject =  !options.skipCurrent || options.archive
-
 		let project = Project(directoryURL: directoryURL)
+        project.allowHTTP = options.allowHTTP
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeValues { eventSink.put($0) }
 
