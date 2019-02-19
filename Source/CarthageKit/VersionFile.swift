@@ -400,44 +400,42 @@ public func createVersionFileForCommitish(
 		platformCaches[platform.rawValue] = []
 	}
 
-	struct FrameworkDetail {
+	struct FrameworkDetails {
+        let binaryURL: URL
+        let name: String
+        let swiftVersion: String?
 		let platformName: String
-		let frameworkName: String
-		let frameworkSwiftVersion: String?
+        init(_ url: URL, _ swiftVersion: String? = nil) {
+            self.name = url.deletingPathExtension().lastPathComponent
+            self.binaryURL = url.appendingPathComponent(name, isDirectory: false)
+            self.swiftVersion = swiftVersion
+            self.platformName = url.deletingLastPathComponent().lastPathComponent
+        }
 	}
+    func signalProducer(for details: FrameworkDetails) -> SignalProducer<(String, FrameworkDetails), CarthageError> {
+        return SignalProducer.zip(
+            hashForFileAtURL(details.binaryURL),
+            SignalProducer<FrameworkDetails, CarthageError>(value: details)
+        )
+    }
 
 	if !buildProducts.isEmpty {
 		return SignalProducer<URL, CarthageError>(buildProducts)
-			.flatMap(.merge) { url -> SignalProducer<(String, FrameworkDetail), CarthageError> in
-				let frameworkName = url.deletingPathExtension().lastPathComponent
-                let binaryURL = url.appendingPathComponent(frameworkName, isDirectory: false)
-				let platformName = url.deletingLastPathComponent().lastPathComponent
+			.flatMap(.merge) { url -> SignalProducer<(String, FrameworkDetails), CarthageError> in
                 guard isSwiftFramework(url) else {
-                    let frameworkDetail: FrameworkDetail = .init(
-                        platformName: platformName,
-                        frameworkName: frameworkName,
-                        frameworkSwiftVersion: nil
-                    )
-                    let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
-                    return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
+                    return signalProducer(for: FrameworkDetails(url))
                 }
                 return frameworkSwiftVersion(url)
                     .mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
-                    .flatMap(.merge) { frameworkSwiftVersion -> SignalProducer<(String, FrameworkDetail), CarthageError> in
-                        let frameworkDetail: FrameworkDetail = .init(
-                            platformName: platformName,
-                            frameworkName: frameworkName,
-                            frameworkSwiftVersion: frameworkSwiftVersion
-                        )
-                        let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
-                        return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
+                    .flatMap(.merge) { swiftVersion -> SignalProducer<(String, FrameworkDetails), CarthageError> in
+                        return signalProducer(for: FrameworkDetails(url, swiftVersion))
                 }
 			}
-			.reduce(into: platformCaches) { (platformCaches: inout [String: [CachedFramework]], values: (String, FrameworkDetail)) in
+			.reduce(into: platformCaches) { (platformCaches: inout [String: [CachedFramework]], values: (String, FrameworkDetails)) in
 				let hash = values.0
 				let platformName = values.1.platformName
-				let frameworkName = values.1.frameworkName
-				let frameworkSwiftVersion = values.1.frameworkSwiftVersion
+				let frameworkName = values.1.name
+				let frameworkSwiftVersion = values.1.swiftVersion
 
 				let cachedFramework = CachedFramework(name: frameworkName, hash: hash, swiftToolchainVersion: frameworkSwiftVersion)
 				if var frameworks = platformCaches[platformName] {
