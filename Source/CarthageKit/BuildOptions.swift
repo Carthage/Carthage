@@ -15,7 +15,7 @@ public struct BuildOptions {
 	/// Whether to use downloaded binaries if possible.
 	public var useBinaries: Bool
 	/// Whether to use platform simulators or not
-	public var noSimulators: Bool
+	public var skipSimulators: Bool
 
 	public init(
 		configuration: String,
@@ -24,7 +24,7 @@ public struct BuildOptions {
 		derivedDataPath: String? = nil,
 		cacheBuilds: Bool = true,
 		useBinaries: Bool = true,
-		noSimulators: Bool = false
+		skipSimulators: Bool = false
 	) {
 		self.configuration = configuration
 		self.platforms = platforms
@@ -32,6 +32,6 @@ public struct BuildOptions {
 		self.derivedDataPath = derivedDataPath
 		self.cacheBuilds = cacheBuilds
 		self.useBinaries = useBinaries
-		self.noSimulators = noSimulators
+		self.skipSimulators = skipSimulators
 	}
 }
