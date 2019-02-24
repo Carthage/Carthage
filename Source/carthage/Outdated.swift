@@ -51,6 +51,7 @@ public struct OutdatedCommand: CommandProtocol {
 		public let useSSH: Bool
 		public let isVerbose: Bool
 		public let outputXcodeWarnings: Bool
+        public let fetchInterval: Int
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
 
@@ -65,7 +66,8 @@ public struct OutdatedCommand: CommandProtocol {
 				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> mode <| Option(key: "xcode-warnings", defaultValue: false, usage: "output Xcode compatible warning messages")
-				<*> ColorOptions.evaluate(mode, additionalUsage: UpdateType.legend)
+                <*> mode <| Option(key: "fetch-interval", defaultValue: 0, usage: "the minimum amount of time that must elapse between dependencies fetch operation")
+                <*> ColorOptions.evaluate(mode, additionalUsage: UpdateType.legend)
 				<*> mode <| projectDirectoryOption
 		}
 
@@ -87,8 +89,18 @@ public struct OutdatedCommand: CommandProtocol {
 	public let function = "Check for compatible updates to the project's dependencies"
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
+        let shouldIgnoreFetching = shouldIgnoreFetchingDependencies(fetchInterval: TimeInterval(options.fetchInterval))
 		return options.loadProject()
-			.flatMap(.merge) { $0.outdatedDependencies(options.isVerbose) }
+            .combineLatest(with: shouldIgnoreFetching)
+            .flatMap(.merge) { project, shouldIgnoreFetching -> SignalProducer<[Project.OutdatedDependency], CarthageError> in
+                if shouldIgnoreFetching {
+                    // TODO: Non-fetching changes required.
+                    carthage.println("The dependencies will not be fetched due to non-expired fetch interval.")
+                    return project.outdatedDependencies(options.isVerbose)
+                } else {
+                    return project.outdatedDependencies(options.isVerbose)
+                }
+            }
 			.on(value: { outdatedDependencies in
 				let formatting = options.colorOptions.formatting
 
@@ -111,4 +123,27 @@ public struct OutdatedCommand: CommandProtocol {
 			})
 			.waitOnCommand()
 	}
+}
+
+private func shouldIgnoreFetchingDependencies(fetchInterval: TimeInterval) -> SignalProducer<Bool, CarthageError> {
+    let key = "org.carthage.Constants.outdatedDependenciesLastFetchDate"
+
+    // When the fetch interval is not provided, clear the storage and fetch the dependencies.
+    guard fetchInterval > 0 else {
+        UserDefaults.standard.removeObject(forKey: key)
+        return SignalProducer<Bool, CarthageError>({ false })
+    }
+
+    // If the fetch interval time has not been set before, start measuring time from the current date.
+    guard let lastFetchDate = UserDefaults.standard.value(forKey: key) as? Date else {
+        UserDefaults.standard.set(Date(), forKey: key)
+        return SignalProducer<Bool, CarthageError>({ false })
+    }
+
+    // Check if the fetch interval is expired.
+    let fetchIntervalExpired = Date() > lastFetchDate.addingTimeInterval(fetchInterval)
+    if fetchIntervalExpired {
+        UserDefaults.standard.set(Date(), forKey: key)
+    }
+    return SignalProducer<Bool, CarthageError>({ !fetchIntervalExpired })
 }
