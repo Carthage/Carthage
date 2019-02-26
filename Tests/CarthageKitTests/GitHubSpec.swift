@@ -32,5 +32,45 @@ class GitHubSpec: QuickSpec {
 				expect(result.error) == expected
 			}
 		}
+		
+		describe("Redirection") {
+			let subject = GitHubURLSessionDelegate()
+			let session = URLSession(configuration: .default)
+			let requestURL = URL(string: "https://api.github.com/some_api_endpoint")!
+			let insideGitHubRedirectURL = URL(string: "https://api.github.com/some_redirected_api_endpoint")!
+			let outsideGitHubRedirectURL = URL(string: "https://api.notgithub.com/")!
+			var request = URLRequest(url: requestURL)
+			let authToken = "TOKEN"
+			request.setValue(authToken, forHTTPHeaderField: "Authorization")
+			let task = session.dataTask(with: request)
+			
+			func redirectURLResponse(location: URL) -> HTTPURLResponse {
+				return HTTPURLResponse(url: requestURL, statusCode: 302, httpVersion: "1.1", headerFields: [
+					"Location": location.absoluteString
+					])!
+			}
+			
+			describe("within github.com") {
+				it("should forward the Authorization header") {
+					let response = redirectURLResponse(location: insideGitHubRedirectURL)
+					let newRequest = URLRequest(url: insideGitHubRedirectURL)
+					
+					subject.urlSession(session, task: task, willPerformHTTPRedirection: response, newRequest: newRequest, completionHandler: { redirectedRequest in
+						expect(redirectedRequest?.value(forHTTPHeaderField: "Authorization")) == authToken
+					})
+				}
+			}
+			
+			describe("away from github.com") {
+				it("should not forward the Authorization header") {
+					let response = redirectURLResponse(location: outsideGitHubRedirectURL)
+					let newRequest = URLRequest(url: outsideGitHubRedirectURL)
+					
+					subject.urlSession(session, task: task, willPerformHTTPRedirection: response, newRequest: newRequest, completionHandler: { redirectedRequest in
+						expect(redirectedRequest?.value(forHTTPHeaderField: "Authorization")).to(beNil())
+					})
+				}
+			}
+		}
 	}
 }
