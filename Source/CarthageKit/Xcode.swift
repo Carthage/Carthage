@@ -51,6 +51,14 @@ private func parseSwiftVersionCommand(output: String?) -> String? {
 }
 
 /// Determines the Swift version of a framework at a given `URL`.
+internal func frameworkSwiftVersionIfIsSwiftFramework(_ frameworkURL: URL) -> SignalProducer<String?, SwiftVersionError> {
+	guard isSwiftFramework(frameworkURL) else {
+		return SignalProducer(value: nil)
+	}
+	return frameworkSwiftVersion(frameworkURL).map(Optional.some)
+}
+
+/// Determines the Swift version of a framework at a given `URL`.
 internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, SwiftVersionError> {
 
 	guard

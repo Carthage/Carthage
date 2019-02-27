@@ -13,7 +13,10 @@ struct CachedFramework: Codable {
 
 	let name: String
 	let hash: String
-	let swiftToolchainVersion: String
+	let swiftToolchainVersion: String?
+	var isSwiftFramework: Bool {
+		return swiftToolchainVersion != nil
+	}
 }
 
 struct VersionFile: Codable {
@@ -403,7 +406,7 @@ public func createVersionFileForCommitish(
 	struct FrameworkDetail {
 		let platformName: String
 		let frameworkName: String
-		let frameworkSwiftVersion: String
+		let frameworkSwiftVersion: String?
 	}
 
 	if !buildProducts.isEmpty {
@@ -411,7 +414,7 @@ public func createVersionFileForCommitish(
 			.flatMap(.merge) { url -> SignalProducer<(String, FrameworkDetail), CarthageError> in
 				let frameworkName = url.deletingPathExtension().lastPathComponent
 				let platformName = url.deletingLastPathComponent().lastPathComponent
-				return frameworkSwiftVersion(url)
+				return frameworkSwiftVersionIfIsSwiftFramework(url)
 					.mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
 					.flatMap(.merge) { frameworkSwiftVersion -> SignalProducer<(String, FrameworkDetail), CarthageError> in
 					let frameworkDetail: FrameworkDetail = .init(platformName: platformName,
