@@ -107,9 +107,9 @@ public struct Cartfile {
 							dependency: dupe.dependency,
 							locations: [ cartfileURL.path ]
 						)
-					}
+				}
 				return .duplicateDependencies(dependencies)
-			}
+		}
 	}
 
 	/// Appends the contents of another Cartfile to that of the receiver.
@@ -126,7 +126,7 @@ extension Cartfile: CustomStringConvertible {
 			.sorted { $0.key.description < $1.key.description }
 			.map { "\($0.key) \($0.value)" }
 			.joined(separator: "\n")
-            .appending("\n")
+			.appending("\n")
 	}
 }
 
@@ -180,14 +180,14 @@ extension ResolvedCartfile: CustomStringConvertible {
 			.sorted { $0.key.description < $1.key.description }
 			.map { "\($0.key) \($0.value)" }
 			.joined(separator: "\n")
-            .appending("\n")
+			.appending("\n")
 	}
 }
 
 extension String {
-	  /// Returns self without any potential trailing Cartfile comment. A Cartfile
-	  /// comment starts with the first `commentIndicator` that is not embedded in any quote
-	  var strippingTrailingCartfileComment: String {
+	/// Returns self without any potential trailing Cartfile comment. A Cartfile
+	/// comment starts with the first `commentIndicator` that is not embedded in any quote
+	var strippingTrailingCartfileComment: String {
 
 		// Since the Cartfile syntax doesn't support nested quotes, such as `"version-\"alpha\""`,
 		// simply consider any odd-number occurence of a quote as a quote-start, and any

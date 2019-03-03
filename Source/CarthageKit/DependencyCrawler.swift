@@ -36,20 +36,20 @@ public final class DependencyCrawler {
 
 	/**
 	Initializes with implementations for retrieving the versions, transitive dependencies and git references.
-
+	
 	Uses the supplied local dependency store to store the encountered dependencies.
-
+	
 	Optional mappings may be specified to anonymize the encountered dependencies (thereby removing sensitive information).
-
+	
 	If ignoreErrors is true, any error during retrieval of the dependencies will not be fatal but will result in an empty array instead.
 	*/
 	public init(
-			versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
-			dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
-			resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>,
-			store: LocalDependencyStore,
-			mappings: [Dependency: Dependency]? = nil,
-			ignoreErrors: Bool = false) {
+		versionsForDependency: @escaping (Dependency) -> SignalProducer<PinnedVersion, CarthageError>,
+		dependenciesForDependency: @escaping (Dependency, PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError>,
+		resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>,
+		store: LocalDependencyStore,
+		mappings: [Dependency: Dependency]? = nil,
+		ignoreErrors: Bool = false) {
 		self.versionsForDependency = versionsForDependency
 		self.dependenciesForDependency = dependenciesForDependency
 		self.resolvedGitReference = resolvedGitReference
@@ -64,9 +64,9 @@ public final class DependencyCrawler {
 
 	/**
 	Recursively traverses the supplied dependencies taking into account their compatibleWith version specifiers.
-
+	
 	Stores all dependencies in the LocalDependencyStore.
-
+	
 	Returns a dictionary of all encountered dependencies with as value a set of all their encountered versions.
 	*/
 	public func traverse(dependencies: [Dependency: VersionSpecifier]) -> Result<[Dependency: Set<PinnedVersion>], CarthageError> {

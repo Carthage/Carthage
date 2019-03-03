@@ -162,7 +162,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 
 				return SignalProducer(error: error)
-			}
+		}
 
 		let privateCartfile = SignalProducer { Cartfile.from(file: privateCartfileURL) }
 			.flatMapError { error -> SignalProducer<Cartfile, CarthageError> in
@@ -171,7 +171,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 
 				return SignalProducer(error: error)
-			}
+		}
 
 		return SignalProducer.zip(cartfile, privateCartfile)
 			.attemptMap { cartfile, privateCartfile -> Result<Cartfile, CarthageError> in
@@ -190,7 +190,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 
 				return .failure(.duplicateDependencies(duplicateDeps))
-			}
+		}
 	}
 
 	/// Reads the project's Cartfile.resolved.
@@ -270,7 +270,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			fetchVersions = downloadBinaryFrameworkDefinition(binary: binary)
 				.flatMap(.concat) { binaryProject -> SignalProducer<PinnedVersion, CarthageError> in
 					return SignalProducer(binaryProject.versions.keys)
-				}
+			}
 		}
 
 		return SignalProducer<Project.CachedVersions, CarthageError>(value: self.cachedVersions)
@@ -294,7 +294,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 
 				return SignalProducer(versions)
-			}
+		}
 	}
 
 	/// Produces the sub dependencies of the given dependency. Uses the checked out directory if able
@@ -317,7 +317,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		for dependency: Dependency,
 		version: PinnedVersion,
 		tryCheckoutDirectory: Bool
-	) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
+		) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
 		switch dependency {
 		case .git, .gitHub:
 			let revision = version.commitish
@@ -334,23 +334,23 @@ public final class Project { // swiftlint:disable:this type_body_length
 				cartfileSource = SignalProducer<Bool, NoError> { () -> Bool in
 					var isDirectory: ObjCBool = false
 					return FileManager.default.fileExists(atPath: dependencyURL.path, isDirectory: &isDirectory) && isDirectory.boolValue
-				}
-				.flatMap(.concat) { directoryExists -> SignalProducer<Cartfile, CarthageError> in
-					if directoryExists {
-						return SignalProducer(result: Cartfile.from(file: dependencyURL.appendingPathComponent(Constants.Project.cartfilePath)))
-							.flatMapError { _ in .empty }
-					} else {
-						return cartfileFetch
 					}
-				}
-				.flatMapError { _ in .empty }
+					.flatMap(.concat) { directoryExists -> SignalProducer<Cartfile, CarthageError> in
+						if directoryExists {
+							return SignalProducer(result: Cartfile.from(file: dependencyURL.appendingPathComponent(Constants.Project.cartfilePath)))
+								.flatMapError { _ in .empty }
+						} else {
+							return cartfileFetch
+						}
+					}
+					.flatMapError { _ in .empty }
 			} else {
 				cartfileSource = cartfileFetch
 			}
 			return cartfileSource
 				.flatMap(.concat) { cartfile -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> in
 					return SignalProducer(cartfile.dependencies.map { ($0.0, $0.1) })
-				}
+			}
 
 		case .binary:
 			// Binary-only frameworks do not support dependencies
@@ -362,7 +362,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	func transitiveDependencies(
 		_ dependenciesToCheckout: [String]?,
 		resolvedCartfile: ResolvedCartfile
-	) -> SignalProducer<[String], CarthageError> {
+		) -> SignalProducer<[String], CarthageError> {
 		return SignalProducer(value: resolvedCartfile)
 			.map { resolvedCartfile -> [(Dependency, PinnedVersion)] in
 				return resolvedCartfile.dependencies
@@ -382,7 +382,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	func requirementsByDependency(
 		resolvedCartfile: ResolvedCartfile,
 		tryCheckoutDirectory: Bool
-	) -> SignalProducer<CompatibilityInfo.Requirements, CarthageError> {
+		) -> SignalProducer<CompatibilityInfo.Requirements, CarthageError> {
 		return SignalProducer(resolvedCartfile.dependencies)
 			.flatMap(.concurrent(limit: 4)) { dependency, pinnedVersion -> SignalProducer<(Dependency, (Dependency, VersionSpecifier)), CarthageError> in
 				return self.dependencies(for: dependency, version: pinnedVersion, tryCheckoutDirectory: tryCheckoutDirectory)
@@ -403,7 +403,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					dict[dependency] = requirementsDict
 				}
 				return SignalProducer(value: dict)
-			}
+		}
 	}
 
 	/// Attempts to resolve a Git reference to a version.
@@ -419,8 +419,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMapError { _ in
 						return resolveReferenceInRepository(repositoryURL, reference)
 							.map(PinnedVersion.init)
-					}
-			}
+				}
+		}
 	}
 
 	/// Attempts to determine the latest satisfiable version of the project's
@@ -466,7 +466,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 								specifier = .any
 							}
 							result[dependency] = specifier
-						}
+					}
 				}
 				.flatMap(.merge) { resolver.resolve(dependencies: $0, lastResolved: nil, dependenciesToUpdate: nil) }
 		}
@@ -529,7 +529,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						return nil
 					}
 				}
-			}
+		}
 
 		if includeNestedDependencies {
 			return outdatedDependencies
@@ -544,7 +544,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return oudatedDependencies.filter { project, _, _, _ in
 					return combinedCartfile.dependencies[project] != nil
 				}
-			}
+		}
 	}
 
 	/// Updates the dependencies of the project to the latest version. The
@@ -555,7 +555,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		useNewResolver: Bool = false,
 		buildOptions: BuildOptions,
 		dependenciesToUpdate: [String]? = nil
-	) -> SignalProducer<(), CarthageError> {
+		) -> SignalProducer<(), CarthageError> {
 		let resolverType: ResolverProtocol.Type
 		if useNewResolver {
 			resolverType = NewResolver.self
@@ -586,7 +586,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		projectName: String,
 		pinnedVersion: PinnedVersion,
 		toolchain: String?
-	) -> SignalProducer<URL, CarthageError> {
+		) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer<URL, CarthageError>(value: zipFile)
 			.flatMap(.concat, unarchive(archive:))
 			.flatMap(.concat) { directoryURL -> SignalProducer<URL, CarthageError> in
@@ -611,7 +611,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						)
 					}
 					.then(SignalProducer<URL, CarthageError>(value: directoryURL))
-			}
+		}
 	}
 
 	/// Removes the file located at the given URL
@@ -669,7 +669,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		pinnedVersion: PinnedVersion,
 		fromRepository repository: Repository,
 		client: Client
-	) -> SignalProducer<URL, CarthageError> {
+		) -> SignalProducer<URL, CarthageError> {
 		return client.execute(repository.release(forTag: pinnedVersion.commitish))
 			.map { _, release in release }
 			.filter { release in
@@ -711,8 +711,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 								.mapError(CarthageError.gitHubAPIRequestFailed)
 								.flatMap(.concat) { downloadURL in cacheDownloadedBinary(downloadURL, toURL: fileURL) }
 						}
-					}
-			}
+				}
+		}
 	}
 
 	/// Copies the framework at the given URL into the current project's build
@@ -725,7 +725,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				let platformFolderURL = self.directoryURL.appendingPathComponent(platform.relativePath, isDirectory: true)
 				return SignalProducer(value: frameworkURL)
 					.copyFileURLsIntoDirectory(platformFolderURL)
-			}
+		}
 	}
 
 	/// Copies the DSYM matching the given framework and contained within the
@@ -760,7 +760,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		fromDirectoryURL directoryURL: URL,
 		projectName: String,
 		commitish: String
-	) -> SignalProducer<(), CarthageError> {
+		) -> SignalProducer<(), CarthageError> {
 		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
 	}
 
@@ -772,7 +772,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		_ dependency: Dependency,
 		version: PinnedVersion,
 		submodulesByPath: [String: Submodule]
-	) -> SignalProducer<(), CarthageError> {
+		) -> SignalProducer<(), CarthageError> {
 		let revision = version.commitish
 		return cloneOrFetchDependency(dependency, commitish: revision)
 			.flatMap(.merge) { repositoryURL -> SignalProducer<(), CarthageError> in
@@ -808,8 +808,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 							submodulesInRepository(repositoryURL, revision: revision)
 								.flatMap(.merge) {
 									cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL)
-								}
-						)
+							}
+					)
 				}
 			}
 			.on(started: {
@@ -820,7 +820,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	public func buildOrderForResolvedCartfile(
 		_ cartfile: ResolvedCartfile,
 		dependenciesToInclude: [String]? = nil
-	) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> {
+		) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> {
 		// swiftlint:disable:next nesting
 		typealias DependencyGraph = [Dependency: Set<Dependency>]
 
@@ -833,7 +833,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return self.dependencySet(for: dependency, version: version)
 					.map { dependencies in
 						[dependency: dependencies]
-					}
+				}
 			}
 			.reduce(into: [:]) { (working: inout DependencyGraph, next: DependencyGraph) in
 				for (key, value) in next {
@@ -855,7 +855,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.map { ($0, cartfile.dependencies[$0]!) }
 
 				return SignalProducer(sortedPinnedDependencies)
-			}
+		}
 	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
@@ -866,7 +866,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		let submodulesSignal = submodulesInRepository(self.directoryURL)
 			.reduce(into: [:]) { (submodulesByPath: inout [String: Submodule], submodule) in
 				submodulesByPath[submodule.path] = submodule
-			}
+		}
 
 		return loadResolvedCartfile()
 			.flatMap(.latest) { resolvedCartfile -> SignalProducer<([String]?, ResolvedCartfile), CarthageError> in
@@ -892,7 +892,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						case .binary:
 							return .empty
 						}
-					}
+				}
 			}
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
@@ -902,7 +902,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		pinnedVersion: PinnedVersion,
 		projectName: String,
 		toolchain: String?
-	) -> SignalProducer<(), CarthageError> {
+		) -> SignalProducer<(), CarthageError> {
 		return SignalProducer<Version, ScannableError>(result: Version.from(pinnedVersion))
 			.mapError { CarthageError(scannableError: $0) }
 			.combineLatest(with: self.downloadBinaryFrameworkDefinition(binary: binary))
@@ -944,7 +944,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		version: PinnedVersion,
 		withRepository repositoryURL: URL,
 		atRootDirectory rootDirectoryURL: URL
-	) -> SignalProducer<(), CarthageError> {
+		) -> SignalProducer<(), CarthageError> {
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
 		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
@@ -953,8 +953,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 		return self.dependencySet(for: dependency, version: version)
 			// file system objects which might conflict with symlinks
 			.zip(with: list(treeish: version.commitish, atPath: carthageProjectCheckoutsPath, inRepository: repositoryURL)
-									.map { (path: String) in (path as NSString).lastPathComponent }
-									.collect()
+				.map { (path: String) in (path as NSString).lastPathComponent }
+				.collect()
 			)
 			.attemptMap { (dependencies: Set<Dependency>, components: [String]) -> Result<(), CarthageError> in
 				let names = dependencies
@@ -990,7 +990,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					let dependencyCheckoutURLResource = try? dependencyCheckoutURL.resourceValues(forKeys: [
 						.isSymbolicLinkKey,
 						.isDirectoryKey,
-					])
+						])
 
 					if dependencyCheckoutURLResource?.isSymbolicLink == true {
 						_ = dependencyCheckoutURL.path.withCString(Darwin.unlink)
@@ -1014,7 +1014,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 
 				return .success(())
-			}
+		}
 	}
 
 	/// Attempts to build each Carthage dependency that has been checked out,
@@ -1027,7 +1027,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		_ options: BuildOptions,
 		dependenciesToBuild: [String]? = nil,
 		sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
-	) -> BuildSchemeProducer {
+		) -> BuildSchemeProducer {
 		return loadResolvedCartfile()
 			.flatMap(.concat) { resolvedCartfile -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				return self.buildOrderForResolvedCartfile(resolvedCartfile, dependenciesToInclude: dependenciesToBuild)
@@ -1075,7 +1075,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 							return self.installBinaries(for: dependency, pinnedVersion: version, toolchain: options.toolchain)
 								.filterMap { installed -> (Dependency, PinnedVersion)? in
 									return installed ? (dependency, version) : nil
-								}
+							}
 						case let .binary(binary):
 							return self.installBinariesForBinaryProject(binary: binary, pinnedVersion: version, projectName: dependency.name, toolchain: options.toolchain)
 								.then(.init(value: (dependency, version)))
@@ -1135,8 +1135,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 						default:
 							return SignalProducer(error: error)
 						}
-					}
-			}
+				}
+		}
 	}
 
 	private func symlinkBuildPathIfNeeded(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<(), CarthageError> {
@@ -1148,7 +1148,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return .empty
 				}
 				return symlinkBuildPath(for: dependency, rootDirectoryURL: self.directoryURL)
-			}
+		}
 	}
 
 	/// Determines whether the requirements specified in this project's Cartfile.resolved
@@ -1167,7 +1167,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 			.flatMap(.concat) { incompatibilities -> SignalProducer<(), CarthageError> in
 				return incompatibilities.isEmpty ? .init(value: ()) : .init(error: .invalidResolvedCartfile(incompatibilities))
-			}
+		}
 	}
 }
 
@@ -1194,8 +1194,8 @@ private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL)
 			}
 			.flatMap { _ in
 				Result(at: rawDependencyURL, carthageError: CarthageError.readFailed, attempt: {
-						try $0.resourceValues(forKeys: [ .isSymbolicLinkKey ]).isSymbolicLink
-					})
+					try $0.resourceValues(forKeys: [ .isSymbolicLinkKey ]).isSymbolicLink
+				})
 					.flatMap { isSymlink in
 						Result(at: dependencyBinariesURL, attempt: {
 							if isSymlink == true {
@@ -1205,8 +1205,8 @@ private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL)
 								return try fileManager.createSymbolicLink(atPath: $0.path, withDestinationPath: linkDestinationPath)
 							}
 						})
-					}
-			}
+				}
+		}
 	}
 }
 
@@ -1257,7 +1257,7 @@ private func cacheDownloadedBinary(_ downloadURL: URL, toURL cachedURL: URL) -> 
 			return Result(at: newDownloadURL, attempt: {
 				try FileManager.default.moveItem(at: downloadURL, to: $0)
 			})
-		}
+	}
 }
 
 /// Sends the URL to each file found in the given directory conforming to the
@@ -1273,7 +1273,7 @@ private func filesInDirectory(_ directoryURL: URL, _ typeIdentifier: String? = n
 					.analysis(ifSuccess: { identifier in
 						return UTTypeConformsTo(identifier as CFString, typeIdentifier as CFString)
 					}, ifFailure: { _ in false })
-			}
+		}
 	} else {
 		return producer
 	}
@@ -1395,7 +1395,7 @@ private func dSYMForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: 
 							return dSYMUUIDs == frameworkUUIDs
 						}
 						.map { _ in dSYMURL }
-				}
+			}
 		}
 		.take(first: 1)
 }
@@ -1430,7 +1430,7 @@ private func BCSymbolMapsForFramework(_ frameworkURL: URL, inDirectoryURL direct
 			}
 			return BCSymbolMapsInDirectory(directoryURL)
 				.lift(filterUUIDs)
-		}
+	}
 }
 
 /// Returns the file URL at which the given project's repository will be
@@ -1464,15 +1464,15 @@ public func cloneOrFetch(
 	preferHTTPS: Bool,
 	destinationURL: URL = Constants.Dependency.repositoriesURL,
 	commitish: String? = nil
-) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
+	) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
 	let fileManager = FileManager.default
 	let repositoryURL = repositoryFileURL(for: dependency, baseURL: destinationURL)
 
 	return SignalProducer {
-			Result(at: destinationURL, attempt: {
-				try fileManager.createDirectory(at: $0, withIntermediateDirectories: true)
-				return dependency.gitURL(preferHTTPS: preferHTTPS)!
-			})
+		Result(at: destinationURL, attempt: {
+			try fileManager.createDirectory(at: $0, withIntermediateDirectories: true)
+			return dependency.gitURL(preferHTTPS: preferHTTPS)!
+		})
 		}
 		.flatMap(.merge) { (remoteURL: GitURL) -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 			return isGitRepository(repositoryURL)
@@ -1487,14 +1487,14 @@ public func cloneOrFetch(
 								.concat(
 									fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
 										.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
-								)
+							)
 						}
 
 						// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
 						if let commitish = commitish {
 							return SignalProducer.zip(
-									branchExistsInRepository(repositoryURL, pattern: commitish),
-									commitExistsInRepository(repositoryURL, revision: commitish)
+								branchExistsInRepository(repositoryURL, pattern: commitish),
+								commitExistsInRepository(repositoryURL, revision: commitish)
 								)
 								.flatMap(.concat) { branchExists, commitExists -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 									// If the given commitish is a branch, we should fetch.
@@ -1503,7 +1503,7 @@ public func cloneOrFetch(
 									} else {
 										return SignalProducer(value: (nil, repositoryURL))
 									}
-								}
+							}
 						} else {
 							return fetchProducer()
 						}
@@ -1516,10 +1516,10 @@ public func cloneOrFetch(
 							.concat(
 								cloneRepository(remoteURL, repositoryURL)
 									.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
-							)
+						)
 					}
-				}
-		}
+			}
+	}
 }
 
 // Diagnostic methods to be able to diagnose problems with the resolver with dependencies

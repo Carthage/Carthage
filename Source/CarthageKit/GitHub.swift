@@ -57,8 +57,8 @@ extension Repository {
 			case var pathComponents = url.pathComponents.filter({ $0 != "/" }),
 			pathComponents.count >= 2,
 			case (let name, let owner) = (pathComponents.removeLast(), pathComponents.removeLast())
-		else {
-			return .failure(ScannableError(message: "invalid GitHub repository identifier \"\(identifier)\""))
+			else {
+				return .failure(ScannableError(message: "invalid GitHub repository identifier \"\(identifier)\""))
 		}
 
 		// If the host name starts with “github.com”, that is not an enterprise
@@ -135,7 +135,7 @@ private func tokenFromEnvironment(forServer server: Server) -> String? {
 				default:
 					break
 				}
-			}
+		}
 		return records[server.url.host!]
 	}
 

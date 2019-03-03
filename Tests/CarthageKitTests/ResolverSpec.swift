@@ -23,7 +23,7 @@ private func equal<A: Equatable, B: Equatable>(_ expectedValue: [(A, B)]?) -> Pr
 			}
 			return PredicateResult(status: .fail, message: message)
 		}
-        return PredicateResult(bool: expectedValue! == actualValue!, message: message)
+		return PredicateResult(bool: expectedValue! == actualValue!, message: message)
 	}
 }
 
@@ -43,7 +43,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 		let resolverType = aContext()
 		
 		describe("\(resolverType)") {
-
+			
 			it("should resolve a simple Cartfile") {
 				let db: DB = [
 					github1: [
@@ -55,7 +55,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						.v1_0_0: [:],
 					],
 					]
-
+				
 				let resolved = db.resolve(resolverType, [ github1: .exactly(.v0_1_0) ])
 				
 				switch resolved {
@@ -68,7 +68,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					fail("Expected no error to occur: \(error)")
 				}
 			}
-
+			
 			it("should resolve to the latest matching versions") {
 				let db: DB = [
 					github1: [
@@ -88,7 +88,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						.v2_0_1: [:],
 					],
 					]
-
+				
 				let resolved = db.resolve(resolverType, [ github1: .any ])
 				
 				switch resolved {
@@ -101,7 +101,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					fail("Expected no error to occur: \(error)")
 				}
 			}
-
+			
 			it("should resolve a subset when given specific dependencies") {
 				let db: DB = [
 					github1: [
@@ -132,7 +132,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						.v1_0_0: [:],
 					],
 					]
-
+				
 				let resolved = db.resolve(resolverType,
 										  [
 											github1: .any,
@@ -140,7 +140,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 											// list should not be resolved.
 											git1: .any,
 											],
-						                  resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0, github4: .v1_0_0 ],
+										  resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0, github4: .v1_0_0 ],
 										  updating: [ github2 ]
 				)
 				
@@ -156,7 +156,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					fail("Expected no error to occur: \(error)")
 				}
 			}
-
+			
 			it("should update a dependency that is in the root list and nested when the parent is marked for update") {
 				let db: DB = [
 					github1: [
@@ -169,11 +169,11 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						.v1_1_0: [:]
 					]
 				]
-
+				
 				let resolved = db.resolve(resolverType,
-				                          [ github1: .any, git1: .any],
-				                          resolved: [ github1: .v1_0_0, git1: .v1_0_0 ],
-				                          updating: [ github1 ])
+										  [ github1: .any, git1: .any],
+										  resolved: [ github1: .v1_0_0, git1: .v1_0_0 ],
+										  updating: [ github1 ])
 				
 				switch resolved {
 				case .success(let value):
@@ -185,7 +185,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					fail("Expected no error to occur: \(error)")
 				}
 			}
-
+			
 			it("should fail when given incompatible nested version specifiers") {
 				let db: DB = [
 					github1: [
@@ -210,7 +210,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 				expect(resolved.value).to(beNil())
 				expect(resolved.error).notTo(beNil())
 			}
-
+			
 			it("should correctly resolve when specifiers intersect") {
 				let db: DB = [
 					github1: [
@@ -223,7 +223,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						.v2_0_0: [:]
 					]
 				]
-
+				
 				let resolved = db.resolve(resolverType, [ github1: .any, github2: .atLeast(.v1_0_0) ])
 				
 				switch resolved {
@@ -236,7 +236,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					fail("Expected no error to occur: \(error)")
 				}
 			}
-
+			
 			it("should fail on incompatible dependencies") {
 				let db: DB = [
 					github1: [
@@ -258,13 +258,13 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						.v1_0_0: [:],
 						.v2_0_0: [:],
 					],
-				]
-
+					]
+				
 				let resolved = db.resolve(resolverType, [ github1: .any, github2: .compatibleWith(.v1_0_0), github3: .compatibleWith(.v1_0_0) ])
 				expect(resolved.value).to(beNil())
 				expect(resolved.error).notTo(beNil())
 			}
-
+			
 			// Only the new resolver and fast resolvers pass the following tests.
 			if resolverType == NewResolver.self {
 				it("should resolve a subset when given specific dependencies that have constraints") {
@@ -291,11 +291,11 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 							.v1_2_0: [:],
 						],
 						]
-
+					
 					let resolved = db.resolve(resolverType,
-					                          [ github1: .any ],
-					                          resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
-					                          updating: [ github2 ]
+											  [ github1: .any ],
+											  resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
+											  updating: [ github2 ]
 					)
 					
 					switch resolved {
@@ -309,8 +309,8 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						fail("Expected no error to occur: \(error)")
 					}
 				}
-
-
+				
+				
 				it("should fail when the only valid graph is not in the specified dependencies") {
 					let db: DB = [
 						github1: [
@@ -336,19 +336,19 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						],
 						]
 					let resolved = db.resolve(resolverType,
-					                          [ github1: .exactly(.v2_0_0) ],
-					                          resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
-					                          updating: [ github2 ]
+											  [ github1: .exactly(.v2_0_0) ],
+											  resolved: [ github1: .v1_0_0, github2: .v1_0_0, github3: .v1_0_0 ],
+											  updating: [ github2 ]
 					)
 					expect(resolved.value).to(beNil())
 					expect(resolved.error).notTo(beNil())
 				}
 			}
-
+			
 			it("should resolve a Cartfile whose dependency is specified by both a branch name and a SHA which is the HEAD of that branch") {
 				let branch = "development"
 				let sha = "8ff4393ede2ca86d5a78edaf62b3a14d90bffab9"
-
+				
 				var db: DB = [
 					github1: [
 						.v1_0_0: [
@@ -371,7 +371,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						sha: PinnedVersion(sha),
 					],
 				]
-
+				
 				let resolved = db.resolve(resolverType, [ github1: .any, github2: .any ])
 				
 				switch resolved {
@@ -385,7 +385,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 					fail("Expected no error to occur: \(error)")
 				}
 			}
-
+			
 			it("should correctly order transitive dependencies") {
 				let db: DB = [
 					github1: [
@@ -410,7 +410,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						.v1_0_0: [:],
 					],
 					]
-
+				
 				let resolved = db.resolve(resolverType, [ github1: .any ])
 				
 				switch resolved {
@@ -436,7 +436,7 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 						.v3_0_0_beta_1: [:],
 					],
 					]
-
+				
 				do {
 					let resolved = db.resolve(resolverType, [ github1: .atLeast(.v3_0_0) ])
 					expect(resolved.value).to(beNil())
@@ -456,135 +456,135 @@ class ResolverBehavior: Behavior<ResolverProtocol.Type> {
 				}
 			}
 		}
-
-        pending("should correctly resolve complex conflicting dependencies") {
-
-            guard let testCartfileURL = Bundle(for: ResolverBehavior.self).url(forResource: "Resolver/ConflictingDependencies/Cartfile", withExtension: "") else {
-                fail("Could not load Resolver/ConflictingDependencies/Cartfile from resources")
-                return
-            }
-            let projectDirectoryURL = testCartfileURL.deletingLastPathComponent()
-            let repositoryURL = projectDirectoryURL.appendingPathComponent("Repository")
-
-            let project = Project(directoryURL: projectDirectoryURL)
-            let repository = LocalDependencyStore(directoryURL: repositoryURL)
-
-            let signalProducer = project.resolveUpdatedDependencies(from: repository,
-                                                                    resolverType: resolverType.self,
-                                                                    dependenciesToUpdate: nil)
-            do {
-                _ = try signalProducer.first()?.dematerialize()
-                fail("Expected incompatibility error to be thrown")
-            } catch {
-                print("Caught error: \(error)")
-                switch error {
-                case CarthageError.incompatibleRequirements:
-                    return
-                default:
-                    break
-                }
-                fail("Expected incompatibleRequirements error to be thrown")
-            }
-        }
-
-        pending("should correctly resolve the latest version") {
-
-            let testCartfileURL = Bundle(for: ResolverBehavior.self).url(forResource: "Resolver/LatestVersion/Cartfile", withExtension: "")!
-            let projectDirectoryURL = testCartfileURL.deletingLastPathComponent()
-            let repositoryURL = projectDirectoryURL.appendingPathComponent("Repository")
-
-            let project = Project(directoryURL: projectDirectoryURL)
-            let repository = LocalDependencyStore(directoryURL: repositoryURL)
-
-            let signalProducer = project.resolveUpdatedDependencies(from: repository,
-                                                                    resolverType: resolverType.self,
-                                                                    dependenciesToUpdate: nil)
-            do {
-                guard let resolvedCartfile = try signalProducer.first()?.dematerialize() else {
-                    fail("Could not load resolved cartfile")
-                    return
-                }
-
-                if let facebookDependency = resolvedCartfile.dependencies.first(where: { $0.key.name == "facebook-ios-sdk" }) {
-                    expect(facebookDependency.value.commitish) == "4.33.0"
-                } else {
-                    fail("Expected facebook dependency to be present")
-                }
-
-                //Should not throw an error
-                _ = try project.buildOrderForResolvedCartfile(resolvedCartfile).first()?.dematerialize()
-
-            } catch {
-                fail("Unexpected error thrown: \(error)")
-            }
-        }
-
-        pending("should correctly resolve items with conflicting names, giving precedence to pinned versions") {
-            guard let testCartfileURL = Bundle(for: ResolverBehavior.self).url(forResource: "Resolver/ConflictingNames/Cartfile", withExtension: "") else {
-                fail("Could not load Resolver/ConflictingNames/Cartfile from resources")
-                return
-            }
-            let projectDirectoryURL = testCartfileURL.deletingLastPathComponent()
-            let repositoryURL = projectDirectoryURL.appendingPathComponent("Repository")
-
-            let project = Project(directoryURL: projectDirectoryURL)
-            let repository = LocalDependencyStore(directoryURL: repositoryURL)
-
-            let signalProducer = project.resolveUpdatedDependencies(from: repository,
-                                                                    resolverType: resolverType.self,
-                                                                    dependenciesToUpdate: nil)
-            do {
-                guard let resolvedCartfile = try signalProducer.first()?.dematerialize() else {
-                    fail("Could not load resolved cartfile")
-                    return
-                }
-
-                if let kissXMLDependency = resolvedCartfile.dependencies.first(where: { $0.key.name == "KissXML" }) {
-                    expect(kissXMLDependency.value.commitish) == "88665bed750e0fec9ad8e1ffc992b5b3812008d3"
-                } else {
-                    fail("Expected kissXMLDependency dependency to be present")
-                }
-
-                //Should not throw an error
-                _ = try project.buildOrderForResolvedCartfile(resolvedCartfile).first()?.dematerialize()
-
-            } catch {
-                fail("Unexpected error thrown: \(error)")
-            }
-        }
-
-        pending("should fail on cyclic dependencies") {
-            let db: DB = [
-                github1: [
-                    .v1_0_0: [
-                        github2: .compatibleWith(.v1_0_0),
-                    ],
-                    .v1_1_0: [
-                        github2: .compatibleWith(.v1_0_0),
-                    ],
-                    .v2_0_0: [
-                        github2: .compatibleWith(.v2_0_0),
-                    ],
-                ],
-                github2: [
-                    .v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
-                ],
-                github3: [
-                    .v1_0_0: [ github1: .compatibleWith(.v1_0_0)],
-                ],
-                ]
-
-            let resolved = db.resolve(resolverType, [ github1: .any, github2: .any ])
-            expect(resolved.value).to(beNil())
-            expect(resolved.error).notTo(beNil())
-            if let error = resolved.error {
-                switch error {
-                case .dependencyCycle:
-                    print("Dependency cycle error: \(error)")
-                default:
-                    fail("Expected error to be of type .dependencyCycle")
-                }
-            }
-        }
+		
+		pending("should correctly resolve complex conflicting dependencies") {
+			
+			guard let testCartfileURL = Bundle(for: ResolverBehavior.self).url(forResource: "Resolver/ConflictingDependencies/Cartfile", withExtension: "") else {
+				fail("Could not load Resolver/ConflictingDependencies/Cartfile from resources")
+				return
+			}
+			let projectDirectoryURL = testCartfileURL.deletingLastPathComponent()
+			let repositoryURL = projectDirectoryURL.appendingPathComponent("Repository")
+			
+			let project = Project(directoryURL: projectDirectoryURL)
+			let repository = LocalDependencyStore(directoryURL: repositoryURL)
+			
+			let signalProducer = project.resolveUpdatedDependencies(from: repository,
+																	resolverType: resolverType.self,
+																	dependenciesToUpdate: nil)
+			do {
+				_ = try signalProducer.first()?.dematerialize()
+				fail("Expected incompatibility error to be thrown")
+			} catch {
+				print("Caught error: \(error)")
+				switch error {
+				case CarthageError.incompatibleRequirements:
+					return
+				default:
+					break
+				}
+				fail("Expected incompatibleRequirements error to be thrown")
+			}
+		}
+		
+		pending("should correctly resolve the latest version") {
+			
+			let testCartfileURL = Bundle(for: ResolverBehavior.self).url(forResource: "Resolver/LatestVersion/Cartfile", withExtension: "")!
+			let projectDirectoryURL = testCartfileURL.deletingLastPathComponent()
+			let repositoryURL = projectDirectoryURL.appendingPathComponent("Repository")
+			
+			let project = Project(directoryURL: projectDirectoryURL)
+			let repository = LocalDependencyStore(directoryURL: repositoryURL)
+			
+			let signalProducer = project.resolveUpdatedDependencies(from: repository,
+																	resolverType: resolverType.self,
+																	dependenciesToUpdate: nil)
+			do {
+				guard let resolvedCartfile = try signalProducer.first()?.dematerialize() else {
+					fail("Could not load resolved cartfile")
+					return
+				}
+				
+				if let facebookDependency = resolvedCartfile.dependencies.first(where: { $0.key.name == "facebook-ios-sdk" }) {
+					expect(facebookDependency.value.commitish) == "4.33.0"
+				} else {
+					fail("Expected facebook dependency to be present")
+				}
+				
+				//Should not throw an error
+				_ = try project.buildOrderForResolvedCartfile(resolvedCartfile).first()?.dematerialize()
+				
+			} catch {
+				fail("Unexpected error thrown: \(error)")
+			}
+		}
+		
+		pending("should correctly resolve items with conflicting names, giving precedence to pinned versions") {
+			guard let testCartfileURL = Bundle(for: ResolverBehavior.self).url(forResource: "Resolver/ConflictingNames/Cartfile", withExtension: "") else {
+				fail("Could not load Resolver/ConflictingNames/Cartfile from resources")
+				return
+			}
+			let projectDirectoryURL = testCartfileURL.deletingLastPathComponent()
+			let repositoryURL = projectDirectoryURL.appendingPathComponent("Repository")
+			
+			let project = Project(directoryURL: projectDirectoryURL)
+			let repository = LocalDependencyStore(directoryURL: repositoryURL)
+			
+			let signalProducer = project.resolveUpdatedDependencies(from: repository,
+																	resolverType: resolverType.self,
+																	dependenciesToUpdate: nil)
+			do {
+				guard let resolvedCartfile = try signalProducer.first()?.dematerialize() else {
+					fail("Could not load resolved cartfile")
+					return
+				}
+				
+				if let kissXMLDependency = resolvedCartfile.dependencies.first(where: { $0.key.name == "KissXML" }) {
+					expect(kissXMLDependency.value.commitish) == "88665bed750e0fec9ad8e1ffc992b5b3812008d3"
+				} else {
+					fail("Expected kissXMLDependency dependency to be present")
+				}
+				
+				//Should not throw an error
+				_ = try project.buildOrderForResolvedCartfile(resolvedCartfile).first()?.dematerialize()
+				
+			} catch {
+				fail("Unexpected error thrown: \(error)")
+			}
+		}
+		
+		pending("should fail on cyclic dependencies") {
+			let db: DB = [
+				github1: [
+					.v1_0_0: [
+						github2: .compatibleWith(.v1_0_0),
+					],
+					.v1_1_0: [
+						github2: .compatibleWith(.v1_0_0),
+					],
+					.v2_0_0: [
+						github2: .compatibleWith(.v2_0_0),
+					],
+				],
+				github2: [
+					.v1_0_0: [ github3: .compatibleWith(.v1_0_0) ],
+				],
+				github3: [
+					.v1_0_0: [ github1: .compatibleWith(.v1_0_0)],
+				],
+				]
+			
+			let resolved = db.resolve(resolverType, [ github1: .any, github2: .any ])
+			expect(resolved.value).to(beNil())
+			expect(resolved.error).notTo(beNil())
+			if let error = resolved.error {
+				switch error {
+				case .dependencyCycle:
+					print("Dependency cycle error: \(error)")
+				default:
+					fail("Expected error to be of type .dependencyCycle")
+				}
+			}
+		}
 	}
 }
