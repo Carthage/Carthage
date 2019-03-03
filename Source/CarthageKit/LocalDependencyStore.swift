@@ -1,31 +1,45 @@
-// swiftlint:disable vertical_parameter_alignment_on_call
 import Foundation
 import Tentacle
 import Result
 import ReactiveSwift
 
-/**
-Local store for storing/loading dependencies and their versions.
-This is for testing without requiring live connection to real repositories.
-*/
+/// Local store for storing/loading dependencies and their versions.
+/// This is for testing without requiring live connection to real repositories.
 public final class LocalDependencyStore {
 	private let directoryURL: URL
 
+	/// Initializes with the URL to the directory containing the JSON files with the dependency information
 	public init(directoryURL: URL) {
 		self.directoryURL = directoryURL
 	}
 
-	public func loadPinnedVersions(for dependency: Dependency, gitReference: String? = nil) throws -> [PinnedVersion] {
+	/// Loads the pinned version for the specified dependency and optional git reference
+	public func loadPinnedVersions(for dependency: Dependency, gitReference: String? = nil) -> Result<[PinnedVersion], CarthageError> {
 		let fileURL = canonicalPinnedVersionFileURL(for: dependency, gitReference: gitReference)
-		let data = try Data(contentsOf: fileURL)
-		return try JSONDecoder().decode([PinnedVersion].self, from: data)
+		do {
+			let data = try Data(contentsOf: fileURL)
+			let pinnedVersions = try JSONDecoder().decode([PinnedVersion].self, from: data)
+			return Result.success(pinnedVersions)
+		} catch let error as NSError {
+			return Result.failure(CarthageError.readFailed(fileURL, error))
+		} catch {
+			return Result.failure(CarthageError.internalError(description: error.localizedDescription))
+		}
 	}
 
-	public func loadTransitiveDependencies(for dependency: Dependency, version: PinnedVersion) throws -> [(Dependency, VersionSpecifier)] {
+	/// Loads transitive dependencies for the specified dependency and version
+	public func loadTransitiveDependencies(for dependency: Dependency, version: PinnedVersion) -> Result<[(Dependency, VersionSpecifier)], CarthageError> {
 		let fileURL = transitiveDependenciesURL(for: dependency, version: version)
-		let data = try Data(contentsOf: fileURL)
-		let versionSpecs = try JSONDecoder().decode([DependencyVersionSpecification].self, from: data)
-		return versionSpecs.map { ($0.dependency, $0.versionSpecifier) }
+		do {
+			let data = try Data(contentsOf: fileURL)
+			let versionSpecs = try JSONDecoder().decode([DependencyVersionSpecification].self, from: data)
+			let versionedDependencies = versionSpecs.map { ($0.dependency, $0.versionSpecifier) }
+			return Result.success(versionedDependencies)
+		} catch let error as NSError {
+			return Result.failure(CarthageError.readFailed(fileURL, error))
+		} catch {
+			return Result.failure(CarthageError.internalError(description: error.localizedDescription))
+		}
 	}
 
 	private func canonicalPinnedVersionFileURL(for dependency: Dependency, gitReference: String? = nil) -> URL {
@@ -40,71 +54,73 @@ public final class LocalDependencyStore {
 		return fileURL
 	}
 
-	public func storePinnedVersions(_ pinnedVersions: [PinnedVersion], for dependency: Dependency, gitReference: String? = nil) throws {
+	/// Stores the specified pinned versions for the specified dependency and optional git reference to disk.
+	public func storePinnedVersions(_ pinnedVersions: [PinnedVersion], for dependency: Dependency, gitReference: String? = nil) -> Result<(), CarthageError> {
 		let fileURL = canonicalPinnedVersionFileURL(for: dependency, gitReference: gitReference)
-
-		//Ensure the directory exists:
-		try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
-
-		let encoder = JSONEncoder()
-		encoder.outputFormatting = .prettyPrinted
-
-		let jsonData = try encoder.encode(pinnedVersions)
-
-		try jsonData.write(to: fileURL, options: [])
+		
+		do {
+			//Ensure the directory exists:
+			try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
+			
+			let encoder = JSONEncoder()
+			encoder.outputFormatting = .prettyPrinted
+			
+			let jsonData = try encoder.encode(pinnedVersions)
+			
+			try jsonData.write(to: fileURL, options: [])
+			
+			return Result.success(())
+		} catch let error as NSError {
+			return Result.failure(CarthageError.writeFailed(fileURL, error))
+		} catch {
+			return Result.failure(CarthageError.internalError(description: error.localizedDescription))
+		}
 	}
 
-	public func storeTransitiveDependencies(_ transitiveDependencies: [(Dependency, VersionSpecifier)], for dependency: Dependency, version: PinnedVersion) throws {
+	/// Stores the specified transitive dependencies for the specified dependency and version to disk.
+	public func storeTransitiveDependencies(_ transitiveDependencies: [(Dependency, VersionSpecifier)], for dependency: Dependency, version: PinnedVersion) -> Result<(), CarthageError> {
 		let fileURL = transitiveDependenciesURL(for: dependency, version: version)
 
-		//Ensure the directory exits:
-		try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
-
-		let specs = transitiveDependencies.map { dependencyEntry -> DependencyVersionSpecification in
-			DependencyVersionSpecification(dependency: dependencyEntry.0, versionSpecifier: dependencyEntry.1)
+		do {
+			//Ensure the directory exits:
+			try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
+			
+			let specs = transitiveDependencies.map { dependencyEntry -> DependencyVersionSpecification in
+				DependencyVersionSpecification(dependency: dependencyEntry.0, versionSpecifier: dependencyEntry.1)
+			}
+			
+			let encoder = JSONEncoder()
+			encoder.outputFormatting = .prettyPrinted
+			
+			let jsonData = try encoder.encode(specs)
+			
+			try jsonData.write(to: fileURL)
+			return Result.success(())
+		} catch let error as NSError {
+			return Result.failure(CarthageError.writeFailed(fileURL, error))
+		} catch {
+			return Result.failure(CarthageError.internalError(description: error.localizedDescription))
 		}
-
-		let encoder = JSONEncoder()
-		encoder.outputFormatting = .prettyPrinted
-
-		let jsonData = try encoder.encode(specs)
-
-		try jsonData.write(to: fileURL)
 	}
 
+	/// Implementation of method needed by the Resolver protocol
 	public func versions(for dependency: Dependency) -> SignalProducer<PinnedVersion, CarthageError> {
 		return SignalProducer<[PinnedVersion], CarthageError> { () -> Result<[PinnedVersion], CarthageError> in
-			do {
-				let pinnedVersions = try self.loadPinnedVersions(for: dependency)
-				return Result.success(pinnedVersions)
-			} catch let error {
-				let carthageError = (error as? CarthageError) ?? CarthageError.internalError(description: error.localizedDescription)
-				return Result.failure(carthageError)
-			}
+			return self.loadPinnedVersions(for: dependency)
 			}.flatten()
 	}
 
+	/// Implementation of method needed by the Resolver protocol
 	public func resolvedGitReference(_ dependency: Dependency, reference: String) -> SignalProducer<PinnedVersion, CarthageError> {
 		return SignalProducer<[PinnedVersion], CarthageError> { () -> Result<[PinnedVersion], CarthageError> in
-			do {
-				let pinnedVersions = try self.loadPinnedVersions(for: dependency, gitReference: reference)
-				return Result.success(pinnedVersions)
-			} catch let error {
-				let carthageError = (error as? CarthageError) ?? CarthageError.internalError(description: error.localizedDescription)
-				return Result.failure(carthageError)
-			}
+			return self.loadPinnedVersions(for: dependency, gitReference: reference)
 			}.flatten()
 	}
 
+	/// Implementation of method needed by the Resolver protocol
 	public func dependencies(for dependency: Dependency, version: PinnedVersion) -> SignalProducer<(Dependency, VersionSpecifier), CarthageError> {
 		return SignalProducer<[(Dependency, VersionSpecifier)], CarthageError> { () -> Result<[(Dependency, VersionSpecifier)], CarthageError> in
-			do {
-				let transitiveDependencies = try self.loadTransitiveDependencies(for: dependency, version: version)
-				return Result.success(transitiveDependencies)
-			} catch let error {
-				let carthageError = (error as? CarthageError) ?? CarthageError.internalError(description: error.localizedDescription)
-				return Result.failure(carthageError)
-			}
+			return self.loadTransitiveDependencies(for: dependency, version: version)
 			}.flatten()
 	}
 }
