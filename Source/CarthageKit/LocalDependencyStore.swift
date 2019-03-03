@@ -57,18 +57,18 @@ public final class LocalDependencyStore {
 	/// Stores the specified pinned versions for the specified dependency and optional git reference to disk.
 	public func storePinnedVersions(_ pinnedVersions: [PinnedVersion], for dependency: Dependency, gitReference: String? = nil) -> Result<(), CarthageError> {
 		let fileURL = canonicalPinnedVersionFileURL(for: dependency, gitReference: gitReference)
-		
+
 		do {
 			//Ensure the directory exists:
 			try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
-			
+
 			let encoder = JSONEncoder()
 			encoder.outputFormatting = .prettyPrinted
-			
+
 			let jsonData = try encoder.encode(pinnedVersions)
-			
+
 			try jsonData.write(to: fileURL, options: [])
-			
+
 			return Result.success(())
 		} catch let error as NSError {
 			return Result.failure(CarthageError.writeFailed(fileURL, error))
@@ -84,16 +84,16 @@ public final class LocalDependencyStore {
 		do {
 			//Ensure the directory exits:
 			try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
-			
+
 			let specs = transitiveDependencies.map { dependencyEntry -> DependencyVersionSpecification in
 				DependencyVersionSpecification(dependency: dependencyEntry.0, versionSpecifier: dependencyEntry.1)
 			}
-			
+
 			let encoder = JSONEncoder()
 			encoder.outputFormatting = .prettyPrinted
-			
+
 			let jsonData = try encoder.encode(specs)
-			
+
 			try jsonData.write(to: fileURL)
 			return Result.success(())
 		} catch let error as NSError {
