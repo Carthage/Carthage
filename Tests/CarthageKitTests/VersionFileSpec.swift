@@ -83,6 +83,7 @@ class VersionFileSpec: QuickSpec {
 			expect(newCachedFramework[0].name) == framework.name
 			expect(newCachedFramework[0].hash) == framework.hash
 			expect(newCachedFramework[0].swiftToolchainVersion) == framework.swiftToolchainVersion
+			expect(newCachedFramework[0].isSwiftFramework) == framework.isSwiftFramework
 		}
 		
 		it("should encode and decode correctly") {
@@ -183,6 +184,25 @@ class VersionFileSpec: QuickSpec {
 			validate(
 				file: versionFile, matches: false, platform: .watchOS,
 				commitish: "v1.0", hashes: [nil, nil], swiftVersionMatches: [true, true]
+			)
+		}
+		
+		it("should do proper validation with objc framework") {
+			let jsonDictionary: [String: Any] = [
+				"commitish": "v1.0",
+				"iOS": [
+					[
+						"name": "TestObjCFramework",
+						"hash": "TestHASH",
+						],
+				],
+				]
+			let jsonData = try! JSONSerialization.data(withJSONObject: jsonDictionary)
+			
+			let versionFile: VersionFile! = try? JSONDecoder().decode(VersionFile.self, from: jsonData)
+			validate(
+				file: versionFile, matches: true, platform: .iOS,
+				commitish: "v1.0", hashes: ["TestHASH"], swiftVersionMatches: [true]
 			)
 		}
 	}

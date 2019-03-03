@@ -378,6 +378,11 @@ class XcodeSpec: QuickSpec {
 			// Verify that the build product exists at the top level.
 			let path = buildFolderURL.appendingPathComponent("Mac/\(dependency.name).framework").path
 			expect(path).to(beExistingDirectory())
+
+			// Verify that the version file exists.
+			let versionFileURL = URL(fileURLWithPath: buildFolderURL.appendingPathComponent(".Archimedes.version").path)
+			let versionFile = VersionFile(url: versionFileURL)
+			expect(versionFile).notTo(beNil())
 			
 			// Verify that the other platform wasn't built.
 			let incorrectPath = buildFolderURL.appendingPathComponent("iOS/\(dependency.name).framework").path
