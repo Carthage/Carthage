@@ -43,7 +43,8 @@ public final class DependencyCrawler {
 		resolvedGitReference: @escaping (Dependency, String) -> SignalProducer<PinnedVersion, CarthageError>,
 		store: LocalDependencyStore,
 		mappings: [Dependency: Dependency]? = nil,
-		ignoreErrors: Bool = false) {
+		ignoreErrors: Bool = false
+		) {
 		self.versionsForDependency = versionsForDependency
 		self.dependenciesForDependency = dependenciesForDependency
 		self.resolvedGitReference = resolvedGitReference
@@ -189,21 +190,10 @@ public final class DependencyCrawler {
 private struct PinnedDependency: Hashable {
 	public let dependency: Dependency
 	public let pinnedVersion: PinnedVersion
-	private let hash: Int
-
+	
 	init(dependency: Dependency, pinnedVersion: PinnedVersion) {
 		self.dependency = dependency
 		self.pinnedVersion = pinnedVersion
-		// Pre-compute hash for efficiency
-		self.hash = 37 &* dependency.hashValue &+ pinnedVersion.hashValue
-	}
-
-	public var hashValue: Int {
-		return hash
-	}
-
-	public static func == (lhs: PinnedDependency, rhs: PinnedDependency) -> Bool {
-		return lhs.pinnedVersion == rhs.pinnedVersion && lhs.dependency == rhs.dependency
 	}
 }
 
