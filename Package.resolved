@@ -24,8 +24,8 @@
         "repositoryURL": "https://github.com/Quick/Nimble.git",
         "state": {
           "branch": null,
-          "revision": "cd6dfb86f496fcd96ce0bc6da962cd936bf41903",
-          "version": "7.3.1"
+          "revision": "e9d769113660769a4d9dd3afb855562c0b7ae7b0",
+          "version": "7.3.4"
         }
       },
       {
@@ -42,8 +42,8 @@
         "repositoryURL": "https://github.com/Quick/Quick.git",
         "state": {
           "branch": null,
-          "revision": "5fbf13871d185526993130c3a1fad0b70bfe37ce",
-          "version": "1.3.2"
+          "revision": "f2b5a06440ea87eba1a167cab37bf6496646c52e",
+          "version": "1.3.4"
         }
       },
       {
@@ -69,8 +69,8 @@
         "repositoryURL": "https://github.com/antitypical/Result.git",
         "state": {
           "branch": null,
-          "revision": "8fc088dcf72802801efeecba76ea8fb041fb773d",
-          "version": "4.0.0"
+          "revision": "2ca499ba456795616fbc471561ff1d963e6ae160",
+          "version": "4.1.0"
         }
       },
       {
@@ -78,7 +78,7 @@
         "repositoryURL": "https://github.com/apple/swift-llbuild.git",
         "state": {
           "branch": "master",
-          "revision": "c7aa6e5ea11b39362159b4edc98bfd5dd6d57cf3",
+          "revision": "ed7a4a1c010002f2646b8aaf9f9e88e6f20795c1",
           "version": null
         }
       },
@@ -86,8 +86,8 @@
         "package": "SwiftPM",
         "repositoryURL": "https://github.com/apple/swift-package-manager.git",
         "state": {
-          "branch": "master",
-          "revision": "618ec189be028484cb942dd1249a396851c7176d",
+          "branch": "swift-DEVELOPMENT-SNAPSHOT-2019-03-04-a",
+          "revision": "916450f7e8a5aef13630edf9e6fc0b16ed9f5f65",
           "version": null
         }
       },
@@ -96,8 +96,8 @@
         "repositoryURL": "https://github.com/mdiep/Tentacle.git",
         "state": {
           "branch": null,
-          "revision": "ace0aedb5bd90a41de254808dbe633813f7b1882",
-          "version": "0.12.0"
+          "revision": "d7f05e586195303174f108a11d0433b204369f4d",
+          "version": "0.12.1"
         }
       }
     ]

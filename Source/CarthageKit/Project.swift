@@ -6,7 +6,7 @@ import ReactiveSwift
 import Tentacle
 import XCDBLD
 import ReactiveTask
-import Utility
+import SPMUtility
 
 import struct Foundation.URL
 import enum XCDBLD.Platform

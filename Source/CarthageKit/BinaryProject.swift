@@ -1,6 +1,6 @@
 import Foundation
 import Result
-import Utility
+import SPMUtility
 
 import struct Foundation.URL
 
