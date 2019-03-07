@@ -201,7 +201,7 @@ private func scriptInputFileLists() -> SignalProducer<String, CarthageError> {
 				.attemptMap { getEnvironmentVariable("SCRIPT_INPUT_FILE_LIST_\($0)") }
 				.flatMap(.merge) { fileList -> SignalProducer<String, CarthageError> in
 					let fileListURL = URL(fileURLWithPath: fileList, isDirectory: true)
-					return SignalProducer<String, NSError>(result: Result(attempt: { try String(contentsOfFile: fileList) }))
+					return SignalProducer<String, NSError>(result: Result(catching: { try String(contentsOfFile: fileList) }))
 						.mapError { CarthageError.readFailed(fileListURL, $0) }
 				}
 				.map { $0.split(separator: "\n").map(String.init) }

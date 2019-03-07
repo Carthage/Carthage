@@ -161,7 +161,7 @@ public func checkoutRepositoryToDirectory(
 			return .success(environment)
 	}
 	.attempt { _ in
-		Result(attempt: { try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true) })
+		Result(catching: { try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true) })
 			.mapError {
 				CarthageError.repositoryCheckoutFailed(
 					workingDirectoryURL: workingDirectoryURL,
