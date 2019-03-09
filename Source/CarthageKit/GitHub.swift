@@ -148,7 +148,13 @@ extension Client {
 			Client.userAgent = gitHubUserAgent()
 		}
 
-		let urlSession = URLSession.proxiedSession
+        var urlSession: URLSession
+        
+        if server.url.host?.contains("github.com") == true {
+            urlSession = URLSession.proxiedSessionWithDelegate
+        } else {
+            urlSession = URLSession.proxiedSession
+        }
 
 		if !isAuthenticated {
 			self.init(server, urlSession: urlSession)
@@ -163,7 +169,14 @@ extension Client {
 }
 
 extension URLSession {
-	public static var proxiedSession: URLSession {
+    public static var proxiedSession: URLSession {
+        let configuration = URLSessionConfiguration.default
+        configuration.connectionProxyDictionary = Proxy.default.connectionProxyDictionary
+        
+        return URLSession(configuration: configuration)
+    }
+    
+	public static var proxiedSessionWithDelegate: URLSession {
 		let configuration = URLSessionConfiguration.default
 		configuration.connectionProxyDictionary = Proxy.default.connectionProxyDictionary
 
