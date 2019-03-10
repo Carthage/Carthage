@@ -357,34 +357,24 @@ private func mergeExecutables(_ executableURLs: [URL], _ outputURL: URL) -> Sign
 		.then(SignalProducer<(), CarthageError>.empty)
 }
 
-private func findSwiftHeaderFiles(fromExecutableURLs executableURLs: [URL]) -> [URL] {
-	return executableURLs.map { 
-		let executableName = $0.lastPathComponent
-		return $0.deletingLastPathComponent().appendingPathComponent("Headers/\(executableName)-Swift.h") 
-	}
-}
-
-private func findSwiftHeaderOutputURL(fromURL url: URL) -> URL {
-	let executableName = url.lastPathComponent
-	
-	return url.deletingLastPathComponent().appendingPathComponent("Headers/\(executableName)-Swift.h")
-}
-
 private func mergeSwiftHeaderFiles(_ executableURLs: [URL], _ executableOutputURL: URL) -> SignalProducer<(), CarthageError> {
 	precondition(executableOutputURL.isFileURL)
-	precondition(executableURLs.count > 1)
 
-	let headerURLs = findSwiftHeaderFiles(fromExecutableURLs: executableURLs)
-	let outputURL = findSwiftHeaderOutputURL(fromURL: executableOutputURL)
+    let conditionalsCheck = "#if 0"
     let conditionalPrefix = "#if 0\n#elif (defined(__x86_64__) && __x86_64__) || (defined(__i386__) && __i386__)\n"
     let conditionalSuffix = "\n#endif"
     
+    guard let conditionalsCheckContents = conditionalsCheck.data(using: .utf8) else { return .empty }
     guard let conditionalPrefixContents = conditionalPrefix.data(using: .utf8) else { return .empty }
     guard let conditionalSuffixContents = conditionalSuffix.data(using: .utf8) else { return .empty }
+    guard let outputURL = executableOutputURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
+    
+    let headerURLs = executableURLs.map { $0.deletingLastPathComponent().swiftHeaderURL() }
 	
 	var fileContents = Data()
 
 	for url in headerURLs {
+        guard let url = url else { continue }
 		guard let contents = FileManager.default.contents(atPath: url.path) else { continue }
 
         // Need to work around an inconsistency in the way that the Swift
@@ -396,7 +386,7 @@ private func mergeSwiftHeaderFiles(_ executableURLs: [URL], _ executableOutputUR
         // add a conditional around those files
         var needToAddConditionals = false
         
-        if String(data: contents, encoding: .utf8)?.starts(with: "#if 0") == false {
+        if contents.starts(with: conditionalsCheckContents) == false {
             needToAddConditionals = true
         }
         
