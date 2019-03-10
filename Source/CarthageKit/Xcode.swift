@@ -359,48 +359,48 @@ private func mergeExecutables(_ executableURLs: [URL], _ outputURL: URL) -> Sign
 
 private func mergeSwiftHeaderFiles(_ executableURLs: [URL], _ executableOutputURL: URL) -> SignalProducer<(), CarthageError> {
 	precondition(executableOutputURL.isFileURL)
-
-    let conditionalsCheck = "#if 0"
-    let conditionalPrefix = "#if 0\n#elif (defined(__x86_64__) && __x86_64__) || (defined(__i386__) && __i386__)\n"
-    let conditionalSuffix = "\n#endif"
-    
-    guard let conditionalsCheckContents = conditionalsCheck.data(using: .utf8) else { return .empty }
-    guard let conditionalPrefixContents = conditionalPrefix.data(using: .utf8) else { return .empty }
-    guard let conditionalSuffixContents = conditionalSuffix.data(using: .utf8) else { return .empty }
-    guard let outputURL = executableOutputURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
-    
-    let headerURLs = executableURLs.map { $0.deletingLastPathComponent().swiftHeaderURL() }
+	
+	let conditionalsCheck = "#if 0"
+	let conditionalPrefix = "#if 0\n#elif (defined(__x86_64__) && __x86_64__) || (defined(__i386__) && __i386__)\n"
+	let conditionalSuffix = "\n#endif"
+	
+	guard let conditionalsCheckContents = conditionalsCheck.data(using: .utf8) else { return .empty }
+	guard let conditionalPrefixContents = conditionalPrefix.data(using: .utf8) else { return .empty }
+	guard let conditionalSuffixContents = conditionalSuffix.data(using: .utf8) else { return .empty }
+	guard let outputURL = executableOutputURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
+	
+	let headerURLs = executableURLs.map { $0.deletingLastPathComponent().swiftHeaderURL() }
 	
 	var fileContents = Data()
-
+	
 	for url in headerURLs {
-        guard let url = url else { continue }
+		guard let url = url else { continue }
 		guard let contents = FileManager.default.contents(atPath: url.path) else { continue }
-
-        // Need to work around an inconsistency in the way that the Swift
-        // header files are created on simulators on different platforms. On
-        // iOS simulators the Swift header file has a structure that matches
-        // the Swift header file for devices because they both include
-        // conditionals for the supported platforms. This is not true for
-        // watchOS simulators (any maybe others?) at this time so we're going to
-        // add a conditional around those files
-        var needToAddConditionals = false
-        
-        if contents.starts(with: conditionalsCheckContents) == false {
-            needToAddConditionals = true
-        }
-        
-        if needToAddConditionals {
-            fileContents.append(conditionalPrefixContents)
-        }
-        
+		
+		// Need to work around an inconsistency in the way that the Swift
+		// header files are created on simulators on different platforms. On
+		// iOS simulators the Swift header file has a structure that matches
+		// the Swift header file for devices because they both include
+		// conditionals for the supported platforms. This is not true for
+		// watchOS simulators (any maybe others?) at this time so we're going to
+		// add a conditional around those files
+		var needToAddConditionals = false
+		
+		if contents.starts(with: conditionalsCheckContents) == false {
+			needToAddConditionals = true
+		}
+		
+		if needToAddConditionals {
+			fileContents.append(conditionalPrefixContents)
+		}
+		
 		fileContents.append(contents)
-        
-        if needToAddConditionals {
-            fileContents.append(conditionalSuffixContents)
-        }
+		
+		if needToAddConditionals {
+			fileContents.append(conditionalSuffixContents)
+		}
 	}
-
+	
 	FileManager.default.createFile(atPath: outputURL.path, contents: fileContents, attributes: nil)
 	
 	return .empty
@@ -534,23 +534,23 @@ private func mergeBuildProducts(
 						.flatMap(.concat) { localSwiftVersion -> SignalProducer<(), CarthageError> in
 							guard let versionSubstring = localSwiftVersion.split(separator: " ").first else { return .empty }
 							let scanner = Scanner(string: String(versionSubstring))
-                            guard let semanticVersion = Version.from(scanner).value else { return .empty }
-
-                            // Would rather not compare to a major Swift version
-                            // here and instead rely upon the structure of the
-                            // Swift header files to determine whether they get
-                            // merged together but as described in the
-                            // `mergeSwiftHeaderFiles(,)` implementation that
-                            // behavior does not appear to be consistent across
-                            // platforms at this time.
+							guard let semanticVersion = Version.from(scanner).value else { return .empty }
+							
+							// Would rather not compare to a major Swift version
+							// here and instead rely upon the structure of the
+							// Swift header files to determine whether they get
+							// merged together but as described in the
+							// `mergeSwiftHeaderFiles(,)` implementation that
+							// behavior does not appear to be consistent across
+							// platforms at this time.
 							guard semanticVersion.major >= 5 else { return .empty }
-
-                            return mergeSwiftHeaderFiles(
+							
+							return mergeSwiftHeaderFiles(
 								executableURLs.map { $0.resolvingSymlinksInPath() },
 								outputURL.resolvingSymlinksInPath()
 							)
 					}
-				}
+			}
 
 			let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
 				.filter { $0.0 != nil }
