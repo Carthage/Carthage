@@ -155,12 +155,25 @@ private func targetBuildFolder() -> Result<URL, CarthageError> {
 		.map { URL(fileURLWithPath: $0, isDirectory: true) }
 }
 
+private func executablePath() -> Result<URL, CarthageError> {
+    return targetBuildFolder().flatMap { url in
+        return getEnvironmentVariable("EXECUTABLE_PATH").map { path in
+            return url.appendingPathComponent(path)
+        }
+    }
+}
+
 private func frameworksFolder() -> Result<URL, CarthageError> {
 	return appropriateDestinationFolder()
 		.flatMap { url -> Result<URL, CarthageError> in
 			getEnvironmentVariable("FRAMEWORKS_FOLDER_PATH")
 				.map { url.appendingPathComponent($0, isDirectory: true) }
 		}
+}
+
+private func projectDirectory() -> Result<URL, CarthageError> {
+    return getEnvironmentVariable("PROJECT_FILE_PATH")
+        .map { URL(fileURLWithPath: $0, isDirectory: false).deletingLastPathComponent() }
 }
 
 private func validArchitectures() -> Result<[String], CarthageError> {
@@ -175,7 +188,7 @@ private func buildActionIsArchiveOrInstall() -> Bool {
 }
 
 private func inputFiles() -> SignalProducer<String, CarthageError> {
-	return SignalProducer(values: scriptInputFiles(), scriptInputFileLists())
+	return SignalProducer(values: scriptInputFiles(), scriptInputFileLists(), inferredInputFiles())
 		.flatten(.merge)
 		.uniqueValues()
 }
@@ -212,4 +225,16 @@ private func scriptInputFileLists() -> SignalProducer<String, CarthageError> {
 	case .failure:
 		return .empty
 	}
+}
+
+private func inferredInputFiles() -> SignalProducer<String, CarthageError> {
+    if
+        let directory = projectDirectory().value,
+        let platformName = getEnvironmentVariable("PLATFORM_NAME").value,
+        let platform = BuildPlatform.from(string: platformName)?.platforms.first,
+        let executable = executablePath().value
+    {
+        return Project(directoryURL: directory).findLinkedFrameworks(for: executable, platform: platform)
+    }
+    return .empty
 }

@@ -1169,6 +1169,37 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return incompatibilities.isEmpty ? .init(value: ()) : .init(error: .invalidResolvedCartfile(incompatibilities))
 			}
 	}
+    
+    func findLinkedFrameworks(
+        for executableURL: URL,
+        existingFrameworksEnumerator: SignalProducer<URL, CarthageError>
+    ) -> SignalProducer<String, CarthageError> {
+        let existingFrameworksMap = existingFrameworksEnumerator.reduce(into: [String: URL]()) { (map, frameworkURL) in
+            let name = frameworkURL.deletingPathExtension().lastPathComponent
+            map[name] = frameworkURL
+        }
+        
+        return sharedLinkedFrameworks(for: executableURL).flatMap(.latest) { frameworks -> SignalProducer<String, CarthageError> in
+            if frameworks.isEmpty {
+                return .empty
+            }
+            
+            return existingFrameworksMap.flatMap(.latest) {  builtFrameworks -> SignalProducer<String, CarthageError> in
+                return SignalProducer(frameworks).filterMap { builtFrameworks[$0]?.path }
+            }
+        }
+    }
+    
+    /// Finds Carthage's frameworks that are linked against a given executable.
+    ///
+    /// - Parameters:
+    ///   - executableURL: Path to a executable of the Project. See `xcodebuild` settings `TARGET_BUILD_DIR` and `EXECUTABLE_PATH` for more info.
+    ///   - platform: Platform of the executable.
+    /// - Returns: Stream of Path for each linked framework for a given `platform` that was build by Carthage.
+    public func findLinkedFrameworks(for executableURL: URL, platform: Platform) -> SignalProducer<String, CarthageError> {
+        let frameworksDirectory = directoryURL.appendingPathComponent(platform.relativePath, isDirectory: true)
+        return findLinkedFrameworks(for: executableURL, existingFrameworksEnumerator: frameworksInDirectory(frameworksDirectory))
+    }
 }
 
 /// Creates symlink between the dependency build folder and the root build folder
@@ -1521,3 +1552,44 @@ public func cloneOrFetch(
 				}
 		}
 }
+
+/// Invokes otool -L for a given executable URL.
+///
+/// - Parameter executableURL: URL to a valid executable.
+/// - Returns: Array of the Shared Library ID that are linked against given executable (`Alamofire`, `Realm`, etc).
+/// System libraries and dylibs are omited.
+internal func sharedLinkedFrameworks(for executableURL: URL) -> SignalProducer<[String], CarthageError> {
+    return Task("/usr/bin/otool", arguments: ["-L", executableURL.path.spm_shellEscaped()])
+        .launch()
+        .mapError(CarthageError.taskError)
+        .ignoreTaskData()
+        .filterMap { data -> String? in
+            return String(data: data, encoding: .utf8)
+        }
+        .map(sharedLinkedFrameworkIDs(from:))
+}
+
+/// Stripping linked shared frameworks from
+/// @rpath/Alamofire.framework/Alamofire (compatibility version 1.0.0, current version 1.0.0)
+/// to Alamofire as well as filtering out system frameworks and various dylibs.
+/// Static frameworks and libraries won't show up here, so we can ignore them.
+///
+/// - Parameter input: Output of the otool -L
+/// - Returns: Array of Shared Framework IDs.
+internal func sharedLinkedFrameworkIDs(from input: String) -> [String] {
+    guard let regex = try? NSRegularExpression(pattern: "@rpath.*\\.framework\\/([\\w]+)") else {
+        return []
+    }
+    return input.components(separatedBy: "\n").compactMap { value in
+        let fullNSRange = NSRange(value.startIndex..<value.endIndex, in: value)
+        if
+            let match = regex.firstMatch(in: value, range: fullNSRange),
+            match.numberOfRanges > 1,
+            match.range(at: 1).length > 0
+        {
+            return Range(match.range(at: 1), in: value).map { String(value[$0]) }
+        }
+        return nil
+    }
+}
+
