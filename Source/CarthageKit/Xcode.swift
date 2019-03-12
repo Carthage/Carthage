@@ -535,6 +535,9 @@ private func mergeBuildProducts(
 							guard let versionSubstring = localSwiftVersion.split(separator: " ").first else { return .empty }
 							let scanner = Scanner(string: String(versionSubstring))
 							guard let semanticVersion = Version.from(scanner).value else { return .empty }
+							// TODO: Need some way to ensure that Xcode is using
+							// the new build system since this behavior does not
+							// exist in the old one per Twitter conversations
 							
 							// Would rather not compare to a major Swift version
 							// here and instead rely upon the structure of the
