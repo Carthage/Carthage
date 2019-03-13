@@ -1174,10 +1174,17 @@ public final class Project { // swiftlint:disable:this type_body_length
         for executableURL: URL,
         existingFrameworksEnumerator: SignalProducer<URL, CarthageError>
     ) -> SignalProducer<String, CarthageError> {
-        let existingFrameworksMap = existingFrameworksEnumerator.reduce(into: [String: URL]()) { (map, frameworkURL) in
-            let name = frameworkURL.deletingPathExtension().lastPathComponent
-            map[name] = frameworkURL
-        }
+        let existingFrameworksMap = existingFrameworksEnumerator
+            .filter { url in
+                // We need to filter out any static frameworks to not accidentally copy then for the dynamically linked ones.
+                let components = url.pathComponents
+                let staticFolderIndex = components.index(components.endIndex, offsetBy: -2)
+                return staticFolderIndex >= 0 && components[staticFolderIndex] != FrameworkType.staticFolderName
+            }
+            .reduce(into: [String: URL]()) { (map, frameworkURL) in
+                let name = frameworkURL.deletingPathExtension().lastPathComponent
+                map[name] = frameworkURL
+            }
         
         return sharedLinkedFrameworks(for: executableURL).flatMap(.latest) { frameworks -> SignalProducer<String, CarthageError> in
             if frameworks.isEmpty {
@@ -1559,7 +1566,7 @@ public func cloneOrFetch(
 /// - Returns: Array of the Shared Library ID that are linked against given executable (`Alamofire`, `Realm`, etc).
 /// System libraries and dylibs are omited.
 internal func sharedLinkedFrameworks(for executableURL: URL) -> SignalProducer<[String], CarthageError> {
-    return Task("/usr/bin/otool", arguments: ["-L", executableURL.path.spm_shellEscaped()])
+    return Task("/usr/bin/xcrun", arguments: ["otool", "-L", executableURL.path.spm_shellEscaped()])
         .launch()
         .mapError(CarthageError.taskError)
         .ignoreTaskData()

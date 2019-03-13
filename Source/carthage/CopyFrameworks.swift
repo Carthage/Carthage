@@ -156,7 +156,7 @@ private func targetBuildFolder() -> Result<URL, CarthageError> {
 }
 
 private func executablePath() -> Result<URL, CarthageError> {
-    return targetBuildFolder().flatMap { url in
+    return appropriateDestinationFolder().flatMap { url in
         return getEnvironmentVariable("EXECUTABLE_PATH").map { path in
             return url.appendingPathComponent(path)
         }
