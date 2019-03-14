@@ -1584,7 +1584,7 @@ internal func sharedLinkedFrameworks(for executableURL: URL) -> SignalProducer<[
 /// - Parameter input: Output of the otool -L
 /// - Returns: Array of Shared Framework IDs.
 internal func sharedLinkedFrameworkIDs(from input: String) -> [String] {
-    guard let regex = try? NSRegularExpression(pattern: "@rpath.*\\.framework\\/([\\w]+)") else {
+    guard let regex = try? NSRegularExpression(pattern: "[\\w]+\\.framework\\/([\\w]+)") else {
         return []
     }
     return input.components(separatedBy: "\n").compactMap { value in
