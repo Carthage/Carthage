@@ -3,7 +3,7 @@ import ReactiveSwift
 import Foundation
 import Result
 import Tentacle
-import Utility
+import SPMUtility
 
 // swiftlint:disable no_extension_access_modifier
 let git1 = Dependency.git(GitURL("https://example.com/repo1"))

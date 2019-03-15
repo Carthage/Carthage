@@ -5,7 +5,7 @@ import Quick
 import ReactiveSwift
 import Result
 import Tentacle
-import Utility
+import SPMUtility
 
 import struct Foundation.URL
 
