@@ -364,9 +364,9 @@ private func mergeSwiftHeaderFiles(_ executableURLs: [URL], _ executableOutputUR
 	let conditionalPrefix = "#if 0\n#elif (defined(__x86_64__) && __x86_64__) || (defined(__i386__) && __i386__)\n"
 	let conditionalSuffix = "\n#endif"
 	
-	guard let conditionalsCheckContents = conditionalsCheck.data(using: .utf8) else { return .empty }
-	guard let conditionalPrefixContents = conditionalPrefix.data(using: .utf8) else { return .empty }
-	guard let conditionalSuffixContents = conditionalSuffix.data(using: .utf8) else { return .empty }
+	let conditionalsCheckContents = conditionalsCheck.data(using: .utf8)!
+	let conditionalPrefixContents = conditionalPrefix.data(using: .utf8)!
+	let conditionalSuffixContents = conditionalSuffix.data(using: .utf8)!
 	guard let outputURL = executableOutputURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
 	
 	let headerURLs = executableURLs.map { $0.deletingLastPathComponent().swiftHeaderURL() }
