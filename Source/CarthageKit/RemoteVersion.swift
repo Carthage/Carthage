@@ -3,7 +3,7 @@ import ReactiveSwift
 import ReactiveTask
 import Result
 import Tentacle
-import Utility
+import SPMUtility
 
 /// Synchronously returns the semantic version of the newest release,
 /// if the given producer emits it within a reasonable timeframe.

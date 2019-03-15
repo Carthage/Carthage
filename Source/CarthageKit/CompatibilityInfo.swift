@@ -1,6 +1,6 @@
 import Foundation
 import Result
-import Utility
+import SPMUtility
 
 /// Identifies a dependency, its pinned version, and its compatible and incompatible requirements
 public struct CompatibilityInfo: Equatable {
