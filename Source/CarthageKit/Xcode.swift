@@ -6,7 +6,7 @@ import ReactiveSwift
 import ReactiveTask
 import XCDBLD
 
-import struct Utility.Version
+import struct SPMUtility.Version
 
 /// Emits the currect Swift version
 internal func swiftVersion(usingToolchain toolchain: String? = nil) -> SignalProducer<String, SwiftVersionError> {
