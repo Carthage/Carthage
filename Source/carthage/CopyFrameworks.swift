@@ -3,14 +3,24 @@ import Commandant
 import Foundation
 import Result
 import ReactiveSwift
+import Curry
 
 /// Type that encapsulates the configuration and evaluation of the `copy-frameworks` subcommand.
 public struct CopyFrameworksCommand: CommandProtocol {
+    public struct Options: OptionsProtocol {
+        public let automatic: Bool
+        
+        public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
+            return curry(self.init)
+                <*> mode <| Option(key: "automatic", defaultValue: false, usage: "infers and copies linked frameworks automatically")
+        }
+    }
+    
 	public let verb = "copy-frameworks"
 	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE and/or SCRIPT_INPUT_FILE_LIST environment variables into the built app bundle"
-
-	public func run(_ options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
-		return inputFiles()
+    
+	public func run(_ options: Options) -> Result<(), CarthageError> {
+		return inputFiles(options)
 			.flatMap(.merge) { frameworkPath -> SignalProducer<(), CarthageError> in
 				let frameworkName = (frameworkPath as NSString).lastPathComponent
 
@@ -187,8 +197,8 @@ private func buildActionIsArchiveOrInstall() -> Bool {
 	return getEnvironmentVariable("ACTION").value == "install"
 }
 
-private func inputFiles() -> SignalProducer<String, CarthageError> {
-	return SignalProducer(values: scriptInputFiles(), scriptInputFileLists(), inferredInputFiles())
+private func inputFiles(_ options: CopyFrameworksCommand.Options) -> SignalProducer<String, CarthageError> {
+    return SignalProducer(values: scriptInputFiles(), scriptInputFileLists(), options.automatic ? inferredInputFiles() : .empty)
 		.flatten(.merge)
 		.uniqueValues()
 }
