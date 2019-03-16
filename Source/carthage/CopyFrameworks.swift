@@ -198,9 +198,27 @@ private func buildActionIsArchiveOrInstall() -> Bool {
 }
 
 private func inputFiles(_ options: CopyFrameworksCommand.Options) -> SignalProducer<String, CarthageError> {
-    return SignalProducer(values: scriptInputFiles(), scriptInputFileLists(), options.automatic ? inferredInputFiles() : .empty)
-		.flatten(.merge)
-		.uniqueValues()
+    let userInputFiles = SignalProducer(values: scriptInputFiles(), scriptInputFileLists())
+        .flatten(.merge)
+        .uniqueValues()
+    
+    if !options.automatic {
+        return userInputFiles
+    }
+
+    // Input files specified by user take precedence over inferred input files.
+    // Use-case:
+    // - backward compatibility
+    // - copy development frameworks that presumable have custom path (i.e. BUILT_PRODUCTS_DIR/Some.framework) instead
+    //  of frameworks built by the Carthage and located at the default path (i.e. ./Carthage/Build/<platform>/Some.framework)
+    return userInputFiles.collect().flatMap(.latest) { higherPriorityInputFiles -> SignalProducer<String, CarthageError> in
+        let higherPriorityFilenames = Set(higherPriorityInputFiles.map { URL(fileURLWithPath: $0).lastPathComponent })
+        return inferredInputFiles()
+            .filter { inferredFile in
+                return !higherPriorityFilenames.contains(URL(fileURLWithPath: inferredFile).lastPathComponent)
+            }
+            .concat(SignalProducer(higherPriorityInputFiles))
+    }
 }
 
 private func scriptInputFiles() -> SignalProducer<String, CarthageError> {
