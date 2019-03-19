@@ -6,8 +6,6 @@ import ReactiveSwift
 import ReactiveTask
 import XCDBLD
 
-import struct SPMUtility.Version
-
 /// Emits the currect Swift version
 internal func swiftVersion(usingToolchain toolchain: String? = nil) -> SignalProducer<String, SwiftVersionError> {
 	return determineSwiftVersion(usingToolchain: toolchain).replayLazily(upTo: 1)
@@ -357,49 +355,34 @@ private func mergeExecutables(_ executableURLs: [URL], _ outputURL: URL) -> Sign
 		.then(SignalProducer<(), CarthageError>.empty)
 }
 
-private func mergeSwiftHeaderFiles(_ executableURLs: [URL], _ executableOutputURL: URL) -> SignalProducer<(), CarthageError> {
+private func mergeSwiftHeaderFiles(_ simulatorExecutableURL: URL,
+								   _ deviceExecutableURL: URL,
+								   _ executableOutputURL: URL) -> SignalProducer<(), CarthageError> {
+	precondition(simulatorExecutableURL.isFileURL)
+	precondition(deviceExecutableURL.isFileURL)
 	precondition(executableOutputURL.isFileURL)
 	
-	let conditionalsCheck = "#if 0"
-	let conditionalPrefix = "#if 0\n#elif (defined(__x86_64__) && __x86_64__) || (defined(__i386__) && __i386__)\n"
+	let conditionalPrefix = "#if TARGET_OS_SIMULATOR\n"
+	let conditionalElse = "\n#else\n"
 	let conditionalSuffix = "\n#endif"
 	
-	let conditionalsCheckContents = conditionalsCheck.data(using: .utf8)!
 	let conditionalPrefixContents = conditionalPrefix.data(using: .utf8)!
+	let conditionalElseContents = conditionalElse.data(using: .utf8)!
 	let conditionalSuffixContents = conditionalSuffix.data(using: .utf8)!
-	guard let outputURL = executableOutputURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
 	
-	let headerURLs = executableURLs.map { $0.deletingLastPathComponent().swiftHeaderURL() }
+	guard let simulatorHeaderURL = simulatorExecutableURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
+	guard let simulatorHeaderContents = FileManager.default.contents(atPath: simulatorHeaderURL.path) else { return .empty }
+	guard let deviceHeaderURL = deviceExecutableURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
+	guard let deviceHeaderContents = FileManager.default.contents(atPath: deviceHeaderURL.path) else { return .empty }
+	guard let outputURL = executableOutputURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
 	
 	var fileContents = Data()
 	
-	for url in headerURLs {
-		guard let url = url else { continue }
-		guard let contents = FileManager.default.contents(atPath: url.path) else { continue }
-		
-		// Need to work around an inconsistency in the way that the Swift
-		// header files are created on simulators on different platforms. On
-		// iOS simulators the Swift header file has a structure that matches
-		// the Swift header file for devices because they both include
-		// conditionals for the supported platforms. This is not true for
-		// watchOS simulators (any maybe others?) at this time so we're going to
-		// add a conditional around those files
-		var needToAddConditionals = false
-		
-		if contents.starts(with: conditionalsCheckContents) == false {
-			needToAddConditionals = true
-		}
-		
-		if needToAddConditionals {
-			fileContents.append(conditionalPrefixContents)
-		}
-		
-		fileContents.append(contents)
-		
-		if needToAddConditionals {
-			fileContents.append(conditionalSuffixContents)
-		}
-	}
+	fileContents.append(conditionalPrefixContents)
+	fileContents.append(simulatorHeaderContents)
+	fileContents.append(conditionalElseContents)
+	fileContents.append(deviceHeaderContents)
+	fileContents.append(conditionalSuffixContents)
 	
 	FileManager.default.createFile(atPath: outputURL.path, contents: fileContents, attributes: nil)
 	
@@ -525,35 +508,16 @@ private func mergeBuildProducts(
 					)
 				}
 
-			let mergeProductSwiftHeaderFilesIfNeeded = SignalProducer(result: executableURLs.fanout(outputURL))
-				.flatMap(.concat) { (executableURLs: [URL], outputURL:  URL) -> SignalProducer<(), CarthageError> in 
+			let mergeProductSwiftHeaderFilesIfNeeded = SignalProducer.zip(simulatorBuildSettings.executableURL, deviceBuildSettings.executableURL, outputURL)
+				.flatMap(.concat) { (simulatorURL: URL, deviceURL: URL, outputURL:  URL) -> SignalProducer<(), CarthageError> in
 					guard isSwiftFramework(productURL) else { return .empty }
 					
-					return swiftVersion()
-						.mapError { error in CarthageError.internalError(description: error.description) }
-						.flatMap(.concat) { localSwiftVersion -> SignalProducer<(), CarthageError> in
-							guard let versionSubstring = localSwiftVersion.split(separator: " ").first else { return .empty }
-							let scanner = Scanner(string: String(versionSubstring))
-							guard let semanticVersion = Version.from(scanner).value else { return .empty }
-							// TODO: Need some way to ensure that Xcode is using
-							// the new build system since this behavior does not
-							// exist in the old one per Twitter conversations
-							
-							// Would rather not compare to a major Swift version
-							// here and instead rely upon the structure of the
-							// Swift header files to determine whether they get
-							// merged together but as described in the
-							// `mergeSwiftHeaderFiles(,)` implementation that
-							// behavior does not appear to be consistent across
-							// platforms at this time.
-							guard semanticVersion.major >= 5 else { return .empty }
-							
-							return mergeSwiftHeaderFiles(
-								executableURLs.map { $0.resolvingSymlinksInPath() },
-								outputURL.resolvingSymlinksInPath()
-							)
-					}
-			}
+					return mergeSwiftHeaderFiles(
+						simulatorURL.resolvingSymlinksInPath(),
+						deviceURL.resolvingSymlinksInPath(),
+						outputURL.resolvingSymlinksInPath()
+					)
+				}
 
 			let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
 				.filter { $0.0 != nil }
