@@ -384,9 +384,10 @@ private func mergeSwiftHeaderFiles(_ simulatorExecutableURL: URL,
 	fileContents.append(deviceHeaderContents)
 	fileContents.append(conditionalSuffixContents)
 	
-	FileManager.default.createFile(atPath: outputURL.path, contents: fileContents, attributes: nil)
-	
-	return .empty
+	switch FileManager.default.createFile(atPath: outputURL.path, contents: fileContents) {
+	case false: return .init(error: .writeFailed(outputURL, nil))
+	case true: return .empty
+	}
 }
 
 /// If the given source URL represents an LLVM module, copies its contents into
