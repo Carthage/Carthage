@@ -205,20 +205,8 @@ private func inputFiles(_ options: CopyFrameworksCommand.Options) -> SignalProdu
     if !options.automatic {
         return userInputFiles
     }
-
-    // Input files specified by user take precedence over inferred input files.
-    // Use-case:
-    // - backward compatibility
-    // - copy development frameworks that presumable have custom path (i.e. BUILT_PRODUCTS_DIR/Some.framework) instead
-    //  of frameworks built by the Carthage and located at the default path (i.e. ./Carthage/Build/<platform>/Some.framework)
-    return userInputFiles.collect().flatMap(.latest) { higherPriorityInputFiles -> SignalProducer<String, CarthageError> in
-        let higherPriorityFilenames = Set(higherPriorityInputFiles.map { URL(fileURLWithPath: $0).lastPathComponent })
-        return inferredInputFiles()
-            .filter { inferredFile in
-                return !higherPriorityFilenames.contains(URL(fileURLWithPath: inferredFile).lastPathComponent)
-            }
-            .concat(SignalProducer(higherPriorityInputFiles))
-    }
+    
+    return userInputFiles.concat(inferredInputFiles(using: userInputFiles))
 }
 
 private func scriptInputFiles() -> SignalProducer<String, CarthageError> {
@@ -255,15 +243,16 @@ private func scriptInputFileLists() -> SignalProducer<String, CarthageError> {
 	}
 }
 
-private func inferredInputFiles() -> SignalProducer<String, CarthageError> {
+private func inferredInputFiles(using userInputFiles: SignalProducer<String, CarthageError>) -> SignalProducer<String, CarthageError> {
     if
         let directory = projectDirectory().value,
         let platformName = getEnvironmentVariable("PLATFORM_NAME").value,
         let platform = BuildPlatform.from(string: platformName)?.platforms.first,
         let executable = executablePath().value
     {
-//        return InputFilesInferrer(projectDirectoryURL: directory).findLinkedFrameworks(for: executable, platform: platform)
-//        return Project(directoryURL: directory).findLinkedFrameworks(for: executable, platform: platform)
+        return InputFilesInferrer(projectDirectory: directory, platform: platform)
+            .inputFiles(for: executable, userInputFiles: userInputFiles.map(URL.init(fileURLWithPath:)))
+            .map { $0.path }
     }
     return .empty
 }
