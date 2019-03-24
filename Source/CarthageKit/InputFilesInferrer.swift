@@ -127,7 +127,9 @@ internal func linkedFrameworks(for executable: URL) -> Result<[String], Carthage
 /// - Parameter input: Output of the otool -L
 /// - Returns: Array of Shared Framework IDs.
 internal func linkedFrameworks(from input: String) -> [String] {
-    guard let regex = try? NSRegularExpression(pattern: "\\/([\\w-_]+) ") else {
+    // Executable name matches c99 extended identifier.
+    // This regex ignores dylibs but we don't need them.
+    guard let regex = try? NSRegularExpression(pattern: "\\/([\\w_]+) ") else {
         return []
     }
     return input.components(separatedBy: "\n").compactMap { value in

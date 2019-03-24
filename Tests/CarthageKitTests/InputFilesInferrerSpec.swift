@@ -255,14 +255,14 @@ final class InputFilesInferrerSpec: QuickSpec {
             let input = """
 RootFramework:
     @rpath/Framework.framework/Framework (compatibility version 0.0.0, current version 0.0.0)
-    @rpath/Frame-_work1.framework/Frame-_work1 (compatibility version 0.0.0, current version 0.0.0)
+    @rpath/Frame_work1.framework/Frame_work1 (compatibility version 0.0.0, current version 0.0.0)
     /System/Library/Frameworks/CoreGraphics.framework/CoreGraphics (compatibility version 64.0.0, current version 1245.9.2)
     /usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
     @rpath/MacFramework.framework/Versions/A/MacFramework (compatibility version 1.2.2, current version 1.2.2)
 """
             it("should return framework IDs") {
                 let result = linkedFrameworks(from: input)
-                expect(result).to(equal(["Framework", "Frame-_work1", "CoreGraphics", "MacFramework"]))
+                expect(result).to(equal(["Framework", "Frame_work1", "CoreGraphics", "MacFramework"]))
             }
             
             it("should not include dylibs") {
