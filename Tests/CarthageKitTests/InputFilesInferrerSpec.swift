@@ -10,19 +10,22 @@ final class InputFilesInferrerSpec: QuickSpec {
         describe("inferring") {
             var sut: InputFilesInferrer!
             
+            let executableResolver: (URL) -> URL? = { $0.appendingPathComponent($0.deletingPathExtension().lastPathComponent) }
+
             describe("framework dependecies resolving") {
                 context("when framework is not listed anywhere") {
                     beforeEach {
                         sut = InputFilesInferrer(
-                            builtFrameworksEnumerator: .empty,
+                            builtFrameworks: .empty,
                             linkedFrameworksResolver: { url -> Result<[String], CarthageError> in
                                 return .success(["A", "B"])
                             }
                         )
+                        sut.executableResolver = executableResolver
                     }
                     
                     it("should ignore it") {
-                        let result = sut.inputFiles(for: URL(fileURLWithPath: "./Root"), userInputFiles: .empty)
+                        let result = sut.inputFiles(for: URL(fileURLWithPath: "/Root"), userInputFiles: .empty)
                             .collect()
                             .single()
                         
@@ -33,9 +36,9 @@ final class InputFilesInferrerSpec: QuickSpec {
                 context("when framework is listed by frameworks enumerator") {
                     beforeEach {
                         sut = InputFilesInferrer(
-                            builtFrameworksEnumerator: SignalProducer([URL(fileURLWithPath: "./Frameworks/A.framework")]),
+                            builtFrameworks: SignalProducer([URL(fileURLWithPath: "/Frameworks/A.framework")]),
                             linkedFrameworksResolver: { url -> Result<[String], CarthageError> in
-                                switch url.deletingPathExtension().lastPathComponent {
+                                switch url.lastPathComponent {
                                 case "Root":
                                     return .success(["A"])
                                     
@@ -47,27 +50,31 @@ final class InputFilesInferrerSpec: QuickSpec {
                                 }
                             }
                         )
+                        sut.executableResolver = executableResolver
                     }
 
                     it("should resolve dependncies at a enumerator's path") {
-                        let result = sut.inputFiles(for: URL(fileURLWithPath: "./Root"), userInputFiles: .empty)
+                        let result = sut.inputFiles(for: URL(fileURLWithPath: "/Root"), userInputFiles: .empty)
                             .collect()
                             .single()
 
-                        expect(result?.value).to(equal([URL(fileURLWithPath: "./Frameworks/A.framework")]))
+                        expect(result?.value).to(equal([URL(fileURLWithPath: "/Frameworks/A.framework")]))
                     }
                 }
                 
                 context("when framework is listed by user input files") {
                     beforeEach {
                         sut = InputFilesInferrer(
-                            builtFrameworksEnumerator: .empty,
+                            builtFrameworks: SignalProducer([URL(fileURLWithPath: "/Frameworks/B.framework")]),
                             linkedFrameworksResolver: { url -> Result<[String], CarthageError> in
-                                switch url.deletingPathExtension().lastPathComponent {
+                                switch url.lastPathComponent {
                                 case "Root":
                                     return .success(["A"])
                                     
                                 case "A":
+                                    return .success(["B"])
+                                    
+                                case "B":
                                     return .success([])
                                     
                                 default:
@@ -75,30 +82,45 @@ final class InputFilesInferrerSpec: QuickSpec {
                                 }
                             }
                         )
+                        sut.executableResolver = executableResolver
                     }
 
-                    it("should resolve dependncies at user input file's path") {
+                    it("should resolve dependencies using user input files") {
                         let result = sut.inputFiles(
-                                for: URL(fileURLWithPath: "./Root"),
-                                userInputFiles: SignalProducer([URL(fileURLWithPath: "./User-Frameworks/A.framework")])
+                                for: URL(fileURLWithPath: "/Root"),
+                                userInputFiles: SignalProducer([URL(fileURLWithPath: "/User-Frameworks/A.framework")])
                             )
                             .collect()
                             .single()
                         
-                        expect(result?.value).to(equal([URL(fileURLWithPath: "./User-Frameworks/A.framework")]))
+                        expect(result?.value).to(equal([URL(fileURLWithPath: "/Frameworks/B.framework")]))
+                    }
+                    
+                    it("should not include user input files") {
+                        let result = sut.inputFiles(
+                            for: URL(fileURLWithPath: "/Root"),
+                            userInputFiles: SignalProducer([URL(fileURLWithPath: "/User-Frameworks/A.framework")])
+                        )
+                        .collect()
+                        .single()
+                        
+                        expect(result?.value).toNot(contain(URL(fileURLWithPath: "/User-Frameworks/A.framework")))
                     }
                 }
 
                 context("when framework is listed by user input files and frameworks enumerator") {
                     beforeEach {
                         sut = InputFilesInferrer(
-                            builtFrameworksEnumerator: .empty,
+                            builtFrameworks: SignalProducer([URL(fileURLWithPath: "/Frameworks/B.framework")]),
                             linkedFrameworksResolver: { url -> Result<[String], CarthageError> in
-                                switch url.deletingPathExtension().lastPathComponent {
+                                switch url.lastPathComponent {
                                 case "Root":
                                     return .success(["A"])
-
+                                    
                                 case "A":
+                                    return .success(["B"])
+                                    
+                                case "B":
                                     return .success([])
                                     
                                 default:
@@ -106,32 +128,33 @@ final class InputFilesInferrerSpec: QuickSpec {
                                 }
                             }
                         )
+                        sut.executableResolver = executableResolver
                     }
 
                     it("should resolve dependncies at user input file's path") {
                         let result = sut.inputFiles(
-                                for: URL(fileURLWithPath: "./Root"),
-                                userInputFiles: SignalProducer([URL(fileURLWithPath: "./User-Frameworks/A.framework")])
+                                for: URL(fileURLWithPath: "/Root"),
+                                userInputFiles: SignalProducer([URL(fileURLWithPath: "/User-Frameworks/A.framework")])
                             )
                             .collect()
                             .single()
-                        
-                        expect(result?.value).to(equal([URL(fileURLWithPath: "./User-Frameworks/A.framework")]))
+
+                        expect(result?.value).to(equal([URL(fileURLWithPath: "/Frameworks/B.framework")]))
                     }
                 }
                 
                 context("when has nested dependencies") {
                     beforeEach {
                         sut = InputFilesInferrer(
-                            builtFrameworksEnumerator: SignalProducer([
-                                URL(fileURLWithPath: "./Frameworks/RootFramework.framework"),
-                                URL(fileURLWithPath: "./Frameworks/NestedFrameworkA.framework"),
-                                URL(fileURLWithPath: "./Frameworks/NestedFrameworkB.framework"),
-                                URL(fileURLWithPath: "./Frameworks/NestedFrameworkC.framework"),
-                                URL(fileURLWithPath: "./Frameworks/NestedFrameworkD.framework"),
+                            builtFrameworks: SignalProducer([
+                                URL(fileURLWithPath: "/Frameworks/RootFramework.framework"),
+                                URL(fileURLWithPath: "/Frameworks/NestedFrameworkA.framework"),
+                                URL(fileURLWithPath: "/Frameworks/NestedFrameworkB.framework"),
+                                URL(fileURLWithPath: "/Frameworks/NestedFrameworkC.framework"),
+                                URL(fileURLWithPath: "/Frameworks/NestedFrameworkD.framework"),
                             ]),
                             linkedFrameworksResolver: { url -> Result<[String], CarthageError> in
-                                switch url.deletingPathExtension().lastPathComponent {
+                                switch url.lastPathComponent {
                                 case "Root":
                                     return .success(["RootFramework", "System"])
                                     
@@ -144,10 +167,10 @@ final class InputFilesInferrerSpec: QuickSpec {
                                 case "NestedFrameworkB":
                                     return .success([])
                                     
-                                case "NestedFrameworkC" where url.deletingPathExtension().lastPathComponent == "Frameworks":
+                                case "NestedFrameworkC" where url.pathComponents[1] == "Frameworks":
                                     return .success([])
                                     
-                                case "NestedFrameworkC" where url.deletingPathExtension().lastPathComponent == "User-Frameworks":
+                                case "NestedFrameworkC" where url.pathComponents[1] == "User-Frameworks":
                                     return .success(["NestedFrameworkD"])
                                     
                                 case "NestedFrameworkD":
@@ -158,24 +181,24 @@ final class InputFilesInferrerSpec: QuickSpec {
                                 }
                             }
                         )
+                        sut.executableResolver = executableResolver
                     }
                     
                     it("should resolve nested dependecies") {
                         let result = sut.inputFiles(
-                                for: URL(fileURLWithPath: "./Root"),
+                                for: URL(fileURLWithPath: "/Root"),
                                 userInputFiles: SignalProducer([
-                                    URL(fileURLWithPath: "./User-Frameworks/NestedFrameworkC.framework")
+                                    URL(fileURLWithPath: "/User-Frameworks/NestedFrameworkC.framework")
                                 ])
                             )
                             .collect()
                             .single()
                         
                         let expectedURLs: [URL] = [
-                            URL(fileURLWithPath: "./Frameworks/RootFramework.framework"),
-                            URL(fileURLWithPath: "./Frameworks/NestedFrameworkA.framework"),
-                            URL(fileURLWithPath: "./Frameworks/NestedFrameworkB.framework"),
-                            URL(fileURLWithPath: "./User-Frameworks/NestedFrameworkC.framework"),
-                            URL(fileURLWithPath: "./Frameworks/NestedFrameworkD.framework")
+                            URL(fileURLWithPath: "/Frameworks/RootFramework.framework"),
+                            URL(fileURLWithPath: "/Frameworks/NestedFrameworkA.framework"),
+                            URL(fileURLWithPath: "/Frameworks/NestedFrameworkB.framework"),
+                            URL(fileURLWithPath: "/Frameworks/NestedFrameworkD.framework")
                         ]
                         
                         expect(result?.value).to(contain(expectedURLs))
@@ -186,13 +209,13 @@ final class InputFilesInferrerSpec: QuickSpec {
                 context("when dependencies have cycle") {
                     beforeEach {
                         sut = InputFilesInferrer(
-                            builtFrameworksEnumerator: SignalProducer([
-                                URL(fileURLWithPath: "./Frameworks/A.framework"),
-                                URL(fileURLWithPath: "./Frameworks/B.framework"),
-                                URL(fileURLWithPath: "./Frameworks/C.framework")
+                            builtFrameworks: SignalProducer([
+                                URL(fileURLWithPath: "/Frameworks/A.framework"),
+                                URL(fileURLWithPath: "/Frameworks/B.framework"),
+                                URL(fileURLWithPath: "/Frameworks/C.framework")
                             ]),
                             linkedFrameworksResolver: { url -> Result<[String], CarthageError> in
-                                switch url.deletingPathExtension().lastPathComponent {
+                                switch url.lastPathComponent {
                                 case "Root":
                                     return .success(["A"])
                                     
@@ -207,17 +230,18 @@ final class InputFilesInferrerSpec: QuickSpec {
                                 }
                             }
                         )
+                        sut.executableResolver = executableResolver
                     }
                     
                     it("should ignore already resolved dependecies") {
-                        let result = sut.inputFiles(for: URL(fileURLWithPath: "./Root"), userInputFiles: .empty)
+                        let result = sut.inputFiles(for: URL(fileURLWithPath: "/Root"), userInputFiles: .empty)
                             .collect()
                             .single()
                         
                         let expectedURLs: [URL] = [
-                            URL(fileURLWithPath: "./Frameworks/A.framework"),
-                            URL(fileURLWithPath: "./Frameworks/B.framework"),
-                            URL(fileURLWithPath: "./Frameworks/C.framework")
+                            URL(fileURLWithPath: "/Frameworks/A.framework"),
+                            URL(fileURLWithPath: "/Frameworks/B.framework"),
+                            URL(fileURLWithPath: "/Frameworks/C.framework")
                         ]
                         
                         expect(result?.value).to(contain(expectedURLs))

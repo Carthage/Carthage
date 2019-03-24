@@ -10,21 +10,28 @@ public final class InputFilesInferrer {
     
     typealias LinkedFrameworksResolver = (URL) -> Result<[String], CarthageError>
     
-    private let builtFrameworksEnumerator: SignalProducer<URL, CarthageError>
+    var executableResolver: (URL) -> URL? = { Bundle(url: $0)?.executableURL }
+    
+    private let builtFrameworks: SignalProducer<URL, CarthageError>
     private let linkedFrameworksResolver: LinkedFrameworksResolver
     
-    init(builtFrameworksEnumerator: SignalProducer<URL, CarthageError>, linkedFrameworksResolver: @escaping LinkedFrameworksResolver) {
-        self.builtFrameworksEnumerator = builtFrameworksEnumerator
+    init(builtFrameworks: SignalProducer<URL, CarthageError>, linkedFrameworksResolver: @escaping LinkedFrameworksResolver) {
+        self.builtFrameworks = builtFrameworks
         self.linkedFrameworksResolver = linkedFrameworksResolver
     }
 
     public convenience init(projectDirectory: URL, platform: Platform) {
         let searchDirectory = projectDirectory.appendingPathComponent(platform.relativePath, isDirectory: true)
-        self.init(builtFrameworksEnumerator: frameworksInDirectory(searchDirectory), linkedFrameworksResolver: linkedFrameworks(for:))
+        self.init(builtFrameworks: frameworksInDirectory(searchDirectory), linkedFrameworksResolver: linkedFrameworks(for:))
     }
 
-    func inputFiles(for executableURL: URL, userInputFiles: SignalProducer<URL, CarthageError>) -> SignalProducer<URL, CarthageError> {
-        let builtFrameworksMap = builtFrameworksEnumerator
+    public func inputFiles(for executableURL: URL, userInputFiles: SignalProducer<URL, CarthageError>) -> SignalProducer<URL, CarthageError> {
+        let userFrameworksMap = userInputFiles.reduce(into: [String: URL]()) { (map, frameworkURL) in
+            let name = frameworkURL.deletingPathExtension().lastPathComponent
+            map[name] = frameworkURL
+        }
+
+        let builtFrameworksMap = builtFrameworks
             .filter { url in
                 // We need to filter out any static frameworks to not accidentally copy then for the dynamically linked ones.
                 let components = url.pathComponents
@@ -36,44 +43,63 @@ public final class InputFilesInferrer {
                 map[name] = frameworkURL
             }
         
-        return builtFrameworksMap.map { map in
-            return URL(fileURLWithPath: "/")
-        }
-
-//        return sharedLinkedFrameworks(for: executableURL).flatMap(.latest) { frameworks -> SignalProducer<String, CarthageError> in
-//            if frameworks.isEmpty {
-//                return .empty
-//            }
-//
-//            return existingFrameworksMap.flatMap(.latest) {  builtFrameworks -> SignalProducer<String, CarthageError> in
-//                return SignalProducer(frameworks).filterMap { builtFrameworks[$0]?.path }
-//            }
-//        }
+        return SignalProducer.combineLatest(userFrameworksMap, builtFrameworksMap)
+            .flatMap(.latest) { userFrameworksMap, builtFrameworksMap -> SignalProducer<URL, CarthageError> in
+                let availableFrameworksMap = userFrameworksMap.merging(builtFrameworksMap) { (lhs, rhs) in
+                    // user's framework path always takes precedence over default Carthage's path.
+                    return lhs
+                }
+                
+                if availableFrameworksMap.isEmpty {
+                    return .empty
+                }
+                
+                return SignalProducer(result: self.resolveFrameworks(at: executableURL, frameworksMap: availableFrameworksMap))
+                    .flatten()
+                    .filter { url in
+                        // We have to omit paths already specified by User.
+                        // Can't use direct URLs comparison, because it is not guaranteed that same framework will have
+                        // same URL all the time. i.e. '/A.framework/' and '/A.framework' will lead to the same result but are not equal.
+                        let name = url.deletingPathExtension().lastPathComponent
+                        return userFrameworksMap[name] == nil
+                    }
+            }
     }
     
-//    private func resolveLinkedFrameworks(using userInputFiles: [String], builtFrameworksMap: [String: URL]) -> SignalProducer<String, CarthageError> {
-//        var collectedFrameworksMap: [String: URL] = [:]
-//
-//
-//        // collect executable frameworks
-//        // for each entry collect nested frameworks
-//        // substituting paths from user input files whenever possible
-//    }
+    private func resolveFrameworks(at executableURL: URL, frameworksMap: [String: URL]) -> Result<[URL], CarthageError> {
+        var resolvedFrameworks: Set<String> = []
+        do {
+            try collectFrameworks(at: executableURL, accumulator: &resolvedFrameworks, frameworksMap: frameworksMap)
+        } catch let error as CarthageError {
+            return .failure(error)
+        } catch {
+            return .failure(CarthageError.internalError(description: "Failed to infer linked frameworks"))
+        }
+        
+        return .success(resolvedFrameworks.compactMap { frameworksMap[$0] })
+    }
     
-//    private func resolveLinkedFrameworks(
-//        at url: URL,
-//        userFrameworksMap: [String: URL],
-//        builtFrameworksMap: [String: URL],
-//        accumulator: [String: URL]
-//    ) throws {
-//        accumulator[url.deletingPathExtension().lastPathComponent] = url
-//
-//        let linkedFrameworks = linkedFrameworksResolver(url)
-//    }
-    
-//    private func linkedFrameworks(using userInputFiles: [String]) -> [String] {
-//
-//    }
+    private func collectFrameworks(at executableURL: URL, accumulator: inout Set<String>, frameworksMap: [String: URL]) throws {
+        let name = executableURL.deletingPathExtension().lastPathComponent
+        if !accumulator.insert(name).inserted {
+            return
+        }
+        
+        switch linkedFrameworksResolver(executableURL) {
+        case .success(let values):
+            let frameworksToCollect = values
+                .filter { !accumulator.contains($0) }
+                .compactMap { frameworksMap[$0] }
+                .compactMap(executableResolver)
+
+            try frameworksToCollect.forEach {
+                try collectFrameworks(at: $0, accumulator: &accumulator, frameworksMap: frameworksMap)
+            }
+            
+        case .failure(let error):
+            throw error
+        }
+    }
 
     /// Finds Carthage's frameworks that are linked against a given executable.
     ///
