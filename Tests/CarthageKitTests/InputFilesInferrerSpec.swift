@@ -254,17 +254,15 @@ final class InputFilesInferrerSpec: QuickSpec {
         describe("linked frameworks") {
             let input = """
 RootFramework:
-    @rpath/RootFramework.framework/RootFramework (compatibility version 0.0.0, current version 0.0.0)
-    @rpath/Framework_with_underscore.framework/Framework_with_underscore (compatibility version 0.0.0, current version 0.0.0)
-    @rpath/Framework.with.dot.framework/Framework.with.dot (compatibility version 0.0.0, current version 0.0.0)
-    @rpath/Dependency.framework/Dependency (compatibility version 1.0.0, current version 0.0.0)
+    @rpath/Framework.framework/Framework (compatibility version 0.0.0, current version 0.0.0)
+    @rpath/Frame-_work1.framework/Frame-_work1 (compatibility version 0.0.0, current version 0.0.0)
     /System/Library/Frameworks/CoreGraphics.framework/CoreGraphics (compatibility version 64.0.0, current version 1245.9.2)
     /usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
+    @rpath/MacFramework.framework/Versions/A/MacFramework (compatibility version 1.2.2, current version 1.2.2)
 """
             it("should return framework IDs") {
                 let result = linkedFrameworks(from: input)
-                expect(result).to(contain(["RootFramework", "Framework_with_underscore", "Framework.with.dot", "Dependency", "CoreGraphics"]))
-                expect(result).to(haveCount(5))
+                expect(result).to(equal(["Framework", "Frame-_work1", "CoreGraphics", "MacFramework"]))
             }
             
             it("should not include dylibs") {

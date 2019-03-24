@@ -100,13 +100,6 @@ public final class InputFilesInferrer {
             throw error
         }
     }
-
-    /// Finds Carthage's frameworks that are linked against a given executable.
-    ///
-    /// - Parameters:
-    ///   - executableURL: Path to a executable of the Project. See `xcodebuild` settings `TARGET_BUILD_DIR` and `EXECUTABLE_PATH` for more info.
-    ///   - platform: Platform of the executable.
-    /// - Returns: Stream of Path for each linked framework for a given `platform` that was build by Carthage.
 }
 
 /// Invokes otool -L for a given executable URL.
@@ -134,7 +127,7 @@ internal func linkedFrameworks(for executable: URL) -> Result<[String], Carthage
 /// - Parameter input: Output of the otool -L
 /// - Returns: Array of Shared Framework IDs.
 internal func linkedFrameworks(from input: String) -> [String] {
-    guard let regex = try? NSRegularExpression(pattern: "[\\w\\.]+\\.framework\\/([\\w\\.]+)") else {
+    guard let regex = try? NSRegularExpression(pattern: "\\/([\\w-_]+) ") else {
         return []
     }
     return input.components(separatedBy: "\n").compactMap { value in
