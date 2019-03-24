@@ -17,3 +17,14 @@ EOF
     [ "$status" -eq 0 ]
     [ -e Carthage/Build/iOS/MMMarkdown.framework ]
 }
+
+@test "carthage build works right IN MY SPECIAL SCENARIO WHICH NEEDS TO BE DESCRIBED HERE" {
+cat >| Cartfile <<-EOF
+github "ReactiveX/RxSwift" ~> 4.0
+EOF
+run carthage update
+rm -rf Carthage/Build
+run carthage build
+[ "$status" -eq 0 ]
+[ -e Carthage/Build/Mac/RxSwift.framework ]
+}
