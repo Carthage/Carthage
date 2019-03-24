@@ -355,6 +355,41 @@ private func mergeExecutables(_ executableURLs: [URL], _ outputURL: URL) -> Sign
 		.then(SignalProducer<(), CarthageError>.empty)
 }
 
+private func mergeSwiftHeaderFiles(_ simulatorExecutableURL: URL,
+								   _ deviceExecutableURL: URL,
+								   _ executableOutputURL: URL) -> SignalProducer<(), CarthageError> {
+	precondition(simulatorExecutableURL.isFileURL)
+	precondition(deviceExecutableURL.isFileURL)
+	precondition(executableOutputURL.isFileURL)
+	
+	let conditionalPrefix = "#if TARGET_OS_SIMULATOR\n"
+	let conditionalElse = "\n#else\n"
+	let conditionalSuffix = "\n#endif"
+	
+	let conditionalPrefixContents = conditionalPrefix.data(using: .utf8)!
+	let conditionalElseContents = conditionalElse.data(using: .utf8)!
+	let conditionalSuffixContents = conditionalSuffix.data(using: .utf8)!
+	
+	guard let simulatorHeaderURL = simulatorExecutableURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
+	guard let simulatorHeaderContents = FileManager.default.contents(atPath: simulatorHeaderURL.path) else { return .empty }
+	guard let deviceHeaderURL = deviceExecutableURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
+	guard let deviceHeaderContents = FileManager.default.contents(atPath: deviceHeaderURL.path) else { return .empty }
+	guard let outputURL = executableOutputURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
+	
+	var fileContents = Data()
+	
+	fileContents.append(conditionalPrefixContents)
+	fileContents.append(simulatorHeaderContents)
+	fileContents.append(conditionalElseContents)
+	fileContents.append(deviceHeaderContents)
+	fileContents.append(conditionalSuffixContents)
+	
+	switch FileManager.default.createFile(atPath: outputURL.path, contents: fileContents) {
+	case false: return .init(error: .writeFailed(outputURL, nil))
+	case true: return .empty
+	}
+}
+
 /// If the given source URL represents an LLVM module, copies its contents into
 /// the destination module.
 ///
@@ -474,6 +509,17 @@ private func mergeBuildProducts(
 					)
 				}
 
+			let mergeProductSwiftHeaderFilesIfNeeded = SignalProducer.zip(simulatorBuildSettings.executableURL, deviceBuildSettings.executableURL, outputURL)
+				.flatMap(.concat) { (simulatorURL: URL, deviceURL: URL, outputURL:  URL) -> SignalProducer<(), CarthageError> in
+					guard isSwiftFramework(productURL) else { return .empty }
+					
+					return mergeSwiftHeaderFiles(
+						simulatorURL.resolvingSymlinksInPath(),
+						deviceURL.resolvingSymlinksInPath(),
+						outputURL.resolvingSymlinksInPath()
+					)
+				}
+
 			let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
 				.filter { $0.0 != nil }
 				.map { modulesPath, productsURL in
@@ -492,6 +538,7 @@ private func mergeBuildProducts(
 				}
 
 			return mergeProductBinaries
+				.then(mergeProductSwiftHeaderFilesIfNeeded)
 				.then(mergeProductModules)
 				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, simulatorBuildSettings))
 				.then(SignalProducer<URL, CarthageError>(value: productURL))
