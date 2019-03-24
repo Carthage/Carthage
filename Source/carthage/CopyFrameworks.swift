@@ -262,7 +262,8 @@ private func inferredInputFiles() -> SignalProducer<String, CarthageError> {
         let platform = BuildPlatform.from(string: platformName)?.platforms.first,
         let executable = executablePath().value
     {
-        return Project(directoryURL: directory).findLinkedFrameworks(for: executable, platform: platform)
+//        return InputFilesInferrer(projectDirectoryURL: directory).findLinkedFrameworks(for: executable, platform: platform)
+//        return Project(directoryURL: directory).findLinkedFrameworks(for: executable, platform: platform)
     }
     return .empty
 }
