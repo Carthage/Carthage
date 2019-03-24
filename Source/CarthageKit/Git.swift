@@ -49,7 +49,10 @@ public func launchGitTask(
 ) -> SignalProducer<String, CarthageError> {
 	// See https://github.com/Carthage/Carthage/issues/219.
 	var updatedEnvironment = environment ?? ProcessInfo.processInfo.environment
+	// Error rather than prompt for credentials
 	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
+	// Error rather than prompt to resolve ssh errors (such as missing known_hosts entry)
+	updatedEnvironment["GIT_SSH_COMMAND"] = "ssh -oBatchMode=yes"
 
 	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
 
@@ -161,7 +164,7 @@ public func checkoutRepositoryToDirectory(
 			return .success(environment)
 	}
 	.attempt { _ in
-		Result(attempt: { try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true) })
+		Result(catching: { try FileManager.default.createDirectory(at: workingDirectoryURL, withIntermediateDirectories: true) })
 			.mapError {
 				CarthageError.repositoryCheckoutFailed(
 					workingDirectoryURL: workingDirectoryURL,

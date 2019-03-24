@@ -6,7 +6,7 @@ import ReactiveSwift
 import Tentacle
 import XCDBLD
 import ReactiveTask
-import Utility
+import SPMUtility
 
 import struct Foundation.URL
 import enum XCDBLD.Platform
@@ -196,7 +196,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Reads the project's Cartfile.resolved.
 	public func loadResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
 		return SignalProducer {
-			Result(attempt: { try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8) })
+			Result(catching: { try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8) })
 				.mapError { .readFailed(self.resolvedCartfileURL, $0) }
 				.flatMap(ResolvedCartfile.from)
 		}
