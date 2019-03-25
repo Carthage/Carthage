@@ -15,7 +15,7 @@ let package = Package(
         .package(url: "https://github.com/jdhealy/PrettyColors.git", from: "5.0.0"),
         .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "4.0.0"),
         .package(url: "https://github.com/mdiep/Tentacle.git", from: "0.12.0"),
-        .package(url: "https://github.com/thoughtbot/Curry.git", from: "4.0.0"),
+        .package(url: "https://github.com/thoughtbot/Curry.git", from: "4.0.2"),
         .package(url: "https://github.com/Quick/Quick.git", from: "1.3.1"),
         .package(url: "https://github.com/Quick/Nimble.git", from: "7.3.0"),
         .package(url: "https://github.com/apple/swift-package-manager.git", .revision("swift-DEVELOPMENT-SNAPSHOT-2019-03-04-a")),
