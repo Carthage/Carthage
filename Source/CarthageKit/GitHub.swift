@@ -172,18 +172,13 @@ extension URLSession {
 	}
 }
 
-internal final class GitHubURLSessionDelegate: NSObject, URLSessionTaskDelegate {
+class GitHubURLSessionDelegate: NSObject, URLSessionTaskDelegate {
 	func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+		let originalRequest = task.originalRequest
 		var newRequest = request
-		
-		if let originalRequest = task.originalRequest {
-			if originalRequest.url?.host == request.url?.host {
-				if let auth = originalRequest.value(forHTTPHeaderField: "Authorization") {
-					newRequest.setValue(auth, forHTTPHeaderField: "Authorization")
-				}
-			}
+		if let auth = originalRequest?.value(forHTTPHeaderField: "Authorization") {
+			newRequest.setValue(auth, forHTTPHeaderField: "Authorization")
 		}
-		
 		completionHandler(newRequest)
 	}
 }
