@@ -55,8 +55,12 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
     ```sh
-    /usr/local/bin/carthage copy-frameworks
+    /usr/local/bin/carthage copy-frameworks --automatic
     ```
+
+From that point all of the Carthage's frameworks that are linked againts your target will be copied automatically.
+
+In case you need to specify path to your framework manually for whatever reason, do:
 
 - Add the paths to the frameworks you want to use under “Input Files". For example:
 
@@ -109,6 +113,16 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 1. On your application targets’ _General_ settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
+###### Automatic
+
+    ```sh
+    /usr/local/bin/carthage copy-frameworks --automatic
+    ```
+
+From this point Carthage will infer and copy all Carthage's frameworks that are linked against target. It also capable to copy frameworks that are nested. For example, you have linked to your app `SocialSDK-Swift` that links internally `SocialSDK-ObjC` which in turns uses utilitary dependency `SocialTools`. In this case you don't need nested dependencies it should be enough to link against your target only `SocialSDK-Swift`. Nested dependencies will be resolved and copied automatically to your app.
+
+###### Manual
+
     ```sh
     /usr/local/bin/carthage copy-frameworks
     ```
@@ -136,6 +150,11 @@ This script works around an [App Store submission bug](http://www.openradar.me/r
 With the debug information copied into the built products directory, Xcode will be able to symbolicate the stack trace whenever you stop at a breakpoint. This will also enable you to step through third-party code in the debugger.
 
 When archiving your application for submission to the App Store or TestFlight, Xcode will also copy these files into the dSYMs subdirectory of your application’s `.xcarchive` bundle.
+
+###### Combining Automatic and Manual copying
+
+Note that you can combine both automatic and manual ways to copy frameworks, however manually specified frameworks always take precedence over automatically inferred. Therefore in case you have `SomeFramework.framework` located anywhere as well as `SomeFramework.framework` located at `./Carthage/Build/<platform>/`, Carthage will pick manually specified framework. This is useful when you're working with development frameworks and want to copy your version of the framework instead of default one. 
+Important to undestand, that Carthage won't resolve nested dependencies for your custom framework unless they either located at `./Carthage/Build/<platform>/` or specified manually in “Input Files".
 
 ##### For both platforms
 
