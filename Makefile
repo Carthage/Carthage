@@ -9,6 +9,13 @@ OUTPUT_PACKAGE=Carthage.pkg
 CARTHAGE_EXECUTABLE=./.build/release/carthage
 BINARIES_FOLDER=/usr/local/bin
 
+SWIFT_BUILD_FLAGS=--configuration release
+
+SWIFT_STATIC_STDLIB_SHOULD_BE_FLAGGED:=$(shell test -d $$(dirname $$(xcrun --find swift))/../lib/swift_static/macosx && echo should_be_flagged)
+ifeq ($(SWIFT_STATIC_STDLIB_SHOULD_BE_FLAGGED), should_be_flagged)
+SWIFT_BUILD_FLAGS+= -Xswiftc -static-stdlib
+endif
+
 # ZSH_COMMAND · run single command in `zsh` shell, ignoring most `zsh` startup files.
 ZSH_COMMAND := ZDOTDIR='/var/empty' zsh -o NO_GLOBAL_RCS -c
 # RM_SAFELY · `rm -rf` ensuring first and only parameter is non-null, contains more than whitespace, non-root if resolving absolutely.
@@ -38,8 +45,7 @@ test:
 	swift test --skip-build
 
 installables:
-	swift build -c release -Xswiftc -static-stdlib
-
+	swift build $(SWIFT_BUILD_FLAGS)
 
 package: installables
 	$(MKDIR) "$(CARTHAGE_TEMPORARY_FOLDER)$(BINARIES_FOLDER)"
