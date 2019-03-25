@@ -9,10 +9,12 @@ import Curry
 public struct CopyFrameworksCommand: CommandProtocol {
     public struct Options: OptionsProtocol {
         public let automatic: Bool
+        public let isVerbose: Bool
         
         public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
             return curry(self.init)
-                <*> mode <| Option(key: "automatic", defaultValue: false, usage: "infers and copies linked frameworks automatically")
+                <*> mode <| Option(key: "auto", defaultValue: false, usage: "infers and copies linked frameworks automatically")
+                <*> mode <| Option(key: "verbose", defaultValue: false, usage: "print automatically copied frameworks and paths")
         }
     }
     
@@ -206,7 +208,22 @@ private func inputFiles(_ options: CopyFrameworksCommand.Options) -> SignalProdu
         return userInputFiles
     }
     
-    return userInputFiles.concat(inferredInputFiles(using: userInputFiles))
+    return userInputFiles.concat(
+        inferredInputFiles(using: userInputFiles)
+            .on(
+                starting: {
+                    if options.isVerbose {
+                        carthage.println("Going to copy automatically:\n")
+                    }
+                },
+                value: { path in
+                    if options.isVerbose {
+                        let name = URL(fileURLWithPath: path).lastPathComponent
+                        carthage.println("\"\(name)\" at: \"\(path)\"")
+                    }
+                }
+            )
+        )
 }
 
 private func scriptInputFiles() -> SignalProducer<String, CarthageError> {
