@@ -55,7 +55,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
     ```sh
-    /usr/local/bin/carthage copy-frameworks --automatic
+    /usr/local/bin/carthage copy-frameworks --auto
     ```
 
 From that point all of the Carthage's frameworks that are linked againts your target will be copied automatically.
@@ -116,10 +116,12 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 ###### Automatic
 
     ```sh
-    /usr/local/bin/carthage copy-frameworks --automatic
+    /usr/local/bin/carthage copy-frameworks --auto
     ```
 
 From this point Carthage will infer and copy all Carthage's frameworks that are linked against target. It also capable to copy frameworks that are nested. For example, you have linked to your app `SocialSDK-Swift` that links internally `SocialSDK-ObjC` which in turns uses utilitary dependency `SocialTools`. In this case you don't need nested dependencies it should be enough to link against your target only `SocialSDK-Swift`. Nested dependencies will be resolved and copied automatically to your app.
+
+Optionally you can add `--verbose` flag to see which frameworks are being copied by Carthage.
 
 ###### Manual
 
