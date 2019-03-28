@@ -364,7 +364,7 @@ private func mergeSwiftHeaderFiles(_ simulatorExecutableURL: URL,
 	
 	let conditionalPrefix = "#if TARGET_OS_SIMULATOR\n"
 	let conditionalElse = "\n#else\n"
-	let conditionalSuffix = "\n#endif"
+	let conditionalSuffix = "\n#endif\n"
 	
 	let conditionalPrefixContents = conditionalPrefix.data(using: .utf8)!
 	let conditionalElseContents = conditionalElse.data(using: .utf8)!
