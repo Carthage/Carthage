@@ -22,13 +22,12 @@ public struct FetchCache {
 		lastFetchTimes.removeAll()
 	}
 
-	internal static func needsFetch(forURL url: GitURL) -> Bool {
-		guard let lastFetch = lastFetchTimes[url] else {
+    internal static func needsFetch(forURL url: GitURL) -> Bool {
+		guard let lastFetch = lastFetchTimes[url] ?? repositoriesLastFetchTime()?.timeIntervalSince1970 else {
 			return true
 		}
 
 		let difference = Date().timeIntervalSince1970 - lastFetch
-
 		return !(0...fetchCacheInterval).contains(difference)
 	}
 
@@ -37,6 +36,19 @@ public struct FetchCache {
 			lastFetchTimes[url] = Date().timeIntervalSince1970
 		}
 	}
+
+    fileprivate static func repositoriesLastFetchTime() -> Date? {
+        do {
+            let attr = try FileManager.default.attributesOfItem(atPath: Constants.Dependency.repositoriesURL.path)
+            return attr[FileAttributeKey.modificationDate] as? Date
+        } catch {
+            return nil
+        }
+    }
+
+    public static func updateRepositoriesLastFetchTime() {
+        try? FileManager.default.setAttributes([FileAttributeKey.modificationDate: Date()], ofItemAtPath: Constants.Dependency.repositoriesURL.path)
+    }
 }
 
 /// Shells out to `git` with the given arguments, optionally in the directory

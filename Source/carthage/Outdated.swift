@@ -89,19 +89,13 @@ public struct OutdatedCommand: CommandProtocol {
 	public let function = "Check for compatible updates to the project's dependencies"
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
-        let shouldIgnoreFetching = shouldIgnoreFetchingDependencies(fetchInterval: TimeInterval(options.fetchInterval))
-		return options.loadProject()
-            .combineLatest(with: shouldIgnoreFetching)
-            .flatMap(.merge) { project, shouldIgnoreFetching -> SignalProducer<[Project.OutdatedDependency], CarthageError> in
-                if shouldIgnoreFetching {
-                    // TODO: Non-fetching changes required.
-                    carthage.println("The dependencies will not be fetched due to non-expired fetch interval.")
-                    return project.outdatedDependencies(options.isVerbose)
-                } else {
-                    return project.outdatedDependencies(options.isVerbose)
-                }
-            }
+        FetchCache.fetchCacheInterval = TimeInterval(options.fetchInterval)
+
+        return options.loadProject()
+            .flatMap(.merge) { $0.outdatedDependencies(options.isVerbose) }
 			.on(value: { outdatedDependencies in
+                FetchCache.updateRepositoriesLastFetchTime()
+
 				let formatting = options.colorOptions.formatting
 
 				if !outdatedDependencies.isEmpty {
@@ -123,27 +117,4 @@ public struct OutdatedCommand: CommandProtocol {
 			})
 			.waitOnCommand()
 	}
-}
-
-private func shouldIgnoreFetchingDependencies(fetchInterval: TimeInterval) -> SignalProducer<Bool, CarthageError> {
-    let key = "org.carthage.Constants.outdatedDependenciesLastFetchDate"
-
-    // When the fetch interval is not provided, clear the storage and fetch the dependencies.
-    guard fetchInterval > 0 else {
-        UserDefaults.standard.removeObject(forKey: key)
-        return SignalProducer<Bool, CarthageError>({ false })
-    }
-
-    // If the fetch interval time has not been set before, start measuring time from the current date.
-    guard let lastFetchDate = UserDefaults.standard.value(forKey: key) as? Date else {
-        UserDefaults.standard.set(Date(), forKey: key)
-        return SignalProducer<Bool, CarthageError>({ false })
-    }
-
-    // Check if the fetch interval is expired.
-    let fetchIntervalExpired = Date() > lastFetchDate.addingTimeInterval(fetchInterval)
-    if fetchIntervalExpired {
-        UserDefaults.standard.set(Date(), forKey: key)
-    }
-    return SignalProducer<Bool, CarthageError>({ !fetchIntervalExpired })
 }
