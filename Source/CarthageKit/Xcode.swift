@@ -362,10 +362,16 @@ private func mergeSwiftHeaderFiles(_ simulatorExecutableURL: URL,
 	precondition(deviceExecutableURL.isFileURL)
 	precondition(executableOutputURL.isFileURL)
 	
+    let includeTargetConditionals = """
+                                    #ifndef TARGET_OS_SIMULATOR
+                                    #include <TargetConditionals.h>
+                                    #endif\n
+                                    """
 	let conditionalPrefix = "#if TARGET_OS_SIMULATOR\n"
 	let conditionalElse = "\n#else\n"
-	let conditionalSuffix = "\n#endif"
+	let conditionalSuffix = "\n#endif\n"
 	
+	let includeTargetConditionalsContents = includeTargetConditionals.data(using: .utf8)!
 	let conditionalPrefixContents = conditionalPrefix.data(using: .utf8)!
 	let conditionalElseContents = conditionalElse.data(using: .utf8)!
 	let conditionalSuffixContents = conditionalSuffix.data(using: .utf8)!
@@ -378,6 +384,7 @@ private func mergeSwiftHeaderFiles(_ simulatorExecutableURL: URL,
 	
 	var fileContents = Data()
 	
+	fileContents.append(includeTargetConditionalsContents)
 	fileContents.append(conditionalPrefixContents)
 	fileContents.append(simulatorHeaderContents)
 	fileContents.append(conditionalElseContents)
