@@ -11,6 +11,10 @@ BINARIES_FOLDER=/usr/local/bin
 
 SWIFT_BUILD_FLAGS=--configuration release
 
+SWIFTPM_DISABLE_SANDBOX_SHOULD_BE_FLAGGED:=$(shell test -n "$${HOMEBREW_SDKROOT}" && echo should_be_flagged)
+ifeq ($(SWIFTPM_DISABLE_SANDBOX_SHOULD_BE_FLAGGED), should_be_flagged)
+SWIFT_BUILD_FLAGS+= --disable-sandbox
+endif
 SWIFT_STATIC_STDLIB_SHOULD_BE_FLAGGED:=$(shell test -d $$(dirname $$(xcrun --find swift))/../lib/swift_static/macosx && echo should_be_flagged)
 ifeq ($(SWIFT_STATIC_STDLIB_SHOULD_BE_FLAGGED), should_be_flagged)
 SWIFT_BUILD_FLAGS+= -Xswiftc -static-stdlib
