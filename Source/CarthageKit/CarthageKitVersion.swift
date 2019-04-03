@@ -4,5 +4,5 @@ import SPMUtility
 public struct CarthageKitVersion {
 	public let value: Version
 
-	public static let current = CarthageKitVersion(value: Version(0, 31, 2))
+	public static let current = CarthageKitVersion(value: Version(0, 33, 0))
 }
