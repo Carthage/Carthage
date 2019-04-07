@@ -67,8 +67,8 @@ extension GitURL: Equatable {
 }
 
 extension GitURL: Hashable {
-	public var hashValue: Int {
-		return normalizedURLString.hashValue
+	public func hash(into hasher: inout Hasher) {
+		hasher.combine(normalizedURLString)
 	}
 }
 
