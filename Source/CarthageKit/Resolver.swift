@@ -519,8 +519,8 @@ extension DependencyNode: Comparable {
 }
 
 extension DependencyNode: Hashable {
-	fileprivate var hashValue: Int {
-		return dependency.hashValue
+	fileprivate func hash(into hasher: inout Hasher) {
+		hasher.combine(dependency)
 	}
 }
 
