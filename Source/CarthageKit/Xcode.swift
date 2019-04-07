@@ -361,7 +361,7 @@ private func mergeSwiftHeaderFiles(_ simulatorExecutableURL: URL,
 	precondition(simulatorExecutableURL.isFileURL)
 	precondition(deviceExecutableURL.isFileURL)
 	precondition(executableOutputURL.isFileURL)
-	
+
     let includeTargetConditionals = """
                                     #ifndef TARGET_OS_SIMULATOR
                                     #include <TargetConditionals.h>
@@ -370,27 +370,27 @@ private func mergeSwiftHeaderFiles(_ simulatorExecutableURL: URL,
 	let conditionalPrefix = "#if TARGET_OS_SIMULATOR\n"
 	let conditionalElse = "\n#else\n"
 	let conditionalSuffix = "\n#endif\n"
-	
+
 	let includeTargetConditionalsContents = includeTargetConditionals.data(using: .utf8)!
 	let conditionalPrefixContents = conditionalPrefix.data(using: .utf8)!
 	let conditionalElseContents = conditionalElse.data(using: .utf8)!
 	let conditionalSuffixContents = conditionalSuffix.data(using: .utf8)!
-	
+
 	guard let simulatorHeaderURL = simulatorExecutableURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
 	guard let simulatorHeaderContents = FileManager.default.contents(atPath: simulatorHeaderURL.path) else { return .empty }
 	guard let deviceHeaderURL = deviceExecutableURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
 	guard let deviceHeaderContents = FileManager.default.contents(atPath: deviceHeaderURL.path) else { return .empty }
 	guard let outputURL = executableOutputURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
-	
+
 	var fileContents = Data()
-	
+
 	fileContents.append(includeTargetConditionalsContents)
 	fileContents.append(conditionalPrefixContents)
 	fileContents.append(simulatorHeaderContents)
 	fileContents.append(conditionalElseContents)
 	fileContents.append(deviceHeaderContents)
 	fileContents.append(conditionalSuffixContents)
-	
+
 	switch FileManager.default.createFile(atPath: outputURL.path, contents: fileContents) {
 	case false: return .init(error: .writeFailed(outputURL, nil))
 	case true: return .empty
@@ -517,9 +517,9 @@ private func mergeBuildProducts(
 				}
 
 			let mergeProductSwiftHeaderFilesIfNeeded = SignalProducer.zip(simulatorBuildSettings.executableURL, deviceBuildSettings.executableURL, outputURL)
-				.flatMap(.concat) { (simulatorURL: URL, deviceURL: URL, outputURL:  URL) -> SignalProducer<(), CarthageError> in
+				.flatMap(.concat) { (simulatorURL: URL, deviceURL: URL, outputURL: URL) -> SignalProducer<(), CarthageError> in
 					guard isSwiftFramework(productURL) else { return .empty }
-					
+
 					return mergeSwiftHeaderFiles(
 						simulatorURL.resolvingSymlinksInPath(),
 						deviceURL.resolvingSymlinksInPath(),
