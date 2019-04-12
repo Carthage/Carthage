@@ -110,7 +110,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
     ```sh
-    /usr/local/bin/carthage copy-frameworks
+    /usr/local/bin/carthage copy-frameworks | 2>/dev/null
     ```
 
 1. Add the paths to the frameworks you want to use under “Input Files". For example:
