@@ -9,11 +9,13 @@ import Curry
 public struct CopyFrameworksCommand: CommandProtocol {
     public struct Options: OptionsProtocol {
         public let automatic: Bool
+        public let useFrameworkSearchPaths: Bool
         public let isVerbose: Bool
         
         public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
             return curry(self.init)
                 <*> mode <| Option(key: "auto", defaultValue: false, usage: "infers and copies linked frameworks automatically")
+                <*> mode <| Option(key: "use-framework-search-paths", defaultValue: false, usage: "uses FRAMEWORK_SEARCH_PATHS environment variable to copy the linked frameworks with paths order preservation (i.e. first occurrence wins).\nTakes effect only when `--auto` argument is being passed")
                 <*> mode <| Option(key: "verbose", defaultValue: false, usage: "print automatically copied frameworks and paths")
         }
     }
@@ -183,6 +185,22 @@ private func frameworksFolder() -> Result<URL, CarthageError> {
 		}
 }
 
+private func frameworkSearchPaths() -> Result<[URL], CarthageError> {
+    return appropriateDestinationFolder().flatMap { url in
+        return getEnvironmentVariable("FRAMEWORK_SEARCH_PATHS").map { frameworkSearchPaths -> [URL] in
+            let escapingSymbol = ":"
+            
+            return frameworkSearchPaths
+                .replacingOccurrences(of: "\\ ", with: escapingSymbol)
+                .split(separator: " ")
+                .map { $0.replacingOccurrences(of: escapingSymbol, with: " ") }
+                .map {
+                    URL(fileURLWithPath: $0, isDirectory: true)
+                }
+        }
+    }
+}
+
 private func projectDirectory() -> Result<URL, CarthageError> {
     return getEnvironmentVariable("PROJECT_FILE_PATH")
         .map { URL(fileURLWithPath: $0, isDirectory: false).deletingLastPathComponent() }
@@ -209,7 +227,7 @@ private func inputFiles(_ options: CopyFrameworksCommand.Options) -> SignalProdu
     }
     
     return userInputFiles.concat(
-        inferredInputFiles(using: userInputFiles)
+        inferredInputFiles(using: userInputFiles, useFrameworkSearchPaths: options.useFrameworkSearchPaths)
             .on(
                 starting: {
                     if options.isVerbose {
@@ -260,16 +278,25 @@ private func scriptInputFileLists() -> SignalProducer<String, CarthageError> {
 	}
 }
 
-private func inferredInputFiles(using userInputFiles: SignalProducer<String, CarthageError>) -> SignalProducer<String, CarthageError> {
+private func inferredInputFiles(
+    using userInputFiles: SignalProducer<String, CarthageError>,
+    useFrameworkSearchPaths: Bool
+) -> SignalProducer<String, CarthageError> {
     if
         let directory = projectDirectory().value,
         let platformName = getEnvironmentVariable("PLATFORM_NAME").value,
         let platform = BuildPlatform.from(string: platformName)?.platforms.first,
         let executable = executablePath().value
     {
-        return InputFilesInferrer(projectDirectory: directory, platform: platform)
+        let searchPaths = useFrameworkSearchPaths ? frameworkSearchPaths() : nil
+        if case .failure(let error)? = searchPaths {
+            return SignalProducer(error: error)
+        }
+        
+        return InputFilesInferrer(projectDirectory: directory, platform: platform, frameworkSearchPaths: searchPaths?.value ?? [])
             .inputFiles(for: executable, userInputFiles: userInputFiles.map(URL.init(fileURLWithPath:)))
             .map { $0.path }
     }
+
     return .empty
 }

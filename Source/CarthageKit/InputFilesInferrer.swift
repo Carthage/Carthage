@@ -15,15 +15,25 @@ public final class InputFilesInferrer {
     private let builtFrameworks: SignalProducer<URL, CarthageError>
     private let linkedFrameworksResolver: LinkedFrameworksResolver
     
+    // MARK: - Init
+    
     init(builtFrameworks: SignalProducer<URL, CarthageError>, linkedFrameworksResolver: @escaping LinkedFrameworksResolver) {
         self.builtFrameworks = builtFrameworks
         self.linkedFrameworksResolver = linkedFrameworksResolver
     }
 
-    public convenience init(projectDirectory: URL, platform: Platform) {
-        let searchDirectory = projectDirectory.appendingPathComponent(platform.relativePath, isDirectory: true)
-        self.init(builtFrameworks: frameworksInDirectory(searchDirectory), linkedFrameworksResolver: linkedFrameworks(for:))
+    public convenience init(projectDirectory: URL, platform: Platform, frameworkSearchPaths: [URL]) {
+        let allFrameworkSearchPath = InputFilesInferrer.allFrameworkSearchPaths(
+            forProjectIn: projectDirectory,
+            platform: platform,
+            frameworkSearchPaths: frameworkSearchPaths
+        )
+        let enumerator = SignalProducer(allFrameworkSearchPath).flatMap(.concat, frameworksInDirectory)
+        
+        self.init(builtFrameworks: enumerator, linkedFrameworksResolver: linkedFrameworks(for:))
     }
+    
+    // MARK: - Inferring
 
     public func inputFiles(for executableURL: URL, userInputFiles: SignalProducer<URL, CarthageError>) -> SignalProducer<URL, CarthageError> {
         let userFrameworksMap = userInputFiles.reduce(into: [String: URL]()) { (map, frameworkURL) in
@@ -40,7 +50,11 @@ public final class InputFilesInferrer {
             }
             .reduce(into: [String: URL]()) { (map, frameworkURL) in
                 let name = frameworkURL.deletingPathExtension().lastPathComponent
-                map[name] = frameworkURL
+                // Framework potentially can be presented in multiple directories from FRAMEWORK_SEARCH_PATHS.
+                // We're only interested in the first occurrence to preserve order of the paths.
+                if map[name] == nil {
+                    map[name] = frameworkURL
+                }
             }
         
         return SignalProducer.combineLatest(userFrameworksMap, builtFrameworksMap)
@@ -99,6 +113,24 @@ public final class InputFilesInferrer {
         case .failure(let error):
             throw error
         }
+    }
+    
+    // MARK: - Utility
+    
+    static func allFrameworkSearchPaths(forProjectIn directory: URL, platform: Platform, frameworkSearchPaths: [URL]) -> [URL] {
+        // Carthage's default framework search path should always be presented. Under rare circumstances
+        // framework located at the non-default path can be linked against Carthage's framework.
+        // Since we're allowing user to specify only first-level frameworks, App might not link nested framework,
+        // therefore FRAMEWORKS_SEARCH_PATHS won't contain Carthage default search path.
+        // To prevent such failure we're appending default path at the end.
+        let defaultSearchPath = defaultFrameworkSearchPath(forProjectIn: directory, platform: platform)
+        // To throw away all duplicating paths
+        let result = (frameworkSearchPaths + [defaultSearchPath]).unique()
+        return result
+    }
+    
+    static func defaultFrameworkSearchPath(forProjectIn directory: URL, platform: Platform) -> URL {
+        return directory.appendingPathComponent(platform.relativePath, isDirectory: true)
     }
 }
 
