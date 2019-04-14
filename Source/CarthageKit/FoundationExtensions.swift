@@ -11,3 +11,32 @@ extension Collection where Element: Hashable {
         }
     }
 }
+
+extension FileManager {
+    
+    public func allDirectories(at directoryURL: URL) -> [URL] {
+        func isDirectory(at url: URL) -> Bool {
+            let values = try? url.resourceValues(forKeys: [.isDirectoryKey])
+            return values?.isDirectory == true
+        }
+        
+        guard
+            directoryURL.isFileURL,
+            isDirectory(at: directoryURL),
+            let enumerator = self.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey])
+        else
+        {
+            return []
+        }
+        
+        var result: [URL] = [directoryURL]
+
+        for url in enumerator {
+            if let url = url as? URL, isDirectory(at: url) {
+                result.append(url)
+            }
+        }
+        
+        return result
+    }
+}

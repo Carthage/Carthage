@@ -23,5 +23,29 @@ final class FoundationExtensionsSpec: QuickSpec {
                 }
             }
         }
+        
+        describe("FileManager.allDirectories") {
+            let rootDirectory = URL(fileURLWithPath: "/tmp/CarthageKitTests-FoundationExtensionsSpec-FileManager_allDirectories")
+            let directoryA = rootDirectory.appendingPathComponent("A", isDirectory: true)
+            let directoryB = directoryA.appendingPathComponent("B", isDirectory: true)
+            let directoryC = rootDirectory.appendingPathComponent("C", isDirectory: true)
+
+            beforeEach {
+                _ = try? FileManager.default.createDirectory(at: directoryB, withIntermediateDirectories: true, attributes: nil)
+                _ = try? FileManager.default.createDirectory(at: directoryC, withIntermediateDirectories: true, attributes: nil)
+                
+                let data = Data(bytes: [0, 1, 2, 3])
+                try! data.write(to: directoryA.appendingPathComponent("data.txt"))
+            }
+            
+            afterEach {
+                _ = try? FileManager.default.removeItem(at: rootDirectory)
+            }
+            
+            it("should resolve the difference") {
+                let expected: [URL] = [rootDirectory, directoryA, directoryB, directoryC]
+                expect(FileManager.default.allDirectories(at: rootDirectory).map { $0.standardizedFileURL }).to(equal(expected))
+            }
+        }
     }
 }

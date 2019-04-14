@@ -124,8 +124,10 @@ public final class InputFilesInferrer {
         // therefore FRAMEWORKS_SEARCH_PATHS won't contain Carthage default search path.
         // To prevent such failure we're appending default path at the end.
         let defaultSearchPath = defaultFrameworkSearchPath(forProjectIn: directory, platform: platform)
-        // To throw away all duplicating paths
-        let result = (frameworkSearchPaths + [defaultSearchPath]).unique()
+        // To throw away all duplicating paths.
+        // `standardizedFileURL` is needed to normalize paths like `/tmp/search/path` and `/private/tmp/search/path` to
+        // make them equal. Otherwise we'll end up having duplicates of the same path. Latter one even might be invalid.
+        let result = (frameworkSearchPaths + [defaultSearchPath]).map { $0.standardizedFileURL }.unique()
         return result
     }
     
