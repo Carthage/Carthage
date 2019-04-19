@@ -137,6 +137,11 @@ With the debug information copied into the built products directory, Xcode will 
 
 When archiving your application for submission to the App Store or TestFlight, Xcode will also copy these files into the dSYMs subdirectory of your application’s `.xcarchive` bundle.
 
+##### If you're building for iOS, tvOS, or watchOS and the there is an option for manual installation
+1. Like above. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
+1. Run `carthage update --manually`. This will fetch dependencies into a [Carthage/Checkouts][] folder, but the projects won't be build, instead, the source code will be copied to your project directory on subdirectories called `Carthage-PROJECTNAME`.
+1. Just add those directories into your project using `Add Files`.
+
 ##### For both platforms
 
 Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.resolved][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.resolved][]**, because anyone else using the project will need that file to build the same framework versions.
