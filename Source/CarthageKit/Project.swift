@@ -109,6 +109,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// the receiver itself).
 	public let projectEvents: Signal<ProjectEvent, NoError>
 	private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
+    
+    /// Only copy the files manually into the project
+    public var manually: Bool = false
 
 	public init(directoryURL: URL) {
 		precondition(directoryURL.isFileURL)
@@ -793,7 +796,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 
 				let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, version: version, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
-
+                
 				if let submodule = submodule {
 					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
 					// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
@@ -809,7 +812,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 								.flatMap(.merge) {
 									cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL)
 								}
-						)
+                        ).on(completed: {
+                            self.checkAndCopySourceManually(workingDirectoryURL: workingDirectoryURL)
+                        })
 				}
 			}
 			.on(started: {
@@ -938,6 +943,22 @@ public final class Project { // swiftlint:disable:this type_body_length
 		}
 	}
 
+    /// Check if manually is enable and copy all the source files in the correct directories
+    private func checkAndCopySourceManually(workingDirectoryURL: URL) /*-> SignalProducer<(), CarthageError>*/ {
+        if self.manually {
+            // In the presence of manually for update
+            if let sourceDirectory = self.sourceDirectory(workingDirectoryURL: workingDirectoryURL) {
+                if let dirContents = try? FileManager.default.contentsOfDirectory(at: sourceDirectory, includingPropertiesForKeys: [], options: []) {
+                    let destinationDirectory = self.directoryURL.appendingPathComponent("Carthage-\(workingDirectoryURL.lastPathComponent)", isDirectory: true)
+                    try? FileManager.default.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
+                    for file in dirContents {
+                        try? FileManager.default.copyItem(at: file, to: destinationDirectory, avoiding·rdar·32984063: true)
+                    }
+                }
+            }
+        }
+    }
+    
 	/// Creates symlink between the dependency checkouts and the root checkouts
 	private func symlinkCheckoutPaths(
 		for dependency: Dependency,
@@ -1169,6 +1190,18 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return incompatibilities.isEmpty ? .init(value: ()) : .init(error: .invalidResolvedCartfile(incompatibilities))
 			}
 	}
+    
+    private func sourceDirectory(workingDirectoryURL: URL) -> URL? {
+        let possibleSourceDirectories = ["Sources", "Source", "Manually", "sources", "source", "manually"]
+        for possibleSource in possibleSourceDirectories {
+            let possibleDirectory = workingDirectoryURL.appendingPathComponent(possibleSource, isDirectory: true)
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: possibleDirectory.path, isDirectory: &isDirectory) && isDirectory.boolValue {
+                return possibleDirectory
+            }
+        }
+        return nil
+    }
 }
 
 /// Creates symlink between the dependency build folder and the root build folder

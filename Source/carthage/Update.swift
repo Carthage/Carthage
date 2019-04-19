@@ -13,6 +13,7 @@ public struct UpdateCommand: CommandProtocol {
 		public let isVerbose: Bool
 		public let logPath: String?
 		public let useNewResolver: Bool
+        public let manual: Bool
 		public let buildOptions: CarthageKit.BuildOptions
 		public let checkoutOptions: CheckoutCommand.Options
 		public let dependenciesToUpdate: [String]?
@@ -36,7 +37,7 @@ public struct UpdateCommand: CommandProtocol {
 		///
 		/// Otherwise, this producer will be empty.
 		public var buildProducer: SignalProducer<(), CarthageError> {
-			if checkoutAfterUpdate && buildAfterUpdate {
+			if checkoutAfterUpdate && buildAfterUpdate && !manual {
 				return BuildCommand().buildWithOptions(buildCommandOptions)
 			} else {
 				return .empty
@@ -48,6 +49,7 @@ public struct UpdateCommand: CommandProtocol {
 		             isVerbose: Bool,
 		             logPath: String?,
 		             useNewResolver: Bool,
+                     manual: Bool,
 		             buildOptions: BuildOptions,
 		             checkoutOptions: CheckoutCommand.Options
 		) {
@@ -56,6 +58,7 @@ public struct UpdateCommand: CommandProtocol {
 			self.isVerbose = isVerbose
 			self.logPath = logPath
 			self.useNewResolver = useNewResolver
+            self.manual = manual
 			self.buildOptions = buildOptions
 			self.checkoutOptions = checkoutOptions
 			self.dependenciesToUpdate = checkoutOptions.dependenciesToCheckout
@@ -66,14 +69,19 @@ public struct UpdateCommand: CommandProtocol {
 
 			let dependenciesUsage = "the dependency names to update, checkout and build"
 
-			return curry(self.init)
+            // Compiler issue with curry
+            // https://github.com/thoughtbot/Argo/blob/master/Documentation/Compilation-Errors.md
+			let create = curry(self.init)
+            return create
 				<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 				<*> mode <| Option(key: "build", defaultValue: true, usage: buildDescription)
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
-				<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
+				<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies.Default is false")
+                <*> mode <| Option(key: "manually", defaultValue: false, usage: "use to register the files manually into your project instead of the compiled framework")
 				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
 				<*> CheckoutCommand.Options.evaluate(mode, dependenciesUsage: dependenciesUsage)
+            
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it
@@ -111,6 +119,9 @@ public struct UpdateCommand: CommandProtocol {
 					shouldCheckout: options.checkoutAfterUpdate, useNewResolver: options.useNewResolver, buildOptions: options.buildOptions,
 					dependenciesToUpdate: options.dependenciesToUpdate
 				)
+                
+                // tell the project to copy the files manually
+                project.manually = options.manual
 
 				return checkDependencies.then(updateDependencies)
 			}
