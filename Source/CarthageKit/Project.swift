@@ -944,7 +944,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
     /// Check if manually is enable and copy all the source files in the correct directories
-    private func checkAndCopySourceManually(workingDirectoryURL: URL) /*-> SignalProducer<(), CarthageError>*/ {
+    private func checkAndCopySourceManually(workingDirectoryURL: URL) {
         if self.manually {
             // In the presence of manually for update
             if let sourceDirectory = self.sourceDirectory(workingDirectoryURL: workingDirectoryURL) {
