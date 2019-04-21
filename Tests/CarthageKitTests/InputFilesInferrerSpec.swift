@@ -63,6 +63,39 @@ final class InputFilesInferrerSpec: QuickSpec {
                     }
                 }
                 
+                context("when framework is listed by frameworks enumerator in different directories") {
+                    beforeEach {
+                        sut = InputFilesInferrer(
+                            builtFrameworks: SignalProducer([
+                                URL(fileURLWithPath: "Build/Directory/A.framework"),
+                                URL(fileURLWithPath: "/Frameworks/A.framework")
+                                
+                            ]),
+                            linkedFrameworksResolver: { url -> Result<[String], CarthageError> in
+                                switch url.lastPathComponent {
+                                case "Root":
+                                    return .success(["A"])
+                                    
+                                case "A":
+                                    return .success([])
+                                    
+                                default:
+                                    return .success([])
+                                }
+                        }
+                        )
+                        sut.executableResolver = executableResolver
+                    }
+                    
+                    it("should resolve dependncies at a first enumerator's path") {
+                        let result = sut.inputFiles(for: URL(fileURLWithPath: "/Root"), userInputFiles: .empty)
+                            .collect()
+                            .single()
+                        
+                        expect(result?.value).to(equal([URL(fileURLWithPath: "Build/Directory/A.framework")]))
+                    }
+                }
+                
                 context("when framework is listed by user input files") {
                     beforeEach {
                         sut = InputFilesInferrer(
@@ -309,7 +342,7 @@ final class InputFilesInferrerSpec: QuickSpec {
                 
                 it("should standartize paths") {
                     let paths: [URL] = [
-                        URL(fileURLWithPath: "/tmp/private/path", isDirectory: true)
+                        URL(fileURLWithPath: "Project/Frameworks", isDirectory: true)
                     ]
                     
                     let processedPaths = InputFilesInferrer.allFrameworkSearchPaths(
@@ -319,17 +352,18 @@ final class InputFilesInferrerSpec: QuickSpec {
                     )
                     
                     expect(processedPaths).to(equal([
-                        URL(fileURLWithPath: "/tmp/path", isDirectory: true),
-                        URL(fileURLWithPath: "/Project/Directory/Carthage/Build/iOS", isDirectory: true)
+                        URL(fileURLWithPath: "Project/Frameworks/", isDirectory: true).standardizedFileURL,
+                        URL(fileURLWithPath: "/Project/Directory/Carthage/Build/iOS/", isDirectory: true)
                     ]))
                 }
+
                 
                 it("should exclude duplicates") {
                     let paths: [URL] = [
                         URL(fileURLWithPath: "/Project/Frameworks", isDirectory: true),
-                        URL(fileURLWithPath: "/tmp/path", isDirectory: true),
-                        URL(fileURLWithPath: "/tmp/private/path", isDirectory: true),
-                        URL(fileURLWithPath: "/Project/Frameworks", isDirectory: true)
+                        URL(fileURLWithPath: "/tmp/search/path", isDirectory: true),
+                        URL(fileURLWithPath: "/Project/Frameworks", isDirectory: true),
+                        URL(fileURLWithPath: "Project/Frameworks", isDirectory: true)
                     ]
                     
                     let processedPaths = InputFilesInferrer.allFrameworkSearchPaths(
@@ -339,9 +373,10 @@ final class InputFilesInferrerSpec: QuickSpec {
                     )
                     
                     expect(processedPaths).to(equal([
-                        URL(fileURLWithPath: "/tmp/path", isDirectory: true),
-                        URL(fileURLWithPath: "/Project/Frameworks", isDirectory: true),
-                        URL(fileURLWithPath: "/Project/Directory/Carthage/Build/iOS", isDirectory: true)
+                        URL(fileURLWithPath: "/Project/Frameworks/", isDirectory: true),
+                        URL(fileURLWithPath: "/tmp/search/path/", isDirectory: true),
+                        URL(fileURLWithPath: "Project/Frameworks/", isDirectory: true).standardizedFileURL,
+                        URL(fileURLWithPath: "/Project/Directory/Carthage/Build/iOS/", isDirectory: true)
                     ]))
                 }
             }
