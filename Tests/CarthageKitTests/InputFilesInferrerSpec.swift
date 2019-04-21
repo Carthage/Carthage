@@ -1,4 +1,5 @@
 @testable import CarthageKit
+import XCDBLD
 import Foundation
 import Nimble
 import Quick
@@ -247,6 +248,101 @@ final class InputFilesInferrerSpec: QuickSpec {
                         expect(result?.value).to(contain(expectedURLs))
                         expect(result?.value).to(haveCount(expectedURLs.count))
                     }
+                }
+            }
+        }
+        
+        describe("paths resolving") {
+            let projectDirectory = URL(fileURLWithPath: "/Project/Directory")
+            let platform: Platform = .iOS
+            
+            describe("default framework search path") {
+                it("should combine project ULR and platform-related relative path") {
+                    let path = InputFilesInferrer.defaultFrameworkSearchPath(forProjectIn: projectDirectory, platform: platform)
+                    expect(path).to(equal(URL(fileURLWithPath: "/Project/Directory/Carthage/Build/iOS/")))
+                }
+            }
+            
+            describe("all framework search paths") {
+                context("when has default search path") {
+                    it("should preserve order of search paths") {
+                        let paths: [URL] = [
+                            URL(fileURLWithPath: "/Project/Directory/Frameworks", isDirectory: true),
+                            URL(fileURLWithPath: "/Project/Directory/Carthage/Build/iOS", isDirectory: true),
+                            URL(fileURLWithPath: "/Project/Directory/External", isDirectory: true)
+                        ]
+                        
+                        let processedPaths = InputFilesInferrer.allFrameworkSearchPaths(
+                            forProjectIn: projectDirectory,
+                            platform: platform,
+                            frameworkSearchPaths: paths
+                        )
+                        
+                        expect(processedPaths).to(equal([
+                            URL(fileURLWithPath: "/Project/Directory/Frameworks", isDirectory: true),
+                            URL(fileURLWithPath: "/Project/Directory/Carthage/Build/iOS", isDirectory: true),
+                            URL(fileURLWithPath: "/Project/Directory/External", isDirectory: true)
+                        ]))
+                    }
+                }
+                
+                context("when has no default search path inculded") {
+                    it("should append it") {
+                        let paths: [URL] = [
+                            URL(fileURLWithPath: "/Project/Directory/Frameworks", isDirectory: true),
+                            URL(fileURLWithPath: "/Project/Directory/External", isDirectory: true)
+                        ]
+                        
+                        let processedPaths = InputFilesInferrer.allFrameworkSearchPaths(
+                            forProjectIn: projectDirectory,
+                            platform: platform,
+                            frameworkSearchPaths: paths
+                        )
+                        
+                        expect(processedPaths).to(equal([
+                            URL(fileURLWithPath: "/Project/Directory/Frameworks", isDirectory: true),
+                            URL(fileURLWithPath: "/Project/Directory/External", isDirectory: true),
+                            URL(fileURLWithPath: "/Project/Directory/Carthage/Build/iOS", isDirectory: true)
+                        ]))
+                    }
+                }
+                
+                it("should standartize paths") {
+                    let paths: [URL] = [
+                        URL(fileURLWithPath: "/tmp/private/path", isDirectory: true)
+                    ]
+                    
+                    let processedPaths = InputFilesInferrer.allFrameworkSearchPaths(
+                        forProjectIn: projectDirectory,
+                        platform: platform,
+                        frameworkSearchPaths: paths
+                    )
+                    
+                    expect(processedPaths).to(equal([
+                        URL(fileURLWithPath: "/tmp/path", isDirectory: true),
+                        URL(fileURLWithPath: "/Project/Directory/Carthage/Build/iOS", isDirectory: true)
+                    ]))
+                }
+                
+                it("should exclude duplicates") {
+                    let paths: [URL] = [
+                        URL(fileURLWithPath: "/Project/Frameworks", isDirectory: true),
+                        URL(fileURLWithPath: "/tmp/path", isDirectory: true),
+                        URL(fileURLWithPath: "/tmp/private/path", isDirectory: true),
+                        URL(fileURLWithPath: "/Project/Frameworks", isDirectory: true)
+                    ]
+                    
+                    let processedPaths = InputFilesInferrer.allFrameworkSearchPaths(
+                        forProjectIn: projectDirectory,
+                        platform: platform,
+                        frameworkSearchPaths: paths
+                    )
+                    
+                    expect(processedPaths).to(equal([
+                        URL(fileURLWithPath: "/tmp/path", isDirectory: true),
+                        URL(fileURLWithPath: "/Project/Frameworks", isDirectory: true),
+                        URL(fileURLWithPath: "/Project/Directory/Carthage/Build/iOS", isDirectory: true)
+                    ]))
                 }
             }
         }
