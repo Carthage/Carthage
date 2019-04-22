@@ -401,5 +401,37 @@ RootFramework:
                 expect(result).toNot(contain(["libobjc.A"]))
             }
         }
+        
+        describe("FRAMEWORK_SEARCH_PATH mapping") {
+            let root = "/tmp/InputFilesInferrerSpec"
+            let vendorFrameworkDirectory = URL(fileURLWithPath: "\(root)/Project/Frameworks/SomeVendor/Binary/")
+            let vendorFrameworkInternalDirectory = URL(fileURLWithPath: "\(root)/Project/Frameworks/SomeVendor/Binary/A.framework/Frameworks/")
+            let someFrameworkDirectory = URL(fileURLWithPath: "\(root)/Project/Directory with_spaces/and.dots/")
+            
+            beforeEach {
+                _ = try? FileManager.default.createDirectory(at: vendorFrameworkInternalDirectory, withIntermediateDirectories: true, attributes: nil)
+                _ = try? FileManager.default.createDirectory(at: someFrameworkDirectory, withIntermediateDirectories: true, attributes: nil)
+            }
+            
+            afterEach {
+                _ = try? FileManager.default.removeItem(at: URL(fileURLWithPath: root))
+            }
+            
+//            let input =
+//            """
+//            \(root)/Project/Frameworks/** \(root)/Project/Directory with_spaces/and.dots/
+//            """
+
+            
+            it("should resolve recursive path") {
+                let input = "\(root)/Project/Frameworks/**"
+                let resolvedURLs = InputFilesInferrer.frameworkSearchPaths(from: input)
+                expect(resolvedURLs).to(equal([
+                    URL(fileURLWithPath: "\(root)/Project/Frameworks/"),
+                    URL(fileURLWithPath: "\(root)/Project/Frameworks/SomeVendor/"),
+                    URL(fileURLWithPath: "\(root)/Project/Frameworks/SomeVendor/Binary/")
+                ]))
+            }
+        }
     }
 }

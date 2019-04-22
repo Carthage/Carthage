@@ -134,6 +134,32 @@ public final class InputFilesInferrer {
     static func defaultFrameworkSearchPath(forProjectIn directory: URL, platform: Platform) -> URL {
         return directory.appendingPathComponent(platform.relativePath, isDirectory: true)
     }
+    
+    /// Maps Xcode's `FRAMEWORK_SEARCH_PATHS` string to an array or file URLs as well as resolves recursive directories.
+    ///
+    /// - Parameter rawFrameworkSearchPaths: Value of `FRAMEWORK_SEARCH_PATHS`
+    /// - Returns: Array of corresponding file URLs.
+    public static func frameworkSearchPaths(from rawFrameworkSearchPaths: String) -> [URL] {
+        let escapingSymbol = ":"
+        
+        return rawFrameworkSearchPaths
+            .replacingOccurrences(of: "\\ ", with: escapingSymbol)
+            .split(separator: " ")
+            .map { $0.replacingOccurrences(of: escapingSymbol, with: " ") }
+            .flatMap { path -> [URL] in
+                // For recursive paths Xcode adds a "**" suffix. i.e. /search/path turns into a /search/path/**
+                // We need to collect all the nested paths to act like an Xcode.
+                let recursiveSymbol = "**"
+                
+                if path.hasSuffix(recursiveSymbol) {
+                    let normalizedURL = URL(fileURLWithPath: String(path.dropLast(recursiveSymbol.count)), isDirectory: true)
+                    return FileManager.default.allDirectories(at: normalizedURL)
+                } else {
+                    return [URL(fileURLWithPath: path, isDirectory: true)]
+                }
+            }
+            .map { $0.standardizedFileURL }
+    }
 }
 
 /// Invokes otool -L for a given executable URL.
@@ -179,4 +205,3 @@ internal func linkedFrameworks(from input: String) -> [String] {
         return nil
     }
 }
-

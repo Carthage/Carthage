@@ -187,25 +187,8 @@ private func frameworksFolder() -> Result<URL, CarthageError> {
 
 private func frameworkSearchPaths() -> Result<[URL], CarthageError> {
     return appropriateDestinationFolder().flatMap { url in
-        return getEnvironmentVariable("FRAMEWORK_SEARCH_PATHS").map { frameworkSearchPaths -> [URL] in
-            let escapingSymbol = ":"
-            
-            return frameworkSearchPaths
-                .replacingOccurrences(of: "\\ ", with: escapingSymbol)
-                .split(separator: " ")
-                .map { $0.replacingOccurrences(of: escapingSymbol, with: " ") }
-                .flatMap { path -> [URL] in
-                    // For recursive paths Xcode adds a "**" suffix. i.e. /search/path turns into a /search/path/**
-                    // We need to collect all the nested paths to act like an Xcode.
-                    let recursiveSymbol = "**"
-
-                    if path.hasSuffix(recursiveSymbol) {
-                        let normalizedURL = URL(fileURLWithPath: String(path.dropLast(recursiveSymbol.count)), isDirectory: true)
-                        return FileManager.default.allDirectories(at: normalizedURL)
-                    } else {
-                        return [URL(fileURLWithPath: path, isDirectory: true)]
-                    }
-                }
+        return getEnvironmentVariable("FRAMEWORK_SEARCH_PATHS").map { rawFrameworkSearchPaths -> [URL] in
+            return InputFilesInferrer.frameworkSearchPaths(from: rawFrameworkSearchPaths)
         }
     }
 }
