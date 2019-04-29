@@ -1383,8 +1383,9 @@ internal func dSYMsInDirectory(_ directoryURL: URL) -> SignalProducer<URL, Carth
 	return filesInDirectory(directoryURL, "com.apple.xcode.dsym")
 }
 
-/// Sends the URL of the dSYM whose UUIDs match those of the given framework, or
-/// errors if there was an error parsing a dSYM contained within the directory.
+/// Sends the URL of the dSYM for which at least one of the UUIDs are common with 
+/// those of the given framework, or errors if there was an error parsing a dSYM 
+/// contained within the directory.
 private func dSYMForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return UUIDsForFramework(frameworkURL)
 		.flatMap(.concat) { (frameworkUUIDs: Set<UUID>) in
@@ -1392,7 +1393,7 @@ private func dSYMForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: 
 				.flatMap(.merge) { dSYMURL in
 					return UUIDsForDSYM(dSYMURL)
 						.filter { (dSYMUUIDs: Set<UUID>) in
-							return dSYMUUIDs == frameworkUUIDs
+							return !dSYMUUIDs.isDisjoint(with: frameworkUUIDs)
 						}
 						.map { _ in dSYMURL }
 				}
