@@ -4,7 +4,6 @@ internal struct NetrcMachine {
     let name: String
     let login: String
     let password: String
-    let isDefault: Bool
 }
 
 internal struct Netrc {
@@ -29,8 +28,7 @@ internal struct Netrc {
         let tokens = content
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .components(separatedBy: .whitespacesAndNewlines)
-            .filter({ $0 != ""})
-        // 🦁 TODO: Handle comments
+            .filter({ $0 != "" })
         
         var machines: [NetrcMachine] = []
         
@@ -42,7 +40,7 @@ internal struct Netrc {
             guard let name = values.first else { continue }
             guard let login = values["login"] else { throw NetrcError.missingValueForToken("login") }
             guard let password = values["password"] else { throw NetrcError.missingValueForToken("password") }
-            machines.append(NetrcMachine(name: name, login: login, password: password, isDefault: false)) // 🦁 TODO: Handle 'isDefault'
+            machines.append(NetrcMachine(name: name, login: login, password: password))
         }
         
         guard machines.count > 0 else { throw NetrcError.machineNotFound }

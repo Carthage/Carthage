@@ -16,7 +16,6 @@ class NetrcSpec: QuickSpec {
                 expect(machine?.name) == "example.com"
                 expect(machine?.login) == "anonymous"
                 expect(machine?.password) == "qwerty"
-                expect(machine?.isDefault) == false
             }
             
             it("should load machines for a given multi-line format") {
@@ -33,7 +32,6 @@ class NetrcSpec: QuickSpec {
                 expect(machine?.name) == "example.com"
                 expect(machine?.login) == "anonymous"
                 expect(machine?.password) == "qwerty"
-                expect(machine?.isDefault) == false
             }
             
             it("should load machines for a given multi-line + whitespaces format") {
@@ -49,7 +47,6 @@ class NetrcSpec: QuickSpec {
                 expect(machine?.name) == "example.com"
                 expect(machine?.login) == "anonymous"
                 expect(machine?.password) == "qwerty"
-                expect(machine?.isDefault) == false
             }
             
             it("should load multiple machines for a given inline format") {
@@ -62,13 +59,11 @@ class NetrcSpec: QuickSpec {
                 expect(machine?.name) == "example.com"
                 expect(machine?.login) == "anonymous"
                 expect(machine?.password) == "qwerty"
-                expect(machine?.isDefault) == false
                 
                 machine = machines?[1]
                 expect(machine?.name) == "example2.com"
                 expect(machine?.login) == "anonymous2"
                 expect(machine?.password) == "qwerty2"
-                expect(machine?.isDefault) == false
             }
             
             it("should load multiple machines for a given multi-line format") {
@@ -87,13 +82,11 @@ class NetrcSpec: QuickSpec {
                 expect(machine?.name) == "example.com"
                 expect(machine?.login) == "anonymous"
                 expect(machine?.password) == "qwerty"
-                expect(machine?.isDefault) == false
                 
                 machine = machines?[1]
                 expect(machine?.name) == "example2.com"
                 expect(machine?.login) == "anonymous2"
                 expect(machine?.password) == "qwerty2"
-                expect(machine?.isDefault) == false
             }
             
             it("should throw error when machine parameter is missing") {
@@ -118,8 +111,3 @@ class NetrcSpec: QuickSpec {
         }
     }
 }
-
-// 🦁 TODO: Implement test cases
-
-// default login anonymous password qwerty
-// default login anonymous password qwerty machine example.com login carthage password admin
