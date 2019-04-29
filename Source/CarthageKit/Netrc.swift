@@ -35,12 +35,13 @@ internal struct Netrc {
         var machines: [NetrcMachine] = []
         
         let machineTokens = tokens.split { $0 == "machine" }
-        guard machineTokens.count > 0 else { throw NetrcError.machineNotFound }
+        guard tokens.contains("machine"), machineTokens.count > 0 else { throw NetrcError.machineNotFound }
         
         for machine in machineTokens {
-            guard let name = machine.first else { continue }
-            guard let login = machine["login"] else { throw NetrcError.missingValueForToken("login") }
-            guard let password = machine["password"] else { throw NetrcError.missingValueForToken("password") }
+            let values = Array(machine)
+            guard let name = values.first else { continue }
+            guard let login = values["login"] else { throw NetrcError.missingValueForToken("login") }
+            guard let password = values["password"] else { throw NetrcError.missingValueForToken("password") }
             machines.append(NetrcMachine(name: name, login: login, password: password, isDefault: false)) // 🦁 TODO: Handle 'isDefault'
         }
         
@@ -49,10 +50,10 @@ internal struct Netrc {
     }
 }
 
-fileprivate extension ArraySlice where Element == String {
+fileprivate extension Array where Element == String {
     subscript(_ token: String) -> String? {
         guard let tokenIndex = firstIndex(of: token),
-            self.count > tokenIndex,
+            count > tokenIndex,
             !["machine", "login", "password"].contains(self[tokenIndex + 1]) else {
                 return nil
         }
