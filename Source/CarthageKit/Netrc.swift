@@ -1,4 +1,5 @@
 import Foundation
+import Result
 
 internal struct NetrcMachine {
     let name: String
@@ -9,22 +10,22 @@ internal struct NetrcMachine {
 internal struct Netrc {
     
     enum NetrcError: Error {
-        case fileNotFound(String)
-        case unreadableFile(String)
+        case fileNotFound(URL)
+        case unreadableFile(URL)
         case machineNotFound
         case missingToken(String)
         case missingValueForToken(String)
     }
     
-    static func load(from file: URL = URL(fileURLWithPath: "\(NSHomeDirectory())/.netrc")) throws -> [NetrcMachine] {
-        guard FileManager.default.fileExists(atPath: file.path) else { throw NetrcError.fileNotFound(file.path) }
-        guard FileManager.default.isReadableFile(atPath: file.path) else { throw NetrcError.unreadableFile(file.path) }
+    static func from(_ fileURL: URL = URL(fileURLWithPath: "\(NSHomeDirectory())/.netrc")) -> Result<[NetrcMachine], NetrcError> {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return .failure(NetrcError.fileNotFound(fileURL)) }
+        guard FileManager.default.isReadableFile(atPath: fileURL.path) else { return .failure(NetrcError.unreadableFile(fileURL)) }
         
-        let content = try String(contentsOf: file, encoding: .utf8)
-        return try Netrc.load(from: content)
+        return Result(catching: { try String(contentsOf: fileURL, encoding: .utf8) })
+            .flatMap { Netrc.from($0) }
     }
     
-    static func load(from content: String) throws -> [NetrcMachine] {
+    static func from(_ content: String) -> Result<[NetrcMachine], NetrcError> {
         let tokens = content
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .components(separatedBy: .whitespacesAndNewlines)
@@ -33,18 +34,18 @@ internal struct Netrc {
         var machines: [NetrcMachine] = []
         
         let machineTokens = tokens.split { $0 == "machine" }
-        guard tokens.contains("machine"), machineTokens.count > 0 else { throw NetrcError.machineNotFound }
+        guard tokens.contains("machine"), machineTokens.count > 0 else { return .failure(NetrcError.machineNotFound) }
         
         for machine in machineTokens {
             let values = Array(machine)
             guard let name = values.first else { continue }
-            guard let login = values["login"] else { throw NetrcError.missingValueForToken("login") }
-            guard let password = values["password"] else { throw NetrcError.missingValueForToken("password") }
+            guard let login = values["login"] else { return .failure(NetrcError.missingValueForToken("login")) }
+            guard let password = values["password"] else { return .failure(NetrcError.missingValueForToken("password")) }
             machines.append(NetrcMachine(name: name, login: login, password: password))
         }
         
-        guard machines.count > 0 else { throw NetrcError.machineNotFound }
-        return machines
+        guard machines.count > 0 else { return .failure(NetrcError.machineNotFound) }
+        return .success(machines)
     }
 }
 

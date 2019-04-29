@@ -9,7 +9,7 @@ class NetrcSpec: QuickSpec {
             it("should load machines for a given inline format") {
                 let content = "machine example.com login anonymous password qwerty"
                 
-                let machines = try? Netrc.load(from: content)
+                let machines = Netrc.from(content).value
                 expect(machines?.count) == 1
                 
                 let machine = machines?.first
@@ -25,7 +25,7 @@ class NetrcSpec: QuickSpec {
                     password qwerty
                     """
                 
-                let machines = try? Netrc.load(from: content)
+                let machines = Netrc.from(content).value
                 expect(machines?.count) == 1
                 
                 let machine = machines?.first
@@ -40,7 +40,7 @@ class NetrcSpec: QuickSpec {
                     password                  qwerty
                     """
                 
-                let machines = try? Netrc.load(from: content)
+                let machines = Netrc.from(content).value
                 expect(machines?.count) == 1
                 
                 let machine = machines?.first
@@ -52,7 +52,7 @@ class NetrcSpec: QuickSpec {
             it("should load multiple machines for a given inline format") {
                 let content = "machine example.com login anonymous password qwerty machine example2.com login anonymous2 password qwerty2"
                 
-                let machines = try? Netrc.load(from: content)
+                let machines = Netrc.from(content).value
                 expect(machines?.count) == 2
                 
                 var machine = machines?[0]
@@ -75,7 +75,7 @@ class NetrcSpec: QuickSpec {
                     password qwerty2
                     """
                 
-                let machines = try? Netrc.load(from: content)
+                let machines = Netrc.from(content).value
                 expect(machines?.count) == 2
                 
                 var machine = machines?[0]
@@ -91,22 +91,50 @@ class NetrcSpec: QuickSpec {
             
             it("should throw error when machine parameter is missing") {
                 let content = "login anonymous password qwerty"
-                expect { try Netrc.load(from: content) }.to( throwError() )
+                let error = Netrc.from(content).error
+                
+                switch error {
+                case .some(.machineNotFound):
+                    break
+                default:
+                    fail("Expected invalidJSON error")
+                }
             }
             
             it("should throw error for an empty machine values") {
                 let content = "machine"
-                expect { try Netrc.load(from: content) }.to( throwError() )
+                let error = Netrc.from(content).error
+                
+                switch error {
+                case .some(.machineNotFound):
+                    break
+                default:
+                    fail("Expected invalidJSON error")
+                }
             }
             
             it("should throw error when login parameter is missing") {
                 let content = "machine example.com anonymous password qwerty"
-                expect { try Netrc.load(from: content) }.to( throwError() )
+                let error = Netrc.from(content).error
+                
+                switch error {
+                case .some(.missingValueForToken(let token)):
+                    expect(token) == "login"
+                default:
+                    fail("Expected invalidJSON error")
+                }
             }
             
             it("should throw error when password parameter is missing") {
                 let content = "machine example.com login anonymous"
-                expect { try Netrc.load(from: content) }.to( throwError() )
+                let error = Netrc.from(content).error
+                
+                switch error {
+                case .some(.missingValueForToken(let password)):
+                    expect(password) == "password"
+                default:
+                    fail("Expected invalidJSON error")
+                }
             }
         }
     }
