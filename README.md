@@ -10,7 +10,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 - [Installing Carthage](#installing-carthage)
 - [Adding frameworks to an application](#adding-frameworks-to-an-application)
 	- [Getting started](#getting-started)
-		- [If you're building for OS X](#if-youre-building-for-os-x)
+		- [If you're building for macOS](#if-youre-building-for-macos)
 		- [If you're building for iOS, tvOS, or watchOS](#if-youre-building-for-ios-tvos-or-watchos)
 		- [For both platforms](#for-both-platforms)
 		- [(Optionally) Add build phase to warn about outdated dependencies](#optionally-add-build-phase-to-warn-about-outdated-dependencies)
@@ -90,10 +90,10 @@ Once you have Carthage [installed](#installing-carthage), you can begin adding f
 
 ### Getting started
 
-##### If you're building for OS X
+##### If you're building for macOS
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
-1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled framework.
+1. Run `carthage update --platform macOS`. This will fetch dependencies into a [Carthage/Checkouts][] folder and build each one or download a pre-compiled framework.
 1. On your application targets’ _General_ settings tab, in the _Embedded Binaries_ section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 
 Additionally, you'll need to copy debug symbols for debugging and crash reporting on OS X.
