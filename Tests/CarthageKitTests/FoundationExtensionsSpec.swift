@@ -25,26 +25,92 @@ final class FoundationExtensionsSpec: QuickSpec {
         }
         
         describe("FileManager.allDirectories") {
-            let rootDirectory = URL(fileURLWithPath: "/tmp/CarthageKitTests-FoundationExtensionsSpec-FileManager_allDirectories")
-            let directoryA = rootDirectory.appendingPathComponent("A", isDirectory: true)
-            let directoryB = directoryA.appendingPathComponent("B", isDirectory: true)
-            let directoryC = rootDirectory.appendingPathComponent("C", isDirectory: true)
-
+            let sandboxURL = URL(fileURLWithPath: "/tmp/CarthageKitTests-FoundationExtensionsSpec-FileManager_allDirectories")
+            let manager: FileManager = .default
+            
             beforeEach {
-                _ = try? FileManager.default.createDirectory(at: directoryB, withIntermediateDirectories: true, attributes: nil)
-                _ = try? FileManager.default.createDirectory(at: directoryC, withIntermediateDirectories: true, attributes: nil)
-                
-                let data = Data(bytes: [0, 1, 2, 3])
-                try! data.write(to: directoryA.appendingPathComponent("data.txt"))
+                _ = try? manager.createDirectory(at: sandboxURL, withIntermediateDirectories: true, attributes: nil)
             }
             
             afterEach {
-                _ = try? FileManager.default.removeItem(at: rootDirectory)
+                _ = try? manager.removeItem(at: sandboxURL)
             }
             
-            it("should resolve the difference") {
-                let expected: [URL] = [rootDirectory, directoryA, directoryB, directoryC]
-                expect(FileManager.default.allDirectories(at: rootDirectory).map { $0.standardizedFileURL }).to(equal(expected))
+            context("default") {
+                let rootURL = sandboxURL.appendingPathComponent("Project", isDirectory: true)
+                let frameworksURL = rootURL.appendingPathComponent("Frameworks", isDirectory: true)
+                let sdkURL = frameworksURL.appendingPathComponent("SDK", isDirectory: true)
+                
+                beforeEach {
+                    _ = try? manager.createDirectory(at: sdkURL, withIntermediateDirectories: true, attributes: nil)
+                }
+                
+                it("should return all directories including receiver") {
+                    let expected: [URL] = [rootURL, frameworksURL, sdkURL]
+                    expect(manager.allDirectories(at: rootURL)).to(equal(expected))
+                }
+            }
+            
+            context("when has hidden directories") {
+                let rootURL = sandboxURL.appendingPathComponent("Project", isDirectory: true)
+                let gitURL = rootURL.appendingPathComponent(".git", isDirectory: true)
+                let frameworksURL = rootURL.appendingPathComponent("Frameworks", isDirectory: true)
+                let sdkURL = frameworksURL.appendingPathComponent("SDK", isDirectory: true)
+                let sdkResourcesURL = sdkURL.appendingPathComponent("Resources", isDirectory: true)
+                
+                beforeEach {
+                    _ = try? manager.createDirectory(at: sdkResourcesURL, withIntermediateDirectories: true, attributes: nil)
+                    _ = try? manager.createDirectory(at: gitURL, withIntermediateDirectories: true, attributes: nil)
+                    
+                    var values = URLResourceValues()
+                    values.isHidden = true
+                    
+                    var sdkURL = sdkURL
+                    try! sdkURL.setResourceValues(values)
+                }
+                
+                it("should skip hidden directories with underlying content") {
+                    let expected: [URL] = [rootURL, frameworksURL]
+                    expect(manager.allDirectories(at: rootURL)).to(equal(expected))
+                }
+            }
+            
+            context("when has ignored extensions") {
+                let rootURL = sandboxURL.appendingPathComponent("Project", isDirectory: true)
+                let frameworksURL = rootURL.appendingPathComponent("Frameworks", isDirectory: true)
+                
+                let someFrameworkURL = frameworksURL.appendingPathComponent("A.framework", isDirectory: true)
+                let someFrameworkResourcesURL = someFrameworkURL.appendingPathComponent("Resources", isDirectory: true)
+                
+                let someFakeFrameworkURL = frameworksURL.appendingPathComponent(".framework", isDirectory: true)
+                let otherURL = frameworksURL.appendingPathComponent("Framework.etc", isDirectory: true)
+                
+
+                beforeEach {
+                    _ = try? manager.createDirectory(at: someFrameworkResourcesURL, withIntermediateDirectories: true, attributes: nil)
+                    _ = try? manager.createDirectory(at: someFakeFrameworkURL, withIntermediateDirectories: true, attributes: nil)
+                    _ = try? manager.createDirectory(at: otherURL, withIntermediateDirectories: true, attributes: nil)
+                }
+                
+                it("should skip matching directories with underlying content") {
+                    let expected: [URL] = [rootURL, frameworksURL, otherURL]
+                    expect(manager.allDirectories(at: rootURL, ignoringExtensions: ["framework"])).to(equal(expected))
+                }
+            }
+            
+            context("Packages") {
+                let rootURL = sandboxURL.appendingPathComponent("Project", isDirectory: true)
+                let someBundleURL = rootURL.appendingPathComponent("Some.bundle", isDirectory: true)
+                let someBundleResourcesURL = someBundleURL.appendingPathComponent("Resources", isDirectory: true)
+
+                beforeEach {
+                    _ = try? manager.createDirectory(at: someBundleResourcesURL, withIntermediateDirectories: true, attributes: nil)
+                }
+                
+                it("should evaluate packages descendants") {
+                    let expected: [URL] = [rootURL, someBundleURL, someBundleResourcesURL]
+                    expect(manager.allDirectories(at: rootURL)).to(equal(expected))
+                }
             }
         }
     }

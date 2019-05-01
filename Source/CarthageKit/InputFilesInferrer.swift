@@ -142,6 +142,28 @@ public final class InputFilesInferrer {
     public static func frameworkSearchPaths(from rawFrameworkSearchPaths: String) -> [URL] {
         let escapingSymbol = ":"
         
+        // During expansion of the recursive path we don't want to enumarate over a directories that are known
+        // to be used as resources / other xcode-specific files that do not contain any frameworks.
+        let ignoredDirectoryExtensions: Set<String> = [
+            "app",
+            "dSYM",
+            "docset",
+            "framework",
+            "git",
+            "lproj",
+            "playground",
+            "xcassets",
+            "scnassets",
+            "xcstickers",
+            "xcbaseline",
+            "xcdatamodel",
+            "xcmappingmodel",
+            "xcodeproj",
+            "xctemplate",
+            "xctest",
+            "xcworkspace"
+        ]
+        
         return rawFrameworkSearchPaths
             .replacingOccurrences(of: "\\ ", with: escapingSymbol)
             .split(separator: " ")
@@ -153,7 +175,7 @@ public final class InputFilesInferrer {
                 
                 if path.hasSuffix(recursiveSymbol) {
                     let normalizedURL = URL(fileURLWithPath: String(path.dropLast(recursiveSymbol.count)), isDirectory: true)
-                    return FileManager.default.allDirectories(at: normalizedURL)
+                    return FileManager.default.allDirectories(at: normalizedURL, ignoringExtensions: ignoredDirectoryExtensions)
                 } else {
                     return [URL(fileURLWithPath: path, isDirectory: true)]
                 }

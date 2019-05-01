@@ -14,16 +14,18 @@ extension Collection where Element: Hashable {
 
 extension FileManager {
     
-    public func allDirectories(at directoryURL: URL) -> [URL] {
+    public func allDirectories(at directoryURL: URL, ignoringExtensions: Set<String> = []) -> [URL] {
         func isDirectory(at url: URL) -> Bool {
             let values = try? url.resourceValues(forKeys: [.isDirectoryKey])
             return values?.isDirectory == true
         }
         
+        let options: FileManager.DirectoryEnumerationOptions = [.skipsHiddenFiles]
+        let keys: [URLResourceKey] = [.isDirectoryKey]
         guard
             directoryURL.isFileURL,
             isDirectory(at: directoryURL),
-            let enumerator = self.enumerator(at: directoryURL, includingPropertiesForKeys: [.isDirectoryKey])
+            let enumerator = self.enumerator(at: directoryURL, includingPropertiesForKeys: keys, options: options)
         else
         {
             return []
@@ -33,10 +35,14 @@ extension FileManager {
 
         for url in enumerator {
             if let url = url as? URL, isDirectory(at: url) {
-                result.append(url)
+                if !url.pathExtension.isEmpty && ignoringExtensions.contains(url.pathExtension) {
+                    enumerator.skipDescendants()
+                } else {
+                    result.append(url)
+                }
             }
         }
         
-        return result
+        return result.map { $0.standardizedFileURL }
     }
 }
