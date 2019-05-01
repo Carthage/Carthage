@@ -140,8 +140,6 @@ public final class InputFilesInferrer {
     /// - Parameter rawFrameworkSearchPaths: Value of `FRAMEWORK_SEARCH_PATHS`
     /// - Returns: Array of corresponding file URLs.
     public static func frameworkSearchPaths(from rawFrameworkSearchPaths: String) -> [URL] {
-        let escapingSymbol = ":"
-        
         // During expansion of the recursive path we don't want to enumarate over a directories that are known
         // to be used as resources / other xcode-specific files that do not contain any frameworks.
         let ignoredDirectoryExtensions: Set<String> = [
@@ -164,6 +162,10 @@ public final class InputFilesInferrer {
             "xcworkspace"
         ]
         
+        // We can not split by ' ' or by '\n' since it will give us invalid results because of the escaped spaces.
+        // To handle this we're replacing escaped spaces by ':' which seems to be the only invalid symbol on macOS,
+        // making conversion and then reverting replacement.
+        let escapingSymbol = ":"
         return rawFrameworkSearchPaths
             .replacingOccurrences(of: "\\ ", with: escapingSymbol)
             .split(separator: " ")

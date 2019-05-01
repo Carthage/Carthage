@@ -403,34 +403,77 @@ RootFramework:
         }
         
         describe("FRAMEWORK_SEARCH_PATH mapping") {
-            let root = "/tmp/InputFilesInferrerSpec"
-            let vendorFrameworkDirectory = URL(fileURLWithPath: "\(root)/Project/Frameworks/SomeVendor/Binary/")
-            let vendorFrameworkInternalDirectory = URL(fileURLWithPath: "\(root)/Project/Frameworks/SomeVendor/Binary/A.framework/Frameworks/")
-            let someFrameworkDirectory = URL(fileURLWithPath: "\(root)/Project/Directory with_spaces/and.dots/")
+            let sandboxURL = URL(fileURLWithPath: "/tmp/InputFilesInferrerSpec")
+            let rootURL = sandboxURL.appendingPathComponent("Project", isDirectory: true)
+            let someSDKURL = rootURL.appendingPathComponent("SDK", isDirectory: true)
+            let someSDKResourcesURL = someSDKURL.appendingPathComponent("Resources", isDirectory: true)
+            
+            let frameworksURL = rootURL.appendingPathComponent("Frameworks", isDirectory: true)
+            let someFrameworkDirectoryURL = frameworksURL.appendingPathComponent("Some", isDirectory: true)
+            let someFrameworkURL = someFrameworkDirectoryURL.appendingPathComponent("Some.framework", isDirectory: true)
+            let someFrameworkURLResources = someFrameworkURL.appendingPathComponent("Resources", isDirectory: true)
+            
+            let manager: FileManager = .default
             
             beforeEach {
-                _ = try? FileManager.default.createDirectory(at: vendorFrameworkInternalDirectory, withIntermediateDirectories: true, attributes: nil)
-                _ = try? FileManager.default.createDirectory(at: someFrameworkDirectory, withIntermediateDirectories: true, attributes: nil)
+                _ = try? manager.createDirectory(at: someSDKResourcesURL, withIntermediateDirectories: true, attributes: nil)
+                _ = try? manager.createDirectory(at: someFrameworkURLResources, withIntermediateDirectories: true, attributes: nil)
             }
             
             afterEach {
-                _ = try? FileManager.default.removeItem(at: URL(fileURLWithPath: root))
+                _ = try? manager.removeItem(at: sandboxURL)
+            }
+
+            it("should expand recursive path") {
+                let input =
+                """
+                \(frameworksURL.path)** \(someSDKURL.path)
+                """
+                
+                let expected: [URL] = [frameworksURL, someFrameworkDirectoryURL, someSDKURL]
+                let result = InputFilesInferrer.frameworkSearchPaths(from: input)
+                expect(result).to(equal(expected))
             }
             
-//            let input =
-//            """
-//            \(root)/Project/Frameworks/** \(root)/Project/Directory with_spaces/and.dots/
-//            """
+            context("when has special symbols") {
+                let specialURL = sandboxURL.appendingPathComponent("?- path", isDirectory: true)
+                beforeEach {
+                    _ = try? manager.createDirectory(at: specialURL, withIntermediateDirectories: true, attributes: nil)
+                }
+                
+                afterEach {
+                    _ = try? manager.removeItem(at: specialURL)
+                }
 
+                let input =
+                """
+                \(frameworksURL.path)** \(someSDKResourcesURL.path) \(sandboxURL.path)/?-\\ path
+                """
+                
+                it("should handle it") {
+                    let expected: [URL] = [frameworksURL, someFrameworkDirectoryURL, someSDKResourcesURL, specialURL]
+                    let result = InputFilesInferrer.frameworkSearchPaths(from: input)
+                    expect(result).to(equal(expected))
+                }
+            }
             
-            it("should resolve recursive path") {
-                let input = "\(root)/Project/Frameworks/**"
-                let resolvedURLs = InputFilesInferrer.frameworkSearchPaths(from: input)
-                expect(resolvedURLs).to(equal([
-                    URL(fileURLWithPath: "\(root)/Project/Frameworks/"),
-                    URL(fileURLWithPath: "\(root)/Project/Frameworks/SomeVendor/"),
-                    URL(fileURLWithPath: "\(root)/Project/Frameworks/SomeVendor/Binary/")
-                ]))
+            context("when has non existing path") {
+                let invalidPath = sandboxURL.appendingPathComponent("Invalid/URL/", isDirectory: true)
+                let input =
+                """
+                \(frameworksURL.path)** /Carthage-Invalid-URL\\ Tests/** ./Invalid/Recursive/URL/** ./Directory/ \(invalidPath.path)
+                """
+
+                it("should ignore recursive invalid paths but include plain invalid path") {
+                    let expected: [URL] = [
+                        frameworksURL,
+                        someFrameworkDirectoryURL,
+                        URL(fileURLWithPath: "./Directory/", isDirectory: true).standardizedFileURL,
+                        invalidPath
+                    ]
+                    let result = InputFilesInferrer.frameworkSearchPaths(from: input)
+                    expect(result).to(equal(expected))
+                }
             }
         }
     }
