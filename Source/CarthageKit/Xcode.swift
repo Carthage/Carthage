@@ -964,12 +964,15 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
 /// does not already exist, and any pre-existing version of the product in the
 /// destination folder will be deleted before the copy of the new version.
 ///
+/// Passing `true` for `skipIfOutdated` will result into a no-op in case pre-existing version of the product
+/// exists and has been modified later than the destination product. Default is `false`.
+///
 /// If the `from` URL has the same path as the `to` URL, and there is a resource
 /// at the given path, no operation is needed and the returned signal will just
 /// send `.success`.
 ///
 /// Returns a signal that will send the URL after copying upon .success.
-public func copyProduct(_ from: URL, _ to: URL) -> SignalProducer<URL, CarthageError> { // swiftlint:disable:this identifier_name
+public func copyProduct(_ from: URL, _ to: URL, skipIfOutdated: Bool = false) -> SignalProducer<URL, CarthageError> { // swiftlint:disable:this identifier_name
 	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in
 		let manager = FileManager.default
 
@@ -982,6 +985,21 @@ public func copyProduct(_ from: URL, _ to: URL) -> SignalProducer<URL, CarthageE
 		if manager.fileExists(atPath: to.path) && from.absoluteURL == to.absoluteURL {
 			return .success(to)
 		}
+        
+        if skipIfOutdated {
+            let key: URLResourceKey = .attributeModificationDateKey
+            let fromAttributes = try? from.resourceValues(forKeys: [key])
+            let toAttributes = try? to.resourceValues(forKeys: [key])
+
+            // File at `to` has been modified later than `from`, therefore we need to skip copying.
+            if
+                let fromModificationDate = fromAttributes?.attributeModificationDate,
+                let toModificationDate = toAttributes?.attributeModificationDate,
+                fromModificationDate <= toModificationDate
+            {
+                return .success(to)
+            }
+        }
 
 		// Although some methods’ documentation say: “YES if createIntermediates
 		// is set and the directory already exists)”, it seems to rarely

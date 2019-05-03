@@ -45,7 +45,21 @@ public struct CopyFrameworksCommand: CommandProtocol {
 									carthage.println("warning: Ignoring \(frameworkName) because it does not support the current architecture\n")
 									return .empty
 								} else {
-									let copyFrameworks = copyFramework(source, target: target, validArchitectures: validArchitectures)
+                                    // We don't want to copy outdated frameworks. i.e. such frameworks that are being modified
+                                    // earlier that existing products at the `target` URL.
+                                    // This typically indicates that we're copying a wrong framework. This may
+                                    // be result of the `options.useFrameworkSearchPaths == true` when Carthage will try
+                                    // to copy all of the linked frameworks that are available at the FRAMEWORK_SEARCH_PATHS,
+                                    // while those frameworks already copied by 'Embed Frameworks' phase for example.
+                                    // Also we don't want to force new behaviour of skipping outdated and enabling it only
+                                    // for automatic option.
+                                    let skipIfOutdated = options.automatic
+									let copyFrameworks = copyFramework(
+                                        source,
+                                        target: target,
+                                        skipIfOutdated: skipIfOutdated,
+                                        validArchitectures: validArchitectures
+                                    )
 									let copydSYMs = copyDebugSymbolsForFramework(source, validArchitectures: validArchitectures)
 									return SignalProducer.combineLatest(copyFrameworks, copydSYMs)
 										.then(SignalProducer<(), CarthageError>.empty)
@@ -59,8 +73,8 @@ public struct CopyFrameworksCommand: CommandProtocol {
 	}
 }
 
-private func copyFramework(_ source: URL, target: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-	return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
+private func copyFramework(_ source: URL, target: URL, skipIfOutdated: Bool, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+    return SignalProducer.combineLatest(copyProduct(source, target, skipIfOutdated: skipIfOutdated), codeSigningIdentity())
 		.flatMap(.merge) { url, codesigningIdentity -> SignalProducer<(), CarthageError> in
 			let strip = stripFramework(
 				url,

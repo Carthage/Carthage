@@ -43,10 +43,13 @@ public final class InputFilesInferrer {
 
         let builtFrameworksMap = builtFrameworks
             .filter { url in
-                // We need to filter out any static frameworks to not accidentally copy then for the dynamically linked ones.
-                let components = url.pathComponents
-                let staticFolderIndex = components.index(components.endIndex, offsetBy: -2)
-                return staticFolderIndex >= 0 && components[staticFolderIndex] != FrameworkType.staticFolderName
+                if
+                    let executableURL = Bundle(url: url)?.executableURL,
+                    let header = MachHeader.headers(forMachOFileAtUrl: executableURL).single()?.value
+                {
+                    return header.fileType == MH_DYLIB
+                }
+                return false
             }
             .reduce(into: [String: URL]()) { (map, frameworkURL) in
                 let name = frameworkURL.deletingPathExtension().lastPathComponent

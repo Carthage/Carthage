@@ -158,6 +158,10 @@ When archiving your application for submission to the App Store or TestFlight, X
 Note that you can combine both automatic and manual ways to copy frameworks, however manually specified frameworks always take precedence over automatically inferred. Therefore in case you have `SomeFramework.framework` located anywhere as well as `SomeFramework.framework` located at `./Carthage/Build/<platform>/`, Carthage will pick manually specified framework. This is useful when you're working with development frameworks and want to copy your version of the framework instead of default one. 
 Important to undestand, that Carthage won't resolve nested dependencies for your custom framework unless they either located at `./Carthage/Build/<platform>/` or specified manually in “Input Files".
 
+###### Automatic depencencies copying FRAMEWORK_SEARCH_PATHS
+
+If you're working on a development dependencies and would like to utilize `--auto` flag to automate copying of the build artifacts you also can be interested in using `--use-framework-search-paths` flag. This will intstruct Carthage to search for a linked dependcies and copy them using `FRAMEWORK_SEARCH_PATHS` environment variable.
+
 ##### For both platforms
 
 Along the way, Carthage will have created some [build artifacts][Artifacts]. The most important of these is the [Cartfile.resolved][] file, which lists the versions that were actually built for each framework. **Make sure to commit your [Cartfile.resolved][]**, because anyone else using the project will need that file to build the same framework versions.
