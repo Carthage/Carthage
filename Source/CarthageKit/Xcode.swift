@@ -987,14 +987,14 @@ public func copyProduct(_ from: URL, _ to: URL, skipIfOutdated: Bool = false) ->
 		}
         
         if skipIfOutdated {
-            let key: URLResourceKey = .attributeModificationDateKey
+            let key: URLResourceKey = .contentModificationDateKey
             let fromAttributes = try? from.resourceValues(forKeys: [key])
             let toAttributes = try? to.resourceValues(forKeys: [key])
 
             // File at `to` has been modified later than `from`, therefore we need to skip copying.
             if
-                let fromModificationDate = fromAttributes?.attributeModificationDate,
-                let toModificationDate = toAttributes?.attributeModificationDate,
+                let fromModificationDate = fromAttributes?.contentModificationDate,
+                let toModificationDate = toAttributes?.contentModificationDate,
                 fromModificationDate <= toModificationDate
             {
                 return .success(to)
