@@ -12,6 +12,7 @@ final class InputFilesInferrerSpec: QuickSpec {
             var sut: InputFilesInferrer!
             
             let executableResolver: (URL) -> URL? = { $0.appendingPathComponent($0.deletingPathExtension().lastPathComponent) }
+            let builtFrameworkFilter: (URL) -> Bool = { _ in true }
 
             describe("framework dependecies resolving") {
                 context("when framework is not listed anywhere") {
@@ -23,6 +24,7 @@ final class InputFilesInferrerSpec: QuickSpec {
                             }
                         )
                         sut.executableResolver = executableResolver
+                        sut.builtFrameworkFilter = builtFrameworkFilter
                     }
                     
                     it("should ignore it") {
@@ -52,6 +54,7 @@ final class InputFilesInferrerSpec: QuickSpec {
                             }
                         )
                         sut.executableResolver = executableResolver
+                        sut.builtFrameworkFilter = builtFrameworkFilter
                     }
 
                     it("should resolve dependncies at a enumerator's path") {
@@ -85,6 +88,7 @@ final class InputFilesInferrerSpec: QuickSpec {
                         }
                         )
                         sut.executableResolver = executableResolver
+                        sut.builtFrameworkFilter = builtFrameworkFilter
                     }
                     
                     it("should resolve dependncies at a first enumerator's path") {
@@ -117,6 +121,7 @@ final class InputFilesInferrerSpec: QuickSpec {
                             }
                         )
                         sut.executableResolver = executableResolver
+                        sut.builtFrameworkFilter = builtFrameworkFilter
                     }
 
                     it("should resolve dependencies using user input files") {
@@ -163,6 +168,7 @@ final class InputFilesInferrerSpec: QuickSpec {
                             }
                         )
                         sut.executableResolver = executableResolver
+                        sut.builtFrameworkFilter = builtFrameworkFilter
                     }
 
                     it("should resolve dependncies at user input file's path") {
@@ -216,6 +222,7 @@ final class InputFilesInferrerSpec: QuickSpec {
                             }
                         )
                         sut.executableResolver = executableResolver
+                        sut.builtFrameworkFilter = builtFrameworkFilter
                     }
                     
                     it("should resolve nested dependecies") {
@@ -265,6 +272,7 @@ final class InputFilesInferrerSpec: QuickSpec {
                             }
                         )
                         sut.executableResolver = executableResolver
+                        sut.builtFrameworkFilter = builtFrameworkFilter
                     }
                     
                     it("should ignore already resolved dependecies") {

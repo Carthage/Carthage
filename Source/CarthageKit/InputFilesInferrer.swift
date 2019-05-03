@@ -10,7 +10,19 @@ public final class InputFilesInferrer {
     
     typealias LinkedFrameworksResolver = (URL) -> Result<[String], CarthageError>
     
+    /// For test-use only
     var executableResolver: (URL) -> URL? = { Bundle(url: $0)?.executableURL }
+    
+    /// For test-use only
+    var builtFrameworkFilter: (URL) -> Bool = { url in
+        if
+            let executableURL = Bundle(url: url)?.executableURL,
+            let header = MachHeader.headers(forMachOFileAtUrl: executableURL).single()?.value
+        {
+            return header.fileType == MH_DYLIB
+        }
+        return false
+    }
     
     private let builtFrameworks: SignalProducer<URL, CarthageError>
     private let linkedFrameworksResolver: LinkedFrameworksResolver
@@ -42,15 +54,7 @@ public final class InputFilesInferrer {
         }
 
         let builtFrameworksMap = builtFrameworks
-            .filter { url in
-                if
-                    let executableURL = Bundle(url: url)?.executableURL,
-                    let header = MachHeader.headers(forMachOFileAtUrl: executableURL).single()?.value
-                {
-                    return header.fileType == MH_DYLIB
-                }
-                return false
-            }
+            .filter(builtFrameworkFilter)
             .reduce(into: [String: URL]()) { (map, frameworkURL) in
                 let name = frameworkURL.deletingPathExtension().lastPathComponent
                 // Framework potentially can be presented in multiple directories from FRAMEWORK_SEARCH_PATHS.
