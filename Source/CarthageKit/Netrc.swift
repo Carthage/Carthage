@@ -17,7 +17,7 @@ internal struct Netrc {
         case missingValueForToken(String)
     }
     
-    static func from(_ fileURL: URL = URL(fileURLWithPath: "\(NSHomeDirectory())/.netrc")) -> Result<[NetrcMachine], NetrcError> {
+    static func load(from fileURL: URL = URL(fileURLWithPath: "\(NSHomeDirectory())/.netrc")) -> Result<[NetrcMachine], NetrcError> {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return .failure(NetrcError.fileNotFound(fileURL)) }
         guard FileManager.default.isReadableFile(atPath: fileURL.path) else { return .failure(NetrcError.unreadableFile(fileURL)) }
         
