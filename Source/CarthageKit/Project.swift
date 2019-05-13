@@ -6,10 +6,7 @@ import ReactiveSwift
 import Tentacle
 import XCDBLD
 import ReactiveTask
-import SPMUtility
-
-import struct Foundation.URL // swiftlint:disable:this duplicate_imports
-import enum XCDBLD.Platform // swiftlint:disable:this duplicate_imports
+import struct SPMUtility.Version
 
 /// Describes an event occurring to or with a project.
 public enum ProjectEvent {
