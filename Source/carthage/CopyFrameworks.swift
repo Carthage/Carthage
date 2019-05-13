@@ -7,6 +7,7 @@ import ReactiveSwift
 /// Type that encapsulates the configuration and evaluation of the `copy-frameworks` subcommand.
 public struct CopyFrameworksCommand: CommandProtocol {
 	public let verb = "copy-frameworks"
+	// swiftlint:disable:next line_length
 	public let function = "In a Run Script build phase, copies each framework specified by a SCRIPT_INPUT_FILE and/or SCRIPT_INPUT_FILE_LIST environment variables into the built app bundle"
 
 	public func run(_ options: NoOptions<CarthageError>) -> Result<(), CarthageError> {
