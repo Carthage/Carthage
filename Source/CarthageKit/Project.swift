@@ -8,8 +8,8 @@ import XCDBLD
 import ReactiveTask
 import SPMUtility
 
-import struct Foundation.URL
-import enum XCDBLD.Platform
+import struct Foundation.URL // swiftlint:disable:this duplicate_imports
+import enum XCDBLD.Platform // swiftlint:disable:this duplicate_imports
 
 /// Describes an event occurring to or with a project.
 public enum ProjectEvent {

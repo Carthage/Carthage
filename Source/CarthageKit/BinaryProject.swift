@@ -2,7 +2,7 @@ import Foundation
 import Result
 import SPMUtility
 
-import struct Foundation.URL
+import struct Foundation.URL // swiftlint:disable:this duplicate_imports
 
 /// Represents a binary dependency 
 public struct BinaryProject: Equatable {
