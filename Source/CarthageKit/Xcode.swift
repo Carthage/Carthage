@@ -355,9 +355,11 @@ private func mergeExecutables(_ executableURLs: [URL], _ outputURL: URL) -> Sign
 		.then(SignalProducer<(), CarthageError>.empty)
 }
 
-private func mergeSwiftHeaderFiles(_ simulatorExecutableURL: URL,
-								   _ deviceExecutableURL: URL,
-								   _ executableOutputURL: URL) -> SignalProducer<(), CarthageError> {
+private func mergeSwiftHeaderFiles(
+	_ simulatorExecutableURL: URL,
+	_ deviceExecutableURL: URL,
+	_ executableOutputURL: URL
+) -> SignalProducer<(), CarthageError> {
 	precondition(simulatorExecutableURL.isFileURL)
 	precondition(deviceExecutableURL.isFileURL)
 	precondition(executableOutputURL.isFileURL)
