@@ -6,10 +6,7 @@ import ReactiveSwift
 import Tentacle
 import XCDBLD
 import ReactiveTask
-import SPMUtility
-
-import struct Foundation.URL
-import enum XCDBLD.Platform
+import struct SPMUtility.Version
 
 /// Describes an event occurring to or with a project.
 public enum ProjectEvent {
