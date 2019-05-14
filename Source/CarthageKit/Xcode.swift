@@ -1012,9 +1012,23 @@ public func stripDSYM(_ dSYMURL: URL, keepingArchitectures: [String]) -> SignalP
 
 /// Strips a universal file from unexpected architectures.
 private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-	return architecturesInPackage(binaryURL)
-		.filter { !keepingArchitectures.contains($0) }
-		.flatMap(.concat) { stripArchitecture(binaryURL, $0) }
+  let fileManager = FileManager()
+  return fileManager.reactive.createTemporaryDirectoryWithTemplate("carthage-lipo-XXXXXX")
+    .map { tempURL in
+      let file = binaryURL.lastPathComponent
+      return tempURL.appendingPathComponent(file)
+    }
+    .flatMap(.merge) { workspaceURL in
+      return fileManager.reactive
+        .copyItem(at: binaryURL, to: workspaceURL)
+        .map {
+          return architecturesInPackage(workspaceURL)
+            .filter { !keepingArchitectures.contains($0) }
+            .flatMap(.concat) { stripArchitecture(workspaceURL, $0) }
+        }
+        .then(fileManager.reactive.replaceItem(at: binaryURL, withItemAt: workspaceURL))
+        .then(fileManager.reactive.removeItem(at: workspaceURL))
+  }
 }
 
 /// Copies a product into the given folder. The folder will be created if it
@@ -1126,7 +1140,7 @@ extension Signal where Value: TaskEventType {
 private func stripArchitecture(_ frameworkURL: URL, _ architecture: String) -> SignalProducer<(), CarthageError> {
 	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
 		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
-			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path, binaryURL.path])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: ["lipo", "-remove", architecture, "-output", binaryURL.path, binaryURL.path])
 			return lipoTask.launch()
 				.mapError(CarthageError.taskError)
 		}
