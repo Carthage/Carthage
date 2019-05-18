@@ -9,7 +9,7 @@ class NetrcSpec: QuickSpec {
             it("should load machines for a given inline format") {
                 let content = "machine example.com login anonymous password qwerty"
                 
-                let machines = Netrc.from(content).value
+                let machines = Netrc.from(content).value?.machines
                 expect(machines?.count) == 1
                 
                 let machine = machines?.first
@@ -25,7 +25,7 @@ class NetrcSpec: QuickSpec {
                     password qwerty
                     """
                 
-                let machines = Netrc.from(content).value
+                let machines = Netrc.from(content).value?.machines
                 expect(machines?.count) == 1
                 
                 let machine = machines?.first
@@ -40,7 +40,7 @@ class NetrcSpec: QuickSpec {
                     password                  qwerty
                     """
                 
-                let machines = Netrc.from(content).value
+                let machines = Netrc.from(content).value?.machines
                 expect(machines?.count) == 1
                 
                 let machine = machines?.first
@@ -52,7 +52,7 @@ class NetrcSpec: QuickSpec {
             it("should load multiple machines for a given inline format") {
                 let content = "machine example.com login anonymous password qwerty machine example2.com login anonymous2 password qwerty2"
                 
-                let machines = Netrc.from(content).value
+                let machines = Netrc.from(content).value?.machines
                 expect(machines?.count) == 2
                 
                 var machine = machines?[0]
@@ -75,7 +75,7 @@ class NetrcSpec: QuickSpec {
                     password qwerty2
                     """
                 
-                let machines = Netrc.from(content).value
+                let machines = Netrc.from(content).value?.machines
                 expect(machines?.count) == 2
                 
                 var machine = machines?[0]
@@ -135,6 +135,25 @@ class NetrcSpec: QuickSpec {
                 default:
                     fail("Expected invalidJSON error")
                 }
+            }
+            
+            it("should return authorization when config contains a given machine") {
+                let content = "machine example.com login anonymous password qwerty"
+                
+                let netrc = Netrc.from(content).value
+                let result = netrc?.authorization(for: URL(string: "https://example.com")!)
+                
+                let data = "anonymous:qwerty".data(using: .utf8)!.base64EncodedString()
+                expect(result) == "Basic \(data)"
+            }
+            
+            it("should not return authorization when config does not contain a given machine") {
+                let content = "machine example.com login anonymous password qwerty"
+                
+                let netrc = Netrc.from(content).value
+                let result = netrc?.authorization(for: URL(string: "https://example99.com")!)
+                
+                expect(result).to(beNil())
             }
         }
     }

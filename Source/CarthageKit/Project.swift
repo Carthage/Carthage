@@ -240,14 +240,9 @@ public final class Project { // swiftlint:disable:this type_body_length
                     // When downloading a binary, `carthage` will take into account the user's
                     // `~/.netrc` file to determine authentication credentials
                     switch Netrc.load() {
-                    case .success(let machines):
-                        if let index = machines.firstIndex(where: { $0.name == binary.url.host }) {
-                            let machine = machines[index]
-                            let authString = "\(machine.login):\(machine.password)"
-                            if let authData = authString.data(using: .utf8) {
-                                let authValue = "Basic \(authData.base64EncodedString())"
-                                request.addValue(authValue, forHTTPHeaderField: "Authorization");
-                            }
+                    case let .success(netrc):
+                        if let authorization = netrc.authorization(for: binary.url) {
+                            request.addValue(authorization, forHTTPHeaderField: "Authorization")
                         }
                     case .failure(_): break // Do nothing
                     }

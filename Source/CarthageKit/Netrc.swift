@@ -17,7 +17,21 @@ internal struct Netrc {
         case missingValueForToken(String)
     }
     
-    static func load(from fileURL: URL = URL(fileURLWithPath: "\(NSHomeDirectory())/.netrc")) -> Result<[NetrcMachine], NetrcError> {
+    public let machines: [NetrcMachine]
+    
+    internal init(machines: [NetrcMachine]) {
+        self.machines = machines
+    }
+    
+    func authorization(for url: URL) -> String? {
+        guard let index = machines.firstIndex(where: { $0.name == url.host }) else { return nil }
+        let machine = machines[index]
+        let authString = "\(machine.login):\(machine.password)"
+        guard let authData = authString.data(using: .utf8) else { return nil }
+        return "Basic \(authData.base64EncodedString())"
+    }
+    
+    static func load(from fileURL: URL = URL(fileURLWithPath: "\(NSHomeDirectory())/.netrc")) -> Result<Netrc, NetrcError> {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return .failure(NetrcError.fileNotFound(fileURL)) }
         guard FileManager.default.isReadableFile(atPath: fileURL.path) else { return .failure(NetrcError.unreadableFile(fileURL)) }
         
@@ -25,7 +39,7 @@ internal struct Netrc {
             .flatMap { Netrc.from($0) }
     }
     
-    static func from(_ content: String) -> Result<[NetrcMachine], NetrcError> {
+    static func from(_ content: String) -> Result<Netrc, NetrcError> {
         let tokens = content
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .components(separatedBy: .whitespacesAndNewlines)
@@ -45,7 +59,7 @@ internal struct Netrc {
         }
         
         guard machines.count > 0 else { return .failure(NetrcError.machineNotFound) }
-        return .success(machines)
+        return .success(Netrc(machines: machines))
     }
 }
 
