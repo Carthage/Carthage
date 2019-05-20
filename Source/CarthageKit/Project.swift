@@ -631,8 +631,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 			let uniquePairs = destinationMap
 				.filter { $0.value.count == 1}
-				.map { SourceURLAndDestinationURL(frameworkSourceURL:$0.key,
-												  frameworkDestinationURL: $0.value.first!)}
+				.map { SourceURLAndDestinationURL(frameworkSourceURL: $0.value.first!,
+												  frameworkDestinationURL: $0.key)}
 			return .success(uniquePairs)
 		}
 
@@ -804,7 +804,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Sends the URL of the dSYM after copying.
 	public func copyDSYMToBuildFolderForFramework(_ frameworkURL: URL, fromDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 		let destinationDirectoryURL = frameworkURL.deletingLastPathComponent()
-		print(destinationDirectoryURL)
 		return dSYMForFramework(frameworkURL, inDirectoryURL: directoryURL)
 			.copyFileURLsIntoDirectory(destinationDirectoryURL)
 	}
