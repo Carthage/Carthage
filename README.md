@@ -119,7 +119,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
     /usr/local/bin/carthage copy-frameworks --auto
     ```
 
-From this point Carthage will infer and copy all Carthage's frameworks that are linked against target. It also capable to copy frameworks that are nested. For example, you have linked to your app `SocialSDK-Swift` that links internally `SocialSDK-ObjC` which in turns uses utilitary dependency `SocialTools`. In this case you don't need nested dependencies it should be enough to link against your target only `SocialSDK-Swift`. Nested dependencies will be resolved and copied automatically to your app.
+From this point Carthage will infer and copy all Carthage's frameworks that are linked against target. It also capable to copy transitive frameworks. For example, you have linked to your app `SocialSDK-Swift` that links internally `SocialSDK-ObjC` which in turns uses utilitary dependency `SocialTools`. In this case you don't need transient dependencies it should be enough to link against your target only `SocialSDK-Swift`. Transient dependencies will be resolved and copied automatically to your app.
 
 Optionally you can add `--verbose` flag to see which frameworks are being copied by Carthage.
 
@@ -156,11 +156,11 @@ When archiving your application for submission to the App Store or TestFlight, X
 ###### Combining Automatic and Manual copying
 
 Note that you can combine both automatic and manual ways to copy frameworks, however manually specified frameworks always take precedence over automatically inferred. Therefore in case you have `SomeFramework.framework` located anywhere as well as `SomeFramework.framework` located at `./Carthage/Build/<platform>/`, Carthage will pick manually specified framework. This is useful when you're working with development frameworks and want to copy your version of the framework instead of default one. 
-Important to undestand, that Carthage won't resolve nested dependencies for your custom framework unless they either located at `./Carthage/Build/<platform>/` or specified manually in “Input Files".
+Important to undestand, that Carthage won't resolve transient dependencies for your custom framework unless they either located at `./Carthage/Build/<platform>/` or specified manually in “Input Files".
 
 ###### Automatic depencencies copying FRAMEWORK_SEARCH_PATHS
 
-If you're working on a development dependencies and would like to utilize `--auto` flag to automate copying of the build artifacts you also can be interested in using `--use-framework-search-paths` flag. This will intstruct Carthage to search for a linked dependcies and copy them using `FRAMEWORK_SEARCH_PATHS` environment variable.
+If you're working on a development dependencies and would like to utilize `--auto` flag to automate copying of the build artifacts you also can be interested in using `--use-framework-search-paths` flag. This will instruct Carthage to search for a linked dependcies and copy them using `FRAMEWORK_SEARCH_PATHS` environment variable.
 
 ##### For both platforms
 

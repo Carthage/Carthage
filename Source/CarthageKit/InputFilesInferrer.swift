@@ -127,7 +127,7 @@ public final class InputFilesInferrer {
     static func allFrameworkSearchPaths(forProjectIn directory: URL, platform: Platform, frameworkSearchPaths: [URL]) -> [URL] {
         // Carthage's default framework search path should always be presented. Under rare circumstances
         // framework located at the non-default path can be linked against Carthage's framework.
-        // Since we're allowing user to specify only first-level frameworks, App might not link nested framework,
+        // Since we're allowing user to specify only first-level frameworks, App might not link transient framework,
         // therefore FRAMEWORKS_SEARCH_PATHS won't contain Carthage default search path.
         // To prevent such failure we're appending default path at the end.
         let defaultSearchPath = defaultFrameworkSearchPath(forProjectIn: directory, platform: platform)
