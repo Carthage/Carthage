@@ -5,7 +5,7 @@ import Quick
 
 class NetrcSpec: QuickSpec {
     override func spec() {
-        describe("load(from:)") {
+        describe("loading") {
             it("should load machines for a given inline format") {
                 let content = "machine example.com login anonymous password qwerty"
                 
