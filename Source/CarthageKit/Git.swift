@@ -181,7 +181,9 @@ public func checkoutRepositoryToDirectory(
 
 /// Clones the given submodule into the working directory of its parent
 /// repository, but without any Git metadata.
-public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
+///
+/// `cacheURLMap` maps from a remote URL to an optional local cache URL
+public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDirectoryURL: URL, cacheURLMap: ((GitURL) -> URL?)?) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = workingDirectoryURL.appendingPathComponent(submodule.path, isDirectory: true)
 
 	func repositoryCheck<T>(_ description: String, attempt closure: () throws -> T) -> Result<T, CarthageError> {
@@ -218,13 +220,18 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 		}
 
 	return SignalProducer<(), CarthageError> { () -> Result<(), CarthageError> in
-		repositoryCheck("remove submodule checkout") {
-			try FileManager.default.removeItem(at: submoduleDirectoryURL)
+			return repositoryCheck("remove submodule checkout") {
+				try FileManager.default.removeItem(at: submoduleDirectoryURL)
+			}
 		}
-	}
-	.then(cloneRepository(submodule.url, workingDirectoryURL.appendingPathComponent(submodule.path), isBare: false))
-	.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
-	.then(purgeGitDirectories)
+		.then(cloneOrFetch(
+			remoteURL: submodule.url,
+			cacheURL: cacheURLMap?(submodule.url),
+			destinationURL: submoduleDirectoryURL,
+			isDestinationBare: false,
+			commitish: submodule.sha))
+		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+		.then(purgeGitDirectories)
 }
 
 /// Recursively checks out the given submodule's revision, in its working

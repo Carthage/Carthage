@@ -875,7 +875,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 						.then(
 							submodulesInRepository(repositoryURL, revision: revision)
 								.flatMap(.merge) {
-									cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL)
+									return cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL, cacheURLMap: { (gitURL: GitURL) in
+										let dependency = Dependency.git(gitURL)
+										return repositoryFileURL(for: dependency)
+									})
 								}
 						)
 				}
