@@ -205,7 +205,10 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 	}
 
 	let purgeGitDirectories = FileManager.default.reactive
-		.enumerator(at: submoduleDirectoryURL, includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ], catchErrors: true)
+		.enumerator(at: submoduleDirectoryURL,
+					includingPropertiesForKeys: [ .isDirectoryKey, .nameKey ],
+					options: [ .skipsSubdirectoryDescendants ],
+					catchErrors: true)
 		.attemptMap { enumerator, url -> Result<(), CarthageError> in
 			return repositoryCheck("enumerate name of descendant at \(url.path)", attempt: {
 					try url.resourceValues(forKeys: [ .nameKey ]).name
@@ -237,7 +240,12 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 			destinationURL: submoduleDirectoryURL,
 			isDestinationBare: false,
 			commitish: submodule.sha))
-		.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+		.then(checkoutRepositoryToDirectory(submoduleDirectoryURL, submoduleDirectoryURL, force: false, revision: submodule.sha))
+		.then(submodulesInRepository(submoduleDirectoryURL)
+			.flatMap(.concat) { submodule -> SignalProducer<(), CarthageError> in
+				return cloneSubmoduleInWorkingDirectory(submodule, submoduleDirectoryURL, cacheURLMap: cacheURLMap)
+			}
+		)
 		.then(purgeGitDirectories)
 }
 
