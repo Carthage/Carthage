@@ -199,7 +199,7 @@ public final class InputFilesInferrer {
 /// - Returns: Array of the Shared Library ID that are linked against given executable (`Alamofire`, `Realm`, etc).
 /// System libraries and dylibs are omited.
 internal func linkedFrameworks(for executable: URL) -> Result<[String], CarthageError> {
-    return Task("/usr/bin/xcrun", arguments: ["otool", "-L", executable.path.spm_shellEscaped()])
+    return Task("/bin/sh", arguments: ["-c", "/usr/bin/xcrun otool -L '\(executable.path)'"])
         .launch()
         .mapError(CarthageError.taskError)
         .ignoreTaskData()
