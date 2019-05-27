@@ -1012,22 +1012,34 @@ public func stripDSYM(_ dSYMURL: URL, keepingArchitectures: [String]) -> SignalP
 
 /// Strips a universal file from unexpected architectures.
 private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-  let fileManager = FileManager()
-  return fileManager.reactive.createTemporaryDirectoryWithTemplate("carthage-lipo-XXXXXX")
-    .map { tempURL in
-      let file = binaryURL.lastPathComponent
-      return tempURL.appendingPathComponent(file)
-    }
-    .flatMap(.merge) { workspaceURL in
-      return fileManager.reactive
-        .copyItem(at: binaryURL, to: workspaceURL)
-        .map {
-          return architecturesInPackage(workspaceURL)
-            .filter { !keepingArchitectures.contains($0) }
-            .flatMap(.concat) { stripArchitecture(workspaceURL, $0) }
-        }
-        .then(fileManager.reactive.replaceItem(at: binaryURL, withItemAt: workspaceURL))
-        .then(fileManager.reactive.removeItem(at: workspaceURL))
+  let fileManager = FileManager().reactive
+  
+  let createTempDir: SignalProducer<URL, CarthageError> = fileManager.createTemporaryDirectoryWithTemplate("carthage-lipo-XXXXXX")
+  
+  let copyItem: (URL, URL) -> SignalProducer<URL, CarthageError> = { source, dest in
+    fileManager.copyItem(source, into: dest)
+  }
+  
+  let strip: (URL, [String]) -> SignalProducer<URL, CarthageError> = { workspace, keeping in
+    return architecturesInPackage(workspace)
+      .filter { !keepingArchitectures.contains($0) }
+      .flatMap(.concat) { stripArchitecture(workspace, $0) }
+      .then(SignalProducer(value: workspace))
+  }
+  
+  let replace: (URL, URL) -> SignalProducer<(), CarthageError> = { original, modified in
+    return fileManager.replaceItem(at: original, withItemAt: modified)
+  }
+  
+  return createTempDir
+    .flatMap(.merge) { temp in
+      copyItem(binaryURL, temp)
+        .flatMap(.merge) { workspace in
+          strip(workspace, keepingArchitectures)
+            .flatMap(.merge) { workspace in
+              replace(binaryURL, workspace)
+          }
+      }
   }
 }
 
