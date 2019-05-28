@@ -1012,7 +1012,7 @@ public func stripDSYM(_ dSYMURL: URL, keepingArchitectures: [String]) -> SignalP
 
 /// Strips a universal file from unexpected architectures.
 private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-  let fileManager = FileManager().reactive
+  let fileManager = FileManager.default.reactive
   
   let createTempDir: SignalProducer<URL, CarthageError> = fileManager.createTemporaryDirectoryWithTemplate("carthage-lipo-XXXXXX")
   
