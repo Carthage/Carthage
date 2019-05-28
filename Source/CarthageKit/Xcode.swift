@@ -1034,12 +1034,12 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
   return createTempDir
     .flatMap(.merge) { temp in
       copyItem(binaryURL, temp)
-        .flatMap(.merge) { workspace in
-          strip(workspace, keepingArchitectures)
-            .flatMap(.merge) { workspace in
-              replace(binaryURL, workspace)
-          }
-      }
+    }
+    .flatMap(.merge) { workspace in
+      strip(workspace, keepingArchitectures)
+    }
+    .flatMap(.merge) { workspace in
+      replace(binaryURL, workspace)
   }
 }
 
