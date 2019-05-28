@@ -1012,6 +1012,27 @@ public func stripDSYM(_ dSYMURL: URL, keepingArchitectures: [String]) -> SignalP
 
 /// Strips a universal file from unexpected architectures.
 private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+  // With a very complex build, where multiple application targets share Carthage output,
+  // there is a concurrency issue if two build phases running in parallel try to work on the
+  // same framework.
+  //
+  // In a nutshell:
+  //  pid 1094 copyProduct(MyFrameworkframework.dSYM)
+  //  pid 1094 stripArchitecture(armv7)
+  //  pid 1094 stripArchitecture(arm64)
+  //  pid 1684 copyProduct(MyFramework.framework.dSYM)
+  //  pid 1684 stripArchitecture(armv7)
+  //  pid 1916 copyProduct(MyFrameworkframework.dSYM)
+  //  pid 1916 stripArchitecture(armv7)
+  //  pid 1684 stripArchitecture(arm64)
+  //  pid 1916 stripArchitecture(arm64)  <-- already stripped, so an error occurs
+  //
+  //  A shell task (/usr/bin/xcrun lipo -remove armv7 […] failed with exit code 1:
+  //  fatal error: […]MyFramework.framework does not contain that architecture
+  //
+  // So we copy it to /tmp, modify it there, and copy it back to thie original
+  // location. Problem averted!
+
   let fileManager = FileManager.default.reactive
   
   let createTempDir: SignalProducer<URL, CarthageError> = fileManager.createTemporaryDirectoryWithTemplate("carthage-lipo-XXXXXX")
