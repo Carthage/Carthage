@@ -421,7 +421,7 @@ extension Reactive where Base: FileManager {
   
   public func replaceItem(at originalItemURL: URL, withItemAt newItemURL: URL) -> SignalProducer<(), CarthageError> {
     do {
-      guard (try FileManager().replaceItemAt(originalItemURL, withItemAt: newItemURL, backupItemName: nil, options: .usingNewMetadataOnly)) != nil else {
+      guard (try self.base.replaceItemAt(originalItemURL, withItemAt: newItemURL, backupItemName: nil, options: .usingNewMetadataOnly)) != nil else {
         return SignalProducer(error: .internalError(description: "replaceItem succeeded, but returned nil"))
       }
       return SignalProducer(.empty)
