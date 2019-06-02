@@ -44,7 +44,13 @@ public struct CopyFrameworksCommand: CommandProtocol {
 								if shouldIgnore {
 									carthage.println("warning: Ignoring \(frameworkName) because it does not support the current architecture\n")
 									return .empty
-								} else {
+								} else if options.automatic && shouldSkipFrameworkCopying(from: source, to: target) {
+                                    if options.isVerbose {
+                                        carthage.print(
+                                            "Skipping \(frameworkName) copying because framework at target path \"\(target.path)\" "
+                                            + "has equal or highter modification date than framework at source path \"\(source.path)\"\n"
+                                        )
+                                    }
                                     // We don't want to copy outdated frameworks. i.e. such frameworks that are being modified
                                     // earlier that existing products at the `target` URL.
                                     // This typically indicates that we're copying a wrong framework. This may
@@ -53,13 +59,9 @@ public struct CopyFrameworksCommand: CommandProtocol {
                                     // while those frameworks already copied by 'Embed Frameworks' phase for example.
                                     // Also we don't want to force new behaviour of skipping outdated and enabling it only
                                     // for automatic option.
-                                    let skipIfOutdated = options.automatic
-									let copyFrameworks = copyFramework(
-                                        source,
-                                        target: target,
-                                        skipIfOutdated: skipIfOutdated,
-                                        validArchitectures: validArchitectures
-                                    )
+                                    return .empty
+                                } else {
+									let copyFrameworks = copyFramework(source, target: target, validArchitectures: validArchitectures)
 									let copydSYMs = copyDebugSymbolsForFramework(source, validArchitectures: validArchitectures)
 									return SignalProducer.combineLatest(copyFrameworks, copydSYMs)
 										.then(SignalProducer<(), CarthageError>.empty)
@@ -73,8 +75,8 @@ public struct CopyFrameworksCommand: CommandProtocol {
 	}
 }
 
-private func copyFramework(_ source: URL, target: URL, skipIfOutdated: Bool, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-    return SignalProducer.combineLatest(copyProduct(source, target, skipIfOutdated: skipIfOutdated), codeSigningIdentity())
+private func copyFramework(_ source: URL, target: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
+    return SignalProducer.combineLatest(copyProduct(source, target), codeSigningIdentity())
 		.flatMap(.merge) { url, codesigningIdentity -> SignalProducer<(), CarthageError> in
 			let strip = stripFramework(
 				url,
@@ -104,6 +106,22 @@ private func shouldIgnoreFramework(_ framework: URL, validArchitectures: [String
 			// wat means that the framework does not have a binary for the given architecture, ignore the framework.
 			remainingArchitectures.isEmpty
 		}
+}
+
+private func shouldSkipFrameworkCopying(from: URL, to: URL) -> Bool {
+    let key: URLResourceKey = .contentModificationDateKey
+    let fromAttributes = try? from.resourceValues(forKeys: [key])
+    let toAttributes = try? to.resourceValues(forKeys: [key])
+    
+    // File at `to` has been modified later than `from`, therefore we need to skip copying.
+    if
+        let fromModificationDate = fromAttributes?.contentModificationDate,
+        let toModificationDate = toAttributes?.contentModificationDate
+    {
+        return fromModificationDate <= toModificationDate
+    }
+    
+    return false
 }
 
 private func copyDebugSymbolsForFramework(_ source: URL, validArchitectures: [String]) -> SignalProducer<(), CarthageError> {
