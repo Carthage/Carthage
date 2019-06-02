@@ -61,6 +61,10 @@ public struct CopyFrameworksCommand: CommandProtocol {
                                     // for automatic option.
                                     return .empty
                                 } else {
+                                    if options.automatic && options.isVerbose {
+                                        carthage.println("Copying automatically \"\(frameworkName)\" at \"\(source.path)\" to \"\(target.path)\"")
+                                    }
+                                    
 									let copyFrameworks = copyFramework(source, target: target, validArchitectures: validArchitectures)
 									let copydSYMs = copyDebugSymbolsForFramework(source, validArchitectures: validArchitectures)
 									return SignalProducer.combineLatest(copyFrameworks, copydSYMs)
@@ -250,22 +254,7 @@ private func inputFiles(_ options: CopyFrameworksCommand.Options) -> SignalProdu
         return userInputFiles
     }
     
-    return userInputFiles.concat(
-        inferredInputFiles(using: userInputFiles, useFrameworkSearchPaths: options.useFrameworkSearchPaths)
-            .on(
-                starting: {
-                    if options.isVerbose {
-                        carthage.println("Going to copy automatically:\n")
-                    }
-                },
-                value: { path in
-                    if options.isVerbose {
-                        let name = URL(fileURLWithPath: path).lastPathComponent
-                        carthage.println("\"\(name)\" at: \"\(path)\"")
-                    }
-                }
-            )
-        )
+    return userInputFiles.concat(inferredInputFiles(using: userInputFiles, useFrameworkSearchPaths: options.useFrameworkSearchPaths))
 }
 
 private func scriptInputFiles() -> SignalProducer<String, CarthageError> {
