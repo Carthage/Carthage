@@ -46,9 +46,12 @@ public struct CopyFrameworksCommand: CommandProtocol {
 									return .empty
 								} else if options.automatic && shouldSkipFrameworkCopying(from: source, to: target) {
                                     if options.isVerbose {
-                                        carthage.print(
-                                            "Skipping \(frameworkName) copying because framework at target path \"\(target.path)\" "
-                                            + "has equal or highter modification date than framework at source path \"\(source.path)\"\n"
+                                        carthage.println(
+                                            """
+                                            Skipping \(frameworkName) copying because the framework at target path has equal or higher modification date than the framework at source path:
+                                            source: "\(source.path)"
+                                            target: "\(target.path)"
+                                            """
                                         )
                                     }
                                     // We don't want to copy outdated frameworks. i.e. such frameworks that are being modified
@@ -62,7 +65,13 @@ public struct CopyFrameworksCommand: CommandProtocol {
                                     return .empty
                                 } else {
                                     if options.automatic && options.isVerbose {
-                                        carthage.println("Copying automatically \"\(frameworkName)\" at \"\(source.path)\" to \"\(target.path)\"")
+                                        carthage.println(
+                                            """
+                                            Copying \"\(frameworkName)\" automatically:
+                                            source path: "\(source.path)"
+                                            target path: "\(target.path)"
+                                            """
+                                        )
                                     }
                                     
 									let copyFrameworks = copyFramework(source, target: target, validArchitectures: validArchitectures)
