@@ -69,6 +69,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
     ```
     $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Alamofire.framework
     ```
+Another approach when having multiple dependencies is to use `.xcfilelist`s. This is covered in [If you´re building for iOS, tvOS ot WatchOS](#if-youre-building-for-ios-tvos-or-watchos)
 
 For an in depth guide, read on from [Adding frameworks to an application](#adding-frameworks-to-an-application)
 
@@ -112,8 +113,9 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
     ```sh
     /usr/local/bin/carthage copy-frameworks
     ```
+1. Create a file named `input.xcfilelist` and a file named `output.xcfilelist`
 
-1. Add the paths to the frameworks you want to use under “Input Files". For example:
+1. Add the paths to the frameworks you want to use to your `input.xcfilelist`. For example:
 
     ```
     $(SRCROOT)/Carthage/Build/iOS/Result.framework
@@ -121,7 +123,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
     $(SRCROOT)/Carthage/Build/iOS/ReactiveCocoa.framework
     ```
 
-1. Add the paths to the copied frameworks to the “Output Files”. For example:
+1. Add the paths to the copied frameworks to the `output.xcfilelist`. For example:
 
     ```
     $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Result.framework
@@ -130,6 +132,9 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
     ```
 
     With output files specified alongside the input files, Xcode only needs to run the script when the input files have changed or the output files are missing. This means dirty builds will be faster when you haven't rebuilt frameworks with Carthage.
+
+1. Add the `input.xcfilelist` to the "Input File Lists" section of the Carthage run script phase
+1. Add the `output.xcfilelist` to the "Output File Lists" section of the Carthage run script phase
 
 This script works around an [App Store submission bug](http://www.openradar.me/radar?id=6409498411401216) triggered by universal binaries and ensures that necessary bitcode-related files and dSYMs are copied when archiving.
 
