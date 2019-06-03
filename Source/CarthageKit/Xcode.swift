@@ -355,6 +355,51 @@ private func mergeExecutables(_ executableURLs: [URL], _ outputURL: URL) -> Sign
 		.then(SignalProducer<(), CarthageError>.empty)
 }
 
+private func mergeSwiftHeaderFiles(
+	_ simulatorExecutableURL: URL,
+	_ deviceExecutableURL: URL,
+	_ executableOutputURL: URL
+) -> SignalProducer<(), CarthageError> {
+	precondition(simulatorExecutableURL.isFileURL)
+	precondition(deviceExecutableURL.isFileURL)
+	precondition(executableOutputURL.isFileURL)
+
+    let includeTargetConditionals = """
+                                    #ifndef TARGET_OS_SIMULATOR
+                                    #include <TargetConditionals.h>
+                                    #endif\n
+                                    """
+	let conditionalPrefix = "#if TARGET_OS_SIMULATOR\n"
+	let conditionalElse = "\n#else\n"
+	let conditionalSuffix = "\n#endif\n"
+
+	let includeTargetConditionalsContents = includeTargetConditionals.data(using: .utf8)!
+	let conditionalPrefixContents = conditionalPrefix.data(using: .utf8)!
+	let conditionalElseContents = conditionalElse.data(using: .utf8)!
+	let conditionalSuffixContents = conditionalSuffix.data(using: .utf8)!
+
+	guard let simulatorHeaderURL = simulatorExecutableURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
+	guard let simulatorHeaderContents = FileManager.default.contents(atPath: simulatorHeaderURL.path) else { return .empty }
+	guard let deviceHeaderURL = deviceExecutableURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
+	guard let deviceHeaderContents = FileManager.default.contents(atPath: deviceHeaderURL.path) else { return .empty }
+	guard let outputURL = executableOutputURL.deletingLastPathComponent().swiftHeaderURL() else { return .empty }
+
+	var fileContents = Data()
+
+	fileContents.append(includeTargetConditionalsContents)
+	fileContents.append(conditionalPrefixContents)
+	fileContents.append(simulatorHeaderContents)
+	fileContents.append(conditionalElseContents)
+	fileContents.append(deviceHeaderContents)
+	fileContents.append(conditionalSuffixContents)
+
+	if FileManager.default.createFile(atPath: outputURL.path, contents: fileContents) {
+		return .empty
+	} else {
+		return .init(error: .writeFailed(outputURL, nil))
+	}
+}
+
 /// If the given source URL represents an LLVM module, copies its contents into
 /// the destination module.
 ///
@@ -474,6 +519,17 @@ private func mergeBuildProducts(
 					)
 				}
 
+			let mergeProductSwiftHeaderFilesIfNeeded = SignalProducer.zip(simulatorBuildSettings.executableURL, deviceBuildSettings.executableURL, outputURL)
+				.flatMap(.concat) { (simulatorURL: URL, deviceURL: URL, outputURL: URL) -> SignalProducer<(), CarthageError> in
+					guard isSwiftFramework(productURL) else { return .empty }
+
+					return mergeSwiftHeaderFiles(
+						simulatorURL.resolvingSymlinksInPath(),
+						deviceURL.resolvingSymlinksInPath(),
+						outputURL.resolvingSymlinksInPath()
+					)
+				}
+
 			let sourceModulesURL = SignalProducer(result: simulatorBuildSettings.relativeModulesPath.fanout(simulatorBuildSettings.builtProductsDirectoryURL))
 				.filter { $0.0 != nil }
 				.map { modulesPath, productsURL in
@@ -492,6 +548,7 @@ private func mergeBuildProducts(
 				}
 
 			return mergeProductBinaries
+				.then(mergeProductSwiftHeaderFilesIfNeeded)
 				.then(mergeProductModules)
 				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, simulatorBuildSettings))
 				.then(SignalProducer<URL, CarthageError>(value: productURL))
@@ -955,9 +1012,56 @@ public func stripDSYM(_ dSYMURL: URL, keepingArchitectures: [String]) -> SignalP
 
 /// Strips a universal file from unexpected architectures.
 private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> SignalProducer<(), CarthageError> {
-	return architecturesInPackage(binaryURL)
-		.filter { !keepingArchitectures.contains($0) }
-		.flatMap(.concat) { stripArchitecture(binaryURL, $0) }
+  // With a very complex build, where multiple application targets share Carthage output,
+  // there is a concurrency issue if two build phases running in parallel try to work on the
+  // same framework.
+  //
+  // In a nutshell:
+  //  pid 1094 copyProduct(MyFrameworkframework.dSYM)
+  //  pid 1094 stripArchitecture(armv7)
+  //  pid 1094 stripArchitecture(arm64)
+  //  pid 1684 copyProduct(MyFramework.framework.dSYM)
+  //  pid 1684 stripArchitecture(armv7)
+  //  pid 1916 copyProduct(MyFrameworkframework.dSYM)
+  //  pid 1916 stripArchitecture(armv7)
+  //  pid 1684 stripArchitecture(arm64)
+  //  pid 1916 stripArchitecture(arm64)  <-- already stripped, so an error occurs
+  //
+  //  A shell task (/usr/bin/xcrun lipo -remove armv7 […] failed with exit code 1:
+  //  fatal error: […]MyFramework.framework does not contain that architecture
+  //
+  // So we copy it to /tmp, modify it there, and copy it back to thie original
+  // location. Problem averted!
+
+  let fileManager = FileManager.default.reactive
+  
+  let createTempDir: SignalProducer<URL, CarthageError> = fileManager.createTemporaryDirectoryWithTemplate("carthage-lipo-XXXXXX")
+  
+  let copyItem: (URL, URL) -> SignalProducer<URL, CarthageError> = { source, dest in
+    fileManager.copyItem(source, into: dest)
+  }
+  
+  let strip: (URL, [String]) -> SignalProducer<URL, CarthageError> = { workspace, keeping in
+    return architecturesInPackage(workspace)
+      .filter { !keepingArchitectures.contains($0) }
+      .flatMap(.concat) { stripArchitecture(workspace, $0) }
+      .then(SignalProducer(value: workspace))
+  }
+  
+  let replace: (URL, URL) -> SignalProducer<(), CarthageError> = { original, modified in
+    return fileManager.replaceItem(at: original, withItemAt: modified)
+  }
+  
+  return createTempDir
+    .flatMap(.merge) { temp in
+      copyItem(binaryURL, temp)
+    }
+    .flatMap(.merge) { workspace in
+      strip(workspace, keepingArchitectures)
+    }
+    .flatMap(.merge) { workspace in
+      replace(binaryURL, workspace)
+  }
 }
 
 /// Copies a product into the given folder. The folder will be created if it
@@ -1068,7 +1172,7 @@ extension Signal where Value: TaskEventType {
 private func stripArchitecture(_ frameworkURL: URL, _ architecture: String) -> SignalProducer<(), CarthageError> {
 	return SignalProducer<URL, CarthageError> { () -> Result<URL, CarthageError> in binaryURL(frameworkURL) }
 		.flatMap(.merge) { binaryURL -> SignalProducer<TaskEvent<Data>, CarthageError> in
-			let lipoTask = Task("/usr/bin/xcrun", arguments: [ "lipo", "-remove", architecture, "-output", binaryURL.path, binaryURL.path])
+			let lipoTask = Task("/usr/bin/xcrun", arguments: ["lipo", "-remove", architecture, "-output", binaryURL.path, binaryURL.path])
 			return lipoTask.launch()
 				.mapError(CarthageError.taskError)
 		}

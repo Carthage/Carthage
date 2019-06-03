@@ -27,7 +27,7 @@ public struct Constants {
 	private static let userCachesURL: URL = {
 		let fileManager = FileManager.default
 
-		let urlResult: Result<URL, NSError> = Result(attempt: {
+		let urlResult: Result<URL, NSError> = Result(catching: {
 			try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
 		}).flatMap { cachesURL in
 			let dependenciesURL = cachesURL.appendingPathComponent(Constants.bundleIdentifier, isDirectory: true)
@@ -41,7 +41,7 @@ public struct Constants {
 					return Result(error: error)
 				}
 			} else {
-				return Result(attempt: {
+				return Result(catching: {
 					try fileManager.createDirectory(
 						at: dependenciesURL,
 						withIntermediateDirectories: true,

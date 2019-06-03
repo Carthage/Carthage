@@ -1,7 +1,7 @@
 import Foundation
 import Result
 import ReactiveSwift
-import Utility
+import SPMUtility
 
 /// Responsible for resolving acyclic dependency graphs.
 public struct NewResolver: ResolverProtocol {
@@ -492,8 +492,8 @@ extension DependencyNode: Comparable {
 }
 
 extension DependencyNode: Hashable {
-	fileprivate var hashValue: Int {
-		return dependency.hashValue
+	fileprivate func hash(into hasher: inout Hasher) {
+		hasher.combine(dependency)
 	}
 }
 

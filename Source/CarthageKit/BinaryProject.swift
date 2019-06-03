@@ -1,8 +1,6 @@
 import Foundation
 import Result
-import Utility
-
-import struct Foundation.URL
+import struct SPMUtility.Version
 
 /// Represents a binary dependency 
 public struct BinaryProject: Equatable {

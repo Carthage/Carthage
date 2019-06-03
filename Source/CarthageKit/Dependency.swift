@@ -200,8 +200,8 @@ extension BinaryURL: Equatable {
 }
 
 extension BinaryURL: Hashable {
-	public var hashValue: Int {
-		return description.hashValue
+	public func hash(into hasher: inout Hasher) {
+		hasher.combine(description)
 	}
 }
 

@@ -48,49 +48,55 @@ trailing_comma:
 
 custom_rules:
   if_as_guard:
-    included: ".*.swift"
+    included: ".*\\.swift"
     regex: '\n *if [^\{]+\{\s*(?:return|break|continue)[^\n]*\n *\}(?! *else)'
     name: "If as Guard"
     message: "Don't use an if statement to just return/break/continue – use guard for such cases instead."
     severity: warning
   late_force_unwrapping:
-    included: ".*.swift"
+    included: ".*\\.swift"
     regex: '\(\S+\?\.\S+\)!'
     name: "Late Force Unwrapping"
     message: "Don't use ? first to force unwrap later – directly unwrap within the parantheses."
     severity: warning
   missing_docs:
-    included: ".*.swift"
+    included: ".*\\.swift"
     regex: '\n *(?!\/\/\/)(\/\/)?[^\n\/]*\n *(?:@\S+ )*(?:public|open)'
     name: "Missing Docs"
     message: "Types, properties and methods with public or open access level should be documented."
     severity: warning
   multiple_closure_params:
-    included: ".*.swift"
+    included: ".*\\.swift"
     regex: '\} *\) *\{'
     name: "Multiple Closure Params"
     message: "Don't use multiple in-line closures – save one or more of them to variables instead."
     severity: warning
   single_line_return:
-    included: ".*.swift"
+    included: ".*\\.swift"
     regex: '\.\S+ *\{(?: *return|[^\n\}]+ in return) [^\}]+\}'
     name: "Single Line Return"
     message: "Remove the 'return' when returning from a single line closure."
     severity: warning
   space_before_comment:
-    included: ".*.swift"
+    included: ".*\\.swift"
     regex: '\n[ ]{0}[^\/ \n][^\n]*\n[ ]{0}\/\/|\n[ ]{4}[^\/ \n][^\n]*\n[ ]{4}\/\/|\n[ ]{8}[^\/ \n][^\n]*\n[ ]{8}\/\/|\n[ ]{16}[^\/ \n][^\n]*\n[ ]{16}\/\/|\n[ ]{20}[^\/ \n][^\n]*\n[ ]{20}\/\/|\n[ ]{24}[^\/ \n][^\n]*\n[ ]{24}\/\/'
     name: "Space Before Comment"
     message: "Always put a space line before a comment line and always comment code beforehand."
     severity: warning
   vertical_whitespaces_around_mark:
-    included: ".*.swift"
+    included: ".*\\.swift"
     regex: '\/\/\s*MARK:[^\n]*(\n)(?!\n)|(\n\n\n)[ \t]*\/\/\s*MARK:|[^\s{]\n[^\n\/]*\/\/\s*MARK:'
     name: "Vertical Whitespaces Around MARK:"
     message: "Include a single vertical whitespace (empty line) before and after MARK: comments."
   whitespace_comment_start:
-    included: ".*.swift"
+    included: ".*\\.swift"
     regex: '[^:#][^:#]\/\/[^\s\/]'
     name: "Whitespace Comment Start"
     message: "A comment should always start with a whitespace."
+    severity: warning
+  carthage_typo:
+    included: ".*\\.(swift|md)"
+    regex: "(Carhage|Cartage)"
+    name: "Carthage Typo"
+    message: "Found a possible Carthage typo"
     severity: warning
