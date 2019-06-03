@@ -52,6 +52,7 @@ public struct CopyFrameworksCommand: CommandProtocol {
                                             Skipping \(frameworkName) copying because the framework at target path has equal or higher modification date than the framework at source path:
                                             source: "\(source.path)"
                                             target: "\(target.path)"
+
                                             """
                                         )
                                     }
@@ -69,8 +70,9 @@ public struct CopyFrameworksCommand: CommandProtocol {
                                         carthage.println(
                                             """
                                             Copying \"\(frameworkName)\" automatically:
-                                            source path: "\(source.path)"
-                                            target path: "\(target.path)"
+                                            source: "\(source.path)"
+                                            target: "\(target.path)"
+
                                             """
                                         )
                                     }
