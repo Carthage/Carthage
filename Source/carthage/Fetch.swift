@@ -12,7 +12,7 @@ public struct FetchCommand: CommandProtocol {
 		public let repositoryURL: GitURL
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
-			return curry(self.init)
+			return curry(Options.init)
 				<*> ColorOptions.evaluate(mode)
 				<*> mode <| Argument(usage: "the Git repository that should be cloned or fetched")
 		}

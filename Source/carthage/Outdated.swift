@@ -61,7 +61,7 @@ public struct OutdatedCommand: CommandProtocol {
 				usage: "the directory containing the Carthage project"
 			)
 
-			return curry(self.init)
+			return curry(Options.init)
 				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> mode <| Option(key: "xcode-warnings", defaultValue: false, usage: "output Xcode compatible warning messages")
