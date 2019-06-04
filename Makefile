@@ -9,7 +9,7 @@ OUTPUT_PACKAGE=Carthage.pkg
 CARTHAGE_EXECUTABLE=./.build/release/carthage
 BINARIES_FOLDER=/usr/local/bin
 
-SWIFT_BUILD_FLAGS=--configuration release
+SWIFT_BUILD_FLAGS=--configuration release -Xswiftc -suppress-warnings
 
 SWIFTPM_DISABLE_SANDBOX_SHOULD_BE_FLAGGED:=$(shell test -n "$${HOMEBREW_SDKROOT}" && echo should_be_flagged)
 ifeq ($(SWIFTPM_DISABLE_SANDBOX_SHOULD_BE_FLAGGED), should_be_flagged)
@@ -42,7 +42,7 @@ clean:
 
 test:
 	$(RM_SAFELY) ./.build/debug/CarthagePackageTests.xctest
-	swift build --build-tests
+	swift build --build-tests -Xswiftc -suppress-warnings
 	$(CP) -R Tests/CarthageKitTests/Resources ./.build/debug/CarthagePackageTests.xctest/Contents
 	$(CP) Tests/CarthageKitTests/fixtures/CartfilePrivateOnly.zip ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
 	script/copy-fixtures ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
