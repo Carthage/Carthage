@@ -93,7 +93,7 @@ public struct ColorOptions: OptionsProtocol {
 		if let additionalUsage = additionalUsage {
 			usage += "\n" + additionalUsage
 		}
-		return curry(self.init)
+		return curry(ColorOptions.init)
 			<*> mode <| Option(
 				key: "color",
 				defaultValue: ColorArgument.auto,
