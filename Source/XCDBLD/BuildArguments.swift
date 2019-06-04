@@ -56,13 +56,17 @@ public struct BuildArguments {
 	/// The build setting whether full bitcode should be embedded in the binary.
 	public var bitcodeGenerationMode: BitcodeGenerationMode?
 
+    /// Skip archive when build Device SDK
+    public var skipArchive: Bool?
+    
 	public init(
 		project: ProjectLocator,
 		scheme: Scheme? = nil,
 		configuration: String? = nil,
 		derivedDataPath: String? = nil,
 		sdk: SDK? = nil,
-		toolchain: String? = nil
+		toolchain: String? = nil,
+        skipArchive: Bool? = nil
 	) {
 		self.project = project
 		self.scheme = scheme
@@ -70,6 +74,7 @@ public struct BuildArguments {
 		self.derivedDataPath = derivedDataPath
 		self.sdk = sdk
 		self.toolchain = toolchain
+        self.skipArchive = skipArchive
 	}
 
 	/// The `xcodebuild` invocation corresponding to the receiver.
