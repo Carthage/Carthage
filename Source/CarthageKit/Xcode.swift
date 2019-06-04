@@ -355,6 +355,33 @@ private func mergeExecutables(_ executableURLs: [URL], _ outputURL: URL) -> Sign
 		.then(SignalProducer<(), CarthageError>.empty)
 }
 
+/// Attempts to create a .xcframework, written to
+/// the specified URL.
+private func createXCFramework(_ frameworkURLs: [URL], _ outputURL: URL) -> SignalProducer<(), CarthageError> {
+	precondition(outputURL.isFileURL)
+
+	return SignalProducer<URL, CarthageError>(frameworkURLs)
+		.attemptMap { url -> Result<String, CarthageError> in
+			if url.isFileURL {
+				return .success(url.path)
+			} else {
+				return .failure(.parseError(description: "expected file URL to built executable, got \(url)"))
+			}
+		}
+		.collect()
+		.flatMap(.merge) { executablePaths -> SignalProducer<TaskEvent<Data>, CarthageError> in
+
+			let xcodebuildTask = Task("/usr/bin/xcrun", arguments: [ "xcodebuild", "-create-xcframework" ] + executablePaths.flatMap { ["-framework", $0] } + [ "-output", outputURL.path ])
+
+			return xcodebuildTask.launch()
+				.mapError {
+					print("cia")
+					return CarthageError.taskError($0)
+			}
+		}
+		.then(SignalProducer<(), CarthageError>.empty)
+}
+
 private func mergeSwiftHeaderFiles(
 	_ simulatorExecutableURL: URL,
 	_ deviceExecutableURL: URL,
@@ -548,8 +575,7 @@ private func mergeBuildProducts(
 				}
 
 			return mergeProductBinaries
-				.then(mergeProductSwiftHeaderFilesIfNeeded)
-				.then(mergeProductModules)
+				.then(mergeProductSwiftHeaderFilesIfNeeded).then(mergeProductModules)
 				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, simulatorBuildSettings))
 				.then(SignalProducer<URL, CarthageError>(value: productURL))
 		}
@@ -678,11 +704,24 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						}
 					}
 					.flatMapTaskEvents(.concat) { deviceSettings, simulatorSettings in
-						return mergeBuildProducts(
-							deviceBuildSettings: deviceSettings,
-							simulatorBuildSettings: simulatorSettings,
-							into: deviceSettings.productDestinationPath(in: folderURL)
-						)
+
+						if options.useXCFrameworks {
+
+							let r = folderURL.appendingPathComponent(deviceSettings.wrapperName.value!.spm_dropSuffix("framework")+"xcframework")
+							let rP = SignalProducer<URL, CarthageError>(value: r)
+							return createXCFramework(
+								[deviceSettings.wrapperURL.value!, simulatorSettings.wrapperURL.value!],
+								r
+							).then(rP)
+						}
+						else {
+
+							return mergeBuildProducts(
+								deviceBuildSettings: deviceSettings,
+								simulatorBuildSettings: simulatorSettings,
+								into: deviceSettings.productDestinationPath(in: folderURL)
+							)
+						}
 					}
 
 			default:
@@ -690,6 +729,12 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			}
 		}
 		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
+
+			guard !options.useXCFrameworks else {
+
+				return SignalProducer<URL, CarthageError>(value: builtProductURL)
+			}
+
 			return UUIDsForFramework(builtProductURL)
 				// Only attempt to create debug info if there is at least
 				// one dSYM architecture UUID in the framework. This can
