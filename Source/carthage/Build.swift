@@ -16,7 +16,7 @@ extension BuildOptions: OptionsProtocol {
 		var platformUsage = "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')"
 		platformUsage += addendum
 
-		return curry(self.init)
+		return curry(BuildOptions.init)
 			<*> mode <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
 			<*> (mode <| Option<BuildPlatform>(key: "platform", defaultValue: .all, usage: platformUsage)).map { $0.platforms }
 			<*> mode <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
@@ -52,7 +52,7 @@ public struct BuildCommand: CommandProtocol {
 		}
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
-			return curry(self.init)
+			return curry(Options.init)
 				<*> BuildOptions.evaluate(mode)
 				<*> mode <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 				<*> ColorOptions.evaluate(mode)

@@ -66,7 +66,7 @@ public struct UpdateCommand: CommandProtocol {
 
 			let dependenciesUsage = "the dependency names to update, checkout and build"
 
-			return curry(self.init)
+			return curry(Options.init)
 				<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 				<*> mode <| Option(key: "build", defaultValue: true, usage: buildDescription)
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")

@@ -32,7 +32,7 @@ public struct CheckoutCommand: CommandProtocol {
 		}
 
 		public static func evaluate(_ mode: CommandMode, dependenciesUsage: String) -> Result<Options, CommandantError<CarthageError>> {
-			return curry(self.init)
+			return curry(Options.init)
 				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> mode <| Option(key: "use-submodules", defaultValue: false, usage: "add dependencies as Git submodules")
 				<*> ColorOptions.evaluate(mode)
