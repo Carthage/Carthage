@@ -5,11 +5,14 @@ import Result
 public struct Constants {
 	/// Carthage's bundle identifier.
 	public static let bundleIdentifier: String = "org.carthage.CarthageKit"
-
+    
 	/// The name of the folder into which Carthage puts binaries it builds (relative
 	/// to the working directory).
-	public static let binariesFolderPath = "Carthage/Build"
-
+    public static internal(set) var binariesFolderPath = "Carthage/Build"
+    
+    /// The relative path to a project's checked out dependencies.
+    public static internal(set) var carthageProjectCheckoutsPath = "Carthage/Checkouts"
+    
 	/// The fallback dependencies URL to be used in case
 	/// the intended ~/Library/Caches/org.carthage.CarthageKit cannot
 	/// be found or created.
@@ -83,14 +86,34 @@ public struct Constants {
 	}
 
 	public struct Project {
-		/// The relative path to a project's Cartfile.
-		public static let cartfilePath = "Cartfile"
-
-		/// The relative path to a project's Cartfile.private.
-		public static let privateCartfilePath = "Cartfile.private"
-
-		/// The relative path to a project's Cartfile.resolved.
-		public static let resolvedCartfilePath = "Cartfile.resolved"
+        
+        public static func configure(with custom: String) {
+            guard !custom.isEmpty else { return }
+            guard custom.lowercased() != "private" && custom.lowercased() != "resolved" && !custom.contains(".") else {
+                fatalError("Invalid custom value: \(custom)")
+            }
+            
+            cartfilePath = "Cartfile\(custom)"
+            privateCartfilePath = "Cartfile\(custom).private"
+            resolvedCartfilePath = "Cartfile\(custom).resolved"
+            
+            Constants.binariesFolderPath = "Carthage\(custom)/Build"
+            Constants.carthageProjectCheckoutsPath = "Carthage\(custom)/Checkouts"
+            
+            self.custom = custom
+        }
+        
+        /// The relative path to a project's Cartfile.
+        public static private(set) var cartfilePath = "Cartfile"
+        
+        /// The relative path to a project's Cartfile.private.
+        public static private(set) var privateCartfilePath = "Cartfile.private"
+        
+        /// The relative path to a project's Cartfile.resolved.
+        public static private(set) var resolvedCartfilePath = "Cartfile.resolved"
+        
+        /// Custom suffix
+        public static private(set) var custom: String?
 
 		/// The text that needs to exist in a GitHub Release asset's name, for it to be
 		/// tried as a binary framework.

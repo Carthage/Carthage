@@ -1015,12 +1015,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 	) -> SignalProducer<(), CarthageError> {
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
-		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
+		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(Constants.carthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
 		let fileManager = FileManager.default
 
 		return self.dependencySet(for: dependency, version: version)
 			// file system objects which might conflict with symlinks
-			.zip(with: list(treeish: version.commitish, atPath: carthageProjectCheckoutsPath, inRepository: repositoryURL)
+			.zip(with: list(treeish: version.commitish, atPath: Constants.carthageProjectCheckoutsPath, inRepository: repositoryURL)
 									.map { (path: String) in (path as NSString).lastPathComponent }
 									.collect()
 			)
@@ -1052,7 +1052,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 				for name in names {
 					let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
-					let subdirectoryPath = (carthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
+					let subdirectoryPath = (Constants.carthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
 					let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: subdirectoryPath)
 
 					let dependencyCheckoutURLResource = try? dependencyCheckoutURL.resourceValues(forKeys: [

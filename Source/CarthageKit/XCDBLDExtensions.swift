@@ -36,7 +36,7 @@ extension ProjectLocator {
 
 		return gitmodulesEntriesInRepository(directoryURL, revision: nil)
 			.map { directoryURL.appendingPathComponent($0.path) }
-			.concat(value: directoryURL.appendingPathComponent(carthageProjectCheckoutsPath))
+			.concat(value: directoryURL.appendingPathComponent(Constants.carthageProjectCheckoutsPath))
 			.collect()
 			.flatMap(.merge) { directoriesToSkip -> SignalProducer<URL, CarthageError> in
 				return FileManager.default.reactive
