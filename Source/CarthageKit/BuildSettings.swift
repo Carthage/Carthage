@@ -241,6 +241,11 @@ public struct BuildSettings {
 		return self["WRAPPER_NAME"]
 	}
 
+	/// Attempts to determine the name of the built product's wrapper bundle replacing "framework" with "xcframework".
+	public var xcFrameworkWrapperName: Result<String, CarthageError> {
+		return self["WRAPPER_NAME"].map { $0.spm_dropSuffix(".framework").appending(".xcframework") }
+	}
+
 	/// Attempts to determine the URL to the built product's wrapper, corresponding
 	/// to its xcodebuild action.
 	public var wrapperURL: Result<URL, CarthageError> {

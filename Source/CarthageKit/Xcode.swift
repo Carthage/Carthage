@@ -704,18 +704,18 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						}
 					}
 					.flatMapTaskEvents(.concat) { deviceSettings, simulatorSettings in
-
 						if options.useXCFrameworks {
+							let frameworkURLs = (deviceSettings.wrapperURL.fanout(simulatorSettings.wrapperURL))
+								.map { [ $0, $1 ] }
+							let outputURL = deviceSettings
+								.xcFrameworkWrapperName
+								.map(folderURL.appendingPathComponent)
 
-							let r = folderURL.appendingPathComponent(deviceSettings.wrapperName.value!.spm_dropSuffix("framework")+"xcframework")
-							let rP = SignalProducer<URL, CarthageError>(value: r)
-							return createXCFramework(
-								[deviceSettings.wrapperURL.value!, simulatorSettings.wrapperURL.value!],
-								r
-							).then(rP)
+							return SignalProducer(result: frameworkURLs.fanout(outputURL))
+								.flatMap(.merge, createXCFramework)
+								.then(SignalProducer(result: outputURL))
 						}
 						else {
-
 							return mergeBuildProducts(
 								deviceBuildSettings: deviceSettings,
 								simulatorBuildSettings: simulatorSettings,

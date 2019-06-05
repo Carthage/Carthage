@@ -12,6 +12,7 @@ public struct ArchiveCommand: CommandProtocol {
 		public let outputPath: String?
 		public let directoryPath: String
 		public let colorOptions: ColorOptions
+		public let createXCFramework: Bool
 		public let frameworkNames: [String]
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
@@ -30,6 +31,7 @@ public struct ArchiveCommand: CommandProtocol {
 					usage: "the directory containing the Carthage project"
 				)
 				<*> ColorOptions.evaluate(mode)
+				<*> mode <| Option(key: "create-xcframework", defaultValue: false, usage: "create an .xcframework instead of a fat binary")
 				<*> mode <| Argument(defaultValue: [], usage: argumentUsage, usageParameter: "framework names")
 		}
 	}
@@ -50,7 +52,7 @@ public struct ArchiveCommand: CommandProtocol {
 		let frameworks: SignalProducer<[String], CarthageError>
 		if !options.frameworkNames.isEmpty {
 			frameworks = .init(value: options.frameworkNames.map {
-				return ($0 as NSString).appendingPathExtension("framework")!
+				return ($0 as NSString).appendingPathExtension(options.createXCFramework ? "xcframework" : "framework")!
 			})
 		} else {
 			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
@@ -60,8 +62,10 @@ public struct ArchiveCommand: CommandProtocol {
 					return BuildSettings.load(with: buildArguments)
 				}
 				.flatMap(.concat) { settings -> SignalProducer<String, CarthageError> in
-					if let wrapperName = settings.wrapperName.value, settings.productType.value == .framework {
-						return .init(value: wrapperName)
+					if let wrapperName = settings.wrapperName.value,
+						let xcFrameworkWrapperName = settings.xcFrameworkWrapperName.value,
+						settings.productType.value == .framework {
+						return .init(value: options.createXCFramework ?xcFrameworkWrapperName : wrapperName)
 					} else {
 						return .empty
 					}
@@ -83,15 +87,21 @@ public struct ArchiveCommand: CommandProtocol {
 				}
 				.filter { filePath in FileManager.default.fileExists(atPath: filePath.absolutePath) }
 				.flatMap(.merge) { framework -> SignalProducer<String, CarthageError> in
-					let dSYM = (framework.relativePath as NSString).appendingPathExtension("dSYM")!
-					let bcsymbolmapsProducer = BCSymbolMapsForFramework(URL(fileURLWithPath: framework.absolutePath))
-						// generate relative paths for the bcsymbolmaps so they print nicely
-						.map { url in ((framework.relativePath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(url.lastPathComponent) }
-					let extraFilesProducer = SignalProducer(value: dSYM)
-						.concat(bcsymbolmapsProducer)
-						.filter { _ in FileManager.default.fileExists(atPath: framework.absolutePath) }
-					return SignalProducer(value: framework.relativePath)
-						.concat(extraFilesProducer)
+
+					if !options.createXCFramework {
+						let dSYM = (framework.relativePath as NSString).appendingPathExtension("dSYM")!
+						let bcsymbolmapsProducer = BCSymbolMapsForFramework(URL(fileURLWithPath: framework.absolutePath))
+							// generate relative paths for the bcsymbolmaps so they print nicely
+							.map { url in ((framework.relativePath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(url.lastPathComponent) }
+						let extraFilesProducer = SignalProducer(value: dSYM)
+							.concat(bcsymbolmapsProducer)
+							.filter { _ in FileManager.default.fileExists(atPath: framework.absolutePath) }
+						return SignalProducer(value: framework.relativePath)
+							.concat(extraFilesProducer)
+					}
+					else {
+						return SignalProducer(value: framework.relativePath)
+					}
 				}
 				.on(value: { path in
 					carthage.println(formatting.bullets + "Found " + formatting.path(path))
@@ -102,7 +112,7 @@ public struct ArchiveCommand: CommandProtocol {
 					let foundFrameworks = paths
 						.lazy
 						.map { ($0 as NSString).lastPathComponent }
-						.filter { $0.hasSuffix(".framework") }
+						.filter { $0.hasSuffix(".framework") || options.createXCFramework ? $0.hasSuffix(".xcframework") : true }
 
 					if Set(foundFrameworks) != Set(frameworks) {
 						let error = CarthageError.invalidArgument(
