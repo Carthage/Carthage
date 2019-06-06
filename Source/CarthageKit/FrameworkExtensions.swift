@@ -1,6 +1,7 @@
 import Foundation
 import Result
 import ReactiveSwift
+import XCDBLD
 
 extension String {
 	/// Returns a producer that will enumerate each line of the receiver, then
@@ -295,14 +296,50 @@ extension URL {
 
 	/// Returns the first `URL` to match `<self>/Headers/*-Swift.h`. Otherwise `nil`.
 	internal func swiftHeaderURL() -> URL? {
-		let headersURL = self.appendingPathComponent("Headers", isDirectory: true).resolvingSymlinksInPath()
+
+		var libraryIdentifier: String = ""
+		var libraryPath: String = ""
+		if self.pathExtension == "xcframework" {
+			let xcFrameworkInfo = Bundle(url: self)?
+				.infoDictionary
+				.flatMap(XCFrameworkInfo.init)
+			let firstLibrary =  xcFrameworkInfo?
+				.availableLibraries
+				.first
+			libraryIdentifier = firstLibrary?
+				.identifier ?? ""
+			libraryPath = firstLibrary?.path ?? ""
+		}
+
+		let headersURL = self.appendingPathComponent(libraryIdentifier)
+			.appendingPathComponent(libraryPath)
+			.appendingPathComponent("Headers", isDirectory: true)
+			.resolvingSymlinksInPath()
 		let dirContents = try? FileManager.default.contentsOfDirectory(at: headersURL, includingPropertiesForKeys: [], options: [])
 		return dirContents?.first { $0.absoluteString.contains("-Swift.h") }
 	}
 
 	/// Returns the first `URL` to match `<self>/Modules/*.swiftmodule`. Otherwise `nil`.
 	internal func swiftmoduleURL() -> URL? {
-		let headersURL = self.appendingPathComponent("Modules", isDirectory: true).resolvingSymlinksInPath()
+
+		var libraryIdentifier: String = ""
+		var libraryPath: String = ""
+		if self.pathExtension == "xcframework" {
+			let xcFrameworkInfo = Bundle(url: self)?
+				.infoDictionary
+				.flatMap(XCFrameworkInfo.init)
+			let firstLibrary =  xcFrameworkInfo?
+				.availableLibraries
+				.first
+			libraryIdentifier = firstLibrary?
+				.identifier ?? ""
+			libraryPath = firstLibrary?.path ?? ""
+		}
+
+		let headersURL = self.appendingPathComponent(libraryIdentifier)
+			.appendingPathComponent(libraryPath)
+			.appendingPathComponent("Modules", isDirectory: true)
+			.resolvingSymlinksInPath()
 		let dirContents = try? FileManager.default.contentsOfDirectory(at: headersURL, includingPropertiesForKeys: [], options: [])
 		return dirContents?.first { $0.absoluteString.contains("swiftmodule") }
 	}
