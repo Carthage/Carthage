@@ -741,8 +741,84 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 
 			case 3 where platform == .iOS && sdks.contains(.macOSX) && options.useXCFrameworks:
 
-				fatalError()
+				let (simulatorSDKs, deviceSDKs) = SDK.splitSDKs(sdks)
+				guard let iPhoneSDK = deviceSDKs.first else {
+					fatalError("Could not find device SDK in \(sdks)")
+				}
+				guard let macOSXSDK = deviceSDKs.first(where: { $0 == .macOSX }) else {
+					fatalError("Could not find device SDK in \(sdks)")
+				}
+				guard let iPhoneSimulatorSDK = simulatorSDKs.first else {
+					fatalError("Could not find simulator SDK in \(sdks)")
+				}
 
+				let deviceSettingsProducer = settingsByTarget(build(sdk: iPhoneSDK, with: buildArgs, in: workingDirectoryURL))
+				let macOSSettingsProducer = settingsByTarget(build(sdk: macOSXSDK, with: buildArgs, in: workingDirectoryURL))
+				let iPhoneSimulatorSettingsProducer = settingsByTarget(build(sdk: iPhoneSimulatorSDK, with: buildArgs, in: workingDirectoryURL))
+
+				typealias Triplet = ([String: BuildSettings], [String: BuildSettings], [String: BuildSettings])
+
+				return deviceSettingsProducer.flatMap(.concat) { dE -> SignalProducer<TaskEvent<Triplet>, CarthageError> in
+					switch dE {
+					case let .launch(task):
+						return SignalProducer(value: .launch(task))
+
+					case let .standardOutput(data):
+						return SignalProducer(value: .standardOutput(data))
+
+					case let .standardError(data):
+						return SignalProducer(value: .standardError(data))
+
+					case let .success(d):
+						return macOSSettingsProducer.flatMap(.concat) { dM -> SignalProducer<TaskEvent<Triplet>, CarthageError> in
+
+							switch dM {
+							case let .launch(task):
+								return SignalProducer(value: .launch(task))
+
+							case let .standardOutput(data):
+								return SignalProducer(value: .standardOutput(data))
+
+							case let .standardError(data):
+								return SignalProducer(value: .standardError(data))
+
+							case let .success(m):
+								return iPhoneSimulatorSettingsProducer.flatMapTaskEvents(.concat) { s in
+										return SignalProducer<Triplet, CarthageError>(value:(d,m,s))
+								}
+							}
+						}
+					}
+				}
+				.flatMapTaskEvents(.concat) { deviceSettings, macOSSettings, simulatorSettings -> SignalProducer<(BuildSettings, BuildSettings, BuildSettings), CarthageError> in
+
+					let buildSettings = deviceSettings.map { target, buildSettings in
+
+						return (buildSettings, macOSSettings[target]!, simulatorSettings[target]!)
+					}
+
+					return SignalProducer<(BuildSettings, BuildSettings, BuildSettings), CarthageError>(buildSettings)
+				}
+				.flatMapTaskEvents(.concat) { deviceSettings, macOSSettings, simulatorSettings in
+
+					if options.useXCFrameworks {
+						let frameworkURLs = (deviceSettings.wrapperURL.fanout(macOSSettings.wrapperURL).fanout(simulatorSettings.wrapperURL)).map { [$0.0, $0.1, $1] }
+						let outputURL = deviceSettings
+							.xcFrameworkWrapperName
+							.map(folderURL.appendingPathComponent)
+
+						return SignalProducer(result: frameworkURLs.fanout(outputURL))
+							.flatMap(.merge, createXCFramework)
+							.then(SignalProducer(result: outputURL))
+					}
+					else {
+						return mergeBuildProducts(
+							deviceBuildSettings: deviceSettings,
+							simulatorBuildSettings: simulatorSettings,
+							into: deviceSettings.productDestinationPath(in: folderURL)
+						)
+					}
+				}
 
 			default:
 				fatalError("SDK count \(sdks.count) in scheme \(scheme) is not supported")
