@@ -472,7 +472,9 @@ private func shouldBuildScheme(_ buildArguments: BuildArguments, _ forPlatforms:
 					.flatMapError { _ in .empty }
 			} else {
 				return settings.buildSDKs
-					.filter { forPlatforms.contains($0.platform) }
+					.filter {
+						forPlatforms.contains($0.platform)
+					}
 					.flatMap(.merge) { _ in frameworkType }
 					.flatMapError { _ in .empty }
 			}
@@ -613,7 +615,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 	)
 
 	return BuildSettings.SDKsForScheme(scheme, inProject: project)
-		.flatMap(.concat) { sdk -> SignalProducer<SDK, CarthageError> in
+		.flatMap(.concat) { sdk -> SignalProducer<(BuildSettings, SDK), CarthageError> in
 			var argsForLoading = buildArgs
 			argsForLoading.sdk = sdk
 
@@ -625,14 +627,19 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 					// must add a User-Defined setting of ENABLE_BITCODE=NO.
 					return settings.bitcodeEnabled.value == true || ![.tvOS, .watchOS].contains(sdk)
 				}
-				.map { _ in sdk }
+				.map { settings in return (settings, sdk) }
 		}
-		.reduce(into: [:]) { (sdksByPlatform: inout [Platform: Set<SDK>], sdk: SDK) in
+		.reduce(into: [Platform: Set<SDK>]()) { sdksByPlatform, next in
+			let (settings, sdk) = next
 			let platform = sdk.platform
 
 			if var sdks = sdksByPlatform[platform] {
 				sdks.insert(sdk)
 				sdksByPlatform.updateValue(sdks, forKey: platform)
+				if platform == .iOS && settings.supportsUIKitForMac.value == true && options.useXCFrameworks {
+					sdks.insert(.macOSX)
+					sdksByPlatform.updateValue(sdks, forKey: platform)
+				}
 			} else {
 				sdksByPlatform[platform] = [sdk]
 			}
@@ -646,7 +653,9 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			return SignalProducer(values)
 		}
 		.flatMap(.concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
-			let filterResult = sdkFilter(sdks, scheme, options.configuration, project)
+
+			let wantsXCFramworks = platform == .iOS && sdks.contains(.macOSX) && options.useXCFrameworks
+			let filterResult = !wantsXCFramworks ? sdkFilter(sdks, scheme, options.configuration, project) : .success(sdks)
 			return SignalProducer(result: filterResult.map { (platform, $0) })
 		}
 		.filter { _, sdks in
@@ -729,6 +738,11 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 							)
 						}
 					}
+
+			case 3 where platform == .iOS && sdks.contains(.macOSX) && options.useXCFrameworks:
+
+				fatalError()
+
 
 			default:
 				fatalError("SDK count \(sdks.count) in scheme \(scheme) is not supported")
