@@ -579,7 +579,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		frameworkNameAndExtension: String
 	) -> Result<URL, CarthageError> {
 		guard let lastComponent = URL(string: frameworkNameAndExtension)?.pathExtension,
-			lastComponent == "framework" else {
+			lastComponent == "framework" || lastComponent == "xcframework" else {
 				return .failure(.internalError(description: "\(frameworkNameAndExtension) is not a valid framework identifier"))
 		}
 
@@ -677,9 +677,14 @@ public final class Project { // swiftlint:disable:this type_body_length
 					}
 					// Copy .dSYM & .bcsymbolmap too
 					.flatMap(.merge) { frameworkDestinationURL -> SignalProducer<URL, CarthageError> in
-						return self.copyDSYMToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL)
-							.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL))
-							.then(SignalProducer(value: frameworkDestinationURL))
+						if frameworkDestinationURL.pathExtension != "xcframework" {
+							return self.copyDSYMToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL)
+								.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL))
+								.then(SignalProducer(value: frameworkDestinationURL))
+						}
+						else {
+							return SignalProducer(value: frameworkDestinationURL)
+						}
 					}
 					.collect()
 					// Write the .version file
@@ -711,7 +716,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 		switch dependency {
 		case let .gitHub(server, repository):
 			let client = Client(server: server)
-			return self.downloadMatchingBinaries(for: dependency, pinnedVersion: pinnedVersion, fromRepository: repository, client: client)
+			return self.downloadMatchingBinaries(for: dependency,
+												 pinnedVersion: pinnedVersion,
+												 fromRepository: repository,
+												 client: client
+				)
 				.flatMapError { error -> SignalProducer<URL, CarthageError> in
 					if !client.isAuthenticated {
 						return SignalProducer(error: error)
@@ -724,7 +733,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 					)
 				}
 				.flatMap(.concat) {
-					return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: dependency.name, pinnedVersion: pinnedVersion, toolchain: toolchain)
+					return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0,
+																 projectName: dependency.name,
+																 pinnedVersion: pinnedVersion,
+																 toolchain: toolchain
+					)
 				}
 				.flatMap(.concat) { self.removeItem(at: $0) }
 				.map { true }
@@ -1392,12 +1405,18 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, Carth
 			}
 
 			// Try to read what platfrom this binary is for. Attempt in order:
-			// 1. Read `DTSDKName` from Info.plist.
+			// 1. Read `AvailableLibraries > SupportedPlatform` if .xcFramework bundle
+			// 2. Read `DTSDKName` from Info.plist.
 			//    Some users are reporting that static frameworks don't have this key in the .plist,
 			//    so we fall back and check the binary of the executable itself.
-			// 2. Read the LC_VERSION_<PLATFORM> from the framework's binary executable file
-
-			if let sdkNameFromBundle = bundle?.object(forInfoDictionaryKey: "DTSDKName") as? String {
+			// 3. Read the LC_VERSION_<PLATFORM> from the framework's binary executable file
+			if case bundle?.packageType = PackageType.xcFramework,
+				let sdkNameFromSupportedPlatform = bundle?.infoDictionary.flatMap(XCFrameworkInfo.init)?
+					.availableLibraries
+					.first?
+					.supportedSDK.rawValue {
+				return .success(sdkNameFromSupportedPlatform)
+			} else if let sdkNameFromBundle = bundle?.object(forInfoDictionaryKey: "DTSDKName") as? String {
 				return .success(sdkNameFromBundle)
 			} else if let sdkNameFromExecutable = sdkNameFromExecutable() {
 				return .success(sdkNameFromExecutable)
@@ -1421,14 +1440,32 @@ internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, 
 				return (pathComponent as NSString).pathExtension == "framework"
 			}
 			return frameworksInURL.count == 1
-		}.filter { url in
+		}
+		// We can't identify xcframeworks by UTType, so we have to edit the path manually
+		.map { url in
+			if let stopIndex = url
+				.pathComponents
+				.firstIndex(where: { component in component.hasSuffix(".xcframework")}) {
+
+				let slice = url.pathComponents[0...stopIndex]
+				let path = slice.reduce("/") { acc, next in
+					return (acc as NSString).appendingPathComponent(next)
+				}
+				return URL(fileURLWithPath: path as String, isDirectory: true)
+			}
+			else {
+				return url
+			}
+		}
+		.uniqueValues()
+		.filter { url in
 			// For reasons of speed and the fact that CLI-output structures can change,
 			// first try the safer method of reading the ‘Info.plist’ from the Framework’s bundle.
 			let bundle = Bundle(url: url)
 			let packageType: PackageType? = bundle?.packageType
 
 			switch packageType {
-			case .framework?, .bundle?:
+			case .framework?, .bundle?, .xcFramework?:
 				return true
 			default:
 				// In case no Info.plist exists check the Mach-O fileType

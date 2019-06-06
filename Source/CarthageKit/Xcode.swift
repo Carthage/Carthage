@@ -297,6 +297,9 @@ internal enum PackageType: String {
 
 	/// A .dSYM package.
 	case dSYM = "dSYM"
+
+	/// A .xcframework
+	case xcFramework = "XFWK"
 }
 
 /// Finds the built product for the given settings, then copies it (preserving
