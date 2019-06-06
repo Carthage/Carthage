@@ -366,7 +366,7 @@ private func createXCFramework(_ frameworkURLs: [URL], _ outputURL: URL) -> Sign
 	return SignalProducer<URL, CarthageError>(frameworkURLs)
 		.attemptMap { url -> Result<String, CarthageError> in
 			if url.isFileURL {
-				return .success(url.path)
+				return .success(url.resolvingSymlinksInPath().path)
 			} else {
 				return .failure(.parseError(description: "expected file URL to built executable, got \(url)"))
 			}
@@ -374,11 +374,14 @@ private func createXCFramework(_ frameworkURLs: [URL], _ outputURL: URL) -> Sign
 		.collect()
 		.flatMap(.merge) { executablePaths -> SignalProducer<TaskEvent<Data>, CarthageError> in
 
-			let xcodebuildTask = Task("/usr/bin/xcrun", arguments: [ "xcodebuild", "-create-xcframework" ] + executablePaths.flatMap { ["-framework", $0] } + [ "-output", outputURL.path ])
+			let xcodebuildTask = Task("/usr/bin/xcrun",
+									  arguments: [ "xcodebuild", "-create-xcframework" ]
+										+ executablePaths.flatMap { ["-framework", $0] }
+										+ [ "-output", outputURL.path ]
+			)
 
 			return xcodebuildTask.launch()
 				.mapError {
-					print("cia")
 					return CarthageError.taskError($0)
 			}
 		}

@@ -65,7 +65,7 @@ public struct ArchiveCommand: CommandProtocol {
 					if let wrapperName = settings.wrapperName.value,
 						let xcFrameworkWrapperName = settings.xcFrameworkWrapperName.value,
 						settings.productType.value == .framework {
-						return .init(value: options.createXCFramework ?xcFrameworkWrapperName : wrapperName)
+						return .init(value: options.createXCFramework ? xcFrameworkWrapperName : wrapperName)
 					} else {
 						return .empty
 					}
