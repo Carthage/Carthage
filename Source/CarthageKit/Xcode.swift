@@ -84,7 +84,7 @@ internal func dSYMSwiftVersion(_ dSYMURL: URL) -> SignalProducer<String, SwiftVe
 	let task = Task("/usr/bin/xcrun", arguments: ["dwarfdump", "--arch=\(arch)", "--debug-info", dSYMURL.path])
 
 	//	$ dwarfdump --debug-info Carthage/Build/iOS/Swiftz.framework.dSYM
-	//		----------------------------------------------------------------------
+	//	----------------------------------------------------------------------
 	//	File: Carthage/Build/iOS/Swiftz.framework.dSYM/Contents/Resources/DWARF/Swiftz (i386)
 	//	----------------------------------------------------------------------
 	//	.debug_info contents:
@@ -373,7 +373,6 @@ private func createXCFramework(_ frameworkURLs: [URL], _ outputURL: URL) -> Sign
 		}
 		.collect()
 		.flatMap(.merge) { executablePaths -> SignalProducer<TaskEvent<Data>, CarthageError> in
-
 			let xcodebuildTask = Task("/usr/bin/xcrun",
 									  arguments: [ "xcodebuild", "-create-xcframework" ]
 										+ executablePaths.flatMap { ["-framework", $0] }
@@ -753,76 +752,104 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 					fatalError("Could not find simulator SDK in \(sdks)")
 				}
 
+				let tmpProductDirTemplate = "carthage-xcframework-tmp.XXXXXX"
+
 				let deviceSettingsProducer = settingsByTarget(build(sdk: iPhoneSDK, with: buildArgs, in: workingDirectoryURL))
 				let macOSSettingsProducer = settingsByTarget(build(sdk: macOSXSDK, with: buildArgs, in: workingDirectoryURL))
 				let iPhoneSimulatorSettingsProducer = settingsByTarget(build(sdk: iPhoneSimulatorSDK, with: buildArgs, in: workingDirectoryURL))
 
-				typealias Triplet = ([String: BuildSettings], [String: BuildSettings], [String: BuildSettings])
+				typealias Triplet = (([(URL, String)], [String: BuildSettings]), ([(URL, String)], [String: BuildSettings]), ([(URL, String)], [String: BuildSettings]))
 
 				return deviceSettingsProducer.flatMap(.concat) { dE -> SignalProducer<TaskEvent<Triplet>, CarthageError> in
 					switch dE {
 					case let .launch(task):
 						return SignalProducer(value: .launch(task))
-
 					case let .standardOutput(data):
 						return SignalProducer(value: .standardOutput(data))
-
 					case let .standardError(data):
 						return SignalProducer(value: .standardError(data))
-
 					case let .success(d):
-
-						return macOSSettingsProducer.flatMap(.concat) { mE -> SignalProducer<TaskEvent<Triplet>, CarthageError> in
-
-							switch mE {
-							case let .launch(task):
-								return SignalProducer(value: .launch(task))
-
-							case let .standardOutput(data):
-								return SignalProducer(value: .standardOutput(data))
-
-							case let .standardError(data):
-								return SignalProducer(value: .standardError(data))
-
-							case let .success(m):
-								return iPhoneSimulatorSettingsProducer.flatMapTaskEvents(.concat) { s in
-										return SignalProducer<Triplet, CarthageError>(value:(d,m,s))
+						return SignalProducer(d).flatMap(.merge) { target, settings in
+							FileManager.default.reactive.createTemporaryDirectoryWithTemplate(tmpProductDirTemplate).flatMap(.merge) { directoryURL in
+								copyBuildProductIntoDirectory(settings.productDestinationPath(in: directoryURL.appendingPathComponent("iOS")), settings)
+								.zip(with: SignalProducer<String, CarthageError>(value: target))
+								.collect()
+								.flatMap(.merge) { iphoneTargetsDestinationULRs in
+									return macOSSettingsProducer.flatMap(.concat) { mE -> SignalProducer<TaskEvent<Triplet>, CarthageError> in
+										switch mE {
+										case let .launch(task):
+											return SignalProducer(value: .launch(task))
+										case let .standardOutput(data):
+											return SignalProducer(value: .standardOutput(data))
+										case let .standardError(data):
+											return SignalProducer(value: .standardError(data))
+										case let .success(m):
+											return SignalProducer(m).flatMap(.merge) { target, settings in
+												copyBuildProductIntoDirectory(settings.productDestinationPath(in: directoryURL.appendingPathComponent("UIKitForMac")), settings)
+													.zip(with: SignalProducer<String, CarthageError>(value: target))
+												}
+												.collect()
+												.flatMap(.merge) { macOSTargetsDestinationULRs in
+													return iPhoneSimulatorSettingsProducer.flatMapTaskEvents(.concat) { s in
+														return SignalProducer(s).flatMap(.merge) { (target, settings) -> SignalProducer<(URL, String), CarthageError>  in
+															copyBuildProductIntoDirectory(settings.productDestinationPath(in: directoryURL.appendingPathComponent("iOSSimulator")), settings)
+															.zip(with: SignalProducer<String, CarthageError>(value: target))
+															}
+															.collect()
+															.flatMap(.merge) { simualtorTargetsDestinationULRs -> SignalProducer<Triplet, CarthageError> in
+																let triplet: Triplet = ((iphoneTargetsDestinationULRs, d),(macOSTargetsDestinationULRs, m),(simualtorTargetsDestinationULRs, s))
+																return SignalProducer<Triplet, CarthageError>(value: triplet)
+															}
+														}
+												}
+										}
+									}
 								}
 							}
 						}
 					}
 				}
-				.flatMapTaskEvents(.concat) { deviceSettings, macOSSettings, simulatorSettings -> SignalProducer<(BuildSettings, BuildSettings, BuildSettings), CarthageError> in
+				.flatMapTaskEvents(.concat) { dT, mT, sT in
 
-					let buildSettings = deviceSettings.map { target, buildSettings in
+					let (dURLs, deviceSettings) = dT
+					let (mURLs, _) = mT
+					let (sURLs, _) = sT
 
-						return (buildSettings, macOSSettings[target]!, simulatorSettings[target]!)
+
+					let reducer: (inout [String : Set<URL>], (URL, String)) -> () = { acc, tuple in
+						if acc[tuple.1] == nil {
+
+							acc[tuple.1] = Set([tuple.0])
+						}
+						else {
+							acc[tuple.1]!.update(with: tuple.0)
+						}
 					}
 
-					return SignalProducer<(BuildSettings, BuildSettings, BuildSettings), CarthageError>(buildSettings)
-				}
-				.flatMapTaskEvents(.concat) { deviceSettings, macOSSettings, simulatorSettings in
+					let deviceTargetsAndProductsDictionary = dURLs.reduce(into: [String : Set<URL>](), reducer)
+					let macTargetsAndProductsDictionary = mURLs.reduce(into: [String : Set<URL>](), reducer)
+					let simulatorTargetsAndProductsDictionary = sURLs.reduce(into: [String : Set<URL>](), reducer)
 
-					if options.useXCFrameworks {
-//						let frameworkURLs = deviceSettings.wrapperURL
-//							.fanout(macOSSettings.wrapperURL)
-//							.fanout(simulatorSettings.wrapperURL)
-//							.map { [$0.0, $0.1, $1] }
-						let frameworkURLs: Result<[URL], CarthageError> = Result([deviceSettings.wrapperURL.value, macOSSettings.wrapperURL.value, simulatorSettings.wrapperURL.value].compactMap { $0 })
-						let outputURL = deviceSettings
+					var allPlatformsTargetURLs = [String : Set<URL>]()
+
+					for (target, urls) in deviceTargetsAndProductsDictionary {
+
+						allPlatformsTargetURLs[target] = urls
+							.union(macTargetsAndProductsDictionary[target]!)
+							.union(simulatorTargetsAndProductsDictionary[target]!)
+					}
+
+					return SignalProducer(allPlatformsTargetURLs)
+						.flatMap(.merge) { target, urls in
+							let outputURL = deviceSettings[target]!
 							.xcFrameworkWrapperName
 							.map(folderURL.appendingPathComponent)
 
-						return SignalProducer(result: frameworkURLs.fanout(outputURL))
-							.flatMap(.merge, createXCFramework)
-							.then(SignalProducer(result: outputURL))
-					}
-					else {
-						return mergeBuildProducts(
-							deviceBuildSettings: deviceSettings,
-							simulatorBuildSettings: simulatorSettings,
-							into: deviceSettings.productDestinationPath(in: folderURL)
-						)
+							let adaptedURLs = Result<[URL], CarthageError>(Array(urls))
+
+							return SignalProducer(outputURL.fanout(adaptedURLs))
+								.flatMap(.merge) { createXCFramework($0.1, $0.0) }
+								.then(SignalProducer(result: outputURL))
 					}
 				}
 
