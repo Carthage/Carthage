@@ -216,7 +216,9 @@ public struct BuildSettings {
 			pathComponent = "\(configuration)\(effectivePlatformName)"
 		}
 
-		let path = (basePath as NSString).appendingPathComponent(pathComponent)
+		// TODO: could use self["variant"] maybe, is SDK is passed with variant
+		let isUIKitForMac = (self.supportsUIKitForMac.value ?? false) && (self["SDK_NAME"].map { $0.contains("macos") }.value ?? false)
+		let path = (basePath as NSString).appendingPathComponent(isUIKitForMac ? "\(pathComponent)-uikitformac" : pathComponent)
 		return .success(path)
 	}
 

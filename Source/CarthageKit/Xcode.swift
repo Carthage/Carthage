@@ -583,7 +583,8 @@ private func mergeBuildProducts(
 				}
 
 			return mergeProductBinaries
-				.then(mergeProductSwiftHeaderFilesIfNeeded).then(mergeProductModules)
+				.then(mergeProductSwiftHeaderFilesIfNeeded)
+				.then(mergeProductModules)
 				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, simulatorBuildSettings))
 				.then(SignalProducer<URL, CarthageError>(value: productURL))
 		}
@@ -742,7 +743,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			case 3 where platform == .iOS && sdks.contains(.macOSX) && options.useXCFrameworks:
 
 				let (simulatorSDKs, deviceSDKs) = SDK.splitSDKs(sdks)
-				guard let iPhoneSDK = deviceSDKs.first else {
+				guard let iPhoneSDK = deviceSDKs.first(where: { $0 == .iPhoneOS }) else {
 					fatalError("Could not find device SDK in \(sdks)")
 				}
 				guard let macOSXSDK = deviceSDKs.first(where: { $0 == .macOSX }) else {
@@ -770,9 +771,10 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						return SignalProducer(value: .standardError(data))
 
 					case let .success(d):
-						return macOSSettingsProducer.flatMap(.concat) { dM -> SignalProducer<TaskEvent<Triplet>, CarthageError> in
 
-							switch dM {
+						return macOSSettingsProducer.flatMap(.concat) { mE -> SignalProducer<TaskEvent<Triplet>, CarthageError> in
+
+							switch mE {
 							case let .launch(task):
 								return SignalProducer(value: .launch(task))
 
@@ -802,7 +804,11 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				.flatMapTaskEvents(.concat) { deviceSettings, macOSSettings, simulatorSettings in
 
 					if options.useXCFrameworks {
-						let frameworkURLs = (deviceSettings.wrapperURL.fanout(macOSSettings.wrapperURL).fanout(simulatorSettings.wrapperURL)).map { [$0.0, $0.1, $1] }
+//						let frameworkURLs = deviceSettings.wrapperURL
+//							.fanout(macOSSettings.wrapperURL)
+//							.fanout(simulatorSettings.wrapperURL)
+//							.map { [$0.0, $0.1, $1] }
+						let frameworkURLs: Result<[URL], CarthageError> = Result([deviceSettings.wrapperURL.value, macOSSettings.wrapperURL.value, simulatorSettings.wrapperURL.value].compactMap { $0 })
 						let outputURL = deviceSettings
 							.xcFrameworkWrapperName
 							.map(folderURL.appendingPathComponent)
