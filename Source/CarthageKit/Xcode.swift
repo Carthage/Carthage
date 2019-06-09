@@ -149,14 +149,14 @@ internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain to
 
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
-public func xcodebuildTask(_ tasks: [String], _ buildArguments: BuildArguments) -> Task {
-	return Task("/usr/bin/xcrun", arguments: buildArguments.arguments + tasks)
+public func xcodebuildTask(_ tasks: [String], _ buildArguments: BuildArguments, useRawArguments: Bool = false) -> Task {
+	return Task("/usr/bin/xcrun", arguments: (useRawArguments ? buildArguments.rawArguments : buildArguments.arguments) + tasks)
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
-public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments) -> Task {
-	return xcodebuildTask([task], buildArguments)
+public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments, useRawArguments: Bool = false) -> Task {
+	return xcodebuildTask([task], buildArguments, useRawArguments: useRawArguments)
 }
 
 /// Finds schemes of projects or workspaces, which Carthage should build, found
@@ -755,7 +755,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				let tmpProductDirTemplate = "carthage-xcframework-tmp.XXXXXX"
 
 				let deviceSettingsProducer = settingsByTarget(build(sdk: iPhoneSDK, with: buildArgs, in: workingDirectoryURL))
-				let macOSSettingsProducer = settingsByTarget(build(sdk: macOSXSDK, with: buildArgs, in: workingDirectoryURL))
+				let macOSSettingsProducer = settingsByTarget(build(sdk: macOSXSDK, with: buildArgs, forUIKitForMac: true, in: workingDirectoryURL))
 				let iPhoneSimulatorSettingsProducer = settingsByTarget(build(sdk: iPhoneSimulatorSDK, with: buildArgs, in: workingDirectoryURL))
 
 				typealias Triplet = (([(URL, String)], [String: BuildSettings]), ([(URL, String)], [String: BuildSettings]), ([(URL, String)], [String: BuildSettings]))
@@ -897,7 +897,11 @@ private func resolveSameTargetName(for settings: BuildSettings) -> SignalProduce
 
 /// Runs the build for a given sdk and build arguments, optionally performing a clean first
 // swiftlint:disable:next function_body_length
-private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectoryURL: URL) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
+private func build(sdk: SDK,
+	with buildArgs: BuildArguments,
+	forUIKitForMac isUIKitForMac: Bool = false,
+	in workingDirectoryURL: URL
+) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
 	var argsForLoading = buildArgs
 	argsForLoading.sdk = sdk
 
@@ -995,7 +999,7 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 						return result
 					}()
 
-					var buildScheme = xcodebuildTask(actions, argsForBuilding)
+					var buildScheme = xcodebuildTask(actions, argsForBuilding, useRawArguments: isUIKitForMac)
 					buildScheme.workingDirectoryPath = workingDirectoryURL.path
 
 					return buildScheme.launch()
