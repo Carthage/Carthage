@@ -1017,12 +1017,12 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
   // same framework.
   //
   // In a nutshell:
-  //  pid 1094 copyProduct(MyFrameworkframework.dSYM)
+  //  pid 1094 copyProduct(MyFramework.framework)
   //  pid 1094 stripArchitecture(armv7)
   //  pid 1094 stripArchitecture(arm64)
-  //  pid 1684 copyProduct(MyFramework.framework.dSYM)
+  //  pid 1684 copyProduct(MyFramework.framework)
   //  pid 1684 stripArchitecture(armv7)
-  //  pid 1916 copyProduct(MyFrameworkframework.dSYM)
+  //  pid 1916 copyProduct(MyFramework.framework)
   //  pid 1916 stripArchitecture(armv7)
   //  pid 1684 stripArchitecture(arm64)
   //  pid 1916 stripArchitecture(arm64)  <-- already stripped, so an error occurs
@@ -1030,7 +1030,7 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
   //  A shell task (/usr/bin/xcrun lipo -remove armv7 […] failed with exit code 1:
   //  fatal error: […]MyFramework.framework does not contain that architecture
   //
-  // So we copy it to /tmp, modify it there, and copy it back to thie original
+  // So we copy it to /tmp, modify it there, and copy it back to the original
   // location. Problem averted!
 
   let fileManager = FileManager.default.reactive
