@@ -415,10 +415,10 @@ extension Reactive where Base: FileManager {
       try self.base.copyItem(at: source, to: destination, avoiding·rdar·32984063: true)
       return SignalProducer(value: destination)
     } catch {
-      return SignalProducer(error: .internalError(description: "copyItem failed: \(error)"))
+      return SignalProducer(error: .internalError(description: "copyItem failed: \(error)\n\(source)\n\(into)"))
     }
   }
-  
+
   public func replaceItem(at originalItemURL: URL, withItemAt newItemURL: URL) -> SignalProducer<(), CarthageError> {
     do {
       guard (try self.base.replaceItemAt(originalItemURL, withItemAt: newItemURL, backupItemName: nil, options: .usingNewMetadataOnly)) != nil else {
