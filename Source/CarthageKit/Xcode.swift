@@ -1032,6 +1032,18 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
   //
   // So we copy it to /tmp, modify it there, and copy it back to the original
   // location. Problem averted!
+  //
+  // Footnote: Turns out this works perfectly for _framework_s, but the dSYMs
+  // introduce a wrinkle: They are all copied to ($BUILT_PRODUCTS_DIR), regardless
+  // of where the frameworks go, so that whole lipo scenario still exists. After
+  // many overly-complex attemts to handle cross-process & cross-thread locking,
+  // I came up with a simplified solution.
+  //
+  // - Continue to do all the work in tmp
+  // - Check to see if the product in tmp is exactly the same as the destination
+  //   - If so, delete the temp file
+  //   - If not, overwrite the dest (this handles updates to an existing dSYM)
+  //
 
   let fileManager = FileManager.default.reactive
   
@@ -1053,14 +1065,17 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
   }
   
   return createTempDir
-    .flatMap(.merge) { temp in
-      copyItem(binaryURL, temp)
+    .flatMap(.merge) { tempDir in
+      copyItem(binaryURL, tempDir)
     }
-    .flatMap(.merge) { workspace in
-      strip(workspace, keepingArchitectures)
+    .flatMap(.merge) { tempFile in
+      strip(tempFile, keepingArchitectures)
     }
-    .flatMap(.merge) { workspace in
-      replace(binaryURL, workspace)
+    .filter { tempFile in
+      return !FileManager.default.contentsEqual(atPath: tempFile.path, andPath: binaryURL.path)
+    }
+    .flatMap(.merge) { tempFile in
+      replace(binaryURL, tempFile)
   }
 }
 
