@@ -14,7 +14,7 @@ public struct CopyFrameworksCommand: CommandProtocol {
         
         public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
             return curry(self.init)
-                <*> mode <| Option(key: "auto", defaultValue: false, usage: "infers and copies linked frameworks automatically")
+                <*> mode <| Option(key: "auto", defaultValue: false, usage: "(experimental) infers and copies linked frameworks automatically")
                 <*> mode <| Option(key: "use-framework-search-paths", defaultValue: false, usage: "uses FRAMEWORK_SEARCH_PATHS environment variable to copy the linked frameworks with paths order preservation (i.e. first occurrence wins).\nTakes effect only when `--auto` argument is being passed")
                 <*> mode <| Option(key: "verbose", defaultValue: false, usage: "print automatically copied frameworks and paths")
         }

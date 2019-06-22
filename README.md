@@ -55,12 +55,8 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
     ```sh
-    /usr/local/bin/carthage copy-frameworks --auto
+    /usr/local/bin/carthage copy-frameworks
     ```
-
-From that point all of the Carthage's frameworks that are linked againts your target will be copied automatically.
-
-In case you need to specify path to your framework manually for whatever reason, do:
 
 - Add the paths to the frameworks you want to use under “Input Files". For example:
 
@@ -74,8 +70,17 @@ In case you need to specify path to your framework manually for whatever reason,
     $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Alamofire.framework
     ```
 
-For an in depth guide, read on from [Adding frameworks to an application](#adding-frameworks-to-an-application)
+Another approach when having multiple dependencies is to use `.xcfilelist`s. This is covered in [If you´re building for iOS, tvOS ot WatchOS](#if-youre-building-for-ios-tvos-or-watchos)
 
+1. **Experimental**: You may also want to copy your dependencies automatically. In this case in a created Run Script append `--auto` argument to get a following script:
+
+	```
+	/usr/local/bin/carthage copy-frameworks --auto
+	```
+
+From that point all of the Carthage's frameworks that are linked againts your target will be copied automatically. This approach supports both paths from the "Input Files" as well as the `.xcfilelist`s and therefore purely additive.
+
+For an in depth guide, read on from [Adding frameworks to an application](#adding-frameworks-to-an-application)
 ## Installing Carthage
 
 There are multiple options for installing Carthage:
@@ -113,16 +118,6 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 1. On your application targets’ _General_ settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
-###### Automatic
-
-    ```sh
-    /usr/local/bin/carthage copy-frameworks --auto
-    ```
-
-From this point Carthage will infer and copy all Carthage's frameworks that are linked against target. It also capable to copy transitive frameworks. For example, you have linked to your app `SocialSDK-Swift` that links internally `SocialSDK-ObjC` which in turns uses utilitary dependency `SocialTools`. In this case you don't need transient dependencies it should be enough to link against your target only `SocialSDK-Swift`. Transient dependencies will be resolved and copied automatically to your app.
-
-Optionally you can add `--verbose` flag to see which frameworks are being copied by Carthage.
-
 ###### Manual
 
     ```sh
@@ -152,6 +147,16 @@ This script works around an [App Store submission bug](http://www.openradar.me/r
 With the debug information copied into the built products directory, Xcode will be able to symbolicate the stack trace whenever you stop at a breakpoint. This will also enable you to step through third-party code in the debugger.
 
 When archiving your application for submission to the App Store or TestFlight, Xcode will also copy these files into the dSYMs subdirectory of your application’s `.xcarchive` bundle.
+
+###### Experimental Automatic Copying
+
+    ```sh
+    /usr/local/bin/carthage copy-frameworks --auto
+    ```
+
+From this point Carthage will infer and copy all Carthage's frameworks that are linked against target. It also capable to copy transitive frameworks. For example, you have linked to your app `SocialSDK-Swift` that links internally `SocialSDK-ObjC` which in turns uses utilitary dependency `SocialTools`. In this case you don't need transient dependencies it should be enough to link against your target only `SocialSDK-Swift`. Transient dependencies will be resolved and copied automatically to your app.
+
+Optionally you can add `--verbose` flag to see which frameworks are being copied by Carthage.
 
 ###### Combining Automatic and Manual copying
 

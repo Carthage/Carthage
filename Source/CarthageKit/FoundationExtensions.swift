@@ -26,8 +26,7 @@ extension FileManager {
             directoryURL.isFileURL,
             isDirectory(at: directoryURL),
             let enumerator = self.enumerator(at: directoryURL, includingPropertiesForKeys: keys, options: options)
-        else
-        {
+        else {
             return []
         }
         
