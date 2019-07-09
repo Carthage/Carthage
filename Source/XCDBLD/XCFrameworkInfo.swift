@@ -37,14 +37,12 @@ public struct XCFrameworkLibrary {
 
 fileprivate extension Platform {
 
-	static var aliases: [String : Platform] {
-		["ios" : .iOS,
-		 "macos" : .macOS,
-		 "watchos" : .watchOS,
-		 "tvos" : .tvOS
-		]
-	}
-
+	static let aliases: [String : Platform] = ["ios" : .iOS,
+											   "macos" : .macOS,
+											   "watchos" : .watchOS,
+											   "tvos" : .tvOS
+											  ]
+	
 	init?(platform: String) {
 
 		guard let vanillaPlatform = Platform(rawValue: platform) else {

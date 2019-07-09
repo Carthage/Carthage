@@ -87,8 +87,8 @@ public struct BuildArguments {
 			if sdk == .macOSX, let sdkIndex = args.firstIndex(where: { $0 == "-sdk"} ) {
 
 				if sdkIndex + 1 < args.count {
-					args.remove(at: sdkIndex) // remove -skd
-					args.remove(at: sdkIndex) // remove paramter
+					args.remove(at: sdkIndex) // remove -sdk
+					args.remove(at: sdkIndex) // remove parameter
 				}
 			}
 		}

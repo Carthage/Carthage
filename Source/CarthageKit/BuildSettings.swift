@@ -305,7 +305,7 @@ public struct BuildSettings {
 
 	/// Attepts to determine if UIKit for Mac is supported
 	public var supportsUIKitForMac: Result<Bool, CarthageError> {
-		self["SUPPORTS_UIKITFORMAC"].map { $0 == "YES" }
+		return self["SUPPORTS_UIKITFORMAC"].map { $0 == "YES" }
 	}
 
 	/// Add subdirectory path if it's not possible to paste product to destination path
