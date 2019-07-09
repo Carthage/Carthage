@@ -951,7 +951,7 @@ private func build(sdk: SDK,
 			// See https://github.com/Carthage/Carthage/issues/2056
 			// and https://developer.apple.com/library/content/qa/qa1964/_index.html.
 			let xcodebuildAction: BuildArguments.Action = sdk.isDevice ? .archive : .build
-			return BuildSettings.load(with: argsForLoading, for: xcodebuildAction)
+			return BuildSettings.load(with: argsForLoading, useRawArguments: isUIKitForMac, for: xcodebuildAction)
 				.filter { settings in
 					// Only copy build products that are frameworks
 					guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {

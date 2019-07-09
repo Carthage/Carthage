@@ -297,22 +297,9 @@ extension URL {
 	/// Returns the first `URL` to match `<self>/Headers/*-Swift.h`. Otherwise `nil`.
 	internal func swiftHeaderURL() -> URL? {
 
-		var libraryIdentifier: String = ""
-		var libraryPath: String = ""
-		if self.pathExtension == "xcframework" {
-			let xcFrameworkInfo = Bundle(url: self)?
-				.infoDictionary
-				.flatMap(XCFrameworkInfo.init)
-			let firstLibrary =  xcFrameworkInfo?
-				.availableLibraries
-				.first
-			libraryIdentifier = firstLibrary?
-				.identifier ?? ""
-			libraryPath = firstLibrary?.path ?? ""
-		}
-
-		let headersURL = self.appendingPathComponent(libraryIdentifier)
-			.appendingPathComponent(libraryPath)
+		let xcFrameworkLibraryIdAndPath: (identifier: String, path: String)? = self.xcFrameworkLibraryIdentifiedAndPath()
+		let headersURL = self.appendingPathComponent(xcFrameworkLibraryIdAndPath?.identifier ?? "" )
+			.appendingPathComponent(xcFrameworkLibraryIdAndPath?.path ?? "")
 			.appendingPathComponent("Headers", isDirectory: true)
 			.resolvingSymlinksInPath()
 		let dirContents = try? FileManager.default.contentsOfDirectory(at: headersURL, includingPropertiesForKeys: [], options: [])
@@ -322,26 +309,39 @@ extension URL {
 	/// Returns the first `URL` to match `<self>/Modules/*.swiftmodule`. Otherwise `nil`.
 	internal func swiftmoduleURL() -> URL? {
 
-		var libraryIdentifier: String = ""
-		var libraryPath: String = ""
+		let xcFrameworkLibraryIdAndPath: (identifier: String, path: String)? = self.xcFrameworkLibraryIdentifiedAndPath()
+		let modulesURL = self.appendingPathComponent(xcFrameworkLibraryIdAndPath?.identifier ?? "" )
+			.appendingPathComponent(xcFrameworkLibraryIdAndPath?.path ?? "")
+			.appendingPathComponent("Modules", isDirectory: true)
+			.resolvingSymlinksInPath()
+		let dirContents = try? FileManager.default.contentsOfDirectory(at: modulesURL, includingPropertiesForKeys: [], options: [])
+		return dirContents?.first { $0.absoluteString.contains("swiftmodule") }
+	}
+
+	func xcFrameworkLibraryIdentifiedAndPath() -> (String, String)? {
+
+		let libraryIdentifier: String
+		let libraryPath: String
 		if self.pathExtension == "xcframework" {
 			let xcFrameworkInfo = Bundle(url: self)?
 				.infoDictionary
 				.flatMap(XCFrameworkInfo.init)
-			let firstLibrary =  xcFrameworkInfo?
-				.availableLibraries
-				.first
-			libraryIdentifier = firstLibrary?
-				.identifier ?? ""
-			libraryPath = firstLibrary?.path ?? ""
-		}
 
-		let headersURL = self.appendingPathComponent(libraryIdentifier)
-			.appendingPathComponent(libraryPath)
-			.appendingPathComponent("Modules", isDirectory: true)
-			.resolvingSymlinksInPath()
-		let dirContents = try? FileManager.default.contentsOfDirectory(at: headersURL, includingPropertiesForKeys: [], options: [])
-		return dirContents?.first { $0.absoluteString.contains("swiftmodule") }
+			guard let firstLibrary = xcFrameworkInfo?
+				.availableLibraries
+				.first else {
+					return nil
+			}
+			libraryIdentifier = firstLibrary
+				.identifier
+			libraryPath = firstLibrary.path
+
+			return (libraryIdentifier, libraryPath)
+
+		}
+		else {
+			return nil
+		}
 	}
 }
 
