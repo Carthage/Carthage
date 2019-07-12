@@ -57,7 +57,7 @@ final class InputFilesInferrerSpec: QuickSpec {
                         sut.builtFrameworkFilter = builtFrameworkFilter
                     }
 
-                    it("should resolve dependncies at a enumerator's path") {
+                    it("should resolve dependencies at a enumerator's path") {
                         let result = sut.inputFiles(for: URL(fileURLWithPath: "/Root"), userInputFiles: .empty)
                             .collect()
                             .single()
@@ -91,7 +91,7 @@ final class InputFilesInferrerSpec: QuickSpec {
                         sut.builtFrameworkFilter = builtFrameworkFilter
                     }
                     
-                    it("should resolve dependncies at a first enumerator's path") {
+                    it("should resolve dependencies at a first enumerator's path") {
                         let result = sut.inputFiles(for: URL(fileURLWithPath: "/Root"), userInputFiles: .empty)
                             .collect()
                             .single()
@@ -171,7 +171,7 @@ final class InputFilesInferrerSpec: QuickSpec {
                         sut.builtFrameworkFilter = builtFrameworkFilter
                     }
 
-                    it("should resolve dependncies at user input file's path") {
+                    it("should resolve dependencies at user input file's path") {
                         let result = sut.inputFiles(
                                 for: URL(fileURLWithPath: "/Root"),
                                 userInputFiles: SignalProducer([URL(fileURLWithPath: "/User-Frameworks/A.framework")])
@@ -298,7 +298,7 @@ final class InputFilesInferrerSpec: QuickSpec {
             let platform: Platform = .iOS
             
             describe("default framework search path") {
-                it("should combine project ULR and platform-related relative path") {
+                it("should combine project URL and platform-related relative path") {
                     let path = InputFilesInferrer.defaultFrameworkSearchPath(forProjectIn: projectDirectory, platform: platform)
                     expect(path).to(equal(URL(fileURLWithPath: "/Project/Directory/Carthage/Build/iOS/")))
                 }

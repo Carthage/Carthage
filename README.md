@@ -165,7 +165,7 @@ Important to undestand, that Carthage won't resolve transient dependencies for y
 
 ###### Automatic depencencies copying FRAMEWORK_SEARCH_PATHS
 
-If you're working on a development dependencies and would like to utilize `--auto` flag to automate copying of the build artifacts you also can be interested in using `--use-framework-search-paths` flag. This will instruct Carthage to search for a linked dependcies and copy them using `FRAMEWORK_SEARCH_PATHS` environment variable.
+If you're working on a development dependencies and would like to utilize `--auto` flag to automate copying of the build artifacts you also can be interested in using `--use-framework-search-paths` flag. This will instruct Carthage to search for a linked dependencies and copy them using `FRAMEWORK_SEARCH_PATHS` environment variable.
 
 ##### For both platforms
 
