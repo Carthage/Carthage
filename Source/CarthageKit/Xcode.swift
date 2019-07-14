@@ -312,8 +312,14 @@ internal enum PackageType: String {
 private func copyBuildProductIntoDirectory(_ directoryURL: URL, _ settings: BuildSettings) -> SignalProducer<URL, CarthageError> {
 	let target = settings.wrapperName.map(directoryURL.appendingPathComponent)
 	return SignalProducer(result: target.fanout(settings.wrapperURL))
-		.flatMap(.merge) { target, source in
-			return copyProduct(source.resolvingSymlinksInPath(), target)
+		.flatMap(.merge) { target, source -> SignalProducer<URL, CarthageError> in
+		// TODO: Fix this hack
+			var newSource = source
+			if target.path.contains("UIKitForMac") {
+				newSource = URL(fileURLWithPath: source.path.replacingOccurrences(of: "-iphoneos/", with: "-uikitformac/"))
+			}
+
+			return copyProduct(newSource.resolvingSymlinksInPath(), target)
 		}
 		.flatMap(.merge) { url in
 			return copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL, settings)
@@ -328,7 +334,15 @@ private func copyBuildProductIntoDirectory(_ directoryURL: URL, _ settings: Buil
 private func copyBCSymbolMapsForBuildProductIntoDirectory(_ directoryURL: URL, _ settings: BuildSettings) -> SignalProducer<URL, CarthageError> {
 	if settings.bitcodeEnabled.value == true {
 		return SignalProducer(result: settings.wrapperURL)
-			.flatMap(.merge) { wrapperURL in BCSymbolMapsForFramework(wrapperURL) }
+			.flatMap(.merge) { wrapperURL -> SignalProducer<URL, CarthageError> in
+				// TODO: Fix this hack
+				var newWrapperURL = wrapperURL
+				if directoryURL.path.contains("UIKitForMac") {
+					newWrapperURL = URL(fileURLWithPath: wrapperURL.path.replacingOccurrences(of: "-iphoneos/", with: "-uikitformac/"))					
+				}
+
+				return BCSymbolMapsForFramework(newWrapperURL) 
+			}
 			.copyFileURLsIntoDirectory(directoryURL)
 	} else {
 		return .empty
