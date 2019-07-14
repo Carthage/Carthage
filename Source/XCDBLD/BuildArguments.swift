@@ -37,6 +37,9 @@ public struct BuildArguments {
 	/// The path to the derived data.
 	public var derivedDataPath: String?
 
+	/// The name of the temporary folder used to build for a platform.
+	public var buildFolderName: String?
+
 	/// The platform SDK to build for.
 	public var sdk: SDK?
 
@@ -117,9 +120,13 @@ public struct BuildArguments {
 		}
 
 		if let derivedDataPath = derivedDataPath {
-			let standarizedPath = URL(fileURLWithPath: (derivedDataPath as NSString).expandingTildeInPath).standardizedFileURL.path
-			if !derivedDataPath.isEmpty && !standarizedPath.isEmpty {
-				args += [ "-derivedDataPath", standarizedPath ]
+			var standardizedPath = URL(fileURLWithPath: (derivedDataPath as NSString).expandingTildeInPath).standardizedFileURL.path
+			if !derivedDataPath.isEmpty && !standardizedPath.isEmpty {
+				if let buildFolderName = buildFolderName {
+					standardizedPath = (standardizedPath as NSString).appendingPathComponent(buildFolderName)
+				}
+
+				args += [ "-derivedDataPath", standardizedPath ]
 			}
 		}
 
@@ -152,6 +159,10 @@ public struct BuildArguments {
 		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]
 
 		args += [ "CARTHAGE=YES" ]
+
+		if let buildFolderName = buildFolderName {
+			args += [ "BUILD_FOLDER_NAME=\(buildFolderName)" ]
+		}
 
 		return args
 	}
