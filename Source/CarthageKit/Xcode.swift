@@ -658,6 +658,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				sdksByPlatform[platform] = [sdk]
 			}
 		}
+		/*
 		.flatMap(.concat) { sdksByPlatform -> SignalProducer<(Platform, [SDK]), CarthageError> in
 			if sdksByPlatform.isEmpty {
 				fatalError("No SDKs found for scheme \(scheme)")
@@ -889,6 +890,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				}
 				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
 		}
+		*/
 }
 
 /// Fixes problem when more than one xcode target has the same Product name for same Deployment target and configuration by deleting TARGET_BUILD_DIR.
