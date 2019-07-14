@@ -593,3 +593,29 @@ public func cloneOrFetch(
 			}
 		}
 }
+
+/// Clones the given project to the given destination URL,
+/// or fetches inside it if it has already been cloned.
+/// If a `cacheURL` is passed, first clone or fetch in the cache repository.
+/// Optionally takes a commitish to check for prior to fetching.
+///
+/// Returns a signal which will send a void value when the operation completes.
+public func cloneOrFetch(
+	remoteURL: GitURL,
+	cacheURL: URL?,
+	isCacheBare: Bool = true,
+	destinationURL: URL,
+	isDestinationBare: Bool,
+	commitish: String? = nil
+) -> SignalProducer<(), CarthageError> {
+	if let cacheURL = cacheURL {
+		return cloneOrFetch(remoteURL: remoteURL, to: cacheURL, isBare: isCacheBare, commitish: commitish)
+			.then(cloneOrFetch(remoteURL: GitURL(cacheURL.path), to: destinationURL, isBare: isDestinationBare, commitish: commitish))
+			.map { _ in () }
+			.take(last: 1)
+	} else {
+		return cloneOrFetch(remoteURL: remoteURL, to: destinationURL, isBare: isDestinationBare, commitish: commitish)
+			.map { _ in () }
+			.take(last: 1)
+	}
+}
