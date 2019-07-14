@@ -78,6 +78,10 @@ public struct ArchiveCommand: CommandProtocol {
 			return SignalProducer<Platform, CarthageError>(Platform.supportedPlatforms)
 				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
 					return SignalProducer(frameworks).map { framework in
+						if true {
+							return framework
+						}
+
 						return (platform.relativePath as NSString).appendingPathComponent(framework)
 					}
 				}
