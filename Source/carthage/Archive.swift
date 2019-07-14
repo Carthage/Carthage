@@ -86,7 +86,12 @@ public struct ArchiveCommand: CommandProtocol {
 					}
 				}
 				.map { relativePath -> (relativePath: String, absolutePath: String) in
-					let absolutePath = (options.directoryPath as NSString).appendingPathComponent(relativePath)
+					var absolutePath = options.directoryPath
+
+					if false {
+						absolutePath = (absolutePath as NSString).appendingPathComponent(relativePath)
+					}
+
 					return (relativePath, absolutePath)
 				}
 				.filter { filePath in FileManager.default.fileExists(atPath: filePath.absolutePath) }
