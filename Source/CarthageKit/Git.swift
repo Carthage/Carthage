@@ -531,72 +531,65 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 		}
 }
 
-/// Clones the given project to the given destination URL (defaults to the global
-/// repositories folder), or fetches inside it if it has already been cloned.
+/// Used by the cloneOrFetch function to indicate whether the operation will be a clone or fetching
+public enum CloneOrFetch {
+	case cloning, fetching
+}
+
+/// Clones the given project to the given local URL,
+/// or fetches inside it if it has already been cloned.
 /// Optionally takes a commitish to check for prior to fetching.
 ///
-/// Returns a signal which will send the operation type once started, and
-/// the URL to where the repository's folder will exist on disk, then complete
-/// when the operation completes.
+/// Returns a signal which will send the operation type once started,
+/// then complete when the operation completes.
 public func cloneOrFetch(
-	dependency: Dependency,
-	preferHTTPS: Bool,
-	destinationURL: URL = Constants.Dependency.repositoriesURL,
+	remoteURL: GitURL,
+	to repositoryURL: URL,
+	isBare: Bool,
 	commitish: String? = nil
-) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
-	let fileManager = FileManager.default
-	let repositoryURL = repositoryFileURL(for: dependency, baseURL: destinationURL)
-
-	return SignalProducer {
-			Result(at: destinationURL, attempt: {
-				try fileManager.createDirectory(at: $0, withIntermediateDirectories: true)
-				return dependency.gitURL(preferHTTPS: preferHTTPS)!
-			})
-		}
-		.flatMap(.merge) { (remoteURL: GitURL) -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
-			return isGitRepository(repositoryURL)
-				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
-					if isRepository {
-						let fetchProducer: () -> SignalProducer<(ProjectEvent?, URL), CarthageError> = {
-							guard FetchCache.needsFetch(forURL: remoteURL) else {
-								return SignalProducer(value: (nil, repositoryURL))
-							}
-
-							return SignalProducer(value: (.fetching(dependency), repositoryURL))
-								.concat(
-									fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
-										.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
-								)
-						}
-
-						// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
-						if let commitish = commitish {
-							return SignalProducer.zip(
-									branchExistsInRepository(repositoryURL, pattern: commitish),
-									commitExistsInRepository(repositoryURL, revision: commitish)
-								)
-								.flatMap(.concat) { branchExists, commitExists -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
-									// If the given commitish is a branch, we should fetch.
-									if branchExists || !commitExists {
-										return fetchProducer()
-									} else {
-										return SignalProducer(value: (nil, repositoryURL))
-									}
-								}
-						} else {
-							return fetchProducer()
-						}
-					} else {
-						// Either the directory didn't exist or it did but wasn't a git repository
-						// (Could happen if the process is killed during a previous directory creation)
-						// So we remove it, then clone
-						_ = try? fileManager.removeItem(at: repositoryURL)
-						return SignalProducer(value: (.cloning(dependency), repositoryURL))
-							.concat(
-								cloneRepository(remoteURL, repositoryURL)
-									.then(SignalProducer<(ProjectEvent?, URL), CarthageError>.empty)
-							)
+) -> SignalProducer<CloneOrFetch?, CarthageError> {
+	return isGitRepository(repositoryURL)
+		.flatMap(.merge) { isRepository -> SignalProducer<CloneOrFetch?, CarthageError> in
+			if isRepository {
+				let fetchProducer: () -> SignalProducer<CloneOrFetch?, CarthageError> = {
+					guard FetchCache.needsFetch(forURL: remoteURL) else {
+						return SignalProducer(value: nil)
 					}
+
+					return SignalProducer(value: CloneOrFetch.fetching)
+						.concat(
+							fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
+								.then(SignalProducer<CloneOrFetch?, CarthageError>.empty)
+						)
 				}
+
+				// If we've already cloned the repo, check for the revision, possibly skipping an unnecessary fetch
+				if let commitish = commitish {
+					return SignalProducer.zip(
+							branchExistsInRepository(repositoryURL, pattern: commitish),
+							commitExistsInRepository(repositoryURL, revision: commitish)
+						)
+						.flatMap(.concat) { branchExists, commitExists -> SignalProducer<CloneOrFetch?, CarthageError> in
+							// If the given commitish is a branch, we should fetch.
+							if branchExists || !commitExists {
+								return fetchProducer()
+							} else {
+								return SignalProducer(value: nil)
+							}
+						}
+				} else {
+					return fetchProducer()
+				}
+			} else {
+				// Either the directory didn't exist or it did but wasn't a git repository
+				// (Could happen if the process is killed during a previous directory creation)
+				// So we remove it, then clone
+				_ = try? FileManager.default.removeItem(at: repositoryURL)
+				return SignalProducer(value: CloneOrFetch.cloning)
+					.concat(
+						cloneRepository(remoteURL, repositoryURL, isBare: isBare)
+							.then(SignalProducer<CloneOrFetch?, CarthageError>.empty)
+					)
+			}
 		}
 }

@@ -1520,3 +1520,39 @@ internal func relativeLinkDestination(for dependency: Dependency, subdirectory: 
 
 	return linkDestinationPath
 }
+
+/// Clones the given project to the given destination URL (defaults to the global
+/// repositories folder), or fetches inside it if it has already been cloned.
+/// Optionally takes a commitish to check for prior to fetching.
+///
+/// Returns a signal which will send the operation type once started, and
+/// the URL to where the repository's folder will exist on disk, then complete
+/// when the operation completes.
+public func cloneOrFetch(
+	dependency: Dependency,
+	preferHTTPS: Bool,
+	destinationURL: URL = Constants.Dependency.repositoriesURL,
+	commitish: String? = nil
+) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
+	return SignalProducer {
+			Result(at: destinationURL, attempt: {
+				try FileManager.default.createDirectory(at: $0, withIntermediateDirectories: true)
+			})
+		}
+		.flatMap(.merge) { () -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
+			let remoteURL = dependency.gitURL(preferHTTPS: preferHTTPS)!
+			let repositoryURL = repositoryFileURL(for: dependency, baseURL: destinationURL)
+
+			return cloneOrFetch(remoteURL: remoteURL, to: repositoryURL, isBare: true, commitish: commitish)
+				.map { (cloneOrFetch) -> (ProjectEvent?, URL) in
+					switch cloneOrFetch {
+					case .none:
+						return (nil, repositoryURL)
+					case .some(.cloning):
+						return (.cloning(dependency), repositoryURL)
+					case .some(.fetching):
+						return (.fetching(dependency), repositoryURL)
+					}
+				}
+		}
+}
