@@ -921,6 +921,16 @@ private func build(sdk: SDK,
 	var argsForLoading = buildArgs
 	argsForLoading.sdk = sdk
 
+	var buildFolderName = sdk.platform.rawValue
+
+	if buildFolderName == "Mac" && isUIKitForMac {
+		buildFolderName = "UIKitForMac"
+	} else if sdk.isSimulator {
+		buildFolderName += "Simulator"
+	}
+
+	argsForLoading.buildFolderName = buildFolderName
+
 	var argsForBuilding = argsForLoading
 	argsForBuilding.onlyActiveArchitecture = false
 
