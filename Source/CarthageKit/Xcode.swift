@@ -658,6 +658,39 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				sdksByPlatform[platform] = [sdk]
 			}
 		}
+		.flatMap(.concat) { sdksByPlatform -> SignalProducer<TaskEvent<URL>, CarthageError> in
+			if sdksByPlatform.isEmpty {
+				fatalError("No SDKs found for scheme \(scheme)")
+			}
+
+			if true && options.useXCFrameworks {
+				let allSDKs = sdksByPlatform.map { $0.value.map { $0 } }
+
+				return createCombinedXCFramework(workingDirectoryURL, rootDirectoryURL, buildArgs, allSDKs)
+			}
+
+			return .empty
+			// let values = sdksByPlatform.map { ($0, Array($1)) }
+			// return SignalProducer(values)
+		}
+		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
+
+			guard !options.useXCFrameworks else {
+
+				return SignalProducer<URL, CarthageError>(value: builtProductURL)
+			}
+
+			return UUIDsForFramework(builtProductURL)
+				// Only attempt to create debug info if there is at least
+				// one dSYM architecture UUID in the framework. This can
+				// occur if the framework is a static framework packaged
+				// like a dynamic framework.
+				.take(first: 1)
+				.flatMap(.concat) { _ -> SignalProducer<TaskEvent<URL>, CarthageError> in
+					return createDebugInformation(builtProductURL)
+				}
+				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
+		}
 		/*
 		.flatMap(.concat) { sdksByPlatform -> SignalProducer<(Platform, [SDK]), CarthageError> in
 			if sdksByPlatform.isEmpty {
