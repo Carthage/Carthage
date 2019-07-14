@@ -926,6 +926,163 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		*/
 }
 
+private typealias Singlet = ([(URL, String)], [String: BuildSettings])
+
+private typealias Triplet = (Singlet,
+                             Singlet,
+                             Singlet)
+
+private func createCombinedXCFramework(_ workingDirectoryURL: URL, 
+									   _ rootDirectoryURL: URL,
+									   _ buildArgs: BuildArguments, 
+									   _ sdkGroups: [[SDK]]) -> SignalProducer<TaskEvent<URL>, CarthageError> {
+	let folderURL = rootDirectoryURL.appendingPathComponent("Carthage", isDirectory: true).appendingPathComponent("Build", isDirectory: true).resolvingSymlinksInPath()
+    let taskEvents = createProductDirectories(sdkGroups, buildArgs, workingDirectoryURL)
+
+    return taskEvents
+        .flatMapTaskEvents(.concat) { singlets in
+			var allPlatformsBuildSettings = [String: BuildSettings]()
+            var allPlatformsTargetURLs = [String : Set<URL>]()
+
+            let reducer: (inout [String : Set<URL>], (URL, String)) -> () = { acc, tuple in
+                if acc[tuple.1] == nil {
+
+                    acc[tuple.1] = Set([tuple.0])
+                }
+                else {
+                    acc[tuple.1]!.update(with: tuple.0)
+                }
+            }
+
+			_ = singlets.map { (singlet) in
+				let (urls, settings) = singlet
+
+				let targetsAndProductsDictionary = urls.reduce(into: [String: Set<URL>](), reducer)
+				for (target, urls) in targetsAndProductsDictionary {
+					allPlatformsBuildSettings[target] = settings[target]!
+
+					var unionedURLs = urls
+					if allPlatformsTargetURLs[target] != nil {
+						unionedURLs = unionedURLs.union(allPlatformsTargetURLs[target]!)
+					}
+					allPlatformsTargetURLs[target] = unionedURLs
+				}
+			}
+
+			return SignalProducer(allPlatformsTargetURLs)
+                .flatMap(.merge) { target, urls in
+                    let outputURL = allPlatformsBuildSettings[target]!
+						.xcFrameworkWrapperName
+                        .map(folderURL.appendingPathComponent)
+
+                    let adaptedURLs = Result<[URL], CarthageError>(Array(urls))
+
+                    return SignalProducer(outputURL.fanout(adaptedURLs))
+                        .flatMap(.merge) { createXCFramework($0.1, $0.0) }
+                        .then(SignalProducer(result: outputURL))
+            }
+        }
+}
+
+private func createProductDirectories(_ sdkGroups: [[SDK]],
+                                      _ buildArgs: BuildArguments,
+                                      _ workingDirectoryURL: URL) -> SignalProducer<TaskEvent<[Singlet]>, CarthageError> {
+    var simulatorSDKs = [SDK]()
+    var deviceSDKs = [SDK]()
+
+    for sdkGroup in sdkGroups {
+        let (theseSimulatorSDKs, theseDeviceSDKs) = SDK.splitSDKs(sdkGroup)
+        simulatorSDKs.append(contentsOf: theseSimulatorSDKs)
+        deviceSDKs.append(contentsOf: theseDeviceSDKs)
+    }
+
+	var iOSProducers = [SignalProducer<TaskEvent<[String : BuildSettings]>, CarthageError>]()
+
+	if let sdk = deviceSDKs.first(where: { $0 == .iPhoneOS }) {
+		let producer = settingsByTarget(build(sdk: sdk, with: buildArgs, in: workingDirectoryURL))
+
+		iOSProducers.append(producer)
+	}
+
+	if let sdk = simulatorSDKs.first(where: { $0 == .iPhoneSimulator }) {
+		let producer = settingsByTarget(build(sdk: sdk, with: buildArgs, in: workingDirectoryURL))
+
+		iOSProducers.append(producer)
+	}
+
+	if let sdk = deviceSDKs.first(where: { $0 == .macOSX }) {
+		let producer = settingsByTarget(build(sdk: sdk, with: buildArgs, forUIKitForMac: true, in: workingDirectoryURL))
+
+		iOSProducers.append(producer)
+	}
+
+	var watchOSProducers = [SignalProducer<TaskEvent<[String : BuildSettings]>, CarthageError>]()
+
+	if let sdk = deviceSDKs.first(where: { $0 == .watchOS }) {
+		let producer = settingsByTarget(build(sdk: sdk, with: buildArgs, in: workingDirectoryURL))
+
+		watchOSProducers.append(producer)
+	}
+
+	if let sdk = simulatorSDKs.first(where: { $0 == .watchSimulator }) {
+		let producer = settingsByTarget(build(sdk: sdk, with: buildArgs, in: workingDirectoryURL))
+
+		watchOSProducers.append(producer)
+	}
+
+	var tvOSProducers = [SignalProducer<TaskEvent<[String : BuildSettings]>, CarthageError>]()
+
+	if let sdk = deviceSDKs.first(where: { $0 == .tvOS }) {
+		let producer = settingsByTarget(build(sdk: sdk, with: buildArgs, in: workingDirectoryURL))
+
+		tvOSProducers.append(producer)
+	}
+
+	if let sdk = simulatorSDKs.first(where: { $0 == .tvSimulator }) {
+		let producer = settingsByTarget(build(sdk: sdk, with: buildArgs, in: workingDirectoryURL))
+
+		tvOSProducers.append(producer)
+	}
+
+	var producers = iOSProducers
+	producers.append(contentsOf: watchOSProducers)
+	producers.append(contentsOf: tvOSProducers)
+
+    let tmpProductDirTemplate = "carthage-xcframework-tmp.XXXXXX"
+
+    return FileManager.default.reactive.createTemporaryDirectoryWithTemplate(tmpProductDirTemplate).flatMap(.merge) { (directoryURL) -> SignalProducer<TaskEvent<[Singlet]>, CarthageError> in
+        return createPlatformDirectories(directoryURL, producers)
+    }
+}
+
+private func createPlatformDirectories(_ directoryURL: URL, _ producers: [SignalProducer<TaskEvent<[String: BuildSettings]>, CarthageError>]) -> SignalProducer<TaskEvent<[Singlet]>, CarthageError> {
+	let all = SignalProducer.merge(producers)
+
+	return all.flatMap(.concat) { event -> SignalProducer<TaskEvent<Singlet>, CarthageError> in
+		let singlet = createBuildEvent(directoryURL, event)
+
+		return singlet
+	}
+	.collectTaskEvents()
+}
+
+private func createBuildEvent(_ directoryURL: URL, _ event: TaskEvent<[String: BuildSettings]>) -> SignalProducer<TaskEvent<Singlet>, CarthageError> {
+	return event.producerMap { (d) -> SignalProducer<Singlet, CarthageError> in
+		return SignalProducer(d).flatMap(.merge) { targetAndSettings in
+			let (target, settings) = targetAndSettings
+
+			return copyBuildProductIntoDirectory(settings.productDestinationPath(in: directoryURL.appendingPathComponent(settings.settings["BUILD_FOLDER_NAME"]!)), settings)
+				.zip(with: SignalProducer<String, CarthageError>(value: target))
+				.collect()
+				.flatMap(.merge) { targetsDestinationURLs -> SignalProducer<Singlet, CarthageError> in
+					let value: Singlet = (targetsDestinationURLs, d)
+
+					return SignalProducer<Singlet, CarthageError>(value: value)
+			}
+		}
+	}
+}
+
 /// Fixes problem when more than one xcode target has the same Product name for same Deployment target and configuration by deleting TARGET_BUILD_DIR.
 private func resolveSameTargetName(for settings: BuildSettings) -> SignalProducer<BuildSettings, CarthageError> {
 	switch settings.targetBuildDirectory {
