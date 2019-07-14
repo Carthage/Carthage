@@ -14,7 +14,7 @@ matrix:
       language: objective-c
       osx_image: xcode10.1
       script:
-        - make test
+        - make clean && SWIFTPM_BOOTSTRAP=true make test
       env: JOB=CI_TEST_10_1
     - os: osx
       language: objective-c
@@ -22,7 +22,7 @@ matrix:
       script:
         - brew uninstall carthage
         - HOMEBREW_NO_AUTO_UPDATE=1 brew install bats
-        - make install
+        - make clean && SWIFTPM_BOOTSTRAP=true make install
         - bats IntegrationTests
       env:
         - JOB=CI_INTEGRATION_TESTS

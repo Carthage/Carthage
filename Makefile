@@ -9,7 +9,8 @@ OUTPUT_PACKAGE=Carthage.pkg
 CARTHAGE_EXECUTABLE=./.build/release/carthage
 BINARIES_FOLDER=/usr/local/bin
 
-SWIFT_BUILD_FLAGS=--configuration release -Xswiftc -suppress-warnings
+PWD := $(shell pwd)
+SWIFT_BUILD_FLAGS=--skip-update --configuration release -Xswiftc -suppress-warnings
 
 SWIFTPM_DISABLE_SANDBOX_SHOULD_BE_FLAGGED:=$(shell test -n "$${HOMEBREW_SDKROOT}" && echo should_be_flagged)
 ifeq ($(SWIFTPM_DISABLE_SANDBOX_SHOULD_BE_FLAGGED), should_be_flagged)
@@ -39,17 +40,20 @@ all: installables
 
 clean:
 	swift package clean
+	swift package reset
 
 test:
 	$(RM_SAFELY) ./.build/debug/CarthagePackageTests.xctest
-	swift build --build-tests -Xswiftc -suppress-warnings
+	swift package --skip-update resolve
+	swift build --skip-update --build-tests -Xswiftc -suppress-warnings -Xswiftc -Xcc -Xswiftc -fmodule-map-file=$(PWD)/`find .build/checkouts -name "swift-llbuild.git*"`/products/libllbuild/include/module.modulemap
 	$(CP) -R Tests/CarthageKitTests/Resources ./.build/debug/CarthagePackageTests.xctest/Contents
 	$(CP) Tests/CarthageKitTests/fixtures/CartfilePrivateOnly.zip ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
 	script/copy-fixtures ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
 	swift test --skip-build
 
 installables:
-	swift build $(SWIFT_BUILD_FLAGS)
+	swift package --skip-update resolve
+	swift build $(SWIFT_BUILD_FLAGS) -Xswiftc -Xcc -Xswiftc -fmodule-map-file=$(PWD)/`find .build/checkouts -name "swift-llbuild.git*"`/products/libllbuild/include/module.modulemap
 
 package: installables
 	$(MKDIR) "$(CARTHAGE_TEMPORARY_FOLDER)$(BINARIES_FOLDER)"
