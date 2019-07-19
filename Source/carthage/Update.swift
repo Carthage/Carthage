@@ -87,7 +87,8 @@ public struct UpdateCommand: CommandProtocol {
 	public let function = "Update and rebuild the project's dependencies"
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
-		return options.loadProject()
+		return migrateCacheIfNecessary()
+			.then(options.loadProject())
 			.flatMap(.merge) { project -> SignalProducer<(), CarthageError> in
 
 				let checkDependencies: SignalProducer<(), CarthageError>

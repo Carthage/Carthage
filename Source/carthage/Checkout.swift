@@ -59,7 +59,8 @@ public struct CheckoutCommand: CommandProtocol {
 	public let function = "Check out the project's dependencies"
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
-		return self.checkoutWithOptions(options)
+		return migrateCacheIfNecessary()
+			.then(self.checkoutWithOptions(options))
 			.waitOnCommand()
 	}
 

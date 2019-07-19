@@ -87,7 +87,8 @@ public struct OutdatedCommand: CommandProtocol {
 	public let function = "Check for compatible updates to the project's dependencies"
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
-		return options.loadProject()
+		return migrateCacheIfNecessary()
+			.then(options.loadProject())
 			.flatMap(.merge) { $0.outdatedDependencies(options.isVerbose) }
 			.on(value: { outdatedDependencies in
 				let formatting = options.colorOptions.formatting

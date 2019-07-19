@@ -530,3 +530,9 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 			}
 		}
 }
+
+/// Gets the remote URL of a repository
+public func getRemoteURLInRepository(_ repositoryFileURL: URL, remote: String = "origin") -> SignalProducer<String, CarthageError> {
+	return ensureDirectoryExistsAtURL(repositoryFileURL)
+		.then(launchGitTask([ "remote", "get-url", remote ], repositoryFileURL: repositoryFileURL))
+}

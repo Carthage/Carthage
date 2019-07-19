@@ -39,7 +39,8 @@ public struct ArchiveCommand: CommandProtocol {
 
 	// swiftlint:disable:next function_body_length
 	public func run(_ options: Options) -> Result<(), CarthageError> {
-		return archiveWithOptions(options)
+		return migrateCacheIfNecessary()
+			.then(archiveWithOptions(options))
 			.waitOnCommand()
 	}
 
