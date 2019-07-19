@@ -315,8 +315,8 @@ private func copyBuildProductIntoDirectory(_ directoryURL: URL, _ settings: Buil
 		.flatMap(.merge) { target, source -> SignalProducer<URL, CarthageError> in
 		// TODO: Fix this hack
 			var newSource = source
-			if target.path.contains("UIKitForMac") {
-				newSource = URL(fileURLWithPath: source.path.replacingOccurrences(of: "-iphoneos/", with: "-uikitformac/"))
+			if target.path.contains("MacCatalyst") {
+				newSource = URL(fileURLWithPath: source.path.replacingOccurrences(of: "-iphoneos/", with: "-maccatalyst/"))
 			}
 
 			return copyProduct(newSource.resolvingSymlinksInPath(), target)
@@ -337,8 +337,8 @@ private func copyBCSymbolMapsForBuildProductIntoDirectory(_ directoryURL: URL, _
 			.flatMap(.merge) { wrapperURL -> SignalProducer<URL, CarthageError> in
 				// TODO: Fix this hack
 				var newWrapperURL = wrapperURL
-				if directoryURL.path.contains("UIKitForMac") {
-					newWrapperURL = URL(fileURLWithPath: wrapperURL.path.replacingOccurrences(of: "-iphoneos/", with: "-uikitformac/"))					
+				if directoryURL.path.contains("MacCatalyst") {
+					newWrapperURL = URL(fileURLWithPath: wrapperURL.path.replacingOccurrences(of: "-iphoneos/", with: "-maccatalyst/"))
 				}
 
 				return BCSymbolMapsForFramework(newWrapperURL) 
@@ -650,7 +650,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			if var sdks = sdksByPlatform[platform] {
 				sdks.insert(sdk)
 				sdksByPlatform.updateValue(sdks, forKey: platform)
-				if platform == .iOS && settings.supportsUIKitForMac.value == true && options.useXCFrameworks {
+				if platform == .iOS && settings.supportsMacCatalyst.value == true && options.useXCFrameworks {
 					sdks.insert(.macOSX)
 					sdksByPlatform.updateValue(sdks, forKey: platform)
 				}
@@ -1011,7 +1011,7 @@ private func createProductDirectories(_ sdkGroups: [[SDK]],
 	}
 
 	if let sdk = deviceSDKs.first(where: { $0 == .macOSX }) {
-		let producer = settingsByTarget(build(sdk: sdk, with: buildArgs, forUIKitForMac: true, in: workingDirectoryURL))
+		let producer = settingsByTarget(build(sdk: sdk, with: buildArgs, forMacCatalyst: true, in: workingDirectoryURL))
 
 		iOSProducers.append(producer)
 	}
@@ -1105,7 +1105,7 @@ private func resolveSameTargetName(for settings: BuildSettings) -> SignalProduce
 // swiftlint:disable:next function_body_length
 private func build(sdk: SDK,
 	with buildArgs: BuildArguments,
-	forUIKitForMac isUIKitForMac: Bool = false,
+	forMacCatalyst isMacCatalyst: Bool = false,
 	in workingDirectoryURL: URL
 ) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
 	var argsForLoading = buildArgs
@@ -1113,8 +1113,8 @@ private func build(sdk: SDK,
 
 	var buildFolderName = sdk.platform.rawValue
 
-	if buildFolderName == "Mac" && isUIKitForMac {
-		buildFolderName = "UIKitForMac"
+	if buildFolderName == "Mac" && isMacCatalyst {
+		buildFolderName = "MacCatalyst"
 	} else if sdk.isSimulator {
 		buildFolderName += "Simulator"
 	}
@@ -1215,7 +1215,7 @@ private func build(sdk: SDK,
 						return result
 					}()
 
-					var buildScheme = xcodebuildTask(actions, argsForBuilding, useRawArguments: isUIKitForMac)
+					var buildScheme = xcodebuildTask(actions, argsForBuilding, useRawArguments: isMacCatalyst)
 					buildScheme.workingDirectoryPath = workingDirectoryURL.path
 
 					return buildScheme.launch()

@@ -217,8 +217,8 @@ public struct BuildSettings {
 		}
 
 		// TODO: could use self["variant"] maybe, is SDK is passed with variant
-		let isUIKitForMac = (self.supportsUIKitForMac.value ?? false) && (self["SDK_NAME"].map { $0.contains("macos") }.value ?? false)
-		let path = (basePath as NSString).appendingPathComponent(isUIKitForMac ? "\(pathComponent)-uikitformac" : pathComponent)
+		let isMacCatalyst = (self.supportsMacCatalyst.value ?? false) && (self["SDK_NAME"].map { $0.contains("macos") }.value ?? false)
+		let path = (basePath as NSString).appendingPathComponent(isMacCatalyst ? "\(pathComponent)-maccatalyst" : pathComponent)
 		return .success(path)
 	}
 
@@ -300,8 +300,8 @@ public struct BuildSettings {
 	}
 
 	/// Attepts to determine if UIKit for Mac is supported
-	public var supportsUIKitForMac: Result<Bool, CarthageError> {
-		self["SUPPORTS_UIKITFORMAC"].map { $0 == "YES" }
+	public var supportsMacCatalyst: Result<Bool, CarthageError> {
+		self["SUPPORTS_MACCATALYST"].map { $0 == "YES" }
 	}
 
 	/// Add subdirectory path if it's not possible to paste product to destination path
