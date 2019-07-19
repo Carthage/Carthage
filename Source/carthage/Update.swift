@@ -65,15 +65,18 @@ public struct UpdateCommand: CommandProtocol {
 			let buildDescription = "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)"
 
 			let dependenciesUsage = "the dependency names to update, checkout and build"
+			let defaultValue: String? = nil
 
-			return curry(Options.init)
-				<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
-				<*> mode <| Option(key: "build", defaultValue: true, usage: buildDescription)
-				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
-				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
-				<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
-				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
-				<*> CheckoutCommand.Options.evaluate(mode, dependenciesUsage: dependenciesUsage)
+			let options: Result<Options, CommandantError<CarthageError>> = curry(Options.init)
+							<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
+							<*> mode <| Option(key: "build", defaultValue: true, usage: buildDescription)
+							<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
+							<*> mode <| Option(key: "log-path", defaultValue: defaultValue, usage: "path to the xcode build output. A temporary file is used by default")
+							<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
+							<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
+							<*> CheckoutCommand.Options.evaluate(mode, dependenciesUsage: dependenciesUsage)
+
+			return options
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it
