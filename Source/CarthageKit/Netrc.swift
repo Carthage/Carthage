@@ -1,13 +1,13 @@
 import Foundation
 import Result
 
-internal struct NetrcMachine {
+struct NetrcMachine {
     let name: String
     let login: String
     let password: String
 }
 
-internal struct Netrc {
+struct Netrc {
     
     enum NetrcError: Error {
         case fileNotFound(URL)
@@ -19,7 +19,7 @@ internal struct Netrc {
     
     public let machines: [NetrcMachine]
     
-    internal init(machines: [NetrcMachine]) {
+    init(machines: [NetrcMachine]) {
         self.machines = machines
     }
     
