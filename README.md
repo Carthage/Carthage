@@ -153,7 +153,7 @@ You can add a Run Script phase to automatically warn you when one of your depend
 1. On your application targets’ `Build Phases` settings tab, click the `+` icon and choose `New Run Script Phase`. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
 ```sh
-/usr/local/bin/carthage outdated --xcode-warnings | 2>/dev/null
+/usr/local/bin/carthage outdated --xcode-warnings 2>/dev/null
 ```
 
 ##### Swift binary framework download compatibility
