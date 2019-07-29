@@ -27,7 +27,8 @@ public struct UpdateCommand: CommandProtocol {
 				isVerbose: isVerbose,
 				directoryPath: checkoutOptions.directoryPath,
 				logPath: logPath,
-				archive: false,
+                archive: false,
+                useNetrc: useNetrc,
                 dependenciesToBuild: dependenciesToUpdate
 			)
 		}
@@ -68,7 +69,9 @@ public struct UpdateCommand: CommandProtocol {
 			let buildDescription = "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)"
 
 			let dependenciesUsage = "the dependency names to update, checkout and build"
-            let netrcOption = Option(key: "use-netrc", defaultValue: false, usage: "use authentication credentials from ~/.netrc file when downloading binary only frameworks")
+            let netrcOption = Option(key: "use-netrc",
+                                     defaultValue: false,
+                                     usage: "use authentication credentials from ~/.netrc file when downloading binary only frameworks")
 
 			return curry(Options.init)
 				<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
