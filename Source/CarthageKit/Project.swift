@@ -101,6 +101,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Whether to use submodules for dependencies, or just check out their
 	/// working directories.
 	public var useSubmodules = false
+    
+    /// Wheter to use authentication credentials from ~/.netrc file
+    /// to download binary only frameworks.
+    public var useNetrc = false
 
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
@@ -236,15 +240,16 @@ public final class Project { // swiftlint:disable:this type_body_length
                     self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(binary), binary.url))
                     
                     var request = URLRequest(url: binary.url)
-                    
-                    // When downloading a binary, `carthage` will take into account the user's
-                    // `~/.netrc` file to determine authentication credentials
-                    switch Netrc.load() {
-                    case let .success(netrc):
-                        if let authorization = netrc.authorization(for: binary.url) {
-                            request.addValue(authorization, forHTTPHeaderField: "Authorization")
+                    if self.useNetrc {
+                        // When downloading a binary, `carthage` will take into account the user's
+                        // `~/.netrc` file to determine authentication credentials
+                        switch Netrc.load() {
+                        case let .success(netrc):
+                            if let authorization = netrc.authorization(for: binary.url) {
+                                request.addValue(authorization, forHTTPHeaderField: "Authorization")
+                            }
+                        case .failure(_): break // Do nothing
                         }
-                    case .failure(_): break // Do nothing
                     }
 
 					return URLSession.shared.reactive.data(with: request)

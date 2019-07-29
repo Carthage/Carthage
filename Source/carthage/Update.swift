@@ -13,6 +13,7 @@ public struct UpdateCommand: CommandProtocol {
 		public let isVerbose: Bool
 		public let logPath: String?
 		public let useNewResolver: Bool
+        public let useNetrc: Bool
 		public let buildOptions: CarthageKit.BuildOptions
 		public let checkoutOptions: CheckoutCommand.Options
 		public let dependenciesToUpdate: [String]?
@@ -27,7 +28,7 @@ public struct UpdateCommand: CommandProtocol {
 				directoryPath: checkoutOptions.directoryPath,
 				logPath: logPath,
 				archive: false,
-				dependenciesToBuild: dependenciesToUpdate
+                dependenciesToBuild: dependenciesToUpdate
 			)
 		}
 
@@ -48,6 +49,7 @@ public struct UpdateCommand: CommandProtocol {
 		             isVerbose: Bool,
 		             logPath: String?,
 		             useNewResolver: Bool,
+                     useNetrc: Bool,
 		             buildOptions: BuildOptions,
 		             checkoutOptions: CheckoutCommand.Options
 		) {
@@ -56,6 +58,7 @@ public struct UpdateCommand: CommandProtocol {
 			self.isVerbose = isVerbose
 			self.logPath = logPath
 			self.useNewResolver = useNewResolver
+            self.useNetrc = useNetrc
 			self.buildOptions = buildOptions
 			self.checkoutOptions = checkoutOptions
 			self.dependenciesToUpdate = checkoutOptions.dependenciesToCheckout
@@ -65,6 +68,7 @@ public struct UpdateCommand: CommandProtocol {
 			let buildDescription = "skip the building of dependencies after updating\n(ignored if --no-checkout option is present)"
 
 			let dependenciesUsage = "the dependency names to update, checkout and build"
+            let netrcOption = Option(key: "use-netrc", defaultValue: false, usage: "use authentication credentials from ~/.netrc file when downloading binary only frameworks")
 
 			return curry(Options.init)
 				<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
@@ -72,6 +76,7 @@ public struct UpdateCommand: CommandProtocol {
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> mode <| Option(key: "new-resolver", defaultValue: false, usage: "use the new resolver codeline when calculating dependencies. Default is false")
+                <*> mode <| netrcOption
 				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
 				<*> CheckoutCommand.Options.evaluate(mode, dependenciesUsage: dependenciesUsage)
 		}
@@ -90,7 +95,9 @@ public struct UpdateCommand: CommandProtocol {
 		return options.loadProject()
 			.flatMap(.merge) { project -> SignalProducer<(), CarthageError> in
 
-				let checkDependencies: SignalProducer<(), CarthageError>
+                project.useNetrc = options.useNetrc
+				
+                let checkDependencies: SignalProducer<(), CarthageError>
 				if let depsToUpdate = options.dependenciesToUpdate {
 					checkDependencies = project
 						.loadCombinedCartfile()
