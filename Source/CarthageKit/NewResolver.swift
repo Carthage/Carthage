@@ -1,7 +1,7 @@
 import Foundation
 import Result
 import ReactiveSwift
-import SPMUtility
+import Utility
 
 /// Responsible for resolving acyclic dependency graphs.
 public struct NewResolver: ResolverProtocol {

@@ -1,4 +1,4 @@
-import SPMUtility
+import Utility
 
 /// Defines the current CarthageKit version.
 public struct CarthageKitVersion {

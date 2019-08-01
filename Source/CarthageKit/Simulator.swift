@@ -1,5 +1,5 @@
 import Foundation
-import SPMUtility
+import Utility
 import XCDBLD
 
 internal struct Simulator: Decodable {

@@ -4,7 +4,7 @@ import Result
 import Tentacle
 import Nimble
 import Quick
-import SPMUtility
+import Utility
 
 import struct Foundation.URL
 

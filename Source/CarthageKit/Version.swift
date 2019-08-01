@@ -3,7 +3,7 @@
 import Foundation
 import Result
 import ReactiveSwift
-import SPMUtility
+import Utility
 
 extension Version {
 	/// Attempts to parse a semantic version from a PinnedVersion.

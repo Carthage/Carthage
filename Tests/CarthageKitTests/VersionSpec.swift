@@ -2,7 +2,7 @@ import CarthageKit
 import Foundation
 import Nimble
 import Quick
-import SPMUtility
+import Utility
 
 class VersionSpec: QuickSpec {
 	override func spec() {
