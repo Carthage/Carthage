@@ -249,14 +249,6 @@ public func cloneSubmoduleInWorkingDirectory(_ submodule: Submodule, _ workingDi
 		.then(purgeGitDirectories)
 }
 
-/// Recursively checks out the given submodule's revision, in its working
-/// directory.
-private func checkoutSubmodule(_ submodule: Submodule, _ submoduleWorkingDirectoryURL: URL) -> SignalProducer<(), CarthageError> {
-	return launchGitTask([ "checkout", "--quiet", submodule.sha ], repositoryFileURL: submoduleWorkingDirectoryURL)
-		.then(launchGitTask([ "submodule", "--quiet", "update", "--init", "--recursive" ], repositoryFileURL: submoduleWorkingDirectoryURL))
-		.then(SignalProducer<(), CarthageError>.empty)
-}
-
 /// Parses each key/value entry from the given config file contents, optionally
 /// stripping a known prefix/suffix off of each key.
 private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keySuffix: String = "") -> SignalProducer<(String, String), NoError> {
@@ -500,9 +492,9 @@ public func isGitRepository(_ directoryURL: URL) -> SignalProducer<Bool, NoError
 		.flatMapError { _ in SignalProducer(value: false) }
 }
 
-/// Adds the given submodule to the given repository, cloning from `fetchURL` if
-/// the desired revision does not exist or the submodule needs to be cloned.
-public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Submodule, _ fetchURL: GitURL) -> SignalProducer<(), CarthageError> {
+/// Adds the given submodule to the given repository or update the submodule if it's already added.
+/// `cacheURLMap` maps from a remote URL to an optional local cache URL
+public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Submodule, cacheURLMap: ((GitURL) -> URL?)?) -> SignalProducer<(), CarthageError> {
 	let submoduleDirectoryURL = repositoryFileURL.appendingPathComponent(submodule.path, isDirectory: true)
 
 	return isGitRepository(submoduleDirectoryURL)
@@ -512,16 +504,26 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 		}
 		.flatMap(.merge) { submoduleExists -> SignalProducer<(), CarthageError> in
 			if submoduleExists {
-				// Just check out and stage the correct revision.
-				return fetchRepository(submoduleDirectoryURL, remoteURL: fetchURL, refspec: "+refs/heads/*:refs/remotes/origin/*")
+				return cloneOrFetch(
+						remoteURL: submodule.url,
+						cacheURL: cacheURLMap?(submodule.url),
+						destinationURL: submoduleDirectoryURL,
+						isDestinationBare: false,
+						commitish: submodule.sha
+					)
 					.then(
 						launchGitTask(
 							["config", "--file", ".gitmodules", "submodule.\(submodule.name).url", submodule.url.urlString],
 							repositoryFileURL: repositoryFileURL
 						)
 					)
-					.then(launchGitTask([ "submodule", "--quiet", "sync", "--recursive", submoduleDirectoryURL.path ], repositoryFileURL: repositoryFileURL))
-					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+					.then(launchGitTask([ "submodule", "--quiet", "sync", submoduleDirectoryURL.path ], repositoryFileURL: repositoryFileURL))
+					.then(checkoutRepositoryToDirectory(submoduleDirectoryURL, submoduleDirectoryURL, force: false, revision: submodule.sha))
+					.then(submodulesInRepository(submoduleDirectoryURL)
+						.flatMap(.concat) { submoduleOfSubmodule -> SignalProducer<(), CarthageError> in
+							return addSubmoduleToRepository(submoduleDirectoryURL, submoduleOfSubmodule, cacheURLMap: cacheURLMap)
+						}
+					)
 					.then(launchGitTask([ "add", "--force", submodule.path ], repositoryFileURL: repositoryFileURL))
 					.then(SignalProducer<(), CarthageError>.empty)
 			} else {
@@ -543,11 +545,20 @@ public func addSubmoduleToRepository(_ repositoryFileURL: URL, _ submodule: Subm
 
 				// If it doesn't exist, clone and initialize a submodule from our
 				// local bare repository.
-				return cloneRepository(fetchURL, submoduleDirectoryURL, isBare: false)
-					.then(launchGitTask([ "remote", "set-url", "origin", submodule.url.urlString ], repositoryFileURL: submoduleDirectoryURL))
-					.then(checkoutSubmodule(submodule, submoduleDirectoryURL))
+				return cloneOrFetch(
+						remoteURL: submodule.url,
+						cacheURL: cacheURLMap?(submodule.url),
+						destinationURL: submoduleDirectoryURL,
+						isDestinationBare: false,
+						commitish: submodule.sha
+					)
+					.then(checkoutRepositoryToDirectory(submoduleDirectoryURL, submoduleDirectoryURL, force: false, revision: submodule.sha))
+					.then(submodulesInRepository(submoduleDirectoryURL)
+						.flatMap(.concat) { submoduleOfSubmodule -> SignalProducer<(), CarthageError> in
+							return addSubmoduleToRepository(submoduleDirectoryURL, submoduleOfSubmodule, cacheURLMap: cacheURLMap)
+						}
+					)
 					.then(addSubmodule)
-					.then(launchGitTask([ "submodule", "--quiet", "init", "--", submodule.path ], repositoryFileURL: repositoryFileURL))
 					.then(SignalProducer<(), CarthageError>.empty)
 			}
 		}

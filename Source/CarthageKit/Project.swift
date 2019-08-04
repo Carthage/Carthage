@@ -866,7 +866,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 			if let submodule = submodule {
 				// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
 				// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
-				return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
+				return addSubmoduleToRepository(self.directoryURL, submodule, cacheURLMap: { (gitURL: GitURL) in
+						let dependency = Dependency.git(gitURL)
+						return repositoryFileURL(for: dependency)
+					})
 					.startOnQueue(self.gitOperationQueue)
 					.then(symlinkCheckoutPaths)
 			} else {
