@@ -634,6 +634,8 @@ public func cloneOrFetch(
 	if let cacheURL = cacheURL {
 		return cloneOrFetch(remoteURL: remoteURL, to: cacheURL, isBare: isCacheBare, commitish: commitish)
 			.then(cloneOrFetch(remoteURL: GitURL(cacheURL.path), to: destinationURL, isBare: isDestinationBare, commitish: commitish))
+			// Set the origin remote back to the actual remote URL
+			.then(launchGitTask([ "remote", "set-url", "origin", remoteURL.urlString ], repositoryFileURL: destinationURL))
 			.map { _ in () }
 			.take(last: 1)
 	} else {
