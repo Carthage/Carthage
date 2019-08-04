@@ -578,9 +578,10 @@ public func cloneOrFetch(
 						return SignalProducer(value: nil)
 					}
 
+					let refspec = isBare ? "+refs/heads/*:refs/heads/*" : "+refs/heads/*:refs/remotes/origin/*"
 					return SignalProducer(value: CloneOrFetch.fetching)
 						.concat(
-							fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: "+refs/heads/*:refs/heads/*")
+							fetchRepository(repositoryURL, remoteURL: remoteURL, refspec: refspec)
 								.then(SignalProducer<CloneOrFetch?, CarthageError>.empty)
 						)
 				}
