@@ -832,8 +832,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 		return createVersionFileForCommitish(commitish, dependencyName: projectName, buildProducts: frameworkURLs, rootDirectoryURL: self.directoryURL)
 	}
 
-	private let gitOperationQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.gitOperationQueue")
-
 	/// Checks out the given dependency into its intended working directory,
 	/// cloning it first if need be.
 	private func checkoutDependency(
@@ -870,7 +868,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 						let dependency = Dependency.git(gitURL)
 						return repositoryFileURL(for: dependency)
 					})
-					.startOnQueue(self.gitOperationQueue)
 					.then(symlinkCheckoutPaths)
 			} else {
 				return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, force: true, revision: revision)
