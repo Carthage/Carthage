@@ -268,6 +268,9 @@ internal enum FrameworkType {
 
 	/// A static framework.
 	case `static`
+	
+	/// One of: action, bundle, kext, mdimporter, metallib, plugin, prefPane, qlgenerator, saver, xpc
+	case generic
 
 	init?(productType: ProductType, machOType: MachOType) {
 		switch (productType, machOType) {
@@ -276,6 +279,9 @@ internal enum FrameworkType {
 
 		case (.framework, .staticlib):
 			self = .static
+			
+		case (.genericBundle, .bundle):
+			self = .generic
 
 		case _:
 			return nil
@@ -837,7 +843,9 @@ public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<Tas
 
 	let executableName = builtProductURL.deletingPathExtension().lastPathComponent
 	if !executableName.isEmpty {
-		let executable = builtProductURL.appendingPathComponent(executableName).path
+		let executable = binaryURL(builtProductURL).recover(
+			builtProductURL.appendingPathComponent(executableName)
+		).path
 		let dSYM = dSYMURL.path
 		let dsymutilTask = Task("/usr/bin/xcrun", arguments: ["dsymutil", executable, "-o", dSYM])
 

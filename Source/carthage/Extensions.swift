@@ -95,15 +95,15 @@ internal struct ProjectEventSink {
 
 		case let .downloadingBinaries(dependency, release):
 			carthage.println(formatting.bullets + "Downloading " + formatting.projectName(dependency.name)
-				+ ".framework binary at " + formatting.quote(release))
+				+ " binary at " + formatting.quote(release))
 
 		case let .skippedDownloadingBinaries(dependency, message):
 			carthage.println(formatting.bullets + "Skipped downloading " + formatting.projectName(dependency.name)
-				+ ".framework binary due to the error:\n\t" + formatting.quote(message))
+				+ " binary due to the error:\n\t" + formatting.quote(message))
 
 		case let .skippedInstallingBinaries(dependency, error):
 			let output = """
-			\(formatting.bullets) Skipped installing \(formatting.projectName(dependency.name)).framework binary due to the error:
+			\(formatting.bullets) Skipped installing \(formatting.projectName(dependency.name)) binary due to the error:
 				\(formatting.quote(String(describing: error)))
 
 			    Falling back to building from the source

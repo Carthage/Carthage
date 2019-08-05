@@ -83,24 +83,23 @@ struct VersionFile: Codable {
 		for cachedFramework: CachedFramework,
 		platform: Platform,
 		binariesDirectoryURL: URL
-	) -> URL {
-		return binariesDirectoryURL
-			.appendingPathComponent(platform.rawValue, isDirectory: true)
-			.resolvingSymlinksInPath()
-			.appendingPathComponent("\(cachedFramework.name).framework", isDirectory: true)
+	) -> SignalProducer<URL, CarthageError> {
+		return enumerateSupportedFrameworks(target: cachedFramework.name,
+											inDirectory: binariesDirectoryURL,
+											isBuildDirectory: true,
+											allowedPlatforms: [platform])
+			.filterMap { $0.path.appendingPathComponent($0.name, isDirectory: true) }
 	}
 
 	func frameworkBinaryURL(
 		for cachedFramework: CachedFramework,
 		platform: Platform,
 		binariesDirectoryURL: URL
-	) -> URL {
-		return frameworkURL(
-			for: cachedFramework,
-			platform: platform,
-			binariesDirectoryURL: binariesDirectoryURL
-		)
-			.appendingPathComponent("\(cachedFramework.name)", isDirectory: false)
+	) -> SignalProducer<URL, CarthageError> {
+		return frameworkURL(for: cachedFramework,
+							 platform: platform,
+							 binariesDirectoryURL: binariesDirectoryURL)
+			.filterMap { binaryURL($0).value }
 	}
 
 	/// Sends the hashes of the provided cached framework's binaries in the
@@ -111,13 +110,14 @@ struct VersionFile: Codable {
 		binariesDirectoryURL: URL
 	) -> SignalProducer<String?, CarthageError> {
 		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
-			.flatMap(.concat) { cachedFramework -> SignalProducer<String?, CarthageError> in
-				let frameworkBinaryURL = self.frameworkBinaryURL(
+			.flatMap(.concat) { cachedFramework -> SignalProducer<URL, CarthageError> in
+				self.frameworkBinaryURL(
 					for: cachedFramework,
 					platform: platform,
 					binariesDirectoryURL: binariesDirectoryURL
 				)
-
+			}
+			.flatMap(.concat) { frameworkBinaryURL -> SignalProducer<String?, CarthageError> in
 				return hashForFileAtURL(frameworkBinaryURL)
 					.map { hash -> String? in
 						return hash
@@ -141,13 +141,14 @@ struct VersionFile: Codable {
 		localSwiftVersion: String
 	) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
-			.flatMap(.concat) { cachedFramework -> SignalProducer<Bool, CarthageError> in
-				let frameworkURL = self.frameworkURL(
+			.flatMap(.concat) { cachedFramework -> SignalProducer<URL, CarthageError> in
+				self.frameworkURL(
 					for: cachedFramework,
 					platform: platform,
 					binariesDirectoryURL: binariesDirectoryURL
 				)
-
+			}
+			.flatMap(.concat) { frameworkURL -> SignalProducer<Bool, CarthageError> in
 				if !isSwiftFramework(frameworkURL) {
 					return SignalProducer(value: true)
 				} else {
@@ -421,8 +422,8 @@ public func createVersionFileForCommitish(
 										     frameworkName: frameworkName,
 										     frameworkSwiftVersion: frameworkSwiftVersion)
 					let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
-					let binaryURL = url.appendingPathComponent(frameworkName, isDirectory: false)
-					return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
+					let binary = binaryURL(url).value ?? url.appendingPathComponent(frameworkName, isDirectory: false)
+					return SignalProducer.zip(hashForFileAtURL(binary), details)
 				}
 			}
 			.reduce(into: platformCaches) { (platformCaches: inout [String: [CachedFramework]], values: (String, FrameworkDetail)) in
