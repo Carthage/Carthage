@@ -4,7 +4,7 @@ import XCDBLD
 import ReactiveSwift
 
 /// Describes the type of packages file extensions
-public enum ProductExtension: String {
+public enum ProductExtension: String, CaseIterable {
 	/// A .framework package.
 	case framework = "framework"
 	
@@ -38,7 +38,7 @@ public enum ProductExtension: String {
 	/// A .xpc package.
 	case xpc = "xpc"
 	
-	public static let supportedExtensions: [ProductExtension] = [ .framework, .action, .bundle, .kext, .mdimporter, .metallib, .plugin, .prefPane, .qlgenerator, .saver, .xpc ]
+	public static let supportedExtensions: [ProductExtension] = ProductExtension.allCases
 	
 	/// Attempts to parse a product extension
 	public static func from(string: String) -> Result<ProductExtension, CarthageError> {
