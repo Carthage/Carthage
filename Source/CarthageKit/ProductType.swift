@@ -24,6 +24,4 @@ public enum ProductType: String {
 	public var isArchivable: Bool {
 	    return self == .framework || self == .genericBundle
 	}
-		return self == .framework || self == .genericBundle;
-	}
 }
