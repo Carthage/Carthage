@@ -62,7 +62,7 @@ public struct ArchiveCommand: CommandProtocol {
 					return BuildSettings.load(with: buildArguments)
 				}
 				.flatMap(.concat) { settings -> SignalProducer<String, CarthageError> in
-					if let wrapperName = settings.wrapperName.value, settings.productType.value?.archivable() ?? false {
+					if let wrapperName = settings.wrapperName.value, settings.productType.value?.isArchivable ?? false {
 						return .init(value: wrapperName)
 					} else {
 						return .empty
