@@ -13,7 +13,7 @@ extension BuildOptions: OptionsProtocol {
 	}
 
 	public static func evaluate(_ mode: CommandMode, addendum: String) -> Result<BuildOptions, CommandantError<CarthageError>> {
-		var platformUsage = "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')"
+		var platformUsage = "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', 'macCatalyst', or comma-separated values of the formers except for 'all')"
 		platformUsage += addendum
 
 		return curry(BuildOptions.init)
@@ -229,6 +229,9 @@ public enum BuildPlatform: Equatable {
 
 	/// Build only for tvOS.
 	case tvOS
+    
+    /// Build only for macCatalyst
+    case macCatalyst
 
 	/// Build for multiple platforms within the list.
 	case multiple([BuildPlatform])
@@ -250,6 +253,9 @@ public enum BuildPlatform: Equatable {
 
 		case .tvOS:
 			return [ .tvOS ]
+            
+        case .macCatalyst:
+            return [ .macCatalyst ]
 
 		case let .multiple(buildPlatforms):
 			return buildPlatforms.reduce(into: []) { set, buildPlatform in
@@ -276,6 +282,9 @@ extension BuildPlatform: CustomStringConvertible {
 
 		case .tvOS:
 			return "tvOS"
+            
+        case .macCatalyst:
+            return "macCatalyst"
 
 		case let .multiple(buildPlatforms):
 			return buildPlatforms.map { $0.description }.joined(separator: ", ")
@@ -291,6 +300,7 @@ extension BuildPlatform: ArgumentProtocol {
 		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
 		"watchOS": .watchOS, "watchsimulator": .watchOS,
 		"tvOS": .tvOS, "tvsimulator": .tvOS, "appletvos": .tvOS, "appletvsimulator": .tvOS,
+        "macCatalyst": .macCatalyst,
 		"all": .all,
 	]
 

@@ -164,7 +164,7 @@ public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments) -> 
 public func buildableSchemesInDirectory( // swiftlint:disable:this function_body_length
 	_ directoryURL: URL,
 	withConfiguration configuration: String,
-	forPlatforms platforms: Set<Platform> = []
+	forPlatforms platforms: Set<Platform>? = nil
 ) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> {
 	precondition(directoryURL.isFileURL)
 	let locator = ProjectLocator
@@ -195,8 +195,8 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 			/// Check whether we should the scheme by checking against the project. If we're building
 			/// from a workspace, then it might include additional targets that would trigger our
 			/// check.
-			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-			return shouldBuildScheme(buildArguments, platforms)
+            let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
+			return shouldBuildScheme(buildArguments, platforms ?? [])
 				.filter { $0 }
 				.map { _ in (scheme, project) }
 		}
@@ -209,8 +209,8 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 				.flatMap(.concat) { project, schemes -> SignalProducer<ProjectLocator, CarthageError> in
 					switch project {
 					case .workspace where schemes.contains(scheme):
-						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-						return shouldBuildScheme(buildArguments, platforms)
+                        let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration, platforms: platforms)
+						return shouldBuildScheme(buildArguments, platforms ?? [])
 							.filter { $0 }
 							.map { _ in project }
 
@@ -229,7 +229,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 			if !schemes.isEmpty {
 				return .init(schemes)
 			} else {
-				return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platforms))
+				return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platforms ?? []))
 			}
 		}
 }
@@ -429,7 +429,21 @@ private func shouldBuildFrameworkType(_ frameworkType: FrameworkType?) -> Bool {
 /// Determines whether the given scheme should be built automatically.
 private func shouldBuildScheme(_ buildArguments: BuildArguments, _ forPlatforms: Set<Platform>) -> SignalProducer<Bool, CarthageError> {
 	precondition(buildArguments.scheme != nil)
-
+    let diffSDKMap: [SDK: SDK] = forPlatforms
+        .reduce([:], { (prev, cur) -> [SDK: SDK] in
+            let platformSDKs = cur.SDKs
+            if platformSDKs.count == 1,
+                let platformSDK = platformSDKs.first {
+                var next = prev
+                cur.realPlatform.SDKs
+                    .forEach({ (realSDK) in
+                        next[realSDK] = platformSDK
+                    })
+                return next
+            } else {
+                return prev
+            }
+        })
 	return BuildSettings.load(with: buildArguments)
 		.flatMap(.concat) { settings -> SignalProducer<FrameworkType?, CarthageError> in
 			let frameworkType = SignalProducer(result: settings.frameworkType)
@@ -438,10 +452,22 @@ private func shouldBuildScheme(_ buildArguments: BuildArguments, _ forPlatforms:
 				return frameworkType
 					.flatMapError { _ in .empty }
 			} else {
-				return settings.buildSDKs
-					.filter { forPlatforms.contains($0.platform) }
-					.flatMap(.merge) { _ in frameworkType }
-					.flatMapError { _ in .empty }
+                if diffSDKMap.isEmpty {
+                    return settings.buildSDKs
+                        .filter { forPlatforms.contains($0.platform) }
+                        .flatMap(.merge) { _ in frameworkType }
+                        .flatMapError { _ in .empty }
+                } else {
+                    return settings.buildSDKs
+                        .map({ (sdk) -> SDK in
+                            let retVal = diffSDKMap[sdk] ?? sdk
+                            return retVal
+                        })
+                        .uniqueValues()
+                        .filter { forPlatforms.contains($0.platform) }
+                        .flatMap(.merge) { _ in frameworkType }
+                        .flatMapError { _ in .empty }
+                }
 			}
 		}
 		.filter(shouldBuildFrameworkType)
@@ -577,10 +603,11 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		scheme: scheme,
 		configuration: options.configuration,
 		derivedDataPath: options.derivedDataPath,
+        platforms: options.platforms,
 		toolchain: options.toolchain
 	)
 
-	return BuildSettings.SDKsForScheme(scheme, inProject: project)
+    return BuildSettings.SDKsForScheme(scheme, inProject: project, platforms: options.platforms)
 		.flatMap(.concat) { sdk -> SignalProducer<SDK, CarthageError> in
 			var argsForLoading = buildArgs
 			argsForLoading.sdk = sdk

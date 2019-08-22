@@ -125,6 +125,33 @@ public struct BuildSettings {
 			.take(first: 1)
 			.flatMap(.merge) { $0.buildSDKs }
 	}
+    
+    public static func SDKsForScheme(_ scheme: Scheme, inProject project: ProjectLocator, platforms: Set<Platform>) -> SignalProducer<SDK, CarthageError> {
+        let diffSDKMap: [SDK: SDK] = platforms
+            .reduce([:], { (prev, cur) -> [SDK: SDK] in
+                let platformSDKs = cur.SDKs
+                if platformSDKs.count == 1,
+                    let platformSDK = platformSDKs.first {
+                    var next = prev
+                    cur.realPlatform.SDKs
+                        .forEach({ (realSDK) in
+                            next[realSDK] = platformSDK
+                        })
+                    return next
+                } else {
+                    return prev
+                }
+            })
+        return load(with: BuildArguments(project: project, scheme: scheme, platforms: platforms))
+            .take(first: 1)
+            .flatMap(.merge, { (settings) -> SignalProducer<SDK, CarthageError> in
+                settings.buildSDKs.map({ (sdk) -> SDK in
+                    let retVal = diffSDKMap[sdk] ?? sdk
+                    return retVal
+                })
+            })
+            .uniqueValues()
+    }
 
 	/// Returns the value for the given build setting, or an error if it could
 	/// not be determined.

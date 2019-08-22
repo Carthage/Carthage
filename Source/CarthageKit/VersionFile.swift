@@ -26,6 +26,7 @@ struct VersionFile: Codable {
 		case iOS = "iOS"
 		case watchOS = "watchOS"
 		case tvOS = "tvOS"
+        case macCatalyst = "macCatalyst"
 	}
 
 	let commitish: String
@@ -34,6 +35,7 @@ struct VersionFile: Codable {
 	let iOS: [CachedFramework]?
 	let watchOS: [CachedFramework]?
 	let tvOS: [CachedFramework]?
+    let macCatalyst: [CachedFramework]?
 
 	/// The extension representing a serialized VersionFile.
 	static let pathExtension = "version"
@@ -51,6 +53,9 @@ struct VersionFile: Codable {
 
 		case .tvOS:
 			return tvOS
+            
+        case .macCatalyst:
+            return macCatalyst
 		}
 	}
 
@@ -59,13 +64,15 @@ struct VersionFile: Codable {
 		macOS: [CachedFramework]?,
 		iOS: [CachedFramework]?,
 		watchOS: [CachedFramework]?,
-		tvOS: [CachedFramework]?
+		tvOS: [CachedFramework]?,
+        macCatalyst: [CachedFramework]?
 	) {
 		self.commitish = commitish
 		self.macOS = macOS
 		self.iOS = iOS
 		self.watchOS = watchOS
 		self.tvOS = tvOS
+        self.macCatalyst = macCatalyst
 	}
 
 	init?(url: URL) {
@@ -377,7 +384,8 @@ private func createVersionFile(
 			macOS: platformCaches[Platform.macOS.rawValue],
 			iOS: platformCaches[Platform.iOS.rawValue],
 			watchOS: platformCaches[Platform.watchOS.rawValue],
-			tvOS: platformCaches[Platform.tvOS.rawValue])
+			tvOS: platformCaches[Platform.tvOS.rawValue],
+            macCatalyst: platformCaches[Platform.macCatalyst.rawValue])
 
 		return versionFile.write(to: versionFileURL)
 	}

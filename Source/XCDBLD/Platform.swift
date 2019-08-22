@@ -13,6 +13,9 @@ public enum Platform: String {
 
 	/// Apple TV device and simulator.
 	case tvOS = "tvOS"
+    
+    /// UIKit for Mac
+    case macCatalyst = "macCatalyst"
 
 	/// All supported build platforms.
 	public static let supportedPlatforms: [Platform] = [ .macOS, .iOS, .watchOS, .tvOS ]
@@ -31,6 +34,19 @@ public enum Platform: String {
 
 		case .tvOS:
 			return [ .tvOS, .tvSimulator ]
+            
+        case .macCatalyst:
+            return [ .macCatalyst ]
 		}
 	}
+    
+    public var realPlatform: Platform {
+        switch self {
+        case .macCatalyst:
+            return .iOS
+            
+        default:
+            return self
+        }
+    }
 }

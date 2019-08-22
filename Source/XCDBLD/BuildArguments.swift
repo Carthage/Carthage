@@ -71,6 +71,30 @@ public struct BuildArguments {
 		self.sdk = sdk
 		self.toolchain = toolchain
 	}
+    
+    public init(
+        project: ProjectLocator,
+        scheme: Scheme? = nil,
+        configuration: String? = nil,
+        derivedDataPath: String? = nil,
+        platforms: Set<Platform>?,
+        toolchain: String? = nil
+    ) {
+        self.project = project
+        self.scheme = scheme
+        self.configuration = configuration
+        self.derivedDataPath = derivedDataPath
+        if platforms?.count == 1,
+            let platform = platforms?.first,
+            platform.SDKs.count == 1,
+            let sdk = platform.SDKs.first
+        {
+            self.sdk = sdk
+        } else {
+            self.sdk = nil
+        }
+        self.toolchain = toolchain
+    }
 
 	/// The `xcodebuild` invocation corresponding to the receiver.
 	public var arguments: [String] {
@@ -99,6 +123,7 @@ public struct BuildArguments {
 			}
 		}
 
+        let additionalBuildOptions: [String]
 		if let sdk = sdk {
 			// Passing in -sdk macosx appears to break implicit dependency
 			// resolution (see Carthage/Carthage#347).
@@ -107,9 +132,12 @@ public struct BuildArguments {
 			// for macOS already, just let xcodebuild figure out the SDK on its
 			// own.
 			if sdk != .macOSX {
-				args += [ "-sdk", sdk.rawValue ]
+				args += [ "-sdk", sdk.realSDK.rawValue ]
 			}
-		}
+            additionalBuildOptions = sdk.additionalBuildOptions
+        } else {
+            additionalBuildOptions = []
+        }
 
 		if let toolchain = toolchain {
 			args += [ "-toolchain", toolchain ]
@@ -134,6 +162,8 @@ public struct BuildArguments {
 		// Disable code signing requirement for all builds
 		// Frameworks get signed in the copy-frameworks action
 		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]
+        
+        args += additionalBuildOptions
 
 		args += [ "CARTHAGE=YES" ]
 

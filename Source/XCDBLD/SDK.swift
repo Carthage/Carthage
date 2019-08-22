@@ -23,13 +23,16 @@ public enum SDK: String {
 
 	/// tvSimulator, for the Apple TV simulator.
 	case tvSimulator = "appletvsimulator"
+    
+    /// UIKit for Mac, builds as iPhoneOS
+    case macCatalyst = "maccatalyst"
 
-	public static let allSDKs: Set<SDK> = [.macOSX, .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator]
+    public static let allSDKs: Set<SDK> = [.macOSX, .iPhoneOS, .iPhoneSimulator, .watchOS, .watchSimulator, .tvOS, .tvSimulator, .macCatalyst]
 
 	/// Returns whether this is a device SDK.
 	public var isDevice: Bool {
 		switch self {
-		case .macOSX, .iPhoneOS, .watchOS, .tvOS:
+        case .macOSX, .iPhoneOS, .watchOS, .tvOS, .macCatalyst:
 			return true
 
 		case .iPhoneSimulator, .watchSimulator, .tvSimulator:
@@ -43,7 +46,7 @@ public enum SDK: String {
 		case .iPhoneSimulator, .watchSimulator, .tvSimulator:
 			return true
 
-		case .macOSX, .iPhoneOS, .watchOS, .tvOS:
+        case .macOSX, .iPhoneOS, .watchOS, .tvOS, .macCatalyst:
 			return false
 		}
 	}
@@ -62,8 +65,32 @@ public enum SDK: String {
 
 		case .macOSX:
 			return .macOS
+            
+        case .macCatalyst:
+            return .macCatalyst
 		}
 	}
+    
+    /// The real SDK to use when building
+    public var realSDK: SDK {
+        switch self {
+        case .macCatalyst:
+            return .iPhoneOS
+            
+        default:
+            return self
+        }
+    }
+    
+    /// Any additional build options to use when building
+    public var additionalBuildOptions: [String] {
+        switch self {
+        case .macCatalyst:
+            return ["SUPPORTS_MACCATALYST=YES"]
+        default:
+            return []
+        }
+    }
 
 	private static var aliases: [String: SDK] {
 		return ["tvos": .tvOS]
@@ -107,6 +134,9 @@ extension SDK: CustomStringConvertible {
 
 		case .tvSimulator:
 			return "tvOS Simulator"
+            
+        case .macCatalyst:
+            return "macCatalyst"
 		}
 	}
 }
