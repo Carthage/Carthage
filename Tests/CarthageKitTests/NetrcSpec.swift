@@ -34,6 +34,24 @@ class NetrcSpec: QuickSpec {
                 expect(machine?.password) == "qwerty"
             }
             
+            it("should load machines for a given multi-line format with comments") {
+                let content = """
+                    ## This is a comment
+                    # This is another comment
+                    machine example.com # This is an inline comment
+                    login anonymous
+                    password qwerty # and # another #one
+                    """
+                
+                let machines = Netrc.from(content).value?.machines
+                expect(machines?.count) == 1
+                
+                let machine = machines?.first
+                expect(machine?.name) == "example.com"
+                expect(machine?.login) == "anonymous"
+                expect(machine?.password) == "qwerty"
+            }
+            
             it("should load machines for a given multi-line + whitespaces format") {
                 let content = """
                     machine  example.com login     anonymous
@@ -155,6 +173,8 @@ class NetrcSpec: QuickSpec {
                 
                 expect(result).to(beNil())
             }
+            
+            
         }
     }
 }

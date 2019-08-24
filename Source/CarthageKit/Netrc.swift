@@ -40,7 +40,8 @@ struct Netrc {
     }
     
     static func from(_ content: String) -> Result<Netrc, NetrcError> {
-        let tokens = content
+        let trimmedCommentsContent = trimComments(from: content)
+        let tokens = trimmedCommentsContent
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .components(separatedBy: .whitespacesAndNewlines)
             .filter({ $0 != "" })
@@ -60,6 +61,19 @@ struct Netrc {
         
         guard machines.count > 0 else { return .failure(NetrcError.machineNotFound) }
         return .success(Netrc(machines: machines))
+    }
+    
+    private static func trimComments(from text: String) -> String {
+        let regex = try! NSRegularExpression(pattern: "\\#[\\s\\S]*?.*$", options: .anchorsMatchLines)
+        let nsString = text as NSString
+        let range = NSRange(location: 0, length: nsString.length)
+        let matches = regex.matches(in: text, range: range)
+        var trimmedCommentsText = text
+        matches.forEach {
+            trimmedCommentsText = trimmedCommentsText
+                .replacingOccurrences(of: nsString.substring(with: $0.range), with: "")
+        }
+        return trimmedCommentsText
     }
 }
 
