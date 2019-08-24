@@ -15,7 +15,7 @@ If you can’t make the change yourself, please open an issue after making sure 
 After checkout, you can run the following command from the cloned directory, and then open the workspace in Xcode:
 
 ```bash
-make xcodeproj && \
+SWIFTPM_BOOTSTRAP=true make xcodeproj && \
   open Carthage.xcodeproj
 ```
 
