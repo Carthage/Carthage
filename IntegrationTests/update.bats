@@ -5,7 +5,7 @@ setup() {
     rm -rf UpdateTest
     mkdir UpdateTest && cd UpdateTest
     echo 'github "antitypical/Result" == 4.1.0' > Cartfile
-    echo 'github "Quick/Nimble" == 7.3.1' > Cartfile.private
+    echo 'github "Quick/Nimble" == 8.0.0' > Cartfile.private
 }
 
 teardown() {
