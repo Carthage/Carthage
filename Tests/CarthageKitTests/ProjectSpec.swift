@@ -228,7 +228,7 @@ class ProjectSpec: QuickSpec {
 					overwriteSwiftVersion("TestFramework3",
 										  forPlatformName: "Mac",
 										  inDirectory: buildDirectoryURL,
-										  withVersion: "1.0 (swiftlang-000.0.1 clang-000.0.0.1)")
+										  withVersion: "<invalid>")
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == []
