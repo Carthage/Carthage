@@ -86,7 +86,13 @@ public enum SDK: String {
     public var additionalBuildOptions: [String] {
         switch self {
         case .macCatalyst:
-            return ["SUPPORTS_MACCATALYST=YES"]
+            return [
+                "-destination",
+                "platform=macOS,arch=x86_64,variant=Mac Catalyst",
+                "IS_MACCATALYST=YES",
+                "IS_UIKITFORMAC=YES",
+                "SUPPORTS_MACCATALYST=YES",
+            ]
         default:
             return []
         }

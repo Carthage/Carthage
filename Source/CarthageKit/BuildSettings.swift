@@ -220,7 +220,11 @@ public struct BuildSettings {
 		let basePath = "ArchiveIntermediates/\(schemeOrTarget)/BuildProductsPath"
 		let pathComponent: String
 
-		if
+        if self.arguments.sdk == .macCatalyst {
+            let r2 = self["CONFIGURATION"]
+            guard let configuration = r2.value else { return r2 }
+            pathComponent = "\(configuration)-maccatalyst"
+        } else if
 			let buildDir = self["BUILD_DIR"].value,
 			let builtProductsDir = self["BUILT_PRODUCTS_DIR"].value,
 			builtProductsDir.hasPrefix(buildDir)
@@ -228,20 +232,20 @@ public struct BuildSettings {
 			// This is required to support CocoaPods-generated projects.
 			// See https://github.com/AliSoftware/Reusable/issues/50#issuecomment-336434345 for the details.
 			pathComponent = String(builtProductsDir[buildDir.endIndex...]) // e.g., /Release-iphoneos/Reusable-iOS
-		} else {
-			let r2 = self["CONFIGURATION"]
-			guard let configuration = r2.value else { return r2 }
-
-			// A value almost certainly beginning with `-` or (lacking said value) an
-			// empty string to append without effect in the path below because Xcode
-			// expects the path like that.
-			let effectivePlatformName = self["EFFECTIVE_PLATFORM_NAME"].value ?? ""
-
-			// e.g.,
-			// - Release
-			// - Release-iphoneos
-			pathComponent = "\(configuration)\(effectivePlatformName)"
-		}
+        } else {
+            let r2 = self["CONFIGURATION"]
+            guard let configuration = r2.value else { return r2 }
+            
+            // A value almost certainly beginning with `-` or (lacking said value) an
+            // empty string to append without effect in the path below because Xcode
+            // expects the path like that.
+            let effectivePlatformName = self["EFFECTIVE_PLATFORM_NAME"].value ?? ""
+            
+            // e.g.,
+            // - Release
+            // - Release-iphoneos
+            pathComponent = "\(configuration)\(effectivePlatformName)"
+        }
 
 		let path = (basePath as NSString).appendingPathComponent(pathComponent)
 		return .success(path)
