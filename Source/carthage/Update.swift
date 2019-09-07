@@ -66,11 +66,11 @@ public struct UpdateCommand: CommandProtocol {
 
 			let dependenciesUsage = "the dependency names to update, checkout and build"
 
-      // Swift 5.1 workaround
-      // Carthage Issue: https://github.com/Carthage/Carthage/issues/2831
-      // Swift Compiler Bug: https://bugs.swift.org/browse/SR-11423
-      let defaultLogPath: String? = nil
-      
+			// Swift 5.1 workaround
+			// Carthage Issue: https://github.com/Carthage/Carthage/issues/2831
+			// Swift Compiler Bug: https://bugs.swift.org/browse/SR-11423
+			let defaultLogPath: String? = nil
+
 			return curry(Options.init)
 				<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 				<*> mode <| Option(key: "build", defaultValue: true, usage: buildDescription)
