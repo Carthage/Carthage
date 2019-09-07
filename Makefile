@@ -45,7 +45,7 @@ clean:
 test:
 	$(RM_SAFELY) ./.build/debug/CarthagePackageTests.xctest
 	swift package --skip-update resolve
-	swift build --skip-update --build-tests -Xswiftc -suppress-warnings -Xswiftc -Xcc -Xswiftc -fmodule-map-file=$(PWD)/`find .build/checkouts -name "swift-llbuild.git*"`/products/libllbuild/include/module.modulemap
+	swift build --skip-update --build-tests -Xswiftc -suppress-warnings
 	$(CP) -R Tests/CarthageKitTests/Resources ./.build/debug/CarthagePackageTests.xctest/Contents
 	$(CP) Tests/CarthageKitTests/fixtures/CartfilePrivateOnly.zip ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
 	script/copy-fixtures ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
@@ -53,7 +53,7 @@ test:
 
 installables:
 	swift package --skip-update resolve
-	swift build $(SWIFT_BUILD_FLAGS) -Xswiftc -Xcc -Xswiftc -fmodule-map-file=$(PWD)/`find .build/checkouts -name "swift-llbuild.git*"`/products/libllbuild/include/module.modulemap
+	swift build $(SWIFT_BUILD_FLAGS)
 
 package: installables
 	$(MKDIR) "$(CARTHAGE_TEMPORARY_FOLDER)$(BINARIES_FOLDER)"
@@ -81,12 +81,5 @@ install: installables
 uninstall:
 	$(RM) "$(BINARIES_FOLDER)/carthage"
 	
-.build/libSwiftPM.xcconfig:
-	mkdir -p .build
-	echo "OTHER_LDFLAGS = -lncurses -lsqlite3" > "$@"
-	echo "OTHER_CFLAGS = -DSWIFT_PACKAGE" >> "$@"
-
-xcconfig: .build/libSwiftPM.xcconfig
-
-xcodeproj: xcconfig
-	 swift package generate-xcodeproj --xcconfig-overrides .build/libSwiftPM.xcconfig
+xcodeproj:
+	 swift package generate-xcodeproj
