@@ -60,9 +60,12 @@ internal func frameworkSwiftVersionIfIsSwiftFramework(_ frameworkURL: URL) -> Si
 
 /// Determines the Swift version of a framework at a given `URL`.
 internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, SwiftVersionError> {
+	// Fall back to dSYM version parsing if header is not present
+	guard let swiftHeaderURL = frameworkURL.swiftHeaderURL() else {
+		return dSYMSwiftVersion(frameworkURL.appendingPathExtension("dSYM"))
+	}
 
 	guard
-		let swiftHeaderURL = frameworkURL.swiftHeaderURL(),
 		let data = try? Data(contentsOf: swiftHeaderURL),
 		let contents = String(data: data, encoding: .utf8),
 		let swiftVersion = parseSwiftVersionCommand(output: contents)
@@ -73,8 +76,7 @@ internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<Strin
 	return SignalProducer(value: swiftVersion)
 }
 
-internal func dSYMSwiftVersion(_ dSYMURL: URL) -> SignalProducer<String, SwiftVersionError> {
-
+private func dSYMSwiftVersion(_ dSYMURL: URL) -> SignalProducer<String, SwiftVersionError> {
 	// Pick one architecture
 	guard let arch = architecturesInPackage(dSYMURL).first()?.value else {
 		return SignalProducer(error: .unknownFrameworkSwiftVersion(message: "No architectures found in dSYM."))

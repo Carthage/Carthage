@@ -1,5 +1,4 @@
 import Foundation
-import SPMUtility
 import XCDBLD
 
 internal struct Simulator: Decodable {
@@ -53,8 +52,8 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 	let allTargetSimulators = devices.reduce(into: [:], reducePlatformNames)
 	func sortedByVersion(_ osNames: [String]) -> [String] {
 		return osNames.sorted { lhs, rhs in
-			guard let lhsVersion = Version.from(PinnedVersion(lhs)).value,
-				let rhsVersion = Version.from(PinnedVersion(rhs)).value else {
+			guard let lhsVersion = SemanticVersion.from(PinnedVersion(lhs)).value,
+				let rhsVersion = SemanticVersion.from(PinnedVersion(rhs)).value else {
 					return lhs < rhs
 			}
 			return lhsVersion < rhsVersion

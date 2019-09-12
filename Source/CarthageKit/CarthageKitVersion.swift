@@ -1,8 +1,8 @@
-import SPMUtility
+import Foundation
 
 /// Defines the current CarthageKit version.
 public struct CarthageKitVersion {
-	public let value: Version
+	public let value: SemanticVersion
 
-	public static let current = CarthageKitVersion(value: Version(0, 33, 0))
+	public static let current = CarthageKitVersion(value: SemanticVersion(0, 33, 0))
 }
