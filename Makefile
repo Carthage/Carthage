@@ -77,12 +77,5 @@ install: installables
 uninstall:
 	$(RM) "$(BINARIES_FOLDER)/carthage"
 	
-.build/libSwiftPM.xcconfig:
-	mkdir -p .build
-	echo "OTHER_LDFLAGS = -lncurses -lsqlite3" > "$@"
-	echo "OTHER_CFLAGS = -DSWIFT_PACKAGE" >> "$@"
-
-xcconfig: .build/libSwiftPM.xcconfig
-
-xcodeproj: xcconfig
-	 swift package generate-xcodeproj --xcconfig-overrides .build/libSwiftPM.xcconfig
+xcodeproj:
+	 swift package generate-xcodeproj

@@ -60,9 +60,12 @@ internal func frameworkSwiftVersionIfIsSwiftFramework(_ frameworkURL: URL) -> Si
 
 /// Determines the Swift version of a framework at a given `URL`.
 internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, SwiftVersionError> {
+	// Fall back to dSYM version parsing if header is not present
+	guard let swiftHeaderURL = frameworkURL.swiftHeaderURL() else {
+		return dSYMSwiftVersion(frameworkURL.appendingPathExtension("dSYM"))
+	}
 
 	guard
-		let swiftHeaderURL = frameworkURL.swiftHeaderURL(),
 		let data = try? Data(contentsOf: swiftHeaderURL),
 		let contents = String(data: data, encoding: .utf8),
 		let swiftVersion = parseSwiftVersionCommand(output: contents)
@@ -73,8 +76,7 @@ internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<Strin
 	return SignalProducer(value: swiftVersion)
 }
 
-internal func dSYMSwiftVersion(_ dSYMURL: URL) -> SignalProducer<String, SwiftVersionError> {
-
+private func dSYMSwiftVersion(_ dSYMURL: URL) -> SignalProducer<String, SwiftVersionError> {
 	// Pick one architecture
 	guard let arch = architecturesInPackage(dSYMURL).first()?.value else {
 		return SignalProducer(error: .unknownFrameworkSwiftVersion(message: "No architectures found in dSYM."))
@@ -1195,12 +1197,12 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
   // same framework.
   //
   // In a nutshell:
-  //  pid 1094 copyProduct(MyFrameworkframework.dSYM)
+  //  pid 1094 copyProduct(MyFramework.framework)
   //  pid 1094 stripArchitecture(armv7)
   //  pid 1094 stripArchitecture(arm64)
-  //  pid 1684 copyProduct(MyFramework.framework.dSYM)
+  //  pid 1684 copyProduct(MyFramework.framework)
   //  pid 1684 stripArchitecture(armv7)
-  //  pid 1916 copyProduct(MyFrameworkframework.dSYM)
+  //  pid 1916 copyProduct(MyFramework.framework)
   //  pid 1916 stripArchitecture(armv7)
   //  pid 1684 stripArchitecture(arm64)
   //  pid 1916 stripArchitecture(arm64)  <-- already stripped, so an error occurs
@@ -1208,8 +1210,20 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
   //  A shell task (/usr/bin/xcrun lipo -remove armv7 […] failed with exit code 1:
   //  fatal error: […]MyFramework.framework does not contain that architecture
   //
-  // So we copy it to /tmp, modify it there, and copy it back to thie original
+  // So we copy it to /tmp, modify it there, and copy it back to the original
   // location. Problem averted!
+  //
+  // Footnote: Turns out this works perfectly for _framework_s, but the dSYMs
+  // introduce a wrinkle: They are all copied to ($BUILT_PRODUCTS_DIR), regardless
+  // of where the frameworks go, so that whole lipo scenario still exists. After
+  // many overly-complex attemts to handle cross-process & cross-thread locking,
+  // I came up with a simplified solution.
+  //
+  // - Continue to do all the work in tmp
+  // - Check to see if the product in tmp is exactly the same as the destination
+  //   - If so, delete the temp file
+  //   - If not, overwrite the dest (this handles updates to an existing dSYM)
+  //
 
   let fileManager = FileManager.default.reactive
   
@@ -1231,14 +1245,17 @@ private func stripBinary(_ binaryURL: URL, keepingArchitectures: [String]) -> Si
   }
   
   return createTempDir
-    .flatMap(.merge) { temp in
-      copyItem(binaryURL, temp)
+    .flatMap(.merge) { tempDir in
+      copyItem(binaryURL, tempDir)
     }
-    .flatMap(.merge) { workspace in
-      strip(workspace, keepingArchitectures)
+    .flatMap(.merge) { tempFile in
+      strip(tempFile, keepingArchitectures)
     }
-    .flatMap(.merge) { workspace in
-      replace(binaryURL, workspace)
+    .filter { tempFile in
+      return !FileManager.default.contentsEqual(atPath: tempFile.path, andPath: binaryURL.path)
+    }
+    .flatMap(.merge) { tempFile in
+      replace(binaryURL, tempFile)
   }
 }
 

@@ -1,7 +1,6 @@
 import Foundation
 import Result
 import ReactiveSwift
-import SPMUtility
 
 /// Protocol for resolving acyclic dependency graphs.
 public protocol ResolverProtocol {
@@ -506,9 +505,9 @@ private final class DependencyNode {
 
 extension DependencyNode: Comparable {
 	fileprivate static func < (_ lhs: DependencyNode, _ rhs: DependencyNode) -> Bool {
-		let leftSemantic = Version.from(lhs.proposedVersion).value ?? Version(0, 0, 0)
-		let rightSemantic = Version.from(rhs.proposedVersion).value ?? Version(0, 0, 0)
-
+		let leftSemantic = SemanticVersion.from(lhs.proposedVersion).value ?? SemanticVersion(0, 0, 0)
+		let rightSemantic = SemanticVersion.from(rhs.proposedVersion).value ?? SemanticVersion(0, 0, 0)
+		
 		// Try higher versions first.
 		return leftSemantic > rightSemantic
 	}

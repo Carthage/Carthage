@@ -126,6 +126,18 @@ class ProjectSpec: QuickSpec {
 					try! header.write(to: swiftHeaderURL, atomically: true, encoding: header.fastestEncoding)
 				}
 
+				func removeHeader(
+					_ frameworkName: String,
+					forPlatformName platformName: String,
+					inDirectory buildDirectoryURL: URL)
+				{
+					let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
+					let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
+					let swiftHeaderURL = frameworkURL.swiftHeaderURL()!
+
+					try! FileManager.default.removeItem(at: swiftHeaderURL)
+				}
+
 				func removeDsym(
 					_ frameworkName: String,
 					forPlatformName platformName: String,
@@ -224,11 +236,10 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					// Overwrite one header, this should trigger cheking the dSYM instead
-					overwriteSwiftVersion("TestFramework3",
+					// Remove one header, this should trigger cheking the dSYM instead
+					removeHeader("TestFramework3",
 										  forPlatformName: "Mac",
-										  inDirectory: buildDirectoryURL,
-										  withVersion: "1.0 (swiftlang-000.0.1 clang-000.0.0.1)")
+										  inDirectory: buildDirectoryURL)
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == []

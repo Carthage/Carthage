@@ -24,8 +24,8 @@
         "repositoryURL": "https://github.com/Quick/Nimble.git",
         "state": {
           "branch": null,
-          "revision": "43304bf2b1579fd555f2fdd51742771c1e4f2b98",
-          "version": "8.0.1"
+          "revision": "f8657642dfdec9973efc79cc68bcef43a653a2bc",
+          "version": "8.0.2"
         }
       },
       {
@@ -71,24 +71,6 @@
           "branch": null,
           "revision": "2ca499ba456795616fbc471561ff1d963e6ae160",
           "version": "4.1.0"
-        }
-      },
-      {
-        "package": "llbuild",
-        "repositoryURL": "https://github.com/apple/swift-llbuild.git",
-        "state": {
-          "branch": "master",
-          "revision": "3aeecb428d202afe15633266dc862de27feab723",
-          "version": null
-        }
-      },
-      {
-        "package": "SwiftPM",
-        "repositoryURL": "https://github.com/apple/swift-package-manager.git",
-        "state": {
-          "branch": "swift-DEVELOPMENT-SNAPSHOT-2019-03-04-a",
-          "revision": "916450f7e8a5aef13630edf9e6fc0b16ed9f5f65",
-          "version": null
         }
       },
       {
