@@ -1103,6 +1103,25 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 	}
 
+	public func generateSwiftPackageManagerXcodeProjectIfAvailable(forDependencyAt dependencyPath: String) -> SignalProducer<(), NoError> {
+		// Search for each sub-dir recursively for Xcode Project file
+		let enumerator = FileManager.default.enumerator(atPath: dependencyPath)
+		while let fileOrFolder = enumerator?.nextObject() as? String {
+			let hasXcodeProjectFile = fileOrFolder.hasSuffix(".xcodeproj") || fileOrFolder.hasSuffix(".xcworkspace")
+			if hasXcodeProjectFile { return .init(value: ()) }
+		}
+
+		let files = (try? FileManager.default.contentsOfDirectory(atPath: dependencyPath)) ?? []
+		let hasPackageFile = files.lazy.first { $0 == "Package.swift" } != nil
+		guard hasPackageFile else { return .init(value: ()) }
+
+		let task = Task("/usr/bin/swift", arguments: [ "package", "generate-xcodeproj" ], workingDirectoryPath: dependencyPath)
+		return task.launch()
+			.ignoreTaskData()
+			.map { _ in }
+			.flatMapError { _ in .init(value: ()) }
+	}
+
 	/// Attempts to build each Carthage dependency that has been checked out,
 	/// optionally they are limited by the given list of dependency names.
 	/// Cached dependencies whose dependency trees are also cached will not
@@ -1197,6 +1216,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
 				return self.symlinkBuildPathIfNeeded(for: dependency, version: version)
+					.then(self.generateSwiftPackageManagerXcodeProjectIfAvailable(forDependencyAt: dependencyPath))
 					.then(build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter))
 					.flatMapError { error -> BuildSchemeProducer in
 						switch error {
