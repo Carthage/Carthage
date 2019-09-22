@@ -951,7 +951,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.url(for: dependency, rootDirectoryURL: self.directoryURL)
 					.resolvingSymlinksInPath()
 
-				let binaryURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release")
+				let frameworkURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release")
 					.flatMap(.concat) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
 						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 						return BuildSettings.load(with: buildArguments)
@@ -965,9 +965,15 @@ public final class Project { // swiftlint:disable:this type_body_length
 								.appendingPathComponent(wrapperName)
 						}
 					}
-					.collect()
 
-				return binaryURLs.map { (checkoutURL, versionFileURL, $0) }
+				return frameworkURLs.flatMap(.concat) { frameworkURL -> SignalProducer<URL, CarthageError> in
+						let framework = SignalProducer<URL, CarthageError>(value: frameworkURL)
+						let bcSymbolMaps = BCSymbolMapsForFramework(frameworkURL)
+						let dSYMs = dSYMForFramework(frameworkURL, inDirectoryURL: frameworkURL.deletingLastPathComponent())
+						return .merge(framework, bcSymbolMaps, dSYMs)
+					}
+					.collect()
+					.map { (checkoutURL, versionFileURL, $0) }
 			}
 			.collect()
 			.map { urls -> (checkoutURLs: Set<URL>, versionFileURLs: Set<URL>, binaryURLs: Set<URL>) in
@@ -984,20 +990,41 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return (checkoutURLSet, versionFileURLSet, binaryURLSet)
 			}
 			.flatMap(.merge) { checkoutURLs, versionFileURLs, binaryURLs -> SignalProducer<URL, CarthageError> in
-				func filesInDirectory(relativePath: String, excluding: Set<URL>) -> [URL] {
-					let fileManager = FileManager.default
-					return (try? fileManager.contentsOfDirectory(
-							at: self.directoryURL.appendingPathComponent(relativePath, isDirectory: true),
-							includingPropertiesForKeys: nil)
-						.map { $0.resolvingSymlinksInPath() }
-						.filter { !excluding.contains($0) }) ?? []
-				}
+				let fileManager = FileManager.default
 
 				var urls: [URL] = []
-				urls += filesInDirectory(relativePath: Constants.checkoutsFolderPath, excluding: checkoutURLs)
-				urls += filesInDirectory(relativePath: Constants.binariesFolderPath, excluding: versionFileURLs)
+				urls += (try? fileManager
+					.contentsOfDirectory(
+						at: self.directoryURL.appendingPathComponent(
+							Constants.checkoutsFolderPath, isDirectory: true
+						),
+						includingPropertiesForKeys: nil
+				)
+					.map { $0.resolvingSymlinksInPath() }
+					.filter { !checkoutURLs.contains($0) }) ?? []
+
+				urls += (try? fileManager
+					.contentsOfDirectory(
+						at: self.directoryURL.appendingPathComponent(
+							Constants.binariesFolderPath, isDirectory: true
+						),
+						includingPropertiesForKeys: nil
+				)
+					.map { $0.resolvingSymlinksInPath() }
+					.filter { $0.pathExtension == VersionFile.pathExtension &&
+						!versionFileURLs.contains($0) }) ?? []
+
 				urls += Platform.supportedPlatforms
-					.flatMap { filesInDirectory(relativePath: $0.relativePath, excluding: binaryURLs) }
+					.flatMap { platform -> [URL] in
+						(try? fileManager
+							.contentsOfDirectory(
+								at: self.directoryURL.appendingPathComponent(
+									platform.relativePath, isDirectory: true
+								),
+								includingPropertiesForKeys: nil
+						)
+							.filter { !binaryURLs.contains($0) }) ?? []
+					}
 
 				return SignalProducer(Set(urls))
 			}
