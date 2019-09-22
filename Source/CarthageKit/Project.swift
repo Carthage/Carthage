@@ -47,6 +47,8 @@ public enum ProjectEvent {
 
 	/// Building an uncached project.
 	case buildingUncached(Dependency)
+
+	case removingUnneededItem(URL)
 }
 
 extension ProjectEvent: Equatable {
@@ -931,6 +933,104 @@ public final class Project { // swiftlint:disable:this type_body_length
 			}
 	}
 
+
+	public func removeUnneededItems() -> SignalProducer<(), CarthageError> {
+		return loadResolvedCartfile()
+			.flatMap(.merge) { resolved -> SignalProducer<URL, CarthageError> in
+				let fileManager = FileManager.default
+
+				var checkoutURLs = Set<URL>()
+				var versionFileURLs = Set<URL>()
+				var binaryURLs = Set<URL>()
+
+				for (dependency, _) in resolved.dependencies {
+					checkoutURLs.insert(
+						self.directoryURL
+							.appendingPathComponent(dependency.relativePath, isDirectory: true)
+							.resolvingSymlinksInPath()
+					)
+
+					let versionFileURL = VersionFile
+						.url(for: dependency, rootDirectoryURL: self.directoryURL)
+						.resolvingSymlinksInPath()
+
+					guard let versionFile = VersionFile(url: versionFileURL) else {
+						return SignalProducer(error: CarthageError.versionFileNotFound(dependency, versionFileURL))
+					}
+
+					versionFileURLs.insert(versionFileURL)
+
+					let binariesDirectoryURL = self.directoryURL
+						.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
+						.resolvingSymlinksInPath()
+
+					binaryURLs.formUnion(Platform.supportedPlatforms.flatMap { platform -> [URL] in
+						let cachedFrameworks: [CachedFramework]?
+						switch platform {
+						case .macOS: cachedFrameworks = versionFile.macOS
+						case .iOS: cachedFrameworks = versionFile.iOS
+						case .watchOS: cachedFrameworks = versionFile.watchOS
+						case .tvOS: cachedFrameworks = versionFile.tvOS
+						}
+						return (cachedFrameworks ?? []).flatMap { cachedFramework -> [URL] in
+							let frameworkURL = versionFile
+								.frameworkURL(
+									for: cachedFramework, platform: platform,
+									binariesDirectoryURL: binariesDirectoryURL
+								)
+								.resolvingSymlinksInPath()
+							return [
+								frameworkURL,
+								URL(fileURLWithPath: frameworkURL.relativePath)
+									.appendingPathExtension("dSYM")
+									.resolvingSymlinksInPath(),
+							]
+						}
+					})
+				}
+
+				var urls: [URL] = []
+				urls += (try? fileManager
+					.contentsOfDirectory(
+						at: self.directoryURL.appendingPathComponent(
+							Constants.checkoutsFolderPath, isDirectory: true
+						),
+						includingPropertiesForKeys: nil
+					)
+					.map { $0.resolvingSymlinksInPath() }
+					.filter { !checkoutURLs.contains($0) }) ?? []
+
+				urls += (try? fileManager
+					.contentsOfDirectory(
+						at: self.directoryURL.appendingPathComponent(
+							Constants.binariesFolderPath, isDirectory: true
+						),
+						includingPropertiesForKeys: nil
+					)
+					.map { $0.resolvingSymlinksInPath() }
+					.filter { $0.pathExtension == VersionFile.pathExtension &&
+						!versionFileURLs.contains($0) }) ?? []
+
+				urls += Platform.supportedPlatforms
+					.flatMap { platform -> [URL] in
+						(try? fileManager
+							.contentsOfDirectory(
+								at: self.directoryURL.appendingPathComponent(
+									platform.relativePath, isDirectory: true
+								),
+								includingPropertiesForKeys: nil
+							)
+							.map { $0.resolvingSymlinksInPath() }
+							.filter { !binaryURLs.contains($0) }) ?? []
+				}
+
+				return SignalProducer(Set(urls))
+			}
+			.on { self._projectEventsObserver.send(value: ProjectEvent.removingUnneededItem($0)) }
+			.flatMap(.merge, self.removeItem(at:))
+			.then(SignalProducer<(), CarthageError>.empty)
+	}
+
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
 	/// optionally they are limited by the given list of dependency names.
 	public func checkoutResolvedDependencies(_ dependenciesToCheckout: [String]? = nil, buildOptions: BuildOptions?) -> SignalProducer<(), CarthageError> {
@@ -1033,12 +1133,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 	) -> SignalProducer<(), CarthageError> {
 		let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 		let dependencyURL = rawDependencyURL.resolvingSymlinksInPath()
-		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true).resolvingSymlinksInPath()
+		let dependencyCheckoutsURL = dependencyURL.appendingPathComponent(Constants.checkoutsFolderPath, isDirectory: true).resolvingSymlinksInPath()
 		let fileManager = FileManager.default
 
 		return self.dependencySet(for: dependency, version: version)
 			// file system objects which might conflict with symlinks
-			.zip(with: list(treeish: version.commitish, atPath: carthageProjectCheckoutsPath, inRepository: repositoryURL)
+			.zip(with: list(treeish: version.commitish, atPath: Constants.checkoutsFolderPath, inRepository: repositoryURL)
 									.map { (path: String) in (path as NSString).lastPathComponent }
 									.collect()
 			)
@@ -1070,7 +1170,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 				for name in names {
 					let dependencyCheckoutURL = dependencyCheckoutsURL.appendingPathComponent(name)
-					let subdirectoryPath = (carthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
+					let subdirectoryPath = (Constants.checkoutsFolderPath as NSString).appendingPathComponent(name)
 					let linkDestinationPath = relativeLinkDestination(for: dependency, subdirectory: subdirectoryPath)
 
 					let dependencyCheckoutURLResource = try? dependencyCheckoutURL.resourceValues(forKeys: [

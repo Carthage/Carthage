@@ -76,7 +76,7 @@ class ProjectSpec: QuickSpec {
 
 			it("should fall back to repo cache if checkout is missing") {
 				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac"]
-				let repoDir = directoryURL.appendingPathComponent(carthageProjectCheckoutsPath)
+				let repoDir = directoryURL.appendingPathComponent(Constants.checkoutsFolderPath)
 				let checkout = repoDir.appendingPathComponent("TestFramework1")
 				let tmpCheckout = repoDir.appendingPathComponent("TestFramework1_BACKUP")
 				try! FileManager.default.moveItem(at: checkout, to: tmpCheckout)
@@ -595,6 +595,67 @@ class ProjectSpec: QuickSpec {
 			it("should check the framework's executable binary and produce a platform") {
 				let actualPlatform = platformForFramework(testStaticFrameworkURL).first()?.value
 				expect(actualPlatform) == .iOS
+			}
+		}
+
+		describe("cleanup Carthage directory") {
+			let baseDirectoryURL = Bundle(for: type(of: self)).url(forResource: "CleanupTest", withExtension: nil)!
+
+			it("should successfully remove files not needed") {
+				let directoryURL = baseDirectoryURL.appendingPathComponent("Valid", isDirectory: true)
+				let project = Project(directoryURL: directoryURL)
+				var events = [ProjectEvent]()
+				project.projectEvents.observeValues { events.append($0) }
+
+				expect(project.removeUnneededItems().wait().error).to(beNil())
+
+				let removedItems = events.flatMap { event -> URL? in
+					guard case let .removingUnneededItem(url) = event else {
+						fail()
+						return nil
+					}
+					return url
+				}
+
+				let expectedPaths = [
+					("Build/Mac/TestFramework2.framework.dSYM", true),
+					("Build/Mac/TestFramework1.framework.dSYM", true),
+					("Build/iOS/TestFramework2.framework.dSYM", true),
+					("Build/iOS/TestFramework1.framework.dSYM", true),
+					("Build/Mac/TestFramework2.framework", true),
+					("Build/Mac/TestFramework1.framework", true),
+					("Build/iOS/TestFramework2.framework", true),
+					("Build/iOS/TestFramework1.framework", true),
+					("Checkouts/TestFramework1", true),
+					("Checkouts/TestFramework2", true),
+					("Build/iOS/59F47BB3-1D4F-3B7F-A0D3-273E2F5B9526.bcsymbolmap", false),
+					("Build/iOS/1047B36A-DF55-31AE-B619-D457C836A39D.bcsymbolmap", false),
+					("Build/iOS/D66A4E3C-FAB4-38A5-9863-D1A27A5C4B41.bcsymbolmap", false),
+					("Build/iOS/86E1998A-CF88-316A-87F7-EED06C281067.bcsymbolmap", false),
+					("Build/iOS/D52D59F2-6C0B-3690-A261-92CBCC93FB86.bcsymbolmap", false),
+					("Build/iOS/9998DD1F-6A06-3FDD-8F51-64BE2FD2C237.bcsymbolmap", false),
+					("Build/.TestFramework2.version", false),
+					("Build/.TestFramework1.version", false),
+				]
+
+				let expectedItems = Set(expectedPaths.map {
+					directoryURL.appendingPathComponent("Carthage/\($0)", isDirectory: $1)
+				})
+
+				expect(Set(removedItems)) == expectedItems
+			}
+
+			it("should fail if version files are missing") {
+				let directoryURL = baseDirectoryURL.appendingPathComponent("VersionFileMissing", isDirectory: true)
+				let project = Project(directoryURL: directoryURL)
+				var events = [ProjectEvent]()
+				project.projectEvents.observeValues { events.append($0) }
+
+				let dependencyName = "TestFramework3"
+				let error = project.removeUnneededItems().wait().error
+				let url = directoryURL.appendingPathComponent("Carthage/Build/.\(dependencyName).version", isDirectory: false)
+				expect(error) == CarthageError.versionFileNotFound(.git(GitURL(dependencyName)), url)
+				expect(events).to(beEmpty())
 			}
 		}
 

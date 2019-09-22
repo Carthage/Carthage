@@ -784,7 +784,7 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 
 					// Do not copy build products that originate from the current project's own carthage dependencies
 					let projectURL = URL(fileURLWithPath: projectPath)
-					let dependencyCheckoutDir = workingDirectoryURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true)
+					let dependencyCheckoutDir = workingDirectoryURL.appendingPathComponent(Constants.checkoutsFolderPath, isDirectory: true)
 					return !dependencyCheckoutDir.hasSubdirectory(projectURL)
 				}
 				.flatMap(.concat) { settings in resolveSameTargetName(for: settings) }
