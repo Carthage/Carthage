@@ -488,6 +488,10 @@ public func versionFileMatches(
 
 	let platformsToCheck = platforms.isEmpty ? Set<Platform>(Platform.supportedPlatforms) : platforms
 
+	let rootBinariesURL = rootDirectoryURL
+		.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
+		.resolvingSymlinksInPath()
+
 	return swiftVersion(usingToolchain: toolchain)
 		.mapError { error in CarthageError.internalError(description: error.description) }
 		.flatMap(.concat) { localSwiftVersion in

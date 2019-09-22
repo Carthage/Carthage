@@ -104,9 +104,6 @@ public enum CarthageError: Error {
 	/// An archive (.zip, .gz, .bz2 ...) contains binaries that would
 	/// be copied to the same destination path
 	case duplicatesInArchive(duplicates: DuplicatesInArchive)
-
-	/// An expected VersionFile wasn't found
-	case versionFileNotFound(Dependency, URL)
 }
 
 extension CarthageError {
@@ -198,9 +195,6 @@ extension CarthageError: Equatable {
 			return left == right
 
 		case let (.duplicatesInArchive(left), .duplicatesInArchive(right)):
-			return left == right
-
-		case let (.versionFileNotFound(left), .versionFileNotFound(right)):
 			return left == right
 
 		default:
@@ -387,9 +381,6 @@ extension CarthageError: CustomStringConvertible {
 				.map { "* \t\($0.value.map{ url in return url.absoluteString }.joined(separator: "\n\t")) \n\t\tto:\n\t\($0.key)" }
 				.joined(separator: "\n")
 			return "Invalid archive - Found multiple frameworks with the same unarchiving destination:\n\(prettyDupeList)"
-
-		case let .versionFileNotFound(dependency, url):
-			return "VersionFile for \(dependency.name) does not exit at \(url.path)"
 		}
 	}
 }
