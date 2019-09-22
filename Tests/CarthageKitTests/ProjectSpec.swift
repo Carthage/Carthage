@@ -642,6 +642,38 @@ class ProjectSpec: QuickSpec {
 
 				expect(Set(removedItems)) == expectedItems
 			}
+
+			it("should successfully remove old frameworks when the library changes dynamic framework to static framework") {
+				let directoryURL = baseDirectoryURL.appendingPathComponent("RemoveDynamic", isDirectory: true)
+				let project = Project(directoryURL: directoryURL)
+				var events = [ProjectEvent]()
+				project.projectEvents.observeValues { events.append($0) }
+
+				expect(project.removeUnneededItems().wait().error).to(beNil())
+
+				let removedItems = events.compactMap { event -> URL? in
+					guard case let .removingUnneededItem(url) = event else {
+						fail()
+						return nil
+					}
+					return url
+				}
+
+				let expectedPaths = [
+					("Build/Mac/TestFramework.framework.dSYM", true),
+					("Build/iOS/TestFramework.framework.dSYM", true),
+					("Build/Mac/TestFramework.framework", true),
+					("Build/iOS/TestFramework.framework", true),
+					("Build/iOS/51899E2B-87E1-3129-97D2-C8FEECF71698.bcsymbolmap", false),
+					("Build/iOS/B730142E-39F3-3EB2-A826-4043D39695EE.bcsymbolmap", false),
+				]
+
+				let expectedItems = Set(expectedPaths.map {
+					directoryURL.appendingPathComponent("Carthage/\($0)", isDirectory: $1)
+				})
+
+				expect(Set(removedItems)) == expectedItems
+			}
 		}
 
 		describe("transitiveDependencies") {
