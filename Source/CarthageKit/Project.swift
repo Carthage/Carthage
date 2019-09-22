@@ -941,92 +941,70 @@ public final class Project { // swiftlint:disable:this type_body_length
 		return loadResolvedCartfile()
 			.flatMap(.merge) { resolved -> SignalProducer<Dependency, CarthageError> in
 				return SignalProducer(resolved.dependencies.keys)
-		}
-		.flatMap(.merge) { dependency -> SignalProducer<(checkoutURL: URL, versionFileURL: URL, binaryURLs: [URL]), CarthageError> in
-			let checkoutURL = self.directoryURL
-				.appendingPathComponent(dependency.relativePath, isDirectory: true)
-				.resolvingSymlinksInPath()
-
-			let versionFileURL = VersionFile
-				.url(for: dependency, rootDirectoryURL: self.directoryURL)
-				.resolvingSymlinksInPath()
-
-			let binaryURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release")
-				.flatMap(.concat) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
-					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
-					return BuildSettings.load(with: buildArguments)
 			}
-			.flatMap(.concat) { settings -> SignalProducer<(BuildSettings, String), CarthageError> in
-				return SignalProducer(settings.wrapperName).map { (settings, $0) }
-			}
-			.flatMap(.concat) { settings, wrapperName -> SignalProducer<URL, CarthageError> in
-				settings.buildSDKs.map { sdk -> URL in
-					settings.productDestinationPath(in: binariesDirectoryURL.appendingPathComponent(sdk.platform.rawValue, isDirectory: true))
-						.appendingPathComponent(wrapperName)
-				}
+			.flatMap(.merge) { dependency -> SignalProducer<(checkoutURL: URL, versionFileURL: URL, binaryURLs: [URL]), CarthageError> in
+				let checkoutURL = self.directoryURL
+					.appendingPathComponent(dependency.relativePath, isDirectory: true)
+					.resolvingSymlinksInPath()
+
+				let versionFileURL = VersionFile
+					.url(for: dependency, rootDirectoryURL: self.directoryURL)
+					.resolvingSymlinksInPath()
+
+				let binaryURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release")
+					.flatMap(.concat) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
+						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
+						return BuildSettings.load(with: buildArguments)
+					}
+					.flatMap(.concat) { settings -> SignalProducer<(BuildSettings, String), CarthageError> in
+						return SignalProducer(settings.wrapperName).map { (settings, $0) }
+					}
+					.flatMap(.concat) { settings, wrapperName -> SignalProducer<URL, CarthageError> in
+						settings.buildSDKs.map { sdk -> URL in
+							settings.productDestinationPath(in: binariesDirectoryURL.appendingPathComponent(sdk.platform.rawValue, isDirectory: true))
+								.appendingPathComponent(wrapperName)
+						}
+					}
+					.collect()
+
+				return binaryURLs.map { (checkoutURL, versionFileURL, $0) }
 			}
 			.collect()
+			.map { urls -> (checkoutURLs: Set<URL>, versionFileURLs: Set<URL>, binaryURLs: Set<URL>) in
+				var checkoutURLSet: Set<URL> = []
+				var versionFileURLSet: Set<URL> = []
+				var binaryURLSet: Set<URL> = []
 
-			return binaryURLs.map { (checkoutURL, versionFileURL, $0) }
-		}
-		.collect()
-		.map { urls -> (checkoutURLs: Set<URL>, versionFileURLs: Set<URL>, binaryURLs: Set<URL>) in
-			var checkoutURLSet: Set<URL> = []
-			var versionFileURLSet: Set<URL> = []
-			var binaryURLSet: Set<URL> = []
+				for (checkoutURL, versionFileURL, binaryURLs) in urls {
+					checkoutURLSet.insert(checkoutURL)
+					versionFileURLSet.insert(versionFileURL)
+					binaryURLSet.formUnion(binaryURLs)
+				}
 
-			for (checkoutURL, versionFileURL, binaryURLs) in urls {
-				checkoutURLSet.insert(checkoutURL)
-				versionFileURLSet.insert(versionFileURL)
-				binaryURLSet.formUnion(binaryURLs)
+				return (checkoutURLSet, versionFileURLSet, binaryURLSet)
 			}
-
-			return (checkoutURLSet, versionFileURLSet, binaryURLSet)
-		}
-		.flatMap(.merge) { (checkoutURLs, versionFileURLs, binaryURLs) -> SignalProducer<URL, CarthageError> in
-			let fileManager = FileManager.default
-
-			var urls: [URL] = []
-			urls += (try? fileManager
-				.contentsOfDirectory(
-					at: self.directoryURL.appendingPathComponent(
-						Constants.checkoutsFolderPath, isDirectory: true
-					),
-					includingPropertiesForKeys: nil
-			)
-				.map { $0.resolvingSymlinksInPath() }
-				.filter { !checkoutURLs.contains($0) }) ?? []
-
-			urls += (try? fileManager
-				.contentsOfDirectory(
-					at: self.directoryURL.appendingPathComponent(
-						Constants.binariesFolderPath, isDirectory: true
-					),
-					includingPropertiesForKeys: nil
-			)
-				.map { $0.resolvingSymlinksInPath() }
-				.filter { $0.pathExtension == VersionFile.pathExtension &&
-					!versionFileURLs.contains($0) }) ?? []
-
-			urls += Platform.supportedPlatforms
-				.flatMap { platform -> [URL] in
-					(try? fileManager
-						.contentsOfDirectory(
-							at: self.directoryURL.appendingPathComponent(
-								platform.relativePath, isDirectory: true
-							),
-							includingPropertiesForKeys: nil
-					)
+			.flatMap(.merge) { checkoutURLs, versionFileURLs, binaryURLs -> SignalProducer<URL, CarthageError> in
+				func filesInDirectory(relativePath: String, excluding: Set<URL>) -> [URL] {
+					let fileManager = FileManager.default
+					return (try? fileManager.contentsOfDirectory(
+							at: self.directoryURL.appendingPathComponent(relativePath, isDirectory: true),
+							includingPropertiesForKeys: nil)
 						.map { $0.resolvingSymlinksInPath() }
-						.filter { !binaryURLs.contains($0) }) ?? []
-			}
+						.filter { !excluding.contains($0) }) ?? []
+				}
 
-			return SignalProducer(Set(urls))
+				var urls: [URL] = []
+				urls += filesInDirectory(relativePath: Constants.checkoutsFolderPath, excluding: checkoutURLs)
+				urls += filesInDirectory(relativePath: Constants.binariesFolderPath, excluding: versionFileURLs)
+				urls += Platform.supportedPlatforms
+					.flatMap { filesInDirectory(relativePath: $0.relativePath, excluding: binaryURLs) }
+
+				return SignalProducer(Set(urls))
+			}
+			.on { self._projectEventsObserver.send(value: ProjectEvent.removingUnneededItem($0)) }
+			.flatMap(.merge, self.removeItem(at:))
+			.then(SignalProducer<(), CarthageError>.empty)
 		}
-		.on { self._projectEventsObserver.send(value: ProjectEvent.removingUnneededItem($0)) }
-		.flatMap(.merge, self.removeItem(at:))
-		.then(SignalProducer<(), CarthageError>.empty)
-	}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
 	/// optionally they are limited by the given list of dependency names.
