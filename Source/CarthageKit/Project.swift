@@ -1002,9 +1002,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				var urls: [URL] = []
 				urls += (try? fileManager
 					.contentsOfDirectory(
-						at: self.directoryURL.appendingPathComponent(
-							Constants.checkoutsFolderPath, isDirectory: true
-						),
+						at: self.directoryURL.appendingPathComponent(Constants.checkoutsFolderPath, isDirectory: true),
 						includingPropertiesForKeys: nil
 					)
 					.map { $0.resolvingSymlinksInPath() }
@@ -1012,9 +1010,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 				urls += (try? fileManager
 					.contentsOfDirectory(
-						at: self.directoryURL.appendingPathComponent(
-							Constants.binariesFolderPath, isDirectory: true
-						),
+						at: self.directoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true),
 						includingPropertiesForKeys: nil
 					)
 					.map { $0.resolvingSymlinksInPath() }
@@ -1025,9 +1021,19 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap { platform -> [URL] in
 						(try? fileManager
 							.contentsOfDirectory(
-								at: self.directoryURL.appendingPathComponent(
-									platform.relativePath, isDirectory: true
-								),
+								at: self.directoryURL.appendingPathComponent(platform.relativePath, isDirectory: true),
+								includingPropertiesForKeys: nil
+							)
+							.filter { !binaryURLs.contains($0) && $0.lastPathComponent != FrameworkType.staticFolderName }) ?? []
+					}
+
+				urls += Platform.supportedPlatforms
+					.flatMap { platform -> [URL] in
+						(try? fileManager
+							.contentsOfDirectory(
+								at: self.directoryURL
+									.appendingPathComponent(platform.relativePath, isDirectory: true)
+									.appendingPathComponent(FrameworkType.staticFolderName, isDirectory: true),
 								includingPropertiesForKeys: nil
 							)
 							.filter { !binaryURLs.contains($0) }) ?? []
