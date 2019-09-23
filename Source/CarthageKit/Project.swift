@@ -959,15 +959,22 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.concat) { settings -> SignalProducer<(BuildSettings, String), CarthageError> in
 						return SignalProducer(settings.wrapperName).map { (settings, $0) }
 					}
-					.flatMap(.concat) { settings, wrapperName -> SignalProducer<URL, CarthageError> in
-						settings.buildSDKs.map { sdk -> URL in
-							settings.productDestinationPath(in: binariesDirectoryURL.appendingPathComponent(sdk.platform.rawValue, isDirectory: true))
+					.flatMap(.concat) { settings, wrapperName -> SignalProducer<(URL, isStatic: Bool), CarthageError> in
+						settings.buildSDKs.map { sdk -> (URL, isStatic: Bool) in
+							let url = settings.productDestinationPath(in: binariesDirectoryURL.appendingPathComponent(sdk.platform.rawValue, isDirectory: true))
 								.appendingPathComponent(wrapperName)
+							let isStatic = settings.frameworkType.value.flatMap { $0 } == .static
+							return (url, isStatic)
 						}
 					}
 
-				return frameworkURLs.flatMap(.concat) { frameworkURL -> SignalProducer<URL, CarthageError> in
+				return frameworkURLs.flatMap(.concat) { frameworkURL, isStatic -> SignalProducer<URL, CarthageError> in
 						let framework = SignalProducer<URL, CarthageError>(value: frameworkURL)
+
+						if isStatic {
+							return framework
+						}
+
 						let bcSymbolMaps = BCSymbolMapsForFramework(frameworkURL)
 						let dSYMs = dSYMForFramework(frameworkURL, inDirectoryURL: frameworkURL.deletingLastPathComponent())
 						return .merge(framework, bcSymbolMaps, dSYMs)
@@ -999,7 +1006,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 							Constants.checkoutsFolderPath, isDirectory: true
 						),
 						includingPropertiesForKeys: nil
-				)
+					)
 					.map { $0.resolvingSymlinksInPath() }
 					.filter { !checkoutURLs.contains($0) }) ?? []
 
@@ -1009,7 +1016,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 							Constants.binariesFolderPath, isDirectory: true
 						),
 						includingPropertiesForKeys: nil
-				)
+					)
 					.map { $0.resolvingSymlinksInPath() }
 					.filter { $0.pathExtension == VersionFile.pathExtension &&
 						!versionFileURLs.contains($0) }) ?? []
@@ -1022,7 +1029,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 									platform.relativePath, isDirectory: true
 								),
 								includingPropertiesForKeys: nil
-						)
+							)
 							.filter { !binaryURLs.contains($0) }) ?? []
 					}
 
