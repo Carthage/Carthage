@@ -953,7 +953,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.resolvingSymlinksInPath()
 
 				let frameworkURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release")
-					.flatMap(.concat) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
+					.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
 						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 						return BuildSettings.load(with: buildArguments)
 					}
@@ -969,7 +969,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						}
 					}
 
-				return frameworkURLs.flatMap(.concat) { frameworkURL, isStatic -> SignalProducer<URL, CarthageError> in
+				return frameworkURLs.flatMap(.concurrent(limit: 4)) { frameworkURL, isStatic -> SignalProducer<URL, CarthageError> in
 						let framework = SignalProducer<URL, CarthageError>(value: frameworkURL)
 
 						if isStatic {
