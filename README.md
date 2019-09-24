@@ -241,7 +241,7 @@ Auto completion of Carthage commands and options are available as documented in 
 
 ## Supporting Carthage for your framework
 
-**Carthage only officially supports dynamic frameworks**. Dynamic frameworks can be used on any version of OS X, but only on **iOS 8 or later**. Additionally, since version 0.30.0 Carhage supports **static** frameworks.
+**Carthage only officially supports dynamic frameworks**. Dynamic frameworks can be used on any version of OS X, but only on **iOS 8 or later**. Additionally, since version 0.30.0 Carthage supports **static** frameworks.
 
 Because Carthage has no centralized package list, and no project specification format, **most frameworks should build automatically**.
 
