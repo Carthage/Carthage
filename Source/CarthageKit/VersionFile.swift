@@ -79,6 +79,14 @@ struct VersionFile: Codable {
 		self = versionFile
 	}
 
+    static func url(for dependency: Dependency, rootDirectoryURL: URL) -> URL {
+        let rootBinariesURL = rootDirectoryURL
+			.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
+			.resolvingSymlinksInPath()
+        return rootBinariesURL
+			.appendingPathComponent(".\(dependency.name).\(VersionFile.pathExtension)")
+    }
+
 	func frameworkURL(
 		for cachedFramework: CachedFramework,
 		platform: Platform,
@@ -471,11 +479,7 @@ public func versionFileMatches(
 	rootDirectoryURL: URL,
 	toolchain: String?
 ) -> SignalProducer<Bool?, CarthageError> {
-	let rootBinariesURL = rootDirectoryURL
-		.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
-		.resolvingSymlinksInPath()
-	let versionFileURL = rootBinariesURL
-		.appendingPathComponent(".\(dependency.name).\(VersionFile.pathExtension)")
+	let versionFileURL = VersionFile.url(for: dependency, rootDirectoryURL: rootDirectoryURL)
 	guard let versionFile = VersionFile(url: versionFileURL) else {
 		return SignalProducer(value: nil)
 	}
@@ -483,6 +487,10 @@ public func versionFileMatches(
 	let commitish = version.commitish
 
 	let platformsToCheck = platforms.isEmpty ? Set<Platform>(Platform.supportedPlatforms) : platforms
+
+	let rootBinariesURL = rootDirectoryURL
+		.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
+		.resolvingSymlinksInPath()
 
 	return swiftVersion(usingToolchain: toolchain)
 		.mapError { error in CarthageError.internalError(description: error.description) }
