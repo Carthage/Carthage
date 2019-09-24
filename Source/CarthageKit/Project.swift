@@ -48,7 +48,7 @@ public enum ProjectEvent {
 	/// Building an uncached project.
 	case buildingUncached(Dependency)
 
-/// Removing unused packages
+	/// Removing unused packages
 	case removingUnneededItem(URL)
 }
 
