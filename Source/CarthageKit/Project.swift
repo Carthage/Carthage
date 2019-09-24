@@ -977,7 +977,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 						}
 
 						let bcSymbolMaps = BCSymbolMapsForFramework(frameworkURL)
+							.flatMapError { _ in SignalProducer<URL, CarthageError>.empty }
 						let dSYMs = dSYMForFramework(frameworkURL, inDirectoryURL: frameworkURL.deletingLastPathComponent())
+							.flatMapError { _ in SignalProducer<URL, CarthageError>.empty }
 						return .merge(framework, bcSymbolMaps, dSYMs)
 					}
 					.collect()
