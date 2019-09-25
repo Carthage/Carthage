@@ -704,6 +704,44 @@ class ProjectSpec: QuickSpec {
 
 				expect(Set(removedItems)) == expectedItems
 			}
+
+			it("should successfully if there is a lack of a framework") {
+				let directoryURL = baseDirectoryURL.appendingPathComponent("PlatformUsed", isDirectory: true)
+				let project = Project(directoryURL: directoryURL)
+				var events = [ProjectEvent]()
+				project.projectEvents.observeValues { events.append($0) }
+
+				expect(project.removeUnneededItems().wait().error).to(beNil())
+
+				let removedItems = events.compactMap { event -> URL? in
+					guard case let .removingUnneededItem(url) = event else {
+						fail()
+						return nil
+					}
+					return url
+				}
+
+				let expectedPaths = [
+					("Build/iOS/TestFramework2.framework.dSYM", true),
+					("Build/iOS/TestFramework1.framework.dSYM", true),
+					("Build/iOS/TestFramework2.framework", true),
+					("Build/iOS/TestFramework1.framework", true),
+					("Checkouts/TestFramework1", true),
+					("Checkouts/TestFramework2", true),
+					("Build/iOS/59F47BB3-1D4F-3B7F-A0D3-273E2F5B9526.bcsymbolmap", false),
+					("Build/iOS/1047B36A-DF55-31AE-B619-D457C836A39D.bcsymbolmap", false),
+					("Build/iOS/D66A4E3C-FAB4-38A5-9863-D1A27A5C4B41.bcsymbolmap", false),
+					("Build/iOS/86E1998A-CF88-316A-87F7-EED06C281067.bcsymbolmap", false),
+					("Build/.TestFramework2.version", false),
+					("Build/.TestFramework1.version", false),
+				]
+
+				let expectedItems = Set(expectedPaths.map {
+					directoryURL.appendingPathComponent("Carthage/\($0)", isDirectory: $1)
+				})
+
+				expect(Set(removedItems)) == expectedItems
+			}
 		}
 
 		describe("transitiveDependencies") {
