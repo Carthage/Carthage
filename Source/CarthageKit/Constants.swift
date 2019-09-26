@@ -102,6 +102,6 @@ public struct Constants {
 
 		/// MIME types allowed for GitHub Release assets, for them to be considered as
 		/// binary frameworks.
-		public static let binaryAssetContentTypes = ["application/zip", "application/octet-stream"]
+		public static let binaryAssetContentTypes = ["application/zip", "application/x-zip-compressed", "application/octet-stream"]
 	}
 }
