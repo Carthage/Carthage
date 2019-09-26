@@ -72,6 +72,12 @@ class DependencySpec: QuickSpec {
 
 					expect(dependency.name) == "myproject"
 				}
+                
+                it("should be the last component of the URL") {
+                    let dependency = Dependency.git(GitURL("git@server.com:myproject"))
+
+                    expect(dependency.name) == "myproject"
+                }
 
 				it("should not include the trailing git suffix") {
 					let dependency = Dependency.git(GitURL("ssh://server.com/myproject.git"))

@@ -47,7 +47,7 @@ public struct GitURL {
 
 	/// The name of the repository, if it can be inferred from the URL.
 	public var name: String? {
-		let components = urlString.split(omittingEmptySubsequences: true) { $0 == "/" }
+        let components = urlString.split(omittingEmptySubsequences: true) { $0 == "/" || $0 == ":"}
 
 		return components
 			.last
