@@ -211,7 +211,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 						.map { _ in (scheme, project, settings) }
 			}
 		}
-		.flatMap(.concurrent(limit: 4)) { (scheme: Scheme, project: ProjectLocator, settings: BuildSettings) -> SignalProducer<(Scheme, ProjectLocator, BuildSettings), CarthageError> in
+		.flatMap(.concurrent(limit: 4)) { scheme, project, settings -> SignalProducer<(Scheme, ProjectLocator, BuildSettings), CarthageError> in
 
 			return locator
 				// This scheduler hop is required to avoid disallowed recursive signals.
