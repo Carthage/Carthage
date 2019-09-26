@@ -151,14 +151,14 @@ internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain to
 
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
-public func xcodebuildTask(_ tasks: [String], _ buildArguments: BuildArguments, useRawArguments: Bool = false) -> Task {
-	return Task("/usr/bin/xcrun", arguments: (useRawArguments ? buildArguments.rawArguments : buildArguments.arguments) + tasks)
+public func xcodebuildTask(_ tasks: [String], _ buildArguments: BuildArguments) -> Task {
+	return Task("/usr/bin/xcrun", arguments: buildArguments.arguments + tasks)
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
-public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments, useRawArguments: Bool = false) -> Task {
-	return xcodebuildTask([task], buildArguments, useRawArguments: useRawArguments)
+public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments) -> Task {
+	return xcodebuildTask([task], buildArguments)
 }
 
 /// Finds schemes of projects or workspaces, which Carthage should build, found
@@ -166,8 +166,9 @@ public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments, use
 public func buildableSchemesInDirectory( // swiftlint:disable:this function_body_length
 	_ directoryURL: URL,
 	withConfiguration configuration: String,
-	forPlatforms platforms: Set<Platform> = []
-) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> {
+	forPlatforms platforms: Set<Platform> = [],
+	useXCFrameworks: Bool = false
+) -> SignalProducer<(Scheme, ProjectLocator, BuildSettings), CarthageError> {
 	precondition(directoryURL.isFileURL)
 	let locator = ProjectLocator
 			.locate(in: directoryURL)
@@ -193,16 +194,25 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 		.flatMap(.merge) { (projects: [(ProjectLocator, [Scheme])]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
 			return schemesInProjects(projects).flatten()
 		}
-		.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
-			/// Check whether we should the scheme by checking against the project. If we're building
+		.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<(Scheme, ProjectLocator, BuildSettings), CarthageError> in
+			/// Check whether we should build the scheme by checking against the project. If we're building
 			/// from a workspace, then it might include additional targets that would trigger our
 			/// check.
+
 			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-			return shouldBuildScheme(buildArguments, platforms)
-				.filter { $0 }
-				.map { _ in (scheme, project) }
+			return BuildSettings.load(with: buildArguments)
+				.flatMap(.concat) { settings in
+
+					return shouldBuild(scheme: scheme,
+									   withSettings: settings,
+									   forPlatforms: platforms,
+									   shouldBuildForDistribution: useXCFrameworks)
+						.filter { $0 }
+						.map { _ in (scheme, project, settings) }
+			}
 		}
-		.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+		.flatMap(.concurrent(limit: 4)) { (scheme: Scheme, project: ProjectLocator, settings: BuildSettings) -> SignalProducer<(Scheme, ProjectLocator, BuildSettings), CarthageError> in
+
 			return locator
 				// This scheduler hop is required to avoid disallowed recursive signals.
 				// See https://github.com/ReactiveCocoa/ReactiveCocoa/pull/2042.
@@ -212,10 +222,15 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 					switch project {
 					case .workspace where schemes.contains(scheme):
 						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-						return shouldBuildScheme(buildArguments, platforms)
-							.filter { $0 }
-							.map { _ in project }
-
+						return BuildSettings.load(with: buildArguments)
+							.flatMap(.concat) { settings in
+								return shouldBuild(scheme: scheme,
+												   withSettings: settings,
+												   forPlatforms: platforms,
+												   shouldBuildForDistribution: useXCFrameworks)
+									.filter { $0 }
+									.map { _ in project }
+						}
 					default:
 						return .empty
 					}
@@ -224,10 +239,10 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 				// which the scheme is defined instead.
 				.concat(value: project)
 				.take(first: 1)
-				.map { project in (scheme, project) }
+				.map { project in (scheme, project, settings) }
 		}
 		.collect()
-		.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator)]) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> in
+		.flatMap(.merge) { (schemes: [(Scheme, ProjectLocator, BuildSettings)]) -> SignalProducer<(Scheme, ProjectLocator, BuildSettings), CarthageError> in
 			if !schemes.isEmpty {
 				return .init(schemes)
 			} else {
@@ -460,32 +475,42 @@ private func shouldBuildFrameworkType(_ frameworkType: FrameworkType?) -> Bool {
 	return frameworkType != nil
 }
 
-/// Determines whether the given scheme should be built automatically.
-private func shouldBuildScheme(_ buildArguments: BuildArguments, _ forPlatforms: Set<Platform>) -> SignalProducer<Bool, CarthageError> {
-	precondition(buildArguments.scheme != nil)
+/// Determines whether the given scheme contained int the `BuildSettings` should  be built automatically.
+private func shouldBuild(scheme: Scheme,
+						 withSettings settings: BuildSettings,
+						 forPlatforms platforms: Set<Platform>,
+						 shouldBuildForDistribution: Bool) -> SignalProducer<Bool, CarthageError> {
 
-	return BuildSettings.load(with: buildArguments)
-		.flatMap(.concat) { settings -> SignalProducer<FrameworkType?, CarthageError> in
-			let frameworkType = SignalProducer(result: settings.frameworkType)
+	let producer = SignalProducer<BuildSettings, CarthageError>(value: settings)
 
-			if forPlatforms.isEmpty {
-				return frameworkType
-					.flatMapError { _ in .empty }
-			} else {
-				return settings.buildSDKs
-					.filter {
-						forPlatforms.contains($0.platform)
-					}
-					.flatMap(.merge) { _ in frameworkType }
-					.flatMapError { _ in .empty }
-			}
+
+	let k = producer
+		.flatMap(.merge) {
+			SignalProducer
+			.zip($0.buildSDKs, SignalProducer(result: $0.frameworkType).flatMapError { _ in return .empty } )
+			.zip(with: SignalProducer<BuildSettings, CarthageError>(value: $0))
 		}
-		.filter(shouldBuildFrameworkType)
-		// If we find any framework target, we should indeed build this scheme.
-		.map { _ in true }
-		// Otherwise, nope.
-		.concat(value: false)
-		.take(first: 1)
+		.map { return ($0.0, $0.1, $1) }
+		.filter {
+			platforms.contains($0.0.platform)
+		}
+		.flatMap(.merge) { tuple -> SignalProducer<(SDK, FrameworkType?, BuildSettings), CarthageError> in
+			let (_, _, settings) = tuple
+			if shouldBuildForDistribution {
+					let shouldBuilForDistributionResult: Result<Bool, CarthageError> = settings
+						.shouldBuildForDistribution
+						.flatMapError { _ in .success(false) }
+
+					if !shouldBuilForDistributionResult.value! {
+						return SignalProducer(error: .notForDistribution(scheme: scheme))
+					}
+				}
+				return SignalProducer<(SDK, FrameworkType?, BuildSettings), CarthageError>(value: tuple)
+		}
+		.map { return $0.1 }
+		.map(shouldBuildFrameworkType)
+
+	return k
 }
 
 /// Aggregates all of the build settings sent on the given signal, associating
@@ -632,16 +657,13 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				.map { settings in return (settings, sdk) }
 		}
 		.reduce(into: [Platform: Set<SDK>]()) { sdksByPlatform, next in
-			let (settings, sdk) = next
+			let (_, sdk) = next
 			let platform = sdk.platform
 
 			if var sdks = sdksByPlatform[platform] {
 				sdks.insert(sdk)
 				sdksByPlatform.updateValue(sdks, forKey: platform)
-				if platform == .iOS && settings.supportsUIKitForMac.value == true && options.useXCFrameworks {
-					sdks.insert(.macOSX)
-					sdksByPlatform.updateValue(sdks, forKey: platform)
-				}
+
 			} else {
 				sdksByPlatform[platform] = [sdk]
 			}
@@ -653,12 +675,6 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 
 			let values = sdksByPlatform.map { ($0, Array($1)) }
 			return SignalProducer(values)
-		}
-		.flatMap(.concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
-
-			let wantsXCFramworks = platform == .iOS && sdks.contains(.macOSX) && options.useXCFrameworks
-			let filterResult = !wantsXCFramworks ? sdkFilter(sdks, scheme, options.configuration, project) : .success(sdks)
-			return SignalProducer(result: filterResult.map { (platform, $0) })
 		}
 		.filter { _, sdks in
 			return !sdks.isEmpty
@@ -741,120 +757,6 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						}
 					}
 
-			case 3 where platform == .iOS && sdks.contains(.macOSX) && options.useXCFrameworks:
-
-				let (simulatorSDKs, deviceSDKs) = SDK.splitSDKs(sdks)
-				guard let iPhoneSDK = deviceSDKs.first(where: { $0 == .iPhoneOS }) else {
-					fatalError("Could not find device SDK in \(sdks)")
-				}
-				guard let macOSXSDK = deviceSDKs.first(where: { $0 == .macOSX }) else {
-					fatalError("Could not find device SDK in \(sdks)")
-				}
-				guard let iPhoneSimulatorSDK = simulatorSDKs.first else {
-					fatalError("Could not find simulator SDK in \(sdks)")
-				}
-
-				let tmpProductDirTemplate = "carthage-xcframework-tmp.XXXXXX"
-
-				let deviceSettingsProducer = settingsByTarget(build(sdk: iPhoneSDK, with: buildArgs, in: workingDirectoryURL))
-				let macOSSettingsProducer = settingsByTarget(build(sdk: macOSXSDK, with: buildArgs, forUIKitForMac: true, in: workingDirectoryURL))
-				let iPhoneSimulatorSettingsProducer = settingsByTarget(build(sdk: iPhoneSimulatorSDK, with: buildArgs, in: workingDirectoryURL))
-
-				typealias Triplet = (([(URL, String)], [String: BuildSettings]), ([(URL, String)], [String: BuildSettings]), ([(URL, String)], [String: BuildSettings]))
-
-				return deviceSettingsProducer.flatMap(.concat) { dE -> SignalProducer<TaskEvent<Triplet>, CarthageError> in
-					switch dE {
-					case let .launch(task):
-						return SignalProducer(value: .launch(task))
-					case let .standardOutput(data):
-						return SignalProducer(value: .standardOutput(data))
-					case let .standardError(data):
-						return SignalProducer(value: .standardError(data))
-					case let .success(d):
-						return SignalProducer(d).flatMap(.merge) { target, settings in
-							FileManager.default.reactive.createTemporaryDirectoryWithTemplate(tmpProductDirTemplate).flatMap(.merge) { directoryURL in
-								copyBuildProductIntoDirectory(settings.productDestinationPath(in: directoryURL.appendingPathComponent("iOS")), settings)
-								.zip(with: SignalProducer<String, CarthageError>(value: target))
-								.collect()
-								.flatMap(.merge) { iphoneTargetsDestinationULRs in
-									return macOSSettingsProducer.flatMap(.concat) { mE -> SignalProducer<TaskEvent<Triplet>, CarthageError> in
-										switch mE {
-										case let .launch(task):
-											return SignalProducer(value: .launch(task))
-										case let .standardOutput(data):
-											return SignalProducer(value: .standardOutput(data))
-										case let .standardError(data):
-											return SignalProducer(value: .standardError(data))
-										case let .success(m):
-											return SignalProducer(m).flatMap(.merge) { target, settings in
-												copyBuildProductIntoDirectory(settings.productDestinationPath(in: directoryURL.appendingPathComponent("UIKitForMac")), settings)
-													.zip(with: SignalProducer<String, CarthageError>(value: target))
-												}
-												.collect()
-												.flatMap(.merge) { macOSTargetsDestinationULRs in
-													return iPhoneSimulatorSettingsProducer.flatMapTaskEvents(.concat) { s in
-														return SignalProducer(s).flatMap(.merge) { (target, settings) -> SignalProducer<(URL, String), CarthageError>  in
-															copyBuildProductIntoDirectory(settings.productDestinationPath(in: directoryURL.appendingPathComponent("iOSSimulator")), settings)
-															.zip(with: SignalProducer<String, CarthageError>(value: target))
-															}
-															.collect()
-															.flatMap(.merge) { simualtorTargetsDestinationULRs -> SignalProducer<Triplet, CarthageError> in
-																let triplet: Triplet = ((iphoneTargetsDestinationULRs, d),(macOSTargetsDestinationULRs, m),(simualtorTargetsDestinationULRs, s))
-																return SignalProducer<Triplet, CarthageError>(value: triplet)
-															}
-														}
-												}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-				.flatMapTaskEvents(.concat) { dT, mT, sT in
-
-					let (dURLs, deviceSettings) = dT
-					let (mURLs, _) = mT
-					let (sURLs, _) = sT
-
-
-					let reducer: (inout [String : Set<URL>], (URL, String)) -> () = { acc, tuple in
-						if acc[tuple.1] == nil {
-
-							acc[tuple.1] = Set([tuple.0])
-						}
-						else {
-							acc[tuple.1]!.update(with: tuple.0)
-						}
-					}
-
-					let deviceTargetsAndProductsDictionary = dURLs.reduce(into: [String : Set<URL>](), reducer)
-					let macTargetsAndProductsDictionary = mURLs.reduce(into: [String : Set<URL>](), reducer)
-					let simulatorTargetsAndProductsDictionary = sURLs.reduce(into: [String : Set<URL>](), reducer)
-
-					var allPlatformsTargetURLs = [String : Set<URL>]()
-
-					for (target, urls) in deviceTargetsAndProductsDictionary {
-
-						allPlatformsTargetURLs[target] = urls
-							.union(macTargetsAndProductsDictionary[target]!)
-							.union(simulatorTargetsAndProductsDictionary[target]!)
-					}
-
-					return SignalProducer(allPlatformsTargetURLs)
-						.flatMap(.merge) { target, urls in
-							let outputURL = deviceSettings[target]!
-							.xcFrameworkWrapperName
-							.map(folderURL.appendingPathComponent)
-
-							let adaptedURLs = Result<[URL], CarthageError>(Array(urls))
-
-							return SignalProducer(outputURL.fanout(adaptedURLs))
-								.flatMap(.merge) { createXCFramework($0.1, $0.0) }
-								.then(SignalProducer(result: outputURL))
-					}
-				}
-
 			default:
 				fatalError("SDK count \(sdks.count) in scheme \(scheme) is not supported")
 			}
@@ -901,7 +803,6 @@ private func resolveSameTargetName(for settings: BuildSettings) -> SignalProduce
 // swiftlint:disable:next function_body_length
 private func build(sdk: SDK,
 	with buildArgs: BuildArguments,
-	forUIKitForMac isUIKitForMac: Bool = false,
 	in workingDirectoryURL: URL
 ) -> SignalProducer<TaskEvent<BuildSettings>, CarthageError> {
 	var argsForLoading = buildArgs
@@ -953,7 +854,7 @@ private func build(sdk: SDK,
 			// See https://github.com/Carthage/Carthage/issues/2056
 			// and https://developer.apple.com/library/content/qa/qa1964/_index.html.
 			let xcodebuildAction: BuildArguments.Action = sdk.isDevice ? .archive : .build
-			return BuildSettings.load(with: argsForLoading, useRawArguments: isUIKitForMac, for: xcodebuildAction)
+			return BuildSettings.load(with: argsForLoading, for: xcodebuildAction)
 				.filter { settings in
 					// Only copy build products that are frameworks
 					guard let frameworkType = settings.frameworkType.value, shouldBuildFrameworkType(frameworkType), let projectPath = settings.projectPath.value else {
@@ -1001,7 +902,7 @@ private func build(sdk: SDK,
 						return result
 					}()
 
-					var buildScheme = xcodebuildTask(actions, argsForBuilding, useRawArguments: isUIKitForMac)
+					var buildScheme = xcodebuildTask(actions, argsForBuilding)
 					buildScheme.workingDirectoryPath = workingDirectoryURL.path
 
 					return buildScheme.launch()
@@ -1085,9 +986,10 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 		// multiple times.
 		buildableSchemesInDirectory(directoryURL,
 									withConfiguration: options.configuration,
-									forPlatforms: options.platforms
+									forPlatforms: options.platforms,
+									useXCFrameworks: options.useXCFrameworks
 			)
-			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
+			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator, _: BuildSettings) -> SignalProducer<TaskEvent<URL>, CarthageError> in
 				let initialValue = (project, scheme)
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in

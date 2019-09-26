@@ -44,7 +44,6 @@ public struct BuildSettings {
 	/// Upon .success, sends one BuildSettings value for each target included in
 	/// the referenced scheme.
 	public static func load(with arguments: BuildArguments,
-		useRawArguments: Bool = false,
 		for action: BuildArguments.Action? = nil) -> SignalProducer<BuildSettings, CarthageError> {
 		// xcodebuild (in Xcode 8.0) has a bug where xcodebuild -showBuildSettings
 		// can hang indefinitely on projects that contain core data models.
@@ -54,9 +53,7 @@ public struct BuildSettings {
 		//
 		// "archive" also works around the issue above so use it to determine if
 		// it is configured for the archive action.
-		let task = xcodebuildTask(["archive", "-showBuildSettings", "-skipUnavailableActions"],
-								  arguments,
-								  useRawArguments: useRawArguments)
+		let task = xcodebuildTask(["archive", "-showBuildSettings", "-skipUnavailableActions"], arguments)
 
 		return task.launch()
 			.ignoreTaskData()
@@ -220,9 +217,7 @@ public struct BuildSettings {
 			pathComponent = "\(configuration)\(effectivePlatformName)"
 		}
 
-		// TODO: could use self["variant"] maybe, is SDK is passed with variant
-		let isUIKitForMac = (self.supportsUIKitForMac.value ?? false) && (self["SDK_NAME"].map { $0.contains("macos") }.value ?? false)
-		let path = (basePath as NSString).appendingPathComponent(isUIKitForMac ? "\(pathComponent)-uikitformac" : pathComponent)
+		let path = (basePath as NSString).appendingPathComponent(pathComponent)
 		return .success(path)
 	}
 
@@ -249,7 +244,13 @@ public struct BuildSettings {
 
 	/// Attempts to determine the name of the built product's wrapper bundle replacing "framework" with "xcframework".
 	public var xcFrameworkWrapperName: Result<String, CarthageError> {
-		return self["WRAPPER_NAME"].map { $0.spm_dropSuffix(".framework").appending(".xcframework") }
+		return self["WRAPPER_NAME"].flatMap { name in
+			let substrings = name.split(separator: ".")
+			guard let replacementString = substrings.last?.replacingOccurrences(of: "framework", with: "xcframework") else {
+				return .failure(.internalError(description: "WRAPPER_NAME does not containt .framework extension"))
+			}
+			return .success(substrings.dropLast().joined(separator: ".").appending("." + replacementString))
+		}
 	}
 
 	/// Attempts to determine the URL to the built product's wrapper, corresponding
@@ -303,9 +304,9 @@ public struct BuildSettings {
 		return self["TARGET_BUILD_DIR"]
 	}
 
-	/// Attepts to determine if UIKit for Mac is supported
-	public var supportsUIKitForMac: Result<Bool, CarthageError> {
-		return self["SUPPORTS_UIKITFORMAC"].map { $0 == "YES" }
+	public var shouldBuildForDistribution: Result<Bool, CarthageError> {
+		return self["BUILD_LIBRARY_FOR_DISTRIBUTION"]
+			.map { $0 == "YES" }
 	}
 
 	/// Add subdirectory path if it's not possible to paste product to destination path

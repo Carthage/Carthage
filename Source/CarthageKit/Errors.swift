@@ -104,6 +104,9 @@ public enum CarthageError: Error {
 	/// An archive (.zip, .gz, .bz2 ...) contains binaries that would
 	/// be copied to the same destination path
 	case duplicatesInArchive(duplicates: DuplicatesInArchive)
+
+	/// Scheme is not supposed to be built for distribution as required by .xcframeworks
+	case notForDistribution(scheme: Scheme)
 }
 
 extension CarthageError {
@@ -195,6 +198,9 @@ extension CarthageError: Equatable {
 			return left == right
 
 		case let (.duplicatesInArchive(left), .duplicatesInArchive(right)):
+			return left == right
+
+		case let (.notForDistribution(scheme: left), .notForDistribution(scheme: right)):
 			return left == right
 
 		default:
@@ -381,6 +387,9 @@ extension CarthageError: CustomStringConvertible {
 				.map { "* \t\($0.value.map{ url in return url.absoluteString }.joined(separator: "\n\t")) \n\t\tto:\n\t\($0.key)" }
 				.joined(separator: "\n")
 			return "Invalid archive - Found multiple frameworks with the same unarchiving destination:\n\(prettyDupeList)"
+
+		case let .notForDistribution(scheme: s):
+			return "Missing build setting - BUILD_LIBRARY_FOR_DISTRIBUTION is required to be \"YES\" in scheme \"\(s.name)\" when supporting xcframeworks"
 		}
 	}
 }
