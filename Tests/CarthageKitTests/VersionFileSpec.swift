@@ -53,7 +53,8 @@ class VersionFileSpec: QuickSpec {
 						      macOS: nil,
 						      iOS: [framework],
 						      watchOS: nil,
-						      tvOS: nil)
+						      tvOS: nil,
+							  macCatalyst: nil)
 
 			let versionFileURL = Bundle(for: type(of: self)).resourceURL!.appendingPathComponent("TestWriteVersionFile")
 
