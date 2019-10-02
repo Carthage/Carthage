@@ -123,7 +123,6 @@ public struct BuildArguments {
 			}
 		}
 
-        let additionalBuildOptions: [String]
 		if let sdk = sdk {
 			// Passing in -sdk macosx appears to break implicit dependency
 			// resolution (see Carthage/Carthage#347).
@@ -134,9 +133,7 @@ public struct BuildArguments {
 			if sdk != .macOSX {
 				args += [ "-sdk", sdk.realSDK.rawValue ]
 			}
-            additionalBuildOptions = sdk.additionalBuildOptions
-        } else {
-            additionalBuildOptions = []
+            args += sdk.additionalBuildOptions
         }
 
 		if let toolchain = toolchain {
@@ -162,8 +159,6 @@ public struct BuildArguments {
 		// Disable code signing requirement for all builds
 		// Frameworks get signed in the copy-frameworks action
 		args += [ "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=" ]
-        
-        args += additionalBuildOptions
 
 		args += [ "CARTHAGE=YES" ]
 

@@ -66,7 +66,7 @@ class BuildArgumentsSpec: QuickSpec {
 			}
 
 			describe("specifying the sdk") {
-				for sdk in SDK.allSDKs.subtracting([.macOSX]) {
+				for sdk in SDK.allSDKs.subtracting([.macOSX, .macCatalyst]) {
 					itCreatesBuildArguments("includes \(sdk) in the argument if specified", arguments: ["-sdk", sdk.rawValue]) { subject in
 						subject.sdk = sdk
 					}
@@ -81,6 +81,20 @@ class BuildArgumentsSpec: QuickSpec {
 				itCreatesBuildArguments("does not include the sdk flag if .macOSX is specified", arguments: []) { subject in
 					subject.sdk = .macOSX
 				}
+                
+                
+                // .macCatalyst is a pseudononym for building using the iOS SDK
+                // but targeting a macOS destination.
+                itCreatesBuildArguments("builds using the iphoneos SDK if .macCatalyst is specified",
+                                        arguments: [
+                                            "-sdk", "iphoneos",
+                                            "-destination", "platform=macOS,arch=x86_64,variant=Mac Catalyst",
+                                            "IS_MACCATALYST=YES",
+                                            "IS_UIKITFORMAC=YES",
+                                            "SUPPORTS_MACCATALYST=YES"
+                ]) { subject in
+                    subject.sdk = .macCatalyst
+                }
 			}
 
 			itCreatesBuildArguments("includes the destination if given", arguments: ["-destination", "exampleDestination"]) { subject in
