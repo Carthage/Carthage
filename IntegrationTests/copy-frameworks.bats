@@ -3,7 +3,7 @@
 setup() {
     cd $BATS_TMPDIR
     rm -rf CarthageCopyFrameworksFixture
-    git clone -b 2.0.0 https://github.com/ikesyo/CarthageCopyFrameworksFixture.git
+    git clone -b 3.0.0 https://github.com/ikesyo/CarthageCopyFrameworksFixture.git
     cd CarthageCopyFrameworksFixture
 }
 
