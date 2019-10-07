@@ -6,6 +6,10 @@ public struct Constants {
 	/// Carthage's bundle identifier.
 	public static let bundleIdentifier: String = "org.carthage.CarthageKit"
 
+	/// The name of the folder into which Carthage puts checked out dependencies (relative
+	/// to the working directory).
+	public static let checkoutsFolderPath = "Carthage/Checkouts"
+
 	/// The name of the folder into which Carthage puts binaries it builds (relative
 	/// to the working directory).
 	public static let binariesFolderPath = "Carthage/Build"
@@ -98,6 +102,6 @@ public struct Constants {
 
 		/// MIME types allowed for GitHub Release assets, for them to be considered as
 		/// binary frameworks.
-		public static let binaryAssetContentTypes = ["application/zip", "application/octet-stream"]
+		public static let binaryAssetContentTypes = ["application/zip", "application/x-zip-compressed", "application/octet-stream"]
 	}
 }
