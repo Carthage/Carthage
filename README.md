@@ -107,7 +107,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one or download a pre-compiled framework.
-1. On your application targets’ _General_ settings tab, in the "Frameworks, Libraries and Embedded Content" section, drag and drop each framework you want to use from [Carthage/Build][] folder on disk and for each select option `Do Not Embed`
+1. On your application targets’ _General_ settings tab, in the "Frameworks, Libraries and Embedded Content" section, drag and drop each framework you want to use from [Carthage/Build][] folder on disk and for each select option "Do Not Embed"
 1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
     ```sh
