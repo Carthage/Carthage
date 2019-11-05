@@ -18,13 +18,6 @@ extension Platform {
 		let subfolderName = rawValue
 		return (Constants.binariesFolderPath as NSString).appendingPathComponent(subfolderName)
 	}
-
-	/// The relative URL at which binaries corresponding to this platform will
-	/// be stored.
-	public var relativeURL: URL? {
-		let subfolderName = rawValue
-		return URL(string: Constants.binariesFolderPath)?.appendingPathComponent(subfolderName, isDirectory: true)
-	}
 }
 
 extension ProjectLocator {
@@ -36,7 +29,7 @@ extension ProjectLocator {
 
 		return gitmodulesEntriesInRepository(directoryURL, revision: nil)
 			.map { directoryURL.appendingPathComponent($0.path) }
-			.concat(value: directoryURL.appendingPathComponent(Constants.checkoutsFolderPath))
+			.concat(value: directoryURL.appendingPathComponent(carthageProjectCheckoutsPath))
 			.collect()
 			.flatMap(.merge) { directoriesToSkip -> SignalProducer<URL, CarthageError> in
 				return FileManager.default.reactive

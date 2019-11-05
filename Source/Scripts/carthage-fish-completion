@@ -52,9 +52,6 @@ complete -c carthage -n '__fish_prog_using_subcommand checkout' -l no-use-binari
 complete -c carthage -n '__fish_prog_using_subcommand checkout' -l color -a "auto always never" -x
 complete -c carthage -n '__fish_prog_using_subcommand checkout' -l project-directory -x -a '(__fish_complete_directories (commandline -ct))'
 
-complete -c carthage -n '__fish_prog_using_subcommand cleanup' -l color -a "auto always never" -x
-complete -c carthage -n '__fish_prog_using_subcommand cleanup' -l project-directory -x -a '(__fish_complete_directories (commandline -ct))'
-
 complete -c carthage -n '__fish_prog_using_subcommand fetch' -l color -a "auto always never" -x
 
 complete -c carthage -n '__fish_prog_using_subcommand help' -a "archive bootstrap build checkout copy-frameworks fetch help outdated update validate version" -f

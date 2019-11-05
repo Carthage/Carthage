@@ -2,7 +2,7 @@
 
 _carthage() {
     local commands command cur prev
-    commands="archive bootstrap build checkout cleanup copy-frameworks fetch help outdated update validate version"
+    commands="archive bootstrap build checkout copy-frameworks fetch help outdated update validate version"
     command="${COMP_WORDS[1]}"
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -40,10 +40,6 @@ _carthage() {
             checkout)
                 COMPREPLY=($(compgen -W '--use-ssh --use-submodules --no-use-binaries \
                     --color --project-directory' -- ${cur}))
-                return 0
-                ;;
-            cleanup)
-                COMPREPLY=($(compgen -W '--color --project-directory' -- ${cur}))
                 return 0
                 ;;
             fetch)
