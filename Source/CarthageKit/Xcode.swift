@@ -134,10 +134,17 @@ internal func isSwiftFramework(_ frameworkURL: URL) -> Bool {
 internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
 	return SignalProducer.combineLatest(swiftVersion(usingToolchain: toolchain), frameworkSwiftVersion(frameworkURL))
 		.attemptMap { localSwiftVersion, frameworkSwiftVersion in
-			return localSwiftVersion == frameworkSwiftVersion
+			return localSwiftVersion == frameworkSwiftVersion || isModuleStableAPI(localSwiftVersion, frameworkSwiftVersion)
 				? .success(frameworkURL)
 				: .failure(.incompatibleFrameworkSwiftVersions(local: localSwiftVersion, framework: frameworkSwiftVersion))
 		}
+}
+
+private func isModuleStableAPI(_ localSwiftVersion: String, _ frameworkSwiftVersion: String) -> Bool {
+    guard let localSwiftVersionNumber = Double(localSwiftVersion.prefix(3)),
+        let frameworkSwiftVersionNumber = Double(frameworkSwiftVersion.prefix(3)) else { return false }
+
+    return localSwiftVersionNumber >= 5.1 && frameworkSwiftVersionNumber >= 5.1
 }
 
 /// Emits the framework URL if it is compatible with the build environment and errors if not.
