@@ -134,17 +134,24 @@ internal func isSwiftFramework(_ frameworkURL: URL) -> Bool {
 internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
 	return SignalProducer.combineLatest(swiftVersion(usingToolchain: toolchain), frameworkSwiftVersion(frameworkURL))
 		.attemptMap { localSwiftVersion, frameworkSwiftVersion in
-			return localSwiftVersion == frameworkSwiftVersion || isModuleStableAPI(localSwiftVersion, frameworkSwiftVersion)
+			return localSwiftVersion == frameworkSwiftVersion || isModuleStableAPI(localSwiftVersion, frameworkSwiftVersion, frameworkURL)
 				? .success(frameworkURL)
 				: .failure(.incompatibleFrameworkSwiftVersions(local: localSwiftVersion, framework: frameworkSwiftVersion))
 		}
 }
 
-private func isModuleStableAPI(_ localSwiftVersion: String, _ frameworkSwiftVersion: String) -> Bool {
+private func isModuleStableAPI(_ localSwiftVersion: String, _ frameworkSwiftVersion: String, _ frameworkURL: URL) -> Bool {
     guard let localSwiftVersionNumber = Double(localSwiftVersion.prefix(3)),
         let frameworkSwiftVersionNumber = Double(frameworkSwiftVersion.prefix(3)) else { return false }
+    guard let swiftModuleURL = frameworkURL.swiftmoduleURL() else { return false }
 
-    return localSwiftVersionNumber >= 5.1 && frameworkSwiftVersionNumber >= 5.1
+    let hasSwiftInterfaceFile = try? FileManager.default.contentsOfDirectory(at: swiftModuleURL,
+                                                                             includingPropertiesForKeys: nil,
+                                                                             options: []).first { (url) -> Bool in
+        return url.lastPathComponent.contains("swiftinterface")
+    } != nil
+
+    return localSwiftVersionNumber >= 5.1 && frameworkSwiftVersionNumber >= 5.1 && hasSwiftInterfaceFile == true
 }
 
 /// Emits the framework URL if it is compatible with the build environment and errors if not.
