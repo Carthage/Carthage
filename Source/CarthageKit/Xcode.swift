@@ -140,7 +140,9 @@ internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolcha
 		}
 }
 
-private func isModuleStableAPI(_ localSwiftVersion: String, _ frameworkSwiftVersion: String, _ frameworkURL: URL) -> Bool {
+private func isModuleStableAPI(_ localSwiftVersion: String,
+                               _ frameworkSwiftVersion: String,
+                               _ frameworkURL: URL) -> Bool {
     guard let localSwiftVersionNumber = Double(localSwiftVersion.prefix(3)),
         let frameworkSwiftVersionNumber = Double(frameworkSwiftVersion.prefix(3)) else { return false }
     guard let swiftModuleURL = frameworkURL.swiftmoduleURL() else { return false }
