@@ -19,9 +19,14 @@ class ProjectSpec: QuickSpec {
 			let noSharedSchemesDirectoryURL = Bundle(for: type(of: self)).url(forResource: "NoSharedSchemesTest", withExtension: nil)!
 			let noSharedSchemesBuildDirectoryURL = noSharedSchemesDirectoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			func build(directoryURL url: URL, platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+			func build(directoryURL url: URL,
+					   platforms: Set<Platform> = [],
+					   cacheBuilds: Bool = true,
+					   dependenciesToBuild: [String]? = nil) -> [String] {
 				let project = Project(directoryURL: url)
-				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
+				let buildOptions = BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds)
+				let result = project
+					.buildCheckedOutDependenciesWithOptions(buildOptions, dependenciesToBuild: dependenciesToBuild)
 					.ignoreTaskData()
 					.on(value: { project, scheme in
 						NSLog("Building scheme \"\(scheme)\" in \(project)")
@@ -34,12 +39,22 @@ class ProjectSpec: QuickSpec {
 				return result.value!.map { $0.name }
 			}
 
-			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
-				return build(directoryURL: directoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
+			func buildDependencyTest(platforms: Set<Platform> = [],
+									 cacheBuilds: Bool = true,
+									 dependenciesToBuild: [String]? = nil) -> [String] {
+				return build(directoryURL: directoryURL,
+							 platforms: platforms,
+							 cacheBuilds: cacheBuilds,
+							 dependenciesToBuild: dependenciesToBuild)
 			}
 
-			func buildNoSharedSchemesTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
-				return build(directoryURL: noSharedSchemesDirectoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
+			func buildNoSharedSchemesTest(platforms: Set<Platform> = [],
+										  cacheBuilds: Bool = true,
+										  dependenciesToBuild: [String]? = nil) -> [String] {
+				return build(directoryURL: noSharedSchemesDirectoryURL,
+							 platforms: platforms,
+							 cacheBuilds: cacheBuilds,
+							 dependenciesToBuild: dependenciesToBuild)
 			}
 
 			beforeEach {
@@ -87,13 +102,16 @@ class ProjectSpec: QuickSpec {
 			}
 
 			describe("createAndCheckVersionFiles") {
-				func overwriteFramework(_ frameworkName: String, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL) {
+				func overwriteFramework(_ frameworkName: String,
+										forPlatformName platformName: String,
+										inDirectory buildDirectoryURL: URL) throws
+				{
 					let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
 					let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
 					let binaryURL = frameworkURL.appendingPathComponent("\(frameworkName)", isDirectory: false)
 
 					let data = "junkdata".data(using: .utf8)!
-					try! data.write(to: binaryURL, options: .atomic)
+					try data.write(to: binaryURL, options: .atomic)
 				}
 
 				func overwriteSwiftVersion(
@@ -175,8 +193,12 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
-
+					do {
+						try overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					}
+					catch let error {
+						fail("Overwrite failed with error: \(error)")
+					}
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
 				}
@@ -224,8 +246,12 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					overwriteFramework("TestFramework2", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
-
+					do {
+						try overwriteFramework("TestFramework2", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					}
+					catch let error {
+						fail("Overwrite failed with error: \(error)")
+					}
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == ["TestFramework2_Mac", "TestFramework1_Mac"]
 				}
@@ -254,7 +280,12 @@ class ProjectSpec: QuickSpec {
 					expect(result1.filter { $0.contains("iOS") }) == iOSExpected
 					expect(Set(result1)) == Set<String>(macOSexpected + iOSExpected)
 
-					overwriteFramework("TestFramework1", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					do {
+						try overwriteFramework("TestFramework1", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					}
+					catch let error {
+						fail("Overwrite failed with error: \(error)")
+					}
 
 					let result2 = buildDependencyTest()
 					expect(result2.filter { $0.contains("Mac") }) == ["TestFramework1_Mac"]
@@ -269,7 +300,8 @@ class ProjectSpec: QuickSpec {
 					expect(result2) == []
 
 					// TestFramework2 has no shared schemes, but invalidating its version file should result in its dependencies (TestFramework1) being rebuilt
-					let framework2VersionFileURL = noSharedSchemesBuildDirectoryURL.appendingPathComponent(".TestFramework2.version", isDirectory: false)
+					let framework2VersionFileURL = noSharedSchemesBuildDirectoryURL
+						.appendingPathComponent(".TestFramework2.version", isDirectory: false)
 					let framework2VersionFilePath = framework2VersionFileURL.path
 
 					let json = try! String(contentsOf: framework2VersionFileURL, encoding: .utf8)
@@ -352,21 +384,29 @@ class ProjectSpec: QuickSpec {
 			let dependency = Dependency.git(GitURL(repositoryURL.absoluteString))
 
 			func initRepository() {
-				expect { try FileManager.default.createDirectory(atPath: repositoryURL.path, withIntermediateDirectories: true) }.notTo(throwError())
+				expect { try FileManager
+					.default
+					.createDirectory(atPath: repositoryURL.path, withIntermediateDirectories: true)
+				}
+				.notTo(throwError())
 				_ = launchGitTask([ "init" ], repositoryFileURL: repositoryURL).wait()
 			}
 
 			@discardableResult
-			func addCommit() -> String {
-				_ = launchGitTask([ "commit", "--allow-empty", "-m \"Empty commit\"" ], repositoryFileURL: repositoryURL).wait()
+			func addCommit() -> String? {
+				let result = launchGitTask([ "commit", "--allow-empty", "-m \"Empty commit\"" ], repositoryFileURL: repositoryURL).wait()
 				return launchGitTask([ "rev-parse", "--short", "HEAD" ], repositoryFileURL: repositoryURL)
-					.last()!
-					.value!
+					.last()?
+					.value?
 					.trimmingCharacters(in: .newlines)
 			}
 
 			func cloneOrFetch(commitish: String? = nil) -> SignalProducer<(ProjectEvent?, URL), CarthageError> {
-				return CarthageKit.cloneOrFetch(dependency: dependency, preferHTTPS: false, destinationURL: cacheDirectoryURL, commitish: commitish)
+				return CarthageKit
+					.cloneOrFetch(dependency: dependency,
+								  preferHTTPS: false,
+								  destinationURL: cacheDirectoryURL,
+								  commitish: commitish)
 			}
 
 			func assertProjectEvent(commitish: String? = nil, clearFetchTime: Bool = true, action: @escaping (ProjectEvent?) -> Void) {
@@ -382,7 +422,11 @@ class ProjectSpec: QuickSpec {
 			}
 
 			beforeEach {
-				expect { try FileManager.default.createDirectory(atPath: temporaryURL.path, withIntermediateDirectories: true) }.notTo(throwError())
+				expect { try FileManager
+					.default
+					.createDirectory(atPath: temporaryURL.path, withIntermediateDirectories: true)
+				}
+				.notTo(throwError())
 				initRepository()
 			}
 
@@ -403,30 +447,36 @@ class ProjectSpec: QuickSpec {
 
 			it("should fetch a project if the given commitish does not exist in the cloned repository") {
 				// Clone first
-				addCommit()
+				expect(addCommit()).toNot(beNil())
 				expect(cloneOrFetch().wait().error).to(beNil())
 
-				let commitish = addCommit()
+				guard let commitish = addCommit() else {
+					fail("Failed to add commit")
+					return
+				}
 
 				assertProjectEvent(commitish: commitish) { expect($0?.isFetching) == true }
 			}
 
 			it("should fetch a project if the given commitish exists but that is a reference") {
 				// Clone first
-				addCommit()
+				expect(addCommit()).toNot(beNil())
 				expect(cloneOrFetch().wait().error).to(beNil())
 
-				addCommit()
+				expect(addCommit()).toNot(beNil())
 
 				assertProjectEvent(commitish: "master") { expect($0?.isFetching) == true }
 			}
 
 			it("should not fetch a project if the given commitish exists but that is not a reference") {
 				// Clone first
-				let commitish = addCommit()
+				guard let commitish = addCommit() else {
+					fail("Failed to add commit")
+					return
+				}
 				expect(cloneOrFetch().wait().error).to(beNil())
 
-				addCommit()
+				expect(addCommit()).toNot(beNil())
 
 				assertProjectEvent(commitish: commitish) { expect($0).to(beNil()) }
 			}
