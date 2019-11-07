@@ -304,9 +304,24 @@ public struct BuildSettings {
 		return self["TARGET_BUILD_DIR"]
 	}
 
+	// Attempts to determine if the project should build for distribution
 	public var shouldBuildForDistribution: Result<Bool, CarthageError> {
 		return self["BUILD_LIBRARY_FOR_DISTRIBUTION"]
-			.map { $0 == "YES" }
+			.map { $0 ==  "YES" }
+	}
+
+	// Attempts to determine if install should be skipped
+	public var skipInstall: Result<Bool, CarthageError> {
+		return self["SKIP_INSTALL"]
+			.map { $0 ==  "YES" }
+
+	}
+
+	// Attemps to determine if build settings are appropriate for XCFramework support
+	public var supportsXCFrameworks: Result<Bool, CarthageError> {
+		return self.shouldBuildForDistribution.flatMap { buildForDistribution in
+			self.skipInstall.map { $0 && buildForDistribution }
+		}
 	}
 
 	/// Add subdirectory path if it's not possible to paste product to destination path

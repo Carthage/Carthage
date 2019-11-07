@@ -206,12 +206,15 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 					return shouldBuild(scheme: scheme,
 									   withSettings: settings,
 									   forPlatforms: platforms,
-									   shouldBuildForDistribution: useXCFrameworks)
-						.filter { $0 }
+									   shouldSupportXCFrameworks: useXCFrameworks)
+						.filter {
+							$0
+					}
 						.map { _ in (scheme, project, settings) }
 			}
 		}
-		.flatMap(.concurrent(limit: 4)) { scheme, project, settings -> SignalProducer<(Scheme, ProjectLocator, BuildSettings), CarthageError> in
+		.flatMap(.concurrent(limit: 4)) {
+			scheme, project, settings -> SignalProducer<(Scheme, ProjectLocator, BuildSettings), CarthageError> in
 
 			return locator
 				// This scheduler hop is required to avoid disallowed recursive signals.
@@ -227,8 +230,10 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 								return shouldBuild(scheme: scheme,
 												   withSettings: settings,
 												   forPlatforms: platforms,
-												   shouldBuildForDistribution: useXCFrameworks)
-									.filter { $0 }
+												   shouldSupportXCFrameworks: useXCFrameworks)
+									.filter {
+										$0
+								}
 									.map { _ in project }
 						}
 					default:
@@ -479,10 +484,9 @@ private func shouldBuildFrameworkType(_ frameworkType: FrameworkType?) -> Bool {
 private func shouldBuild(scheme: Scheme,
 						 withSettings settings: BuildSettings,
 						 forPlatforms platforms: Set<Platform>,
-						 shouldBuildForDistribution: Bool) -> SignalProducer<Bool, CarthageError> {
+						 shouldSupportXCFrameworks: Bool) -> SignalProducer<Bool, CarthageError> {
 
 	let producer = SignalProducer<BuildSettings, CarthageError>(value: settings)
-
 
 	let k = producer
 		.flatMap(.merge) {
@@ -492,20 +496,21 @@ private func shouldBuild(scheme: Scheme,
 		}
 		.map { return ($0.0, $0.1, $1) }
 		.filter {
-			platforms.contains($0.0.platform)
+			guard !platforms.isEmpty else { return true }
+			return platforms.contains($0.0.platform)
 		}
 		.flatMap(.merge) { tuple -> SignalProducer<(SDK, FrameworkType?, BuildSettings), CarthageError> in
 			let (_, _, settings) = tuple
-			if shouldBuildForDistribution {
-					let shouldBuilForDistributionResult: Result<Bool, CarthageError> = settings
-						.shouldBuildForDistribution
+			if shouldSupportXCFrameworks {
+					let shouldSupportXCFrameworksResult: Result<Bool, CarthageError> = settings
+						.supportsXCFrameworks
 						.flatMapError { _ in .success(false) }
 
-					if !shouldBuilForDistributionResult.value! {
+					if !shouldSupportXCFrameworksResult.value! {
 						return SignalProducer(error: .notForDistribution(scheme: scheme))
 					}
-				}
-				return SignalProducer<(SDK, FrameworkType?, BuildSettings), CarthageError>(value: tuple)
+			}
+			return SignalProducer<(SDK, FrameworkType?, BuildSettings), CarthageError>(value: tuple)
 		}
 		.map { return $0.1 }
 		.map(shouldBuildFrameworkType)

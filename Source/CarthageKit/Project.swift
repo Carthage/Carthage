@@ -966,7 +966,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.resolvingSymlinksInPath()
 
 				let frameworkURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release")
-					.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
+					.flatMap(.concurrent(limit: 4)) { scheme, project, _ -> SignalProducer<BuildSettings, CarthageError> in
 						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 						return BuildSettings.load(with: buildArguments)
 					}
@@ -1328,7 +1328,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
 				return self.symlinkBuildPathIfNeeded(for: dependency, version: version)
-					.then(build(dependency: dependency, version: version, self.directoryURL, withOptions: options, sdkFilter: sdkFilter))
+					.then(build(dependency: dependency,
+								version: version,
+								self.directoryURL,
+								withOptions: options,
+								sdkFilter: sdkFilter))
 					.flatMapError { error -> BuildSchemeProducer in
 						switch error {
 						case .noSharedFrameworkSchemes:
