@@ -394,9 +394,16 @@ class ProjectSpec: QuickSpec {
 
 			@discardableResult
 			func addCommit() -> String? {
-				let result = launchGitTask([ "commit", "--allow-empty", "-m \"Empty commit\"" ], repositoryFileURL: repositoryURL).wait()
+				_ = launchGitTask([ "-c",
+								"commit.gpgsign=false",
+								"commit",
+								"--allow-empty",
+								"-m \"Empty commit\""
+								],
+								repositoryFileURL: repositoryURL)
+					.wait()
 				return launchGitTask([ "rev-parse", "--short", "HEAD" ], repositoryFileURL: repositoryURL)
-					.last()?
+					.single()?
 					.value?
 					.trimmingCharacters(in: .newlines)
 			}

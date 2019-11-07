@@ -41,6 +41,7 @@ public struct FetchCache {
 
 /// Shells out to `git` with the given arguments, optionally in the directory
 /// of an existing repository.
+@discardableResult
 public func launchGitTask(
 	_ arguments: [String],
 	repositoryFileURL: URL? = nil,
@@ -54,7 +55,9 @@ public func launchGitTask(
 	// Error rather than prompt to resolve ssh errors (such as missing known_hosts entry)
 	updatedEnvironment["GIT_SSH_COMMAND"] = "ssh -oBatchMode=yes"
 
-	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
+	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments,
+							   workingDirectoryPath: repositoryFileURL?.path,
+							   environment: updatedEnvironment)
 
 	return taskDescription.launch(standardInput: standardInput)
 		.ignoreTaskData()
