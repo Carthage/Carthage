@@ -193,12 +193,13 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					do {
-						try overwriteFramework("TestFramework3", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					expect {
+						try overwriteFramework("TestFramework3",
+											   forPlatformName: "Mac",
+											   inDirectory: buildDirectoryURL)
 					}
-					catch let error {
-						fail("Overwrite failed with error: \(error)")
-					}
+					.toNot(throwError())
+
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
 				}
@@ -246,12 +247,13 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					do {
-						try overwriteFramework("TestFramework2", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					expect {
+						try overwriteFramework("TestFramework2",
+											   forPlatformName: "Mac",
+											   inDirectory: buildDirectoryURL)
 					}
-					catch let error {
-						fail("Overwrite failed with error: \(error)")
-					}
+					.toNot(throwError())
+
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == ["TestFramework2_Mac", "TestFramework1_Mac"]
 				}
@@ -280,12 +282,12 @@ class ProjectSpec: QuickSpec {
 					expect(result1.filter { $0.contains("iOS") }) == iOSExpected
 					expect(Set(result1)) == Set<String>(macOSexpected + iOSExpected)
 
-					do {
-						try overwriteFramework("TestFramework1", forPlatformName: "Mac", inDirectory: buildDirectoryURL)
+					expect {
+						try overwriteFramework("TestFramework1",
+											   forPlatformName: "Mac",
+											   inDirectory: buildDirectoryURL)
 					}
-					catch let error {
-						fail("Overwrite failed with error: \(error)")
-					}
+					.toNot(throwError())
 
 					let result2 = buildDependencyTest()
 					expect(result2.filter { $0.contains("Mac") }) == ["TestFramework1_Mac"]
