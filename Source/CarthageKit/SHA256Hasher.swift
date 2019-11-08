@@ -50,7 +50,7 @@ class SHA256Hasher {
 		}
 
 		_ = data.withUnsafeBytes { ptr in
-			CC_SHA256_Update(&sha256Context, ptr.baseAddress, CC_LONG(ptr.count))
+			CC_SHA256_Update(&sha256Context, ptr, CC_LONG(data.count))
 		}
 		pthread_mutex_unlock(&mutex)
 	}
