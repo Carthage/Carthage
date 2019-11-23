@@ -98,6 +98,33 @@ class XcodeSpec: QuickSpec {
 
 				expect(result?.value) == "4.1-dev (LLVM 0fcc19c0d8, Clang 1696f82ad2, Swift 691139445e)"
 			}
+
+			it("should determine when a module-stable Swift framework is incompatible") {
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "ModuleStableBuiltWithSwift5.1.2.framework", withExtension: nil)!
+				let swift5Dot0Toolchain = "Apple Swift version 5.0 (swiftlang-1001.0.69.5 clang-1001.0.46.3)"
+				let result = checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: swift5Dot0Toolchain).single()
+
+				expect(result?.value).to(beNil())
+				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: "5.0 (swiftlang-1001.0.69.5 clang-1001.0.46.3)", framework: "5.1.2 (swiftlang-1100.0.278 clang-1100.0.33.9)")
+			}
+
+			it("should determine when a non-module-stable Swift framework is incompatible") {
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "NonModuleStableBuiltWithSwift5.1.2.framework", withExtension: nil)!
+				let swift5Dot1Toolchain = "5.1 (swiftlang-1100.0.270.13 clang-1100.0.33.7)"
+				let result = checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: swift5Dot1Toolchain).single()
+
+				expect(result?.value).to(beNil())
+				expect(result?.error) == .incompatibleFrameworkSwiftVersions(local: swift5Dot1Toolchain, framework: "5.1.2 (swiftlang-1100.0.278 clang-1100.0.33.9)")
+			}
+
+			it("should determine when a module-stable Swift framework is compatible") {
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "ModuleStableBuiltWithSwift5.1.2.framework", withExtension: nil)!
+				let swift5Dot1Toolchain = "5.1 (swiftlang-1100.0.270.13 clang-1100.0.33.7)"
+				let result = checkSwiftFrameworkCompatibility(frameworkURL, usingToolchain: swift5Dot1Toolchain).single()
+
+				expect(result?.value) == frameworkURL
+				expect(result?.error).to(beNil())
+			}
 		}
 
 		describe("locateProjectsInDirectory:") {
