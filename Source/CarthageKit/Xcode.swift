@@ -141,19 +141,19 @@ internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolcha
 }
 
 private func isModuleStableAPI(_ localSwiftVersion: String,
-                               _ frameworkSwiftVersion: String,
-                               _ frameworkURL: URL) -> Bool {
-    guard let localSwiftVersionNumber = Double(localSwiftVersion.prefix(3)),
-        let frameworkSwiftVersionNumber = Double(frameworkSwiftVersion.prefix(3)) else { return false }
-    guard let swiftModuleURL = frameworkURL.swiftmoduleURL() else { return false }
+							   _ frameworkSwiftVersion: String,
+							   _ frameworkURL: URL) -> Bool {
+	guard let localSwiftVersionNumber = Double(localSwiftVersion.prefix(3)),
+		let frameworkSwiftVersionNumber = Double(frameworkSwiftVersion.prefix(3)) else { return false }
+	guard let swiftModuleURL = frameworkURL.swiftmoduleURL() else { return false }
 
-    let hasSwiftInterfaceFile = try? FileManager.default.contentsOfDirectory(at: swiftModuleURL,
-                                                                             includingPropertiesForKeys: nil,
-                                                                             options: []).first { (url) -> Bool in
-        return url.lastPathComponent.contains("swiftinterface")
-    } != nil
+	let hasSwiftInterfaceFile = try? FileManager.default.contentsOfDirectory(at: swiftModuleURL,
+																			 includingPropertiesForKeys: nil,
+																			 options: []).first { (url) -> Bool in
+			return url.lastPathComponent.contains("swiftinterface")
+		} != nil
 
-    return localSwiftVersionNumber >= 5.1 && frameworkSwiftVersionNumber >= 5.1 && hasSwiftInterfaceFile == true
+	return localSwiftVersionNumber >= 5.1 && frameworkSwiftVersionNumber >= 5.1 && hasSwiftInterfaceFile == true
 }
 
 /// Emits the framework URL if it is compatible with the build environment and errors if not.
