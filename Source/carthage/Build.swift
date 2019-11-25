@@ -151,22 +151,50 @@ public struct BuildCommand: CommandProtocol {
 				return project.buildCheckedOutDependenciesWithOptions(options.buildOptions, dependenciesToBuild: options.dependenciesToBuild)
 			}
 
-		if !shouldBuildCurrentProject {
+		guard shouldBuildCurrentProject else {
 			return buildProducer
-		} else {
-			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions, rootDirectoryURL: directoryURL)
-				.flatMapError { error -> BuildSchemeProducer in
-					switch error {
-					case let .noSharedFrameworkSchemes(project, _):
-						// Log that building the current project is being skipped.
-						eventSink.put(.skippedBuilding(project, error.description))
-						return .empty
+		}
 
-					default:
-						return SignalProducer(error: error)
+		let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions, rootDirectoryURL: directoryURL)
+			.flatMapError { error -> BuildSchemeProducer in
+				switch error {
+				case let .noSharedFrameworkSchemes(project, _):
+					// Log that building the current project is being skipped.
+					eventSink.put(.skippedBuilding(project, error.description))
+					return .empty
+
+				default:
+					return SignalProducer(error: error)
+				}
+		}
+		return buildProducer.collect().flatMap(.concat) { builtDependencies -> BuildSchemeProducer in
+			guard options.buildOptions.cacheBuilds, builtDependencies.isEmpty else {
+				// Some dependencies built; skip the cache and rebuild the current project.
+				return currentProducers
+			}
+			return projectName(for: directoryURL).flatMap(.merge) { currentName -> BuildSchemeProducer in
+				return describeTagOrCommitish("HEAD", in: directoryURL).flatMap(.merge) { currentVersion in
+					versionFileMatches(
+						currentName,
+						version: PinnedVersion(currentVersion),
+						platforms: options.buildOptions.platforms,
+						rootDirectoryURL: directoryURL,
+						toolchain: options.buildOptions.toolchain
+					)
+				}.flatMap(.merge) { matchesVersionFile -> BuildSchemeProducer in
+					switch matchesVersionFile {
+					case .none:
+						eventSink.put(.buildingUncached(currentName))
+						return currentProducers
+					case .some(false):
+						eventSink.put(.rebuildingCached(currentName))
+						return currentProducers
+					case .some(true):
+						eventSink.put(.skippedBuildingCached(currentName))
+						return .empty
 					}
 				}
-			return buildProducer.concat(currentProducers)
+			}
 		}
 	}
 
