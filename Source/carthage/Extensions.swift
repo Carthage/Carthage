@@ -113,15 +113,15 @@ internal struct ProjectEventSink {
 		case let .skippedBuilding(dependency, message):
 			carthage.println(formatting.bullets + "Skipped building " + formatting.projectName(dependency.name) + " due to the error:\n" + message)
 
-		case let .skippedBuildingCached(dependency):
-			carthage.println(formatting.bullets + "Valid cache found for " + formatting.projectName(dependency.name) + ", skipping build")
+		case let .skippedBuildingCached(dependencyName):
+			carthage.println(formatting.bullets + "Valid cache found for " + formatting.projectName(dependencyName) + ", skipping build")
 
-		case let .rebuildingCached(dependency):
-			carthage.println(formatting.bullets + "Invalid cache found for " + formatting.projectName(dependency.name)
+		case let .rebuildingCached(dependencyName):
+			carthage.println(formatting.bullets + "Invalid cache found for " + formatting.projectName(dependencyName)
 				+ ", rebuilding with all downstream dependencies")
 
-		case let .buildingUncached(dependency):
-			carthage.println(formatting.bullets + "No cache found for " + formatting.projectName(dependency.name)
+		case let .buildingUncached(dependencyName):
+			carthage.println(formatting.bullets + "No cache found for " + formatting.projectName(dependencyName)
 				+ ", building with all downstream dependencies")
 
 		case let .removingUnneededItem(url):

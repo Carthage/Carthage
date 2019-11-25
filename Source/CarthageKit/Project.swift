@@ -40,13 +40,13 @@ public enum ProjectEvent {
 	case skippedBuilding(Dependency, String)
 
 	/// Building the project is being skipped because it is cached.
-	case skippedBuildingCached(Dependency)
+	case skippedBuildingCached(String)
 
 	/// Rebuilding a cached project because of a version file/framework mismatch.
-	case rebuildingCached(Dependency)
+	case rebuildingCached(String)
 
 	/// Building an uncached project.
-	case buildingUncached(Dependency)
+	case buildingUncached(String)
 
 	/// Removing unused packages
 	case removingUnneededItem(URL)
@@ -977,7 +977,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.resolvingSymlinksInPath()
 
 				let versionFileURL = VersionFile
-					.url(for: dependency, rootDirectoryURL: self.directoryURL)
+					.url(for: dependency.name, rootDirectoryURL: self.directoryURL)
 					.resolvingSymlinksInPath()
 
 				let frameworkURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release")
@@ -1269,7 +1269,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return SignalProducer.combineLatest(
 					SignalProducer(value: (dependency, version)),
 					self.dependencySet(for: dependency, version: version),
-					versionFileMatches(dependency, version: version, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
+					versionFileMatches(dependency.name, version: version, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
 				)
 			}
 			.reduce([]) { includedDependencies, nextGroup -> [(Dependency, PinnedVersion)] in
@@ -1285,15 +1285,15 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 
 				guard let versionFileMatches = matches else {
-					self._projectEventsObserver.send(value: .buildingUncached(nextDependency.0))
+					self._projectEventsObserver.send(value: .buildingUncached(nextDependency.0.name))
 					return dependenciesIncludingNext
 				}
 
 				if versionFileMatches {
-					self._projectEventsObserver.send(value: .skippedBuildingCached(nextDependency.0))
+					self._projectEventsObserver.send(value: .skippedBuildingCached(nextDependency.0.name))
 					return includedDependencies
 				} else {
-					self._projectEventsObserver.send(value: .rebuildingCached(nextDependency.0))
+					self._projectEventsObserver.send(value: .rebuildingCached(nextDependency.0.name))
 					return dependenciesIncludingNext
 				}
 			}
