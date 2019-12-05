@@ -47,15 +47,15 @@ public struct GitURL {
 
 	/// The name of the repository, if it can be inferred from the URL.
 	public var name: String? {
-        let absoluteURLString: String
-        if urlString.hasPrefix(".") {
-            absoluteURLString = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-                .appendingPathComponent(urlString)
-                .standardizedFileURL
-                .absoluteString
-        } else {
-            absoluteURLString = urlString
-        }
+		let absoluteURLString: String
+		if urlString.hasPrefix(".") {
+			absoluteURLString = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+				.appendingPathComponent(urlString)
+				.standardizedFileURL
+				.absoluteString
+		} else {
+			absoluteURLString = urlString
+		}
 		let components = absoluteURLString.split(omittingEmptySubsequences: true) { $0 == "/" }
 
 		return components
