@@ -4,22 +4,28 @@ import ReactiveTask
 import Result
 import XCDBLD
 
-struct CachedFramework: Codable {
+/// A representation of the cached frameworks
+public struct CachedFramework: Codable {
 	enum CodingKeys: String, CodingKey {
 		case name = "name"
 		case hash = "hash"
 		case swiftToolchainVersion = "swiftToolchainVersion"
 	}
 
-	let name: String
-	let hash: String
-	let swiftToolchainVersion: String?
-	var isSwiftFramework: Bool {
+	/// Name of the framework
+	public let name: String
+	/// Hash of the framework
+	public let hash: String
+	/// The Swift toolchain version used to build the framework
+	public let swiftToolchainVersion: String?
+	/// Indicates if the framework is built from swift code
+	public var isSwiftFramework: Bool {
 		return swiftToolchainVersion != nil
 	}
 }
 
-struct VersionFile: Codable {
+/// The representation for a version file
+public struct VersionFile: Codable {
 	enum CodingKeys: String, CodingKey {
 		case commitish = "commitish"
 		case macOS = "Mac"
@@ -28,12 +34,16 @@ struct VersionFile: Codable {
 		case tvOS = "tvOS"
 	}
 
-	let commitish: String
-
-	let macOS: [CachedFramework]?
-	let iOS: [CachedFramework]?
-	let watchOS: [CachedFramework]?
-	let tvOS: [CachedFramework]?
+	/// The revision of the dependency (usually a version number)
+	public let commitish: String
+	/// The macOS cached frameworks
+	public let macOS: [CachedFramework]?
+	/// The iOS cached frameworks
+	public let iOS: [CachedFramework]?
+	/// The watchOS cached frameworks
+	public let watchOS: [CachedFramework]?
+	/// The tvOS cached frameworks
+	public let tvOS: [CachedFramework]?
 
 	/// The extension representing a serialized VersionFile.
 	static let pathExtension = "version"
@@ -54,7 +64,8 @@ struct VersionFile: Codable {
 		}
 	}
 
-	init(
+	/// Initializes a version file from some values
+	public init(
 		commitish: String,
 		macOS: [CachedFramework]?,
 		iOS: [CachedFramework]?,
@@ -68,7 +79,9 @@ struct VersionFile: Codable {
 		self.tvOS = tvOS
 	}
 
-	init?(url: URL) {
+	/// Initializes a version file from the content of a file
+	/// - Parameter url: the path to the file
+	public init?(url: URL) {
 		guard
 			FileManager.default.fileExists(atPath: url.path),
 			let jsonData = try? Data(contentsOf: url),
@@ -79,15 +92,24 @@ struct VersionFile: Codable {
 		self = versionFile
 	}
 
-    static func url(for dependency: Dependency, rootDirectoryURL: URL) -> URL {
-        let rootBinariesURL = rootDirectoryURL
+	/// Calculates the path of the version file corresponding with a dependency
+	/// - Parameters:
+	///   - dependency: the dependency
+	///   - rootDirectoryURL: the path to the root directory
+	public static func url(for dependency: Dependency, rootDirectoryURL: URL) -> URL {
+		let rootBinariesURL = rootDirectoryURL
 			.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
 			.resolvingSymlinksInPath()
-        return rootBinariesURL
+		return rootBinariesURL
 			.appendingPathComponent(".\(dependency.name).\(VersionFile.pathExtension)")
-    }
+	}
 
-	func frameworkURL(
+	/// Calculates the path of the framework corresponding with a version file
+	/// - Parameters:
+	///   - cachedFramework: the cached framework used to calculate the path
+	///   - platform: the platform to use
+	///   - binariesDirectoryURL: the binaries directory
+	public func frameworkURL(
 		for cachedFramework: CachedFramework,
 		platform: Platform,
 		binariesDirectoryURL: URL
@@ -98,7 +120,12 @@ struct VersionFile: Codable {
 			.appendingPathComponent("\(cachedFramework.name).framework", isDirectory: true)
 	}
 
-	func frameworkBinaryURL(
+	/// Calculates the path of the binary inside the framework corresponding with a version file
+	/// - Parameters:
+	///   - cachedFramework: the cached framework used to calculate the path
+	///   - platform: the platform to use
+	///   - binariesDirectoryURL: the binaries directory
+	public func frameworkBinaryURL(
 		for cachedFramework: CachedFramework,
 		platform: Platform,
 		binariesDirectoryURL: URL
@@ -113,7 +140,7 @@ struct VersionFile: Codable {
 
 	/// Sends the hashes of the provided cached framework's binaries in the
 	/// order that they were provided in.
-	func hashes(
+	public func hashes(
 		for cachedFrameworks: [CachedFramework],
 		platform: Platform,
 		binariesDirectoryURL: URL
@@ -142,7 +169,7 @@ struct VersionFile: Codable {
 	///
 	/// Non-Swift frameworks are considered as matching the local Swift version,
 	/// as they will be compatible with it by definition.
-	func swiftVersionMatches(
+	public func swiftVersionMatches(
 		for cachedFrameworks: [CachedFramework],
 		platform: Platform,
 		binariesDirectoryURL: URL,
@@ -168,7 +195,8 @@ struct VersionFile: Codable {
 			}
 	}
 
-	func satisfies(
+	/// Check if the version file matches its values with the ones provided
+	public func satisfies(
 		platform: Platform,
 		commitish: String,
 		binariesDirectoryURL: URL,
@@ -203,7 +231,8 @@ struct VersionFile: Codable {
 			}
 	}
 
-	func satisfies(
+	/// Check if the version file matches its values with the ones provided
+	public func satisfies(
 		platform: Platform,
 		commitish: String,
 		hashes: [String?],
@@ -231,7 +260,8 @@ struct VersionFile: Codable {
 			}
 	}
 
-	func write(to url: URL) -> Result<(), CarthageError> {
+	/// Writes the version file to the provided path
+	public func write(to url: URL) -> Result<(), CarthageError> {
 		return Result(at: url, attempt: {
 			let encoder = JSONEncoder()
 			encoder.outputFormatting = .prettyPrinted
@@ -305,7 +335,7 @@ public func createVersionFileForCurrentProject(
 		}
 		// Pick "origin" if it exists,
 		// otherwise sort remotes by popularity
-	    // or alphabetically in case of a draw
+		// or alphabetically in case of a draw
 		.map { (remotePopularityMap: [String: (popularity: Int, remoteNameAndURL: (name: String, url: String))]) -> String in
 			guard let origin = remotePopularityMap["origin"] else {
 				let urlOfMostPopularRemote = remotePopularityMap.sorted { lhs, rhs in
@@ -425,8 +455,8 @@ public func createVersionFileForCommitish(
 					.mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
 					.flatMap(.merge) { frameworkSwiftVersion -> SignalProducer<(String, FrameworkDetail), CarthageError> in
 					let frameworkDetail: FrameworkDetail = .init(platformName: platformName,
-										     frameworkName: frameworkName,
-										     frameworkSwiftVersion: frameworkSwiftVersion)
+											 frameworkName: frameworkName,
+											 frameworkSwiftVersion: frameworkSwiftVersion)
 					let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
 					let binaryURL = url.appendingPathComponent(frameworkName, isDirectory: false)
 					return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
