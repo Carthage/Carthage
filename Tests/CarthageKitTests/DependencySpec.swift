@@ -87,8 +87,8 @@ class DependencySpec: QuickSpec {
 
 				it("should be the directory name if the given URL is relative local path") {
 					let fileManager = FileManager.default
-					let previousDirectory = fileManager.currentDirectoryPath
-					defer { fileManager.changeCurrentDirectoryPath(previousDirectory) }
+					let startingDirectory = fileManager.currentDirectoryPath
+					defer { fileManager.changeCurrentDirectoryPath(startingDirectory) }
 					let temporaryDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
 					fileManager.changeCurrentDirectoryPath(temporaryDirectoryURL.path)
 					let dependency = Dependency.git(GitURL(".."))
