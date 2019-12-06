@@ -85,15 +85,44 @@ class DependencySpec: QuickSpec {
 					expect(dependency.name) == "whatisthisurleven"
 				}
 
-				it("should be the directory name if the given URL is relative local path") {
+				context("when a relative local path with dots is given") {
 					let fileManager = FileManager.default
-					let startingDirectory = fileManager.currentDirectoryPath
-					defer { fileManager.changeCurrentDirectoryPath(startingDirectory) }
-					let temporaryDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
-					fileManager.changeCurrentDirectoryPath(temporaryDirectoryURL.path)
-					let dependency = Dependency.git(GitURL(".."))
+					var startingDirectory: String!
+					var temporaryDirectoryURL: URL!
 
-					expect(dependency.name) == temporaryDirectoryURL.deletingLastPathComponent().lastPathComponent
+					beforeEach {
+						startingDirectory = fileManager.currentDirectoryPath
+						temporaryDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
+						fileManager.changeCurrentDirectoryPath(temporaryDirectoryURL.path)
+					}
+
+					afterEach {
+						fileManager.changeCurrentDirectoryPath(startingDirectory)
+					}
+
+					it("should be the directory name if the given URL string is '.'") {
+						let dependency = Dependency.git(GitURL("."))
+
+						expect(dependency.name) == temporaryDirectoryURL.lastPathComponent
+					}
+
+					it ("should be the directory name if the given URL string is prefixed by './'") {
+						let dependency = Dependency.git(GitURL("./myproject"))
+
+						expect(dependency.name) == "myproject"
+					}
+
+					it("should be the directory name if the given URL string is '..'") {
+						let dependency = Dependency.git(GitURL(".."))
+
+						expect(dependency.name) == temporaryDirectoryURL.deletingLastPathComponent().lastPathComponent
+					}
+
+					it ("should be the directory name if the given URL string is prefixed by '../'") {
+						let dependency = Dependency.git(GitURL("../myproject"))
+
+						expect(dependency.name) == "myproject"
+					}
 				}
 			}
 
