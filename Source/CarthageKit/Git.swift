@@ -22,13 +22,12 @@ public struct FetchCache {
 		lastFetchTimes.removeAll()
 	}
 
-	internal static func needsFetch(forURL url: GitURL) -> Bool {
-		guard let lastFetch = lastFetchTimes[url] else {
+    internal static func needsFetch(forURL url: GitURL) -> Bool {
+		guard let lastFetch = lastFetchTimes[url] ?? repositoriesLastFetchTime() else {
 			return true
 		}
 
 		let difference = Date().timeIntervalSince1970 - lastFetch
-
 		return !(0...fetchCacheInterval).contains(difference)
 	}
 
@@ -37,6 +36,52 @@ public struct FetchCache {
 			lastFetchTimes[url] = Date().timeIntervalSince1970
 		}
 	}
+
+    fileprivate static func repositoriesLastFetchTime() -> TimeInterval? {
+        guard let data = try? Constants.Dependency.repositoriesURL.extendedAttribute(for: "\(Constants.bundleIdentifier).repositories.last.fetch.time") else {
+            return nil
+        }
+        return data.withUnsafeBytes { $0.pointee as TimeInterval }
+    }
+
+    public static func updateRepositoriesLastFetchTime() {
+        var now = Date().timeIntervalSince1970
+        let data = Data(bytes: &now, count: MemoryLayout<TimeInterval>.size)
+        try? Constants.Dependency.repositoriesURL.setExtendedAttribute(for: "\(Constants.bundleIdentifier).repositories.last.fetch.time", data: data)
+    }
+}
+
+/// URL extension to support operations on extended attributes of a file
+fileprivate extension URL {
+
+    enum ExtendedAttributesError: Error {
+        case cannotReadAttribute
+        case cannotSetAttribute
+    }
+
+    func extendedAttribute(for name: String) throws -> Data  {
+        let data = try withUnsafeFileSystemRepresentation { path -> Data in
+            let length = getxattr(path, name, nil, 0, 0, 0)
+            guard length >= 0 else { throw ExtendedAttributesError.cannotReadAttribute }
+
+            var data = Data(count: length)
+            let result =  data.withUnsafeMutableBytes { [count = data.count] in
+                getxattr(path, name, $0.baseAddress, count, 0, 0)
+            }
+            guard result >= 0 else { throw ExtendedAttributesError.cannotReadAttribute }
+            return data
+        }
+        return data
+    }
+
+    func setExtendedAttribute(for name: String, data: Data) throws {
+        try withUnsafeFileSystemRepresentation { path in
+            let result = data.withUnsafeBytes {
+                setxattr(path, name, $0, data.count, 0, 0)
+            }
+            guard result >= 0 else { throw ExtendedAttributesError.cannotSetAttribute }
+        }
+    }
 }
 
 /// Shells out to `git` with the given arguments, optionally in the directory

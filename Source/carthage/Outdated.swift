@@ -51,6 +51,7 @@ public struct OutdatedCommand: CommandProtocol {
 		public let useSSH: Bool
 		public let isVerbose: Bool
 		public let outputXcodeWarnings: Bool
+        public let fetchInterval: Int
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
 
@@ -65,7 +66,8 @@ public struct OutdatedCommand: CommandProtocol {
 				<*> mode <| Option(key: "use-ssh", defaultValue: false, usage: "use SSH for downloading GitHub repositories")
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "include nested dependencies")
 				<*> mode <| Option(key: "xcode-warnings", defaultValue: false, usage: "output Xcode compatible warning messages")
-				<*> ColorOptions.evaluate(mode, additionalUsage: UpdateType.legend)
+                <*> mode <| Option(key: "fetch-interval", defaultValue: 0, usage: "the minimum amount of time that must elapse between dependencies fetch operation")
+                <*> ColorOptions.evaluate(mode, additionalUsage: UpdateType.legend)
 				<*> mode <| projectDirectoryOption
 		}
 
@@ -87,9 +89,13 @@ public struct OutdatedCommand: CommandProtocol {
 	public let function = "Check for compatible updates to the project's dependencies"
 
 	public func run(_ options: Options) -> Result<(), CarthageError> {
-		return options.loadProject()
-			.flatMap(.merge) { $0.outdatedDependencies(options.isVerbose) }
+        FetchCache.fetchCacheInterval = TimeInterval(options.fetchInterval)
+
+        return options.loadProject()
+            .flatMap(.merge) { $0.outdatedDependencies(options.isVerbose) }
 			.on(value: { outdatedDependencies in
+                FetchCache.updateRepositoriesLastFetchTime()
+
 				let formatting = options.colorOptions.formatting
 
 				if !outdatedDependencies.isEmpty {
