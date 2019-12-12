@@ -1381,13 +1381,29 @@ public func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 
 	if bundle?.packageType == .dSYM {
 		let binaryName = packageURL.deletingPathExtension().deletingPathExtension().lastPathComponent
-		if !binaryName.isEmpty {
-			let binaryURL = packageURL.appendingPathComponent("Contents/Resources/DWARF/\(binaryName)")
-			return .success(binaryURL)
-		}
+		if binaryName.isEmpty {
+			return .failure(.readFailed(packageURL, NSError(
+                domain: NSCocoaErrorDomain,
+                code: CocoaError.fileReadInvalidFileName.rawValue,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "Your dSYM has an invalid filename",
+                    NSLocalizedRecoverySuggestionErrorKey: "Make sure your dSYM has a an extension with the 'name.framework.dSYM' format"
+                ]
+            )))
+        } else {
+            let binaryURL = packageURL.appendingPathComponent("Contents/Resources/DWARF/\(binaryName)")
+            return .success(binaryURL)
+        }
 	}
 
-	return .failure(.readFailed(packageURL, nil))
+	return .failure(.readFailed(packageURL, NSError(
+        domain: NSCocoaErrorDomain,
+        code: CocoaError.fileReadCorruptFile.rawValue,
+        userInfo: [
+            NSLocalizedDescriptionKey: "The bundle type is unknown, supported types are executables and dSYMs",
+            NSLocalizedRecoverySuggestionErrorKey: "Does your bundle contain an Info.plist?"
+        ]
+    )))
 }
 
 /// Signs a framework with the given codesigning identity.
