@@ -21,6 +21,9 @@ public struct FetchCache {
 	private static let lock = NSLock()
 
 	internal static func clearFetchTimes() {
+		lock.lock()
+		defer { lock.unlock() }
+
 		lastFetchTimes.removeAll()
 	}
 
