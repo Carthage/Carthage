@@ -151,7 +151,7 @@ internal func isModuleStableAPI(_ localSwiftVersion: String,
 	let hasSwiftInterfaceFile = try? FileManager.default.contentsOfDirectory(at: swiftModuleURL,
 																			 includingPropertiesForKeys: nil,
 																			 options: []).first { (url) -> Bool in
-																				return url.lastPathComponent.contains("swiftinterface")
+			return url.lastPathComponent.contains("swiftinterface")
 		} != nil
 
 	return localSwiftVersionNumber >= 5.1 && frameworkSwiftVersionNumber >= 5.1 && hasSwiftInterfaceFile == true
