@@ -61,8 +61,16 @@ class BuildArgumentsSpec: QuickSpec {
 				subject.derivedDataPath = ""
 			}
 
-			itCreatesBuildArguments("includes the the toolchain", arguments: ["-toolchain", "org.swift.3020160509a"]) { subject in
+			itCreatesBuildArguments("includes the toolchain", arguments: ["-toolchain", "org.swift.3020160509a"]) { subject in
 				subject.toolchain = "org.swift.3020160509a"
+			}
+
+			itCreatesBuildArguments("includes warnings as errors OFF", arguments: ["SWIFT_TREAT_WARNINGS_AS_ERRORS=NO"]) { subject in
+				subject.warningsAsErrors = false
+			}
+
+			itCreatesBuildArguments("includes warnings as errors ON", arguments: ["SWIFT_TREAT_WARNINGS_AS_ERRORS=YES"]) { subject in
+				subject.warningsAsErrors = true
 			}
 
 			describe("specifying the sdk") {

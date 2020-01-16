@@ -23,6 +23,23 @@ extension BuildOptions: OptionsProtocol {
 			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
 			<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: "don't use downloaded binaries when possible")
+			<*> mode <| Option<Bool?>(key: "warnings-as-errors", defaultValue: nil, usage: "override project-level settings to treat warnings as es when building")
+	}
+}
+
+/// Required to allow boolean argument to be passed.
+extension Bool: ArgumentProtocol {
+	public static let name = "bool"
+
+	public static func from(string: String) -> Bool? {
+		switch string.lowercased() {
+		case "yes", "1", "si", "y", "true", "ja":
+			return true
+		case "no", "0", "nein", "n", "false":
+			return false
+		default:
+			return Bool(string)
+		}
 	}
 }
 

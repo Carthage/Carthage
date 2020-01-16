@@ -43,6 +43,9 @@ public struct BuildArguments {
 	/// The Swift toolchain to use.
 	public var toolchain: String?
 
+    /// Whether to treat warnings as errors (overrides project-level settings)
+    public var warningsAsErrors: Bool?
+    
 	/// The run destination to try building for.
 	public var destination: String?
 
@@ -62,7 +65,8 @@ public struct BuildArguments {
 		configuration: String? = nil,
 		derivedDataPath: String? = nil,
 		sdk: SDK? = nil,
-		toolchain: String? = nil
+		toolchain: String? = nil,
+		warningsAsErrors: Bool? = nil
 	) {
 		self.project = project
 		self.scheme = scheme
@@ -70,6 +74,7 @@ public struct BuildArguments {
 		self.derivedDataPath = derivedDataPath
 		self.sdk = sdk
 		self.toolchain = toolchain
+		self.warningsAsErrors = warningsAsErrors
 	}
 
 	/// The `xcodebuild` invocation corresponding to the receiver.
@@ -117,6 +122,10 @@ public struct BuildArguments {
 
 		if let destination = destination {
 			args += [ "-destination", destination ]
+		}
+		
+		if let warningsAsErrors = warningsAsErrors {
+			args += [ "SWIFT_TREAT_WARNINGS_AS_ERRORS=\(warningsAsErrors ? "YES" : "NO")" ]
 		}
 
 		if let destinationTimeout = destinationTimeout {

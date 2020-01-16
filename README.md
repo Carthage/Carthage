@@ -230,6 +230,28 @@ By default Carthage will rebuild a dependency regardless of whether it's the sam
 
 Note: At this time `--cache-builds` is incompatible with `--use-submodules`. Using both will result in working copy and committed changes to your submodule dependency not being correctly rebuilt. See [#1785](https://github.com/Carthage/Carthage/issues/1785) for details.
 
+### Suppressing Swift Warnings
+
+By default Carthage will honor each dependencies' own project-level Swift build setting for "treat warnings as errors." However, should you need to override this setting in order to get a dependency to build (e.g. with a different version of the Swift compiler than it was originally validated against), or in order to check if a dependency has any lingering errors (by forcing the setting to be on), you may elect to override this setting for some or all of your dependencies.
+
+Usage:
+
+```
+carthage build ReactiveSwift --no-use-binaries --warnings-as-errors no
+```
+
+or
+
+```
+carthage update --warnings-as-errors yes
+```
+
+To be clear, setting this to "yes" means that any warnings will cause a dependency not to build at all. 
+
+Setting it to "no" means that no warnings will stop it from building. 
+
+Deactivating this setting can be useful in a CI pipeline, for example, should you not prefer your builds to fail when heavy CPU load triggers a ">400 ms" type-check warning. It may also be advantageous for engineers to locally deactivate this setting on a temporary basis should new warnings in a required dependency otherwise block them from updating XCode or using a desired alternate Swift toolchain.
+
 ### Bash/Zsh/Fish completion
 
 Auto completion of Carthage commands and options are available as documented in [Bash/Zsh/Fish Completion][Bash/Zsh/Fish Completion].
