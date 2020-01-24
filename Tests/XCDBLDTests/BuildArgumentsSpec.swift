@@ -73,6 +73,10 @@ class BuildArgumentsSpec: QuickSpec {
 				subject.warningsAsErrors = true
 			}
 
+            itCreatesBuildArguments("doesn't include warnings as errors if NIL", arguments: []) { subject in
+                subject.warningsAsErrors = nil
+            }
+
 			describe("specifying the sdk") {
 				for sdk in SDK.allSDKs.subtracting([.macOSX]) {
 					itCreatesBuildArguments("includes \(sdk) in the argument if specified", arguments: ["-sdk", sdk.rawValue]) { subject in
