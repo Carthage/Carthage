@@ -33,9 +33,9 @@ extension Bool: ArgumentProtocol {
 
 	public static func from(string: String) -> Bool? {
 		switch string.lowercased() {
-		case "yes", "1", "si", "y", "true", "ja":
+		case "yes", "1", "y", "true":
 			return true
-		case "no", "0", "nein", "n", "false":
+		case "no", "0", "n", "false":
 			return false
 		default:
 			return Bool(string)
