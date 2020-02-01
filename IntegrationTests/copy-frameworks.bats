@@ -3,7 +3,7 @@
 setup() {
     cd $BATS_TMPDIR
     rm -rf CarthageCopyFrameworksFixture
-    git clone -b 2.0.0 https://github.com/ikesyo/CarthageCopyFrameworksFixture.git
+    git clone -b 3.0.0 https://github.com/ikesyo/CarthageCopyFrameworksFixture.git
     cd CarthageCopyFrameworksFixture
 }
 
@@ -19,7 +19,7 @@ teardown() {
     [ "$status" -eq 0 ]
 
     ARCHIVE_APP_DIR=CarthageCopyFrameworksFixture.xcarchive/Products/Applications
-    run xcodebuild clean archive -scheme CarthageCopyFrameworksFixture -archivePath CarthageCopyFrameworksFixture.xcarchive CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=
+    run xcodebuild clean archive -scheme CarthageCopyFrameworksFixture -archivePath CarthageCopyFrameworksFixture.xcarchive CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
     [ "$status" -eq 0 ]
     [ -e "$ARCHIVE_APP_DIR/CarthageCopyFrameworksFixture.app" ]
     [ ! -e "$ARCHIVE_APP_DIR/Result.framework.dSYM" ]

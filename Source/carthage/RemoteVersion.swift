@@ -4,10 +4,9 @@ import ReactiveSwift
 import ReactiveTask
 import Result
 import Tentacle
-import SPMUtility
 
 /// The latest version of Carthage as a `Version`.
-public func remoteVersion() -> Version? {
+public func remoteVersion() -> SemanticVersion? {
 	let remoteVersionProducer = Client(.dotCom, urlSession: URLSession.proxiedSession)
 		.execute(Repository(owner: "Carthage", name: "Carthage").releases, perPage: 2)
 		.mapError(CarthageError.gitHubAPIRequestFailed)
