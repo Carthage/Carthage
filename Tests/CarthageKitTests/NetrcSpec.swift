@@ -115,7 +115,7 @@ class NetrcSpec: QuickSpec {
 				case .some(.machineNotFound):
 					break
 				default:
-					fail("Expected invalidJSON error")
+					fail("Expected machineNotFound error")
 				}
 			}
 			
@@ -127,7 +127,7 @@ class NetrcSpec: QuickSpec {
 				case .some(.machineNotFound):
 					break
 				default:
-					fail("Expected invalidJSON error")
+					fail("Expected machineNotFound error")
 				}
 			}
 			
@@ -139,7 +139,7 @@ class NetrcSpec: QuickSpec {
 				case .some(.missingValueForToken(let token)):
 					expect(token) == "login"
 				default:
-					fail("Expected invalidJSON error")
+					fail("Expected missingValueForToken error")
 				}
 			}
 			
@@ -151,7 +151,7 @@ class NetrcSpec: QuickSpec {
 				case .some(.missingValueForToken(let password)):
 					expect(password) == "password"
 				default:
-					fail("Expected invalidJSON error")
+					fail("Expected missingValueForToken error")
 				}
 			}
 			
