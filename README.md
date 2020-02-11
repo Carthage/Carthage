@@ -69,7 +69,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
     ```
     $(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Alamofire.framework
     ```
-Another approach when having multiple dependencies is to use `.xcfilelist`s. This is covered in [If you´re building for iOS, tvOS ot WatchOS](#if-youre-building-for-ios-tvos-or-watchos)
+Another approach when having multiple dependencies is to use `.xcfilelist`s. This is covered in [If you're building for iOS, tvOS or watchOS](#if-youre-building-for-ios-tvos-or-watchos)
 
 For an in depth guide, read on from [Adding frameworks to an application](#adding-frameworks-to-an-application)
 

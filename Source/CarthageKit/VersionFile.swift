@@ -9,6 +9,7 @@ public struct CachedFramework: Codable {
 	enum CodingKeys: String, CodingKey {
 		case name = "name"
 		case hash = "hash"
+		case linking = "linking"
 		case swiftToolchainVersion = "swiftToolchainVersion"
 	}
 
@@ -16,11 +17,23 @@ public struct CachedFramework: Codable {
 	public let name: String
 	/// Hash of the framework
 	public let hash: String
+    /// The linking type of the framework. One of `dynamic` or `static`. Defaults to `dynamic`
+    public let linking: FrameworkType?
 	/// The Swift toolchain version used to build the framework
 	public let swiftToolchainVersion: String?
 	/// Indicates if the framework is built from swift code
 	public var isSwiftFramework: Bool {
 		return swiftToolchainVersion != nil
+	}
+
+	/// The framework's expected location within a platform directory.
+	var relativePath: String {
+		switch linking {
+		case .some(.static):
+			return "\(FrameworkType.staticFolderName)/\(name).framework"
+		default:
+			return "\(name).framework"
+		}
 	}
 }
 
@@ -117,7 +130,7 @@ public struct VersionFile: Codable {
 		return binariesDirectoryURL
 			.appendingPathComponent(platform.rawValue, isDirectory: true)
 			.resolvingSymlinksInPath()
-			.appendingPathComponent("\(cachedFramework.name).framework", isDirectory: true)
+			.appendingPathComponent(cachedFramework.relativePath, isDirectory: true)
 	}
 
 	/// Calculates the path of the binary inside the framework corresponding with a version file
@@ -444,19 +457,37 @@ public func createVersionFileForCommitish(
 		let platformName: String
 		let frameworkName: String
 		let frameworkSwiftVersion: String?
+		let frameworkType: FrameworkType
 	}
 
 	if !buildProducts.isEmpty {
 		return SignalProducer<URL, CarthageError>(buildProducts)
 			.flatMap(.merge) { url -> SignalProducer<(String, FrameworkDetail), CarthageError> in
-				let frameworkName = url.deletingPathExtension().lastPathComponent
-				let platformName = url.deletingLastPathComponent().lastPathComponent
+				let frameworkName: String
+				let platformName: String
+				let frameworkType: FrameworkType
+				switch (
+					url.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent,
+					url.deletingLastPathComponent().lastPathComponent,
+					url.deletingPathExtension().lastPathComponent
+				) {
+				case (let platform, FrameworkType.staticFolderName, let name):
+					frameworkName = name
+					platformName = platform
+					frameworkType = .static
+				case (_, let platform, let name):
+					frameworkName = name
+					platformName = platform
+					frameworkType = .dynamic
+				}
+
 				return frameworkSwiftVersionIfIsSwiftFramework(url)
 					.mapError { swiftVersionError -> CarthageError in .unknownFrameworkSwiftVersion(swiftVersionError.description) }
 					.flatMap(.merge) { frameworkSwiftVersion -> SignalProducer<(String, FrameworkDetail), CarthageError> in
 					let frameworkDetail: FrameworkDetail = .init(platformName: platformName,
-											 frameworkName: frameworkName,
-											 frameworkSwiftVersion: frameworkSwiftVersion)
+										     frameworkName: frameworkName,
+										     frameworkSwiftVersion: frameworkSwiftVersion,
+										     frameworkType: frameworkType)
 					let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
 					let binaryURL = url.appendingPathComponent(frameworkName, isDirectory: false)
 					return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
@@ -467,8 +498,9 @@ public func createVersionFileForCommitish(
 				let platformName = values.1.platformName
 				let frameworkName = values.1.frameworkName
 				let frameworkSwiftVersion = values.1.frameworkSwiftVersion
+				let frameworkType = values.1.frameworkType
 
-				let cachedFramework = CachedFramework(name: frameworkName, hash: hash, swiftToolchainVersion: frameworkSwiftVersion)
+				let cachedFramework = CachedFramework(name: frameworkName, hash: hash, linking: frameworkType, swiftToolchainVersion: frameworkSwiftVersion)
 				if var frameworks = platformCaches[platformName] {
 					frameworks.append(cachedFramework)
 					platformCaches[platformName] = frameworks
