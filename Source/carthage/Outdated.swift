@@ -53,6 +53,7 @@ public struct OutdatedCommand: CommandProtocol {
 		public let outputXcodeWarnings: Bool
 		public let colorOptions: ColorOptions
 		public let directoryPath: String
+		public let useNetrc: Bool
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
 			let projectDirectoryOption = Option(
@@ -67,6 +68,9 @@ public struct OutdatedCommand: CommandProtocol {
 				<*> mode <| Option(key: "xcode-warnings", defaultValue: false, usage: "output Xcode compatible warning messages")
 				<*> ColorOptions.evaluate(mode, additionalUsage: UpdateType.legend)
 				<*> mode <| projectDirectoryOption
+				<*> mode <| Option(key: "use-netrc",
+								   defaultValue: false,
+								   usage: "use authentication credentials from ~/.netrc file when downloading binary only frameworks")
 		}
 
 		/// Attempts to load the project referenced by the options, and configure it
@@ -75,6 +79,7 @@ public struct OutdatedCommand: CommandProtocol {
 			let directoryURL = URL(fileURLWithPath: self.directoryPath, isDirectory: true)
 			let project = Project(directoryURL: directoryURL)
 			project.preferHTTPS = !self.useSSH
+			project.useNetrc = self.useNetrc
 
 			var eventSink = ProjectEventSink(colorOptions: colorOptions)
 			project.projectEvents.observeValues { eventSink.put($0) }

@@ -42,6 +42,7 @@ binary "relative/path/MyFramework.json"                   // Locally hosted at r
 binary "/absolute/path/MyFramework.json"                  // Locally hosted at absolute path
 ```
 
+When downloading a binary only frameworks, `carthage` will take into account the user's `~/.netrc` file to determine authentication credentials if `--use-netrc` flag was set.
 
 #### Version requirement
 
