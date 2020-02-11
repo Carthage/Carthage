@@ -1383,27 +1383,27 @@ public func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 		let binaryName = packageURL.deletingPathExtension().deletingPathExtension().lastPathComponent
 		if binaryName.isEmpty {
 			return .failure(.readFailed(packageURL, NSError(
-                domain: NSCocoaErrorDomain,
-                code: CocoaError.fileReadInvalidFileName.rawValue,
-                userInfo: [
-                    NSLocalizedDescriptionKey: "Your dSYM has an invalid filename",
-                    NSLocalizedRecoverySuggestionErrorKey: "Make sure your dSYM has a an extension with the 'name.framework.dSYM' format"
-                ]
-            )))
-        } else {
-            let binaryURL = packageURL.appendingPathComponent("Contents/Resources/DWARF/\(binaryName)")
-            return .success(binaryURL)
-        }
+				domain: NSCocoaErrorDomain,
+				code: CocoaError.fileReadInvalidFileName.rawValue,
+				userInfo: [
+					NSLocalizedDescriptionKey: "dSYM has an invalid filename",
+					NSLocalizedRecoverySuggestionErrorKey: "Make sure your dSYM filename conforms to 'name.framework.dSYM' format"
+				]
+			)))
+		} else {
+			let binaryURL = packageURL.appendingPathComponent("Contents/Resources/DWARF/\(binaryName)")
+			return .success(binaryURL)
+		}
 	}
 
 	return .failure(.readFailed(packageURL, NSError(
-        domain: NSCocoaErrorDomain,
-        code: CocoaError.fileReadCorruptFile.rawValue,
-        userInfo: [
-            NSLocalizedDescriptionKey: "The bundle type is unknown, supported types are executables and dSYMs",
-            NSLocalizedRecoverySuggestionErrorKey: "Does your bundle contain an Info.plist?"
-        ]
-    )))
+		domain: NSCocoaErrorDomain,
+		code: CocoaError.fileReadCorruptFile.rawValue,
+		userInfo: [
+			NSLocalizedDescriptionKey: "Cannot retrive binary file from bundle at \(packageURL)",
+			NSLocalizedRecoverySuggestionErrorKey: "Does the bundle contain an Info.plist?"
+		]
+	)))
 }
 
 /// Signs a framework with the given codesigning identity.
