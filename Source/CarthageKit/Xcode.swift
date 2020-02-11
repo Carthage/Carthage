@@ -264,7 +264,7 @@ public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])]) -> Signa
 }
 
 /// Describes the type of frameworks.
-internal enum FrameworkType: String, Codable {
+public enum FrameworkType: String, Codable {
 	/// A dynamic framework.
 	case dynamic
 
