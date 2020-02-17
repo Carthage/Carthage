@@ -490,10 +490,15 @@ public func createVersionFileForCommitish(
 																	 frameworkType: frameworkType)
 						let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
 
-						guard let bundle = Bundle(url: url),
-							let packageType = bundle.packageType else {
+						guard let bundle = Bundle(url: url) else {
 							return SignalProducer<(String, FrameworkDetail), CarthageError>(error: .internalError(description: "\(url) is not a valid bundle."))
 						}
+
+						guard let executableURL = bundle.executableURL,
+							let packageType = bundle.packageType ?? MachHeader.speculativePackageType(forExecutable: executableURL) else {
+							return SignalProducer<(String, FrameworkDetail), CarthageError>(error: .internalError(description: "\(url) is not a valid bundle. Binary is not Mach-O or filetype is not supported."))
+						}
+
 						switch packageType {
 
 						case .framework, .bundle:

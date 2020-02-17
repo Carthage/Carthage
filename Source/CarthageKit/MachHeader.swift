@@ -48,6 +48,16 @@ extension MachHeader {
 			].map { UInt32($0) }
 		)
 	}()
+
+	/// Returns `PackageType.framework` if the filetype in the Mach-O headers is compatible with the supported filetypes
+	static func speculativePackageType(forExecutable executableURL: URL) -> PackageType? {
+		return MachHeader.headers(forMachOFileAtUrl: executableURL)
+			.filter { MachHeader.carthageSupportedFileTypes.contains($0.fileType) }
+			.reduce(into: Set<UInt32>()) { $0.insert($1.fileType); return }
+			.map { $0.count == 1 }
+			.single()?
+			.value != nil ? PackageType.framework : nil
+	}
 }
 
 extension MachHeader {
