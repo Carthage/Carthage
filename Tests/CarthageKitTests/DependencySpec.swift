@@ -84,6 +84,46 @@ class DependencySpec: QuickSpec {
 
 					expect(dependency.name) == "whatisthisurleven"
 				}
+
+				context("when a relative local path with dots is given") {
+					let fileManager = FileManager.default
+					var startingDirectory: String!
+					var temporaryDirectoryURL: URL!
+
+					beforeEach {
+						startingDirectory = fileManager.currentDirectoryPath
+						temporaryDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
+						fileManager.changeCurrentDirectoryPath(temporaryDirectoryURL.path)
+					}
+
+					afterEach {
+						fileManager.changeCurrentDirectoryPath(startingDirectory)
+					}
+
+					it("should be the directory name if the given URL string is '.'") {
+						let dependency = Dependency.git(GitURL("."))
+
+						expect(dependency.name) == temporaryDirectoryURL.lastPathComponent
+					}
+
+					it ("should be the directory name if the given URL string is prefixed by './'") {
+						let dependency = Dependency.git(GitURL("./myproject"))
+
+						expect(dependency.name) == "myproject"
+					}
+
+					it("should be the directory name if the given URL string is '..'") {
+						let dependency = Dependency.git(GitURL(".."))
+
+						expect(dependency.name) == temporaryDirectoryURL.deletingLastPathComponent().lastPathComponent
+					}
+
+					it ("should be the directory name if the given URL string is prefixed by '../'") {
+						let dependency = Dependency.git(GitURL("../myproject"))
+
+						expect(dependency.name) == "myproject"
+					}
+				}
 			}
 
 			context("binary") {

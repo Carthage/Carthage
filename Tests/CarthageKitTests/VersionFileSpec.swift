@@ -22,9 +22,11 @@ class VersionFileSpec: QuickSpec {
 			expect(iOSCache!.count) == 2
 			expect(iOSCache![0].name) == "TestFramework1"
 			expect(iOSCache![0].hash) == "ios-framework1-hash"
+			expect(iOSCache![0].linking) == .dynamic
 			expect(iOSCache![0].swiftToolchainVersion) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 			expect(iOSCache![1].name) == "TestFramework2"
 			expect(iOSCache![1].hash) == "ios-framework2-hash"
+			expect(iOSCache![1].linking) == .static
 			expect(iOSCache![1].swiftToolchainVersion) == "4.2.1 (swiftlang-1000.11.42 clang-1000.11.45.1)"
 
 			// Check different number of frameworks for a platform
@@ -33,7 +35,8 @@ class VersionFileSpec: QuickSpec {
 			expect(macOSCache!.count) == 1
 			expect(macOSCache![0].name) == "TestFramework1"
 			expect(macOSCache![0].hash) == "mac-framework1-hash"
-			expect(iOSCache![0].swiftToolchainVersion) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
+			expect(macOSCache![0].linking).to(beNil())
+			expect(macOSCache![0].swiftToolchainVersion) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 
 			// Check empty framework list
 			let tvOSCache = versionFile.tvOS
@@ -48,6 +51,7 @@ class VersionFileSpec: QuickSpec {
 		it("should write and read back a version file correctly") {
 			let framework = CachedFramework(name: "TestFramework",
 							hash: "TestHASH",
+							linking: .dynamic,
 							swiftToolchainVersion: "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)")
 			let versionFile = VersionFile(commitish: "v1.0",
 						      macOS: nil,
@@ -73,6 +77,7 @@ class VersionFileSpec: QuickSpec {
 			expect(newCachedFramework.count) == 1
 			expect(newCachedFramework[0].name) == framework.name
 			expect(newCachedFramework[0].hash) == framework.hash
+			expect(newCachedFramework[0].linking) == .dynamic
 			expect(newCachedFramework[0].swiftToolchainVersion) == framework.swiftToolchainVersion
 			expect(newCachedFramework[0].isSwiftFramework) == framework.isSwiftFramework
 		}
@@ -84,6 +89,7 @@ class VersionFileSpec: QuickSpec {
 					[
 						"name": "TestFramework",
 						"hash": "TestHASH",
+						"linking": "dynamic",
 						"swiftToolchainVersion": "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)",
 					],
 				],
@@ -102,6 +108,7 @@ class VersionFileSpec: QuickSpec {
 			expect(iOSCache!.count) == 1
 			expect(iOSCache![0].name) == "TestFramework"
 			expect(iOSCache![0].hash) == "TestHASH"
+			expect(iOSCache![0].linking) == .dynamic
 			expect(iOSCache![0].swiftToolchainVersion) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 			expect(iOSCache![0].isSwiftFramework) == true
 
@@ -113,6 +120,7 @@ class VersionFileSpec: QuickSpec {
 			let iosFramework = (newJSONDictionary["iOS"] as! [Any])[0] as! [String: String] // swiftlint:disable:this force_cast
 			expect(iosFramework["name"]) == "TestFramework"
 			expect(iosFramework["hash"]) == "TestHASH"
+			expect(iosFramework["linking"]) == "dynamic"
 			expect(iosFramework["swiftToolchainVersion"]) == "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
 		}
 
@@ -183,6 +191,24 @@ class VersionFileSpec: QuickSpec {
 				file: versionFile, matches: true, platform: .iOS,
 				commitish: "v1.0", hashes: ["TestHASH"], swiftVersionMatches: [true]
 			)
+		}
+
+		it("should compute the relative paths of static and dynamic frameworks") {
+			let dynamicFramework = CachedFramework(
+				name: "TestFramework",
+				hash: "TestHASH",
+				linking: .dynamic,
+				swiftToolchainVersion: "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
+			)
+			let staticFramework = CachedFramework(
+				name: "TestFramework",
+				hash: "TestHASH",
+				linking: .static,
+				swiftToolchainVersion: "4.2 (swiftlang-1000.11.37.1 clang-1000.11.45.1)"
+			)
+
+			expect(dynamicFramework.relativePath) == "TestFramework.framework"
+			expect(staticFramework.relativePath) == "Static/TestFramework.framework"
 		}
 	}
 }

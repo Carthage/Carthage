@@ -103,6 +103,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Whether to use submodules for dependencies, or just check out their
 	/// working directories.
 	public var useSubmodules = false
+    
+	/// Whether to use authentication credentials from ~/.netrc file
+	/// to download binary only frameworks.
+	public var useNetrc = false
 
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
@@ -236,8 +240,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 					return SignalProducer(value: binaryProject)
 				} else {
 					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(binary), binary.url))
-
-					return URLSession.shared.reactive.data(with: URLRequest(url: binary.url))
+					
+					let request = self.buildURLRequest(for: binary.url, useNetrc: self.useNetrc)
+					return URLSession.shared.reactive.data(with: request)
 						.mapError { CarthageError.readFailed(binary.url, $0 as NSError) }
 						.attemptMap { data, _ in
 							return BinaryProject.from(jsonData: data).mapError { error in
@@ -250,6 +255,29 @@ public final class Project { // swiftlint:disable:this type_body_length
 				}
 			}
 			.startOnQueue(self.cachedBinaryProjectsQueue)
+	}
+    
+    
+	/// Builds URL request
+	///
+	/// - Parameters:
+	///   - url: a url that identifies the location of a resource
+	///   - useNetrc: determines whether to use credentials from `~/.netrc` file
+	/// - Returns: a URL request
+	private func buildURLRequest(for url: URL, useNetrc: Bool) -> URLRequest {
+		var request = URLRequest(url: url)
+		guard useNetrc else { return request }
+		
+		// When downloading a binary, `carthage` will take into account the user's
+		// `~/.netrc` file to determine authentication credentials
+		switch Netrc.load() {
+		case let .success(netrc):
+			if let authorization = netrc.authorization(for: url) {
+				request.addValue(authorization, forHTTPHeaderField: "Authorization")
+			}
+		case .failure(_): break // Do nothing
+		}
+		return request
 	}
 
 	/// Sends all versions available for the given project.
@@ -1146,7 +1174,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 		if FileManager.default.fileExists(atPath: fileURL.path) {
 			return SignalProducer(value: fileURL)
 		} else {
-			return URLSession.shared.reactive.download(with: URLRequest(url: url))
+			let request = self.buildURLRequest(for: url, useNetrc: self.useNetrc)
+			return URLSession.shared.reactive.download(with: request)
 				.on(started: {
 					self._projectEventsObserver.send(value: .downloadingBinaries(dependency, version.description))
 				})

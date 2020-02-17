@@ -102,18 +102,18 @@ class ProjectSpec: QuickSpec {
 			}
 
 			describe("createAndCheckVersionFiles") {
-				func overwriteFramework(_ frameworkName: String,
-										forPlatformName platformName: String,
-										inDirectory buildDirectoryURL: URL) throws
-				{
+				func overwriteFramework(_ frameworkName: String, type: FrameworkType, forPlatformName platformName: String, inDirectory buildDirectoryURL: URL) {
 					let platformURL = buildDirectoryURL.appendingPathComponent(platformName, isDirectory: true)
-					let frameworkURL = platformURL.appendingPathComponent("\(frameworkName).framework", isDirectory: false)
+					let frameworkURL = platformURL.appendingPathComponent(
+						type == .static ? "Static/\(frameworkName).framework" : "\(frameworkName).framework",
+						isDirectory: false
+					)
 					let binaryURL = frameworkURL.appendingPathComponent("\(frameworkName)", isDirectory: false)
 
 					let data = "junkdata".data(using: .utf8)!
-					try data.write(to: binaryURL, options: .atomic)
+					try! data.write(to: binaryURL, options: .atomic)
 				}
-
+				
 				func overwriteSwiftVersion(
 					_ frameworkName: String,
 					forPlatformName platformName: String,
@@ -193,12 +193,7 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					expect {
-						try overwriteFramework("TestFramework3",
-											   forPlatformName: "Mac",
-											   inDirectory: buildDirectoryURL)
-					}
-					.toNot(throwError())
+					overwriteFramework("TestFramework3", type: .dynamic, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == expected
@@ -232,7 +227,7 @@ class ProjectSpec: QuickSpec {
 										  inDirectory: buildDirectoryURL,
 										  withVersion: "1.0 (swiftlang-000.0.1 clang-000.0.0.1)")
 
-					let allDSymsRemoved = expected
+					let allDSymsRemoved = ["TestFramework3_Mac", "TestFramework2_Mac"] // TestFramework1 is static; doesn't produce a dSYM
 						.compactMap { removeDsym($0.dropLast(4).description, forPlatformName: "Mac", inDirectory: buildDirectoryURL) }
 						.reduce(true) { acc, next in return  acc && next }
 					expect(allDSymsRemoved) == true
@@ -247,12 +242,7 @@ class ProjectSpec: QuickSpec {
 					let result1 = buildDependencyTest(platforms: [.macOS])
 					expect(result1) == expected
 
-					expect {
-						try overwriteFramework("TestFramework2",
-											   forPlatformName: "Mac",
-											   inDirectory: buildDirectoryURL)
-					}
-					.toNot(throwError())
+					overwriteFramework("TestFramework2", type: .dynamic, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 
 					let result2 = buildDependencyTest(platforms: [.macOS])
 					expect(result2) == ["TestFramework2_Mac", "TestFramework1_Mac"]
@@ -282,12 +272,7 @@ class ProjectSpec: QuickSpec {
 					expect(result1.filter { $0.contains("iOS") }) == iOSExpected
 					expect(Set(result1)) == Set<String>(macOSexpected + iOSExpected)
 
-					expect {
-						try overwriteFramework("TestFramework1",
-											   forPlatformName: "Mac",
-											   inDirectory: buildDirectoryURL)
-					}
-					.toNot(throwError())
+					overwriteFramework("TestFramework1", type: .static, forPlatformName: "Mac", inDirectory: buildDirectoryURL)
 
 					let result2 = buildDependencyTest()
 					expect(result2.filter { $0.contains("Mac") }) == ["TestFramework1_Mac"]
