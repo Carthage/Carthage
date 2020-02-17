@@ -109,7 +109,7 @@ public struct ArchiveCommand: CommandProtocol {
 					let foundFrameworks = paths
 						.lazy
 						.map { ($0 as NSString).lastPathComponent }
-						.filter { $0.hasSuffix(".framework") || options.createXCFramework ? $0.hasSuffix(".xcframework") : true }
+						.filter { $0.hasSuffix(".framework") || (options.createXCFramework ? $0.hasSuffix(".xcframework") : false) }
 
 					if Set(foundFrameworks) != Set(frameworks) {
 						let error = CarthageError.invalidArgument(
