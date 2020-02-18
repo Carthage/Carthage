@@ -319,8 +319,9 @@ public struct BuildSettings {
 
 	// Attemps to determine if build settings are appropriate for XCFramework support
 	public var supportsXCFrameworks: Result<Bool, CarthageError> {
+		// BUILD_LIBRARY_FOR_DISTRIBUTION=YES and SKIP_INSTALL=NO
 		return self.shouldBuildForDistribution.flatMap { buildForDistribution in
-			self.skipInstall.map { $0 && buildForDistribution }
+			self.skipInstall.map { !$0 && buildForDistribution }
 		}
 	}
 

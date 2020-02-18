@@ -296,8 +296,7 @@ extension URL {
 
 	/// Returns the first `URL` to match `<self>/Headers/*-Swift.h`. Otherwise `nil`.
 	internal func swiftHeaderURL() -> URL? {
-
-		let xcFrameworkLibraryIdAndPath: (identifier: String, path: String)? = self.xcFrameworkLibraryIdentifiedAndPath()
+		let xcFrameworkLibraryIdAndPath: (identifier: String, path: String)? = self.xcFrameworkLibraryIdentifierdAndPath()
 		let headersURL = self.appendingPathComponent(xcFrameworkLibraryIdAndPath?.identifier ?? "" )
 			.appendingPathComponent(xcFrameworkLibraryIdAndPath?.path ?? "")
 			.appendingPathComponent("Headers", isDirectory: true)
@@ -308,8 +307,7 @@ extension URL {
 
 	/// Returns the first `URL` to match `<self>/Modules/*.swiftmodule`. Otherwise `nil`.
 	internal func swiftmoduleURL() -> URL? {
-
-		let xcFrameworkLibraryIdAndPath: (identifier: String, path: String)? = self.xcFrameworkLibraryIdentifiedAndPath()
+		let xcFrameworkLibraryIdAndPath: (identifier: String, path: String)? = self.xcFrameworkLibraryIdentifierdAndPath()
 		let modulesURL = self.appendingPathComponent(xcFrameworkLibraryIdAndPath?.identifier ?? "" )
 			.appendingPathComponent(xcFrameworkLibraryIdAndPath?.path ?? "")
 			.appendingPathComponent("Modules", isDirectory: true)
@@ -318,8 +316,7 @@ extension URL {
 		return dirContents?.first { $0.absoluteString.contains("swiftmodule") }
 	}
 
-	func xcFrameworkLibraryIdentifiedAndPath() -> (String, String)? {
-
+	func xcFrameworkLibraryIdentifierdAndPath() -> (String, String)? {
 		let libraryIdentifier: String
 		let libraryPath: String
 		if self.pathExtension == "xcframework" {
@@ -337,7 +334,6 @@ extension URL {
 			libraryPath = firstLibrary.path
 
 			return (libraryIdentifier, libraryPath)
-
 		}
 		else {
 			return nil

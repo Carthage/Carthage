@@ -531,7 +531,7 @@ private func shouldBuild(scheme: Scheme,
 						.flatMapError { _ in .success(false) }
 
 					if !shouldSupportXCFrameworksResult.value! {
-						return SignalProducer(error: .notForDistribution(scheme: scheme))
+						return SignalProducer(error: .noXCFrameworkSupport(scheme: scheme))
 					}
 			}
 			return SignalProducer<(SDK, FrameworkType?, BuildSettings), CarthageError>(value: tuple)

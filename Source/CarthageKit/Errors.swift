@@ -105,8 +105,8 @@ public enum CarthageError: Error {
 	/// be copied to the same destination path
 	case duplicatesInArchive(duplicates: DuplicatesInArchive)
 
-	/// Scheme is not supposed to be built for distribution as required by .xcframeworks
-	case notForDistribution(scheme: Scheme)
+	/// Scheme does not have required settings for xcframework builds
+	case noXCFrameworkSupport(scheme: Scheme)
 }
 
 extension CarthageError {
@@ -200,7 +200,7 @@ extension CarthageError: Equatable {
 		case let (.duplicatesInArchive(left), .duplicatesInArchive(right)):
 			return left == right
 
-		case let (.notForDistribution(scheme: left), .notForDistribution(scheme: right)):
+		case let (.noXCFrameworkSupport(scheme: left), .noXCFrameworkSupport(scheme: right)):
 			return left == right
 
 		default:
@@ -388,8 +388,8 @@ extension CarthageError: CustomStringConvertible {
 				.joined(separator: "\n")
 			return "Invalid archive - Found multiple frameworks with the same unarchiving destination:\n\(prettyDupeList)"
 
-		case let .notForDistribution(scheme: s):
-			return "Missing build setting - BUILD_LIBRARY_FOR_DISTRIBUTION is required to be \"YES\" in scheme \"\(s.name)\" when supporting xcframeworks"
+		case let .noXCFrameworkSupport(scheme: s):
+			return "Missing build settings - BUILD_LIBRARY_FOR_DISTRIBUTION=YES and SKIP_INSTALL=NO are required in scheme \"\(s.name)\" when supporting xcframeworks"
 		}
 	}
 }
