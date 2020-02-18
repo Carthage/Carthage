@@ -715,7 +715,19 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 			case 1:
 				return build(sdk: sdks[0], with: buildArgs, in: workingDirectoryURL)
 					.flatMapTaskEvents(.merge) { settings in
-						return copyBuildProductIntoDirectory(settings.productDestinationPath(in: folderURL), settings)
+						if options.useXCFrameworks {
+							let frameworkURL = settings.wrapperURL
+							let outputURL = settings
+								.xcFrameworkWrapperName
+								.map(folderURL.appendingPathComponent)
+
+							return SignalProducer(result: frameworkURL.fanout(outputURL))
+								.flatMap(.merge) { f, o in createXCFramework([f], o) }
+								.then(SignalProducer(result: outputURL))
+						}
+						else {
+							return copyBuildProductIntoDirectory(settings.productDestinationPath(in: folderURL), settings)
+						}
 					}
 
 			case 2:
