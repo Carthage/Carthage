@@ -59,7 +59,7 @@ public struct ArchiveCommand: CommandProtocol {
 			frameworks = buildableSchemesInDirectory(
 				directoryURL,
 				withConfiguration: "Release",
-				useXCFrameworks: .platform)
+				useXCFrameworks: options.createXCFramework)
 				.flatMap(.concat) { scheme, project, settings -> SignalProducer<String, CarthageError> in
 
 					if let wrapperName = settings.wrapperName.value,

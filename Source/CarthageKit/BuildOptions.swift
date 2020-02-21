@@ -3,9 +3,7 @@ import XCDBLD
 public enum XCFrameworkPackaging: Equatable {
 	/// Don't make an xcframework
 	case none
-	/// Make an xcframework per platforms
-	case platform
-	/// Make and xcframework out of all platforms
+	/// Make an xcframework out of all platforms
 	case combined
 }
 

@@ -993,7 +993,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.url(for: dependency, rootDirectoryURL: self.directoryURL)
 					.resolvingSymlinksInPath()
 
-				let frameworkURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release")
+				let frameworkURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release", useXCFrameworks: .combined)
 					.flatMap(.concurrent(limit: 4)) { scheme, project, _ -> SignalProducer<BuildSettings, CarthageError> in
 						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 						return BuildSettings.load(with: buildArguments)

@@ -191,7 +191,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 	_ directoryURL: URL,
 	withConfiguration configuration: String,
 	forPlatforms platforms: Set<Platform> = [],
-	useXCFrameworks: XCFrameworkPackaging = .none
+	useXCFrameworks: XCFrameworkPackaging
 ) -> SignalProducer<(Scheme, ProjectLocator, BuildSettings), CarthageError> {
 	precondition(directoryURL.isFileURL)
 	let locator = ProjectLocator
@@ -662,7 +662,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 	rootDirectoryURL: URL,
 	workingDirectoryURL: URL,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
-) -> SignalProducer<TaskEvent<URL>, CarthageError> {
+) -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> {
 	precondition(workingDirectoryURL.isFileURL)
 
 	let buildArgs = BuildArguments(
@@ -700,12 +700,20 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				sdksByPlatform[platform] = [sdk]
 			}
 		}
-		.flatMap(.concat) { sdksByPlatform -> SignalProducer<TaskEvent<URL>, CarthageError> in
+		.map { sdksByPlatform -> [Platform: Set<SDK>] in
+			return sdksByPlatform.compactMapValues { urlSet in
+				guard let filteredSDKs = sdkFilter(Array(urlSet), scheme, options.configuration, project).value else {
+					return nil
+				}
+				return filteredSDKs.isEmpty ? nil : Set(filteredSDKs)
+			}
+		}
+		.flatMap(.concat) { sdksByPlatform -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> in
 			if sdksByPlatform.isEmpty {
 				fatalError("No SDKs found for scheme \(scheme)")
 			}
 
-				return createFramework(
+				return buildFramework(
 					forScheme: scheme,
 					buildArguments: buildArgs,
 					buildOptions: options,
@@ -713,8 +721,8 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 					workingDirectoryURL: workingDirectoryURL,
 					platformToSDKMap: sdksByPlatform)
 		}
-		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
-
+		.flatMapTaskEvents(.concat) { buildTriplet -> SignalProducer<BuildQuartet, CarthageError> in
+			let (_, _, _, builtProductURL) = buildTriplet
 			return UUIDsForFramework(builtProductURL)
 				// Only attempt to create debug info if there is at least
 				// one dSYM architecture UUID in the framework. This can
@@ -724,26 +732,26 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 				.flatMap(.concat) { _ -> SignalProducer<TaskEvent<URL>, CarthageError> in
 					return createDebugInformation(builtProductURL)
 			}
-			.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
+			.then(SignalProducer<BuildQuartet, CarthageError>(value: buildTriplet))
 		}
 
 }
 
-func createFramework(
+func buildFramework(
 	forScheme scheme: Scheme,
 	buildArguments buildArgs: BuildArguments,
 	buildOptions options: BuildOptions,
 	rootDirectoryURL: URL,
 	workingDirectoryURL: URL,
 	platformToSDKMap sdksByPlatform: [Platform: Set<SDK>]
-) -> SignalProducer<TaskEvent<URL>, CarthageError> {
+) -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> {
 
 	let values = sdksByPlatform.map { ($0, Array($1)) }
 	return SignalProducer(values)
 		.filter { _, sdks in
 			return !sdks.isEmpty
 	}
-	.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<URL>, CarthageError> in
+	.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> in
 		let folderURL = rootDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).resolvingSymlinksInPath()
 
 		return build(scheme: scheme,
@@ -757,9 +765,11 @@ func createFramework(
 					let (settings, _) = settingsAndSDKPairs.first!
 					let destination = settings.productDestinationPath(in: folderURL)
 					return copyBuildProductIntoDirectory(destination, settings)
+						.map { (settings, platform, Set(sdks), $0)}
+
 				case 2:
-					let (deviceSettings, _) = settingsAndSDKPairs.first!
-					let (simulatorSettings, _) = settingsAndSDKPairs.last!
+					let (deviceSettings, deviceSDK) = settingsAndSDKPairs.first!
+					let (simulatorSettings, simulatorSDK) = settingsAndSDKPairs.last!
 
 					switch options.useXCFrameworks {
 					case .none:
@@ -767,13 +777,17 @@ func createFramework(
 							deviceBuildSettings: deviceSettings,
 							simulatorBuildSettings: simulatorSettings,
 							into: deviceSettings.productDestinationPath(in: folderURL))
-					case .platform, .combined:
+							.map { (deviceSettings, platform, Set(sdks), $0)}
+
+					case .combined:
 						let deviceDestination = deviceSettings.productDestinationPath(in: folderURL)
 						let simulatorFolderURL = rootDirectoryURL.appendingPathComponent("\(platform.relativePath)simulator", isDirectory: true).resolvingSymlinksInPath()
 						let simulatorDestination = simulatorSettings.productDestinationPath(in: simulatorFolderURL)
 
 						return copyBuildProductIntoDirectory(deviceDestination, deviceSettings)
-							.concat(copyBuildProductIntoDirectory(simulatorDestination, simulatorSettings))
+							.map { (deviceSettings, platform, Set([deviceSDK]), $0) }
+							.concat(copyBuildProductIntoDirectory(simulatorDestination, simulatorSettings).map { (simulatorSettings, platform, Set([simulatorSDK]), $0)}
+)
 					}
 
 				default:
@@ -1007,6 +1021,9 @@ public func createDebugInformation(_ builtProductURL: URL) -> SignalProducer<Tas
 /// begins, then complete or error when building terminates.
 public typealias BuildSchemeProducer = SignalProducer<TaskEvent<(ProjectLocator, Scheme)>, CarthageError>
 
+/// A type representing meta data of the outcome of a build operation
+public typealias BuildQuartet = (buildSettings: BuildSettings, platform: Platform, sdks: Set<SDK>, builtProductURL: URL)
+
 /// Attempts to build the dependency, then places its build product into the
 /// root directory given.
 ///
@@ -1060,7 +1077,7 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 			withConfiguration: options.configuration,
 			forPlatforms: options.platforms,
 			useXCFrameworks: options.useXCFrameworks)
-			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator, _: BuildSettings) -> SignalProducer<TaskEvent<URL>, CarthageError> in
+			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator, _: BuildSettings) -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> in
 				let initialValue = (project, scheme)
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
@@ -1093,10 +1110,11 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 					})
 			}
 			.collectTaskEvents()
-			.flatMapTaskEvents(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
+			.flatMapTaskEvents(.concat) { (buildTriplets: [BuildQuartet]) -> SignalProducer<(), CarthageError> in
 
 				switch options.useXCFrameworks {
 				case .none:
+					let urls = buildTriplets.map { $0.builtProductURL }
 					guard let dependency = dependency else {
 
 						return createVersionFileForCurrentProject(
@@ -1113,17 +1131,31 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 						buildProducts: urls,
 						rootDirectoryURL: rootDirectoryURL)
 						.flatMapError { _ in .empty }
-				case .combined:
 
-					let frameworkNamesAndURLs = urls.reduce(into: [String: Set<URL>]()) { acc, url in
-						var set = acc[url.lastPathComponent] ?? Set()
-						set.insert(url)
-						acc[url.lastPathComponent] = set
+				case .combined:
+					let partitioned: [String: (String, Set<URL>)] =
+						buildTriplets
+							.compactMap {
+								triplet -> (key: String, value: (xcframeworkName: String, builtProductURL: URL))? in
+								guard let name = triplet.buildSettings.xcFrameworkWrapperName.value,
+									let frameworkType = triplet.buildSettings.frameworkType.value??.rawValue else {
+										return nil
+								}
+								return (key: "\(name)-\(frameworkType)", value: (xcframeworkName: name, builtProductURL: triplet.builtProductURL))
+						}
+						.reduce(into: [String: (String, Set<URL>)]()) { acc, tuple in
+							guard var value = acc[tuple.key] else {
+								acc[tuple.key] = (tuple.value.xcframeworkName, Set([tuple.value.builtProductURL]))
+								return
+							}
+							_ = value.1.insert(tuple.value.builtProductURL)
+							acc[tuple.key] = (value.0, value.1)
 					}
 
+					let frameworkNamesAndURLs = Array(partitioned.values)
+
 					return SignalProducer(frameworkNamesAndURLs).flatMap(.merge){ frameworkNameAndURLs in
-						let (frameworkName, frameworkURLs) = frameworkNameAndURLs
-						let xcFrameworkName = frameworkName.stripping(suffix: "framework").appending("xcframework")
+						let (xcFrameworkName, frameworkURLs) = frameworkNameAndURLs
 
 						let outputDir = rootDirectoryURL
 							.appendingPathComponent(Constants.binariesFolderPath)
@@ -1132,8 +1164,6 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 						return createXCFramework(Array(frameworkURLs), outputDir)
 							.then(SignalProducer<(), CarthageError>.empty)
 					}
-				case .platform:
-					fatalError()
 				}
 			}
 			// Discard any Success values, since we want to

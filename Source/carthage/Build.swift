@@ -343,7 +343,6 @@ extension XCFrameworkPackaging: ArgumentProtocol {
 
 	private static let acceptedStrings: [String: XCFrameworkPackaging] = [
 		"none": .none,
-		"platform": .platform,
 		"combined": .combined
 	]
 
