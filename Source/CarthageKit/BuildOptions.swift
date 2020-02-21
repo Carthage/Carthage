@@ -1,5 +1,14 @@
 import XCDBLD
 
+public enum XCFrameworkPackaging: Equatable {
+	/// Don't make an xcframework
+	case none
+	/// Make an xcframework per platforms
+	case platform
+	/// Make and xcframework out of all platforms
+	case combined
+}
+
 /// The build options used for building `xcodebuild` command.
 public struct BuildOptions {
 	/// The Xcode configuration to build.
@@ -16,7 +25,7 @@ public struct BuildOptions {
 	public var useBinaries: Bool
 
 	/// Whether to use xcframeworks or not
-	public var useXCFrameworks: Bool
+	public var useXCFrameworks: XCFrameworkPackaging
 
 	public init(
 		configuration: String,
@@ -25,7 +34,7 @@ public struct BuildOptions {
 		derivedDataPath: String? = nil,
 		cacheBuilds: Bool = true,
 		useBinaries: Bool = true,
-		useXCFrameworks: Bool = false
+		useXCFrameworks: XCFrameworkPackaging = .none
 	) {
 		self.configuration = configuration
 		self.platforms = platforms

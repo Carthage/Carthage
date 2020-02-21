@@ -12,7 +12,7 @@ public struct ArchiveCommand: CommandProtocol {
 		public let outputPath: String?
 		public let directoryPath: String
 		public let colorOptions: ColorOptions
-		public let createXCFramework: Bool
+		public let createXCFramework: XCFrameworkPackaging
 		public let frameworkNames: [String]
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
@@ -31,7 +31,7 @@ public struct ArchiveCommand: CommandProtocol {
 					usage: "the directory containing the Carthage project"
 				)
 				<*> ColorOptions.evaluate(mode)
-				<*> mode <| Option(key: "create-xcframework", defaultValue: false, usage: "create an .xcframework instead of a fat binary")
+				<*> mode <| Option(key: "create-xcframework", defaultValue: .none, usage: "create an .xcframework instead of a fat binary")
 				<*> mode <| Argument(defaultValue: [], usage: argumentUsage, usageParameter: "framework names")
 		}
 	}
@@ -52,17 +52,20 @@ public struct ArchiveCommand: CommandProtocol {
 		let frameworks: SignalProducer<[String], CarthageError>
 		if !options.frameworkNames.isEmpty {
 			frameworks = .init(value: options.frameworkNames.map {
-				return ($0 as NSString).appendingPathExtension(options.createXCFramework ? "xcframework" : "framework")!
+				return ($0 as NSString).appendingPathExtension(options.createXCFramework != .none ? "xcframework" : "framework")!
 			})
 		} else {
 			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
-			frameworks = buildableSchemesInDirectory(directoryURL, withConfiguration: "Release", useXCFrameworks: options.createXCFramework)
+			frameworks = buildableSchemesInDirectory(
+				directoryURL,
+				withConfiguration: "Release",
+				useXCFrameworks: .platform)
 				.flatMap(.concat) { scheme, project, settings -> SignalProducer<String, CarthageError> in
 
 					if let wrapperName = settings.wrapperName.value,
 						let xcFrameworkWrapperName = settings.xcFrameworkWrapperName.value,
 						settings.productType.value == .framework {
-						return .init(value: options.createXCFramework ? xcFrameworkWrapperName : wrapperName)
+						return .init(value: options.createXCFramework != .none ? xcFrameworkWrapperName : wrapperName)
 					} else {
 						return .empty
 					}
@@ -85,7 +88,7 @@ public struct ArchiveCommand: CommandProtocol {
 				.filter { filePath in FileManager.default.fileExists(atPath: filePath.absolutePath) }
 				.flatMap(.merge) { framework -> SignalProducer<String, CarthageError> in
 
-					if !options.createXCFramework {
+					if options.createXCFramework == .none {
 						let dSYM = (framework.relativePath as NSString).appendingPathExtension("dSYM")!
 						let bcsymbolmapsProducer = BCSymbolMapsForFramework(URL(fileURLWithPath: framework.absolutePath))
 							// generate relative paths for the bcsymbolmaps so they print nicely
@@ -109,7 +112,7 @@ public struct ArchiveCommand: CommandProtocol {
 					let foundFrameworks = paths
 						.lazy
 						.map { ($0 as NSString).lastPathComponent }
-						.filter { $0.hasSuffix(".framework") || (options.createXCFramework ? $0.hasSuffix(".xcframework") : false) }
+						.filter { $0.hasSuffix(".framework") || (options.createXCFramework != .none ? $0.hasSuffix(".xcframework") : false) }
 
 					if Set(foundFrameworks) != Set(frameworks) {
 						let error = CarthageError.invalidArgument(

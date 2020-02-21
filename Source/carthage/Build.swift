@@ -23,7 +23,7 @@ extension BuildOptions: OptionsProtocol {
 			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
 			<*> mode <| Option(key: "use-binaries", defaultValue: true, usage: "don't use downloaded binaries when possible")
-			<*> mode <| Option(key: "create-xcframework", defaultValue: false, usage: "create an .xcframework instead of a fat binary")
+			<*> mode <| Option<XCFrameworkPackaging>(key: "create-xcframework", defaultValue: .none, usage: "create an .xcframework instead of a fat binary")
 	}
 }
 
@@ -335,5 +335,19 @@ extension BuildPlatform: ArgumentProtocol {
 			}
 			return .multiple(buildPlatforms)
 		}
+	}
+}
+
+extension XCFrameworkPackaging: ArgumentProtocol {
+	public static let name = "create-xcframework"
+
+	private static let acceptedStrings: [String: XCFrameworkPackaging] = [
+		"none": .none,
+		"platform": .platform,
+		"combined": .combined
+	]
+
+	public static func from(string: String) -> XCFrameworkPackaging? {
+		return self.acceptedStrings[string]
 	}
 }
