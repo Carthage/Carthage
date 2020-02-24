@@ -77,10 +77,17 @@ public struct ArchiveCommand: CommandProtocol {
 		return frameworks.flatMap(.merge) { frameworks -> SignalProducer<(), CarthageError> in
 			return SignalProducer<Platform, CarthageError>(Platform.supportedPlatforms)
 				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
-					return SignalProducer(frameworks).map { framework in
-						return (platform.relativePath as NSString).appendingPathComponent(framework)
+					return SignalProducer(frameworks)
+						.map { framework in
+							if options.createXCFramework == .none {
+								return (platform.relativePath as NSString).appendingPathComponent(framework)
+							}
+							else {
+								return (Constants.combinedBinariesFolderPath as NSString).appendingPathComponent(framework)
+							}
 					}
 				}
+				.uniqueValues()
 				.map { relativePath -> (relativePath: String, absolutePath: String) in
 					let absolutePath = (options.directoryPath as NSString).appendingPathComponent(relativePath)
 					return (relativePath, absolutePath)

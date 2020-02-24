@@ -153,13 +153,19 @@ public struct BuildCommand: CommandProtocol {
 				}
 			}
 			.flatMap(.merge) { project in
-				return project.buildCheckedOutDependenciesWithOptions(options.buildOptions, dependenciesToBuild: options.dependenciesToBuild)
+				return project
+					.buildCheckedOutDependenciesWithOptions(
+						options.buildOptions,
+						dependenciesToBuild: options.dependenciesToBuild)
 			}
 
 		if !shouldBuildCurrentProject {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions, rootDirectoryURL: directoryURL)
+			let currentProducers = buildInDirectory(
+				directoryURL,
+				withOptions: options.buildOptions,
+				rootDirectoryURL: directoryURL)
 				.flatMapError { error -> BuildSchemeProducer in
 					switch error {
 					case let .noSharedFrameworkSchemes(project, _):

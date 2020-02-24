@@ -14,6 +14,10 @@ public struct Constants {
 	/// to the working directory).
 	public static let binariesFolderPath = "Carthage/Build"
 
+	/// The name of the folder into which Carthage puts .xcframeworks it builds (relative
+	/// to the working directory).
+	public static let combinedBinariesFolderPath = "\(binariesFolderPath)/Combined"
+
 	/// The fallback dependencies URL to be used in case
 	/// the intended ~/Library/Caches/org.carthage.CarthageKit cannot
 	/// be found or created.

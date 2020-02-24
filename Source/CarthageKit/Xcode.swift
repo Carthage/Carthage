@@ -649,7 +649,12 @@ private func mergeBuildProducts(
 }
 
 /// A callback function used to determine whether or not an SDK should be built
-public typealias SDKFilterCallback = (_ sdks: [SDK], _ scheme: Scheme, _ configuration: String, _ project: ProjectLocator) -> Result<[SDK], CarthageError>
+public typealias SDKFilterCallback = (
+	_ sdks: [SDK],
+	_ scheme: Scheme,
+	_ configuration: String,
+	_ project: ProjectLocator
+) -> Result<[SDK], CarthageError>
 
 /// Builds one scheme of the given project, for all supported SDKs.
 ///
@@ -702,7 +707,11 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		}
 		.map { sdksByPlatform -> [Platform: Set<SDK>] in
 			return sdksByPlatform.compactMapValues { urlSet in
-				guard let filteredSDKs = sdkFilter(Array(urlSet), scheme, options.configuration, project).value else {
+				guard let filteredSDKs = sdkFilter(
+					Array(urlSet),
+					scheme,
+					options.configuration,
+					project).value else {
 					return nil
 				}
 				return filteredSDKs.isEmpty ? nil : Set(filteredSDKs)
@@ -752,7 +761,9 @@ func buildFramework(
 			return !sdks.isEmpty
 	}
 	.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<BuildQuartet>, CarthageError> in
-		let folderURL = rootDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).resolvingSymlinksInPath()
+		let folderURL = rootDirectoryURL
+			.appendingPathComponent(platform.relativePath, isDirectory: true)
+			.resolvingSymlinksInPath()
 
 		return build(scheme: scheme,
 					 forSDKs: sdks,
@@ -781,12 +792,15 @@ func buildFramework(
 
 					case .combined:
 						let deviceDestination = deviceSettings.productDestinationPath(in: folderURL)
-						let simulatorFolderURL = rootDirectoryURL.appendingPathComponent("\(platform.relativePath)simulator", isDirectory: true).resolvingSymlinksInPath()
+						let simulatorFolderURL = rootDirectoryURL
+							.appendingPathComponent("\(platform.relativePath)simulator", isDirectory: true)
+							.resolvingSymlinksInPath()
 						let simulatorDestination = simulatorSettings.productDestinationPath(in: simulatorFolderURL)
 
 						return copyBuildProductIntoDirectory(deviceDestination, deviceSettings)
 							.map { (deviceSettings, platform, Set([deviceSDK]), $0) }
-							.concat(copyBuildProductIntoDirectory(simulatorDestination, simulatorSettings).map { (simulatorSettings, platform, Set([simulatorSDK]), $0)}
+							.concat(copyBuildProductIntoDirectory(simulatorDestination, simulatorSettings)
+								.map { (simulatorSettings, platform, Set([simulatorSDK]), $0)}
 )
 					}
 
@@ -1158,8 +1172,7 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 						let (xcFrameworkName, frameworkURLs) = frameworkNameAndURLs
 
 						let outputDir = rootDirectoryURL
-							.appendingPathComponent(Constants.binariesFolderPath)
-							.appendingPathComponent("Combined")
+							.appendingPathComponent(Constants.combinedBinariesFolderPath)
 							.appendingPathComponent(xcFrameworkName)
 						return createXCFramework(Array(frameworkURLs), outputDir)
 							.then(SignalProducer<(), CarthageError>.empty)
