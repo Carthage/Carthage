@@ -56,7 +56,7 @@ public struct GitURL {
 		} else {
 			absoluteURLString = urlString
 		}
-		let components = absoluteURLString.split(omittingEmptySubsequences: true) { $0 == "/" }
+		let components = absoluteURLString.split(omittingEmptySubsequences: true) { $0 == "/" || $0 == ":" }
 
 		return components
 			.last

@@ -24,12 +24,13 @@ EOF
     extract-workspace-with-dependency
     cd "${BATS_TMPDIR:?}/WorkspaceWithDependency"
     git init && git-commit 'Initialize project.'
+    git remote add origin "git@example.com:TestFramework1.git"
 
     run carthage build --no-skip-current --platform mac --cache-builds
     [ "$status" -eq 0 ]
-    [ "${lines[1]}" = "*** Invalid cache found for _Current, rebuilding with all downstream dependencies" ]
+    [ "${lines[1]}" = "*** Invalid cache found for TestFramework1, rebuilding with all downstream dependencies" ]
 
     run carthage build --no-skip-current --platform mac --cache-builds
     [ "$status" -eq 0 ]
-    [ "${lines[1]}" = "*** Valid cache found for _Current, skipping build" ]
+    [ "${lines[1]}" = "*** Valid cache found for TestFramework1, skipping build" ]
 }

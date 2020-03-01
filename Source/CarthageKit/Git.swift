@@ -708,7 +708,7 @@ public func projectName(for repositoryFileURL: URL? = nil) -> SignalProducer<Str
 				}
 				.first?.value.remoteNameAndURL.url
 
-				// If the reposiroty is not pushed to any remote
+				// If the repository is not pushed to any remote
 				// the list of remotes is empty, so call the current project... "_Current"
 				return urlOfMostPopularRemote.flatMap { Dependency.git(GitURL($0)).name } ?? "_Current"
 			}
