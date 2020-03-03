@@ -28,9 +28,9 @@ EOF
 
     run carthage build --no-skip-current --platform mac --cache-builds
     [ "$status" -eq 0 ]
-    [ "${lines[1]}" = "*** Invalid cache found for TestFramework1, rebuilding with all downstream dependencies" ]
+    [[ "$output" =~ "*** Invalid cache found for TestFramework1, rebuilding with all downstream dependencies" ]]
 
     run carthage build --no-skip-current --platform mac --cache-builds
     [ "$status" -eq 0 ]
-    [ "${lines[1]}" = "*** Valid cache found for TestFramework1, skipping build" ]
+    [[ "$output" =~ "*** Valid cache found for TestFramework1, skipping build" ]]
 }
