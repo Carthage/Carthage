@@ -993,37 +993,72 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.url(for: dependency, rootDirectoryURL: self.directoryURL)
 					.resolvingSymlinksInPath()
 
-				let frameworkURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release", useXCFrameworks: .combined)
+				let frameworkURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release", useXCFrameworks: .none)
 					.flatMap(.concurrent(limit: 4)) { scheme, project, _ -> SignalProducer<BuildSettings, CarthageError> in
 						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 						return BuildSettings.load(with: buildArguments)
 					}
-					.flatMap(.concat) { settings -> SignalProducer<(BuildSettings, String), CarthageError> in
-						return SignalProducer(settings.wrapperName).map { (settings, $0) }
+					.flatMap(.concat) { settings -> SignalProducer<(BuildSettings, String, String), CarthageError> in
+						return SignalProducer(settings.wrapperName)
+							.zip(with: settings.xcFrameworkWrapperName)
+							.map { (settings, $0.0, $0.1) }
 					}
-					.flatMap(.concat) { settings, wrapperName -> SignalProducer<(URL, isStatic: Bool), CarthageError> in
-						settings.buildSDKs.map { sdk -> (URL, isStatic: Bool) in
+					.flatMap(.concat) { (settings, wrapperName, xcFrameworkWrapperName) -> SignalProducer<(URL, isStatic: Bool, xcFrameworkWrapperName: String), CarthageError> in
+
+						return settings.buildSDKs.flatMap(.merge) { sdk -> SignalProducer<(URL, isStatic: Bool, xcFrameworkWrapperName: String), CarthageError> in
+
+							// produce paths for frameworks builds
 							let url = settings.productDestinationPath(in: binariesDirectoryURL.appendingPathComponent(sdk.platform.rawValue, isDirectory: true))
 								.appendingPathComponent(wrapperName)
 							let isStatic = settings.frameworkType.value.flatMap { $0 } == .static
-							return (url, isStatic)
+							let canonicalPathProducer = SignalProducer<(URL, isStatic: Bool, xcFrameworkWrapperName: String), CarthageError>(value: (url, isStatic, xcFrameworkWrapperName))
+							if sdk.isSimulator {
+								// produce paths for xcframework builds
+								let url = settings.productDestinationPath(in: binariesDirectoryURL)
+									.appendingPathComponent("\(sdk.platform.rawValue)Simulator", isDirectory: true)
+									.appendingPathComponent(wrapperName)
+								let xcfarmeworkLocationsProcuder = SignalProducer<(URL, isStatic: Bool, xcFrameworkWrapperName: String), CarthageError>(value: (url, isStatic, xcFrameworkWrapperName))
+								return canonicalPathProducer.concat(xcfarmeworkLocationsProcuder)
+							}
+							else {
+								return canonicalPathProducer
+							}
 						}
 					}
 
-				return frameworkURLs.flatMap(.concurrent(limit: 4)) { frameworkURL, isStatic -> SignalProducer<URL, CarthageError> in
-						let framework = SignalProducer<URL, CarthageError>(value: frameworkURL)
+				return frameworkURLs
+					.flatMap(.concurrent(limit: 4)) { frameworkURL, isStatic, xcFrameworkWrapperName -> SignalProducer<(URL, xcFrameworkWrapperName: String), CarthageError> in
+						let framework = SignalProducer<(URL, xcFrameworkWrapperName: String), CarthageError>(value: (frameworkURL, xcFrameworkWrapperName))
 
-						if isStatic {
-							return framework
-						}
+						guard !isStatic else { return framework }
 
 						let bcSymbolMaps = BCSymbolMapsForFramework(frameworkURL)
-							.flatMapError { _ in SignalProducer<URL, CarthageError>.empty }
+							.map { return ($0, xcFrameworkWrapperName) }
+							.flatMapError { _ in SignalProducer<(URL, xcFrameworkWrapperName: String), CarthageError>.empty }
+
 						let dSYMs = dSYMForFramework(frameworkURL, inDirectoryURL: frameworkURL.deletingLastPathComponent())
-							.flatMapError { _ in SignalProducer<URL, CarthageError>.empty }
+							.map { return ($0, xcFrameworkWrapperName) }
+							.flatMapError { _ in SignalProducer<(URL, xcFrameworkWrapperName: String), CarthageError>.empty }
+
 						return .merge(framework, bcSymbolMaps, dSYMs)
 					}
 					.collect()
+					.map { urlsAndWrapperName -> ([URL], String) in
+						let t = urlsAndWrapperName.reduce(into: ([URL](), "")) { acc, next in
+							acc.0.append(next.0)
+							acc.1 = next.1
+						}
+						return t
+					}
+					.flatMap(.merge) { (urls, xcFrameworkWrapperName)  -> SignalProducer<[URL], CarthageError> in
+						let xcframeworkURL = self.directoryURL.appendingPathComponent(Constants.binariesFolderPath).appendingPathComponent(xcFrameworkWrapperName)
+						if FileManager.default.fileExists(atPath: xcframeworkURL.resolvingSymlinksInPath().absoluteString) {
+							return SignalProducer(value: [xcframeworkURL] + urls)
+						}
+						else {
+							return  SignalProducer(value: urls)
+						}
+					}
 					.map { (checkoutURL, versionFileURL, $0) }
 			}
 			.collect()
@@ -1037,7 +1072,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 					versionFileURLSet.insert(versionFileURL)
 					binaryURLSet.formUnion(binaryURLs)
 				}
-
 				return (checkoutURLSet, versionFileURLSet, binaryURLSet)
 			}
 			.flatMap(.merge) { checkoutURLs, versionFileURLs, binaryURLs -> SignalProducer<URL, CarthageError> in
@@ -1082,6 +1116,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 							)
 							.filter { !binaryURLs.contains($0) }) ?? []
 					}
+				urls += (try? fileManager
+					.contentsOfDirectory(
+						at: self.directoryURL.appendingPathComponent(Constants.combinedBinariesFolderPath, isDirectory: true),
+						includingPropertiesForKeys: nil
+					)
+					.filter { !binaryURLs.contains($0) }) ?? []
 
 				return SignalProducer(Set(urls))
 			}

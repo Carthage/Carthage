@@ -793,7 +793,7 @@ func buildFramework(
 					case .combined:
 						let deviceDestination = deviceSettings.productDestinationPath(in: folderURL)
 						let simulatorFolderURL = rootDirectoryURL
-							.appendingPathComponent("\(platform.relativePath)simulator", isDirectory: true)
+							.appendingPathComponent("\(platform.relativePath)Simulator", isDirectory: true)
 							.resolvingSymlinksInPath()
 						let simulatorDestination = simulatorSettings.productDestinationPath(in: simulatorFolderURL)
 
