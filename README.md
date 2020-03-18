@@ -47,7 +47,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 	```
 	github "Alamofire/Alamofire" ~> 4.7.2
 	```
-	
+
 1. Run `carthage update`
 1. A `Cartfile.resolved` file and a `Carthage` directory will appear in the same directory where your `.xcodeproj` or `.xcworkspace` is
 1. Drag the built `.framework` binaries from `Carthage/Build/<platform>` into your application’s Xcode project.
@@ -107,7 +107,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one or download a pre-compiled framework.
-1. On your application targets’ _General_ settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
+1. Open your application targets’ _General_ settings tab. For Xcode 11.0 and higher, in the "Frameworks, Libraries, and Embedded Content" section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk. Then, in the "Embed"  section, select "Do Not Embed" from the pulldown menu for each item added. For Xcode 10.x and lower, in the "Linked Frameworks and Libraries" section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
     ```sh
@@ -436,4 +436,3 @@ Header backdrop photo is released under the [CC BY-NC-SA 2.0](https://creativeco
 [CarthageKit]: Source/CarthageKit
 [VersionFile]: Documentation/VersionFile.md
 [StaticFrameworks]: Documentation/StaticFrameworks.md
-
