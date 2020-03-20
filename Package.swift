@@ -18,8 +18,6 @@ let package = Package(
         .package(url: "https://github.com/thoughtbot/Curry.git", from: "4.0.2"),
         .package(url: "https://github.com/Quick/Quick.git", from: "2.1.0"),
         .package(url: "https://github.com/Quick/Nimble.git", from: "8.0.1"),
-        .package(url: "https://github.com/apple/swift-package-manager.git", .revision("swift-DEVELOPMENT-SNAPSHOT-2019-03-04-a")),
-        .package(url: "https://github.com/apple/swift-llbuild.git", .revision("3aeecb428d202afe15633266dc862de27feab723")),
     ],
     targets: [
         .target(
@@ -31,8 +29,8 @@ let package = Package(
             dependencies: ["XCDBLD", "Quick", "Nimble"]
         ),
         .target(
-            name: "CarthageKit",
-            dependencies: ["XCDBLD", "Tentacle", "Curry", "SwiftPM-auto", "llbuildSwift"]
+            name: "CarthageKit", 
+            dependencies: ["XCDBLD", "Tentacle", "Curry"]
         ),
         .testTarget(
             name: "CarthageKitTests",

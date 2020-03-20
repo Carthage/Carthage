@@ -98,6 +98,33 @@ class XcodeSpec: QuickSpec {
 
 				expect(result?.value) == "4.1-dev (LLVM 0fcc19c0d8, Clang 1696f82ad2, Swift 691139445e)"
 			}
+
+			it("should determine when a module-stable Swift framework is incompatible") {
+				let localSwiftVersion = "5.0 (swiftlang-1001.0.69.5 clang-1001.0.46.3)"
+				let frameworkVersion = "5.1.2 (swiftlang-1100.0.278 clang-1100.0.33.9)"
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "ModuleStableBuiltWithSwift5.1.2.framework", withExtension: nil)!
+				let result = isModuleStableAPI(localSwiftVersion, frameworkVersion, frameworkURL)
+
+				expect(result).to(beFalse())
+			}
+
+			it("should determine when a non-module-stable Swift framework is incompatible") {
+				let localSwiftVersion = "5.1 (swiftlang-1100.0.270.13 clang-1100.0.33.7)"
+				let frameworkVersion = "5.1.2 (swiftlang-1100.0.278 clang-1100.0.33.9)"
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "NonModuleStableBuiltWithSwift5.1.2.framework", withExtension: nil)!
+				let result = isModuleStableAPI(localSwiftVersion, frameworkVersion, frameworkURL)
+
+				expect(result).to(beFalse())
+			}
+
+			it("should determine when a module-stable Swift framework is compatible") {
+				let localSwiftVersion = "5.1 (swiftlang-1100.0.270.13 clang-1100.0.33.7)"
+				let frameworkVersion = "5.1.2 (swiftlang-1100.0.278 clang-1100.0.33.9)"
+				let frameworkURL = Bundle(for: type(of: self)).url(forResource: "ModuleStableBuiltWithSwift5.1.2.framework", withExtension: nil)!
+				let result = isModuleStableAPI(localSwiftVersion, frameworkVersion, frameworkURL)
+
+				expect(result).to(beTrue())
+			}
 		}
 
 		describe("locateProjectsInDirectory:") {
@@ -114,7 +141,7 @@ class XcodeSpec: QuickSpec {
 			it("should not find anything in the Carthage Subdirectory") {
 				let relativePaths = relativePathsForProjectsInDirectory(directoryURL)
 				expect(relativePaths).toNot(beEmpty())
-				let pathsStartingWithCarthage = relativePaths.filter { $0.hasPrefix("\(carthageProjectCheckoutsPath)/") }
+				let pathsStartingWithCarthage = relativePaths.filter { $0.hasPrefix("\(Constants.checkoutsFolderPath)/") }
 				expect(pathsStartingWithCarthage).to(beEmpty())
 			}
 

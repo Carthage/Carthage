@@ -60,9 +60,12 @@ internal func frameworkSwiftVersionIfIsSwiftFramework(_ frameworkURL: URL) -> Si
 
 /// Determines the Swift version of a framework at a given `URL`.
 internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, SwiftVersionError> {
+	// Fall back to dSYM version parsing if header is not present
+	guard let swiftHeaderURL = frameworkURL.swiftHeaderURL() else {
+		return dSYMSwiftVersion(frameworkURL.appendingPathExtension("dSYM"))
+	}
 
 	guard
-		let swiftHeaderURL = frameworkURL.swiftHeaderURL(),
 		let data = try? Data(contentsOf: swiftHeaderURL),
 		let contents = String(data: data, encoding: .utf8),
 		let swiftVersion = parseSwiftVersionCommand(output: contents)
@@ -73,8 +76,7 @@ internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<Strin
 	return SignalProducer(value: swiftVersion)
 }
 
-internal func dSYMSwiftVersion(_ dSYMURL: URL) -> SignalProducer<String, SwiftVersionError> {
-
+private func dSYMSwiftVersion(_ dSYMURL: URL) -> SignalProducer<String, SwiftVersionError> {
 	// Pick one architecture
 	guard let arch = architecturesInPackage(dSYMURL).first()?.value else {
 		return SignalProducer(error: .unknownFrameworkSwiftVersion(message: "No architectures found in dSYM."))
@@ -132,10 +134,34 @@ internal func isSwiftFramework(_ frameworkURL: URL) -> Bool {
 internal func checkSwiftFrameworkCompatibility(_ frameworkURL: URL, usingToolchain toolchain: String?) -> SignalProducer<URL, SwiftVersionError> {
 	return SignalProducer.combineLatest(swiftVersion(usingToolchain: toolchain), frameworkSwiftVersion(frameworkURL))
 		.attemptMap { localSwiftVersion, frameworkSwiftVersion in
-			return localSwiftVersion == frameworkSwiftVersion
+			return localSwiftVersion == frameworkSwiftVersion || isModuleStableAPI(localSwiftVersion, frameworkSwiftVersion, frameworkURL)
 				? .success(frameworkURL)
 				: .failure(.incompatibleFrameworkSwiftVersions(local: localSwiftVersion, framework: frameworkSwiftVersion))
 		}
+}
+
+/// Determines whether a local swift version and a framework combination are considered module stable
+internal func isModuleStableAPI(_ localSwiftVersion: String,
+								_ frameworkSwiftVersion: String,
+								_ frameworkURL: URL) -> Bool {
+	guard let localSwiftVersionNumber = determineMajorMinorVersion(localSwiftVersion),
+		let frameworkSwiftVersionNumber = determineMajorMinorVersion(frameworkSwiftVersion),
+		let swiftModuleURL = frameworkURL.swiftmoduleURL() else { return false }
+
+	let hasSwiftInterfaceFile = try? FileManager.default.contentsOfDirectory(at: swiftModuleURL,
+																			 includingPropertiesForKeys: nil,
+																			 options: []).first { (url) -> Bool in
+			return url.lastPathComponent.contains("swiftinterface")
+		} != nil
+
+	return localSwiftVersionNumber >= 5.1 && frameworkSwiftVersionNumber >= 5.1 && hasSwiftInterfaceFile == true
+}
+
+/// Attempts to return a `Double` representing the major/minor version components parsed from a given swift version, otherwise returns `nil`.
+private func determineMajorMinorVersion(_ swiftVersion: String) -> Double? {
+	guard let range = swiftVersion.range(of: "^(\\d+)\\.(\\d+)", options: .regularExpression) else { return nil }
+
+	return Double(swiftVersion[range])
 }
 
 /// Emits the framework URL if it is compatible with the build environment and errors if not.
@@ -262,7 +288,7 @@ public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])]) -> Signa
 }
 
 /// Describes the type of frameworks.
-internal enum FrameworkType {
+public enum FrameworkType: String, Codable {
 	/// A dynamic framework.
 	case dynamic
 
@@ -788,7 +814,7 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 
 					// Do not copy build products that originate from the current project's own carthage dependencies
 					let projectURL = URL(fileURLWithPath: projectPath)
-					let dependencyCheckoutDir = workingDirectoryURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true)
+					let dependencyCheckoutDir = workingDirectoryURL.appendingPathComponent(Constants.checkoutsFolderPath, isDirectory: true)
 					return !dependencyCheckoutDir.hasSubdirectory(projectURL)
 				}
 				.flatMap(.concat) { settings in resolveSameTargetName(for: settings) }
@@ -1387,13 +1413,29 @@ public func binaryURL(_ packageURL: URL) -> Result<URL, CarthageError> {
 
 	if bundle?.packageType == .dSYM {
 		let binaryName = packageURL.deletingPathExtension().deletingPathExtension().lastPathComponent
-		if !binaryName.isEmpty {
+		if binaryName.isEmpty {
+			return .failure(.readFailed(packageURL, NSError(
+				domain: NSCocoaErrorDomain,
+				code: CocoaError.fileReadInvalidFileName.rawValue,
+				userInfo: [
+					NSLocalizedDescriptionKey: "dSYM has an invalid filename",
+					NSLocalizedRecoverySuggestionErrorKey: "Make sure your dSYM filename conforms to 'name.framework.dSYM' format"
+				]
+			)))
+		} else {
 			let binaryURL = packageURL.appendingPathComponent("Contents/Resources/DWARF/\(binaryName)")
 			return .success(binaryURL)
 		}
 	}
 
-	return .failure(.readFailed(packageURL, nil))
+	return .failure(.readFailed(packageURL, NSError(
+		domain: NSCocoaErrorDomain,
+		code: CocoaError.fileReadCorruptFile.rawValue,
+		userInfo: [
+			NSLocalizedDescriptionKey: "Cannot retrive binary file from bundle at \(packageURL)",
+			NSLocalizedRecoverySuggestionErrorKey: "Does the bundle contain an Info.plist?"
+		]
+	)))
 }
 
 /// Signs a framework with the given codesigning identity.

@@ -18,11 +18,19 @@ public struct FetchCache {
 
 	private static var lastFetchTimes: [GitURL: TimeInterval] = [:]
 
+	private static let lock = NSLock()
+
 	internal static func clearFetchTimes() {
+		lock.lock()
+		defer { lock.unlock() }
+
 		lastFetchTimes.removeAll()
 	}
 
 	internal static func needsFetch(forURL url: GitURL) -> Bool {
+		lock.lock()
+		defer { lock.unlock() }
+
 		guard let lastFetch = lastFetchTimes[url] else {
 			return true
 		}
@@ -33,6 +41,9 @@ public struct FetchCache {
 	}
 
 	fileprivate static func updateLastFetchTime(forURL url: GitURL?) {
+		lock.lock()
+		defer { lock.unlock() }
+
 		if let url = url {
 			lastFetchTimes[url] = Date().timeIntervalSince1970
 		}
