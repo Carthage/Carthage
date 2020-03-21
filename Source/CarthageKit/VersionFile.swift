@@ -8,6 +8,7 @@ import XCDBLD
 public struct CachedFramework: Codable {
 	enum CodingKeys: String, CodingKey {
 		case name = "name"
+		case `extension` = "extension"
 		case hash = "hash"
 		case linking = "linking"
 		case swiftToolchainVersion = "swiftToolchainVersion"
@@ -15,6 +16,8 @@ public struct CachedFramework: Codable {
 
 	/// Name of the framework
 	public let name: String
+	/// Extension of the framework. Defaults to `framework`
+	public let `extension`: String?
 	/// Hash of the framework
 	public let hash: String
     /// The linking type of the framework. One of `dynamic` or `static`. Defaults to `dynamic`
@@ -28,11 +31,12 @@ public struct CachedFramework: Codable {
 
 	/// The framework's expected location within a platform directory.
 	var relativePath: String {
+		let ext = `extension` ?? "framework"
 		switch linking {
 		case .some(.static):
-			return "\(FrameworkType.staticFolderName)/\(name).framework"
+			return "\(FrameworkType.staticFolderName)/\(name).\(ext)"
 		default:
-			return "\(name).framework"
+			return "\(name).\(ext)"
 		}
 	}
 }
@@ -126,12 +130,11 @@ public struct VersionFile: Codable {
 		for cachedFramework: CachedFramework,
 		platform: Platform,
 		binariesDirectoryURL: URL
-	) -> SignalProducer<URL, CarthageError> {
-		return enumerateSupportedFrameworks(target: cachedFramework.name,
-											inDirectory: binariesDirectoryURL,
-											isBuildDirectory: true,
-											allowedPlatforms: [platform])
-			.filterMap { $0.path.appendingPathComponent($0.name, isDirectory: true) }
+	) -> URL {
+		return binariesDirectoryURL
+			.appendingPathComponent(platform.rawValue, isDirectory: true)
+			.resolvingSymlinksInPath()
+			.appendingPathComponent(cachedFramework.relativePath, isDirectory: true)
 	}
 
 	/// Calculates the path of the binary inside the framework corresponding with a version file
@@ -143,11 +146,13 @@ public struct VersionFile: Codable {
 		for cachedFramework: CachedFramework,
 		platform: Platform,
 		binariesDirectoryURL: URL
-	) -> SignalProducer<URL, CarthageError> {
-		return frameworkURL(for: cachedFramework,
-							 platform: platform,
-							 binariesDirectoryURL: binariesDirectoryURL)
-			.filterMap { binaryURL($0).value }
+	) -> URL {
+		let fmwkURL = frameworkURL(
+			for: cachedFramework,
+			platform: platform,
+			binariesDirectoryURL: binariesDirectoryURL
+		)
+		return binaryURL(fmwkURL).value ?? fmwkURL.appendingPathComponent("\(cachedFramework.name)", isDirectory: false)
 	}
 
 	/// Sends the hashes of the provided cached framework's binaries in the
@@ -158,14 +163,13 @@ public struct VersionFile: Codable {
 		binariesDirectoryURL: URL
 	) -> SignalProducer<String?, CarthageError> {
 		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
-			.flatMap(.concat) { cachedFramework -> SignalProducer<URL, CarthageError> in
-				self.frameworkBinaryURL(
+			.flatMap(.concat) { cachedFramework -> SignalProducer<String?, CarthageError> in
+				let frameworkBinaryURL = self.frameworkBinaryURL(
 					for: cachedFramework,
 					platform: platform,
 					binariesDirectoryURL: binariesDirectoryURL
 				)
-			}
-			.flatMap(.concat) { frameworkBinaryURL -> SignalProducer<String?, CarthageError> in
+				
 				return hashForFileAtURL(frameworkBinaryURL)
 					.map { hash -> String? in
 						return hash
@@ -189,14 +193,13 @@ public struct VersionFile: Codable {
 		localSwiftVersion: String
 	) -> SignalProducer<Bool, CarthageError> {
 		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
-			.flatMap(.concat) { cachedFramework -> SignalProducer<URL, CarthageError> in
-				self.frameworkURL(
+			.flatMap(.concat) { cachedFramework -> SignalProducer<Bool, CarthageError> in
+				let frameworkURL = self.frameworkURL(
 					for: cachedFramework,
 					platform: platform,
 					binariesDirectoryURL: binariesDirectoryURL
 				)
-			}
-			.flatMap(.concat) { frameworkURL -> SignalProducer<Bool, CarthageError> in
+				
 				if !isSwiftFramework(frameworkURL) {
 					return SignalProducer(value: true)
 				} else {
@@ -457,6 +460,7 @@ public func createVersionFileForCommitish(
 	struct FrameworkDetail {
 		let platformName: String
 		let frameworkName: String
+		let frameworkExt: String
 		let frameworkSwiftVersion: String?
 		let frameworkType: FrameworkType
 	}
@@ -464,20 +468,18 @@ public func createVersionFileForCommitish(
 	if !buildProducts.isEmpty {
 		return SignalProducer<URL, CarthageError>(buildProducts)
 			.flatMap(.merge) { url -> SignalProducer<(String, FrameworkDetail), CarthageError> in
-				let frameworkName: String
+				let frameworkName = url.deletingPathExtension().lastPathComponent
+				let frameworkExt = url.pathExtension
 				let platformName: String
 				let frameworkType: FrameworkType
 				switch (
 					url.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent,
-					url.deletingLastPathComponent().lastPathComponent,
-					url.deletingPathExtension().lastPathComponent
+					url.deletingLastPathComponent().lastPathComponent
 				) {
-				case (let platform, FrameworkType.staticFolderName, let name):
-					frameworkName = name
+				case (let platform, FrameworkType.staticFolderName):
 					platformName = platform
 					frameworkType = .static
-				case (_, let platform, let name):
-					frameworkName = name
+				case (_, let platform):
 					platformName = platform
 					frameworkType = .dynamic
 				}
@@ -487,6 +489,7 @@ public func createVersionFileForCommitish(
 					.flatMap(.merge) { frameworkSwiftVersion -> SignalProducer<(String, FrameworkDetail), CarthageError> in
 					let frameworkDetail: FrameworkDetail = .init(platformName: platformName,
 										     frameworkName: frameworkName,
+											 frameworkExt: frameworkExt,
 										     frameworkSwiftVersion: frameworkSwiftVersion,
 										     frameworkType: frameworkType)
 					let details = SignalProducer<FrameworkDetail, CarthageError>(value: frameworkDetail)
@@ -498,10 +501,11 @@ public func createVersionFileForCommitish(
 				let hash = values.0
 				let platformName = values.1.platformName
 				let frameworkName = values.1.frameworkName
+				let frameworkExt = values.1.frameworkExt
 				let frameworkSwiftVersion = values.1.frameworkSwiftVersion
 				let frameworkType = values.1.frameworkType
 
-				let cachedFramework = CachedFramework(name: frameworkName, hash: hash, linking: frameworkType, swiftToolchainVersion: frameworkSwiftVersion)
+				let cachedFramework = CachedFramework(name: frameworkName, extension: frameworkExt, hash: hash, linking: frameworkType, swiftToolchainVersion: frameworkSwiftVersion)
 				if var frameworks = platformCaches[platformName] {
 					frameworks.append(cachedFramework)
 					platformCaches[platformName] = frameworks
