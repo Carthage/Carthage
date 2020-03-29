@@ -1606,7 +1606,7 @@ internal func frameworksInDirectory(_ directoryURL: URL, platforms: [Platform]) 
                 return true
             } else {
                 let platformName = url.pathComponents[url.pathComponents.endIndex - 2]
-                return platforms.map(\.rawValue).contains(platformName)
+                return platforms.map { $0.rawValue }.contains(platformName)
             }
         }
 		.filter { url in
