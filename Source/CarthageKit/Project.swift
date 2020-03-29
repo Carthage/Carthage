@@ -636,7 +636,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		projectName: String,
 		pinnedVersion: PinnedVersion,
 		toolchain: String?,
-        platforms: [Platform]
+		platforms: [Platform]
 	) -> SignalProducer<URL, CarthageError> {
 
 		// Helper type
@@ -671,7 +671,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat, unarchive(archive:))
 			.flatMap(.concat) { directoryURL -> SignalProducer<URL, CarthageError> in
 				// For all frameworks in the directory where the archive has been expanded
-                return frameworksInDirectory(directoryURL, platforms: platforms)
+				return frameworksInDirectory(directoryURL, platforms: platforms)
 					.collect()
 					// Check if multiple frameworks resolve to the same unique destination URL in the Carthage/Build/ folder.
 					// This is needed because frameworks might overwrite each others.
@@ -738,10 +738,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
 	/// Sends a boolean indicating whether binaries were installed.
-    private func installBinaries(for dependency: Dependency,
-                                 pinnedVersion: PinnedVersion,
-                                 toolchain: String?,
-                                 platforms: [Platform]) -> SignalProducer<Bool, CarthageError> {
+	private func installBinaries(for dependency: Dependency,
+								 pinnedVersion: PinnedVersion,
+								 toolchain: String?,
+								 platforms: [Platform]) -> SignalProducer<Bool, CarthageError> {
 		switch dependency {
 		case let .gitHub(server, repository):
 			let client = Client(server: server)
@@ -758,11 +758,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 					)
 				}
 				.flatMap(.concat) {
-                    return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0,
-                                                                 projectName: dependency.name,
-                                                                 pinnedVersion: pinnedVersion,
-                                                                 toolchain: toolchain,
-                                                                 platforms: platforms)
+					return self.unarchiveAndCopyBinaryFrameworks(zipFile: $0,
+																 projectName: dependency.name,
+																 pinnedVersion: pinnedVersion,
+																 toolchain: toolchain,
+																 platforms: platforms)
 				}
 				.flatMap(.concat) { self.removeItem(at: $0) }
 				.map { true }
@@ -1142,7 +1142,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 		pinnedVersion: PinnedVersion,
 		projectName: String,
 		toolchain: String?,
-        platforms: [Platform]
+		platforms: [Platform]
 	) -> SignalProducer<(), CarthageError> {
 		return SignalProducer<SemanticVersion, ScannableError>(result: SemanticVersion.from(pinnedVersion))
 			.mapError { CarthageError(scannableError: $0) }
@@ -1157,12 +1157,13 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { semanticVersion, frameworkURL in
 				return self.downloadBinary(dependency: Dependency.binary(binary), version: semanticVersion, url: frameworkURL)
 			}
-            .flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0,
-                                                                      projectName: projectName,
-                                                                      pinnedVersion: pinnedVersion,
-                                                                      toolchain: toolchain,
-                                                                      platforms: platforms)
-            }
+			.flatMap(.concat) {
+				self.unarchiveAndCopyBinaryFrameworks(zipFile: $0,
+													  projectName: projectName,
+													  pinnedVersion: pinnedVersion,
+													  toolchain: toolchain,
+													  platforms: platforms)
+			}
 			.flatMap(.concat) { self.removeItem(at: $0) }
 	}
 
@@ -1319,19 +1320,19 @@ public final class Project { // swiftlint:disable:this type_body_length
 							guard options.useBinaries else {
 								return .empty
 							}
-                            return self.installBinaries(for: dependency,
-                                                        pinnedVersion: version,
-                                                        toolchain: options.toolchain,
-                                                        platforms: Array(options.platforms))
+							return self.installBinaries(for: dependency,
+														pinnedVersion: version,
+														toolchain: options.toolchain,
+														platforms: Array(options.platforms))
 								.filterMap { installed -> (Dependency, PinnedVersion)? in
 									return installed ? (dependency, version) : nil
 								}
 						case let .binary(binary):
-                            return self.installBinariesForBinaryProject(binary: binary,
-                                                                        pinnedVersion: version,
-                                                                        projectName: dependency.name,
-                                                                        toolchain: options.toolchain,
-                                                                        platforms: Array(options.platforms))
+							return self.installBinariesForBinaryProject(binary: binary,
+																		pinnedVersion: version,
+																		projectName: dependency.name,
+																		toolchain: options.toolchain,
+																		platforms: Array(options.platforms))
 								.then(.init(value: (dependency, version)))
 						}
 					}
@@ -1600,15 +1601,15 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, Carth
 /// Sends the URL to each framework bundle found in the given directory.
 internal func frameworksInDirectory(_ directoryURL: URL, platforms: [Platform]) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
-        .filter { !$0.pathComponents.contains("__MACOSX") }
-        .filter { url in
-            if platforms.isEmpty {
-                return true
-            } else {
-                let platformName = url.pathComponents[url.pathComponents.endIndex - 2]
-                return platforms.map { $0.rawValue }.contains(platformName)
-            }
-        }
+		.filter { !$0.pathComponents.contains("__MACOSX") }
+		.filter { url in
+			if platforms.isEmpty {
+				return true
+			} else {
+				let platformName = url.pathComponents[url.pathComponents.endIndex - 2]
+				return platforms.map { $0.rawValue }.contains(platformName)
+			}
+    	}
 		.filter { url in
 			// Skip nested frameworks
 			let frameworksInURL = url.pathComponents.filter { pathComponent in
