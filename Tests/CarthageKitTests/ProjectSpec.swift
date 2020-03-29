@@ -776,7 +776,7 @@ class ProjectSpec: QuickSpec {
 			it("should find all carthage compatible framework bundles and exclude improper ones") {
 				let directoryURL = Bundle(for: type(of: self)).url(forResource: "FilterBogusFrameworks", withExtension: nil)!
 
-				let result = CarthageKit.frameworksInDirectory(directoryURL).collect().single()
+                let result = CarthageKit.frameworksInDirectory(directoryURL, platforms: []).collect().single()
 				expect(result?.value?.count) == 3
 			}
 		}
