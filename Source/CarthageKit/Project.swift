@@ -1603,7 +1603,7 @@ internal func frameworksInDirectory(_ directoryURL: URL, platforms: [Platform]) 
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
 		.filter { !$0.pathComponents.contains("__MACOSX") }
 		.filter { url in
-			if platforms.isEmpty {
+			if platforms.isEmpty || !url.absoluteString.contains(Constants.binariesFolderPath) {
 				return true
 			} else {
 				let platformName = url.pathComponents[url.pathComponents.endIndex - 2]
