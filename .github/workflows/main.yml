@@ -21,7 +21,6 @@ jobs:
      - uses: actions/checkout@v1
      - name: Install Carthage
        run: |
-         ls /Applications
          brew uninstall carthage
          make install
      - name: Run bats IntegrationTests
