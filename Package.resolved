@@ -6,8 +6,8 @@
         "repositoryURL": "https://github.com/Carthage/Commandant.git",
         "state": {
           "branch": null,
-          "revision": "07cad52573bad19d95844035bf0b25acddf6b0f6",
-          "version": "0.15.0"
+          "revision": "2cd0210f897fe46c6ce42f52ccfa72b3bbb621a0",
+          "version": "0.16.0"
         }
       },
       {
@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/thoughtbot/Curry.git",
         "state": {
           "branch": null,
-          "revision": "b6bf27ec9d711f607a8c7da9ca69ee9eaa201a22",
-          "version": "4.0.1"
+          "revision": "4331dd50bc1db007db664a23f32e6f3df93d4e1a",
+          "version": "4.0.2"
         }
       },
       {
@@ -24,8 +24,8 @@
         "repositoryURL": "https://github.com/Quick/Nimble.git",
         "state": {
           "branch": null,
-          "revision": "cd6dfb86f496fcd96ce0bc6da962cd936bf41903",
-          "version": "7.3.1"
+          "revision": "f8657642dfdec9973efc79cc68bcef43a653a2bc",
+          "version": "8.0.2"
         }
       },
       {
@@ -33,8 +33,8 @@
         "repositoryURL": "https://github.com/jdhealy/PrettyColors.git",
         "state": {
           "branch": null,
-          "revision": "1954a28331668a706134dc315fe264b15b74984e",
-          "version": "5.0.1"
+          "revision": "afd4553a4db6f656521cfe9b1f70bece2748c7d8",
+          "version": "5.0.2"
         }
       },
       {
@@ -42,8 +42,8 @@
         "repositoryURL": "https://github.com/Quick/Quick.git",
         "state": {
           "branch": null,
-          "revision": "5fbf13871d185526993130c3a1fad0b70bfe37ce",
-          "version": "1.3.2"
+          "revision": "94df9b449508344667e5afc7e80f8bcbff1e4c37",
+          "version": "2.1.0"
         }
       },
       {
@@ -51,8 +51,8 @@
         "repositoryURL": "https://github.com/ReactiveCocoa/ReactiveSwift.git",
         "state": {
           "branch": null,
-          "revision": "4f6a12ae6762e825b0e19a4f7076eafa43847e6e",
-          "version": "4.0.0"
+          "revision": "c37950dc5020544c58d4bf47c0d028893686b9e6",
+          "version": "5.0.1"
         }
       },
       {
@@ -60,8 +60,8 @@
         "repositoryURL": "https://github.com/Carthage/ReactiveTask.git",
         "state": {
           "branch": null,
-          "revision": "0f3be6022e2435e1bb91679bc2aabeff13eb794c",
-          "version": "0.15.0"
+          "revision": "df1bf7625684180b9377a8ba3c076db08d98757e",
+          "version": "0.16.0"
         }
       },
       {
@@ -69,26 +69,8 @@
         "repositoryURL": "https://github.com/antitypical/Result.git",
         "state": {
           "branch": null,
-          "revision": "8fc088dcf72802801efeecba76ea8fb041fb773d",
-          "version": "4.0.0"
-        }
-      },
-      {
-        "package": "llbuild",
-        "repositoryURL": "https://github.com/apple/swift-llbuild.git",
-        "state": {
-          "branch": "master",
-          "revision": "c7aa6e5ea11b39362159b4edc98bfd5dd6d57cf3",
-          "version": null
-        }
-      },
-      {
-        "package": "SwiftPM",
-        "repositoryURL": "https://github.com/apple/swift-package-manager.git",
-        "state": {
-          "branch": "master",
-          "revision": "618ec189be028484cb942dd1249a396851c7176d",
-          "version": null
+          "revision": "2ca499ba456795616fbc471561ff1d963e6ae160",
+          "version": "4.1.0"
         }
       },
       {
@@ -96,8 +78,8 @@
         "repositoryURL": "https://github.com/mdiep/Tentacle.git",
         "state": {
           "branch": null,
-          "revision": "ace0aedb5bd90a41de254808dbe633813f7b1882",
-          "version": "0.12.0"
+          "revision": "578edd088b03bc749c49253b15ae2d5aaa9aa7df",
+          "version": "0.13.1"
         }
       }
     ]

@@ -16,7 +16,7 @@ extension BuildOptions: OptionsProtocol {
 		var platformUsage = "the platforms to build for (one of 'all', 'macOS', 'iOS', 'watchOS', 'tvOS', or comma-separated values of the formers except for 'all')"
 		platformUsage += addendum
 
-		return curry(self.init)
+		return curry(BuildOptions.init)
 			<*> mode <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
 			<*> (mode <| Option<BuildPlatform>(key: "platform", defaultValue: .all, usage: platformUsage)).map { $0.platforms }
 			<*> mode <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
@@ -36,6 +36,7 @@ public struct BuildCommand: CommandProtocol {
 		public let directoryPath: String
 		public let logPath: String?
 		public let archive: Bool
+		public let useNetrc: Bool
 		public let dependenciesToBuild: [String]?
 
 		/// If `archive` is true, this will be a producer that will archive
@@ -52,7 +53,11 @@ public struct BuildCommand: CommandProtocol {
 		}
 
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
-			return curry(self.init)
+			let netrcOption = Option(key: "use-netrc",
+									 defaultValue: false,
+									 usage: "use authentication credentials from ~/.netrc file when downloading binary only frameworks")
+			
+			return curry(Options.init)
 				<*> BuildOptions.evaluate(mode)
 				<*> mode <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 				<*> ColorOptions.evaluate(mode)
@@ -60,6 +65,7 @@ public struct BuildCommand: CommandProtocol {
 				<*> mode <| Option(key: "project-directory", defaultValue: FileManager.default.currentDirectoryPath, usage: "the directory containing the Carthage project")
 				<*> mode <| Option(key: "log-path", defaultValue: nil, usage: "path to the xcode build output. A temporary file is used by default")
 				<*> mode <| Option(key: "archive", defaultValue: false, usage: "archive built frameworks from the current project (implies --no-skip-current)")
+				<*> mode <| netrcOption
 				<*> (mode <| Argument(defaultValue: [], usage: "the dependency names to build", usageParameter: "dependency names")).map { $0.isEmpty ? nil : $0 }
 		}
 	}
@@ -126,6 +132,7 @@ public struct BuildCommand: CommandProtocol {
 		let shouldBuildCurrentProject =  !options.skipCurrent || options.archive
 
 		let project = Project(directoryURL: directoryURL)
+		project.useNetrc = options.useNetrc
 		var eventSink = ProjectEventSink(colorOptions: options.colorOptions)
 		project.projectEvents.observeValues { eventSink.put($0) }
 

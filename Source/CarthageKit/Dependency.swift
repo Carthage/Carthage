@@ -48,7 +48,7 @@ public enum Dependency: Hashable {
 	/// The path at which this project will be checked out, relative to the
 	/// working directory of the main project.
 	public var relativePath: String {
-		return (carthageProjectCheckoutsPath as NSString).appendingPathComponent(name)
+		return (Constants.checkoutsFolderPath as NSString).appendingPathComponent(name)
 	}
 }
 
@@ -200,8 +200,8 @@ extension BinaryURL: Equatable {
 }
 
 extension BinaryURL: Hashable {
-	public var hashValue: Int {
-		return description.hashValue
+	public func hash(into hasher: inout Hasher) {
+		hasher.combine(description)
 	}
 }
 

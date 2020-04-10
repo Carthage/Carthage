@@ -1,9 +1,6 @@
 import Foundation
 import Result
 
-/// The relative path to a project's checked out dependencies.
-public let carthageProjectCheckoutsPath = "Carthage/Checkouts"
-
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
 public struct Cartfile {
@@ -96,7 +93,7 @@ public struct Cartfile {
 
 	/// Attempts to parse a Cartfile from a file at a given URL.
 	public static func from(file cartfileURL: URL) -> Result<Cartfile, CarthageError> {
-		return Result(attempt: { try String(contentsOf: cartfileURL, encoding: .utf8) })
+		return Result(catching: { try String(contentsOf: cartfileURL, encoding: .utf8) })
 			.mapError { .readFailed(cartfileURL, $0) }
 			.flatMap(Cartfile.from(string:))
 			.mapError { error in

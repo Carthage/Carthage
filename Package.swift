@@ -1,4 +1,4 @@
-// swift-tools-version:4.0
+// swift-tools-version:4.2
 import PackageDescription
 
 let package = Package(
@@ -9,16 +9,15 @@ let package = Package(
         .executable(name: "carthage", targets: ["carthage"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/antitypical/Result.git", from: "4.0.0"),
-        .package(url: "https://github.com/Carthage/ReactiveTask.git", from: "0.15.0"),
-        .package(url: "https://github.com/Carthage/Commandant.git", from: "0.15.0"),
-        .package(url: "https://github.com/jdhealy/PrettyColors.git", from: "5.0.0"),
-        .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "4.0.0"),
-        .package(url: "https://github.com/mdiep/Tentacle.git", from: "0.12.0"),
-        .package(url: "https://github.com/thoughtbot/Curry.git", from: "4.0.0"),
-        .package(url: "https://github.com/Quick/Quick.git", from: "1.3.1"),
-        .package(url: "https://github.com/Quick/Nimble.git", from: "7.3.0"),
-        .package(url: "https://github.com/apple/swift-package-manager.git", .branch("master")),
+        .package(url: "https://github.com/antitypical/Result.git", from: "4.1.0"),
+        .package(url: "https://github.com/Carthage/ReactiveTask.git", from: "0.16.0"),
+        .package(url: "https://github.com/Carthage/Commandant.git", from: "0.16.0"),
+        .package(url: "https://github.com/jdhealy/PrettyColors.git", from: "5.0.2"),
+        .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "5.0.0"),
+        .package(url: "https://github.com/mdiep/Tentacle.git", from: "0.13.1"),
+        .package(url: "https://github.com/thoughtbot/Curry.git", from: "4.0.2"),
+        .package(url: "https://github.com/Quick/Quick.git", from: "2.1.0"),
+        .package(url: "https://github.com/Quick/Nimble.git", from: "8.0.1"),
     ],
     targets: [
         .target(
@@ -30,8 +29,8 @@ let package = Package(
             dependencies: ["XCDBLD", "Quick", "Nimble"]
         ),
         .target(
-            name: "CarthageKit",
-            dependencies: ["XCDBLD", "Tentacle", "Curry", "SwiftPM-auto"]
+            name: "CarthageKit", 
+            dependencies: ["XCDBLD", "Tentacle", "Curry"]
         ),
         .testTarget(
             name: "CarthageKitTests",
@@ -44,5 +43,5 @@ let package = Package(
             exclude: ["swift-is-crashy.c"]
         ),
     ],
-    swiftLanguageVersions: [4]
+    swiftLanguageVersions: [.v4_2]
 )

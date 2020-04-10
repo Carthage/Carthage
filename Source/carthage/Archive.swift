@@ -18,7 +18,7 @@ public struct ArchiveCommand: CommandProtocol {
 			let argumentUsage = "the names of the built frameworks to archive without any extension "
 				+ "(or blank to pick up the frameworks in the current project built by `--no-skip-current`)"
 
-			return curry(self.init)
+			return curry(Options.init)
 				<*> mode <| Option(
 					key: "output",
 					defaultValue: nil,

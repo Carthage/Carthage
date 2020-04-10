@@ -1,8 +1,5 @@
 import Foundation
 import Result
-import Utility
-
-import struct Foundation.URL
 
 /// Represents a binary dependency 
 public struct BinaryProject: Equatable {
@@ -18,7 +15,7 @@ public struct BinaryProject: Equatable {
 
 				for (key, value) in json {
 					let pinnedVersion: PinnedVersion
-					switch Version.from(Scanner(string: key)) {
+					switch SemanticVersion.from(Scanner(string: key)) {
 					case .success:
 						pinnedVersion = PinnedVersion(key)
 					case let .failure(error):

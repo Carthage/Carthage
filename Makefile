@@ -9,6 +9,17 @@ OUTPUT_PACKAGE=Carthage.pkg
 CARTHAGE_EXECUTABLE=./.build/release/carthage
 BINARIES_FOLDER=/usr/local/bin
 
+SWIFT_BUILD_FLAGS=--configuration release -Xswiftc -suppress-warnings
+
+SWIFTPM_DISABLE_SANDBOX_SHOULD_BE_FLAGGED:=$(shell test -n "$${HOMEBREW_SDKROOT}" && echo should_be_flagged)
+ifeq ($(SWIFTPM_DISABLE_SANDBOX_SHOULD_BE_FLAGGED), should_be_flagged)
+SWIFT_BUILD_FLAGS+= --disable-sandbox
+endif
+SWIFT_STATIC_STDLIB_SHOULD_BE_FLAGGED:=$(shell test -d $$(dirname $$(xcrun --find swift))/../lib/swift_static/macosx && echo should_be_flagged)
+ifeq ($(SWIFT_STATIC_STDLIB_SHOULD_BE_FLAGGED), should_be_flagged)
+SWIFT_BUILD_FLAGS+= -Xswiftc -static-stdlib
+endif
+
 # ZSH_COMMAND · run single command in `zsh` shell, ignoring most `zsh` startup files.
 ZSH_COMMAND := ZDOTDIR='/var/empty' zsh -o NO_GLOBAL_RCS -c
 # RM_SAFELY · `rm -rf` ensuring first and only parameter is non-null, contains more than whitespace, non-root if resolving absolutely.
@@ -31,15 +42,14 @@ clean:
 
 test:
 	$(RM_SAFELY) ./.build/debug/CarthagePackageTests.xctest
-	swift build --build-tests
+	swift build --build-tests -Xswiftc -suppress-warnings
 	$(CP) -R Tests/CarthageKitTests/Resources ./.build/debug/CarthagePackageTests.xctest/Contents
 	$(CP) Tests/CarthageKitTests/fixtures/CartfilePrivateOnly.zip ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
 	script/copy-fixtures ./.build/debug/CarthagePackageTests.xctest/Contents/Resources
 	swift test --skip-build
 
 installables:
-	swift build -c release -Xswiftc -static-stdlib
-
+	swift build $(SWIFT_BUILD_FLAGS)
 
 package: installables
 	$(MKDIR) "$(CARTHAGE_TEMPORARY_FOLDER)$(BINARIES_FOLDER)"
@@ -62,17 +72,11 @@ prefix_install: installables
 	$(CP) -f "$(CARTHAGE_EXECUTABLE)" "$(PREFIX)/bin/"
 
 install: installables
+	if [ ! -d "$(BINARIES_FOLDER)" ]; then $(SUDO) $(MKDIR) "$(BINARIES_FOLDER)"; fi
 	$(SUDO) $(CP) -f "$(CARTHAGE_EXECUTABLE)" "$(BINARIES_FOLDER)"
 
 uninstall:
 	$(RM) "$(BINARIES_FOLDER)/carthage"
 	
-.build/libSwiftPM.xcconfig:
-	mkdir -p .build
-	echo "OTHER_LDFLAGS = -lncurses -lsqlite3" > "$@"
-	echo "OTHER_CFLAGS = -DSWIFT_PACKAGE" >> "$@"
-
-xcconfig: .build/libSwiftPM.xcconfig
-
-xcodeproj: xcconfig
-	 swift package generate-xcodeproj --xcconfig-overrides .build/libSwiftPM.xcconfig
+xcodeproj:
+	 swift package generate-xcodeproj

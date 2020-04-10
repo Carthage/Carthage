@@ -47,7 +47,16 @@ public struct GitURL {
 
 	/// The name of the repository, if it can be inferred from the URL.
 	public var name: String? {
-		let components = urlString.split(omittingEmptySubsequences: true) { $0 == "/" }
+		let absoluteURLString: String
+		if urlString.hasPrefix(".") {
+			absoluteURLString = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+				.appendingPathComponent(urlString)
+				.standardizedFileURL
+				.absoluteString
+		} else {
+			absoluteURLString = urlString
+		}
+		let components = absoluteURLString.split(omittingEmptySubsequences: true) { $0 == "/" }
 
 		return components
 			.last
@@ -67,8 +76,8 @@ extension GitURL: Equatable {
 }
 
 extension GitURL: Hashable {
-	public var hashValue: Int {
-		return normalizedURLString.hashValue
+	public func hash(into hasher: inout Hasher) {
+		hasher.combine(normalizedURLString)
 	}
 }
 

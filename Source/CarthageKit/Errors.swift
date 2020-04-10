@@ -8,6 +8,11 @@ import XCDBLD
 public enum CarthageError: Error {
 	public typealias VersionRequirement = (specifier: VersionSpecifier, fromDependency: Dependency?)
 
+	public struct DuplicatesInArchive: Equatable {
+
+		let dictionary: [URL: [URL]]
+	}
+
 	/// One or more arguments was invalid.
 	case invalidArgument(description: String)
 
@@ -95,6 +100,10 @@ public enum CarthageError: Error {
 
 	/// Cartfile.resolved contains incompatible versions
 	case invalidResolvedCartfile([CompatibilityInfo])
+
+	/// An archive (.zip, .gz, .bz2 ...) contains binaries that would
+	/// be copied to the same destination path
+	case duplicatesInArchive(duplicates: DuplicatesInArchive)
 }
 
 extension CarthageError {
@@ -183,6 +192,9 @@ extension CarthageError: Equatable {
 			return left == right
 
 		case let (.internalError(left), .internalError(right)):
+			return left == right
+
+		case let (.duplicatesInArchive(left), .duplicatesInArchive(right)):
 			return left == right
 
 		default:
@@ -363,6 +375,12 @@ extension CarthageError: CustomStringConvertible {
 				}
 				.joined(separator: "\n")
 			return message
+
+		case let .duplicatesInArchive(duplicates):
+			let prettyDupeList = duplicates.dictionary
+				.map { "* \t\($0.value.map{ url in return url.absoluteString }.joined(separator: "\n\t")) \n\t\tto:\n\t\($0.key)" }
+				.joined(separator: "\n")
+			return "Invalid archive - Found multiple frameworks with the same unarchiving destination:\n\(prettyDupeList)"
 		}
 	}
 }
