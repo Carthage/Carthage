@@ -1,6 +1,6 @@
 name: Integration Tests
 
- on:
+on:
    push:
      branches:
        - master
@@ -8,9 +8,9 @@ name: Integration Tests
        - '*'
    pull_request:
 
- jobs:
+jobs:
    integration_tests:
-     runs-on: macOS-10.14
+     runs-on: macos
      strategy:
        matrix:
          xcode: [10.1, 10.3]
