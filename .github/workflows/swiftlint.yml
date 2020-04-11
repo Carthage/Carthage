@@ -11,6 +11,7 @@ jobs:
   SwiftLint:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - uses: technote-space/get-diff-action@v1
         id: git_diff
         with:
