@@ -14,17 +14,15 @@ jobs:
       - uses: technote-space/get-diff-action@v1
         id: git_diff
         with:
-          SUFFIX_FILTER: .yml
           SEPARATOR: ' '
       - name: Get file changes
         id: get_file_changes
         uses: trilom/file-changes-action@v1.2.3
         with:
           output: ' '
-      - name: Filter file changes
-        id: filter_file_changes
+      - name: Echo file changes
         run: |
-          echo Changed files: ${{ steps.get_file_changes.outputs.files }}
+          echo Changed files: ${{ steps.git_diff.outputs.diff }}
       - uses: actions/checkout@v1
       - name: GitHub Action for SwiftLint (Only files changed in the PR)
         uses: norio-nomura/action-swiftlint@3.1.0
