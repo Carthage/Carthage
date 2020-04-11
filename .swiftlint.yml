@@ -37,10 +37,6 @@ line_length:
 file_length:
   ignore_comment_only_lines: true
 
-
-file_header:
-  required_pattern: ''
-
 function_body_length:
   warning: 60
 
@@ -94,6 +90,12 @@ custom_rules:
     regex: '[^:#][^:#]\/\/[^\s\/]'
     name: "Whitespace Comment Start"
     message: "A comment should always start with a whitespace."
+    severity: warning
+  carthage_typo:
+    included: ".*\\.(swift|md)"
+    regex: "(Carhage|Cartage)"
+    name: "Carthage Typo"
+    message: "Found a possible Carthage typo"
     severity: warning
   carthage_typo:
     included: ".*\\.(swift|md)"
