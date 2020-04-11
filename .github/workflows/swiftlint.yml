@@ -14,7 +14,7 @@ jobs:
       - uses: technote-space/get-diff-action@v1
         id: git_diff
         with:
-          SUFFIX_FILTER: .swift
+          SUFFIX_FILTER: .yml
           SEPARATOR: ' '
       - name: Get file changes
         id: get_file_changes
