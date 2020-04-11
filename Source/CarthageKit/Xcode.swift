@@ -276,8 +276,8 @@ public func schemesInProjects(_ projects: [(ProjectLocator, [Scheme])]) -> Signa
 			switch project {
 			case .projectFile where !schemes.isEmpty:
 				return true
-            case .workspace where !schemes.isEmpty:
-                return true
+ 			case .workspace where !schemes.isEmpty:
+				return true
 			default:
 				return false
 			}
