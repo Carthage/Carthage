@@ -29,5 +29,6 @@ jobs:
       - name: GitHub Action for SwiftLint (Only files changed in the PR)
         uses: norio-nomura/action-swiftlint@3.1.0
         env:
-          changedFiles: ${{ steps.git_diff.outputs.diff }}
+          DIFF_BASE: ${{ github.base_ref }}
+          changed__Files: ${{ steps.git_diff.outputs.diff }}
         if: steps.git_diff.outputs.diff
