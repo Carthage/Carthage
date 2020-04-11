@@ -16,7 +16,7 @@ jobs:
         id: git_diff
         with:
           SUFFIX_FILTER: .swift
-          SEPARATOR: ','
+          SEPARATOR: ' '
       - name: Get file changes
         id: get_file_changes
         uses: trilom/file-changes-action@v1.2.3
