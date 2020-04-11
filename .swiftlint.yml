@@ -37,6 +37,7 @@ line_length:
 file_length:
   ignore_comment_only_lines: true
 
+
 file_header:
   required_pattern: ''
 
