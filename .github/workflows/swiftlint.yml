@@ -25,7 +25,6 @@ jobs:
       - name: Echo file changes
         run: |
           echo Changed files: ${{ steps.git_diff.outputs.diff }}
-      - uses: actions/checkout@v1
       - name: GitHub Action for SwiftLint (Only files changed in the PR)
         uses: norio-nomura/action-swiftlint@3.1.0
         env:
