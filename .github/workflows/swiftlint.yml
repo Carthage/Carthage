@@ -29,5 +29,6 @@ jobs:
         uses: norio-nomura/action-swiftlint@3.1.0
         env:
           DIFF___BASE: ${{ github.base_ref }}
-          changedFiles: ${{ steps.git_diff.outputs.diff }}
+          changedFilesDiff: ${{ steps.git_diff.outputs.diff }}
+          changedFiles: ${{ steps.get_file_changes.outputs.files }}
         if: steps.git_diff.outputs.diff
