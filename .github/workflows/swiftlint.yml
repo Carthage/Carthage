@@ -16,7 +16,7 @@ jobs:
         id: git_diff
         with:
           SUFFIX_FILTER: .swift
-          SEPARATOR: ' '
+          SEPARATOR: ','
       - name: Get file changes
         id: get_file_changes
         uses: trilom/file-changes-action@v1.2.3
@@ -28,6 +28,6 @@ jobs:
       - name: GitHub Action for SwiftLint (Only files changed in the PR)
         uses: norio-nomura/action-swiftlint@3.1.0
         env:
-          DIFF_BASE: ${{ github.base_ref }}
-          changed__Files: ${{ steps.git_diff.outputs.diff }}
+          DIFF___BASE: ${{ github.base_ref }}
+          changedFiles: ${{ steps.git_diff.outputs.diff }}
         if: steps.git_diff.outputs.diff
