@@ -44,7 +44,7 @@ public struct GitURL {
 			return "\(host)\(path)"
 		}
 	}
-
+    //change
 	/// The name of the repository, if it can be inferred from the URL.
 	public var name: String? {
 		let absoluteURLString: String
