@@ -30,3 +30,4 @@ jobs:
         uses: norio-nomura/action-swiftlint@3.1.0
         env:
           changedFiles: ${{ steps.git_diff.outputs.diff }}
+        if: steps.git_diff.outputs.diff
