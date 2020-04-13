@@ -7,7 +7,7 @@ import ReactiveTask
 import XCDBLD
 
 /// Emits the currect Swift version
-internal func swiftVersion(usingToolchain toolchain: String? = nil) -> SignalProducer<String, SwiftVersionError> {
+public func swiftVersion(usingToolchain toolchain: String? = nil) -> SignalProducer<String, SwiftVersionError> {
 	return determineSwiftVersion(usingToolchain: toolchain).replayLazily(upTo: 1)
 }
 
