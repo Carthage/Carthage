@@ -51,7 +51,7 @@ private func parseSwiftVersionCommand(output: String?) -> String? {
 }
 
 /// Determines the Swift version of a framework at a given `URL`.
-internal func frameworkSwiftVersionIfIsSwiftFramework(_ frameworkURL: URL) -> SignalProducer<String?, SwiftVersionError> {
+public func frameworkSwiftVersionIfIsSwiftFramework(_ frameworkURL: URL) -> SignalProducer<String?, SwiftVersionError> {
 	guard isSwiftFramework(frameworkURL) else {
 		return SignalProducer(value: nil)
 	}
@@ -59,7 +59,7 @@ internal func frameworkSwiftVersionIfIsSwiftFramework(_ frameworkURL: URL) -> Si
 }
 
 /// Determines the Swift version of a framework at a given `URL`.
-internal func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, SwiftVersionError> {
+public func frameworkSwiftVersion(_ frameworkURL: URL) -> SignalProducer<String, SwiftVersionError> {
 	// Fall back to dSYM version parsing if header is not present
 	guard let swiftHeaderURL = frameworkURL.swiftHeaderURL() else {
 		return dSYMSwiftVersion(frameworkURL.appendingPathExtension("dSYM"))
