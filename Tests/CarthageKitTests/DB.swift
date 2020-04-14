@@ -1,7 +1,6 @@
 import CarthageKit
 import ReactiveSwift
 import Foundation
-import Result
 import Tentacle
 
 // swiftlint:disable no_extension_access_modifier

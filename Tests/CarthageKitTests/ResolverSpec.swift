@@ -3,7 +3,6 @@ import Foundation
 import Nimble
 import Quick
 import ReactiveSwift
-import Result
 import Tentacle
 
 private func ==<A: Equatable, B: Equatable>(lhs: [(A, B)], rhs: [(A, B)]) -> Bool {

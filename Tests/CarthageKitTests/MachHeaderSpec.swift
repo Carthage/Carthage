@@ -3,7 +3,6 @@ import Foundation
 import Nimble
 import Quick
 import ReactiveSwift
-import Result
 
 class MachHeaderSpec: QuickSpec {
 
