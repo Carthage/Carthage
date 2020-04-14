@@ -904,8 +904,8 @@ public func build(
 			case let (_, .noSharedFrameworkSchemes(_, platforms)):
 				return .noSharedFrameworkSchemes(dependency, platforms)
 
-			case let (.gitHub(repo), .noSharedSchemes(project, _)):
-				return .noSharedSchemes(project, repo)
+			case let (.gitHub(server, repository), .noSharedSchemes(project, _)):
+				return .noSharedSchemes(project, (server, repository))
 
 			default:
 				return error

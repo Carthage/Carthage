@@ -1305,7 +1305,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 								return .empty
 							}
 							return self.installBinaries(for: dependency, pinnedVersion: version, toolchain: options.toolchain)
-								.filterMap { installed -> (Dependency, PinnedVersion)? in
+								.compactMap { installed -> (Dependency, PinnedVersion)? in
 									return installed ? (dependency, version) : nil
 								}
 						case let .binary(binary):

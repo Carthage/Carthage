@@ -68,7 +68,7 @@ public struct Resolver: ResolverProtocol {
 				}
 
 				// When target dependencies are specified
-				return orderedNodesProducer.filterMap { node -> (Dependency, PinnedVersion)? in
+				return orderedNodesProducer.compactMap { node -> (Dependency, PinnedVersion)? in
 					// A dependency included in the targets should be affected.
 					if dependenciesToUpdate.contains(node.dependency.name) {
 						return node.pinnedDependency
