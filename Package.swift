@@ -44,5 +44,5 @@ let package = Package(
             exclude: ["swift-is-crashy.c"]
         ),
     ],
-    swiftLanguageVersions: [.v4_2]
+    swiftLanguageVersions: [.version("5.2")]
 )
