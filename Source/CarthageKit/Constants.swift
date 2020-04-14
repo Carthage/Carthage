@@ -1,5 +1,4 @@
 import Foundation
-import Result
 
 /// A struct including all constants.
 public struct Constants {
@@ -31,7 +30,7 @@ public struct Constants {
 	private static let userCachesURL: URL = {
 		let fileManager = FileManager.default
 
-		let urlResult: Result<URL, NSError> = Result(catching: {
+		let urlResult: Result<URL, Error> = Result(catching: {
 			try fileManager.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
 		}).flatMap { cachesURL in
 			let dependenciesURL = cachesURL.appendingPathComponent(Constants.bundleIdentifier, isDirectory: true)
@@ -39,10 +38,10 @@ public struct Constants {
 
 			if fileManager.fileExists(atPath: dependenciesPath, isDirectory: nil) {
 				if fileManager.isWritableFile(atPath: dependenciesPath) {
-					return Result(value: dependenciesURL)
+                    return .success(dependenciesURL)
 				} else {
 					let error = NSError(domain: Constants.bundleIdentifier, code: 0, userInfo: nil)
-					return Result(error: error)
+                    return .failure(error)
 				}
 			} else {
 				return Result(catching: {

@@ -1,7 +1,6 @@
 import Foundation
 import ReactiveSwift
 import ReactiveTask
-import Result
 import XCDBLD
 
 /// A representation of the cached frameworks

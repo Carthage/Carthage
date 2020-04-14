@@ -1,7 +1,6 @@
 import CarthageKit
 import Commandant
 import Foundation
-import Result
 
 /// Type that encapsulates the configuration and evaluation of the `version` subcommand.
 public struct VersionCommand: CommandProtocol {

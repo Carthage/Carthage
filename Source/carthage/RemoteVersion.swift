@@ -2,7 +2,6 @@ import Foundation
 import CarthageKit
 import ReactiveSwift
 import ReactiveTask
-import Result
 import Tentacle
 
 /// The latest version of Carthage as a `Version`.

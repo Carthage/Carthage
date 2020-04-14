@@ -1,7 +1,6 @@
 import Foundation
 import ReactiveSwift
 import ReactiveTask
-import Result
 import XCDBLD
 
 extension MachOType {

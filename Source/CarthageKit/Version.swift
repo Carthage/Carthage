@@ -1,7 +1,6 @@
 // swiftlint:disable file_length
 
 import Foundation
-import Result
 import ReactiveSwift
 
 /// A semantic version.

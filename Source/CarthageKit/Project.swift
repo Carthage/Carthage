@@ -1,7 +1,6 @@
 // swiftlint:disable file_length
 
 import Foundation
-import Result
 import ReactiveSwift
 import Tentacle
 import XCDBLD
@@ -110,13 +109,13 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
-	public let projectEvents: Signal<ProjectEvent, NoError>
-	private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
+	public let projectEvents: Signal<ProjectEvent, Never>
+	private let _projectEventsObserver: Signal<ProjectEvent, Never>.Observer
 
 	public init(directoryURL: URL) {
 		precondition(directoryURL.isFileURL)
 
-		let (signal, observer) = Signal<ProjectEvent, NoError>.pipe()
+		let (signal, observer) = Signal<ProjectEvent, Never>.pipe()
 		projectEvents = signal
 		_projectEventsObserver = observer
 
@@ -200,7 +199,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	public func loadResolvedCartfile() -> SignalProducer<ResolvedCartfile, CarthageError> {
 		return SignalProducer {
 			Result(catching: { try String(contentsOf: self.resolvedCartfileURL, encoding: .utf8) })
-				.mapError { .readFailed(self.resolvedCartfileURL, $0) }
+				.mapError { .readFailed(self.resolvedCartfileURL, $0 as NSError) }
 				.flatMap(ResolvedCartfile.from)
 		}
 	}
@@ -358,7 +357,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			let cartfileSource: SignalProducer<Cartfile, CarthageError>
 			if tryCheckoutDirectory {
 				let dependencyURL = self.directoryURL.appendingPathComponent(dependency.relativePath)
-				cartfileSource = SignalProducer<Bool, NoError> { () -> Bool in
+				cartfileSource = SignalProducer<Bool, Never> { () -> Bool in
 					var isDirectory: ObjCBool = false
 					return FileManager.default.fileExists(atPath: dependencyURL.path, isDirectory: &isDirectory) && isDirectory.boolValue
 				}
@@ -1536,7 +1535,7 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, Carth
 					.ignoreTaskData()
 					.map { String(data: $0, encoding: .utf8) ?? "" }
 					.filter { !$0.isEmpty }
-					.flatMap(.merge) { (output: String) -> SignalProducer<String, NoError> in
+					.flatMap(.merge) { (output: String) -> SignalProducer<String, Never> in
 						output.linesProducer
 					}
 					.filter { $0.contains("LC_VERSION") }

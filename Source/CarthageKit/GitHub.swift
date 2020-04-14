@@ -1,5 +1,4 @@
 import Foundation
-import Result
 import ReactiveSwift
 import Tentacle
 

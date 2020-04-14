@@ -1,6 +1,5 @@
 import CarthageKit
 import Commandant
-import Result
 import Foundation
 import ReactiveSwift
 import Curry

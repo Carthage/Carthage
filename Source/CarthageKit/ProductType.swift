@@ -1,4 +1,3 @@
-import Result
 
 /// Describes the type of product built by an Xcode target.
 public enum ProductType: String {

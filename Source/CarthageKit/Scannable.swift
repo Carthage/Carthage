@@ -1,5 +1,4 @@
 import Foundation
-import Result
 
 /// Anything that can be parsed from a Scanner.
 public protocol Scannable {

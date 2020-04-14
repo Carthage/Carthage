@@ -1,5 +1,4 @@
 import Foundation
-import Result
 import Tentacle
 
 /// Uniquely identifies a Binary Spec's resolved URL and its description

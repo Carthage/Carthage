@@ -1,5 +1,4 @@
 import Foundation
-import Result
 import ReactiveSwift
 import ReactiveTask
 
@@ -55,7 +54,7 @@ public struct FetchCache {
 public func launchGitTask(
 	_ arguments: [String],
 	repositoryFileURL: URL? = nil,
-	standardInput: SignalProducer<Data, NoError>? = nil,
+	standardInput: SignalProducer<Data, Never>? = nil,
 	environment: [String: String]? = nil
 ) -> SignalProducer<String, CarthageError> {
 	// See https://github.com/Carthage/Carthage/issues/219.
@@ -181,7 +180,7 @@ public func checkoutRepositoryToDirectory(
 				CarthageError.repositoryCheckoutFailed(
 					workingDirectoryURL: workingDirectoryURL,
 					reason: "Could not create working directory",
-					underlyingError: $0
+					underlyingError: $0 as NSError
 				)
 			}
 	}
@@ -270,7 +269,7 @@ private func checkoutSubmodule(_ submodule: Submodule, _ submoduleWorkingDirecto
 
 /// Parses each key/value entry from the given config file contents, optionally
 /// stripping a known prefix/suffix off of each key.
-private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keySuffix: String = "") -> SignalProducer<(String, String), NoError> {
+private func parseConfigEntries(_ contents: String, keyPrefix: String = "", keySuffix: String = "") -> SignalProducer<(String, String), Never> {
 	let entries = contents.split(omittingEmptySubsequences: true) { $0 == "\0" }
 
 	return SignalProducer { observer, lifetime in
@@ -367,7 +366,7 @@ internal func gitmodulesEntriesInRepository(
 	}
 
 	return launchGitTask(baseArguments + [ "--get-regexp", "submodule\\..*\\.path" ], repositoryFileURL: repositoryFileURL)
-		.flatMapError { _ in SignalProducer<String, NoError>.empty }
+		.flatMapError { _ in SignalProducer<String, Never>.empty }
 		.flatMap(.concat) { value in parseConfigEntries(value, keyPrefix: "submodule.", keySuffix: ".path") }
 		.flatMap(.concat) { name, path -> SignalProducer<(name: String, path: String, url: GitURL), CarthageError> in
 			return launchGitTask(baseArguments + [ "--get", "submodule.\(name).url" ], repositoryFileURL: repositoryFileURL)
@@ -425,10 +424,10 @@ public func submodulesInRepository(_ repositoryFileURL: URL, revision: String = 
 ///
 /// If the specified file URL does not represent a valid Git repository, `false`
 /// will be sent.
-internal func branchExistsInRepository(_ repositoryFileURL: URL, pattern: String) -> SignalProducer<Bool, NoError> {
+internal func branchExistsInRepository(_ repositoryFileURL: URL, pattern: String) -> SignalProducer<Bool, Never> {
 	return ensureDirectoryExistsAtURL(repositoryFileURL)
 		.succeeded()
-		.flatMap(.concat) { exists -> SignalProducer<Bool, NoError> in
+		.flatMap(.concat) { exists -> SignalProducer<Bool, Never> in
 			if !exists { return .init(value: false) }
 			return SignalProducer.zip(
 					launchGitTask([ "show-ref", pattern ], repositoryFileURL: repositoryFileURL).succeeded(),
@@ -444,10 +443,10 @@ internal func branchExistsInRepository(_ repositoryFileURL: URL, pattern: String
 ///
 /// If the specified file URL does not represent a valid Git repository, `false`
 /// will be sent.
-public func commitExistsInRepository(_ repositoryFileURL: URL, revision: String = "HEAD") -> SignalProducer<Bool, NoError> {
+public func commitExistsInRepository(_ repositoryFileURL: URL, revision: String = "HEAD") -> SignalProducer<Bool, Never> {
 	return ensureDirectoryExistsAtURL(repositoryFileURL)
 		.then(launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL))
-		.then(SignalProducer<Bool, NoError>(value: true))
+		.then(SignalProducer<Bool, Never>(value: true))
 		.flatMapError { _ in .init(value: false) }
 }
 
@@ -493,7 +492,7 @@ internal func resolveTagInRepository(_ repositoryFileURL: URL, _ tag: String) ->
 
 /// Attempts to determine whether the given directory represents a Git
 /// repository.
-public func isGitRepository(_ directoryURL: URL) -> SignalProducer<Bool, NoError> {
+public func isGitRepository(_ directoryURL: URL) -> SignalProducer<Bool, Never> {
 	return ensureDirectoryExistsAtURL(directoryURL)
 		.then(launchGitTask([ "rev-parse", "--git-dir" ], repositoryFileURL: directoryURL))
 		.map { outputIncludingLineEndings in

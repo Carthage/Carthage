@@ -3,7 +3,6 @@ import Commandant
 import Foundation
 import ReactiveSwift
 import ReactiveTask
-import Result
 
 setlinebuf(stdout)
 

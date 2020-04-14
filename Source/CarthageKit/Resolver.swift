@@ -1,5 +1,4 @@
 import Foundation
-import Result
 import ReactiveSwift
 
 /// Protocol for resolving acyclic dependency graphs.
@@ -167,7 +166,7 @@ public struct Resolver: ResolverProtocol {
 		basedOnGraph inputGraph: DependencyGraph
 	) -> SignalProducer<DependencyGraph, CarthageError> {
 		return nodePermutations(for: dependencies)
-			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, NoError> in
+			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, Never> in
 				return self
 					.graphs(for: nodes, dependencyOf: dependencyOf, basedOnGraph: inputGraph)
 					.materialize()
@@ -203,7 +202,7 @@ public struct Resolver: ResolverProtocol {
 					.map { node in self.graphsForDependenciesOfNode(node, basedOnGraph: graph) }
 					.observe(on: scheduler)
 					.permute()
-					.flatMap(.concat) { graphs -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, NoError> in
+					.flatMap(.concat) { graphs -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, Never> in
 						return SignalProducer<DependencyGraph, CarthageError> {
 								mergeGraphs([ inputGraph ] + graphs)
 							}
@@ -365,11 +364,11 @@ private struct DependencyGraph {
 				newNodes.append(newNode)
 
 			case let .failure(error):
-				return Result(error: error)
+                return .failure(error)
 			}
 		}
 
-		return Result(value: newNodes)
+            return .success(newNodes)
 	}
 
 	/// Whether the given node is included or not in the nested dependencies of
