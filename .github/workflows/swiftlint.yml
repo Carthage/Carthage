@@ -24,7 +24,7 @@ jobs:
         id: array_filter
         uses: Shepherd-Dog/array-filter-action@v1.0.0
         with:
-          arrayToFilter: steps.get_file_changes.outputs.files
+          arrayToFilter: ${{ steps.get_file_changes.outputs.files }}
           suffixFilter: ".swift"
       - name: Echo file changes after filter
         run: |
