@@ -17,13 +17,16 @@ jobs:
         uses: trilom/file-changes-action@v1.2.3
         with:
           output: ' '
+      - name: Echo file changes
+        run: |
+          echo Changed files: ${{ steps.get_file_changes.outputs.files }}
       - name: Filter array
         id: array_filter
         uses: Shepherd-Dog/array-filter-action@v1.0.0
         with:
           arrayToFilter: steps.get_file_changes.outputs.files
           suffixFilter: ".swift"
-      - name: Echo file changes
+      - name: Echo file changes after filter
         run: |
           echo Changed files: ${{ steps.array_filter.outputs.filteredArray }}
       - name: GitHub Action for SwiftLint (Only files changed in the PR)
