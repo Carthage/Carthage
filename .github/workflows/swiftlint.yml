@@ -25,8 +25,8 @@ jobs:
         uses: Shepherd-Dog/array-filter-action@v1.1.0
         with:
           arrayToFilter: ${{ steps.get_file_changes.outputs.files }}
-          suffixFilter: ".swift"
-          outputFormat: "space_delimited"
+          outputFormat: 'space_delimited'
+          suffixFilter: '.swift'
       - name: Echo file changes after filter
         run: |
           echo Changed files: ${{ steps.array_filter.outputs.filteredArray }}
