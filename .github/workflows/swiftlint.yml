@@ -22,10 +22,11 @@ jobs:
           echo Changed files: ${{ steps.get_file_changes.outputs.files }}
       - name: Filter array
         id: array_filter
-        uses: Shepherd-Dog/array-filter-action@v1.0.0
+        uses: Shepherd-Dog/array-filter-action@v1.1.0
         with:
           arrayToFilter: ${{ steps.get_file_changes.outputs.files }}
           suffixFilter: ".swift"
+          outputFormat: "space_delimited"
       - name: Echo file changes after filter
         run: |
           echo Changed files: ${{ steps.array_filter.outputs.filteredArray }}
