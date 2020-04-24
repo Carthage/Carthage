@@ -4,7 +4,6 @@ import Nimble
 import Quick
 import ReactiveSwift
 import Tentacle
-import Result
 import ReactiveTask
 import XCDBLD
 
