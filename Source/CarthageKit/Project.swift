@@ -954,7 +954,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 				let sortedPinnedDependencies = cartfile.dependencies.keys
 					.filter { dependency in sortedDependencies.contains(dependency) }
-					.sorted { left, right in sortedDependencies.index(of: left)! < sortedDependencies.index(of: right)! }
+                    .sorted { left, right in sortedDependencies.firstIndex(of: left)! < sortedDependencies.firstIndex(of: right)! }
 					.map { ($0, cartfile.dependencies[$0]!) }
 
 				return SignalProducer(sortedPinnedDependencies)

@@ -286,7 +286,7 @@ private struct DependencyGraph {
 	mutating func addNode(_ node: DependencyNode, dependencyOf: DependencyNode?) -> Result<DependencyNode, CarthageError> {
 		var node = node
 
-		if let index = allNodes.index(of: node) {
+        if let index = allNodes.firstIndex(of: node) {
 			let existingNode = allNodes[index]
 
 			if let newSpecifier = intersection(existingNode.versionSpecifier, node.versionSpecifier) {
