@@ -66,11 +66,11 @@
       },
       {
         "package": "Tentacle",
-        "repositoryURL": "https://github.com/olejnjak/Tentacle.git",
+        "repositoryURL": "https://github.com/mdiep/Tentacle.git",
         "state": {
-          "branch": "swift5.2",
-          "revision": "6681c015a2ab5d5fb6c07ca4ada07c7a649c76a5",
-          "version": null
+          "branch": null,
+          "revision": "fb9f20c3cc094103799e271dd664e1ee1b76211e",
+          "version": "0.14.0"
         }
       }
     ]
