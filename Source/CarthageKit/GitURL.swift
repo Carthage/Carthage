@@ -47,21 +47,27 @@ public struct GitURL {
 
 	/// The name of the repository, if it can be inferred from the URL.
 	public var name: String? {
-		let absoluteURLString: String
-		if urlString.hasPrefix(".") {
-			absoluteURLString = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-				.appendingPathComponent(urlString)
-				.standardizedFileURL
-				.absoluteString
-		} else {
-			absoluteURLString = urlString
-		}
-		let components = absoluteURLString.split(omittingEmptySubsequences: true) { $0 == "/" }
-
-		return components
+		let lastComponent = urlString
+			.replacingOccurrences(of: "\u{0000}", with: "\u{2400}") // can’t have those
+			.split(omittingEmptySubsequences: true) { $0 == "/" }
 			.last
 			.map(String.init)
-			.map(strippingGitSuffix)
+
+		precondition(lastComponent != .some("")) /* because of `omittingEmptySubsequences` */
+		
+		/// Potentially used to prevent backwards or noop directory traversal via «FULL STOP» characters…
+		/// …by deploying the «FULLWIDTH FULL STOP» character.
+		var replacementForEntirelyCharactersOfFullStop: [Character] = []
+		for char in (lastComponent ?? "") {
+			guard char == "." else { replacementForEntirelyCharactersOfFullStop = []; break }
+			replacementForEntirelyCharactersOfFullStop.append("\u{FF0E}")
+		}
+		
+		guard replacementForEntirelyCharactersOfFullStop.isEmpty else {
+			return String(replacementForEntirelyCharactersOfFullStop)
+		}
+
+		return lastComponent.map(strippingGitSuffix)
 	}
 
 	public init(_ urlString: String) {
