@@ -445,6 +445,15 @@ extension Reactive where Base: FileManager {
 		}
 		.map { URL(fileURLWithPath: $0, isDirectory: true) }
 	}
+
+    /// Removes the file located at the given URL
+    ///
+    /// Sends empty value on successful removal
+    func removeItem(at url: URL) -> SignalProducer<(), CarthageError> {
+        return SignalProducer {
+            return Result(at: url, attempt: self.removeItem(at:))
+        }
+    }
   
   public func copyItem(_ source: URL, into: URL) -> SignalProducer<URL, CarthageError> {
     let destination = into.appendingPathComponent(source.lastPathComponent)
