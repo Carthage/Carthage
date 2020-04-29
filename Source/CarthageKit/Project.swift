@@ -970,23 +970,9 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { (dependencies: [(Dependency, PinnedVersion)]) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				return SignalProducer(dependencies)
 					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
-						switch dependency {
-						case .git, .gitHub:
-							guard options.useBinaries else {
-								return .empty
-							}
-							return self.binaryInstaller.installBinaries(for: dependency, pinnedVersion: version, toolchain: options.toolchain)
-								.filterMap { installed -> (Dependency, PinnedVersion)? in
-									return installed ? (dependency, version) : nil
-								}
-						case let .binary(binary):
-                            return self.binaryInstaller.installBinariesForBinaryProject(binary: binary,
-                                                                                        pinnedVersion: version,
-                                                                                        binaryProjectsMap: self.cachedBinaryProjects,
-                                                                                        projectName: dependency.name,
-                                                                                        toolchain: options.toolchain)
-                                .then(.init(value: (dependency, version)))
-						}
+                        return self.binaryInstaller.install(dependency: dependency, version: version,
+                                                            toolchain: options.toolchain, useBinaries: options.useBinaries,
+                                                            projectsMap: self.cachedBinaryProjects)
 					}
 					.flatMap(.merge) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 						// Symlink the build folder of binary downloads for consistency with regular checkouts
@@ -1115,43 +1101,6 @@ private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL)
 					}
 			}
 	}
-}
-
-/// Caches the downloaded binary at the given URL, moving it to the other URL
-/// given.
-///
-/// Sends the final file URL upon .success.
-private func cacheDownloadedBinary(_ downloadURL: URL, toURL cachedURL: URL) -> SignalProducer<URL, CarthageError> {
-	return SignalProducer(value: cachedURL)
-		.attempt { fileURL in
-			Result(at: fileURL.deletingLastPathComponent(), attempt: {
-				try FileManager.default.createDirectory(at: $0, withIntermediateDirectories: true)
-			})
-		}
-		.attempt { newDownloadURL in
-			// Tries `rename()` system call at first.
-			let result = downloadURL.withUnsafeFileSystemRepresentation { old in
-				newDownloadURL.withUnsafeFileSystemRepresentation { new in
-					rename(old!, new!)
-				}
-			}
-			if result == 0 {
-				return .success(())
-			}
-
-			if errno != EXDEV {
-				return .failure(.taskError(.posixError(errno)))
-			}
-
-			// If the “Cross-device link” error occurred, then falls back to
-			// `FileManager.moveItem(at:to:)`.
-			//
-			// See https://github.com/Carthage/Carthage/issues/706 and
-			// https://github.com/Carthage/Carthage/issues/711.
-			return Result(at: newDownloadURL, attempt: {
-				try FileManager.default.moveItem(at: downloadURL, to: $0)
-			})
-		}
 }
 
 /// Sends the URL to each file found in the given directory conforming to the
