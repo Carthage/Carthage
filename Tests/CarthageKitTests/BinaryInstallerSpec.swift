@@ -5,6 +5,7 @@ import Nimble
 import ReactiveSwift
 import XCDBLD
 import Result
+import Tentacle
 
 final class BinaryInstallerSpec: QuickSpec {
 
@@ -29,10 +30,9 @@ final class BinaryInstallerSpec: QuickSpec {
                 var events = [ProjectEvent]()
                 installer.projectEvents.observeValues { events.append($0) }
 
-                installer.downloadBinaryFrameworkDefinition(binary: <#T##BinaryURL#>, binaryProjectsMap: <#T##[URL : BinaryProject]#>)
-
+                let testDefinitionURL = URL(string: "https://test.url")!
                 let binary = BinaryURL(url: testDefinitionURL, resolvedDescription: testDefinitionURL.description)
-                _ = downloader.binaryFrameworkDefinition(url: testDefinitionURL, useNetrc: false).first()
+                _ = installer.availableVersions(binary: binary).first()
 
                 expect(events) == [.downloadingBinaryFrameworkDefinition(.binary(binary), testDefinitionURL)]
             }
@@ -45,9 +45,9 @@ final class BinaryInstallerSpec: QuickSpec {
 // not used yet
 
 private final class FileManagerMock: FileManaging {
-    var fileExists: ((String) -> Bool)!
+    var fileExistsClosure: ((String) -> Bool)!
     func fileExists(atPath: String) -> Bool {
-        return fileExists(atPath: atPath)
+        return fileExistsClosure(atPath)
     }
 
     func createDirectory(at: URL, withIntermediateDirectories: Bool, attributes: [FileAttributeKey : Any]?) throws {}
@@ -68,5 +68,19 @@ private final class FrameworkInformationProviderMock: FrameworkInformationProvid
 }
 
 private final class BinaryFrameworkDownloaderMock: BinaryFrameworkDownloading {
+    var projectEvents: Signal<ProjectEvent, NoError> {
+        return .empty
+    }
 
+    func binaryFrameworkDefinition(url: URL, useNetrc: Bool) -> SignalProducer<BinaryProject, CarthageError> {
+        return .empty
+    }
+
+    func downloadBinary(dependency: Dependency, version: SemanticVersion, url: URL, useNetrc: Bool) -> SignalProducer<URL, CarthageError> {
+        return .empty
+    }
+
+    func downloadBinaryFromGitHub(for dependency: Dependency, pinnedVersion: PinnedVersion, server: Server, repository: Repository) -> SignalProducer<URL, CarthageError> {
+        return .empty
+    }
 }

@@ -146,10 +146,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 	private var cachedVersions: CachedVersions = [:]
 	private let cachedVersionsQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.cachedVersionsQueue")
 
-	// Cache the binary project definitions in memory to avoid redownloading during carthage operation
-	private var cachedBinaryProjects: CachedBinaryProjects = [:]
-	private let cachedBinaryProjectsQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.cachedBinaryProjectsQueue")
-
 	private lazy var xcodeVersionDirectory: String = XcodeVersion.make()
 		.map { "\($0.version)_\($0.buildVersion)" } ?? "Unknown"
 
@@ -262,13 +258,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				.map { PinnedVersion($0) }
 
 		case let .binary(binary):
-            fetchVersions = binaryInstaller.downloadBinaryFrameworkDefinition(binary: binary, binaryProjectsMap: self.cachedBinaryProjects)
-                .on(value: { binaryProject in
-                    self.cachedBinaryProjects[binary.url] = binaryProject
-                }).flatMap(.concat) { binaryProject -> SignalProducer<PinnedVersion, CarthageError> in
-                    return SignalProducer(binaryProject.versions.keys)
-                }
-                .startOnQueue(self.cachedBinaryProjectsQueue)
+            fetchVersions = binaryInstaller.availableVersions(binary: binary)
 		}
 
 		return SignalProducer<Project.CachedVersions, CarthageError>(value: self.cachedVersions)
@@ -970,8 +960,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return SignalProducer(dependencies)
 					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
                         return self.binaryInstaller.install(dependency: dependency, version: version,
-                                                            toolchain: options.toolchain, useBinaries: options.useBinaries,
-                                                            projectsMap: self.cachedBinaryProjects)
+                                                            toolchain: options.toolchain, useBinaries: options.useBinaries)
 					}
 					.flatMap(.merge) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 						// Symlink the build folder of binary downloads for consistency with regular checkouts

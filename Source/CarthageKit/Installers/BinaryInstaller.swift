@@ -37,6 +37,11 @@ final class BinaryInstaller {
     private let frameworkInformationProvider: FrameworkInformationProviding
     private let frameworkDownloader: BinaryFrameworkDownloading
 
+    private typealias CachedBinaryProjects = [URL: BinaryProject]
+    // Cache the binary project definitions in memory to avoid redownloading during carthage operation
+    private var cachedBinaryProjects: CachedBinaryProjects = [:]
+    private let cachedBinaryProjectsQueue = SerialProducerQueue(name: "org.carthage.Constants.Project.cachedBinaryProjectsQueue")
+
     init(directoryURL: URL,
          fileManager: FileManaging = FileManager.default,
          frameworkInformationProvider: FrameworkInformationProviding = FrameworkInformationProvider(),
@@ -52,8 +57,17 @@ final class BinaryInstaller {
         self.frameworkDownloader = frameworkDownloader
     }
 
-    func install(dependency: Dependency, version: PinnedVersion, toolchain: String?, useBinaries: Bool,
-                 projectsMap: [URL: BinaryProject]) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> {
+    func availableVersions(binary: BinaryURL) -> SignalProducer<PinnedVersion, CarthageError> {
+        return downloadBinaryFrameworkDefinition(binary: binary, binaryProjectsMap: self.cachedBinaryProjects)
+        .on(value: { binaryProject in
+            self.cachedBinaryProjects[binary.url] = binaryProject
+        }).flatMap(.concat) { binaryProject -> SignalProducer<PinnedVersion, CarthageError> in
+            return SignalProducer(binaryProject.versions.keys)
+        }
+        .startOnQueue(self.cachedBinaryProjectsQueue)
+    }
+
+    func install(dependency: Dependency, version: PinnedVersion, toolchain: String?, useBinaries: Bool) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> {
         switch dependency {
         case .git, .gitHub:
             guard useBinaries else {
@@ -66,7 +80,7 @@ final class BinaryInstaller {
         case let .binary(binary):
             return self.installBinariesForBinaryProject(binary: binary,
                                                         pinnedVersion: version,
-                                                        binaryProjectsMap: projectsMap,
+                                                        binaryProjectsMap: self.cachedBinaryProjects,
                                                         projectName: dependency.name,
                                                         toolchain: toolchain)
                 .then(.init(value: (dependency, version)))
@@ -126,7 +140,7 @@ final class BinaryInstaller {
             }
     }
 
-    func downloadBinaryFrameworkDefinition(binary: BinaryURL, binaryProjectsMap: [URL: BinaryProject]) -> SignalProducer<BinaryProject, CarthageError> {
+    private func downloadBinaryFrameworkDefinition(binary: BinaryURL, binaryProjectsMap: [URL: BinaryProject]) -> SignalProducer<BinaryProject, CarthageError> {
         return SignalProducer<[URL: BinaryProject], CarthageError>(value: binaryProjectsMap)
             .flatMap(.merge) { binaryProjectsByURL -> SignalProducer<BinaryProject, CarthageError> in
                 if let binaryProject = binaryProjectsByURL[binary.url] {
