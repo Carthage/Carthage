@@ -301,6 +301,7 @@ public struct VersionFile: Codable {
 ///
 /// Returns a signal that succeeds once the file has been created.
 public func createVersionFileForCurrentProject(
+    version: String,
 	platforms: Set<Platform>,
 	buildProducts: [URL],
 	rootDirectoryURL: URL
@@ -366,25 +367,16 @@ public func createVersionFileForCurrentProject(
 
 			return Dependency.git(GitURL(origin.remoteNameAndURL.url)).name
 		}
-
-	let currentGitTagOrCommitish = launchGitTask(["rev-parse", "HEAD"])
-		.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-		.flatMap(.merge) { headCommitish in
-			launchGitTask(["describe", "--tags", "--exact-match", headCommitish])
-				.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-				.flatMapError { _  in SignalProducer(value: headCommitish) }
-		}
-
-	 return SignalProducer.zip(currentProjectName, currentGitTagOrCommitish)
-		.flatMap(.merge) { currentProjectNameString, version in
-			createVersionFileForCommitish(
-				version,
-				dependencyName: currentProjectNameString,
-				platforms: platforms,
-				buildProducts: buildProducts,
-				rootDirectoryURL: rootDirectoryURL
-		)
-	}
+    
+    return currentProjectName.map {
+        return createVersionFileForCommitish(
+            version,
+            dependencyName: $0,
+            platforms: platforms,
+            buildProducts: buildProducts,
+            rootDirectoryURL: rootDirectoryURL
+        )
+    }
 }
 
 /// Creates a version file for the current dependency in the

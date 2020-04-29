@@ -332,16 +332,23 @@ internal enum PackageType: String {
 /// If this built product has any *.bcsymbolmap files they will also be copied.
 ///
 /// Returns a signal that will send the URL after copying upon .success.
-private func copyBuildProductIntoDirectory(_ directoryURL: URL, _ settings: BuildSettings) -> SignalProducer<URL, CarthageError> {
+private func copyBuildProductIntoDirectory(_ directoryURL: URL, _ settings: BuildSettings, swiftVersion: String) -> SignalProducer<BuiltProductInfo, CarthageError> {
 	let target = settings.wrapperName.map(directoryURL.appendingPathComponent)
 	return SignalProducer(result: target.fanout(settings.wrapperURL))
 		.flatMap(.merge) { target, source in
 			return copyProduct(source.resolvingSymlinksInPath(), target)
 		}
-		.flatMap(.merge) { url in
-			return copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL, settings)
-				.then(SignalProducer<URL, CarthageError>(value: url))
-		}
+		.flatMap(.merge) { url -> SignalProducer<BuiltProductInfo, CarthageError> in
+            let builtProductInfo = BuiltProductInfo(swiftToolchainVersion: swiftVersion, productUrl: url)
+            return copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL, settings)
+                .collect()
+                .flatMap(.merge) { urls -> SignalProducer<BuiltProductInfo, CarthageError> in
+                    let builtProductInfoWithBCSymbolMapFiles = urls.reduce(builtProductInfo) {
+                        return $0.addingFile($1)
+                    }
+                    return SignalProducer(value: builtProductInfoWithBCSymbolMapFiles)
+                }
+        }
 }
 
 /// Finds any *.bcsymbolmap files for the built product and copies them into
@@ -530,10 +537,11 @@ private func settingsByTarget<Error>(_ producer: SignalProducer<TaskEvent<BuildS
 private func mergeBuildProducts(
 	deviceBuildSettings: BuildSettings,
 	simulatorBuildSettings: BuildSettings,
-	into destinationFolderURL: URL
-) -> SignalProducer<URL, CarthageError> {
-	return copyBuildProductIntoDirectory(destinationFolderURL, deviceBuildSettings)
-		.flatMap(.merge) { productURL -> SignalProducer<URL, CarthageError> in
+	into destinationFolderURL: URL,
+    swiftVersion: String
+) -> SignalProducer<BuiltProductInfo, CarthageError> {
+    return copyBuildProductIntoDirectory(destinationFolderURL, deviceBuildSettings, swiftVersion: swiftVersion)
+		.flatMap(.merge) { builtProductInfo -> SignalProducer<BuiltProductInfo, CarthageError> in
 			let executableURLs = (deviceBuildSettings.executableURL.fanout(simulatorBuildSettings.executableURL)).map { [ $0, $1 ] }
 			let outputURL = deviceBuildSettings.executablePath.map(destinationFolderURL.appendingPathComponent)
 
@@ -547,7 +555,7 @@ private func mergeBuildProducts(
 
 			let mergeProductSwiftHeaderFilesIfNeeded = SignalProducer.zip(simulatorBuildSettings.executableURL, deviceBuildSettings.executableURL, outputURL)
 				.flatMap(.concat) { (simulatorURL: URL, deviceURL: URL, outputURL: URL) -> SignalProducer<(), CarthageError> in
-					guard isSwiftFramework(productURL) else { return .empty }
+                    guard isSwiftFramework(builtProductInfo.productUrl) else { return .empty }
 
 					return mergeSwiftHeaderFiles(
 						simulatorURL.resolvingSymlinksInPath(),
@@ -577,7 +585,7 @@ private func mergeBuildProducts(
 				.then(mergeProductSwiftHeaderFilesIfNeeded)
 				.then(mergeProductModules)
 				.then(copyBCSymbolMapsForBuildProductIntoDirectory(destinationFolderURL, simulatorBuildSettings))
-				.then(SignalProducer<URL, CarthageError>(value: productURL))
+				.then(SignalProducer<BuiltProductInfo, CarthageError>(value: builtProductInfo))
 		}
 }
 
@@ -595,7 +603,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 	rootDirectoryURL: URL,
 	workingDirectoryURL: URL,
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
-) -> SignalProducer<TaskEvent<URL>, CarthageError> {
+) -> SignalProducer<TaskEvent<BuiltProductInfo>, CarthageError> {
 	precondition(workingDirectoryURL.isFileURL)
 
 	let buildArgs = BuildArguments(
@@ -646,14 +654,17 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 		.filter { _, sdks in
 			return !sdks.isEmpty
 		}
-		.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<URL>, CarthageError> in
+		.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<BuiltProductInfo>, CarthageError> in
 			let folderURL = rootDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).resolvingSymlinksInPath()
-
 			switch sdks.count {
 			case 1:
 				return build(sdk: sdks[0], with: buildArgs, in: workingDirectoryURL)
-					.flatMapTaskEvents(.merge) { settings in
-						return copyBuildProductIntoDirectory(settings.productDestinationPath(in: folderURL), settings)
+					.flatMapTaskEvents(.merge) { settings -> SignalProducer<BuiltProductInfo, CarthageError> in
+                        return swiftVersion(usingToolchain: options.toolchain)
+                            .mapError { error in CarthageError.internalError(description: error.description) }
+                            .flatMap(.merge) { swiftVersion -> SignalProducer<BuiltProductInfo, CarthageError> in
+                                return copyBuildProductIntoDirectory(settings.productDestinationPath(in: folderURL), settings, swiftVersion: swiftVersion)
+                            }
 					}
 
 			case 2:
@@ -704,28 +715,38 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 						}
 					}
 					.flatMapTaskEvents(.concat) { deviceSettings, simulatorSettings in
-						return mergeBuildProducts(
-							deviceBuildSettings: deviceSettings,
-							simulatorBuildSettings: simulatorSettings,
-							into: deviceSettings.productDestinationPath(in: folderURL)
-						)
-					}
-
+                        return swiftVersion(usingToolchain: options.toolchain)
+                            .mapError { error in CarthageError.internalError(description: error.description) }
+                            .flatMap(.merge) { swiftVersion -> SignalProducer<BuiltProductInfo, CarthageError> in
+                                return mergeBuildProducts(
+                                    deviceBuildSettings: deviceSettings,
+                                    simulatorBuildSettings: simulatorSettings,
+                                    into: deviceSettings.productDestinationPath(in: folderURL),
+                                    swiftVersion: swiftVersion
+                                )
+                            }
+                    }
 			default:
 				fatalError("SDK count \(sdks.count) in scheme \(scheme) is not supported")
 			}
 		}
-		.flatMapTaskEvents(.concat) { builtProductURL -> SignalProducer<URL, CarthageError> in
-			return UUIDsForFramework(builtProductURL)
+		.flatMapTaskEvents(.concat) { builtProductInfo -> SignalProducer<BuiltProductInfo, CarthageError> in
+            return UUIDsForFramework(builtProductInfo.productUrl)
 				// Only attempt to create debug info if there is at least
 				// one dSYM architecture UUID in the framework. This can
 				// occur if the framework is a static framework packaged
 				// like a dynamic framework.
 				.take(first: 1)
 				.flatMap(.concat) { _ -> SignalProducer<TaskEvent<URL>, CarthageError> in
-					return createDebugInformation(builtProductURL)
+                    return createDebugInformation(builtProductInfo.productUrl)
 				}
-				.then(SignalProducer<URL, CarthageError>(value: builtProductURL))
+                .flatMap(.merge) { dSYMURL -> SignalProducer<BuiltProductInfo, CarthageError> in
+                    if let dSYMFile = dSYMURL.value {
+                        return SignalProducer<BuiltProductInfo, CarthageError>(value: builtProductInfo.addingFile(dSYMFile))
+                    } else {
+                        return SignalProducer<BuiltProductInfo, CarthageError>(value: builtProductInfo)
+                    }
+                }
 		}
 }
 
@@ -933,7 +954,7 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 									withConfiguration: options.configuration,
 									forPlatforms: options.platforms
 			)
-			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
+			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<BuiltProductInfo>, CarthageError> in
 				let initialValue = (project, scheme)
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
@@ -966,26 +987,39 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 					})
 			}
 			.collectTaskEvents()
-			.flatMapTaskEvents(.concat) { (urls: [URL]) -> SignalProducer<(), CarthageError> in
-
-				guard let dependency = dependency else {
-
-					return createVersionFileForCurrentProject(platforms: options.platforms,
-															  buildProducts: urls,
-															  rootDirectoryURL: rootDirectoryURL
-						)
-						.flatMapError { _ in .empty }
-				}
-
-				return createVersionFile(
-					for: dependency.dependency,
-					version: dependency.version,
-					platforms: options.platforms,
-					buildProducts: urls,
-					rootDirectoryURL: rootDirectoryURL
-					)
-					.flatMapError { _ in .empty }
+			.flatMapTaskEvents(.concat) { (builtProductInfos: [BuiltProductInfo]) -> SignalProducer<[BuiltProductInfo], CarthageError> in
+                let buildProducts = builtProductInfos.compactMap { $0.productUrl }
+                if let dependency = dependency {
+                    return createVersionFile(for: dependency.dependency,
+                                             version: dependency.version,
+                                             platforms: options.platforms,
+                                             buildProducts: buildProducts,
+                                             rootDirectoryURL: rootDirectoryURL
+                    )
+                    .then(addCommitish(commitish: dependency.version.commitish, to: builtProductInfos))
+                    .flatMapError { _ in .empty }
+                } else {
+                    return launchGitTask(["rev-parse", "HEAD"])
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .flatMap(.merge) { headCommitish in
+                            launchGitTask(["describe", "--tags", "--exact-match", headCommitish])
+                                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                                .flatMapError { _  in SignalProducer(value: headCommitish) }
+                        }
+                        .flatMap(.merge) { version in
+                            return createVersionFileForCurrentProject(version: version,
+                                                                      platforms: options.platforms,
+                                                                      buildProducts: buildProducts,
+                                                                      rootDirectoryURL: rootDirectoryURL
+                            )
+                            .then(addCommitish(commitish: version, to: builtProductInfos))
+                        }
+                        .flatMapError { _ in .empty }
+                }
 			}
+            .flatMapTaskEvents(.concat) { (urls: [BuiltProductInfo]) -> SignalProducer<(), CarthageError> in
+                return SignalProducer.merge(urls.map { writeBuiltProductInfoJSONFile(builtProductInfo: $0) })
+            }
 			// Discard any Success values, since we want to
 			// use our initial value instead of waiting for
 			// completion.
@@ -1169,6 +1203,18 @@ extension SignalProducer where Value == URL, Error == CarthageError {
 				return copyProduct(fileURL, resolvedDestinationURL)
 			}
 	}
+}
+
+extension SignalProducer where Value == [URL], Error == CarthageError {
+    public func updateBuiltProductFiles(builtProductInfo: BuiltProductInfo) -> SignalProducer<BuiltProductInfo, CarthageError> {
+        return producer
+            .flatMap(.merge) { fileURLs -> SignalProducer<BuiltProductInfo, CarthageError> in
+                let updatedBuiltProductInfo = fileURLs
+                    .filter { (try? $0.checkResourceIsReachable()) ?? false }
+                    .reduce(builtProductInfo) { $0.addingFile($1) }
+                return SignalProducer<BuiltProductInfo, CarthageError>(value: updatedBuiltProductInfo)
+            }
+    }
 }
 
 extension SignalProducer where Value: TaskEventType {

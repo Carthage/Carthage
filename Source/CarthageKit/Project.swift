@@ -700,17 +700,35 @@ public final class Project { // swiftlint:disable:this type_body_length
 							.reduce(into: pair) { (_, _) = ($0.1, $1) }
 					}
 					// If the framework is compatible copy it over to the destination folder in Carthage/Build
-					.flatMap(.merge) { pair -> SignalProducer<URL, CarthageError> in
-						return SignalProducer<URL, CarthageError>(value: pair.frameworkSourceURL)
-							.copyFileURLsIntoDirectory(pair.frameworkDestinationURL.deletingLastPathComponent())
-							.then(SignalProducer<URL, CarthageError>(value: pair.frameworkDestinationURL))
+					.flatMap(.merge) { pair -> SignalProducer<BuiltProductInfo, CarthageError> in
+                        return swiftVersion(usingToolchain: toolchain)
+                        .mapError { error in CarthageError.internalError(description: error.description) }
+                        .flatMap(.merge) { swiftVersion -> SignalProducer<BuiltProductInfo, CarthageError> in
+                            let builtProductInfo = BuiltProductInfo(swiftToolchainVersion: swiftVersion,
+                                                                    productUrl: pair.frameworkDestinationURL)
+                                .withCommitish(pinnedVersion.commitish)
+                            return SignalProducer<URL, CarthageError>(value: pair.frameworkSourceURL)
+                                .copyFileURLsIntoDirectory(pair.frameworkDestinationURL.deletingLastPathComponent())
+                                .then(SignalProducer<BuiltProductInfo, CarthageError>(value: builtProductInfo))
+                        }
 					}
-					// Copy .dSYM & .bcsymbolmap too
-					.flatMap(.merge) { frameworkDestinationURL -> SignalProducer<URL, CarthageError> in
-						return self.copyDSYMToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL)
-							.then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL))
-							.then(SignalProducer(value: frameworkDestinationURL))
-					}
+					// Copy .dSYM
+					.flatMap(.merge) { builtProductInfo -> SignalProducer<BuiltProductInfo, CarthageError> in
+                        return self.copyDSYMToBuildFolderForFramework(builtProductInfo.productUrl, fromDirectoryURL: directoryURL)
+                            .collect()
+                            .updateBuiltProductFiles(builtProductInfo: builtProductInfo)
+                    }
+                    // Copy .bcsymbolmap(s)
+                    .flatMap(.merge) { builtProductInfo -> SignalProducer<BuiltProductInfo, CarthageError> in
+                        return self.copyBCSymbolMapsToBuildFolderForFramework(builtProductInfo.productUrl, fromDirectoryURL: directoryURL)
+                            .collect()
+                            .updateBuiltProductFiles(builtProductInfo: builtProductInfo)
+                    }
+                    // Write the builtProductInfo json file
+                    .flatMap(.merge) { builtProductInfo -> SignalProducer<URL, CarthageError> in
+                        return writeBuiltProductInfoJSONFile(builtProductInfo: builtProductInfo)
+                            .then(SignalProducer<URL, CarthageError>(value: builtProductInfo.productUrl))
+                    }
 					.collect()
 					// Write the .version file
 					.flatMap(.concat) { frameworkURLs -> SignalProducer<(), CarthageError> in
