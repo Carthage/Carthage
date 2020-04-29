@@ -233,15 +233,10 @@ final class BinaryInstaller {
                     }
                     // Copy .dSYM & .bcsymbolmap too
                 let copiedDsyms = copiedFrameworks.flatMap(.merge) { frameworkDestinationURL -> SignalProducer<URL, CarthageError> in
-                        if frameworkDestinationURL.pathExtension != "xcframework" {
-                            return self.copyDSYMToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL)
-                                .then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL))
-                                .then(SignalProducer(value: frameworkDestinationURL))
-                        }
-                        else {
-                            return SignalProducer(value: frameworkDestinationURL)
-                        }
-                    }
+                    return self.copyDSYMToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL)
+                        .then(self.copyBCSymbolMapsToBuildFolderForFramework(frameworkDestinationURL, fromDirectoryURL: directoryURL))
+                        .then(SignalProducer(value: frameworkDestinationURL))
+                }
                return copiedDsyms.collect()
                     // Write the .version file
                     .flatMap(.concat) { frameworkURLs -> SignalProducer<(), CarthageError> in
@@ -299,7 +294,7 @@ final class BinaryInstaller {
         frameworkNameAndExtension: String
     ) -> Result<URL, CarthageError> {
         guard let lastComponent = URL(string: frameworkNameAndExtension)?.pathExtension,
-            lastComponent == "framework" || lastComponent == "xcframework" else {
+            lastComponent == "framework" else {
                 return .failure(.internalError(description: "\(frameworkNameAndExtension) is not a valid framework identifier"))
         }
 

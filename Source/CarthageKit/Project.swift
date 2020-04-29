@@ -1110,6 +1110,70 @@ func filesInDirectory(_ directoryURL: URL, _ typeIdentifier: String? = nil) -> S
 	}
 }
 
+/// Sends the platform specified in the given Info.plist.
+func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, CarthageError> {
+	return SignalProducer(value: frameworkURL)
+		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used
+		// because Xcode 6 and below do not include either in macOS frameworks.
+		.attemptMap { url -> Result<String, CarthageError> in
+			let bundle = Bundle(url: url)
+
+			func readFailed(_ message: String) -> CarthageError {
+				let error = Result<(), NSError>.error(message)
+				return .readFailed(frameworkURL, error)
+			}
+
+			func sdkNameFromExecutable() -> String? {
+				guard let executableURL = bundle?.executableURL else {
+					return nil
+				}
+
+				let task = Task("/usr/bin/xcrun", arguments: ["otool", "-lv", executableURL.path])
+
+				let sdkName: String? = task.launch(standardInput: nil)
+					.ignoreTaskData()
+					.map { String(data: $0, encoding: .utf8) ?? "" }
+					.filter { !$0.isEmpty }
+					.flatMap(.merge) { (output: String) -> SignalProducer<String, NoError> in
+						output.linesProducer
+					}
+					.filter { $0.contains("LC_VERSION") }
+					.take(last: 1)
+					.map { lcVersionLine -> String? in
+						let sdkString = lcVersionLine.split(separator: "_")
+							.last
+							.flatMap(String.init)
+							.flatMap { $0.lowercased() }
+
+						return sdkString
+					}
+					.skipNil()
+					.single()?
+					.value
+
+				return sdkName
+			}
+
+			// Try to read what platfrom this binary is for. Attempt in order:
+			// 1. Read `DTSDKName` from Info.plist.
+			//    Some users are reporting that static frameworks don't have this key in the .plist,
+			//    so we fall back and check the binary of the executable itself.
+			// 2. Read the LC_VERSION_<PLATFORM> from the framework's binary executable file
+
+			if let sdkNameFromBundle = bundle?.object(forInfoDictionaryKey: "DTSDKName") as? String {
+				return .success(sdkNameFromBundle)
+			} else if let sdkNameFromExecutable = sdkNameFromExecutable() {
+				return .success(sdkNameFromExecutable)
+			} else {
+				return .failure(readFailed("could not determine platform neither from DTSDKName key in plist nor from the framework's executable"))
+			}
+		}
+		// Thus, the SDK name must be trimmed to match the platform name, e.g.
+		// macosx10.10 -> macosx
+		.map { sdkName in sdkName.trimmingCharacters(in: CharacterSet.letters.inverted) }
+		.attemptMap { platform in SDK.from(string: platform).map { $0.platform } }
+}
+
 /// Sends the URL to each framework bundle found in the given directory.
 internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, CarthageError> {
 	return filesInDirectory(directoryURL, kUTTypeFramework as String)
@@ -1120,32 +1184,14 @@ internal func frameworksInDirectory(_ directoryURL: URL) -> SignalProducer<URL, 
 				return (pathComponent as NSString).pathExtension == "framework"
 			}
 			return frameworksInURL.count == 1
-		}
-		// We can't identify xcframeworks by UTType, so we have to edit the path manually
-		.map { url in
-			if let stopIndex = url
-				.pathComponents
-				.firstIndex(where: { component in component.hasSuffix(".xcframework")}) {
-
-				let slice = url.pathComponents[0...stopIndex]
-				let path = slice.reduce("/") { acc, next in
-					return (acc as NSString).appendingPathComponent(next)
-				}
-				return URL(fileURLWithPath: path as String, isDirectory: true)
-			}
-			else {
-				return url
-			}
-		}
-		.uniqueValues()
-		.filter { url in
+		}.filter { url in
 			// For reasons of speed and the fact that CLI-output structures can change,
 			// first try the safer method of reading the ‘Info.plist’ from the Framework’s bundle.
 			let bundle = Bundle(url: url)
 			let packageType: PackageType? = bundle?.packageType
 
 			switch packageType {
-			case .framework?, .bundle?, .xcFramework?:
+			case .framework?, .bundle?:
 				return true
 			default:
 				// In case no Info.plist exists check the Mach-O fileType

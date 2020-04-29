@@ -90,18 +90,11 @@ final class FrameworkInformationProvider: FrameworkInformationProviding {
                 }
 
                 // Try to read what platfrom this binary is for. Attempt in order:
-                // 1. Read `AvailableLibraries > SupportedPlatform` if .xcFramework bundle
-                // 2. Read `DTSDKName` from Info.plist.
+                // 1. Read `DTSDKName` from Info.plist.
                 //    Some users are reporting that static frameworks don't have this key in the .plist,
                 //    so we fall back and check the binary of the executable itself.
-                // 3. Read the LC_VERSION_<PLATFORM> from the framework's binary executable file
-                if case bundle?.packageType = PackageType.xcFramework,
-                    let sdkNameFromSupportedPlatform = bundle?.infoDictionary.flatMap(XCFrameworkInfo.init)?
-                        .availableLibraries
-                        .first?
-                        .supportedSDK.rawValue {
-                    return .success(sdkNameFromSupportedPlatform)
-                } else if let sdkNameFromBundle = bundle?.object(forInfoDictionaryKey: "DTSDKName") as? String {
+                // 2. Read the LC_VERSION_<PLATFORM> from the framework's binary executable file
+                if let sdkNameFromBundle = bundle?.object(forInfoDictionaryKey: "DTSDKName") as? String {
                     return .success(sdkNameFromBundle)
                 } else if let sdkNameFromExecutable = sdkNameFromExecutable() {
                     return .success(sdkNameFromExecutable)
