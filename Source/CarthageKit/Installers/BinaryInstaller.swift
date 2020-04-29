@@ -20,6 +20,7 @@ protocol FrameworkInformationProviding {
 }
 
 protocol BinaryFrameworkDownloading {
+    var projectEvents: Signal<ProjectEvent, NoError> { get }
     func binaryFrameworkDefinition(url: URL, useNetrc: Bool) -> SignalProducer<BinaryProject, CarthageError>
     func downloadBinary(dependency: Dependency, version: SemanticVersion, url: URL, useNetrc: Bool) -> SignalProducer<URL, CarthageError>
     func downloadBinaryFromGitHub(for dependency: Dependency, pinnedVersion: PinnedVersion, server: Server, repository: Repository) -> SignalProducer<URL, CarthageError>
@@ -29,18 +30,23 @@ final class BinaryInstaller {
     var useNetrc: Bool = false
 
     private let directoryURL: URL
+    let projectEvents: Signal<ProjectEvent, NoError>
     private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
 
     private let fileManager: FileManaging
     private let frameworkInformationProvider: FrameworkInformationProviding
     private let frameworkDownloader: BinaryFrameworkDownloading
 
-    init(directoryURL: URL, eventsObserver: Signal<ProjectEvent, NoError>.Observer,
+    init(directoryURL: URL,
          fileManager: FileManaging = FileManager.default,
          frameworkInformationProvider: FrameworkInformationProviding = FrameworkInformationProvider(),
          frameworkDownloader: BinaryFrameworkDownloading = BinaryFrameworkDownloader()) {
+
+        let eventsPipe = Signal<ProjectEvent, NoError>.pipe()
+        self._projectEventsObserver = eventsPipe.input
+        self.projectEvents = eventsPipe.output.merge(with: frameworkDownloader.projectEvents)
+
         self.directoryURL = directoryURL
-        self._projectEventsObserver = eventsObserver
         self.fileManager = fileManager
         self.frameworkInformationProvider = frameworkInformationProvider
         self.frameworkDownloader = frameworkDownloader

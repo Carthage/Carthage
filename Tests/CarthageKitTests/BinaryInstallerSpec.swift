@@ -3,23 +3,46 @@ import Foundation
 import Quick
 import Nimble
 import ReactiveSwift
+import XCDBLD
+import Result
 
 final class BinaryInstallerSpec: QuickSpec {
 
     override func spec() {
         let directoryURL = URL.init(fileURLWithPath: "/tmp/Carthage")
         var installer: BinaryInstaller!
-        var fileManager: FileManagerMock
+        var fileManager: FileManagerMock!
         var frameworkInfoProvider: FrameworkInformationProviderMock!
-        var eventsObserver: Signal<ProjectEvent, NoError>.Observer
-
+        var binaryFrameworkDownloader: BinaryFrameworkDownloading!
 
         beforeEach {
-            installer = BinaryInstaller(directoryURL: directoryURL, eventsObserver: <#T##Signal<ProjectEvent, NoError>.Observer#>, fileManager: <#T##FileManaging#>)
+            fileManager = FileManagerMock()
+            frameworkInfoProvider = FrameworkInformationProviderMock()
+            binaryFrameworkDownloader = BinaryFrameworkDownloaderMock()
+
+            installer = BinaryInstaller(directoryURL: directoryURL, fileManager: fileManager,
+                                        frameworkInformationProvider: frameworkInfoProvider, frameworkDownloader: binaryFrameworkDownloader)
+        }
+
+        describe("") {
+            it("should broadcast downloading framework definition event") {
+                var events = [ProjectEvent]()
+                installer.projectEvents.observeValues { events.append($0) }
+
+                installer.downloadBinaryFrameworkDefinition(binary: <#T##BinaryURL#>, binaryProjectsMap: <#T##[URL : BinaryProject]#>)
+
+                let binary = BinaryURL(url: testDefinitionURL, resolvedDescription: testDefinitionURL.description)
+                _ = downloader.binaryFrameworkDefinition(url: testDefinitionURL, useNetrc: false).first()
+
+                expect(events) == [.downloadingBinaryFrameworkDefinition(.binary(binary), testDefinitionURL)]
+            }
         }
 
     }
 }
+
+// MARK: - Mocks
+// not used yet
 
 private final class FileManagerMock: FileManaging {
     var fileExists: ((String) -> Bool)!
@@ -36,11 +59,14 @@ private final class FileManagerMock: FileManaging {
 
 private final class FrameworkInformationProviderMock: FrameworkInformationProviding {
     func BCSymbolMapsForFramework(_ frameworkURL: URL, inDirectoryURL directoryURL: URL) -> SignalProducer<URL, CarthageError> {
-        <#code#>
+        return .empty
     }
 
     func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, CarthageError> {
-        <#code#>
+        return .empty
     }
+}
+
+private final class BinaryFrameworkDownloaderMock: BinaryFrameworkDownloading {
 
 }

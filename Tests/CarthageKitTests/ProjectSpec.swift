@@ -443,65 +443,6 @@ class ProjectSpec: QuickSpec {
 			}
 		}
 
-//		describe("downloadBinaryFrameworkDefinition") {
-//			var project: Project!
-//			let testDefinitionURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/successful", withExtension: "json")!
-//
-//			beforeEach {
-//				project = Project(directoryURL: URL(string: "file:///var/empty/fake")!)
-//			}
-//
-//			it("should return definition") {
-//				let binary = BinaryURL(url: testDefinitionURL, resolvedDescription: testDefinitionURL.description)
-//				let actualDefinition = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.value
-//
-//				let expectedBinaryProject = BinaryProject(versions: [
-//					PinnedVersion("1.0"): URL(string: "https://my.domain.com/release/1.0.0/framework.zip")!,
-//					PinnedVersion("1.0.1"): URL(string: "https://my.domain.com/release/1.0.1/framework.zip")!,
-//				])
-//				expect(actualDefinition) == expectedBinaryProject
-//			}
-//
-//			it("should return read failed if unable to download") {
-//				let url = URL(string: "file:///thisfiledoesnotexist.json")!
-//				let binary = BinaryURL(url: url, resolvedDescription: testDefinitionURL.description)
-//				let actualError = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.error
-//
-//				switch actualError {
-//				case .some(.readFailed):
-//					break
-//
-//				default:
-//					fail("expected read failed error")
-//				}
-//			}
-//
-//			it("should return an invalid binary JSON error if unable to parse file") {
-//				let invalidDependencyURL = Bundle(for: type(of: self)).url(forResource: "BinaryOnly/invalid", withExtension: "json")!
-//				let binary = BinaryURL(url: invalidDependencyURL, resolvedDescription: invalidDependencyURL.description)
-//
-//				let actualError = project.downloadBinaryFrameworkDefinition(binary: binary).first()?.error
-//
-//				switch actualError {
-//				case .some(CarthageError.invalidBinaryJSON(invalidDependencyURL, BinaryJSONError.invalidJSON)):
-//					break
-//
-//				default:
-//					fail("expected invalid binary JSON error")
-//				}
-//			}
-//
-//			it("should broadcast downloading framework definition event") {
-//				var events = [ProjectEvent]()
-//				project.projectEvents.observeValues { events.append($0) }
-//
-//				let binary = BinaryURL(url: testDefinitionURL, resolvedDescription: testDefinitionURL.description)
-//				_ = project.downloadBinaryFrameworkDefinition(binary: binary).first()
-//
-//				expect(events) == [.downloadingBinaryFrameworkDefinition(.binary(binary), testDefinitionURL)]
-//			}
-//		}
-
 		describe("outdated dependencies") {
 			it("should return return available updates for outdated dependencies") {
 				var db: DB = [
@@ -588,16 +529,6 @@ class ProjectSpec: QuickSpec {
 				expect(outdatedDependencies[github6]!.0) == PinnedVersion(currentSHA)
 				expect(outdatedDependencies[github6]!.1) == PinnedVersion(nextSHA)
 				expect(outdatedDependencies[github6]!.2) == PinnedVersion("v1.0.0")
-			}
-		}
-
-		describe("platformForFramework") {
-			let testStaticFrameworkURL = Bundle(for: type(of: self)).url(forResource: "Alamofire.framework", withExtension: nil)!
-			// Checks the framework's executable binary, not the Info.plist.
-			// The Info.plist is missing from Alamofire's bundle on purpose.
-			it("should check the framework's executable binary and produce a platform") {
-				let actualPlatform = platformForFramework(testStaticFrameworkURL).first()?.value
-				expect(actualPlatform) == .iOS
 			}
 		}
 

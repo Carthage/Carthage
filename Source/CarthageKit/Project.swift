@@ -123,18 +123,17 @@ public final class Project { // swiftlint:disable:this type_body_length
     private let binaryInstaller: BinaryInstaller
 
 	public convenience init(directoryURL: URL) {
-        let (signal, observer) = Signal<ProjectEvent, NoError>.pipe()
-
-        let binaryInstaller = BinaryInstaller(directoryURL: directoryURL, eventsObserver: observer)
-        self.init(directoryURL: directoryURL, binaryInstaller: binaryInstaller, events: signal, eventsObserver: observer)
+        let binaryInstaller = BinaryInstaller(directoryURL: directoryURL)
+        self.init(directoryURL: directoryURL, binaryInstaller: binaryInstaller)
 	}
 
-    init(directoryURL: URL, binaryInstaller: BinaryInstaller,
-         events: Signal<ProjectEvent, NoError>, eventsObserver: Signal<ProjectEvent, NoError>.Observer) {
+    init(directoryURL: URL, binaryInstaller: BinaryInstaller) {
         precondition(directoryURL.isFileURL)
 
-        projectEvents = events
-        _projectEventsObserver = eventsObserver
+        let eventsPipe = Signal<ProjectEvent, NoError>.pipe()
+        projectEvents = eventsPipe.output.merge(with: binaryInstaller.projectEvents)
+        _projectEventsObserver = eventsPipe.input
+        
         self.directoryURL = directoryURL
         self.binaryInstaller = binaryInstaller
     }
