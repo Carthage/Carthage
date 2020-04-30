@@ -117,7 +117,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
-    public var projectEvents: Signal<ProjectEvent, NoError>
+    public let projectEvents: Signal<ProjectEvent, NoError>
     private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
 
     private let binaryInstaller: BinaryInstaller
