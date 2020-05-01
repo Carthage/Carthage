@@ -103,40 +103,40 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Whether to use submodules for dependencies, or just check out their
 	/// working directories.
 	public var useSubmodules = false
-    
+
 	/// Whether to use authentication credentials from ~/.netrc file
 	/// to download binary only frameworks.
-    public var useNetrc: Bool {
-        get {
-            return binaryInstaller.useNetrc
-        }
-        set {
-            binaryInstaller.useNetrc = newValue
-        }
-    }
+	public var useNetrc: Bool {
+		get {
+			return binaryInstaller.useNetrc
+		}
+		set {
+			binaryInstaller.useNetrc = newValue
+		}
+	}
 
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
-    public let projectEvents: Signal<ProjectEvent, NoError>
-    private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
+	public let projectEvents: Signal<ProjectEvent, NoError>
+	private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
 
-    private let binaryInstaller: BinaryInstaller
+	private let binaryInstaller: BinaryInstaller
 
 	public convenience init(directoryURL: URL) {
-        let binaryInstaller = BinaryInstaller(directoryURL: directoryURL)
-        self.init(directoryURL: directoryURL, binaryInstaller: binaryInstaller)
+		let binaryInstaller = BinaryInstaller(directoryURL: directoryURL)
+		self.init(directoryURL: directoryURL, binaryInstaller: binaryInstaller)
 	}
 
-    init(directoryURL: URL, binaryInstaller: BinaryInstaller) {
-        precondition(directoryURL.isFileURL)
+	init(directoryURL: URL, binaryInstaller: BinaryInstaller) {
+		precondition(directoryURL.isFileURL)
 
-        let eventsPipe = Signal<ProjectEvent, NoError>.pipe()
-        projectEvents = eventsPipe.output.merge(with: binaryInstaller.projectEvents)
-        _projectEventsObserver = eventsPipe.input
-        
-        self.directoryURL = directoryURL
-        self.binaryInstaller = binaryInstaller
-    }
+		let eventsPipe = Signal<ProjectEvent, NoError>.pipe()
+		projectEvents = eventsPipe.output.merge(with: binaryInstaller.projectEvents)
+		_projectEventsObserver = eventsPipe.input
+
+		self.directoryURL = directoryURL
+		self.binaryInstaller = binaryInstaller
+	}
 
 	private typealias CachedVersions = [Dependency: [PinnedVersion]]
 	private typealias CachedBinaryProjects = [URL: BinaryProject]
@@ -258,7 +258,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				.map { PinnedVersion($0) }
 
 		case let .binary(binary):
-            fetchVersions = binaryInstaller.availableVersions(binary: binary)
+			fetchVersions = binaryInstaller.availableVersions(binary: binary)
 		}
 
 		return SignalProducer<Project.CachedVersions, CarthageError>(value: self.cachedVersions)
@@ -774,7 +774,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return SignalProducer(Set(urls))
 			}
 			.on { self._projectEventsObserver.send(value: ProjectEvent.removingUnneededItem($0)) }
-            .flatMap(.merge, FileManager.default.reactive.removeItem(at:))
+			.flatMap(.merge, FileManager.default.reactive.removeItem(at:))
 			.then(SignalProducer<(), CarthageError>.empty)
 		}
 
@@ -959,8 +959,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { (dependencies: [(Dependency, PinnedVersion)]) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				return SignalProducer(dependencies)
 					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
-                        return self.binaryInstaller.install(dependency: dependency, version: version,
-                                                            toolchain: options.toolchain, useBinaries: options.useBinaries)
+						return self.binaryInstaller.install(dependency: dependency, version: version,
+															toolchain: options.toolchain, useBinaries: options.useBinaries)
 					}
 					.flatMap(.merge) { dependency, version -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 						// Symlink the build folder of binary downloads for consistency with regular checkouts
