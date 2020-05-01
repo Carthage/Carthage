@@ -165,8 +165,8 @@ public struct BuildCommand: CommandProtocol {
 			let currentProducers = buildInDirectory(
 				directoryURL,
 				withOptions: options.buildOptions,
-				rootDirectoryURL: directoryURL)
-				.flatMapError { error -> BuildSchemeProducer in
+				rootDirectoryURL: directoryURL
+			).flatMapError { error -> BuildSchemeProducer in
 					switch error {
 					case let .noSharedFrameworkSchemes(project, _):
 						// Log that building the current project is being skipped.

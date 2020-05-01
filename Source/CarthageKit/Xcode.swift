@@ -1124,11 +1124,11 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 					})
 			}
 			.collectTaskEvents()
-			.flatMapTaskEvents(.concat) { (buildTriplets: [BuildQuartet]) -> SignalProducer<(), CarthageError> in
+			.flatMapTaskEvents(.concat) { (buildQuartets: [BuildQuartet]) -> SignalProducer<(), CarthageError> in
 
 				switch options.useXCFrameworks {
 				case .none:
-					let urls = buildTriplets.map { $0.builtProductURL }
+					let urls = buildQuartets.map { $0.builtProductURL }
 					guard let dependency = dependency else {
 
 						return createVersionFileForCurrentProject(
@@ -1148,14 +1148,14 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 
 				case .combined:
 					let partitioned: [String: (String, Set<URL>)] =
-						buildTriplets
+						buildQuartets
 							.compactMap {
-								triplet -> (key: String, value: (xcframeworkName: String, builtProductURL: URL))? in
-								guard let name = triplet.buildSettings.xcFrameworkWrapperName.value,
-									let frameworkType = triplet.buildSettings.frameworkType.value??.rawValue else {
+								quartet -> (key: String, value: (xcframeworkName: String, builtProductURL: URL))? in
+								guard let name = quartet.buildSettings.xcFrameworkWrapperName.value,
+									let frameworkType = quartet.buildSettings.frameworkType.value??.rawValue else {
 										return nil
 								}
-								return (key: "\(name)-\(frameworkType)", value: (xcframeworkName: name, builtProductURL: triplet.builtProductURL))
+								return (key: "\(name)-\(frameworkType)", value: (xcframeworkName: name, builtProductURL: quartet.builtProductURL))
 						}
 						.reduce(into: [String: (String, Set<URL>)]()) { acc, tuple in
 							guard var value = acc[tuple.key] else {
@@ -1174,8 +1174,27 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 						let outputDir = rootDirectoryURL
 							.appendingPathComponent(Constants.combinedBinariesFolderPath)
 							.appendingPathComponent(xcFrameworkName)
-						return createXCFramework(Array(frameworkURLs), outputDir)
-							.then(SignalProducer<(), CarthageError>.empty)
+						let t = createXCFramework(Array(frameworkURLs), outputDir).flatMap(.merge) { xcframeworkURL -> SignalProducer<(), CarthageError> in
+
+							guard let dependency = dependency else {
+
+								return createVersionFileForCurrentProject(
+									platforms: options.platforms,
+									buildProducts: [xcframeworkURL],
+									rootDirectoryURL: rootDirectoryURL)
+									.flatMapError { _ in .empty }
+							}
+
+							return createVersionFile(
+								for: dependency.dependency,
+								version: dependency.version,
+								platforms: options.platforms,
+								buildProducts: [xcframeworkURL],
+								rootDirectoryURL: rootDirectoryURL)
+								.flatMapError { _ in .empty }
+						}
+
+						return t
 					}
 				}
 			}

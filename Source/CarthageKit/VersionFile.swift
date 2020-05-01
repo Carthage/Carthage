@@ -4,6 +4,74 @@ import ReactiveTask
 import Result
 import XCDBLD
 
+/// A representation of a cached xcframework
+public struct CachedXCFramework: Codable {
+	enum CodingKeys: String, CodingKey {
+		case name = "name"
+		case hash = "hash"
+		case swiftToolchainVersion = "swiftToolchainVersion"
+		case macOS = "Mac"
+		case iOS = "iOS"
+		case watchOS = "watchOS"
+		case tvOS = "tvOS"
+	}
+
+	/// Name of the framework
+	public let name: String
+	/// Hash of the framework
+	public let hash: String
+	/// The Swift toolchain version used to build the framework
+	public let swiftToolchainVersion: String?
+	/// Indicates if the framework is built from swift code
+	public var isSwiftFramework: Bool {
+		return swiftToolchainVersion != nil
+	}
+	/// The macOS cached frameworks
+	public let macOS: [CachedXCFrameworkFramework]?
+	/// The iOS cached frameworks
+	public let iOS: [CachedXCFrameworkFramework]?
+	/// The watchOS cached frameworks
+	public let watchOS: [CachedXCFrameworkFramework]?
+	/// The tvOS cached frameworks
+	public let tvOS: [CachedXCFrameworkFramework]?
+}
+
+/// A representation of the cached frameworks
+public struct CachedXCFrameworkFramework: Codable {
+	enum CodingKeys: String, CodingKey {
+		case name = "name"
+		case hash = "hash"
+		case linking = "linking"
+		case sdk = "sdk"
+		case swiftToolchainVersion = "swiftToolchainVersion"
+	}
+
+	/// Name of the framework
+	public let name: String
+	/// Hash of the framework
+	public let hash: String
+	/// The linking type of the framework. One of `dynamic` or `static`. Defaults to `dynamic`
+	public let linking: FrameworkType?
+	/// The Swift toolchain version used to build the framework
+	public let swiftToolchainVersion: String?
+	/// Indicates if the framework is built from swift code
+	public var isSwiftFramework: Bool {
+		return swiftToolchainVersion != nil
+	}
+	/// The SDK used to build this framework
+	public let sdk: SDK?
+
+	/// The framework's expected location within a platform directory.
+	var relativePath: String {
+		switch linking {
+		case .some(.static):
+			return "\(FrameworkType.staticFolderName)/\(name).framework"
+		default:
+			return "\(name).framework"
+		}
+	}
+}
+
 /// A representation of the cached frameworks
 public struct CachedFramework: Codable {
 	enum CodingKeys: String, CodingKey {
@@ -45,6 +113,7 @@ public struct VersionFile: Codable {
 		case iOS = "iOS"
 		case watchOS = "watchOS"
 		case tvOS = "tvOS"
+		case combined = "combined"
 	}
 
 	/// The revision of the dependency (usually a version number)
@@ -57,6 +126,8 @@ public struct VersionFile: Codable {
 	public let watchOS: [CachedFramework]?
 	/// The tvOS cached frameworks
 	public let tvOS: [CachedFramework]?
+	/// The cached .xcframework wrapper
+	public let combined: CachedXCFramework?
 
 	/// The extension representing a serialized VersionFile.
 	static let pathExtension = "version"
@@ -83,13 +154,15 @@ public struct VersionFile: Codable {
 		macOS: [CachedFramework]?,
 		iOS: [CachedFramework]?,
 		watchOS: [CachedFramework]?,
-		tvOS: [CachedFramework]?
+		tvOS: [CachedFramework]?,
+		xcFramework: CachedXCFramework?
 	) {
 		self.commitish = commitish
 		self.macOS = macOS
 		self.iOS = iOS
 		self.watchOS = watchOS
 		self.tvOS = tvOS
+		self.combined = xcFramework
 	}
 
 	/// Initializes a version file from the content of a file
@@ -427,7 +500,8 @@ private func createVersionFile(
 			macOS: platformCaches[Platform.macOS.rawValue],
 			iOS: platformCaches[Platform.iOS.rawValue],
 			watchOS: platformCaches[Platform.watchOS.rawValue],
-			tvOS: platformCaches[Platform.tvOS.rawValue])
+			tvOS: platformCaches[Platform.tvOS.rawValue],
+			xcFramework: nil)
 
 		return versionFile.write(to: versionFileURL)
 	}
@@ -466,6 +540,7 @@ public func createVersionFileForCommitish(
 				let frameworkName: String
 				let platformName: String
 				let frameworkType: FrameworkType
+
 				switch (
 					url.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent,
 					url.deletingLastPathComponent().lastPathComponent,
@@ -506,7 +581,7 @@ public func createVersionFileForCommitish(
 							return SignalProducer.zip(hashForFileAtURL(binaryURL), details)
 						case .xcFramework:
 							guard let xcFrameworkInfo = bundle.infoDictionary.flatMap(XCFrameworkInfo.init) else {
-								return SignalProducer<(String, FrameworkDetail), CarthageError>(error: .internalError(description: "\(url) cannot parse xcframework Info.plist"))
+								return SignalProducer<(String, FrameworkDetail), CarthageError>(error: .internalError(description: "\(url) cannot parse xcframework Info.plist."))
 							}
 
 							let cumulativeHashProducer = SignalProducer<XCFrameworkLibrary, CarthageError>(xcFrameworkInfo.availableLibraries)
@@ -556,6 +631,72 @@ public func createVersionFileForCommitish(
 		)
 	}
 }
+
+public func createVersionFileForXCFramework(
+	_ commitish: String,
+	dependencyName: String,
+	xcFrameworkURL: URL,
+	rootDirectoryURL: URL
+) -> SignalProducer<(), CarthageError> {
+
+	guard let bundle = Bundle(url: xcFrameworkURL) else {
+		return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not a valid bundle."))
+	}
+
+	guard let executableURL = bundle.executableURL,
+		let packageType = bundle.packageType ?? MachHeader.speculativePackageType(forExecutable: executableURL) else {
+			return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not a valid bundle. Binary is not Mach-O or filetype is not supported."))
+	}
+
+	switch packageType {
+
+	case .framework, .bundle:
+		return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not an xcframework bundle."))
+	case .xcFramework:
+		guard let xcFrameworkInfo = bundle.infoDictionary.flatMap(XCFrameworkInfo.init) else {
+			return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) cannot parse xcframework Info.plist."))
+		}
+
+		let partitionedAvailableLibrariesPerPlatform = xcFrameworkInfo
+			.availableLibraries
+			.reduce(into: [Platform: [XCFrameworkLibrary]]()) { acc, xcFrameworkLibrary in
+				acc[xcFrameworkLibrary.supportedPlatform] = (acc[xcFrameworkLibrary.supportedPlatform] ?? []) + [xcFrameworkLibrary]
+		}
+
+		let p: SignalProducer<(Platform, [(XCFrameworkLibrary, URL)]), NoError> = SignalProducer(partitionedAvailableLibrariesPerPlatform).map { tuple in
+			let (platform, libraries) = tuple
+			let librariesAndExecutableURLs = libraries
+				.map { (library: $0, partialURL: ($0.identifier as NSString).appendingPathComponent($0.path) as String) }
+				.map { (library: $0.library, bundleURL: bundle.bundleURL.appendingPathComponent($0.partialURL)) }
+				.map { (library: $0.library, executableURL:  Bundle(url: $0.bundleURL)!.executableURL!) }
+
+			return (platform, librariesAndExecutableURLs)
+		}
+
+//		let cumulativeHashProducer = SignalProducer<(Platform, [XCFrameworkLibrary]), CarthageError>(partitionedAvailableLibrariesPerPlatform)
+//			.map {
+//				($0.identifier as NSString).appendingPathComponent($0.path) as String }
+//			.map { bundle.bundleURL.appendingPathComponent($0) }
+//			.map { Bundle(url: $0)!.executableURL! }
+//			.flatMap(.merge, hashForFileAtURL)
+
+
+//			.map { $0.data(using: .utf8)! }
+//			.reduce(into: SHA256Hasher()) { hasher, data in try? hasher.hash(data) }
+//			.flatMap(.merge) { $0.finalizeProducer() }
+
+		fatalError()
+
+//		return createVersionFileForCommitish(commitish, xcFrameworkInfo: xcFrameworkInfo, rootDirectoryURL: rootDirectoryURL)
+//		let availableLibrariesURLs = xcFrameworkInfo
+//			.availableLibraries
+//			.map { xcFrameworkURL.appendingPathComponent(($0.identifier as NSString).appendingPathComponent($0.path)) }
+	default:
+		return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not a supported bundle."))
+	}
+}
+
+
 
 /// Determines whether a dependency can be skipped because it is
 /// already cached.

@@ -4,7 +4,7 @@ setup() {
     cd $BATS_TMPDIR
     rm -rf BinaryTest
     mkdir BinaryTest && cd BinaryTest
-    echo 'binary "https://dl.google.com/dl/firebase/ios/carthage/FirebaseAnalyticsBinary.json"' > Cartfile
+    echo 'binary "https://dl.google.com/dl/firebase/ios/carthage/FirebaseAnalyticsBinary.json" == 6.8.1' > Cartfile
 }
 
 teardown() {

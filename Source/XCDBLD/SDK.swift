@@ -110,3 +110,5 @@ extension SDK: CustomStringConvertible {
 		}
 	}
 }
+
+extension SDK: Codable { }

@@ -1322,7 +1322,13 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return SignalProducer.combineLatest(
 					SignalProducer(value: (dependency, version)),
 					self.dependencySet(for: dependency, version: version),
-					versionFileMatches(dependency, version: version, platforms: options.platforms, rootDirectoryURL: self.directoryURL, toolchain: options.toolchain)
+					versionFileMatches(
+						dependency,
+						version: version,
+						platforms: options.platforms,
+						rootDirectoryURL: self.directoryURL,
+						toolchain: options.toolchain
+					)
 				)
 			}
 			.reduce([]) { includedDependencies, nextGroup -> [(Dependency, PinnedVersion)] in
@@ -1397,12 +1403,14 @@ public final class Project { // swiftlint:disable:this type_body_length
 				options.derivedDataPath = derivedDataVersioned.resolvingSymlinksInPath().path
 
 				return self.symlinkBuildPathIfNeeded(for: dependency, version: version)
-					.then(build(dependency: dependency,
-								version: version,
-								self.directoryURL,
-								withOptions: options,
-								sdkFilter: sdkFilter))
-					.flatMapError { error -> BuildSchemeProducer in
+					.then(
+						build(
+							dependency: dependency,
+							version: version,
+							self.directoryURL,
+							withOptions: options,
+							sdkFilter: sdkFilter)
+				).flatMapError { error -> BuildSchemeProducer in
 						switch error {
 						case .noSharedFrameworkSchemes:
 							// Log that building the dependency is being skipped,
