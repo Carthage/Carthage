@@ -332,14 +332,14 @@ internal enum PackageType: String {
 /// If this built product has any *.bcsymbolmap files they will also be copied.
 ///
 /// Returns a signal that will send the URL after copying upon .success.
-private func copyBuildProductIntoDirectory(_ directoryURL: URL, _ settings: BuildSettings, swiftVersion: String) -> SignalProducer<BuiltProductInfo, CarthageError> {
+private func copyBuildProductIntoDirectory(_ directoryURL: URL, _ settings: BuildSettings, swiftVersion: String, platform: Platform) -> SignalProducer<BuiltProductInfo, CarthageError> {
 	let target = settings.wrapperName.map(directoryURL.appendingPathComponent)
 	return SignalProducer(result: target.fanout(settings.wrapperURL))
 		.flatMap(.merge) { target, source in
 			return copyProduct(source.resolvingSymlinksInPath(), target)
 		}
 		.flatMap(.merge) { url -> SignalProducer<BuiltProductInfo, CarthageError> in
-            let builtProductInfo = BuiltProductInfo(swiftToolchainVersion: swiftVersion, productUrl: url)
+            let builtProductInfo = BuiltProductInfo(swiftToolchainVersion: swiftVersion, productUrl: url, platform: platform)
             return copyBCSymbolMapsForBuildProductIntoDirectory(directoryURL, settings)
                 .collect()
                 .flatMap(.merge) { urls -> SignalProducer<BuiltProductInfo, CarthageError> in
@@ -538,9 +538,10 @@ private func mergeBuildProducts(
 	deviceBuildSettings: BuildSettings,
 	simulatorBuildSettings: BuildSettings,
 	into destinationFolderURL: URL,
-    swiftVersion: String
+    swiftVersion: String,
+    platform: Platform
 ) -> SignalProducer<BuiltProductInfo, CarthageError> {
-    return copyBuildProductIntoDirectory(destinationFolderURL, deviceBuildSettings, swiftVersion: swiftVersion)
+    return copyBuildProductIntoDirectory(destinationFolderURL, deviceBuildSettings, swiftVersion: swiftVersion, platform: platform)
 		.flatMap(.merge) { builtProductInfo -> SignalProducer<BuiltProductInfo, CarthageError> in
 			let executableURLs = (deviceBuildSettings.executableURL.fanout(simulatorBuildSettings.executableURL)).map { [ $0, $1 ] }
 			let outputURL = deviceBuildSettings.executablePath.map(destinationFolderURL.appendingPathComponent)
@@ -663,7 +664,7 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
                         return swiftVersion(usingToolchain: options.toolchain)
                             .mapError { error in CarthageError.internalError(description: error.description) }
                             .flatMap(.merge) { swiftVersion -> SignalProducer<BuiltProductInfo, CarthageError> in
-                                return copyBuildProductIntoDirectory(settings.productDestinationPath(in: folderURL), settings, swiftVersion: swiftVersion)
+                                return copyBuildProductIntoDirectory(settings.productDestinationPath(in: folderURL), settings, swiftVersion: swiftVersion, platform: platform)
                             }
 					}
 
@@ -722,7 +723,8 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
                                     deviceBuildSettings: deviceSettings,
                                     simulatorBuildSettings: simulatorSettings,
                                     into: deviceSettings.productDestinationPath(in: folderURL),
-                                    swiftVersion: swiftVersion
+                                    swiftVersion: swiftVersion,
+                                    platform: platform
                                 )
                             }
                     }

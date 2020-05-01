@@ -1,16 +1,18 @@
 import Foundation
 import ReactiveSwift
 import Result
+import XCDBLD
 
 public struct BuiltProductInfo {
     
     var swiftToolchainVersion: String
     var productUrl: URL
+    var platform: Platform
     var commitish: String?
     var fileNames: [String] = []
     
     private var destinationDirectoryURL: URL {
-        return productUrl.deletingLastPathComponent()
+        return productUrl.deletingLastPathComponent().deletingLastPathComponent()
     }
     private var productFileName: String {
         return productUrl.lastPathComponent
@@ -31,6 +33,7 @@ public struct BuiltProductInfo {
     var asFile: BuiltProductInfoFile {
         return BuiltProductInfoFile(swiftToolchainVersion: swiftToolchainVersion,
                                     productFileName: productFileName,
+                                    platform: platform,
                                     commitish: commitish,
                                     fileNames: fileNames.sorted())
     }
@@ -38,7 +41,7 @@ public struct BuiltProductInfo {
     func writeJSONFile() -> Result<(), CarthageError> {
         return Result(at: destinationDirectoryURL, attempt: {
             let metadataFileURL = $0
-                .appendingPathComponent(".\(productFileName)")
+                .appendingPathComponent(".\(productFileName)-\(platform)")
                 .appendingPathExtension("builtProductInfo")
             let encoder = JSONEncoder()
             if #available(OSX 10.13, *) {
@@ -55,6 +58,7 @@ public struct BuiltProductInfo {
 public struct BuiltProductInfoFile: Codable {
     var swiftToolchainVersion: String?
     var productFileName: String?
+    var platform: Platform
     var commitish: String?
     var fileNames: [String] = []
 }
@@ -74,3 +78,5 @@ public func addCommitish(commitish: String, to builtProductInfos: [BuiltProductI
         })
     }
 }
+
+extension Platform : Codable {}
