@@ -1,10 +1,3 @@
-//
-//  FrameworkInformationProvider.swift
-//  CarthageKit
-//
-//  Created by Laskowski, Michal on 22/04/2020.
-//
-
 import Foundation
 import ReactiveSwift
 import XCDBLD
