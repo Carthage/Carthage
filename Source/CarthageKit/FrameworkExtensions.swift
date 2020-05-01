@@ -408,27 +408,36 @@ extension Reactive where Base: FileManager {
 		}
 		.map { URL(fileURLWithPath: $0, isDirectory: true) }
 	}
-  
-  public func copyItem(_ source: URL, into: URL) -> SignalProducer<URL, CarthageError> {
-    let destination = into.appendingPathComponent(source.lastPathComponent)
-    do {
-      try self.base.copyItem(at: source, to: destination, avoiding·rdar·32984063: true)
-      return SignalProducer(value: destination)
-    } catch {
-      return SignalProducer(error: .internalError(description: "copyItem failed: \(error)\n\(source)\n\(into)"))
-    }
-  }
 
-  public func replaceItem(at originalItemURL: URL, withItemAt newItemURL: URL) -> SignalProducer<(), CarthageError> {
-    do {
-      guard (try self.base.replaceItemAt(originalItemURL, withItemAt: newItemURL, backupItemName: nil, options: .usingNewMetadataOnly)) != nil else {
-        return SignalProducer(error: .internalError(description: "replaceItem succeeded, but returned nil"))
-      }
-      return SignalProducer(.empty)
-    } catch {
-      return SignalProducer(error: .internalError(description: "replaceItem failed: \(error)"))
-    }
-  }
+	/// Removes the file located at the given URL
+	///
+	/// Sends empty value on successful removal
+	func removeItem(at url: URL) -> SignalProducer<(), CarthageError> {
+		return SignalProducer {
+			return Result(at: url, attempt: self.removeItem(at:))
+		}
+	}
+
+	public func copyItem(_ source: URL, into: URL) -> SignalProducer<URL, CarthageError> {
+		let destination = into.appendingPathComponent(source.lastPathComponent)
+		do {
+			try self.base.copyItem(at: source, to: destination, avoiding·rdar·32984063: true)
+			return SignalProducer(value: destination)
+		} catch {
+			return SignalProducer(error: .internalError(description: "copyItem failed: \(error)\n\(source)\n\(into)"))
+		}
+	}
+
+	public func replaceItem(at originalItemURL: URL, withItemAt newItemURL: URL) -> SignalProducer<(), CarthageError> {
+		do {
+			guard (try self.base.replaceItemAt(originalItemURL, withItemAt: newItemURL, backupItemName: nil, options: .usingNewMetadataOnly)) != nil else {
+				return SignalProducer(error: .internalError(description: "replaceItem succeeded, but returned nil"))
+			}
+			return SignalProducer(.empty)
+		} catch {
+			return SignalProducer(error: .internalError(description: "replaceItem failed: \(error)"))
+		}
+	}
 }
 
 private let defaultSessionError = NSError(domain: Constants.bundleIdentifier, code: 1, userInfo: nil)
