@@ -11,6 +11,18 @@ public struct BuiltProductInfo {
     var commitish: String?
     var fileNames: [String] = []
     
+    #if swift(>=5.0)
+    #else
+    init(swiftToolchainVersion: String,
+         productUrl: URL,
+         platform: Platform)
+    {
+        self.swiftToolchainVersion = swiftToolchainVersion
+        self.productUrl = productUrl
+        self.platform = platform
+    }
+    #endif
+    
     private var destinationDirectoryURL: URL {
         return productUrl.deletingLastPathComponent().deletingLastPathComponent()
     }
