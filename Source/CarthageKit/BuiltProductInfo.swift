@@ -42,7 +42,10 @@ public struct BuiltProductInfo {
         return copy
     }
     
-    var asFile: BuiltProductInfoFile {
+    func asFile() throws -> BuiltProductInfoFile {
+        guard let commitish = commitish else {
+            throw CarthageError.internalError(description: "BuiltProductInfo commitish is nil")
+        }
         return BuiltProductInfoFile(swiftToolchainVersion: swiftToolchainVersion,
                                     productFileName: productFileName,
                                     platform: platform,
@@ -61,18 +64,18 @@ public struct BuiltProductInfo {
             } else {
                 encoder.outputFormatting = [.prettyPrinted]
             }
-            let jsonData = try encoder.encode(self.asFile)
+            let jsonData = try encoder.encode(try self.asFile())
             try jsonData.write(to: metadataFileURL, options: .atomic)
         })
     }
 }
 
 public struct BuiltProductInfoFile: Codable {
-    var swiftToolchainVersion: String?
-    var productFileName: String?
+    var swiftToolchainVersion: String
+    var productFileName: String
     var platform: Platform
-    var commitish: String?
-    var fileNames: [String] = []
+    var commitish: String
+    var fileNames: [String]
 }
 
 public func writeBuiltProductInfoJSONFile(builtProductInfo: BuiltProductInfo) -> SignalProducer<(), CarthageError> {
