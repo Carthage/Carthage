@@ -66,20 +66,30 @@ class BuildArgumentsSpec: QuickSpec {
 			}
 
 			describe("specifying the sdk") {
-				for sdk in SDK.allSDKs.subtracting([.macOSX]) {
-					itCreatesBuildArguments("includes \(sdk) in the argument if specified", arguments: ["-sdk", sdk.rawValue]) { subject in
-						subject.sdk = sdk
+				for sdk in SDK.allSDKs {
+					switch sdk {
+					case .macOSX:
+						// Passing in -sdk macosx appears to break implicit dependency
+						// resolution (see Carthage/Carthage#347).
+						//
+						// Since we wouldn't be trying to build this target unless it were
+						// for macOS already, just let xcodebuild figure out the SDK on its
+						// own.
+						itCreatesBuildArguments("does not include the sdk flag if .macOSX is specified", arguments: []) { subject in
+							subject.sdk = .macOSX
+						}
+					case .iPhoneOS, .watchOS, .tvOS:
+						// Thread Sanitizer isn't supported on other than macOS devices
+						// If ENABLE_THREAD_SANITIZER=YES passed through env, it will lead
+						// to error.
+						itCreatesBuildArguments("includes \(sdk) in the argument if specified", arguments: ["-sdk", sdk.rawValue, "ENABLE_THREAD_SANITIZER=NO"]) { subject in
+							subject.sdk = sdk
+						}
+					default:
+						itCreatesBuildArguments("includes \(sdk) in the argument if specified", arguments: ["-sdk", sdk.rawValue]) { subject in
+							subject.sdk = sdk
+						}
 					}
-				}
-
-				// Passing in -sdk macosx appears to break implicit dependency
-				// resolution (see Carthage/Carthage#347).
-				//
-				// Since we wouldn't be trying to build this target unless it were
-				// for macOS already, just let xcodebuild figure out the SDK on its
-				// own.
-				itCreatesBuildArguments("does not include the sdk flag if .macOSX is specified", arguments: []) { subject in
-					subject.sdk = .macOSX
 				}
 			}
 

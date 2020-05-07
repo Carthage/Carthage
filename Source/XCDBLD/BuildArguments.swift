@@ -109,6 +109,13 @@ public struct BuildArguments {
 			if sdk != .macOSX {
 				args += [ "-sdk", sdk.rawValue ]
 			}
+
+			// Thread Sanitizer isn't supported on other than macOS devices
+			// If ENABLE_THREAD_SANITIZER=YES passed through env, it will lead
+			// to error.
+			if [ .iPhoneOS, .watchOS, .tvOS ].contains(sdk) {
+				args += [ "ENABLE_THREAD_SANITIZER=NO" ]
+			}
 		}
 
 		if let toolchain = toolchain {
