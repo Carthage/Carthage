@@ -242,7 +242,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 					self._projectEventsObserver.send(value: .downloadingBinaryFrameworkDefinition(.binary(binary), binary.url))
 					
 					let request = self.buildURLRequest(for: binary.url, useNetrc: self.useNetrc)
-					return URLSession.shared.reactive.data(with: request)
+					return URLSession.proxiedSession.reactive.data(with: request)
 						.mapError { CarthageError.readFailed(binary.url, $0 as NSError) }
 						.attemptMap { data, _ in
 							return BinaryProject.from(jsonData: data).mapError { error in
@@ -1162,7 +1162,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			return SignalProducer(value: fileURL)
 		} else {
 			let request = self.buildURLRequest(for: url, useNetrc: self.useNetrc)
-			return URLSession.shared.reactive.download(with: request)
+			return URLSession.proxiedSession.reactive.download(with: request)
 				.on(started: {
 					self._projectEventsObserver.send(value: .downloadingBinaries(dependency, version.description))
 				})
