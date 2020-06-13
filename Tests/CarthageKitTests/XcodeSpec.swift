@@ -238,7 +238,7 @@ class XcodeSpec: QuickSpec {
 						.ignoreTaskData()
 						.mapError(CarthageError.taskError)
 						.map { String(data: $0, encoding: .utf8) ?? "" }
-						.flatMap(.merge) { output -> SignalProducer<Bool, NoError> in
+						.flatMap(.merge) { output in
 							return SignalProducer(value: output.contains("SO "))
 					}
 			}.single()

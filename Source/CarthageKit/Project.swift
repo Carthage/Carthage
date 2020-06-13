@@ -108,9 +108,15 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// to download binary only frameworks.
 	public var useNetrc = false
 
+	#if compiler(>=5)
+	/// Sends each event that occurs to a project underneath the receiver (or
+	/// the receiver itself).
+	public let projectEvents: Signal<ProjectEvent, Never>
+	#else
 	/// Sends each event that occurs to a project underneath the receiver (or
 	/// the receiver itself).
 	public let projectEvents: Signal<ProjectEvent, NoError>
+	#endif
 	private let _projectEventsObserver: Signal<ProjectEvent, NoError>.Observer
 
 	public init(directoryURL: URL) {

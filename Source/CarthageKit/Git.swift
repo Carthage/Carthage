@@ -50,6 +50,32 @@ public struct FetchCache {
 	}
 }
 
+#if compiler(>=5)
+/// Shells out to `git` with the given arguments, optionally in the directory
+/// of an existing repository.
+public func launchGitTask(
+	_ arguments: [String],
+	repositoryFileURL: URL? = nil,
+	standardInput: SignalProducer<Data, Never>? = nil,
+	environment: [String: String]? = nil
+) -> SignalProducer<String, CarthageError> {
+	// See https://github.com/Carthage/Carthage/issues/219.
+	var updatedEnvironment = environment ?? ProcessInfo.processInfo.environment
+	// Error rather than prompt for credentials
+	updatedEnvironment["GIT_TERMINAL_PROMPT"] = "0"
+	// Error rather than prompt to resolve ssh errors (such as missing known_hosts entry)
+	updatedEnvironment["GIT_SSH_COMMAND"] = "ssh -oBatchMode=yes"
+
+	let taskDescription = Task("/usr/bin/env", arguments: [ "git" ] + arguments, workingDirectoryPath: repositoryFileURL?.path, environment: updatedEnvironment)
+
+	return taskDescription.launch(standardInput: standardInput)
+		.ignoreTaskData()
+		.mapError(CarthageError.taskError)
+		.map { data in
+			return String(data: data, encoding: .utf8)!
+	}
+}
+#else
 /// Shells out to `git` with the given arguments, optionally in the directory
 /// of an existing repository.
 public func launchGitTask(
@@ -72,8 +98,10 @@ public func launchGitTask(
 		.mapError(CarthageError.taskError)
 		.map { data in
 			return String(data: data, encoding: .utf8)!
-		}
+	}
 }
+#endif
+
 
 /// Checks if the git version satisfies the given required version.
 public func ensureGitVersion(_ requiredVersion: String = carthageRequiredGitVersion) -> SignalProducer<Bool, CarthageError> {
@@ -440,6 +468,18 @@ internal func branchExistsInRepository(_ repositoryFileURL: URL, pattern: String
 		}
 }
 
+#if compiler(>=5)
+/// Determines whether the specified revision identifies a valid commit.
+///
+/// If the specified file URL does not represent a valid Git repository, `false`
+/// will be sent.
+public func commitExistsInRepository(_ repositoryFileURL: URL, revision: String = "HEAD") -> SignalProducer<Bool, Never> {
+	return ensureDirectoryExistsAtURL(repositoryFileURL)
+		.then(launchGitTask([ "rev-parse", "\(revision)^{commit}" ], repositoryFileURL: repositoryFileURL))
+		.then(SignalProducer<Bool, NoError>(value: true))
+		.flatMapError { _ in .init(value: false) }
+}
+#else
 /// Determines whether the specified revision identifies a valid commit.
 ///
 /// If the specified file URL does not represent a valid Git repository, `false`
@@ -450,6 +490,7 @@ public func commitExistsInRepository(_ repositoryFileURL: URL, revision: String 
 		.then(SignalProducer<Bool, NoError>(value: true))
 		.flatMapError { _ in .init(value: false) }
 }
+#endif
 
 /// NSTask throws a hissy fit (a.k.a. exception) if the working directory
 /// doesn't exist, so pre-emptively check for that.
@@ -491,6 +532,27 @@ internal func resolveTagInRepository(_ repositoryFileURL: URL, _ tag: String) ->
 		}
 }
 
+#if compiler(>=5)
+/// Attempts to determine whether the given directory represents a Git
+/// repository.
+public func isGitRepository(_ directoryURL: URL) -> SignalProducer<Bool, Never> {
+	return ensureDirectoryExistsAtURL(directoryURL)
+		.then(launchGitTask([ "rev-parse", "--git-dir" ], repositoryFileURL: directoryURL))
+		.map { outputIncludingLineEndings in
+			let relativeOrAbsoluteGitDirectory = outputIncludingLineEndings.trimmingCharacters(in: .newlines)
+			var absoluteGitDirectory: String?
+			if (relativeOrAbsoluteGitDirectory as NSString).isAbsolutePath {
+				absoluteGitDirectory = relativeOrAbsoluteGitDirectory
+			} else {
+				absoluteGitDirectory = directoryURL.appendingPathComponent(relativeOrAbsoluteGitDirectory).path
+			}
+			var isDirectory: ObjCBool = false
+			let directoryExists = absoluteGitDirectory.map { FileManager.default.fileExists(atPath: $0, isDirectory: &isDirectory) } ?? false
+			return directoryExists && isDirectory.boolValue
+	}
+	.flatMapError { _ in SignalProducer(value: false) }
+}
+#else
 /// Attempts to determine whether the given directory represents a Git
 /// repository.
 public func isGitRepository(_ directoryURL: URL) -> SignalProducer<Bool, NoError> {
@@ -510,6 +572,7 @@ public func isGitRepository(_ directoryURL: URL) -> SignalProducer<Bool, NoError
 		}
 		.flatMapError { _ in SignalProducer(value: false) }
 }
+#endif
 
 /// Adds the given submodule to the given repository, cloning from `fetchURL` if
 /// the desired revision does not exist or the submodule needs to be cloned.

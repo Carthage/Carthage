@@ -1,6 +1,23 @@
 // swift-tools-version:4.2
 import PackageDescription
 
+let compilerSpecificDependencies: [Package.Dependency]
+#if compiler(>=5)
+compilerSpecificDependencies = [
+    .package(url: "https://github.com/antitypical/Result.git", from: "5.0.0"),
+    .package(url: "https://github.com/Carthage/ReactiveTask.git", .branch("release-0.17.0")),
+    .package(url: "https://github.com/Carthage/Commandant.git", from: "0.17.0"),
+    .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "6.0.0"),
+]
+#else
+compilerSpecificDependencies = [
+    .package(url: "https://github.com/antitypical/Result.git", from: "4.1.0"),
+    .package(url: "https://github.com/Carthage/ReactiveTask.git", .upToNextMinor(from: "0.16.0")),
+    .package(url: "https://github.com/Carthage/Commandant.git", "0.16.0" ..< "0.17.0"),
+    .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "5.0.0"),
+]
+#endif
+
 let package = Package(
     name: "Carthage",
     products: [
@@ -9,16 +26,12 @@ let package = Package(
         .executable(name: "carthage", targets: ["carthage"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/antitypical/Result.git", from: "4.1.0"),
-        .package(url: "https://github.com/Carthage/ReactiveTask.git", from: "0.16.0"),
-        .package(url: "https://github.com/Carthage/Commandant.git", from: "0.16.0"),
         .package(url: "https://github.com/jdhealy/PrettyColors.git", from: "5.0.2"),
-        .package(url: "https://github.com/ReactiveCocoa/ReactiveSwift.git", from: "5.0.0"),
         .package(url: "https://github.com/mdiep/Tentacle.git", from: "0.13.1"),
         .package(url: "https://github.com/thoughtbot/Curry.git", from: "4.0.2"),
         .package(url: "https://github.com/Quick/Quick.git", from: "2.1.0"),
         .package(url: "https://github.com/Quick/Nimble.git", from: "8.0.1"),
-    ],
+    ] + compilerSpecificDependencies,
     targets: [
         .target(
             name: "XCDBLD",
