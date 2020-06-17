@@ -47,9 +47,6 @@ public enum ProjectEvent {
 
 	/// Building an uncached project.
 	case buildingUncached(Dependency)
-
-	/// Removing unused packages
-	case removingUnneededItem(URL)
 }
 
 extension ProjectEvent: Equatable {
@@ -955,124 +952,6 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return SignalProducer(sortedPinnedDependencies)
 			}
 	}
-
-	public func removeUnneededItems() -> SignalProducer<(), CarthageError> {
-		return SignalProducer<(), CarthageError>.empty
-/*
-		let binariesDirectoryURL = self.directoryURL
-			.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
-			.resolvingSymlinksInPath()
-
-		return loadResolvedCartfile()
-			.flatMap(.merge) { resolved -> SignalProducer<Dependency, CarthageError> in
-				return SignalProducer(resolved.dependencies.keys)
-			}
-			.flatMap(.merge) { dependency -> SignalProducer<(checkoutURL: URL, versionFileURL: URL, binaryURLs: [URL]), CarthageError> in
-				let checkoutURL = self.directoryURL
-					.appendingPathComponent(dependency.relativePath, isDirectory: true)
-					.resolvingSymlinksInPath()
-
-				let versionFileURL = VersionFile
-					.url(for: dependency, rootDirectoryURL: self.directoryURL)
-					.resolvingSymlinksInPath()
-
-				let frameworkURLs = buildableSchemesInDirectory(checkoutURL, withConfiguration: "Release")
-					.flatMap(.concurrent(limit: 4)) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
-						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
-						return BuildSettings.load(with: buildArguments)
-					}
-					.flatMap(.concat) { settings -> SignalProducer<(BuildSettings, String), CarthageError> in
-						return SignalProducer(settings.wrapperName).map { (settings, $0) }
-					}
-					.flatMap(.concat) { settings, wrapperName -> SignalProducer<(URL, isStatic: Bool), CarthageError> in
-						settings.buildSDKs.map { sdk -> (URL, isStatic: Bool) in
-							let url = settings.productDestinationPath(in: binariesDirectoryURL.appendingPathComponent(sdk.platform.rawValue, isDirectory: true))
-								.appendingPathComponent(wrapperName)
-							let isStatic = settings.frameworkType.value.flatMap { $0 } == .static
-							return (url, isStatic)
-						}
-					}
-
-				return frameworkURLs.flatMap(.concurrent(limit: 4)) { frameworkURL, isStatic -> SignalProducer<URL, CarthageError> in
-						let framework = SignalProducer<URL, CarthageError>(value: frameworkURL)
-
-						if isStatic {
-							return framework
-						}
-
-						let bcSymbolMaps = BCSymbolMapsForFramework(frameworkURL)
-							.flatMapError { _ in SignalProducer<URL, CarthageError>.empty }
-						let dSYMs = dSYMForFramework(frameworkURL, inDirectoryURL: frameworkURL.deletingLastPathComponent())
-							.flatMapError { _ in SignalProducer<URL, CarthageError>.empty }
-						return .merge(framework, bcSymbolMaps, dSYMs)
-					}
-					.collect()
-					.map { (checkoutURL, versionFileURL, $0) }
-			}
-			.collect()
-			.map { urls -> (checkoutURLs: Set<URL>, versionFileURLs: Set<URL>, binaryURLs: Set<URL>) in
-				var checkoutURLSet: Set<URL> = []
-				var versionFileURLSet: Set<URL> = []
-				var binaryURLSet: Set<URL> = []
-
-				for (checkoutURL, versionFileURL, binaryURLs) in urls {
-					checkoutURLSet.insert(checkoutURL)
-					versionFileURLSet.insert(versionFileURL)
-					binaryURLSet.formUnion(binaryURLs)
-				}
-
-				return (checkoutURLSet, versionFileURLSet, binaryURLSet)
-			}
-			.flatMap(.merge) { checkoutURLs, versionFileURLs, binaryURLs -> SignalProducer<URL, CarthageError> in
-				let fileManager = FileManager.default
-
-				var urls: [URL] = []
-				urls += (try? fileManager
-					.contentsOfDirectory(
-						at: self.directoryURL.appendingPathComponent(Constants.checkoutsFolderPath, isDirectory: true),
-						includingPropertiesForKeys: nil
-					)
-					.map { $0.resolvingSymlinksInPath() }
-					.filter { !checkoutURLs.contains($0) }) ?? []
-
-				urls += (try? fileManager
-					.contentsOfDirectory(
-						at: self.directoryURL.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true),
-						includingPropertiesForKeys: nil
-					)
-					.map { $0.resolvingSymlinksInPath() }
-					.filter { $0.pathExtension == VersionFile.pathExtension &&
-						!versionFileURLs.contains($0) }) ?? []
-
-				urls += Platform.supportedPlatforms
-					.flatMap { platform -> [URL] in
-						(try? fileManager
-							.contentsOfDirectory(
-								at: self.directoryURL.appendingPathComponent(platform.relativePath, isDirectory: true),
-								includingPropertiesForKeys: nil
-							)
-							.filter { !binaryURLs.contains($0) && $0.lastPathComponent != FrameworkType.staticFolderName }) ?? []
-					}
-
-				urls += Platform.supportedPlatforms
-					.flatMap { platform -> [URL] in
-						(try? fileManager
-							.contentsOfDirectory(
-								at: self.directoryURL
-									.appendingPathComponent(platform.relativePath, isDirectory: true)
-									.appendingPathComponent(FrameworkType.staticFolderName, isDirectory: true),
-								includingPropertiesForKeys: nil
-							)
-							.filter { !binaryURLs.contains($0) }) ?? []
-					}
-
-				return SignalProducer(Set(urls))
-			}
-			.on { self._projectEventsObserver.send(value: ProjectEvent.removingUnneededItem($0)) }
-			.flatMap(.merge, self.removeItem(at:))
-			.then(SignalProducer<(), CarthageError>.empty)
-*/
-		}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
 	/// optionally they are limited by the given list of dependency names.
