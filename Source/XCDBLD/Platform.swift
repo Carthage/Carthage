@@ -1,7 +1,7 @@
 import Foundation
 
 /// Represents a platform to build for.
-public enum Platform: String {
+internal enum Platform: String {
 	/// macOS.
 	case macOS = "Mac"
 
@@ -18,7 +18,7 @@ public enum Platform: String {
 	public static let supportedPlatforms: [Platform] = [ .macOS, .iOS, .watchOS, .tvOS ]
 
 	/// The SDKs that need to be built for this platform.
-	public var SDKs: [SDK] {
+	public var SDKs: [SD_K] {
 		switch self {
 		case .macOS:
 			return [ .macOSX ]

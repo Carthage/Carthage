@@ -61,19 +61,22 @@ public struct VersionFile: Codable {
 	/// The extension representing a serialized VersionFile.
 	static let pathExtension = "version"
 
-	subscript(_ platform: Platform) -> [CachedFramework]? {
-		switch platform {
-		case .macOS:
+	subscript(_ platform: SDK) -> [CachedFramework]? {
+		switch platform.platformSimulatorlessFromHeuristic {
+		case "Mac":
 			return macOS
 
-		case .iOS:
+		case "iOS":
 			return iOS
 
-		case .watchOS:
+		case "watchOS":
 			return watchOS
 
-		case .tvOS:
+		case "tvOS":
 			return tvOS
+			
+		default:
+			return nil
 		}
 	}
 
@@ -124,11 +127,11 @@ public struct VersionFile: Codable {
 	///   - binariesDirectoryURL: the binaries directory
 	public func frameworkURL(
 		for cachedFramework: CachedFramework,
-		platform: Platform,
+		platform: SDK,
 		binariesDirectoryURL: URL
 	) -> URL {
 		return binariesDirectoryURL
-			.appendingPathComponent(platform.rawValue, isDirectory: true)
+			.appendingPathComponent(platform.platformSimulatorlessFromHeuristic, isDirectory: true)
 			.resolvingSymlinksInPath()
 			.appendingPathComponent(cachedFramework.relativePath, isDirectory: true)
 	}
@@ -140,7 +143,7 @@ public struct VersionFile: Codable {
 	///   - binariesDirectoryURL: the binaries directory
 	public func frameworkBinaryURL(
 		for cachedFramework: CachedFramework,
-		platform: Platform,
+		platform: SDK,
 		binariesDirectoryURL: URL
 	) -> URL {
 		return frameworkURL(
@@ -155,7 +158,7 @@ public struct VersionFile: Codable {
 	/// order that they were provided in.
 	public func hashes(
 		for cachedFrameworks: [CachedFramework],
-		platform: Platform,
+		platform: SDK,
 		binariesDirectoryURL: URL
 	) -> SignalProducer<String?, CarthageError> {
 		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
@@ -184,7 +187,7 @@ public struct VersionFile: Codable {
 	/// as they will be compatible with it by definition.
 	public func swiftVersionMatches(
 		for cachedFrameworks: [CachedFramework],
-		platform: Platform,
+		platform: SDK,
 		binariesDirectoryURL: URL,
 		localSwiftVersion: String
 	) -> SignalProducer<Bool, CarthageError> {
@@ -210,7 +213,7 @@ public struct VersionFile: Codable {
 
 	/// Check if the version file matches its values with the ones provided
 	public func satisfies(
-		platform: Platform,
+		platform: SDK,
 		commitish: String,
 		binariesDirectoryURL: URL,
 		localSwiftVersion: String
@@ -246,7 +249,7 @@ public struct VersionFile: Codable {
 
 	/// Check if the version file matches its values with the ones provided
 	public func satisfies(
-		platform: Platform,
+		platform: SDK,
 		commitish: String,
 		hashes: [String?],
 		swiftVersionMatches: [Bool]
@@ -301,7 +304,7 @@ public struct VersionFile: Codable {
 ///
 /// Returns a signal that succeeds once the file has been created.
 public func createVersionFileForCurrentProject(
-	platforms: Set<Platform>,
+	platforms: Set<SDK>?,
 	buildProducts: [URL],
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
@@ -396,7 +399,7 @@ public func createVersionFileForCurrentProject(
 public func createVersionFile(
 	for dependency: Dependency,
 	version: PinnedVersion,
-	platforms: Set<Platform>,
+	platforms: Set<SDK>?,
 	buildProducts: [URL],
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
@@ -422,12 +425,18 @@ private func createVersionFile(
 		let versionFileURL = rootBinariesURL
 			.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
 
+		let knownIn2019YearSDK: (String) -> String = { prefix in
+			SDK.knownIn2019YearSDKs
+				.first(where: { sdk in sdk.rawValue.hasPrefix(prefix) } )!
+				.platformSimulatorlessFromHeuristic
+		}
+
 		let versionFile = VersionFile(
 			commitish: commitish,
-			macOS: platformCaches[Platform.macOS.rawValue],
-			iOS: platformCaches[Platform.iOS.rawValue],
-			watchOS: platformCaches[Platform.watchOS.rawValue],
-			tvOS: platformCaches[Platform.tvOS.rawValue])
+			macOS: platformCaches[knownIn2019YearSDK("mac")],
+			iOS: platformCaches[knownIn2019YearSDK("iphoneos")],
+			watchOS: platformCaches[knownIn2019YearSDK("watchos")],
+			tvOS: platformCaches[knownIn2019YearSDK("appletvos")])
 
 		return versionFile.write(to: versionFileURL)
 	}
@@ -442,15 +451,16 @@ private func createVersionFile(
 public func createVersionFileForCommitish(
 	_ commitish: String,
 	dependencyName: String,
-	platforms: Set<Platform> = Set(Platform.supportedPlatforms),
+	platforms: Set<SDK>? = nil,
 	buildProducts: [URL],
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
 	var platformCaches: [String: [CachedFramework]] = [:]
 
-	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
+	let platformsToCache = (platforms ?? SDK.knownIn2019YearSDKs).intersection(SDK.knownIn2019YearSDKs)
+
 	for platform in platformsToCache {
-		platformCaches[platform.rawValue] = []
+		platformCaches[platform.platformSimulatorlessFromHeuristic] = []
 	}
 
 	struct FrameworkDetail {
@@ -537,7 +547,7 @@ public func createVersionFileForCommitish(
 public func versionFileMatches(
 	_ dependency: Dependency,
 	version: PinnedVersion,
-	platforms: Set<Platform>,
+	platforms: Set<SDK>?,
 	rootDirectoryURL: URL,
 	toolchain: String?
 ) -> SignalProducer<Bool?, CarthageError> {
@@ -548,7 +558,7 @@ public func versionFileMatches(
 
 	let commitish = version.commitish
 
-	let platformsToCheck = platforms.isEmpty ? Set<Platform>(Platform.supportedPlatforms) : platforms
+	let platformsToCheck = (platforms ?? SDK.knownIn2019YearSDKs).intersection(SDK.knownIn2019YearSDKs)
 
 	let rootBinariesURL = rootDirectoryURL
 		.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
@@ -557,7 +567,7 @@ public func versionFileMatches(
 	return swiftVersion(usingToolchain: toolchain)
 		.mapError { error in CarthageError.internalError(description: error.description) }
 		.flatMap(.concat) { localSwiftVersion in
-			return SignalProducer<Platform, CarthageError>(platformsToCheck)
+			return SignalProducer<SDK, CarthageError>(platformsToCheck)
 				.flatMap(.merge) { platform in
 					return versionFile.satisfies(
 						platform: platform,

@@ -1,11 +1,13 @@
 import XCDBLD
+import Result
+import ReactiveSwift
 
 /// The build options used for building `xcodebuild` command.
 public struct BuildOptions {
 	/// The Xcode configuration to build.
 	public var configuration: String
 	/// The platforms to build for.
-	public var platforms: Set<Platform>
+	public var platforms: Set<SDK>?
 	/// The toolchain to build with.
 	public var toolchain: String?
 	/// The path to the custom derived data folder.
@@ -17,7 +19,7 @@ public struct BuildOptions {
 
 	public init(
 		configuration: String,
-		platforms: Set<Platform> = [],
+		platforms: Set<SDK>? = nil,
 		toolchain: String? = nil,
 		derivedDataPath: String? = nil,
 		cacheBuilds: Bool = true,

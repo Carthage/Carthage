@@ -18,7 +18,8 @@ extension BuildOptions: OptionsProtocol {
 
 		return curry(BuildOptions.init)
 			<*> mode <| Option(key: "configuration", defaultValue: "Release", usage: "the Xcode configuration to build" + addendum)
-			<*> (mode <| Option<BuildPlatform>(key: "platform", defaultValue: .all, usage: platformUsage)).map { $0.platforms }
+			<*> (mode <| Option<BuildPlatform>(key: "platform", defaultValue: .all, usage: platformUsage))
+				.map { if case let .setDisjointWithFlaggedAll(set) = $0 { return set } else { return nil } }
 			<*> mode <| Option<String?>(key: "toolchain", defaultValue: nil, usage: "the toolchain to build with")
 			<*> mode <| Option<String?>(key: "derived-data", defaultValue: nil, usage: "path to the custom derived data folder")
 			<*> mode <| Option(key: "cache-builds", defaultValue: false, usage: "use cached builds when possible")
@@ -220,115 +221,33 @@ public struct BuildCommand: CommandProtocol {
 	}
 }
 
-/// Represents the user's chosen platform to build for.
 public enum BuildPlatform: Equatable {
-	/// Build for all available platforms.
+	case setDisjointWithFlaggedAll(Set<SDK>)
 	case all
-
-	/// Build only for iOS.
-	case iOS
-
-	/// Build only for macOS.
-	case macOS
-
-	/// Build only for watchOS.
-	case watchOS
-
-	/// Build only for tvOS.
-	case tvOS
-
-	/// Build for multiple platforms within the list.
-	case multiple([BuildPlatform])
-
-	/// The set of `Platform` corresponding to this setting.
-	public var platforms: Set<Platform> {
-		switch self {
-		case .all:
-			return []
-
-		case .iOS:
-			return [ .iOS ]
-
-		case .macOS:
-			return [ .macOS ]
-
-		case .watchOS:
-			return [ .watchOS ]
-
-		case .tvOS:
-			return [ .tvOS ]
-
-		case let .multiple(buildPlatforms):
-			return buildPlatforms.reduce(into: []) { set, buildPlatform in
-				set.formUnion(buildPlatform.platforms)
-			}
-		}
-	}
-}
-
-extension BuildPlatform: CustomStringConvertible {
-	public var description: String {
-		switch self {
-		case .all:
-			return "all"
-
-		case .iOS:
-			return "iOS"
-
-		case .macOS:
-			return "macOS"
-
-		case .watchOS:
-			return "watchOS"
-
-		case .tvOS:
-			return "tvOS"
-
-		case let .multiple(buildPlatforms):
-			return buildPlatforms.map { $0.description }.joined(separator: ", ")
-		}
-	}
 }
 
 extension BuildPlatform: ArgumentProtocol {
 	public static let name = "platform"
 
-	private static let acceptedStrings: [String: BuildPlatform] = [
-		"macOS": .macOS, "Mac": .macOS, "OSX": .macOS, "macosx": .macOS,
-		"iOS": .iOS, "iphoneos": .iOS, "iphonesimulator": .iOS,
-		"watchOS": .watchOS, "watchsimulator": .watchOS,
-		"tvOS": .tvOS, "tvsimulator": .tvOS, "appletvos": .tvOS, "appletvsimulator": .tvOS,
-		"all": .all,
-	]
+	private static func parseSet(_ string: String) throws -> BuildPlatform {
+		switch Set(string.split()) {
+		case []:
+			throw CocoaError(.keyValueValidation)
+		case let set:
+			guard set != ["all"] else { return .all }
+
+			guard set.isDisjoint(with: ["all"]) else { throw CocoaError(.keyValueValidation) /* because not solely `all` */ }
+
+			let values = try set.lazy.map(SDK.associatedSetOfKnownIn2019YearSDKs).reduce(into: [] as Set<SDK>) {
+				guard $1.isEmpty == false else { throw CocoaError(.keyValueValidation) }
+				$0.formUnion($1)
+			}
+
+			return .setDisjointWithFlaggedAll(values)
+		}
+	}
 
 	public static func from(string: String) -> BuildPlatform? {
-		let tokens = string.split()
-
-		let findBuildPlatform: (String) -> BuildPlatform? = { string in
-			return self.acceptedStrings
-				.first { key, _ in string.caseInsensitiveCompare(key) == .orderedSame }
-				.map { _, platform in platform }
-		}
-
-		switch tokens.count {
-		case 0:
-			return nil
-
-		case 1:
-			return findBuildPlatform(tokens[0])
-
-		default:
-			var buildPlatforms = [BuildPlatform]()
-			for token in tokens {
-				if let found = findBuildPlatform(token), found != .all {
-					buildPlatforms.append(found)
-				} else {
-					// Reject if an invalid value is included in the comma-
-					// separated string.
-					return nil
-				}
-			}
-			return .multiple(buildPlatforms)
-		}
+		try? parseSet(string)
 	}
 }
