@@ -22,6 +22,8 @@ disabled_rules:
 - no_fallthrough_only # https://github.com/realm/SwiftLint/issues/2276
 - redundant_string_enum_value
 - superfluous_disable_command
+- large_tuple
+- switch_case_on_newline
 
 included:
 - Source

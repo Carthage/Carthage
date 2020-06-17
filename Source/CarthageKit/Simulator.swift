@@ -43,7 +43,7 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 		let devices = jsonObject["devices"] else {
 		return nil
 	}
-	let platformName = sdk.platform.rawValue
+	let platformName = sdk.platformSimulatorlessFromHeuristic
 	func reducePlatformNames(_ result: inout [String: [Simulator]], _ entry: (key: String, value: [Simulator])) {
 		guard let platformVersion = parsePlatformVersion(for: platformName, from: entry.key) else { return }
 		guard entry.value.contains(where: { $0.isAvailable }) else { return }
@@ -67,14 +67,57 @@ internal func selectAvailableSimulator(of sdk: SDK, from data: Data) -> Simulato
 }
 
 /// Parses a matching platform and version from a given identifier.
+///
+/// - Warning: Comparing dissimilar — say, hyphenated against "iOS 9.0"-style — is _not_
+///            accomodated by chains with this function, (but generally not needed anyway.)
 internal func parsePlatformVersion(for platformName: String, from identifier: String) -> String? {
-	guard let platformRange = identifier.range(of: platformName) else { return nil }
+	let asciiDigitCharacterSet = CharacterSet.urlUserAllowed.intersection(CharacterSet.decimalDigits)
+	let badEndingCharacterSet = asciiDigitCharacterSet.union(CharacterSet(charactersIn: ".-")).inverted
 
-	let nonDigitCharacters = CharacterSet.decimalDigits.inverted
-	let version = identifier
-		.suffix(from: platformRange.upperBound)
-		.split(whereSeparator: { $0.unicodeScalars.contains(where: { nonDigitCharacters.contains($0) }) })
+	let øøø = identifier.suffix(from: identifier.lastIndex(of: " ") ?? identifier.endIndex).dropFirst()
+	if
+		øøø.unicodeScalars.firstIndex(where: badEndingCharacterSet.contains) == nil,
+		identifier.commonPrefix(
+			with: platformName.replacingOccurrences(of: " ", with: "-"),
+			options: .caseInsensitive
+		).isEmpty == false /* btw, `øøø == ""` returns here too · ✓ */
+	{
+		return [øøø.range(of: ".*", options: .regularExpression)!].reduce(into: identifier) {
+			$0.replaceSubrange($1, with: øøø)
+		}
+	}
+
+	var suffix = identifier.suffix(from: identifier.lastIndex(of: ".") ?? identifier.endIndex).dropFirst()
+
+	// let assumedSpaceReplacementCharacter = "-" // but, as of 2019 no simulator displayNames with spaces in the platform section exist
+
+	let commonality = suffix.commonPrefix(
+		with: platformName.replacingOccurrences(of: " ", with: "-").appending("-"),
+		options: .caseInsensitive
+	)
+
+	guard commonality.isEmpty == false else { return nil }
+
+	guard [platformName, identifier].allSatisfy({ $0.contains("ß") == false }) else { return nil }
+	// 〜 that above character matches (when case insensitive) the two character string "SS"
+	// 〜 and therefore would nonunify `commonality`’s `endIndex` and where we begin to search for the version
+
+	switch suffix.dropFirst(commonality.count) {
+	case "":
+		return nil
+	case let possibleVersion where possibleVersion.unicodeScalars.firstIndex(where: badEndingCharacterSet.contains) == nil:
+		suffix = possibleVersion
+	default:
+		return nil
+	}
+
+	let version = suffix
+		.components(separatedBy: asciiDigitCharacterSet.inverted)
+		.filter { $0.isEmpty == false }
 		.joined(separator: ".")
 
-	return "\(platformName) \(version)"
+	// possible for version to contain three+ «.» and four+ numeric components,
+	// but later SemanticVersioning parsing will negate those · ✓
+
+	return "\(String(commonality.dropLast(1))) \(version)"
 }

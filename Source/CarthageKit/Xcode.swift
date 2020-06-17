@@ -175,13 +175,13 @@ internal func checkFrameworkCompatibility(_ frameworkURL: URL, usingToolchain to
 
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
-public func xcodebuildTask(_ tasks: [String], _ buildArguments: BuildArguments) -> Task {
-	return Task("/usr/bin/xcrun", arguments: buildArguments.arguments + tasks)
+public func xcodebuildTask(_ tasks: [String], _ buildArguments: BuildArguments, environment: [String: String]? = nil) -> Task {
+	return Task("/usr/bin/xcrun", arguments: buildArguments.arguments + tasks, environment: environment)
 }
 
 /// Creates a task description for executing `xcodebuild` with the given
 /// arguments.
-public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments) -> Task {
+public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments, environment: [String: String]? = nil) -> Task {
 	return xcodebuildTask([task], buildArguments)
 }
 
@@ -190,7 +190,7 @@ public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments) -> 
 public func buildableSchemesInDirectory( // swiftlint:disable:this function_body_length
 	_ directoryURL: URL,
 	withConfiguration configuration: String,
-	forPlatforms platforms: Set<Platform> = []
+	forPlatforms platformAllowList: Set<SDK>? = nil
 ) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> {
 	precondition(directoryURL.isFileURL)
 	let locator = ProjectLocator
@@ -222,7 +222,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 			/// from a workspace, then it might include additional targets that would trigger our
 			/// check.
 			let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-			return shouldBuildScheme(buildArguments, platforms)
+			return shouldBuildScheme(buildArguments, platformAllowList)
 				.filter { $0 }
 				.map { _ in (scheme, project) }
 		}
@@ -236,7 +236,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 					switch project {
 					case .workspace where schemes.contains(scheme):
 						let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: configuration)
-						return shouldBuildScheme(buildArguments, platforms)
+						return shouldBuildScheme(buildArguments, platformAllowList)
 							.filter { $0 }
 							.map { _ in project }
 
@@ -255,7 +255,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 			if !schemes.isEmpty {
 				return .init(schemes)
 			} else {
-				return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platforms))
+				return .init(error: .noSharedFrameworkSchemes(.git(GitURL(directoryURL.path)), platformAllowList ?? []))
 			}
 		}
 }
@@ -453,29 +453,24 @@ private func shouldBuildFrameworkType(_ frameworkType: FrameworkType?) -> Bool {
 }
 
 /// Determines whether the given scheme should be built automatically.
-private func shouldBuildScheme(_ buildArguments: BuildArguments, _ forPlatforms: Set<Platform>) -> SignalProducer<Bool, CarthageError> {
+private func shouldBuildScheme(
+	_ buildArguments: BuildArguments,
+	_ platformAllowList: Set<SDK>? = nil
+) -> SignalProducer<Bool, CarthageError> {
 	precondition(buildArguments.scheme != nil)
 
-	return BuildSettings.load(with: buildArguments)
-		.flatMap(.concat) { settings -> SignalProducer<FrameworkType?, CarthageError> in
-			let frameworkType = SignalProducer(result: settings.frameworkType)
+	let setSignal = SDK.setsFromJSONShowSDKsWithFallbacks.promoteError(CarthageError.self)
 
-			if forPlatforms.isEmpty {
-				return frameworkType
-					.flatMapError { _ in .empty }
-			} else {
-				return settings.buildSDKs
-					.filter { forPlatforms.contains($0.platform) }
-					.flatMap(.merge) { _ in frameworkType }
-					.flatMapError { _ in .empty }
-			}
+	return BuildSettings.load(with: buildArguments)
+		.flatMap(.merge) { (settings) -> SignalProducer<Set<SDK>, CarthageError> in
+			let supportedFrameworks = settings.buildSDKRawNames.map { sdk in SDK(name: sdk, simulatorHeuristic: "") }
+			guard settings.frameworkType.recover(nil) != nil else { return .empty }
+			return setSignal.map { $0.intersection(supportedFrameworks) }
 		}
-		.filter(shouldBuildFrameworkType)
-		// If we find any framework target, we should indeed build this scheme.
-		.map { _ in true }
-		// Otherwise, nope.
-		.concat(value: false)
-		.take(first: 1)
+		.reduce(into: false) {
+			let filter = (platformAllowList ?? $1).contains
+			$0 = $0 || $1.firstIndex(where: filter) != nil
+		}
 }
 
 /// Aggregates all of the build settings sent on the given signal, associating
@@ -582,7 +577,7 @@ private func mergeBuildProducts(
 }
 
 /// A callback function used to determine whether or not an SDK should be built
-public typealias SDKFilterCallback = (_ sdks: [SDK], _ scheme: Scheme, _ configuration: String, _ project: ProjectLocator) -> Result<[SDK], CarthageError>
+public typealias SDKFilterCallback = (_ sdk: Set<SDK>, _ scheme: Scheme, _ configuration: String, _ project: ProjectLocator) -> Result<Set<SDK>, CarthageError>
 
 /// Builds one scheme of the given project, for all supported SDKs.
 ///
@@ -617,37 +612,27 @@ public func buildScheme( // swiftlint:disable:this function_body_length cyclomat
 					// Filter out SDKs that require bitcode when bitcode is disabled in
 					// project settings. This is necessary for testing frameworks, which
 					// must add a User-Defined setting of ENABLE_BITCODE=NO.
-					return settings.bitcodeEnabled.value == true || ![.tvOS, .watchOS].contains(sdk)
+					return settings.bitcodeEnabled.value == true || !["appletvos", "watchos"].contains(sdk.rawValue)
 				}
 				.map { _ in sdk }
 		}
-		.reduce(into: [:]) { (sdksByPlatform: inout [Platform: Set<SDK>], sdk: SDK) in
-			let platform = sdk.platform
+		.reduce(into: [] as Set) { $0.formUnion([$1]) }
+		.flatMap(.concat) { sdks -> SignalProducer<(String, [SDK]), CarthageError> in
+			if sdks.isEmpty { fatalError("No SDKs found for scheme \(scheme)") }
+			// fatalError in unlikely case that propogated logic error from Carthage authors
+			// has become unrecoverable
 
-			if var sdks = sdksByPlatform[platform] {
-				sdks.insert(sdk)
-				sdksByPlatform.updateValue(sdks, forKey: platform)
-			} else {
-				sdksByPlatform[platform] = [sdk]
-			}
+			return sdkFilter(sdks, scheme, options.configuration, project).analysis(
+				ifSuccess: { filteredSDKs in
+					SignalProducer<(String, [SDK]), CarthageError>(
+						Dictionary(grouping: filteredSDKs, by: { $0.relativePath }).lazy.map { ($0, $1) }
+					)
+				}, ifFailure: { error in
+					SignalProducer<(String, [SDK]), CarthageError>(error: error)
+				})
 		}
-		.flatMap(.concat) { sdksByPlatform -> SignalProducer<(Platform, [SDK]), CarthageError> in
-			if sdksByPlatform.isEmpty {
-				fatalError("No SDKs found for scheme \(scheme)")
-			}
-
-			let values = sdksByPlatform.map { ($0, Array($1)) }
-			return SignalProducer(values)
-		}
-		.flatMap(.concat) { platform, sdks -> SignalProducer<(Platform, [SDK]), CarthageError> in
-			let filterResult = sdkFilter(sdks, scheme, options.configuration, project)
-			return SignalProducer(result: filterResult.map { (platform, $0) })
-		}
-		.filter { _, sdks in
-			return !sdks.isEmpty
-		}
-		.flatMap(.concat) { platform, sdks -> SignalProducer<TaskEvent<URL>, CarthageError> in
-			let folderURL = rootDirectoryURL.appendingPathComponent(platform.relativePath, isDirectory: true).resolvingSymlinksInPath()
+		.flatMap(.concat) { relativePath, sdks -> SignalProducer<TaskEvent<URL>, CarthageError> in
+			let folderURL = rootDirectoryURL.appendingPathComponent(relativePath, isDirectory: true).resolvingSymlinksInPath()
 
 			switch sdks.count {
 			case 1:
@@ -776,10 +761,10 @@ private func build(sdk: SDK, with buildArgs: BuildArguments, in workingDirectory
 					if let selectedSimulator = selectAvailableSimulator(of: sdk, from: data) {
 						return .init(value: selectedSimulator)
 					} else {
-						return .init(error: CarthageError.noAvailableSimulators(platformName: sdk.platform.rawValue))
+						return .init(error: CarthageError.noAvailableSimulators(platformName: sdk.platformSimulatorlessFromHeuristic))
 					}
 				}
-				.map { "platform=\(sdk.platform.rawValue) Simulator,id=\($0.udid.uuidString)" }
+				.map { "platform=\(sdk.platformSimulatorlessFromHeuristic) Simulator,id=\($0.udid.uuidString)" }
 		}
 		return SignalProducer(value: nil)
 	}
@@ -937,13 +922,7 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 				let initialValue = (project, scheme)
 
 				let wrappedSDKFilter: SDKFilterCallback = { sdks, scheme, configuration, project in
-					let filteredSDKs: [SDK]
-					if options.platforms.isEmpty {
-						filteredSDKs = sdks
-					} else {
-						filteredSDKs = sdks.filter { options.platforms.contains($0.platform) }
-					}
-					return sdkFilter(filteredSDKs, scheme, configuration, project)
+					return sdkFilter((options.platforms /* allow list */ ?? sdks).intersection(sdks), scheme, configuration, project)
 				}
 
 				return buildScheme(

@@ -19,7 +19,7 @@ class ProjectSpec: QuickSpec {
 			let noSharedSchemesDirectoryURL = Bundle(for: type(of: self)).url(forResource: "NoSharedSchemesTest", withExtension: nil)!
 			let noSharedSchemesBuildDirectoryURL = noSharedSchemesDirectoryURL.appendingPathComponent(Constants.binariesFolderPath)
 
-			func build(directoryURL url: URL, platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+			func build(directoryURL url: URL, platforms: Set<SDK>? = nil, cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				let project = Project(directoryURL: url)
 				let result = project.buildCheckedOutDependenciesWithOptions(BuildOptions(configuration: "Debug", platforms: platforms, cacheBuilds: cacheBuilds), dependenciesToBuild: dependenciesToBuild)
 					.ignoreTaskData()
@@ -34,11 +34,11 @@ class ProjectSpec: QuickSpec {
 				return result.value!.map { $0.name }
 			}
 
-			func buildDependencyTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+			func buildDependencyTest(platforms: Set<SDK>? = nil, cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				return build(directoryURL: directoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
 			}
 
-			func buildNoSharedSchemesTest(platforms: Set<Platform> = [], cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
+			func buildNoSharedSchemesTest(platforms: Set<SDK>? = nil, cacheBuilds: Bool = true, dependenciesToBuild: [String]? = nil) -> [String] {
 				return build(directoryURL: noSharedSchemesDirectoryURL, platforms: platforms, cacheBuilds: cacheBuilds, dependenciesToBuild: dependenciesToBuild)
 			}
 
@@ -57,7 +57,7 @@ class ProjectSpec: QuickSpec {
 				let macOSexpected = ["TestFramework3_Mac", "TestFramework2_Mac", "TestFramework1_Mac"]
 				let iOSExpected = ["TestFramework3_iOS", "TestFramework2_iOS", "TestFramework1_iOS"]
 
-				let result = buildDependencyTest(platforms: [], cacheBuilds: false)
+				let result = buildDependencyTest(platforms: nil, cacheBuilds: false)
 
 				expect(result.filter { $0.contains("Mac") }) == macOSexpected
 				expect(result.filter { $0.contains("iOS") }) == iOSExpected

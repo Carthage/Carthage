@@ -11,18 +11,18 @@ extension MachOType {
 	}
 }
 
-extension Platform {
+extension SDK {
 	/// The relative path at which binaries corresponding to this platform will
 	/// be stored.
 	public var relativePath: String {
-		let subfolderName = rawValue
+		let subfolderName = self.platformSimulatorlessFromHeuristic
 		return (Constants.binariesFolderPath as NSString).appendingPathComponent(subfolderName)
 	}
 
 	/// The relative URL at which binaries corresponding to this platform will
 	/// be stored.
 	public var relativeURL: URL? {
-		let subfolderName = rawValue
+		let subfolderName = self.platformSimulatorlessFromHeuristic
 		return URL(string: Constants.binariesFolderPath)?.appendingPathComponent(subfolderName, isDirectory: true)
 	}
 }
@@ -100,12 +100,22 @@ extension ProjectLocator {
 	}
 }
 
-extension SDK {
+extension SD_K {
 	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
-	public static func from(string: String) -> Result<SDK, CarthageError> {
+	public static func from(string: String) -> Result<SD_K, CarthageError> {
 		return Result(self.init(rawValue: string.lowercased()), failWith: .parseError(description: "unexpected SDK key \"\(string)\""))
 	}
 
+	/// Split the given SDKs into simulator ones and device ones.
+	internal static func splitSDKs<S: Sequence>(_ sdks: S) -> (simulators: [SD_K], devices: [SD_K]) where S.Iterator.Element == SD_K {
+		return (
+			simulators: sdks.filter { $0.isSimulator },
+			devices: sdks.filter { !$0.isSimulator }
+		)
+	}
+}
+
+extension SDK {
 	/// Split the given SDKs into simulator ones and device ones.
 	internal static func splitSDKs<S: Sequence>(_ sdks: S) -> (simulators: [SDK], devices: [SDK]) where S.Iterator.Element == SDK {
 		return (

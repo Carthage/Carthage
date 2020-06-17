@@ -67,7 +67,7 @@ public enum CarthageError: Error {
 
 	/// The project is not sharing any framework schemes, so Carthage cannot
 	/// discover them.
-	case noSharedFrameworkSchemes(Dependency, Set<Platform>)
+	case noSharedFrameworkSchemes(Dependency, Set<SDK>)
 
 	/// The project is not sharing any schemes, so Carthage cannot discover
 	/// them.
@@ -277,7 +277,7 @@ extension CarthageError: CustomStringConvertible {
 		case let .noSharedFrameworkSchemes(dependency, platforms):
 			var description = "Dependency \"\(dependency.name)\" has no shared framework schemes"
 			if !platforms.isEmpty {
-				let platformsString = platforms.map { $0.rawValue }.joined(separator: ", ")
+				let platformsString = Set(platforms.map { $0.platformSimulatorlessFromHeuristic }).joined(separator: ", ")
 				description += " for any of the platforms: \(platformsString)"
 			}
 

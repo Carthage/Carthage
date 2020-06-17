@@ -605,7 +605,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 	/// Constructs the file:// URL at which a given .framework
 	/// will be found. Depends on the location of the current project.
 	private func frameworkURLInCarthageBuildFolder(
-		forPlatform platform: Platform,
+		forSDK sdk: SDK,
 		frameworkNameAndExtension: String
 	) -> Result<URL, CarthageError> {
 		guard let lastComponent = URL(string: frameworkNameAndExtension)?.pathExtension,
@@ -613,10 +613,10 @@ public final class Project { // swiftlint:disable:this type_body_length
 				return .failure(.internalError(description: "\(frameworkNameAndExtension) is not a valid framework identifier"))
 		}
 
-		guard let destinationURLInWorkingDir = platform
+		guard let destinationURLInWorkingDir = sdk
 			.relativeURL?
 			.appendingPathComponent(frameworkNameAndExtension, isDirectory: true) else {
-				return .failure(.internalError(description: "failed to construct framework destination url from \(platform) and \(frameworkNameAndExtension)"))
+				return .failure(.internalError(description: "failed to construct framework destination url from \(sdk.platformSimulatorlessFromHeuristic) and \(frameworkNameAndExtension)"))
 		}
 
 		return .success(self
@@ -678,7 +678,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 						return SignalProducer<URL, CarthageError>(frameworksUrls)
 							.flatMap(.merge) { url -> SignalProducer<URL, CarthageError> in
 								return platformForFramework(url)
-									.attemptMap { self.frameworkURLInCarthageBuildFolder(forPlatform: $0,
+									.attemptMap { self.frameworkURLInCarthageBuildFolder(forSDK: $0,
 																				 frameworkNameAndExtension: url.lastPathComponent) }
 							}
 							.collect()
@@ -957,6 +957,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 	}
 
 	public func removeUnneededItems() -> SignalProducer<(), CarthageError> {
+		return SignalProducer<(), CarthageError>.empty
+/*
 		let binariesDirectoryURL = self.directoryURL
 			.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
 			.resolvingSymlinksInPath()
@@ -1069,6 +1071,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.on { self._projectEventsObserver.send(value: ProjectEvent.removingUnneededItem($0)) }
 			.flatMap(.merge, self.removeItem(at:))
 			.then(SignalProducer<(), CarthageError>.empty)
+*/
 		}
 
 	/// Checks out the dependencies listed in the project's Cartfile.resolved,
@@ -1494,7 +1497,7 @@ private func filesInDirectory(_ directoryURL: URL, _ typeIdentifier: String? = n
 }
 
 /// Sends the platform specified in the given Info.plist.
-func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, CarthageError> {
+func platformForFramework(_ frameworkURL: URL) -> SignalProducer<SDK, CarthageError> {
 	return SignalProducer(value: frameworkURL)
 		// Neither DTPlatformName nor CFBundleSupportedPlatforms can not be used
 		// because Xcode 6 and below do not include either in macOS frameworks.
@@ -1554,7 +1557,7 @@ func platformForFramework(_ frameworkURL: URL) -> SignalProducer<Platform, Carth
 		// Thus, the SDK name must be trimmed to match the platform name, e.g.
 		// macosx10.10 -> macosx
 		.map { sdkName in sdkName.trimmingCharacters(in: CharacterSet.letters.inverted) }
-		.attemptMap { platform in SDK.from(string: platform).map { $0.platform } }
+		.map { SDK(name: $0, simulatorHeuristic: "") }
 }
 
 /// Sends the URL to each framework bundle found in the given directory.

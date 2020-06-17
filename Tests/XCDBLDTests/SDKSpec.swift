@@ -4,50 +4,106 @@ import Quick
 
 @testable import XCDBLD
 
-class SDKSpec: QuickSpec {
+class SDKEncompassingPlatformsSpec: QuickSpec {
 	override func spec() {
-		describe("\(SDK.self)") {
+		describe("platformSimulatorlessFromHeuristic") {
+			it("should parse from different heuristics correctly") {
+				let pairs: KeyValuePairs = [
+					SDK(name: "platformboxsimulator", simulatorHeuristic: "Simulator - PlatformBox"): (true, "PlatformBox"),
+					SDK(name: "PlatformBoxSimulator", simulatorHeuristic: ""): (true, "PlatformBox"),
+					SDK(name: "platformboxsimulator", simulatorHeuristic: ""): (true, "platformbox"),
+					SDK(name: "PlatformBox", simulatorHeuristic: ""): (false, "PlatformBox"),
+					SDK(name: "platformbox", simulatorHeuristic: ""): (false, "platformbox"),
+					SDK(name: "wAtchsiMulator", simulatorHeuristic: ""): (true, "watchOS"),
+					SDK(name: "macosx", simulatorHeuristic: ""): (false, "Mac"), /* special case */
+				]
+
+				pairs.forEach { sdk, result in
+					expect(sdk.isSimulator) == result.0
+					expect(sdk.platformSimulatorlessFromHeuristic) == result.1
+				}
+			}
+		}
+
+		/*
+		describe("BuildPlatform") {
+			it("should parseSet and error where necessary") {
+				expect {
+					try BuildPlatform.parseSet(string: "ios,all")
+				}.to(throwError())
+
+				expect {
+					try BuildPlatform.parseSet(string: "all")
+				} == BuildPlatform.all
+
+				expect {
+					try BuildPlatform.parseSet(string: "all,all")
+				} == BuildPlatform.all
+
+				expect {
+					try BuildPlatform.parseSet(string: "ios")
+				}.notTo(throwError())
+				
+				expect {
+					try BuildPlatform.parseSet(string: "all,ios")
+				}.to(throwError())
+		*/
+
+		describe("Associated Sets of Known-In-2019-Year SDKs") {
+			it("should map correctly") {
+				expect(SDK.associatedSetOfKnownIn2019YearSDKs("TVOS").map { $0.rawValue }.sorted())
+					== [ "appletvos", "appletvsimulator" ]
+				expect(SDK.associatedSetOfKnownIn2019YearSDKs("ios").map { $0.rawValue }.sorted())
+					== [ "iphoneos", "iphonesimulator" ]
+			}
+		}
+	}
+}
+
+class SD_KSpec: QuickSpec {
+	override func spec() {
+		describe("\(SD_K.self)") {
 			describe("initializer") {
 				it("should return nil for empty string") {
-					expect(SDK(rawValue: "")).to(beNil())
+					expect(SD_K(rawValue: "")).to(beNil())
 				}
 				
 				it("should return nil for unexpected input") {
-					expect(SDK(rawValue: "speakerOS")).to(beNil())
+					expect(SD_K(rawValue: "speakerOS")).to(beNil())
 				}
 				
 				it("should return a valid value for expected input") {
-					let watchOS = SDK(rawValue: "watchOS")
+					let watchOS = SD_K(rawValue: "watchOS")
 					expect(watchOS).notTo(beNil())
-					expect(watchOS) == SDK.watchOS
+					expect(watchOS) == SD_K.watchOS
 					
-					let watchOSSimulator = SDK(rawValue: "wAtchsiMulator")
+					let watchOSSimulator = SD_K(rawValue: "wAtchsiMulator")
 					expect(watchOSSimulator).notTo(beNil())
-					expect(watchOSSimulator) == SDK.watchSimulator
+					expect(watchOSSimulator) == SD_K.watchSimulator
 					
-					let tvOS1 = SDK(rawValue: "tvOS")
+					let tvOS1 = SD_K(rawValue: "tvOS")
 					expect(tvOS1).notTo(beNil())
-					expect(tvOS1) == SDK.tvOS
+					expect(tvOS1) == SD_K.tvOS
 					
-					let tvOS2 = SDK(rawValue: "appletvos")
+					let tvOS2 = SD_K(rawValue: "appletvos")
 					expect(tvOS2).notTo(beNil())
-					expect(tvOS2) == SDK.tvOS
+					expect(tvOS2) == SD_K.tvOS
 					
-					let tvOSSimulator = SDK(rawValue: "appletvsimulator")
+					let tvOSSimulator = SD_K(rawValue: "appletvsimulator")
 					expect(tvOSSimulator).notTo(beNil())
-					expect(tvOSSimulator) == SDK.tvSimulator
+					expect(tvOSSimulator) == SD_K.tvSimulator
 					
-					let macOS = SDK(rawValue: "macosx")
+					let macOS = SD_K(rawValue: "macosx")
 					expect(macOS).notTo(beNil())
-					expect(macOS) == SDK.macOSX
+					expect(macOS) == SD_K.macOSX
 					
-					let iOS = SDK(rawValue: "iphoneos")
+					let iOS = SD_K(rawValue: "iphoneos")
 					expect(iOS).notTo(beNil())
-					expect(iOS) == SDK.iPhoneOS
+					expect(iOS) == SD_K.iPhoneOS
 					
-					let iOSimulator = SDK(rawValue: "iphonesimulator")
+					let iOSimulator = SD_K(rawValue: "iphonesimulator")
 					expect(iOSimulator).notTo(beNil())
-					expect(iOSimulator) == SDK.iPhoneSimulator
+					expect(iOSimulator) == SD_K.iPhoneSimulator
 				}
 			}
 		}

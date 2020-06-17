@@ -3,6 +3,7 @@ import ReactiveSwift
 import Foundation
 import Result
 import Tentacle
+import struct XCDBLD.SDK
 
 // swiftlint:disable no_extension_access_modifier
 let git1 = Dependency.git(GitURL("https://example.com/repo1"))
@@ -101,4 +102,9 @@ extension DB: ExpressibleByDictionaryLiteral {
 			versions[key] = value
 		}
 	}
+}
+
+extension SDK {
+	static let macOS = SDK.knownIn2019YearSDKs.first(where: { $0.rawValue == "macosx" })!
+	static let iOS = SDK.knownIn2019YearSDKs.first(where: { $0.rawValue == "iphoneos" })!
 }
