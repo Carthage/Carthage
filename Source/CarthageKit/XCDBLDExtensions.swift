@@ -100,21 +100,6 @@ extension ProjectLocator {
 	}
 }
 
-extension SD_K {
-	/// Attempts to parse an SDK name from a string returned from `xcodebuild`.
-	public static func from(string: String) -> Result<SD_K, CarthageError> {
-		return Result(self.init(rawValue: string.lowercased()), failWith: .parseError(description: "unexpected SDK key \"\(string)\""))
-	}
-
-	/// Split the given SDKs into simulator ones and device ones.
-	internal static func splitSDKs<S: Sequence>(_ sdks: S) -> (simulators: [SD_K], devices: [SD_K]) where S.Iterator.Element == SD_K {
-		return (
-			simulators: sdks.filter { $0.isSimulator },
-			devices: sdks.filter { !$0.isSimulator }
-		)
-	}
-}
-
 extension SDK {
 	/// Split the given SDKs into simulator ones and device ones.
 	internal static func splitSDKs<S: Sequence>(_ sdks: S) -> (simulators: [SDK], devices: [SDK]) where S.Iterator.Element == SDK {
