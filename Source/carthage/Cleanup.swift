@@ -4,35 +4,11 @@ import Foundation
 import Result
 import Curry
 
-/// Type that encapsulates the configuration and evaluation of the `cleanup` subcommand.
-public struct CleanupCommand: CommandProtocol {
-	public let verb = "cleanup"
-	public let function = "Remove unneeded files from Carthage directory"
+/*
+Former file of `carthage cleanup` command — which existed on-master, but unshipped-in-tags — and no longer makes sense when set of SDKs are non-fixed across Xcode versions.
 
-	public struct Options: OptionsProtocol {
-		public let directoryPath: String
-		public let colorOptions: ColorOptions
+See also <github.com/Carthage/Carthage/pull/2872> — and major thanks to @sidepelican and @chuganzy for developing it…
+〜 sorry that the new system of dynamically parsed SDKs makes it nonviable; maybe it's viable in some future way…
 
-		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
-			return curry(self.init)
-				<*> mode <| Option(
-					key: "project-directory",
-					defaultValue: FileManager.default.currentDirectoryPath,
-					usage: "the directory containing the Carthage project"
-				)
-				<*> ColorOptions.evaluate(mode)
-		}
-
-		public func loadProject() -> Project {
-			let directoryURL = URL(fileURLWithPath: self.directoryPath, isDirectory: true)
-			let project = Project(directoryURL: directoryURL)
-			var eventSink = ProjectEventSink(colorOptions: colorOptions)
-			project.projectEvents.observeValues { eventSink.put($0) }
-			return project
-		}
-	}
-
-	public func run(_ options: Options) -> Result<(), CarthageError> {
-		return options.loadProject().removeUnneededItems().waitOnCommand()
-	}
-}
+See commit <github.com/Carthage/Carthage/commit/883f1c8e479ac10f5f38b367e6483517e4686383>.
+*/
