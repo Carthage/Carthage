@@ -1,5 +1,4 @@
 import Foundation
-import Result
 import ReactiveSwift
 
 /// Responsible for resolving acyclic dependency graphs.

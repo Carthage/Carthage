@@ -1,5 +1,4 @@
 import Foundation
-import Result
 
 /// Identifies a dependency, its pinned version, and its compatible and incompatible requirements
 public struct CompatibilityInfo: Equatable {
@@ -40,14 +39,14 @@ public struct CompatibilityInfo: Equatable {
 				var requirements = invertedRequirements[requiredDependency] ?? [:]
 
 				if requirements[dependency] != nil {
-					return .init(error: .duplicateDependencies([DuplicateDependency(dependency: dependency, locations: [])]))
+					return .failure(.duplicateDependencies([DuplicateDependency(dependency: dependency, locations: [])]))
 				}
 
 				requirements[dependency] = requiredVersion
 				invertedRequirements[requiredDependency] = requirements
 			}
 		}
-		return .init(invertedRequirements)
+		return .success(invertedRequirements)
 	}
 
 	/// Constructs CompatibilityInfo objects for dependencies with incompatibilities

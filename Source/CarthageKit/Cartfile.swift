@@ -1,5 +1,4 @@
 import Foundation
-import Result
 
 /// Represents a Cartfile, which is a specification of a project's dependencies
 /// and any other settings Carthage needs to build it.
@@ -94,7 +93,7 @@ public struct Cartfile {
 	/// Attempts to parse a Cartfile from a file at a given URL.
 	public static func from(file cartfileURL: URL) -> Result<Cartfile, CarthageError> {
 		return Result(catching: { try String(contentsOf: cartfileURL, encoding: .utf8) })
-			.mapError { .readFailed(cartfileURL, $0) }
+			.mapError { .readFailed(cartfileURL, $0 as NSError) }
 			.flatMap(Cartfile.from(string:))
 			.mapError { error in
 				guard case let .duplicateDependencies(dupes) = error else { return error }

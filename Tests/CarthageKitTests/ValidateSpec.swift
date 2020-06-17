@@ -3,7 +3,6 @@ import Foundation
 import Nimble
 import Quick
 import ReactiveSwift
-import Result
 import Tentacle
 
 private extension CarthageError {

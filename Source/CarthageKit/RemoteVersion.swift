@@ -1,7 +1,6 @@
 import Foundation
 import ReactiveSwift
 import ReactiveTask
-import Result
 import Tentacle
 
 /// Synchronously returns the semantic version of the newest release,

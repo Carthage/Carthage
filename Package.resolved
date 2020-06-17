@@ -6,8 +6,8 @@
         "repositoryURL": "https://github.com/Carthage/Commandant.git",
         "state": {
           "branch": null,
-          "revision": "2cd0210f897fe46c6ce42f52ccfa72b3bbb621a0",
-          "version": "0.16.0"
+          "revision": "ab68611013dec67413628ac87c1f29e8427bc8e4",
+          "version": "0.17.0"
         }
       },
       {
@@ -24,8 +24,8 @@
         "repositoryURL": "https://github.com/Quick/Nimble.git",
         "state": {
           "branch": null,
-          "revision": "f8657642dfdec9973efc79cc68bcef43a653a2bc",
-          "version": "8.0.2"
+          "revision": "7fd118ec8795888bcbbebc1a41f6984454c4cd6f",
+          "version": "8.0.7"
         }
       },
       {
@@ -42,8 +42,8 @@
         "repositoryURL": "https://github.com/Quick/Quick.git",
         "state": {
           "branch": null,
-          "revision": "94df9b449508344667e5afc7e80f8bcbff1e4c37",
-          "version": "2.1.0"
+          "revision": "33682c2f6230c60614861dfc61df267e11a1602f",
+          "version": "2.2.0"
         }
       },
       {
@@ -51,26 +51,17 @@
         "repositoryURL": "https://github.com/ReactiveCocoa/ReactiveSwift.git",
         "state": {
           "branch": null,
-          "revision": "c37950dc5020544c58d4bf47c0d028893686b9e6",
-          "version": "5.0.1"
+          "revision": "e27ccdbf4ec36f154b60b91a0d7e0110c4e882cb",
+          "version": "6.2.1"
         }
       },
       {
         "package": "ReactiveTask",
         "repositoryURL": "https://github.com/Carthage/ReactiveTask.git",
         "state": {
-          "branch": null,
-          "revision": "df1bf7625684180b9377a8ba3c076db08d98757e",
-          "version": "0.16.0"
-        }
-      },
-      {
-        "package": "Result",
-        "repositoryURL": "https://github.com/antitypical/Result.git",
-        "state": {
-          "branch": null,
-          "revision": "2ca499ba456795616fbc471561ff1d963e6ae160",
-          "version": "4.1.0"
+          "branch": "master",
+          "revision": "e1396a56055812234e97aeda78731d7228e0bbc7",
+          "version": null
         }
       },
       {
@@ -78,8 +69,8 @@
         "repositoryURL": "https://github.com/mdiep/Tentacle.git",
         "state": {
           "branch": null,
-          "revision": "578edd088b03bc749c49253b15ae2d5aaa9aa7df",
-          "version": "0.13.1"
+          "revision": "fb9f20c3cc094103799e271dd664e1ee1b76211e",
+          "version": "0.14.0"
         }
       }
     ]

@@ -1,5 +1,4 @@
 import Foundation
-import Result
 import ReactiveSwift
 
 /// Protocol for resolving acyclic dependency graphs.
@@ -69,7 +68,7 @@ public struct Resolver: ResolverProtocol {
 				}
 
 				// When target dependencies are specified
-				return orderedNodesProducer.filterMap { node -> (Dependency, PinnedVersion)? in
+				return orderedNodesProducer.compactMap { node -> (Dependency, PinnedVersion)? in
 					// A dependency included in the targets should be affected.
 					if dependenciesToUpdate.contains(node.dependency.name) {
 						return node.pinnedDependency
@@ -167,7 +166,7 @@ public struct Resolver: ResolverProtocol {
 		basedOnGraph inputGraph: DependencyGraph
 	) -> SignalProducer<DependencyGraph, CarthageError> {
 		return nodePermutations(for: dependencies)
-			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, NoError> in
+			.flatMap(.concat) { (nodes: [DependencyNode]) -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, Never> in
 				return self
 					.graphs(for: nodes, dependencyOf: dependencyOf, basedOnGraph: inputGraph)
 					.materialize()
@@ -203,7 +202,7 @@ public struct Resolver: ResolverProtocol {
 					.map { node in self.graphsForDependenciesOfNode(node, basedOnGraph: graph) }
 					.observe(on: scheduler)
 					.permute()
-					.flatMap(.concat) { graphs -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, NoError> in
+					.flatMap(.concat) { graphs -> SignalProducer<Signal<DependencyGraph, CarthageError>.Event, Never> in
 						return SignalProducer<DependencyGraph, CarthageError> {
 								mergeGraphs([ inputGraph ] + graphs)
 							}
@@ -287,7 +286,7 @@ private struct DependencyGraph {
 	mutating func addNode(_ node: DependencyNode, dependencyOf: DependencyNode?) -> Result<DependencyNode, CarthageError> {
 		var node = node
 
-		if let index = allNodes.index(of: node) {
+        if let index = allNodes.firstIndex(of: node) {
 			let existingNode = allNodes[index]
 
 			if let newSpecifier = intersection(existingNode.versionSpecifier, node.versionSpecifier) {
@@ -365,11 +364,11 @@ private struct DependencyGraph {
 				newNodes.append(newNode)
 
 			case let .failure(error):
-				return Result(error: error)
+                return .failure(error)
 			}
 		}
 
-		return Result(value: newNodes)
+            return .success(newNodes)
 	}
 
 	/// Whether the given node is included or not in the nested dependencies of

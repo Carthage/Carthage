@@ -2,7 +2,6 @@ import Foundation
 import Quick
 import Nimble
 import ReactiveSwift
-import Result
 import XCDBLD
 @testable import CarthageKit
 

@@ -1,7 +1,6 @@
 import CarthageKit
 import Commandant
 import Foundation
-import Result
 import Curry
 
 /// Type that encapsulates the configuration and evaluation of the `cleanup` subcommand.

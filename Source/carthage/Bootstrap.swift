@@ -1,7 +1,6 @@
 import CarthageKit
 import Commandant
 import Foundation
-import Result
 import ReactiveSwift
 
 /// Type that encapsulates the configuration and evaluation of the `bootstrap` subcommand.

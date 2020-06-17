@@ -1,7 +1,6 @@
 // swiftlint:disable file_length
 
 import Foundation
-import Result
 import ReactiveSwift
 import ReactiveTask
 import XCDBLD
@@ -100,7 +99,7 @@ private func dSYMSwiftVersion(_ dSYMURL: URL) -> SignalProducer<String, SwiftVer
 		.ignoreTaskData()
 		.map { String(data: $0, encoding: .utf8) ?? "" }
 		.filter { !$0.isEmpty }
-		.flatMap(.merge) { (output: String) -> SignalProducer<String, NoError> in
+		.flatMap(.merge) { (output: String) -> SignalProducer<String, Never> in
 			output.linesProducer
 		}
 		.filter { $0.contains("AT_producer") }
@@ -905,8 +904,8 @@ public func build(
 			case let (_, .noSharedFrameworkSchemes(_, platforms)):
 				return .noSharedFrameworkSchemes(dependency, platforms)
 
-			case let (.gitHub(repo), .noSharedSchemes(project, _)):
-				return .noSharedSchemes(project, repo)
+			case let (.gitHub(server, repository), .noSharedSchemes(project, _)):
+				return .noSharedSchemes(project, (server, repository))
 
 			default:
 				return error

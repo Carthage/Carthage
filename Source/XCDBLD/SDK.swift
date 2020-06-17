@@ -1,5 +1,4 @@
 import Foundation
-import Result
 
 /// Represents an SDK buildable by Xcode.
 public enum SDK: String {

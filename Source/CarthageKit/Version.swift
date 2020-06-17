@@ -1,7 +1,6 @@
 // swiftlint:disable file_length
 
 import Foundation
-import Result
 import ReactiveSwift
 
 /// A semantic version.
@@ -51,10 +50,10 @@ public struct SemanticVersion: Hashable {
 		self.preRelease = preRelease
 		self.buildMetadata = buildMetadata
 	}
-
-	public var hashValue: Int {
-		return components.reduce(0) { $0 ^ $1.hashValue }
-	}
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(components)
+    }
 }
 
 extension SemanticVersion {

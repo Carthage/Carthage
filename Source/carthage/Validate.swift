@@ -2,7 +2,6 @@ import CarthageKit
 import Commandant
 import Foundation
 import ReactiveSwift
-import Result
 
 /// Type that encapsulates the configuration and evaluation of the `validate` subcommand.
 public struct ValidateCommand: CommandProtocol {

@@ -24,12 +24,12 @@ public struct GitURL {
 			// scp syntax.
 			var strippedURLString = urlString
 
-			if let index = strippedURLString.index(of: "@") {
+            if let index = strippedURLString.firstIndex(of: "@") {
 				strippedURLString.removeSubrange(strippedURLString.startIndex...index)
 			}
 
 			var host = ""
-			if let index = strippedURLString.index(of: ":") {
+            if let index = strippedURLString.firstIndex(of: ":") {
 				host = String(strippedURLString[strippedURLString.startIndex..<index])
 				strippedURLString.removeSubrange(strippedURLString.startIndex...index)
 			}

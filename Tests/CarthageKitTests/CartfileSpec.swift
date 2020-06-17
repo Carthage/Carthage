@@ -1,6 +1,5 @@
 import CarthageKit
 import Foundation
-import Result
 import Tentacle
 import Nimble
 import Quick

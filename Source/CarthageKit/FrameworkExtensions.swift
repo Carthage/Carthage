@@ -1,11 +1,10 @@
 import Foundation
-import Result
 import ReactiveSwift
 
 extension String {
 	/// Returns a producer that will enumerate each line of the receiver, then
 	/// complete.
-	internal var linesProducer: SignalProducer<String, NoError> {
+	internal var linesProducer: SignalProducer<String, Never> {
 		return SignalProducer { observer, lifetime in
 			self.enumerateLines { line, stop in
 				observer.send(value: line)
@@ -124,7 +123,7 @@ extension SignalProducer {
 	}
 
 	/// Sends a boolean of whether the producer succeeded or failed.
-	internal func succeeded() -> SignalProducer<Bool, NoError> {
+	internal func succeeded() -> SignalProducer<Bool, Never> {
 		return self
 			.then(SignalProducer<Bool, Error>(value: true))
 			.flatMapError { _ in .init(value: false) }
@@ -447,14 +446,14 @@ extension Reactive where Base: URLSession {
 	/// - note: This method will not send an error event in the case of a server
 	///         side error (i.e. when a response with status code other than
 	///         200...299 is received).
-	internal func download(with request: URLRequest) -> SignalProducer<(URL, URLResponse), AnyError> {
+	internal func download(with request: URLRequest) -> SignalProducer<(URL, URLResponse), Error> {
 		return SignalProducer { [base = self.base] observer, lifetime in
 			let task = base.downloadTask(with: request) { url, response, error in
 				if let url = url, let response = response {
 					observer.send(value: (url, response))
 					observer.sendCompleted()
 				} else {
-					observer.send(error: AnyError(error ?? defaultSessionError))
+                    observer.send(error: error.map { $0 as NSError } ?? defaultSessionError)
 				}
 			}
 

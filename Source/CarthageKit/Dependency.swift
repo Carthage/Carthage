@@ -1,5 +1,4 @@
 import Foundation
-import Result
 import Tentacle
 
 /// Uniquely identifies a Binary Spec's resolved URL and its description
@@ -72,7 +71,8 @@ extension Dependency {
 				let ownerAndNameSubstring = String(urlString[urlString.index(urlString.startIndex, offsetBy: startOfOwnerAndNameSubstring)..<urlString.endIndex])
 
 				switch Repository.fromIdentifier(ownerAndNameSubstring as String) {
-				case .success(let server, let repository):
+				case .success(let success):
+                    let (server, repository) = success
 					self = Dependency.gitHub(server, repository)
 
 				default:

@@ -2,7 +2,6 @@ import Foundation
 import MachO.loader
 import ReactiveTask
 import ReactiveSwift
-import Result
 
 /// Represents a Mach header
 ///
@@ -81,9 +80,9 @@ extension MachHeader {
 			.ignoreTaskData()
 			.map { String(data: $0, encoding: .utf8) ?? "" }
 			.filter { !$0.isEmpty }
-			.flatMap(.merge) { (output: String) -> SignalProducer<(String, String), NoError> in
+			.flatMap(.merge) { (output: String) -> SignalProducer<(String, String), Never> in
 				output.linesProducer.combinePrevious()
-			}.filterMap { previousLine, currentLine -> MachHeader? in
+			}.compactMap { previousLine, currentLine -> MachHeader? in
 
 				let previousLineComponents = previousLine
 					.components(separatedBy: CharacterSet.whitespaces)

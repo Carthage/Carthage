@@ -4,7 +4,6 @@
 import CarthageKit
 import Commandant
 import Foundation
-import Result
 import ReactiveSwift
 import ReactiveTask
 

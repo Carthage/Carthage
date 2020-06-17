@@ -1,5 +1,4 @@
 import Foundation
-import Result
 
 struct NetrcMachine {
 	let name: String
@@ -15,6 +14,7 @@ struct Netrc {
 		case machineNotFound
 		case missingToken(String)
 		case missingValueForToken(String)
+        case unknown(Error)
 	}
 	
 	public let machines: [NetrcMachine]
@@ -36,6 +36,7 @@ struct Netrc {
 		guard FileManager.default.isReadableFile(atPath: fileURL.path) else { return .failure(NetrcError.unreadableFile(fileURL)) }
 		
 		return Result(catching: { try String(contentsOf: fileURL, encoding: .utf8) })
+            .mapError { .unknown($0) }
 			.flatMap { Netrc.from($0) }
 	}
 	
