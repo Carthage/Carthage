@@ -248,6 +248,6 @@ extension BuildPlatform: ArgumentProtocol {
 	}
 
 	public static func from(string: String) -> BuildPlatform? {
-		try? parseSet(string)
+		return try? parseSet(string)
 	}
 }
