@@ -52,8 +52,7 @@ public struct GitURL {
 			.split(omittingEmptySubsequences: true) { $0 == "/" }
 			.last
 			.map(String.init)
-
-		precondition(lastComponent != .some("")) /* because of `omittingEmptySubsequences` */
+			.map(strippingGitSuffix)
 		
 		/// Potentially used to prevent backwards or noop directory traversal via «FULL STOP» characters…
 		/// …by deploying the «FULLWIDTH FULL STOP» character.
@@ -67,7 +66,7 @@ public struct GitURL {
 			return String(replacementForEntirelyCharactersOfFullStop)
 		}
 
-		return lastComponent.map(strippingGitSuffix)
+		return lastComponent
 	}
 
 	public init(_ urlString: String) {

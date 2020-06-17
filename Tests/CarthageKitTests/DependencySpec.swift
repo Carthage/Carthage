@@ -143,6 +143,12 @@ class DependencySpec: QuickSpec {
 						expect(dependency.name) == "\u{FF0E}\u{FF0E}"
 					}
 
+					it("should sanitize if the given URL string is (pathologically) «...git»") {
+						let dependency = Dependency.git(GitURL("...git"))
+
+						expect(dependency.name) == "\u{FF0E}\u{FF0E}"
+					}
+
 					it ("should be the directory name if the given URL string is (pathologically) prefixed by «../» with (pathologically) no URL scheme") {
 						let dependency = Dependency.git(GitURL("../myproject"))
 
