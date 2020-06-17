@@ -866,56 +866,53 @@ public final class Project { // swiftlint:disable:this type_body_length
 
 	/// Checks out the given dependency into its intended working directory,
 	/// cloning it first if need be.
-	private func checkoutDependency(
+	private func checkoutOrCloneDependency(
 		_ dependency: Dependency,
 		version: PinnedVersion,
 		submodulesByPath: [String: Submodule]
 	) -> SignalProducer<(), CarthageError> {
 		let revision = version.commitish
-		let repositoryURL = repositoryFileURL(for: dependency)
+		return cloneOrFetchDependency(dependency, commitish: revision)
+			.flatMap(.merge) { repositoryURL -> SignalProducer<(), CarthageError> in
+				let workingDirectoryURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
 
-		let producer = { () -> SignalProducer<(), CarthageError> in
-			let workingDirectoryURL = self.directoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
+				/// The submodule for an already existing submodule at dependency project’s path
+				/// or the submodule to be added at this path given the `--use-submodules` flag.
+				let submodule: Submodule?
 
-			/// The submodule for an already existing submodule at dependency project’s path
-			/// or the submodule to be added at this path given the `--use-submodules` flag.
-			let submodule: Submodule?
+				if var foundSubmodule = submodulesByPath[dependency.relativePath] {
+					foundSubmodule.url = dependency.gitURL(preferHTTPS: self.preferHTTPS)!
+					foundSubmodule.sha = revision
+					submodule = foundSubmodule
+				} else if self.useSubmodules {
+					submodule = Submodule(name: dependency.relativePath, path: dependency.relativePath, url: dependency.gitURL(preferHTTPS: self.preferHTTPS)!, sha: revision)
+				} else {
+					submodule = nil
+				}
 
-			if var foundSubmodule = submodulesByPath[dependency.relativePath] {
-				foundSubmodule.url = dependency.gitURL(preferHTTPS: self.preferHTTPS)!
-				foundSubmodule.sha = revision
-				submodule = foundSubmodule
-			} else if self.useSubmodules {
-				submodule = Submodule(name: dependency.relativePath, path: dependency.relativePath, url: dependency.gitURL(preferHTTPS: self.preferHTTPS)!, sha: revision)
-			} else {
-				submodule = nil
+				let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, version: version, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
+
+				if let submodule = submodule {
+					// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
+					// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
+					return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
+						.startOnQueue(self.gitOperationQueue)
+						.then(symlinkCheckoutPaths)
+				} else {
+					return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, force: true, revision: revision)
+						// For checkouts of “ideally bare” repositories of `dependency`, we add its submodules by cloning ourselves, after symlinking.
+						.then(symlinkCheckoutPaths)
+						.then(
+							submodulesInRepository(repositoryURL, revision: revision)
+								.flatMap(.merge) {
+									return cloneSubmoduleInWorkingDirectory($0, workingDirectoryURL, cacheURLMap: { (gitURL: GitURL) in
+										let dependency = Dependency.git(gitURL)
+										return repositoryFileURL(for: dependency)
+									})
+								}
+						)
+				}
 			}
-
-			let symlinkCheckoutPaths = self.symlinkCheckoutPaths(for: dependency, version: version, withRepository: repositoryURL, atRootDirectory: self.directoryURL)
-
-			if let submodule = submodule {
-				// In the presence of `submodule` for `dependency` — before symlinking, (not after) — add submodule and its submodules:
-				// `dependency`, subdependencies that are submodules, and non-Carthage-housed submodules.
-				return addSubmoduleToRepository(self.directoryURL, submodule, GitURL(repositoryURL.path))
-					.startOnQueue(self.gitOperationQueue)
-					.then(symlinkCheckoutPaths)
-			} else {
-				return checkoutRepositoryToDirectory(repositoryURL, workingDirectoryURL, force: true, revision: revision)
-					// For checkouts of “ideally bare” repositories of `dependency`, we add its submodules by cloning ourselves, after symlinking.
-					.then(symlinkCheckoutPaths)
-					.then(
-						submodulesInRepository(repositoryURL, revision: revision)
-							.flatMap(.concat) { (submodule) in
-								return cloneSubmoduleInWorkingDirectory(submodule, workingDirectoryURL, cacheURLMap: { (gitURL: GitURL) in
-									let dependency = Dependency.git(gitURL)
-									return repositoryFileURL(for: dependency)
-								})
-							}
-					)
-			}
-		}
-
-		return producer()
 			.on(started: {
 				self._projectEventsObserver.send(value: .checkingOut(dependency, revision))
 			})
@@ -1107,24 +1104,11 @@ public final class Project { // swiftlint:disable:this type_body_length
 					.flatMap(.concurrent(limit: 4)) { dependency, version -> SignalProducer<(), CarthageError> in
 						switch dependency {
 						case .git, .gitHub:
-							return self.cloneOrFetchDependency(dependency, commitish: version.commitish)
-								.then(SignalProducer<(), CarthageError>.empty)
+							return self.checkoutOrCloneDependency(dependency, version: version, submodulesByPath: submodulesByPath)
 						case .binary:
 							return .empty
 						}
 					}
-					// The checkoutDependency operation may clone or fetch submodules that are the same as some dependencies,
-					// so it should run after cloneOrFetchDependency to prevent conflict.
-					.then(SignalProducer<(Dependency, PinnedVersion), CarthageError>(dependencies)
-						.flatMap(.concat) { (dependency, version) -> SignalProducer<(), CarthageError> in
-							switch dependency {
-							case .git, .gitHub:
-								return self.checkoutDependency(dependency, version: version, submodulesByPath: submodulesByPath)
-							case .binary:
-								return .empty
-							}
-						}
-					)
 			}
 			.then(SignalProducer<(), CarthageError>.empty)
 	}
