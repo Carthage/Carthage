@@ -77,7 +77,7 @@ public struct SDK: Hashable {
 	///            hardcoded `simulatorHeuristic` · all keyed by lowercased `name`.
 	/// - Note: The aliases are intended to be matched case-insensitevly.
 	private static let knownIn2019YearDictionary: [String: (String, [String], String)] =
-		KeyValuePairs.reduce([
+		[
 			"MacOSX": (["macOS", "Mac", "OSX"], "macOS"),
 			"iPhoneOS": (["iOS Device", "iOS"], "iOS"),
 			"iPhoneSimulator": (["iOS Simulator"], "Simulator - iOS"),
@@ -85,9 +85,9 @@ public struct SDK: Hashable {
 			"WatchSimulator": (["watchOS Simulator", "watchsimulator"], "Simulator - watchOS"),
 			"AppleTVOS": (["tvOS"], "tvOS"),
 			"AppleTVSimulator": (["tvOS Simulator", "appletvsimulator", "tvsimulator"], "Simulator - tvOS"),
-		])(into: [:]) {
-			$0[$1.0.lowercased()] = ($1.0, $1.1.0, $1.1.1)
-		}
+        ].reduce(into: [:]) {
+            $0[$1.0.lowercased()] = ($1.0, $1.1.0, $1.1.1)
+        }
 
 	public static let knownIn2019YearSDKs: Set<SDK> =
 		Set(
