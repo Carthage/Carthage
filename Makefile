@@ -5,11 +5,12 @@ PREFIX?=/usr/local
 
 INTERNAL_PACKAGE=CarthageApp.pkg
 OUTPUT_PACKAGE=Carthage.pkg
-
-CARTHAGE_EXECUTABLE=./.build/release/carthage
 BINARIES_FOLDER=/usr/local/bin
 
-SWIFT_BUILD_FLAGS=--configuration release -Xswiftc -suppress-warnings
+SWIFT_BUILD_FLAGS=--configuration release $(shell script/query-xcode-for-macosx-architecture-support-and-emit-flags.zsh)
+SWIFT_BUILD_FLAGS+= -Xswiftc -suppress-warnings
+
+CARTHAGE_EXECUTABLE=$(shell swift build $(SWIFT_BUILD_FLAGS) --show-bin-path | /usr/bin/tail -n1)/carthage
 
 SWIFTPM_DISABLE_SANDBOX_SHOULD_BE_FLAGGED:=$(shell test -n "$${HOMEBREW_SDKROOT}" && echo should_be_flagged)
 ifeq ($(SWIFTPM_DISABLE_SANDBOX_SHOULD_BE_FLAGGED), should_be_flagged)
@@ -49,6 +50,8 @@ test:
 	swift test --skip-build
 
 installables:
+	/usr/bin/awk 'BEGIN { if (index(ARGV[1], "\n") != 0 ) { print ARGV[2] > "/dev/stderr"; exit 22 } }' "$${PWD:?}" \
+		"Invalid Working Directory: Due to Swift Package Manager’s verbose-flag–handling nature on «--show-bin-path», Carthage’s Makefile cannot operate under a newline-pathed working directory."
 	swift build $(SWIFT_BUILD_FLAGS)
 
 package: installables
