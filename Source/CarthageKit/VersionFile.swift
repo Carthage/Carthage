@@ -431,12 +431,16 @@ private func createVersionFile(
 				.platformSimulatorlessFromHeuristic
 		}
 
+		let sortedFrameworks: ([CachedFramework]?) -> [CachedFramework]? = {
+			$0?.sorted { $0.name < $1.name }
+		}
+
 		let versionFile = VersionFile(
 			commitish: commitish,
-			macOS: platformCaches[knownIn2019YearSDK("mac")],
-			iOS: platformCaches[knownIn2019YearSDK("iphoneos")],
-			watchOS: platformCaches[knownIn2019YearSDK("watchos")],
-			tvOS: platformCaches[knownIn2019YearSDK("appletvos")])
+			macOS: sortedFrameworks(platformCaches[knownIn2019YearSDK("mac")]),
+			iOS: sortedFrameworks(platformCaches[knownIn2019YearSDK("iphoneos")]),
+			watchOS: sortedFrameworks(platformCaches[knownIn2019YearSDK("watchos")]),
+			tvOS: sortedFrameworks(platformCaches[knownIn2019YearSDK("appletvos")]))
 
 		return versionFile.write(to: versionFileURL)
 	}
