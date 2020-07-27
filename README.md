@@ -272,7 +272,7 @@ Tags without any version number, or with any characters following the version nu
 
 Carthage can automatically use prebuilt frameworks, instead of building from scratch, if they are attached to a [GitHub Release](https://help.github.com/articles/about-releases/) on your project’s repository or via a binary project definition file.
 
-To offer prebuilt frameworks for a specific tag, the binaries for _all_ supported platforms should be zipped up together into _one_ archive, and that archive should be attached to a published Release corresponding to that tag. The attachment should include `.framework` in its name (e.g., `ReactiveCocoa.framework.zip`), to indicate to Carthage that it contains binaries. The directory structure of the acthive is free form but, __frameworks should only appear once in the archive__ as they will be copied
+To offer prebuilt frameworks for a specific tag, the binaries for _all_ supported platforms should be zipped up together into _one_ archive, and that archive should be attached to a published Release corresponding to that tag. The attachment should include `.framework` in its name (e.g., `ReactiveCocoa.framework.zip`), to indicate to Carthage that it contains binaries. The directory structure of the archive is free form but, __frameworks should only appear once in the archive__ as they will be copied
 to `Carthage/Build/<platform>` based on their name (e.g. `ReactiveCocoa.framework`).
 
 You can perform the archiving operation with carthage itself using:
