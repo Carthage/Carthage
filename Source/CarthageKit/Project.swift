@@ -1011,7 +1011,12 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.flatMap(.concat) { semanticVersion, frameworkURL in
 				return self.downloadBinary(dependency: Dependency.binary(binary), version: semanticVersion, url: frameworkURL)
 			}
-			.flatMap(.concat) { self.unarchiveAndCopyBinaryFrameworks(zipFile: $0, projectName: projectName, pinnedVersion: pinnedVersion, toolchain: toolchain) }
+			.flatMap(.concat) { zipFile in
+				self.unarchiveAndCopyBinaryFrameworks(zipFile: zipFile, projectName: projectName, pinnedVersion: pinnedVersion, toolchain: toolchain)
+ 					.on(failed: { _ in
+						try? FileManager.default.removeItem(at: zipFile)
+					})
+			}
 			.flatMap(.concat) { self.removeItem(at: $0) }
 	}
 
