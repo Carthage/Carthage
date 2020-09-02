@@ -204,7 +204,7 @@ public struct VersionFile: Codable {
 				} else {
 					return frameworkSwiftVersion(frameworkURL)
 						.map { swiftVersion -> Bool in
-							return swiftVersion == localSwiftVersion
+							return swiftVersion == localSwiftVersion || isModuleStableAPI(localSwiftVersion, swiftVersion, frameworkURL)
 						}
 						.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
 				}
