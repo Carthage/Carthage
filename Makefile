@@ -33,6 +33,10 @@ MKDIR=mkdir -p
 SUDO=sudo
 CP=cp
 
+ifdef DISABLE_SUDO
+override SUDO:=
+endif
+
 .PHONY: all clean install package test uninstall xcconfig xcodeproj
 
 all: installables
