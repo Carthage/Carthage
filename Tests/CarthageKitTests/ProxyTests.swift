@@ -5,7 +5,7 @@ import Quick
 
 class ProxySpec: QuickSpec {
 	override func spec() {
-		describe("createProxyWithNoProxyValues") {
+		describe("createProxyWithoutProxyValues") {
 			let proxy = Proxy(environment: [:])
 
 			it("should have nil dictionary") {
@@ -36,6 +36,12 @@ class ProxySpec: QuickSpec {
 				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSProxy]).to(beNil())
 				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSPort]).to(beNil())
 			}
+            
+            #if os(OSX)
+            it("should not set the proxy exceptions") {
+                expect(proxy.connectionProxyDictionary![kCFNetworkProxiesExceptionsList]).to(beNil())
+            }
+            #endif
 		}
 
 		describe("createProxyWithHTTPSValues") {
@@ -53,7 +59,36 @@ class ProxySpec: QuickSpec {
 				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPProxy]).to(beNil())
 				expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPPort]).to(beNil())
 			}
+            
+            #if os(OSX)
+            it("should not set the proxy exceptions") {
+                expect(proxy.connectionProxyDictionary![kCFNetworkProxiesExceptionsList]).to(beNil())
+            }
+            #endif
 		}
+        
+        #if os(OSX)
+        describe("createNoProxy") {
+            let proxy = Proxy(environment: ["no_proxy": "example.com,.github.com", "NO_PROXY": "example.com,.github.com"])
+
+            it("should set the proxy exceptions") {
+                expect(proxy.connectionProxyDictionary).toNot(beNil())
+                expect(proxy.connectionProxyDictionary![kCFNetworkProxiesExceptionsList] as? [String]) == ["example.com", ".github.com"]
+            }
+
+            it("should not set the http properties") {
+                expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPEnable]).to(beNil())
+                expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPProxy]).to(beNil())
+                expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPPort]).to(beNil())
+            }
+            
+            it("should not set the https properties") {
+                expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSEnable]).to(beNil())
+                expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSProxy]).to(beNil())
+                expect(proxy.connectionProxyDictionary![kCFNetworkProxiesHTTPSPort]).to(beNil())
+            }
+        }
+        #endif
 
 		describe("createProxyWithHTTPAndHTTPSValues") {
 			let proxy = Proxy(environment: [
