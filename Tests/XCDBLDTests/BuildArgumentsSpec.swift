@@ -104,32 +104,10 @@ class BuildArgumentsSpec: QuickSpec {
 			}
 
 			describe("specifying the sdk") {
-				for sdk in SDK.allSDKs {
-					itCreatesBuildArguments("includes \(sdk) in the argument if specified", rawArguments: ["-sdk", sdk.rawValue]) { subject in
-						subject.sdk = sdk
-					}
-				}
-			}
+				let macosx = SDK.knownIn2019YearSDKs.first(where: { $0.rawValue == "macosx" })!
 
-			itCreatesBuildArguments("includes the destination if given", rawArguments: ["-destination", "exampleDestination"]) { subject in
-				subject.destination = "exampleDestination"
-			}
-
-			describe("specifying onlyActiveArchitecture") {
-				itCreatesBuildArguments("includes ONLY_ACTIVE_ARCH=YES if it's set to true", rawArguments: ["ONLY_ACTIVE_ARCH=YES"]) { subject in
-					subject.onlyActiveArchitecture = true
-				}
-
-				itCreatesBuildArguments("includes ONLY_ACTIVE_ARCH=NO if it's set to false", rawArguments: ["ONLY_ACTIVE_ARCH=NO"]) { subject in
-					subject.onlyActiveArchitecture = false
-				}
-			}
-		}
-
-		describe("arguments") {
-			describe("specifying the sdk") {
-				for sdk in SDK.allSDKs.subtracting([.macOSX]) {
-					itCreatesBuildArguments("includes \(sdk) in the argument if specified", arguments: ["-sdk", sdk.rawValue], compareTo: \.arguments) { subject in
+				for sdk in SDK.knownIn2019YearSDKs.subtracting([macosx]) {
+					itCreatesBuildArguments("includes \(sdk) in the argument if specified", arguments: ["-sdk", sdk.rawValue]) { subject in
 						subject.sdk = sdk
 					}
 				}
@@ -140,8 +118,22 @@ class BuildArgumentsSpec: QuickSpec {
 				// Since we wouldn't be trying to build this target unless it were
 				// for macOS already, just let xcodebuild figure out the SDK on its
 				// own.
-				itCreatesBuildArguments("does not include the sdk flag if .macOSX is specified", arguments: [], compareTo: \.arguments) { subject in
-					subject.sdk = .macOSX
+				itCreatesBuildArguments("does not include the sdk flag if .macOSX is specified", arguments: []) { subject in
+					subject.sdk = macosx
+				}
+			}
+
+			itCreatesBuildArguments("includes the destination if given", arguments: ["-destination", "exampleDestination"]) { subject in
+				subject.destination = "exampleDestination"
+			}
+
+			describe("specifying onlyActiveArchitecture") {
+				itCreatesBuildArguments("includes ONLY_ACTIVE_ARCH=YES if it's set to true", arguments: ["ONLY_ACTIVE_ARCH=YES"]) { subject in
+					subject.onlyActiveArchitecture = true
+				}
+
+				itCreatesBuildArguments("includes ONLY_ACTIVE_ARCH=NO if it's set to false", arguments: ["ONLY_ACTIVE_ARCH=NO"]) { subject in
+					subject.onlyActiveArchitecture = false
 				}
 			}
 		}

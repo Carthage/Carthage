@@ -1,36 +1,12 @@
 import Foundation
 
-/// Represents a platform to build for.
-public enum Platform: String {
-	/// macOS.
-	case macOS = "Mac"
+/*
+Former file of `XCDBLD.Platform` — previously, platform functioned as somewhat of a
+simulator-removed instance of an SDK.
 
-	/// iOS for device and simulator.
-	case iOS = "iOS"
+This is dissimilar (in spirit and practice) to how Xcode Build Settings and
+`xcodebuild -showsdks -json` employed the term `Platform`.
 
-	/// Apple Watch device and simulator.
-	case watchOS = "watchOS"
-
-	/// Apple TV device and simulator.
-	case tvOS = "tvOS"
-
-	/// All supported build platforms.
-	public static let supportedPlatforms: [Platform] = [ .macOS, .iOS, .watchOS, .tvOS ]
-
-	/// The SDKs that need to be built for this platform.
-	public var SDKs: [SDK] {
-		switch self {
-		case .macOS:
-			return [ .macOSX ]
-
-		case .iOS:
-			return [ .iPhoneSimulator, .iPhoneOS ]
-
-		case .watchOS:
-			return [ .watchOS, .watchSimulator ]
-
-		case .tvOS:
-			return [ .tvOS, .tvSimulator ]
-		}
-	}
-}
+Functionality previously provided by this type is mostly now accomodated by
+`SDK.platformSimulatorlessFromHeuristic`.
+*/

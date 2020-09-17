@@ -60,7 +60,11 @@ public struct ArchiveCommand: CommandProtocol {
 				directoryURL,
 				withConfiguration: "Release",
 				useXCFrameworks: options.createXCFramework)
-				.flatMap(.concat) { scheme, project, settings -> SignalProducer<String, CarthageError> in
+				.flatMap(.merge) { scheme, project -> SignalProducer<BuildSettings, CarthageError> in
+					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
+					return BuildSettings.load(with: buildArguments)
+			}
+				.flatMap(.concat) { settings -> SignalProducer<String, CarthageError> in
 
 					if let wrapperName = settings.wrapperName.value,
 						let xcFrameworkWrapperName = settings.xcFrameworkWrapperName.value,
@@ -75,7 +79,9 @@ public struct ArchiveCommand: CommandProtocol {
 		}
 
 		return frameworks.flatMap(.merge) { frameworks -> SignalProducer<(), CarthageError> in
-			return SignalProducer<Platform, CarthageError>(Platform.supportedPlatforms)
+			// TODO: Better warning/planning for compressing up archives with non-known-in-year-2019 platforms.
+			// NOTE: as of current, non-known-in-year-2019 platforms are not compressed and copied by this command.
+			return SignalProducer<SDK, CarthageError>(SDK.knownIn2019YearSDKs)
 				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
 					return SignalProducer(frameworks)
 						.map { framework in

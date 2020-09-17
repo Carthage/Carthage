@@ -132,19 +132,22 @@ public struct VersionFile: Codable {
 	/// The extension representing a serialized VersionFile.
 	static let pathExtension = "version"
 
-	subscript(_ platform: Platform) -> [CachedFramework]? {
-		switch platform {
-		case .macOS:
+	subscript(_ platform: SDK) -> [CachedFramework]? {
+		switch platform.platformSimulatorlessFromHeuristic {
+		case "Mac":
 			return macOS
 
-		case .iOS:
+		case "iOS":
 			return iOS
 
-		case .watchOS:
+		case "watchOS":
 			return watchOS
 
-		case .tvOS:
+		case "tvOS":
 			return tvOS
+			
+		default:
+			return nil
 		}
 	}
 
@@ -197,11 +200,11 @@ public struct VersionFile: Codable {
 	///   - binariesDirectoryURL: the binaries directory
 	public func frameworkURL(
 		for cachedFramework: CachedFramework,
-		platform: Platform,
+		platform: SDK,
 		binariesDirectoryURL: URL
 	) -> URL {
 		return binariesDirectoryURL
-			.appendingPathComponent(platform.rawValue, isDirectory: true)
+			.appendingPathComponent(platform.platformSimulatorlessFromHeuristic, isDirectory: true)
 			.resolvingSymlinksInPath()
 			.appendingPathComponent(cachedFramework.relativePath, isDirectory: true)
 	}
@@ -213,7 +216,7 @@ public struct VersionFile: Codable {
 	///   - binariesDirectoryURL: the binaries directory
 	public func frameworkBinaryURL(
 		for cachedFramework: CachedFramework,
-		platform: Platform,
+		platform: SDK,
 		binariesDirectoryURL: URL
 	) -> URL {
 		return frameworkURL(
@@ -228,7 +231,7 @@ public struct VersionFile: Codable {
 	/// order that they were provided in.
 	public func hashes(
 		for cachedFrameworks: [CachedFramework],
-		platform: Platform,
+		platform: SDK,
 		binariesDirectoryURL: URL
 	) -> SignalProducer<String?, CarthageError> {
 		return SignalProducer<CachedFramework, CarthageError>(cachedFrameworks)
@@ -257,7 +260,7 @@ public struct VersionFile: Codable {
 	/// as they will be compatible with it by definition.
 	public func swiftVersionMatches(
 		for cachedFrameworks: [CachedFramework],
-		platform: Platform,
+		platform: SDK,
 		binariesDirectoryURL: URL,
 		localSwiftVersion: String
 	) -> SignalProducer<Bool, CarthageError> {
@@ -274,7 +277,7 @@ public struct VersionFile: Codable {
 				} else {
 					return frameworkSwiftVersion(frameworkURL)
 						.map { swiftVersion -> Bool in
-							return swiftVersion == localSwiftVersion
+							return swiftVersion == localSwiftVersion || isModuleStableAPI(localSwiftVersion, swiftVersion, frameworkURL)
 						}
 						.flatMapError { _ in SignalProducer<Bool, CarthageError>(value: false) }
 				}
@@ -283,7 +286,7 @@ public struct VersionFile: Codable {
 
 	/// Check if the version file matches its values with the ones provided
 	public func satisfies(
-		platform: Platform,
+		platform: SDK,
 		commitish: String,
 		binariesDirectoryURL: URL,
 		localSwiftVersion: String
@@ -319,7 +322,7 @@ public struct VersionFile: Codable {
 
 	/// Check if the version file matches its values with the ones provided
 	public func satisfies(
-		platform: Platform,
+		platform: SDK,
 		commitish: String,
 		hashes: [String?],
 		swiftVersionMatches: [Bool]
@@ -374,7 +377,7 @@ public struct VersionFile: Codable {
 ///
 /// Returns a signal that succeeds once the file has been created.
 public func createVersionFileForCurrentProject(
-	platforms: Set<Platform>,
+	platforms: Set<SDK>?,
 	buildProducts: [URL],
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
@@ -469,7 +472,7 @@ public func createVersionFileForCurrentProject(
 public func createVersionFile(
 	for dependency: Dependency,
 	version: PinnedVersion,
-	platforms: Set<Platform>,
+	platforms: Set<SDK>?,
 	buildProducts: [URL],
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
@@ -495,13 +498,23 @@ private func createVersionFile(
 		let versionFileURL = rootBinariesURL
 			.appendingPathComponent(".\(dependencyName).\(VersionFile.pathExtension)")
 
+		let knownIn2019YearSDK: (String) -> String = { prefix in
+			SDK.knownIn2019YearSDKs
+				.first(where: { sdk in sdk.rawValue.hasPrefix(prefix) } )!
+				.platformSimulatorlessFromHeuristic
+		}
+
+		let sortedFrameworks: ([CachedFramework]?) -> [CachedFramework]? = {
+			$0?.sorted { $0.name < $1.name }
+		}
+
 		let versionFile = VersionFile(
 			commitish: commitish,
-			macOS: platformCaches[Platform.macOS.rawValue],
-			iOS: platformCaches[Platform.iOS.rawValue],
-			watchOS: platformCaches[Platform.watchOS.rawValue],
-			tvOS: platformCaches[Platform.tvOS.rawValue],
-			xcFramework: nil)
+			macOS: sortedFrameworks(platformCaches[knownIn2019YearSDK("mac")]),
+			iOS: sortedFrameworks(platformCaches[knownIn2019YearSDK("iphoneos")]),
+			watchOS: sortedFrameworks(platformCaches[knownIn2019YearSDK("watchos")]),
+			tvOS: sortedFrameworks(platformCaches[knownIn2019YearSDK("appletvos")]),
+            xcFramework: nil)
 
 		return versionFile.write(to: versionFileURL)
 	}
@@ -516,15 +529,16 @@ private func createVersionFile(
 public func createVersionFileForCommitish(
 	_ commitish: String,
 	dependencyName: String,
-	platforms: Set<Platform> = Set(Platform.supportedPlatforms),
+	platforms: Set<SDK>? = nil,
 	buildProducts: [URL],
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
 	var platformCaches: [String: [CachedFramework]] = [:]
 
-	let platformsToCache = platforms.isEmpty ? Set(Platform.supportedPlatforms) : platforms
+	let platformsToCache = (platforms ?? SDK.knownIn2019YearSDKs).intersection(SDK.knownIn2019YearSDKs)
+
 	for platform in platformsToCache {
-		platformCaches[platform.rawValue] = []
+		platformCaches[platform.platformSimulatorlessFromHeuristic] = []
 	}
 
 	struct FrameworkDetail {
@@ -639,39 +653,39 @@ public func createVersionFileForXCFramework(
 	rootDirectoryURL: URL
 ) -> SignalProducer<(), CarthageError> {
 
-	guard let bundle = Bundle(url: xcFrameworkURL) else {
-		return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not a valid bundle."))
-	}
-
-	guard let executableURL = bundle.executableURL,
-		let packageType = bundle.packageType ?? MachHeader.speculativePackageType(forExecutable: executableURL) else {
-			return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not a valid bundle. Binary is not Mach-O or filetype is not supported."))
-	}
-
-	switch packageType {
-
-	case .framework, .bundle:
-		return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not an xcframework bundle."))
-	case .xcFramework:
-		guard let xcFrameworkInfo = bundle.infoDictionary.flatMap(XCFrameworkInfo.init) else {
-			return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) cannot parse xcframework Info.plist."))
-		}
-
-		let partitionedAvailableLibrariesPerPlatform = xcFrameworkInfo
-			.availableLibraries
-			.reduce(into: [Platform: [XCFrameworkLibrary]]()) { acc, xcFrameworkLibrary in
-				acc[xcFrameworkLibrary.supportedPlatform] = (acc[xcFrameworkLibrary.supportedPlatform] ?? []) + [xcFrameworkLibrary]
-		}
-
-		let p: SignalProducer<(Platform, [(XCFrameworkLibrary, URL)]), NoError> = SignalProducer(partitionedAvailableLibrariesPerPlatform).map { tuple in
-			let (platform, libraries) = tuple
-			let librariesAndExecutableURLs = libraries
-				.map { (library: $0, partialURL: ($0.identifier as NSString).appendingPathComponent($0.path) as String) }
-				.map { (library: $0.library, bundleURL: bundle.bundleURL.appendingPathComponent($0.partialURL)) }
-				.map { (library: $0.library, executableURL:  Bundle(url: $0.bundleURL)!.executableURL!) }
-
-			return (platform, librariesAndExecutableURLs)
-		}
+//	guard let bundle = Bundle(url: xcFrameworkURL) else {
+//		return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not a valid bundle."))
+//	}
+//
+//	guard let executableURL = bundle.executableURL,
+//		let packageType = bundle.packageType ?? MachHeader.speculativePackageType(forExecutable: executableURL) else {
+//			return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not a valid bundle. Binary is not Mach-O or filetype is not supported."))
+//	}
+//
+//	switch packageType {
+//
+//	case .framework, .bundle:
+//		return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not an xcframework bundle."))
+//	case .xcFramework:
+//		guard let xcFrameworkInfo = bundle.infoDictionary.flatMap(XCFrameworkInfo.init) else {
+//			return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) cannot parse xcframework Info.plist."))
+//		}
+//
+//		let partitionedAvailableLibrariesPerPlatform = xcFrameworkInfo
+//			.availableLibraries
+//			.reduce(into: [SDK: [XCFrameworkLibrary]]()) { acc, xcFrameworkLibrary in
+//				acc[xcFrameworkLibrary.supportedPlatform] = (acc[xcFrameworkLibrary.supportedPlatform] ?? []) + [xcFrameworkLibrary]
+//		}
+//
+//		let p: SignalProducer<(SDK, [(XCFrameworkLibrary, URL)]), NoError> = SignalProducer(partitionedAvailableLibrariesPerPlatform).map { tuple in
+//			let (platform, libraries) = tuple
+//			let librariesAndExecutableURLs = libraries
+//				.map { (library: $0, partialURL: ($0.identifier as NSString).appendingPathComponent($0.path) as String) }
+//				.map { (library: $0.library, bundleURL: bundle.bundleURL.appendingPathComponent($0.partialURL)) }
+//				.map { (library: $0.library, executableURL:  Bundle(url: $0.bundleURL)!.executableURL!) }
+//
+//			return (platform, librariesAndExecutableURLs)
+//		}
 
 //		let cumulativeHashProducer = SignalProducer<(Platform, [XCFrameworkLibrary]), CarthageError>(partitionedAvailableLibrariesPerPlatform)
 //			.map {
@@ -685,15 +699,17 @@ public func createVersionFileForXCFramework(
 //			.reduce(into: SHA256Hasher()) { hasher, data in try? hasher.hash(data) }
 //			.flatMap(.merge) { $0.finalizeProducer() }
 
-		fatalError()
+//		fatalError()
 
 //		return createVersionFileForCommitish(commitish, xcFrameworkInfo: xcFrameworkInfo, rootDirectoryURL: rootDirectoryURL)
 //		let availableLibrariesURLs = xcFrameworkInfo
 //			.availableLibraries
 //			.map { xcFrameworkURL.appendingPathComponent(($0.identifier as NSString).appendingPathComponent($0.path)) }
-	default:
-		return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not a supported bundle."))
-	}
+//	default:
+//		return SignalProducer<(), CarthageError>(error: .internalError(description: "\(xcFrameworkURL) is not a supported bundle."))
+//	}
+
+    fatalError()
 }
 
 
@@ -709,7 +725,7 @@ public func createVersionFileForXCFramework(
 public func versionFileMatches(
 	_ dependency: Dependency,
 	version: PinnedVersion,
-	platforms: Set<Platform>,
+	platforms: Set<SDK>?,
 	rootDirectoryURL: URL,
 	toolchain: String?
 ) -> SignalProducer<Bool?, CarthageError> {
@@ -720,7 +736,7 @@ public func versionFileMatches(
 
 	let commitish = version.commitish
 
-	let platformsToCheck = platforms.isEmpty ? Set<Platform>(Platform.supportedPlatforms) : platforms
+	let platformsToCheck = (platforms ?? SDK.knownIn2019YearSDKs).intersection(SDK.knownIn2019YearSDKs)
 
 	let rootBinariesURL = rootDirectoryURL
 		.appendingPathComponent(Constants.binariesFolderPath, isDirectory: true)
@@ -729,7 +745,7 @@ public func versionFileMatches(
 	return swiftVersion(usingToolchain: toolchain)
 		.mapError { error in CarthageError.internalError(description: error.description) }
 		.flatMap(.concat) { localSwiftVersion in
-			return SignalProducer<Platform, CarthageError>(platformsToCheck)
+			return SignalProducer<SDK, CarthageError>(platformsToCheck)
 				.flatMap(.merge) { platform in
 					return versionFile.satisfies(
 						platform: platform,

@@ -9,7 +9,7 @@ public struct XCFrameworkLibrary {
 	public let identifier: String
 	public let path: String
 	public let supportedArchitectures: [String]
-	public let supportedPlatform: Platform
+	public let supportedPlatform: String
 	public let supportedSDK: SDK
 
 	public init?(_ dictionary: [String: Any]) {
@@ -17,62 +17,17 @@ public struct XCFrameworkLibrary {
 		guard let identifier = dictionary["LibraryIdentifier"] as? String,
 			let path = dictionary["LibraryPath"] as? String,
 			let supportedArchs = dictionary["SupportedArchitectures"] as? [String],
-			let supportPlatform = dictionary["SupportedPlatform"] as? String else {
+			let supportedPlatform = dictionary["SupportedPlatform"] as? String else {
 				return nil
 		}
 
-		let supportedPlatformVariant = dictionary["SupportedPlatformVariant"] as? XCFrameworkPlatformVariant
-		guard let supportedPlatform = Platform(platform: supportPlatform),
-			let sdk = SDK(platform: supportedPlatform, variant: supportedPlatformVariant) else {
-				return nil
-		}
+        let supportedPlatformVariant = (dictionary["SupportedPlatformVariant"] as? XCFrameworkPlatformVariant)?.rawValue
 
 		self.identifier = identifier
 		self.path = path
 		self.supportedArchitectures = supportedArchs
 		self.supportedPlatform = supportedPlatform
-		self.supportedSDK = sdk
-	}
-}
-
-fileprivate extension Platform {
-
-	static let aliases: [String : Platform] = ["ios" : .iOS,
-											   "macos" : .macOS,
-											   "watchos" : .watchOS,
-											   "tvos" : .tvOS
-											  ]
-	
-	init?(platform: String) {
-
-		guard let vanillaPlatform = Platform(rawValue: platform) else {
-			guard let aliasedPlatfrom = Platform.aliases[platform] else {
-				return nil
-			}
-			self = aliasedPlatfrom
-			return
-		}
-		self = vanillaPlatform
-	}
-}
-
-fileprivate extension SDK {
-
-	init?(platform: Platform, variant: XCFrameworkPlatformVariant?) {
-
-		let isSimulatorVariant = variant != nil && variant! == .simulator
-
-		switch platform {
-			case .iOS:
-				self = isSimulatorVariant ? .iPhoneSimulator : .iPhoneOS
-			case .macOS:
-				guard !isSimulatorVariant else { return nil }
-				self = .macOSX
-			case .tvOS:
-				self = isSimulatorVariant ? .tvSimulator : .tvOS
-			case .watchOS:
-				self = isSimulatorVariant ? .watchSimulator : .watchOS
-		}
+		self.supportedSDK =  SDK(name: supportedPlatform, simulatorHeuristic: supportedPlatformVariant ?? "")
 	}
 }
 

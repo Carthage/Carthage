@@ -1,5 +1,6 @@
 import Foundation
 import Result
+import ReactiveTask
 import ReactiveSwift
 import XCDBLD
 
@@ -43,8 +44,7 @@ public struct BuildSettings {
 	///
 	/// Upon .success, sends one BuildSettings value for each target included in
 	/// the referenced scheme.
-	public static func load(with arguments: BuildArguments,
-		for action: BuildArguments.Action? = nil) -> SignalProducer<BuildSettings, CarthageError> {
+	public static func load(with arguments: BuildArguments, for action: BuildArguments.Action? = nil, with environment: [String: String]? = nil) -> SignalProducer<BuildSettings, CarthageError> {
 		// xcodebuild (in Xcode 8.0) has a bug where xcodebuild -showBuildSettings
 		// can hang indefinitely on projects that contain core data models.
 		// rdar://27052195
@@ -53,7 +53,7 @@ public struct BuildSettings {
 		//
 		// "archive" also works around the issue above so use it to determine if
 		// it is configured for the archive action.
-		let task = xcodebuildTask(["archive", "-showBuildSettings", "-skipUnavailableActions"], arguments)
+		let task = xcodebuildTask(["archive", "-showBuildSettings", "-skipUnavailableActions"], arguments, environment: environment)
 
 		return task.launch()
 			.ignoreTaskData()
@@ -123,8 +123,10 @@ public struct BuildSettings {
 	/// sent on the returned signal.
 	public static func SDKsForScheme(_ scheme: Scheme, inProject project: ProjectLocator) -> SignalProducer<SDK, CarthageError> {
 		return load(with: BuildArguments(project: project, scheme: scheme))
+			.zip(with: SDK.setsFromJSONShowSDKsWithFallbacks.promoteError(CarthageError.self))
 			.take(first: 1)
-			.flatMap(.merge) { $0.buildSDKs }
+			.map { $1.intersection($0.buildSDKRawNames.map { sdk in SDK(name: sdk, simulatorHeuristic: "") }) }
+			.flatten()
 	}
 
 	/// Returns the value for the given build setting, or an error if it could
@@ -138,18 +140,18 @@ public struct BuildSettings {
 	}
 
 	/// Attempts to determine the SDKs this scheme builds for.
-	public var buildSDKs: SignalProducer<SDK, CarthageError> {
+	public var buildSDKRawNames: Set<String> {
 		let supportedPlatforms = self["SUPPORTED_PLATFORMS"]
 
 		if let supportedPlatforms = supportedPlatforms.value {
-			let platforms = supportedPlatforms.split { $0 == " " }.map(String.init)
-			return SignalProducer<String, CarthageError>(platforms)
-				.map { platform in SignalProducer(result: SDK.from(string: platform)) }
-				.flatten(.merge)
+			return Set(
+				supportedPlatforms.split(separator: " ").map(String.init)
+			)
+		} else if let platformName = self["PLATFORM_NAME"].value {
+			return [platformName] as Set
+		} else {
+			return [] as Set
 		}
-
-		let firstBuildSDK = self["PLATFORM_NAME"].flatMap(SDK.from(string:))
-		return SignalProducer(result: firstBuildSDK)
 	}
 
 	/// Attempts to determine the ProductType specified in these build settings.
@@ -342,4 +344,71 @@ extension BuildSettings: CustomStringConvertible {
 	public var description: String {
 		return "Build settings for target \"\(target)\": \(settings)"
 	}
+}
+
+private enum Environment {
+	static let withoutActiveXcodeXCConfigFile: [String: String] =
+		ProcessInfo.processInfo.environment
+			.merging(
+				["XCODE_XCCONFIG_FILE": "/dev/null", "LC_ALL": "c"],
+				 uniquingKeysWith: { _, replacer in replacer }
+			)
+}
+
+extension SDK {
+	/// Starting around Xcode 7.3.1, and current as of Xcode 11.5, Xcodes contain a
+	/// xcodeproj that we can derive `XCDBLD.SDK`s via Xcode-defaulted `AVAILABLE_PLATFORMS`.
+	///
+	/// - Note: Pass no scheme, later Xcodes handle it correctly, but Xcode 7.3.1 doesn’t…
+	/// - Note: As last ditch effort, try inside `/Applications/Xcode.app`, which might not exist.
+	/// - Note: Mostly, `xcodebuild -showsdks -json`-based `XCDBLD.SDK`s will be grabbed instead of
+	///         this signal reaching completion.
+	/// - Note: Will, where possible, draw from `SDK.knownIn2019YearSDKs` for 2019-era captialization.
+	static let setFromFallbackXcodeprojBuildSettings: SignalProducer<Set<SDK>?, NoError> =
+		Task("/usr/bin/xcrun", arguments: ["--find", "xcodebuild"], environment: Environment.withoutActiveXcodeXCConfigFile)
+			.launch()
+			.materializeResults() // to map below and ignore errors
+			.map {
+				$0.value?.value.flatMap { String(data: $0, encoding: .utf8) }
+					?? "/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild\n"
+			}
+			.map { String.reversed($0)().first == "\n" ? String($0.dropLast(1)) : $0 }
+			.map(URL.init(fileURLWithPath:))
+			.map { (base: URL) in
+				let relative = "../../usr/share/xcs/xcsd/node_modules/nodobjc/node_modules/ffi/deps/libffi/libffi.xcodeproj/"
+				return relative.withCString {
+					URL(fileURLWithFileSystemRepresentation: $0, isDirectory: true, relativeTo: base.isFileURL ? base.standardizedFileURL : URL(string: "file:///var/empty/ø/ø/ø/")!)
+				}
+			}
+			.map { (potentialFile: URL) in BuildArguments(
+				project: ProjectLocator.projectFile(potentialFile),
+				scheme: Scheme?.none,
+				configuration: "Release"
+			) }
+			.map { ($0 as BuildArguments, BuildArguments.Action?.none, Environment.withoutActiveXcodeXCConfigFile) }
+			.flatMap(.race, BuildSettings.load) // note: above var empty path will soft error and get nilled below
+			.materializeResults()
+			.reduce(into: Set<SDK>?.none) {
+				guard let unsplit = $1.value?.settings["AVAILABLE_PLATFORMS"] else { return }
+				guard $0 == nil else { return }
+				$0 = Set(
+					unsplit.split(separator: " ").lazy.map {
+						SDK(rawValue: String($0)) ?? SDK(name: String($0), simulatorHeuristic: "")
+					}
+				)
+			}
+}
+
+extension SDK {
+	/// - See: `SDK.setFromJSONShowSDKs`
+	/// - Note: Fallbacks are `SDK.setFromFallbackXcodeprojBuildSettings` and
+	///         hardcoded `SDK.knownIn2019YearSDKs`.
+	static let setsFromJSONShowSDKsWithFallbacks: SignalProducer<Set<SDK>, NoError> =
+		SDK.setFromJSONShowSDKs
+			.concat(SDK.setFromFallbackXcodeprojBuildSettings)
+			.skip(while: { $0 == nil })
+			.take(first: 1)
+			.skipNil()
+			.reduce(into: SDK.knownIn2019YearSDKs) { $0 = $1 }
+			.replayLazily(upTo: 1)
 }

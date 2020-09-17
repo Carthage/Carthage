@@ -9,7 +9,6 @@ __subcommands() {
         'bootstrap'
         'build'
         'checkout'
-        'cleanup'
         'copy-frameworks'
         'fetch'
         'help'
@@ -84,13 +83,6 @@ _carthage() {
                         '--use-ssh' \
                         '--use-submodules' \
                         '--no-use-binaries' \
-                        '--color: :(auto always never)' \
-                        '--project-directory: :_directories' \
-                        '(-)*:: :->null_state' \
-                        && ret=0
-                        ;;
-                (cleanup)
-                    _arguments \
                         '--color: :(auto always never)' \
                         '--project-directory: :_directories' \
                         '(-)*:: :->null_state' \

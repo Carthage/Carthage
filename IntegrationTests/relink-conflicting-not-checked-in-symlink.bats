@@ -72,3 +72,24 @@ carthage-and-check-project-symlink() {
 	carthage-and-check-project-symlink update --no-build --no-use-binaries
 
 }
+
+@test "with conflicting not-checked-in symlink in «Carthage/Checkouts» of dependency pathologically named «...git», carthage «bootstrap, update, update» should — sanitizing throughout — unlink, then write symlink there" {
+
+	mv "${extracted_directory:?}/SourceRepos/TestFramework1" "${extracted_directory}/SourceRepos/...git"
+
+	rm Cartfile
+
+	cat > Cartfile <<-EOF
+		git "file://${extracted_directory}/SourceRepos/...git" "relink-conflicting-not-checked-in-syminks"
+	EOF
+
+	carthage bootstrap --no-build --no-use-binaries
+	check-symlink "$(project_directory)/Carthage/Checkouts/．．/Carthage/Checkouts/TestFramework2"
+	# carthage should have sanitized the former «TestFramework1» from «...git» to non–path-traversing «．．»…
+
+	carthage update --no-build --no-use-binaries
+	check-symlink "$(project_directory)/Carthage/Checkouts/．．/Carthage/Checkouts/TestFramework2"
+
+	carthage update --no-build --no-use-binaries
+	check-symlink "$(project_directory)/Carthage/Checkouts/．．/Carthage/Checkouts/TestFramework2"
+}

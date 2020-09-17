@@ -47,7 +47,7 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
 	```
 	github "Alamofire/Alamofire" ~> 4.7.2
 	```
-	
+
 1. Run `carthage update`
 1. A `Cartfile.resolved` file and a `Carthage` directory will appear in the same directory where your `.xcodeproj` or `.xcworkspace` is
 1. Drag the built `.framework` binaries from `Carthage/Build/<platform>` into your application’s Xcode project.
@@ -83,7 +83,7 @@ There are multiple options for installing Carthage:
 
 * **MacPorts:** You can use [MacPorts](https://www.macports.org/) and install the `carthage` tool on your system simply by running `sudo port selfupdate` and `sudo port install carthage`. (note: if you previously installed the binary version of Carthage, you should delete `/Library/Frameworks/CarthageKit.framework`).
 
-* **From source:** If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, then run `make install`. Requires Xcode 9.4 (Swift 4.1).
+* **From source:** If you’d like to run the latest development version (which may be highly unstable or incompatible), simply clone the `master` branch of the repository, then run `make install`. Requires Xcode 10.0 (Swift 4.2).
 
 ## Adding frameworks to an application
 
@@ -107,7 +107,7 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 
 1. Create a [Cartfile][] that lists the frameworks you’d like to use in your project.
 1. Run `carthage update`. This will fetch dependencies into a [Carthage/Checkouts][] folder, then build each one or download a pre-compiled framework.
-1. On your application targets’ _General_ settings tab, in the “Linked Frameworks and Libraries” section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
+1. Open your application targets’ _General_ settings tab. For Xcode 11.0 and higher, in the "Frameworks, Libraries, and Embedded Content" section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk. Then, in the "Embed"  section, select "Do Not Embed" from the pulldown menu for each item added. For Xcode 10.x and lower, in the "Linked Frameworks and Libraries" section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
     ```sh
@@ -272,7 +272,7 @@ Tags without any version number, or with any characters following the version nu
 
 Carthage can automatically use prebuilt frameworks, instead of building from scratch, if they are attached to a [GitHub Release](https://help.github.com/articles/about-releases/) on your project’s repository or via a binary project definition file.
 
-To offer prebuilt frameworks for a specific tag, the binaries for _all_ supported platforms should be zipped up together into _one_ archive, and that archive should be attached to a published Release corresponding to that tag. The attachment should include `.framework` in its name (e.g., `ReactiveCocoa.framework.zip`), to indicate to Carthage that it contains binaries. The directory structure of the acthive is free form but, __frameworks should only appear once in the archive__ as they will be copied
+To offer prebuilt frameworks for a specific tag, the binaries for _all_ supported platforms should be zipped up together into _one_ archive, and that archive should be attached to a published Release corresponding to that tag. The attachment should include `.framework` in its name (e.g., `ReactiveCocoa.framework.zip`), to indicate to Carthage that it contains binaries. The directory structure of the archive is free form but, __frameworks should only appear once in the archive__ as they will be copied
 to `Carthage/Build/<platform>` based on their name (e.g. `ReactiveCocoa.framework`).
 
 You can perform the archiving operation with carthage itself using:
@@ -436,4 +436,3 @@ Header backdrop photo is released under the [CC BY-NC-SA 2.0](https://creativeco
 [CarthageKit]: Source/CarthageKit
 [VersionFile]: Documentation/VersionFile.md
 [StaticFrameworks]: Documentation/StaticFrameworks.md
-

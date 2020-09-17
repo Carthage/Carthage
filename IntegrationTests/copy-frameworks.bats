@@ -15,7 +15,7 @@ teardown() {
     run carthage update --platform ios
     [ "$status" -eq 0 ]
 
-    run xcodebuild clean build-for-testing -scheme CarthageCopyFrameworksFixture -sdk iphonesimulator -destination "name=iPhone 6s"
+    run xcodebuild clean build-for-testing -scheme CarthageCopyFrameworksFixture -sdk iphonesimulator -destination "name=iPhone 8"
     [ "$status" -eq 0 ]
 
     ARCHIVE_APP_DIR=CarthageCopyFrameworksFixture.xcarchive/Products/Applications
