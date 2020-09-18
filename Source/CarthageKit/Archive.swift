@@ -56,7 +56,7 @@ private let archiveTemplate = "carthage-archive.XXXXXX"
 /// Unzips the archive at the given file URL into a temporary directory, then
 /// sends the file URL to that directory.
 private func unzip(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
-	return FileManager.default.reactive.createTemporaryDirectoryWithTemplate(archiveTemplate)
+	return FileManager.default.reactive.createTemporaryDirectoryWithTemplate(archiveTemplate, destinationURL: fileURL)
 		.flatMap(.merge) { directoryURL in
 			return unzip(archive: fileURL, to: directoryURL)
 				.then(SignalProducer<URL, CarthageError>(value: directoryURL))
@@ -66,7 +66,7 @@ private func unzip(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
 /// Untars an archive at the given file URL into a temporary directory, 
 /// then sends the file URL to that directory.
 private func untar(archive fileURL: URL) -> SignalProducer<URL, CarthageError> {
-	return FileManager.default.reactive.createTemporaryDirectoryWithTemplate(archiveTemplate)
+	return FileManager.default.reactive.createTemporaryDirectoryWithTemplate(archiveTemplate, destinationURL: fileURL)
 		.flatMap(.merge) { directoryURL in
 			return untar(archive: fileURL, to: directoryURL)
 				.then(SignalProducer<URL, CarthageError>(value: directoryURL))
