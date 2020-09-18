@@ -71,8 +71,17 @@ Carthage builds your dependencies and provides you with binary frameworks, but y
     ```
 Another approach when having multiple dependencies is to use `.xcfilelist`s. This is covered in [If you're building for iOS, tvOS or watchOS](#if-youre-building-for-ios-tvos-or-watchos)
 
-For an in depth guide, read on from [Adding frameworks to an application](#adding-frameworks-to-an-application)
+Another approach when having multiple dependencies is to use `.xcfilelist`s. This is covered in [If you´re building for iOS, tvOS ot WatchOS](#if-youre-building-for-ios-tvos-or-watchos)
 
+1. **Experimental**: You may also want to copy your dependencies automatically. In this case in a created Run Script append `--auto` argument to get a following script:
+
+	```
+	/usr/local/bin/carthage copy-frameworks --auto
+	```
+
+From that point all of the Carthage's frameworks that are linked againts your target will be copied automatically. This approach supports both paths from the "Input Files" as well as the `.xcfilelist`s and therefore purely additive.
+
+For an in depth guide, read on from [Adding frameworks to an application](#adding-frameworks-to-an-application)
 ## Installing Carthage
 
 There are multiple options for installing Carthage:
@@ -110,6 +119,8 @@ Additionally, you'll need to copy debug symbols for debugging and crash reportin
 1. Open your application targets’ _General_ settings tab. For Xcode 11.0 and higher, in the "Frameworks, Libraries, and Embedded Content" section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk. Then, in the "Embed"  section, select "Do Not Embed" from the pulldown menu for each item added. For Xcode 10.x and lower, in the "Linked Frameworks and Libraries" section, drag and drop each framework you want to use from the [Carthage/Build][] folder on disk.
 1. On your application targets’ _Build Phases_ settings tab, click the _+_ icon and choose _New Run Script Phase_. Create a Run Script in which you specify your shell (ex: `/bin/sh`), add the following contents to the script area below the shell:
 
+###### Manual
+
     ```sh
     /usr/local/bin/carthage copy-frameworks
     ```
@@ -141,6 +152,25 @@ This script works around an [App Store submission bug](http://www.openradar.me/r
 With the debug information copied into the built products directory, Xcode will be able to symbolicate the stack trace whenever you stop at a breakpoint. This will also enable you to step through third-party code in the debugger.
 
 When archiving your application for submission to the App Store or TestFlight, Xcode will also copy these files into the dSYMs subdirectory of your application’s `.xcarchive` bundle.
+
+###### Experimental Automatic Copying
+
+    ```sh
+    /usr/local/bin/carthage copy-frameworks --auto
+    ```
+
+From this point Carthage will infer and copy all Carthage's frameworks that are linked against target. It also capable to copy transitive frameworks. For example, you have linked to your app `SocialSDK-Swift` that links internally `SocialSDK-ObjC` which in turns uses utilitary dependency `SocialTools`. In this case you don't need transient dependencies it should be enough to link against your target only `SocialSDK-Swift`. Transient dependencies will be resolved and copied automatically to your app.
+
+Optionally you can add `--verbose` flag to see which frameworks are being copied by Carthage.
+
+###### Combining Automatic and Manual copying
+
+Note that you can combine both automatic and manual ways to copy frameworks, however manually specified frameworks always take precedence over automatically inferred. Therefore in case you have `SomeFramework.framework` located anywhere as well as `SomeFramework.framework` located at `./Carthage/Build/<platform>/`, Carthage will pick manually specified framework. This is useful when you're working with development frameworks and want to copy your version of the framework instead of default one. 
+Important to undestand, that Carthage won't resolve transient dependencies for your custom framework unless they either located at `./Carthage/Build/<platform>/` or specified manually in “Input Files".
+
+###### Automatic depencencies copying FRAMEWORK_SEARCH_PATHS
+
+If you're working on a development dependencies and would like to utilize `--auto` flag to automate copying of the build artifacts you also can be interested in using `--use-framework-search-paths` flag. This will instruct Carthage to search for a linked dependencies and copy them using `FRAMEWORK_SEARCH_PATHS` environment variable.
 
 ##### For both platforms
 

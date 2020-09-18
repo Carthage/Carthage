@@ -1119,8 +1119,7 @@ public func copyProduct(_ from: URL, _ to: URL) -> SignalProducer<URL, CarthageE
 		if manager.fileExists(atPath: to.path) && from.absoluteURL == to.absoluteURL {
 			return .success(to)
 		}
-
-		// Although some methods’ documentation say: “YES if createIntermediates
+        // Although some methods’ documentation say: “YES if createIntermediates
 		// is set and the directory already exists)”, it seems to rarely
 		// returns NO and NSFileWriteFileExistsError error. So we should
 		// ignore that specific error.
