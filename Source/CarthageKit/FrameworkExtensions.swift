@@ -380,14 +380,22 @@ extension Reactive where Base: FileManager {
 	///
 	/// The template name should adhere to the format required by the mkdtemp()
 	/// function.
-	public func createTemporaryDirectoryWithTemplate(_ template: String) -> SignalProducer<URL, CarthageError> {
+  ///
+  /// The `destinationURL` parameter is the URL of the destination item that is to be copied. It is used to create a temporary directory that is on the same filesystem as the destination in order to avoid cross-device file operations.
+    public func createTemporaryDirectoryWithTemplate(_ template: String, destinationURL: URL) -> SignalProducer<URL, CarthageError> {
 		return SignalProducer { [base = self.base] () -> Result<String, CarthageError> in
-			let temporaryDirectory: NSString
-			if #available(macOS 10.12, *) {
-				temporaryDirectory = base.temporaryDirectory.path as NSString
-			} else {
-				temporaryDirectory = NSTemporaryDirectory() as NSString
-			}
+      let temporaryDirectory: NSString
+      do {
+        temporaryDirectory = try base.url(
+          for: .itemReplacementDirectory,
+          in: .userDomainMask,
+          appropriateFor: destinationURL,
+          create: true
+        )
+        .path as NSString
+      } catch {
+        return .failure(.internalError(description: error.localizedDescription))
+      }
 
 			var temporaryDirectoryTemplate: ContiguousArray<CChar> = temporaryDirectory.appendingPathComponent(template).utf8CString
 
