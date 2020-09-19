@@ -34,7 +34,15 @@ public struct ArchiveCommand: CommandProtocol {
 		}
 	}
 
-	public let verb = "archive"
+    private struct FrameworkMeta: Comparable, Hashable {
+        static func < (lhs: FrameworkMeta, rhs: FrameworkMeta) -> Bool {
+            return lhs.name < rhs.name
+        }
+        let name: String
+        let matchOType: MachOType
+    }
+
+    public let verb = "archive"
 	public let function = "Archives built frameworks into a zip that Carthage can use"
 
 	// swiftlint:disable:next function_body_length
@@ -47,10 +55,11 @@ public struct ArchiveCommand: CommandProtocol {
 	public func archiveWithOptions(_ options: Options) -> SignalProducer<(), CarthageError> {
 		let formatting = options.colorOptions.formatting
 
-		let frameworks: SignalProducer<[String], CarthageError>
+        let frameworks: SignalProducer<[FrameworkMeta], CarthageError>
 		if !options.frameworkNames.isEmpty {
 			frameworks = .init(value: options.frameworkNames.map {
-				return ($0 as NSString).appendingPathExtension("framework")!
+                let name: String = ($0 as NSString).appendingPathExtension("framework")!
+                return FrameworkMeta(name: name, matchOType: .dylib)
 			})
 		} else {
 			let directoryURL = URL(fileURLWithPath: options.directoryPath, isDirectory: true)
@@ -59,26 +68,35 @@ public struct ArchiveCommand: CommandProtocol {
 					let buildArguments = BuildArguments(project: project, scheme: scheme, configuration: "Release")
 					return BuildSettings.load(with: buildArguments)
 				}
-				.flatMap(.concat) { settings -> SignalProducer<String, CarthageError> in
-					if let wrapperName = settings.wrapperName.value, settings.productType.value == .framework {
-						return .init(value: wrapperName)
+				.flatMap(.concat) { settings -> SignalProducer<FrameworkMeta, CarthageError> in
+                    if let wrapperName: String = settings.wrapperName.value,
+                        settings.productType.value == .framework,
+                        let machOType = settings.machOType.value {
+                        let value = FrameworkMeta(name: wrapperName, matchOType: machOType)
+						return .init(value: value)
 					} else {
 						return .empty
 					}
 				}
 				.collect()
-				.map { Array(Set($0)).sorted() }
+                .map { Array(Set($0)).sorted() }
 		}
 
 		return frameworks.flatMap(.merge) { frameworks -> SignalProducer<(), CarthageError> in
+            let frameworkNames: [String] = frameworks.map({$0.name})
 			// TODO: Better warning/planning for compressing up archives with non-known-in-year-2019 platforms.
 			// NOTE: as of current, non-known-in-year-2019 platforms are not compressed and copied by this command.
-			return SignalProducer<SDK, CarthageError>(SDK.knownIn2019YearSDKs)
-				.flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
-					return SignalProducer(frameworks).map { framework in
-						return (platform.relativePath as NSString).appendingPathComponent(framework)
-					}
-				}
+            return SignalProducer<SDK, CarthageError>(SDK.knownIn2019YearSDKs)
+                .flatMap(.merge) { platform -> SignalProducer<String, CarthageError> in
+                    return SignalProducer(frameworks).map { framework in
+                        let relPath = platform.relativePath as NSString
+                        if framework.matchOType == .staticlib {
+                            let staticPath = relPath.appendingPathComponent("Static") as NSString
+                            return staticPath.appendingPathComponent(framework.name)
+                        }
+                        return relPath.appendingPathComponent(framework.name)
+                    }
+            }
 				.map { relativePath -> (relativePath: String, absolutePath: String) in
 					let absolutePath = (options.directoryPath as NSString).appendingPathComponent(relativePath)
 					return (relativePath, absolutePath)
@@ -106,15 +124,15 @@ public struct ArchiveCommand: CommandProtocol {
 						.map { ($0 as NSString).lastPathComponent }
 						.filter { $0.hasSuffix(".framework") }
 
-					if Set(foundFrameworks) != Set(frameworks) {
+                    if Set(foundFrameworks) != Set(frameworkNames) {
 						let error = CarthageError.invalidArgument(
-							description: "Could not find any copies of \(frameworks.joined(separator: ", ")). "
+                            description: "Could not find any copies of \(frameworkNames.joined(separator: ", ")). "
 								+ "Make sure you're in the project's root and that the frameworks have already been built using 'carthage build --no-skip-current'."
 						)
 						return SignalProducer(error: error)
 					}
 
-					let outputPath = outputPathWithOptions(options, frameworks: frameworks)
+                    let outputPath = outputPathWithOptions(options, frameworks: frameworkNames)
 					let outputURL = URL(fileURLWithPath: outputPath, isDirectory: false)
 
 					_ = try? FileManager
@@ -124,7 +142,7 @@ public struct ArchiveCommand: CommandProtocol {
 						.default
 						.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
 
-					return zip(paths: paths, into: outputURL, workingDirectory: options.directoryPath).on(completed: {
+                    return zip(paths: paths, into: outputURL, workingDirectory: options.directoryPath).on(completed: {
 						carthage.println(formatting.bullets + "Created " + formatting.path(outputPath))
 					})
 			}
