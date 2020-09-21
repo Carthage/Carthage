@@ -17,6 +17,7 @@ public struct UpdateCommand: CommandProtocol {
 		public let buildOptions: CarthageKit.BuildOptions
 		public let checkoutOptions: CheckoutCommand.Options
 		public let dependenciesToUpdate: [String]?
+		public let skipSchemes: [String]
 		
 		/// The build options corresponding to these options.
 		public var buildCommandOptions: BuildCommand.Options {
@@ -29,7 +30,8 @@ public struct UpdateCommand: CommandProtocol {
 				logPath: logPath,
 				archive: false,
 				useNetrc: useNetrc,
-				dependenciesToBuild: dependenciesToUpdate
+				dependenciesToBuild: dependenciesToUpdate,
+				skipSchemes: skipSchemes
 			)
 		}
 		
@@ -52,7 +54,8 @@ public struct UpdateCommand: CommandProtocol {
 					 useNewResolver: Bool,
 					 useNetrc: Bool,
 					 buildOptions: BuildOptions,
-					 checkoutOptions: CheckoutCommand.Options
+					 checkoutOptions: CheckoutCommand.Options,
+					 skipSchemes: [String]
 			) {
 			self.checkoutAfterUpdate = checkoutAfterUpdate
 			self.buildAfterUpdate = buildAfterUpdate
@@ -63,6 +66,7 @@ public struct UpdateCommand: CommandProtocol {
 			self.buildOptions = buildOptions
 			self.checkoutOptions = checkoutOptions
 			self.dependenciesToUpdate = checkoutOptions.dependenciesToCheckout
+			self.skipSchemes = skipSchemes
 		}
 		
 		public static func evaluate(_ mode: CommandMode) -> Result<Options, CommandantError<CarthageError>> {
@@ -77,8 +81,9 @@ public struct UpdateCommand: CommandProtocol {
 			// Carthage Issue: https://github.com/Carthage/Carthage/issues/2831
 			// Swift Compiler Bug: https://bugs.swift.org/browse/SR-11423
 			let defaultLogPath: String? = nil
-			
-			return curry(Options.init)
+
+			// This was split into 2 steps to prevent type inference timeouts ("The compiler is unable to type-check this expression in reasonable time")
+			let options = curry(Options.init)
 				<*> mode <| Option(key: "checkout", defaultValue: true, usage: "skip the checking out of dependencies after updating")
 				<*> mode <| Option(key: "build", defaultValue: true, usage: buildDescription)
 				<*> mode <| Option(key: "verbose", defaultValue: false, usage: "print xcodebuild output inline (ignored if --no-build option is present)")
@@ -87,6 +92,7 @@ public struct UpdateCommand: CommandProtocol {
 				<*> mode <| netrcOption
 				<*> BuildOptions.evaluate(mode, addendum: "\n(ignored if --no-build option is present)")
 				<*> CheckoutCommand.Options.evaluate(mode, dependenciesUsage: dependenciesUsage)
+			return options <*> mode <| Option(key: "skip-schemes", defaultValue: [], usage: "skip a list of schemes. Default is empty")
 		}
 		
 		/// Attempts to load the project referenced by the options, and configure it

@@ -39,6 +39,7 @@ public struct BuildCommand: CommandProtocol {
 		public let archive: Bool
 		public let useNetrc: Bool
 		public let dependenciesToBuild: [String]?
+		public let skipSchemes: [String]
 
 		/// If `archive` is true, this will be a producer that will archive
 		/// the project after the build.
@@ -57,8 +58,9 @@ public struct BuildCommand: CommandProtocol {
 			let netrcOption = Option(key: "use-netrc",
 									 defaultValue: false,
 									 usage: "use authentication credentials from ~/.netrc file when downloading binary only frameworks")
-			
-			return curry(Options.init)
+
+			// This was split into 2 steps to prevent type inference timeouts ("The compiler is unable to type-check this expression in reasonable time")
+			let options = curry(Options.init)
 				<*> BuildOptions.evaluate(mode)
 				<*> mode <| Option(key: "skip-current", defaultValue: true, usage: "don't skip building the Carthage project (in addition to its dependencies)")
 				<*> ColorOptions.evaluate(mode)
@@ -68,6 +70,7 @@ public struct BuildCommand: CommandProtocol {
 				<*> mode <| Option(key: "archive", defaultValue: false, usage: "archive built frameworks from the current project (implies --no-skip-current)")
 				<*> mode <| netrcOption
 				<*> (mode <| Argument(defaultValue: [], usage: "the dependency names to build", usageParameter: "dependency names")).map { $0.isEmpty ? nil : $0 }
+			return options <*> mode <| Option(key: "skip-schemes", defaultValue: [], usage: "skip a list of schemes. Default is empty")
 		}
 	}
 
@@ -149,13 +152,13 @@ public struct BuildCommand: CommandProtocol {
 				}
 			}
 			.flatMap(.merge) { project in
-				return project.buildCheckedOutDependenciesWithOptions(options.buildOptions, dependenciesToBuild: options.dependenciesToBuild)
+				return project.buildCheckedOutDependenciesWithOptions(options.buildOptions, skipSchemes: options.skipSchemes, dependenciesToBuild: options.dependenciesToBuild)
 			}
 
 		if !shouldBuildCurrentProject {
 			return buildProducer
 		} else {
-			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions, rootDirectoryURL: directoryURL)
+			let currentProducers = buildInDirectory(directoryURL, withOptions: options.buildOptions, rootDirectoryURL: directoryURL, skipSchemes: options.skipSchemes)
 				.flatMapError { error -> BuildSchemeProducer in
 					switch error {
 					case let .noSharedFrameworkSchemes(project, _):

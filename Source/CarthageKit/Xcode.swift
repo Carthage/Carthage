@@ -190,7 +190,8 @@ public func xcodebuildTask(_ task: String, _ buildArguments: BuildArguments, env
 public func buildableSchemesInDirectory( // swiftlint:disable:this function_body_length
 	_ directoryURL: URL,
 	withConfiguration configuration: String,
-	forPlatforms platformAllowList: Set<SDK>? = nil
+	forPlatforms platformAllowList: Set<SDK>? = nil,
+	skipSchemes: [String] = []
 ) -> SignalProducer<(Scheme, ProjectLocator), CarthageError> {
 	precondition(directoryURL.isFileURL)
 	let locator = ProjectLocator
@@ -198,6 +199,7 @@ public func buildableSchemesInDirectory( // swiftlint:disable:this function_body
 			.flatMap(.concat) { project -> SignalProducer<(ProjectLocator, [Scheme]), CarthageError> in
 				return project
 					.schemes()
+					.filter({ !skipSchemes.contains($0.name) })
 					.collect()
 					.flatMapError { error in
 						if case .noSharedSchemes = error {
@@ -875,6 +877,7 @@ public func build(
 	version: PinnedVersion,
 	_ rootDirectoryURL: URL,
 	withOptions options: BuildOptions,
+	skipSchemes: [String],
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> BuildSchemeProducer {
 	let rawDependencyURL = rootDirectoryURL.appendingPathComponent(dependency.relativePath, isDirectory: true)
@@ -884,6 +887,7 @@ public func build(
 							withOptions: options,
 							dependency: (dependency, version),
 							rootDirectoryURL: rootDirectoryURL,
+							skipSchemes: skipSchemes,
 							sdkFilter: sdkFilter
 		).mapError { error in
 			switch (dependency, error) {
@@ -907,6 +911,7 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 	withOptions options: BuildOptions,
 	dependency: (dependency: Dependency, version: PinnedVersion)? = nil,
 	rootDirectoryURL: URL,
+	skipSchemes: [String],
 	sdkFilter: @escaping SDKFilterCallback = { sdks, _, _, _ in .success(sdks) }
 ) -> BuildSchemeProducer {
 	precondition(directoryURL.isFileURL)
@@ -916,7 +921,8 @@ public func buildInDirectory( // swiftlint:disable:this function_body_length
 		// multiple times.
 		buildableSchemesInDirectory(directoryURL,
 									withConfiguration: options.configuration,
-									forPlatforms: options.platforms
+									forPlatforms: options.platforms,
+									skipSchemes: skipSchemes
 			)
 			.flatMap(.concat) { (scheme: Scheme, project: ProjectLocator) -> SignalProducer<TaskEvent<URL>, CarthageError> in
 				let initialValue = (project, scheme)
